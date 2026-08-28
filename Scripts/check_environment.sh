@@ -3,7 +3,8 @@ set -u
 
 project_root="${0:A:h:h}"
 ue_root="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
-required_free_gib=60
+minimum_free_gib=40
+preferred_free_gib=60
 failures=0
 
 pass() { print "PASS  $1"; }
@@ -28,10 +29,12 @@ if [[ -z "$free_kib" ]]; then
   free_kib="$(df -k / | awk 'NR==2 {print $4}')"
 fi
 free_gib=$((free_kib / 1024 / 1024))
-if (( free_gib >= required_free_gib )); then
-  pass "$free_gib GiB free (installation safety gate: $required_free_gib GiB)"
+if (( free_gib >= preferred_free_gib )); then
+  pass "$free_gib GiB free (preferred working headroom: $preferred_free_gib GiB)"
+elif (( free_gib >= minimum_free_gib )); then
+  warn "$free_gib GiB free; builds may proceed, but restore at least $preferred_free_gib GiB before large imports or release packaging"
 else
-  fail "$free_gib GiB free; at least $required_free_gib GiB required before resuming installation/build"
+  fail "$free_gib GiB free; at least $minimum_free_gib GiB is required for this prototype build"
 fi
 
 if command -v git >/dev/null 2>&1; then
@@ -78,4 +81,3 @@ if (( failures > 0 )); then
 fi
 
 print "\nEnvironment check passed."
-

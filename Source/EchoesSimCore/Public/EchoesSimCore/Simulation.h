@@ -1,8 +1,15 @@
 #pragma once
 
+#if defined(__has_include)
+#if __has_include("HAL/Platform.h")
+#include "HAL/Platform.h"
+#endif
+#endif
+
 #include <array>
 #include <compare>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -20,8 +27,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 1;
-inline constexpr std::uint32_t kReplayVersion = 1;
+inline constexpr std::uint32_t kSnapshotVersion = 2;
+inline constexpr std::uint32_t kReplayVersion = 2;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -33,36 +40,44 @@ public:
     }
 
     [[nodiscard]] static constexpr Fixed FromInt(std::int32_t value) {
-        return Fixed(value * kFixedScale);
+        return FromWide(static_cast<std::int64_t>(value) * kFixedScale);
     }
 
     [[nodiscard]] static constexpr Fixed FromRatio(std::int32_t numerator,
                                                     std::int32_t denominator) {
         return denominator == 0
                    ? Fixed()
-                   : Fixed(static_cast<std::int32_t>(
-                         (static_cast<std::int64_t>(numerator) * kFixedScale) /
-                         denominator));
+                   : FromWide((static_cast<std::int64_t>(numerator) * kFixedScale) /
+                              denominator);
     }
 
     [[nodiscard]] constexpr std::int32_t Raw() const { return raw_; }
     [[nodiscard]] constexpr std::int32_t FloorToInt() const {
         return raw_ >= 0 ? raw_ / kFixedScale
                          : -static_cast<std::int32_t>(
-                               (static_cast<std::int64_t>(-raw_) + kFixedScale - 1) /
+                               (-static_cast<std::int64_t>(raw_) + kFixedScale - 1) /
                                kFixedScale);
     }
 
     friend constexpr bool operator==(Fixed, Fixed) = default;
     friend constexpr auto operator<=>(Fixed, Fixed) = default;
     friend constexpr Fixed operator+(Fixed lhs, Fixed rhs) {
-        return Fixed::FromRaw(lhs.raw_ + rhs.raw_);
+        return FromWide(static_cast<std::int64_t>(lhs.raw_) + rhs.raw_);
     }
     friend constexpr Fixed operator-(Fixed lhs, Fixed rhs) {
-        return Fixed::FromRaw(lhs.raw_ - rhs.raw_);
+        return FromWide(static_cast<std::int64_t>(lhs.raw_) - rhs.raw_);
     }
 
 private:
+    [[nodiscard]] static constexpr Fixed FromWide(std::int64_t raw) {
+        return Fixed(static_cast<std::int32_t>(
+            raw > std::numeric_limits<std::int32_t>::max()
+                ? std::numeric_limits<std::int32_t>::max()
+                : raw < std::numeric_limits<std::int32_t>::min()
+                      ? std::numeric_limits<std::int32_t>::min()
+                      : raw));
+    }
+
     explicit constexpr Fixed(std::int32_t raw) : raw_(raw) {}
     std::int32_t raw_ = 0;
 };
@@ -321,8 +336,10 @@ private:
     [[nodiscard]] EntityId FindNearestOwnedDropoff(PlayerId player,
                                                    Vec2 from) const;
     [[nodiscard]] std::uint64_t DistanceSquaredRaw(Vec2 first, Vec2 second) const;
+    [[nodiscard]] bool TryAllocateEntityId(EntityId& id);
 
     void UpdateVisibility();
+    void ResolveExpiredReshapes();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();
@@ -352,6 +369,8 @@ private:
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
+    std::array<std::uint64_t, 2> lastExecutedSequence_{};
+    std::array<bool, 2> hasExecutedSequence_{};
 };
 
 }  // namespace echoes::sim

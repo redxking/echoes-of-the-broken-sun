@@ -13,8 +13,14 @@ namespace {
 constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 constexpr std::uint32_t kMaximumMapTiles = 4U * 1024U * 1024U;
-constexpr std::uint32_t kMaximumSerializedEntities = 1024U * 1024U;
-constexpr std::uint32_t kMaximumSerializedCommands = 4U * 1024U * 1024U;
+constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
+constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
+constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
+constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
+constexpr std::int32_t kMaximumVisionTiles = 256;
+constexpr std::size_t kSerializedEntityBytes = 105;
+constexpr std::size_t kSerializedCommandBytes = 36;
+constexpr std::size_t kSnapshotFixedBytesAfterConfig = 80;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 
@@ -61,8 +67,40 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool HasSameCommandKey(const Command& lhs, const Command& rhs) {
-    return lhs.executeTick == rhs.executeTick && lhs.player == rhs.player &&
-           lhs.sequence == rhs.sequence;
+    return lhs.player == rhs.player && lhs.sequence == rhs.sequence;
+}
+
+[[nodiscard]] bool IsValidFaction(Faction faction) {
+    return faction == Faction::MeridianCompact ||
+           faction == Faction::KharuunAssemblies;
+}
+
+[[nodiscard]] bool IsValidEntityType(EntityType type) {
+    return type >= EntityType::Worker && type <= EntityType::FutureWell;
+}
+
+[[nodiscard]] bool IsValidTerrain(Terrain terrain) {
+    return terrain >= Terrain::Open && terrain <= Terrain::Scarred;
+}
+
+[[nodiscard]] bool IsValidCommandType(CommandType type) {
+    return type >= CommandType::Stop && type <= CommandType::FutureWell;
+}
+
+[[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
+    return choice >= FutureWellChoice::Dormant && choice <= FutureWellChoice::Reshape;
+}
+
+[[nodiscard]] bool IsValidAiPersonality(AiPersonality personality) {
+    return personality >= AiPersonality::Balanced &&
+           personality <= AiPersonality::Economic;
+}
+
+[[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs) {
+    const std::int64_t sum = static_cast<std::int64_t>(lhs) + rhs;
+    return static_cast<std::int32_t>(std::clamp<std::int64_t>(
+        sum, std::numeric_limits<std::int32_t>::min(),
+        std::numeric_limits<std::int32_t>::max()));
 }
 
 class BinaryWriter final {
@@ -139,6 +177,7 @@ public:
         return true;
     }
     [[nodiscard]] bool AtEnd() const { return position_ == bytes_.size(); }
+    [[nodiscard]] std::size_t Remaining() const { return bytes_.size() - position_; }
 
 private:
     std::span<const std::uint8_t> bytes_{};
@@ -222,7 +261,8 @@ Simulation::Simulation(SimulationConfig config)
     if (config_.mapWidthTiles <= 0 || config_.mapHeightTiles <= 0 ||
         config_.mapWidthTiles > kMaximumMapDimension ||
         config_.mapHeightTiles > kMaximumMapDimension ||
-        config_.ticksPerSecond == 0 || tileCount <= 0 ||
+        config_.ticksPerSecond == 0 ||
+        config_.ticksPerSecond > kMaximumTicksPerSecond || tileCount <= 0 ||
         tileCount > kMaximumMapTiles) {
         throw std::invalid_argument("invalid deterministic simulation configuration");
     }
@@ -238,6 +278,7 @@ bool Simulation::AddPlayer(PlayerId player,
                            Faction faction,
                            ResourcePool startingResources) {
     if (player >= players_.size() || players_[player].active ||
+        !IsValidFaction(faction) ||
         startingResources.material < 0 || startingResources.dawnshards < 0) {
         return false;
     }
@@ -323,11 +364,14 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
                                  Vec2 position) {
     if (!IsInsideMap(position) || owner == kNeutralPlayer ||
         FindPlayer(owner) == nullptr || players_[owner].faction != faction ||
+        !IsValidFaction(faction) || !IsValidEntityType(type) ||
         type == EntityType::ResourceNode || type == EntityType::FutureWell) {
         return 0;
     }
     Entity entity = MakeEntity(owner, faction, type, position);
-    entity.id = nextEntityId_++;
+    if (!TryAllocateEntityId(entity.id)) {
+        return 0;
+    }
     entities_.push_back(entity);
     UpdateVisibility();
     return entity.id;
@@ -339,7 +383,9 @@ EntityId Simulation::SpawnResourceNode(Vec2 position, std::int32_t amount) {
     }
     Entity entity = MakeEntity(kNeutralPlayer, Faction::MeridianCompact,
                                EntityType::ResourceNode, position);
-    entity.id = nextEntityId_++;
+    if (!TryAllocateEntityId(entity.id)) {
+        return 0;
+    }
     entity.resourceRemaining = amount;
     entities_.push_back(entity);
     UpdateVisibility();
@@ -352,7 +398,9 @@ EntityId Simulation::SpawnFutureWell(Vec2 position) {
     }
     Entity entity = MakeEntity(kNeutralPlayer, Faction::MeridianCompact,
                                EntityType::FutureWell, position);
-    entity.id = nextEntityId_++;
+    if (!TryAllocateEntityId(entity.id)) {
+        return 0;
+    }
     entities_.push_back(entity);
     UpdateVisibility();
     return entity.id;
@@ -372,11 +420,21 @@ Entity* Simulation::MutableEntity(EntityId id) {
     return found != entities_.end() && found->id == id ? &*found : nullptr;
 }
 
+bool Simulation::TryAllocateEntityId(EntityId& id) {
+    if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
+        nextEntityId_ == std::numeric_limits<EntityId>::max()) {
+        id = 0;
+        return false;
+    }
+    id = nextEntityId_++;
+    return true;
+}
+
 bool Simulation::SetTerrainTile(std::int32_t tileX,
                                 std::int32_t tileY,
                                 Terrain terrain) {
     if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
-        tileY >= config_.mapHeightTiles) {
+        tileY >= config_.mapHeightTiles || !IsValidTerrain(terrain)) {
         return false;
     }
     terrain_[static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX)] = terrain;
@@ -516,26 +574,49 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
 }
 
 bool Simulation::QueueCommand(const Command& command, std::string* rejectionReason) {
+    if (rejectionReason != nullptr) {
+        rejectionReason->clear();
+    }
     if (FindPlayer(command.player) == nullptr) {
         SetError(rejectionReason, "command player is not active");
         return false;
     }
-    if (command.executeTick < currentTick_) {
-        SetError(rejectionReason, "command is scheduled in the past");
+    if (command.executeTick < currentTick_ ||
+        command.executeTick > kMaximumSupportedTick) {
+        SetError(rejectionReason, "command tick is outside the supported range");
         return false;
     }
-    if (command.type > CommandType::FutureWell || command.actor == 0) {
+    if (!IsValidCommandType(command.type) ||
+        !IsValidEntityType(command.buildType) ||
+        !IsValidWellChoice(command.wellChoice) || command.actor == 0) {
         SetError(rejectionReason, "command encoding is invalid");
         return false;
     }
-    const auto duplicatesCommand = [&](const Command& prior) {
-        return HasSameCommandKey(prior, command);
-    };
-    if (std::any_of(commandLog_.begin(), commandLog_.end(), duplicatesCommand) ||
-        std::any_of(pendingCommands_.begin(), pendingCommands_.end(),
-                    duplicatesCommand)) {
-        SetError(rejectionReason,
-                 "execute tick, player, and sequence must uniquely identify a command");
+    if (hasExecutedSequence_[command.player] &&
+        command.sequence <= lastExecutedSequence_[command.player]) {
+        SetError(rejectionReason, "command sequence is not newer than executed input");
+        return false;
+    }
+    for (const Command& prior : pendingCommands_) {
+        if (prior.player != command.player) {
+            continue;
+        }
+        if (HasSameCommandKey(prior, command)) {
+            SetError(rejectionReason, "player and sequence must identify one command");
+            return false;
+        }
+        if ((prior.executeTick < command.executeTick &&
+             prior.sequence >= command.sequence) ||
+            (prior.executeTick > command.executeTick &&
+             prior.sequence <= command.sequence)) {
+            SetError(rejectionReason,
+                     "command sequence must increase across execution ticks");
+            return false;
+        }
+    }
+    if (pendingCommands_.size() >= kMaximumSerializedCommands ||
+        commandLog_.size() >= kMaximumSerializedCommands) {
+        SetError(rejectionReason, "command capacity is exhausted");
         return false;
     }
     if (replayInitialSnapshot_.empty()) {
@@ -634,6 +715,8 @@ void Simulation::ProcessCommandsForCurrentTick() {
     pendingCommands_ = std::move(remaining);
     for (const Command& command : due) {
         ApplyCommand(command);
+        hasExecutedSequence_[command.player] = true;
+        lastExecutedSequence_[command.player] = command.sequence;
     }
 }
 
@@ -679,6 +762,7 @@ void Simulation::ApplyCommand(const Command& command) {
         }
         case CommandType::Build: {
             if (actor->type != EntityType::Worker ||
+                actor->order.type == OrderType::Build ||
                 ValidatePlacement(command.player, command.buildType,
                                   command.position) != PlacementResult::Valid) {
                 return;
@@ -688,11 +772,15 @@ void Simulation::ApplyCommand(const Command& command) {
             if (!ResourceCovers(player->resources, cost)) {
                 return;
             }
+            EntityId siteId = 0;
+            if (!TryAllocateEntityId(siteId)) {
+                return;
+            }
             player->resources.material -= cost.material;
             player->resources.dawnshards -= cost.dawnshards;
             Entity site = MakeEntity(command.player, player->faction,
                                      command.buildType, command.position);
-            site.id = nextEntityId_++;
+            site.id = siteId;
             site.completed = false;
             site.hitPoints = std::max(1, site.maxHitPoints / 10);
             site.constructionProgress = 0;
@@ -768,7 +856,8 @@ void Simulation::ProcessDeliver(Entity& worker) {
     }
     PlayerState* player = MutablePlayer(worker.owner);
     if (player != nullptr && worker.cargo > 0) {
-        player->resources.material += worker.cargo;
+        player->resources.material =
+            SaturatingAdd(player->resources.material, worker.cargo);
         worker.cargo = 0;
     }
     worker.order = {};
@@ -785,9 +874,9 @@ void Simulation::ProcessBuild(Entity& worker) {
         (void)MoveTowards(worker, site->position);
         return;
     }
-    site->constructionProgress =
-        std::min(site->constructionRequired,
-                 site->constructionProgress + worker.workRate);
+    site->constructionProgress = std::min(
+        site->constructionRequired,
+        SaturatingAdd(site->constructionProgress, worker.workRate));
     const std::int64_t scaledHealth =
         static_cast<std::int64_t>(site->maxHitPoints) * site->constructionProgress /
         std::max(1, site->constructionRequired);
@@ -838,7 +927,8 @@ void Simulation::ProcessFutureWell(Entity& worker) {
     }
     switch (worker.order.wellChoice) {
         case FutureWellChoice::Harvest: {
-            player->resources.dawnshards += 300;
+            player->resources.dawnshards =
+                SaturatingAdd(player->resources.dawnshards, 300);
             well->owner = worker.owner;
             well->faction = worker.faction;
             well->wellChoice = FutureWellChoice::Harvest;
@@ -937,7 +1027,8 @@ void Simulation::ApplyPreserveIncome() {
         if (entity.type == EntityType::FutureWell &&
             entity.wellChoice == FutureWellChoice::Preserve) {
             if (PlayerState* player = MutablePlayer(entity.owner); player != nullptr) {
-                player->resources.dawnshards += 3;
+                player->resources.dawnshards =
+                    SaturatingAdd(player->resources.dawnshards, 3);
             }
         }
     }
@@ -970,7 +1061,86 @@ void Simulation::ClearInvalidOrders() {
     }
 }
 
+void Simulation::ResolveExpiredReshapes() {
+    std::vector<Vec2> expiredCenters{};
+    for (Entity& entity : entities_) {
+        if (entity.type == EntityType::FutureWell &&
+            entity.wellChoice == FutureWellChoice::Reshape &&
+            entity.reshapeUntilTick != 0 &&
+            currentTick_ >= entity.reshapeUntilTick) {
+            expiredCenters.push_back(entity.position);
+            entity.reshapeUntilTick = 0;
+        }
+    }
+    if (expiredCenters.empty()) {
+        return;
+    }
+
+    for (Entity& entity : entities_) {
+        if (entity.hitPoints <= 0 || entity.movementPerTickRaw <= 0) {
+            continue;
+        }
+        const std::int32_t tileX = entity.position.x.FloorToInt();
+        const std::int32_t tileY = entity.position.y.FloorToInt();
+        if (TerrainAt(tileX, tileY) != Terrain::Blocked) {
+            continue;
+        }
+        const bool affected = std::any_of(
+            expiredCenters.begin(), expiredCenters.end(), [&](Vec2 center) {
+                return Abs64(static_cast<std::int64_t>(tileX) -
+                             center.x.FloorToInt()) <= 1 &&
+                       Abs64(static_cast<std::int64_t>(tileY) -
+                             center.y.FloorToInt()) <= 1;
+            });
+        if (!affected) {
+            continue;
+        }
+
+        bool foundFallback = false;
+        std::uint64_t bestDistance = std::numeric_limits<std::uint64_t>::max();
+        std::size_t bestTile = 0;
+        for (std::int32_t candidateY = 0; candidateY < config_.mapHeightTiles;
+             ++candidateY) {
+            for (std::int32_t candidateX = 0;
+                 candidateX < config_.mapWidthTiles; ++candidateX) {
+                if (TerrainAt(candidateX, candidateY) == Terrain::Blocked) {
+                    continue;
+                }
+                const std::int64_t deltaX =
+                    static_cast<std::int64_t>(candidateX) - tileX;
+                const std::int64_t deltaY =
+                    static_cast<std::int64_t>(candidateY) - tileY;
+                const std::uint64_t distance = static_cast<std::uint64_t>(
+                    deltaX * deltaX + deltaY * deltaY);
+                const std::size_t candidateTile = static_cast<std::size_t>(
+                    candidateY * config_.mapWidthTiles + candidateX);
+                if (!foundFallback || distance < bestDistance ||
+                    (distance == bestDistance && candidateTile < bestTile)) {
+                    foundFallback = true;
+                    bestDistance = distance;
+                    bestTile = candidateTile;
+                }
+            }
+        }
+        if (foundFallback) {
+            const std::int32_t fallbackX = static_cast<std::int32_t>(
+                bestTile % static_cast<std::size_t>(config_.mapWidthTiles));
+            const std::int32_t fallbackY = static_cast<std::int32_t>(
+                bestTile / static_cast<std::size_t>(config_.mapWidthTiles));
+            entity.position = Vec2::FromTiles(fallbackX, fallbackY);
+        } else {
+            // Invalid all-blocked maps still resolve deterministically without
+            // leaving an entity in an inescapable cell.
+            (void)SetTerrainTile(tileX, tileY, Terrain::Open);
+        }
+        entity.order = {};
+    }
+}
+
 void Simulation::Step() {
+    if (currentTick_ >= kMaximumSupportedTick) {
+        return;
+    }
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -978,11 +1148,13 @@ void Simulation::Step() {
     RemoveDestroyedEntities();
     ClearInvalidOrders();
     ++currentTick_;
+    ResolveExpiredReshapes();
     UpdateVisibility();
 }
 
 void Simulation::Step(Tick tickCount) {
-    for (Tick tick = 0; tick < tickCount; ++tick) {
+    for (Tick tick = 0;
+         tick < tickCount && currentTick_ < kMaximumSupportedTick; ++tick) {
         Step();
     }
 }
@@ -1002,8 +1174,12 @@ void Simulation::UpdateVisibility() {
              ++offsetY) {
             for (std::int32_t offsetX = -radiusTiles; offsetX <= radiusTiles;
                  ++offsetX) {
-                if (offsetX * offsetX + offsetY * offsetY >
-                    radiusTiles * radiusTiles) {
+                const std::int64_t distanceSquared =
+                    static_cast<std::int64_t>(offsetX) * offsetX +
+                    static_cast<std::int64_t>(offsetY) * offsetY;
+                const std::int64_t radiusSquared =
+                    static_cast<std::int64_t>(radiusTiles) * radiusTiles;
+                if (distanceSquared > radiusSquared) {
                     continue;
                 }
                 const std::int32_t tileX = centerX + offsetX;
@@ -1068,7 +1244,7 @@ std::uint64_t Simulation::StatelessAiValue(PlayerId player,
 std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
                                                     AiPersonality personality) const {
     std::vector<Command> commands{};
-    if (FindPlayer(player) == nullptr) {
+    if (FindPlayer(player) == nullptr || !IsValidAiPersonality(personality)) {
         return commands;
     }
     for (const Entity& actor : entities_) {
@@ -1217,6 +1393,10 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
         writer.I32(player.resources.material);
         writer.I32(player.resources.dawnshards);
     }
+    for (PlayerId player = 0; player < players_.size(); ++player) {
+        writer.U8(hasExecutedSequence_[player] ? 1 : 0);
+        writer.U64(lastExecutedSequence_[player]);
+    }
     writer.U32(static_cast<std::uint32_t>(terrain_.size()));
     for (const Terrain terrain : terrain_) {
         writer.U8(static_cast<std::uint8_t>(terrain));
@@ -1277,6 +1457,9 @@ std::uint64_t Simulation::StateChecksum() const {
 std::optional<Simulation> Simulation::LoadSnapshot(
     std::span<const std::uint8_t> bytes,
     std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
     if (bytes.size() < 12) {
         SetError(error, "snapshot is truncated");
         return std::nullopt;
@@ -1319,15 +1502,26 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     if (config.mapWidthTiles <= 0 || config.mapHeightTiles <= 0 ||
         config.mapWidthTiles > kMaximumMapDimension ||
         config.mapHeightTiles > kMaximumMapDimension ||
-        config.ticksPerSecond == 0 || tileCount <= 0 ||
+        config.ticksPerSecond == 0 ||
+        config.ticksPerSecond > kMaximumTicksPerSecond || tileCount <= 0 ||
         tileCount > kMaximumMapTiles) {
         SetError(error, "snapshot map configuration is invalid");
         return std::nullopt;
     }
+    const std::size_t minimumRemaining =
+        kSnapshotFixedBytesAfterConfig +
+        static_cast<std::size_t>(tileCount) * 3U;
+    if (reader.Remaining() < minimumRemaining) {
+        SetError(error, "snapshot payload is too short for its declared map");
+        return std::nullopt;
+    }
+
     Simulation simulation(config);
     if (!reader.U64(simulation.currentTick_) ||
         !reader.U32(simulation.nextEntityId_) ||
-        !reader.U64(simulation.rng_.state)) {
+        !reader.U64(simulation.rng_.state) ||
+        simulation.currentTick_ > kMaximumSupportedTick ||
+        simulation.nextEntityId_ == 0) {
         SetError(error, "snapshot state header is truncated");
         return std::nullopt;
     }
@@ -1349,13 +1543,23 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         player.faction = static_cast<Faction>(faction);
         simulation.players_[index] = player;
     }
+    for (PlayerId player = 0; player < simulation.players_.size(); ++player) {
+        std::uint8_t hasSequence = 0;
+        if (!reader.U8(hasSequence) ||
+            !reader.U64(simulation.lastExecutedSequence_[player]) ||
+            hasSequence > 1 ||
+            (hasSequence != 0 && !simulation.players_[player].active)) {
+            SetError(error, "snapshot command sequence state is invalid");
+            return std::nullopt;
+        }
+        simulation.hasExecutedSequence_[player] = hasSequence != 0;
+    }
     std::uint32_t serializedTileCount = 0;
     if (!reader.U32(serializedTileCount) ||
         static_cast<std::int64_t>(serializedTileCount) != tileCount) {
         SetError(error, "snapshot terrain dimensions do not match the map");
         return std::nullopt;
     }
-    simulation.terrain_.resize(serializedTileCount);
     for (Terrain& terrain : simulation.terrain_) {
         std::uint8_t encoded = 0;
         if (!reader.U8(encoded) ||
@@ -1371,7 +1575,6 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             SetError(error, "snapshot fog dimensions do not match the map");
             return std::nullopt;
         }
-        explored.resize(count);
         if (!reader.Bytes(explored) ||
             std::any_of(explored.begin(), explored.end(),
                         [](std::uint8_t value) { return value > 1; })) {
@@ -1380,7 +1583,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
     }
     std::uint32_t entityCount = 0;
-    if (!reader.U32(entityCount) || entityCount > kMaximumSerializedEntities) {
+    if (!reader.U32(entityCount) || entityCount > kMaximumSerializedEntities ||
+        static_cast<std::size_t>(entityCount) >
+            reader.Remaining() / kSerializedEntityBytes) {
         SetError(error, "snapshot entity count is invalid");
         return std::nullopt;
     }
@@ -1436,11 +1641,22 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
             entity.maxHitPoints <= 0 || entity.hitPoints <= 0 ||
+            entity.hitPoints > entity.maxHitPoints ||
             entity.movementPerTickRaw < 0 || entity.visionTiles < 0 ||
+            entity.visionTiles > kMaximumVisionTiles ||
             entity.attackRangeRaw < 0 || entity.attackDamage < 0 ||
+            entity.attackPeriodTicks > kMaximumSupportedTick ||
+            entity.attackCooldownTicks > entity.attackPeriodTicks ||
             entity.workRate < 0 || entity.cargo < 0 ||
             entity.cargoCapacity < entity.cargo || entity.resourceRemaining < 0 ||
-            entity.constructionProgress < 0 || entity.constructionRequired < 0) {
+            entity.constructionProgress < 0 || entity.constructionRequired < 0 ||
+            entity.constructionProgress > entity.constructionRequired ||
+            entity.reshapeUntilTick > kMaximumSupportedTick ||
+            (wellChoice != static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
+             entity.reshapeUntilTick != 0) ||
+            (wellChoice == static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
+             entity.reshapeUntilTick != 0 &&
+             entity.reshapeUntilTick <= simulation.currentTick_)) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -1467,7 +1683,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     std::uint32_t commandCount = 0;
-    if (!reader.U32(commandCount) || commandCount > kMaximumSerializedCommands) {
+    if (!reader.U32(commandCount) || commandCount > kMaximumSerializedCommands ||
+        static_cast<std::size_t>(commandCount) >
+            reader.Remaining() / kSerializedCommandBytes) {
         SetError(error, "snapshot command count is invalid");
         return std::nullopt;
     }
@@ -1476,19 +1694,34 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         if (!ReadCommand(reader, command) ||
             command.player >= simulation.players_.size() ||
             !simulation.players_[command.player].active ||
-            command.executeTick < simulation.currentTick_ || command.actor == 0) {
+            command.executeTick < simulation.currentTick_ ||
+            command.executeTick > kMaximumSupportedTick || command.actor == 0) {
             SetError(error, "snapshot pending command is invalid");
             return std::nullopt;
         }
     }
     std::sort(simulation.pendingCommands_.begin(),
               simulation.pendingCommands_.end(), CommandLess);
-    for (std::size_t index = 1; index < simulation.pendingCommands_.size(); ++index) {
-        if (HasSameCommandKey(simulation.pendingCommands_[index - 1],
-                              simulation.pendingCommands_[index])) {
-            SetError(error, "snapshot contains duplicate command keys");
+    std::array<bool, 2> sawPendingSequence{};
+    std::array<Tick, 2> lastPendingTick{};
+    std::array<std::uint64_t, 2> lastPendingSequence{};
+    for (const Command& command : simulation.pendingCommands_) {
+        const PlayerId player = command.player;
+        if ((simulation.hasExecutedSequence_[player] &&
+             command.sequence <= simulation.lastExecutedSequence_[player]) ||
+            (sawPendingSequence[player] &&
+             command.sequence <= lastPendingSequence[player])) {
+            SetError(error, "snapshot command sequences are not monotonic");
             return std::nullopt;
         }
+        if (sawPendingSequence[player] &&
+            command.executeTick < lastPendingTick[player]) {
+            SetError(error, "snapshot command ticks are not canonical");
+            return std::nullopt;
+        }
+        sawPendingSequence[player] = true;
+        lastPendingTick[player] = command.executeTick;
+        lastPendingSequence[player] = command.sequence;
     }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");
@@ -1518,8 +1751,16 @@ ReplayRecord Simulation::ExportReplay() const {
 
 std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
                                                   std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
     if (replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
+        return std::nullopt;
+    }
+    if (replay.commands.size() > kMaximumSerializedCommands ||
+        replay.finalTick > kMaximumSupportedTick) {
+        SetError(error, "replay bounds are invalid");
         return std::nullopt;
     }
     std::optional<Simulation> simulation = LoadSnapshot(replay.initialSnapshot, error);

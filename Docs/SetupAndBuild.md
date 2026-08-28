@@ -13,13 +13,13 @@ This is the single authoritative setup and build guide. Edit it in place; do not
 
 ## Verified host state
 
-The initial development host is a MacBook Pro (`MacBookPro18,1`) with an Apple M1 Pro, 10 CPU cores, 16 GPU cores, 16 GB unified memory, Metal 4, and macOS 26.6.2. Xcode 26.6 was installed, but the active developer directory pointed at Command Line Tools rather than full Xcode, and the separately delivered Metal Toolchain component was not installed. Epic Games Launcher 20.2.4 was installed. Unreal Engine 5.8.2 reached approximately 64% before the launcher was suspended because free space fell to a critical 11–14 GiB.
+The initial development host is a MacBook Pro (`MacBookPro18,1`) with an Apple M1 Pro, 10 CPU cores, 16 GPU cores, 16 GB unified memory, Metal 4, and macOS 26.6.2. Xcode 26.6 is installed and `xcode-select -p` currently resolves to `/Applications/Xcode.app/Contents/Developer`. Apple's separately delivered Metal Toolchain build `17F109` is installed and `xcrun metal` resolves. Epic Games Launcher 20.2.4 completed Unreal Engine 5.8.2 after an authorized Docker builder-cache cleanup recovered 39.47 GB of rebuildable space. About 71 GiB remained free after the final Mac Development package, test evidence, and redundant-build cleanup at the latest observation.
 
 The official Epic installer endpoint was downloaded and the disk image verified. The retained file is `~/Downloads/EpicInstaller-20.1.4.dmg`, 114,676,675 bytes, SHA-256 `5c4f204ed623b01890f26cc99d4af657c3fbd6be1d04be7fed176ddbc94b1259`. Because the installed launcher is newer, do not install this backup over it unless repairing the launcher becomes necessary.
 
 ## Supported production baseline
 
-The project pins Unreal Engine 5.8. Epic's version-specific macOS table lists Xcode 26.0 as the minimum and 26.1.1 as recommended, and explicitly marks 26.4 incompatible. The locally installed Xcode 26.6 is an unverified combination, not a confirmed failure. The controlled baseline is Xcode 26.1.1 until a clean build and full test run demonstrate another combination.
+The project pins Unreal Engine 5.8. Epic's version-specific macOS table lists Xcode 26.0 as the minimum and 26.1.1 as recommended, and explicitly marks 26.4 incompatible. The locally installed Xcode 26.6 has passed project generation, arm64 Development Editor compilation, two Unreal automation tests, null-RHI and rendered startup, and a local Development cook/package. That is positive evidence on this host, not a clean-machine, Developer ID signing, notarization, performance, or full compatibility result. Xcode 26.1.1 remains Epic's recommended support baseline.
 
 Epic recommends Apple Silicon M3 and 32 GB for UE 5.8. The inspected M1 Pro and 16 GB configuration meets Epic's lower hardware tier for supported rendering features, but it is below the recommendation. Nanite and Virtual Shadow Maps are disabled because Epic limits them to M2 or newer on Mac and still labels that support beta. Lumen software ray tracing may be evaluated; hardware ray tracing and MegaLights are not Mac targets.
 
@@ -32,22 +32,22 @@ Primary references:
 - [Apple Xcode system requirements](https://developer.apple.com/xcode/system-requirements)
 - [Apple Xcode resources](https://developer.apple.com/xcode/resources/)
 
-## User installation gate
+## Environment setup and residual gate
 
 ### 1. Create storage headroom
 
-Free at least 60 GB before resuming the staged installer; 100 GB is the safer working target, or use a fast APFS external development volume. These thresholds are project engineering recommendations intended to avoid installation and packaging failures, not Epic official minimums.
+The environment check stops prototype builds below 40 GiB free, warns below the preferred 60 GiB headroom, and treats 100 GiB as the safer sustained-production target. Restore at least 60 GiB before large imports or release packaging, or use a fast APFS external development volume. These thresholds are project engineering recommendations intended to avoid build and packaging failures, not Epic official minimums.
 
-The largest inspected local storage area was Docker's managed data, about 65 GB. Review images, containers, build cache, and volumes through Docker Desktop before removing anything. Do not delete `~/Library/Containers/com.docker.docker` manually; volumes may contain user data. Application Support and caches require application-specific review rather than wholesale deletion.
+The largest inspected local storage area was Docker's managed data, about 65 GB. With explicit user authorization, only Docker builder cache was pruned; the command reported 39.47 GB reclaimed. Images, containers, and volumes were not targeted. Do not delete `~/Library/Containers/com.docker.docker` manually; volumes may contain user data. Application Support and caches require application-specific review rather than wholesale deletion.
 
-### 2. Install the pinned Xcode baseline
+### 2. Select the Xcode toolchain
 
-Use Apple's authenticated developer downloads to obtain Xcode 26.1.1. Keep Xcode 26.6 if other work needs it; the archived build can be renamed, for example `Xcode-26.1.1.app`, and installed alongside it. Complete Xcode's first-run setup and install its Metal Toolchain component.
+The installed Xcode 26.6 and Metal Toolchain are being used for the technical spike. The local generation, compilation, automation, rendering, cooking, packaging, and startup evidence described above is positive, but Epic's supported recommendation remains Xcode 26.1.1. If later tests expose a toolchain issue—or a strictly support-aligned baseline is required—obtain 26.1.1 from Apple's authenticated developer downloads and install it alongside 26.6.
 
 For project-local commands, avoid silently changing every developer tool on the Mac:
 
 ```sh
-export ECHOES_XCODE="/Applications/Xcode-26.1.1.app/Contents/Developer"
+export ECHOES_XCODE="/Applications/Xcode.app/Contents/Developer"
 export DEVELOPER_DIR="$ECHOES_XCODE"
 xcodebuild -version
 xcrun metal -v
@@ -55,9 +55,9 @@ xcrun metal -v
 
 If Unreal Launcher or Editor does not honor that environment, select the same Xcode under Xcode Settings → Locations → Command Line Tools. A system-wide `xcode-select` change affects other projects and should be deliberate.
 
-### 3. Complete Unreal Engine 5.8.2
+### 3. Verify Unreal Engine 5.8.2
 
-After storage is available, resume Epic Games Launcher. The observed target is `/Users/Shared/Epic Games/UE_5.8`, and the launcher manifest reports version `5.8.2-56702186+++UE5+Release-5.8-Mac` with a 45,344,581,313-byte final installed size. The install included the Mac editor, templates, and engine source-view files. Do not add unused platform SDKs or debug symbols until needed.
+The completed install is at `/Users/Shared/Epic Games/UE_5.8`. The launcher manifest reports version `5.8.2-56702186+++UE5+Release-5.8-Mac`, `bIsIncompleteInstall=false`, and `InstallSize=45,344,581,313`; the filesystem occupied about 43 GiB at inspection. The `UnrealEditor` executable contains both arm64 and x86_64 slices. Strict deep code-signature verification exits nonzero because the installed nested `libsteam_api.dylib` is reported modified or invalid. Launcher verification, compilation, and the recorded runtime boot still succeeded, so that signature result is retained as an unresolved distribution-integrity issue rather than treated as proof of runtime failure.
 
 The Launcher installation and sign-in are interactive and may require account verification, license acceptance, and macOS security approval. Those states cannot be inferred from the launcher merely existing.
 
@@ -69,27 +69,45 @@ The deterministic core is deliberately testable without Unreal:
 ./Scripts/test_sim.sh
 ```
 
-The script compiles with Apple Clang, writes generated files only beneath `.build`, and runs the native suite. A passing suite validates only the named engine-independent behaviors; it does not validate Unreal integration, rendering, navigation, multiplayer transport, or packaging.
+The script compiles with Apple Clang, writes to a temporary directory beneath `${TMPDIR:-/tmp}`, removes that directory on exit, and runs optimized, debug, and AddressSanitizer/UndefinedBehaviorSanitizer configurations. All three current configurations pass 10/10 suites. Those results validate only the named engine-independent paths; they do not validate Unreal rendering, navigation, multiplayer transport, packaging, or every hostile input. LeakSanitizer is disabled because it is unavailable in Apple's macOS AddressSanitizer runtime.
 
 ## Generate and build the Unreal project
 
-After UE 5.8 is complete, define its location rather than embedding it in source:
+Define the installed engine and full Xcode, then use the repository wrappers:
 
 ```sh
 export UE_ROOT="/Users/Shared/Epic Games/UE_5.8"
-export ECHOES_ROOT="$PWD"
-
-"$UE_ROOT/Engine/Build/BatchFiles/Mac/GenerateProjectFiles.sh" \
-  -project="$ECHOES_ROOT/EchoesOfTheBrokenSun.uproject" -game
-
-"$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" \
-  EchoesOfTheBrokenSunEditor Mac Development \
-  "$ECHOES_ROOT/EchoesOfTheBrokenSun.uproject" -waitmutex
+export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+./Scripts/check_environment.sh
+./Scripts/generate_project_files.sh
+./Scripts/build_editor.sh
+./Scripts/run_unreal_tests.sh
+./Scripts/run_runtime_smoke.sh
 ```
 
-Open the project only after the command-line build succeeds. Run the Unreal automation suite before treating editor launch as an accepted build. Packaging, signing, notarization, and clean-machine installation remain separate gates.
+The observed results are: workspace generation succeeded; `EchoesOfTheBrokenSunEditor Mac Development` compiled and linked for arm64; `Echoes.Runtime.Bootstrap.ClassesAndCore` and `Echoes.Runtime.Visibility.ActorLifecycle` passed 2/2 with no test warning or error; and the null-RHI game smoke selected `EchoesGameMode`, created a 23-entity scenario with 9 initially visible entity views at 20 Hz, emitted the environment/simulation/boot-ready/first-tick markers, and exited cleanly. The first automation test covers class registration and a one-tick portable-core call. The second uses a temporary game world and the real subsystem to prove actor creation on reveal, destruction when hidden, and single-actor recreation on reentry. The null-RHI smoke covers bootstrap only. These results do not validate sustained simulation, complete manual input, gameplay completeness, performance, or clean-machine installation.
+
+## Rendered prototype boundary
+
+A local Metal SM5 editor run was visually inspected at the runtime-generated arena. The HUD, local cyan units, orange matter nodes, home platform, and `RUNTIME TECHNICAL PROTOTYPE` label were visible. The `2` key changed the Future Well protocol to Preserve and the runtime log recorded that command. The desktop automation bridge could not reliably deliver mouse clicks or drag gestures into the Metal window, so selection, context movement, and gathering were not accepted on the exact final build. This is a rendered startup and bounded keyboard-input observation, not evidence of a complete playable loop, final visuals, performance, or fog/shroud presentation.
+
+## Package and smoke-test macOS
+
+The package wrapper requires at least 60 GiB free, creates a new archive rather than mixing with an existing one, performs Unreal build/cook/stage/PAK/package/archive, validates the arm64 binary, bundle identity, version, and cooked containers, applies a local ad-hoc signature to the completed archive, verifies the signature seal, launches a three-second null-RHI smoke test, and writes a SHA-256 content manifest with the source commit, clean/dirty state, configuration, engine, and Xcode identity:
+
+```sh
+./Scripts/package_macos.sh
+```
+
+An explicit new archive path may be supplied as the first argument. Existing targets are refused and left untouched. A previously built package can be checked independently:
+
+```sh
+./Scripts/run_packaged_smoke.sh \
+  BuildArtifacts/Packages/Mac-Development-v0.1.0-final/EchoesOfTheBrokenSun.app
+```
+
+The observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.1.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase had sealed the app before the final PAK update, so the archived signature was initially invalid. The wrapper now seals the completed archive with the checked-in development entitlements and verifies it afterward. The exact corrected archive passed strict deep-signature verification and emitted all four startup markers when its packaged executable was launched. Its adjacent manifest and digest files bind every regular file and symlink in the app to the recorded source and toolchain boundary.
 
 ## Distribution boundary
 
-A free Apple Account is enough for local Xcode development. Developer ID signing, notarization, and Mac App Store distribution require the appropriate Apple Developer Program credentials. No signing, notarization, App Store readiness, or compatibility beyond tested hosts may be claimed until observed and recorded.
-
+A free Apple Account is enough for local Xcode development. The current package is signed only ad hoc so it can be validated locally; that is not an identity-bearing distribution signature. Developer ID signing, notarization, and Mac App Store distribution require the appropriate Apple Developer Program credentials. No Developer ID signing, notarization, App Store readiness, or compatibility beyond the tested host may be claimed until observed and recorded.

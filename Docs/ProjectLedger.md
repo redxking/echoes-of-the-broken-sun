@@ -13,7 +13,7 @@ This is the single authoritative production roadmap, decision log, risk register
 
 ## Status at a glance
 
-The project is in **Milestone 1 — production baseline and deterministic simulation spike**. An isolated Git repository, UE 5.8 project descriptor, initial Mac settings, source balance data, and authoritative design records exist. The engine-independent C++ simulation and tests are under construction. Unreal Engine 5.8.2 reached about 64% installation before it was suspended to prevent the disk from filling. No Unreal project build, editor launch, playable Unreal map, packaged application, performance result, multiplayer result, signing, notarization, or distribution state has been demonstrated.
+The project is in **Milestone 2 — Unreal technical prototype**. The hardened engine-independent simulation passes 10/10 optimized, debug, and sanitizer suites. Unreal Engine 5.8.2 project generation succeeds; the Mac Development Editor target compiles and links for arm64; two Unreal automation tests pass, including a real visible-hidden-visible actor lifecycle; null-RHI bootstrap reaches the first fixed tick with 23 entities and 9 visible views at 20 Hz; rendered startup and one Future Well keyboard command have been observed; and a self-contained arm64 Mac Development application has passed content, identity, local signature-seal, and packaged headless-startup checks. This does not yet establish complete manual playability, player-visible fog/shroud, pathing, production, victory/restart, performance, multiplayer, Developer ID signing, notarization, clean-machine compatibility, or distribution readiness.
 
 The user deleted the first local project workspace during storage cleanup and explicitly directed that the game repository be remade. The current repository and authoritative files were recreated at the same path. The original local Git history and filesystem metadata did not survive that deletion; this limitation cannot be repaired by claiming continuity that does not exist. All subsequent changes remain in the current authoritative files.
 
@@ -50,7 +50,7 @@ Harvest is irreversible after its telegraphed commit; Preserve is a contestable 
 - Record engine/source-build decision and limits.
 - Separate interactive account/installer gates from automated work.
 
-**State:** Substantially complete. Installation and storage remain unresolved.
+**State:** Complete for the technical spike. Xcode 26.6 passed local generation, compilation, automation, null-RHI/rendered startup, and Development cook/package gates; Epic's recommended 26.1.1 baseline, clean-machine compatibility, and representative performance remain open.
 
 ### M1 — Production baseline and simulation spike
 
@@ -61,7 +61,7 @@ Harvest is irreversible after its telegraphed commit; Preserve is a contestable 
 - Tests prove deterministic command ordering/checksums, economy, placement/construction, combat, visibility, all Well modes, bounded AI inputs, replay, and versioned snapshot behavior.
 - Failures return stable reason identifiers.
 
-**State:** In progress. Acceptance requires completed test output and source review below.
+**State:** Substantially complete for the technical spike. Commit `adad96e` records the historical 7/7 baseline; the current integrated hardening passes 10/10 in all three configurations. Content-pack import, authenticated multiplayer-seat binding, explored-state player views, replay work limits, and stable execution-time rejection reporting remain open.
 
 ### M2 — Unreal technical prototype
 
@@ -71,7 +71,7 @@ Harvest is irreversible after its telegraphed commit; Preserve is a contestable 
 - Stress scene records CPU, GPU, memory, navigation, and game-thread measurements.
 - Menus do not advertise unavailable modes.
 
-**State:** Not started; engine installation and toolchain validation are prerequisites.
+**State:** In progress. Compilation, module loading, class/bootstrap automation, world-level visibility actor lifecycle, null-RHI scenario creation, rendered startup, one Future Well keyboard command, and a self-contained native Development package pass at their recorded boundaries. Complete pointer interaction, a true fog/shroud and explored-state surface, pathing, building/production/victory/restart behavior, and stress measurement remain open.
 
 ### M3 — Vertical slice
 
@@ -144,18 +144,32 @@ A 60 FPS editor view is not equivalent to a packaged native result.
 
 | ID | Date | Boundary | Test | Observed result | Claim limit |
 |---|---|---|---|---|---|
-| ENV-001 | 2026-08-28 | M1 Pro 10CPU/16GPU, 16 GB, macOS 26.6.2 | Hardware/tool inventory | Metal 4; Xcode 26.6 installed; active path was CLT; separately delivered Metal Toolchain uninstalled | Environment only; no UE performance result |
-| ENV-002 | 2026-08-28 | Internal APFS SSD | Storage inspection | About 38 GB initially free; Docker-managed data about 65 GB was the largest review target | Point-in-time; no data removed by the agent |
-| INSTALL-001 | 2026-08-28 | Epic Games Launcher | UE 5.8.2 observation | Target `/Users/Shared/Epic Games/UE_5.8`; manifest final size 45,344,581,313 bytes; about 64% before safe suspension as free space reached 11–14 GiB | Paused/incomplete, not installed or verified |
+| ENV-001 | 2026-08-28 | M1 Pro 10CPU/16GPU, 16 GB, macOS 26.6.2 | Hardware/tool inventory | Metal 4; Xcode 26.6 installed | Environment only; no UE performance result |
+| ENV-002 | 2026-08-28 | Internal APFS SSD | Initial storage inspection | About 38 GB initially free; Docker-managed data about 65 GB was the largest review target | Point-in-time inspection only; no data was removed during this inspection, and the later authorized cleanup is recorded separately in STORAGE-001 |
+| INSTALL-001 | 2026-08-28 | Epic Games Launcher | UE 5.8.2 manifest and installed binary inspection | `/Users/Shared/Epic Games/UE_5.8`; version `5.8.2-56702186+++UE5+Release-5.8-Mac`; 45,344,581,313 bytes; `bIsIncompleteInstall=false`; editor has arm64 and x86_64 slices | Launcher completion and binary architecture only; nested signature check and project runtime are separate |
 | DOWNLOAD-001 | 2026-08-28 | Official Epic DMG | `hdiutil verify` + SHA-256 | Valid image; SHA-256 `5c4f204ed623b01890f26cc99d4af657c3fbd6be1d04be7fed176ddbc94b1259` | Download integrity only |
 | RECOVERY-001 | 2026-08-28 | Local workspace | User deletion and explicit remake instruction | Game repository recreated at the original path | Original Git/filesystem history was lost; unrelated deleted projects were not recreated |
+| STORAGE-001 | 2026-08-28 | Docker builder cache | User-authorized `docker builder prune --all --force` | 39.47 GB of rebuildable build cache reclaimed; free space subsequently observed above 77 GiB | Command targeted builder cache only; future Docker builds may re-download/rebuild layers |
+| SIM-001 | 2026-08-28 | Commit `adad96e`; Apple Clang 21; arm64 | `./Scripts/test_sim.sh`, C++20, `-Wall -Wextra -Wpedantic -Werror` | 7/7 suites passed: fixed tick movement; canonical ordering/determinism; economy/build/placement; combat; fog/non-cheating AI; all Well choices; snapshot/replay | Engine-independent core only; no Unreal, navigation-scale, UI, multiplayer-transport, or performance validation |
+| SIM-002 | 2026-08-28 | Commit `adad96e`; Apple Clang 21; arm64 | AddressSanitizer + UndefinedBehaviorSanitizer build of the same native suite | 7/7 suites passed; no sanitizer finding observed | Covered test paths only; not a proof that all inputs are memory-safe |
+| TOOLCHAIN-001 | 2026-08-28 | Xcode 26.6 selected per command | `xcodebuild -showComponent MetalToolchain`; `xcrun metal -v` | Metal Toolchain build `17F109`, identifier `com.apple.dt.toolchain.Metal.32023.883`, installed and resolvable | Component availability only; Xcode 26.6 remains outside Epic's recommended 26.1.1 baseline |
+| GEN-001 | 2026-08-28 | UE 5.8.2 + Xcode 26.6 | `./Scripts/generate_project_files.sh` after UE 5.8 target/config correction | Xcode workspace generation succeeded for game and editor targets | Generation only; Epic installation emits a missing MetalShaderConverter include-directory warning; later build/runtime evidence is recorded separately |
+| ENV-003 | 2026-08-28 | Current local host | `xcode-select -p`, storage observation after final package, test evidence, and redundant-build cleanup | Full Xcode selected at `/Applications/Xcode.app/Contents/Developer`; about 71 GiB free | Point-in-time local state; above the 40 GiB prototype stop threshold and 60 GiB packaging headroom, below the 100 GiB sustained-production target; no clean-machine result |
+| SIGNATURE-001 | 2026-08-28 | Installed UE 5.8.2 tree | `codesign --verify --deep --strict` | Nonzero exit; nested `libsteam_api.dylib` reported modified or invalid | Distribution-integrity warning; launcher verification, project compilation, and runtime boot still succeeded |
+| SIM-003 | 2026-08-28 | Current integrated native tree; Apple Clang 21; arm64 | Optimized strict, debug strict, and AddressSanitizer + UndefinedBehaviorSanitizer strict runs | 10/10 suites passed in all three configurations, including numeric/public-input hardening, sequence/build hardening, and adversarial snapshot/ID bounds | Covered native paths only; macOS leak detection unavailable; no Unreal rendering, transport, or performance conclusion |
+| BUILD-001 | 2026-08-28 | UE 5.8.2, Xcode 26.6, Mac Development, arm64 | `./Scripts/build_editor.sh` with hot reload disabled | `EchoesOfTheBrokenSunEditor` compiled and linked; project and simulation-core editor dylibs plus target receipt produced | Local incremental Development Editor build; not a cook, package, clean-machine build, or warning-free claim |
+| AUTO-001 | 2026-08-28 | MacEditor, null RHI | `./Scripts/run_unreal_tests.sh` | `Echoes.Runtime.Bootstrap.ClassesAndCore`: 1 succeeded, 0 failed, 0 warnings/errors | Registers five Unreal classes and advances a small portable simulation one tick; not a gameplay or rendered test |
+| AUTO-002 | 2026-08-28 | Current integrated MacEditor tree, temporary game world, null RHI | `./Scripts/run_unreal_tests.sh` | 2/2 succeeded with 0 failed and 0 warnings/errors; `Echoes.Runtime.Visibility.ActorLifecycle` additionally proved view creation on reveal, destruction when hidden, and exactly one distinct actor on reentry | Real subsystem and actor lifecycle at prototype scale; not a rendered fog surface, long soak, multiplayer, or performance test |
+| RUNTIME-001 | 2026-08-28 | `/Engine/Maps/Entry`, Mac Development Editor, null RHI | `./Scripts/run_runtime_smoke.sh` | arm64 modules loaded; `EchoesGameMode` selected; 23-entity scenario initialized with 9 visible views at 20 Hz; environment, simulation, boot-ready, and first-fixed-tick markers emitted; benchmark exited 0 | Bootstrap only; no rendered output, manual input, sustained correctness, gameplay completion, or performance conclusion |
+| RENDER-001 | 2026-08-28 | Local M1 Pro, Metal SM5 Development Editor runtime | Rendered arena inspection plus keyboard input | HUD, cyan local units, orange matter, home platform, placeholder geometry, and `RUNTIME TECHNICAL PROTOTYPE` label observed; `2` changed the Future Well protocol to Preserve and was logged | Rendered startup and one keyboard command only; desktop automation could not reliably inject pointer gestures, and no final art, complete controls, true fog/shroud surface, or performance conclusion is claimed |
+| PKG-001 | 2026-08-28 | Local M1 Pro; UE 5.8.2; Xcode 26.6; Mac Development arm64 | Unreal build/cook/stage/PAK/package/archive, structural inspection, local ad-hoc reseal, strict deep verification, content manifest, and `./Scripts/run_packaged_smoke.sh` | 748 MB self-contained `.app`; bundle `com.angelispseftis.echoesofthebrokensun`; short version `0.1.0`; five cooked container files; native arm64 executable; corrected signature valid; packaged executable emitted all four startup markers and exited 0; adjacent SHA-256 content manifest records source and toolchain state | Local Development artifact only; ad-hoc signature is not Developer ID signing; no notarization, clean-machine launch, installer, rendered packaged interaction, performance, universal binary, or release conclusion |
 
 ## Risks
 
 | ID | Risk | Likelihood / impact | Control |
 |---|---|---|---|
-| R-001 | Engine install exhausts disk | High / Critical | Resume only with ≥60 GB free; target ≥100 GB working headroom |
-| R-002 | UE 5.8 fails with Xcode 26.6 | Medium / High | Install pinned 26.1.1 side by side; 26.6 is unverified, not proven incompatible |
+| R-001 | Derived data, assets, builds, or packaging exhaust remaining disk | High / Critical | Stop prototype builds below 40 GiB; restore ≥60 GiB before large imports or release packaging; target ≥100 GiB sustained-production headroom |
+| R-002 | UE 5.8 cook/package/rendered workloads fail with Xcode 26.6 | Medium / High | Retain limited positive evidence; install recommended 26.1.1 side by side if a toolchain issue appears or support alignment is required |
 | R-003 | M1 Pro/16 GB performance is inadequate | High / High | Disable unsupported features, measure early, reopen D-001 if budgets fail |
 | R-004 | Unit pathing/fog saturates game thread | High / High | Batched paths, spatial partitioning, scheduled visibility, flow-field spike |
 | R-005 | Unreal state leaks into authoritative outcomes | Medium / Critical | One-way adapters, deterministic tests, replay hashes, review |
@@ -170,18 +184,19 @@ A 60 FPS editor view is not equivalent to a packaged native result.
 
 ## Known limitations
 
-- Unreal Engine installation and supported Xcode/Metal toolchain are not accepted.
-- The Unreal module has not been compiled, linked, opened, or run.
-- No map, camera, presentation, navigation adapter, UI, effect, or audio has been observed in engine.
+- Unreal Engine installation and the Metal Toolchain are present; Xcode 26.6 has limited positive local evidence but is not Epic's recommended 26.1.1 baseline.
+- The Unreal modules compile, link, load, bootstrap, and render a runtime-generated scenario; only rendered startup and one keyboard command have been accepted, not complete manual interaction.
+- Camera, selection, context-order, HUD, entity-view, arena, and lighting code exists. Views are scoped to currently visible entities, but no rendered fog/shroud surface or explored-state presentation exists, and exact-build pointer selection/context orders remain unverified.
 - Source JSON exists, but automated Unreal import/schema validation is not implemented.
+- The core currently uses technical-spike fixture statistics rather than loading the source JSON; those values are not approved balance data and may diverge until the content compiler is implemented.
 - Native simulation does not prove engine integration, player experience, visual fidelity, or performance.
 - No final art/audio asset is registered.
 - Campaign exists only as design.
 - Skirmish UI, save/load UI, settings, and accessibility controls are not implemented.
 - Multiplayer transport, separate-process execution, reconnect, spectators, and separate-machine tests do not exist.
-- No packaged app, clean build, signing, notarization, or installation test exists.
+- A self-contained local Mac Development package exists and has a verified ad-hoc signature seal; no Developer ID signature, notarization, installer, clean-machine build/install/launch, or packaged rendered-interaction test exists.
 - No claim is made about 60 FPS, supported Mac range, App Store readiness, commercial readiness, or completion.
 
 ## Immediate next task
 
-Complete the native simulation tests and evidence review while storage is resolved. Then resume UE 5.8.2, build the editor target, correct API issues against the installed hotfix, and create the minimum generated prototype map before adding visual content.
+Complete pointer-driven selection/context-order validation, implement the true fog/shroud and explored-state presentation, then add pathing and the minimal construction/production/victory/restart loop. Profile the accepted target scene before expanding visual content.

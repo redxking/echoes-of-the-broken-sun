@@ -8,7 +8,10 @@ public class EchoesSimCore : ModuleRules
         bUseUnity = false;
         CppStandard = CppStandardVersion.Cpp20;
 
-        // The C++ source intentionally has no Unreal dependencies. An Unreal-facing
-        // adapter can depend on this module without pulling engine types into the sim.
+        PublicDependencyModuleNames.Add("Core");
+
+        // The algorithms and data structures remain standard C++20. Core supplies
+        // Unreal's module export/platform macros when this code is built as a module;
+        // the same source is compiled directly by the native test harness.
     }
 }

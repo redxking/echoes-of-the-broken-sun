@@ -1,0 +1,215 @@
+#if WITH_DEV_AUTOMATION_TESTS
+
+#include "Misc/AutomationTest.h"
+
+#include "EchoesEntityView.h"
+#include "EchoesSimCore/Simulation.h"
+#include "EchoesSimulationSubsystem.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Tests/AutomationCommon.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FEchoesVisibilityLifecycleTest,
+    "Echoes.Runtime.Visibility.ActorLifecycle",
+    EAutomationTestFlags::EditorContext |
+        EAutomationTestFlags::ClientContext |
+        EAutomationTestFlags::EngineFilter)
+
+bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+
+    FTestWorldWrapper WorldWrapper;
+    if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        AddError(TEXT("Could not create the temporary game world."));
+        return false;
+    }
+
+    UWorld* World = WorldWrapper.GetTestWorld();
+    UEchoesSimulationSubsystem* Bridge =
+        World != nullptr
+            ? World->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (!TestNotNull(TEXT("Temporary world owns the simulation subsystem"), Bridge) ||
+        !TestTrue(TEXT("Prototype scenario starts in the temporary world"),
+                  Bridge != nullptr && Bridge->StartPrototypeScenario()))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const echoes::sim::Simulation* InitialSimulation = Bridge->GetSimulation();
+    if (!TestNotNull(TEXT("Prototype simulation is available"), InitialSimulation))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const echoes::sim::Vec2 ScoutStart = echoes::sim::Vec2::FromTiles(16, 10);
+    const echoes::sim::Vec2 RevealPoint = echoes::sim::Vec2::FromTiles(21, 24);
+    const echoes::sim::Vec2 TargetPosition = echoes::sim::Vec2::FromTiles(25, 28);
+    echoes::sim::EntityId ScoutId = 0;
+    echoes::sim::EntityId TargetId = 0;
+    for (const echoes::sim::Entity& Entity : InitialSimulation->Entities())
+    {
+        if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity.type == echoes::sim::EntityType::Soldier &&
+            Entity.position == ScoutStart)
+        {
+            ScoutId = Entity.id;
+        }
+        if (Entity.type == echoes::sim::EntityType::ResourceNode &&
+            Entity.position == TargetPosition)
+        {
+            TargetId = Entity.id;
+        }
+    }
+
+    if (!TestTrue(TEXT("Visibility scout was found by scenario state"), ScoutId != 0) ||
+        !TestTrue(TEXT("Visibility target was found by scenario state"), TargetId != 0))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    TestFalse(
+        TEXT("Distant resource starts outside local simulation visibility"),
+        InitialSimulation->IsEntityVisibleTo(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            TargetId));
+    TestNull(
+        TEXT("No presentation actor exists for the initially hidden resource"),
+        Bridge->FindEntityView(TargetId));
+
+    const auto IssueMove = [this, Bridge, ScoutId](
+                               const TCHAR* Description,
+                               const echoes::sim::Vec2& Destination)
+    {
+        FString Feedback;
+        const bool bQueued = Bridge->IssueCommand(
+            echoes::sim::CommandType::Move,
+            ScoutId,
+            0,
+            Bridge->SimToWorld(Destination),
+            echoes::sim::FutureWellChoice::Dormant,
+            Feedback);
+        if (!bQueued)
+        {
+            AddError(FString::Printf(TEXT("%s: %s"), Description, *Feedback));
+        }
+        return bQueued;
+    };
+
+    const auto TickUntil = [Bridge](const auto& Predicate, int32 MaximumTicks)
+    {
+        for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
+        {
+            if (Predicate())
+            {
+                return true;
+            }
+            Bridge->Tick(0.05f);
+        }
+        return Predicate();
+    };
+
+    if (!IssueMove(TEXT("Could not queue the reveal movement"), RevealPoint))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const auto IsTargetPresented = [Bridge, TargetId]()
+    {
+        const echoes::sim::Simulation* CurrentSimulation = Bridge->GetSimulation();
+        return CurrentSimulation != nullptr &&
+               CurrentSimulation->IsEntityVisibleTo(
+                   UEchoesSimulationSubsystem::LocalPlayerId,
+                   TargetId) &&
+               Bridge->FindEntityView(TargetId) != nullptr;
+    };
+    if (!TestTrue(
+            TEXT("A real entity view is created when the resource enters visibility"),
+            TickUntil(IsTargetPresented, 256)))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    AEchoesEntityView* FirstView = Bridge->FindEntityView(TargetId);
+    TWeakObjectPtr<AEchoesEntityView> FirstViewWeak = FirstView;
+    TestNotNull(TEXT("First visible presentation actor is available"), FirstView);
+
+    if (!IssueMove(TEXT("Could not queue the retreat movement"), ScoutStart))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const auto IsTargetHidden = [Bridge, TargetId]()
+    {
+        const echoes::sim::Simulation* CurrentSimulation = Bridge->GetSimulation();
+        return CurrentSimulation != nullptr &&
+               !CurrentSimulation->IsEntityVisibleTo(
+                   UEchoesSimulationSubsystem::LocalPlayerId,
+                   TargetId) &&
+               Bridge->FindEntityView(TargetId) == nullptr;
+    };
+    TestTrue(
+        TEXT("The presentation actor is removed when the resource leaves visibility"),
+        TickUntil(IsTargetHidden, 32));
+    TestFalse(
+        TEXT("The removed presentation actor is no longer a valid object"),
+        FirstViewWeak.IsValid());
+
+    if (!IssueMove(TEXT("Could not queue the visibility reentry movement"), RevealPoint))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    if (!TestTrue(
+            TEXT("The resource view is recreated when visibility returns"),
+            TickUntil(IsTargetPresented, 32)))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    AEchoesEntityView* ReenteredView = Bridge->FindEntityView(TargetId);
+    TestNotNull(TEXT("Reentered presentation actor is available"), ReenteredView);
+    TestTrue(
+        TEXT("Visibility reentry uses a new disposable presentation actor"),
+        ReenteredView != FirstView);
+    if (ReenteredView != nullptr)
+    {
+        TestEqual(
+            TEXT("Reentered actor remains bound to the authoritative entity"),
+            ReenteredView->GetEntityId(),
+            TargetId);
+    }
+
+    int32 LiveTargetViewCount = 0;
+    for (TActorIterator<AEchoesEntityView> It(World); It; ++It)
+    {
+        if (!It->IsActorBeingDestroyed() && It->GetEntityId() == TargetId)
+        {
+            ++LiveTargetViewCount;
+        }
+    }
+    TestEqual(
+        TEXT("Exactly one live actor presents the reentered entity"),
+        LiveTargetViewCount,
+        1);
+
+    // FTestWorldWrapper removes its world context before DestroyWorld invokes
+    // subsystem teardown. Stop the scenario while the context is still valid;
+    // the later subsystem teardown is intentionally idempotent.
+    Bridge->StopPrototypeScenario();
+    WorldWrapper.ForwardErrorMessages(this);
+    return !HasAnyErrors() && !WorldWrapper.HasFailed();
+}
+
+#endif

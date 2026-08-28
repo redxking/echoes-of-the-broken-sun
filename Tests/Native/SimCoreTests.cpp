@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -37,6 +38,47 @@ Command MakeCommand(Tick tick,
     command.type = type;
     command.actor = actor;
     return command;
+}
+
+std::uint64_t SnapshotIntegrity(const std::vector<std::uint8_t>& bytes,
+                                std::size_t length) {
+    std::uint64_t hash = 14695981039346656037ULL;
+    for (std::size_t index = 0; index < length; ++index) {
+        hash ^= bytes[index];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+void WriteU32(std::vector<std::uint8_t>& bytes,
+              std::size_t offset,
+              std::uint32_t value) {
+    for (std::uint32_t shift = 0; shift < 32; shift += 8) {
+        bytes[offset++] = static_cast<std::uint8_t>(value >> shift);
+    }
+}
+
+void WriteU64(std::vector<std::uint8_t>& bytes,
+              std::size_t offset,
+              std::uint64_t value) {
+    for (std::uint32_t shift = 0; shift < 64; shift += 8) {
+        bytes[offset++] = static_cast<std::uint8_t>(value >> shift);
+    }
+}
+
+void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
+    REQUIRE(bytes.size() >= 8);
+    WriteU64(bytes, bytes.size() - 8,
+             SnapshotIntegrity(bytes, bytes.size() - 8));
+}
+
+std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
+    // Snapshot v2 fixed header/player/sequence fields plus terrain and two fog grids.
+    return 100 + 3 * mapTileCount;
+}
+
+std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
+    return SnapshotEntityCountOffset(mapTileCount) + 4;
 }
 
 void AddTwoPlayers(Simulation& simulation,
@@ -329,9 +371,17 @@ void TestFutureWellChoices() {
         REQUIRE(reshapedWell->reshapeUntilTick >= 40 &&
                 reshapedWell->reshapeUntilTick <= 60);
         REQUIRE(reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
+        Command enter = MakeCommand(reshape.CurrentTick(), 0, 2,
+                                    CommandType::Move, worker);
+        enter.position = Vec2::FromTiles(7, 6);
+        REQUIRE(reshape.QueueCommand(enter));
+        reshape.Step(20);
+        REQUIRE(reshape.FindEntity(worker)->position == Vec2::FromTiles(7, 6));
         const Tick end = reshapedWell->reshapeUntilTick;
         reshape.Step(end - reshape.CurrentTick());
         REQUIRE(!reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
+        REQUIRE(reshape.FindEntity(worker)->position != Vec2::FromTiles(7, 6));
+        REQUIRE(reshape.IsPositionPassable(reshape.FindEntity(worker)->position));
     }
 }
 
@@ -369,6 +419,161 @@ void TestSnapshotAndReplay() {
     REQUIRE(reproduced->StateChecksum() == scenario.simulation.StateChecksum());
 }
 
+void TestNumericAndPublicInputHardening() {
+    REQUIRE(Fixed::FromInt(std::numeric_limits<std::int32_t>::max()).Raw() ==
+            std::numeric_limits<std::int32_t>::max());
+    REQUIRE(Fixed::FromInt(std::numeric_limits<std::int32_t>::min()).Raw() ==
+            std::numeric_limits<std::int32_t>::min());
+    REQUIRE((Fixed::FromRaw(std::numeric_limits<std::int32_t>::max()) +
+             Fixed::FromRaw(1))
+                .Raw() == std::numeric_limits<std::int32_t>::max());
+    REQUIRE((Fixed::FromRaw(std::numeric_limits<std::int32_t>::min()) -
+             Fixed::FromRaw(1))
+                .Raw() == std::numeric_limits<std::int32_t>::min());
+    REQUIRE(Fixed::FromRaw(std::numeric_limits<std::int32_t>::min())
+                .FloorToInt() ==
+            std::numeric_limits<std::int32_t>::min() / kFixedScale);
+
+    Simulation harvest({8, 8, 20, 1});
+    REQUIRE(harvest.AddPlayer(
+        0, Faction::MeridianCompact,
+        {0, std::numeric_limits<std::int32_t>::max() - 100}));
+    const EntityId worker = harvest.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
+    const EntityId well = harvest.SpawnFutureWell(Vec2::FromTiles(3, 2));
+    Command action = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    action.target = well;
+    action.wellChoice = FutureWellChoice::Harvest;
+    REQUIRE(harvest.QueueCommand(action));
+    harvest.Step();
+    REQUIRE(harvest.FindPlayer(0)->resources.dawnshards ==
+            std::numeric_limits<std::int32_t>::max());
+
+    Simulation validation({8, 8, 20, 1});
+    REQUIRE(!validation.AddPlayer(0, static_cast<Faction>(255), {0, 0}));
+    REQUIRE(validation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(!validation.SetTerrainTile(1, 1, static_cast<Terrain>(255)));
+    REQUIRE(validation.SpawnEntity(0, Faction::MeridianCompact,
+                                      static_cast<EntityType>(255),
+                                      Vec2::FromTiles(2, 2)) == 0);
+    const EntityId validWorker = validation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
+    Command malformed = MakeCommand(0, 0, 1, static_cast<CommandType>(255),
+                                    validWorker);
+    REQUIRE(!validation.QueueCommand(malformed));
+    malformed.type = CommandType::Stop;
+    malformed.buildType = static_cast<EntityType>(255);
+    REQUIRE(!validation.QueueCommand(malformed));
+    REQUIRE(validation.GenerateAiCommands(
+                           0, static_cast<AiPersonality>(255))
+                .empty());
+}
+
+void TestSequenceAndBuildHardening() {
+    Simulation sequences({12, 12, 20, 1});
+    REQUIRE(sequences.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId worker = sequences.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
+    Command first = MakeCommand(0, 0, 10, CommandType::Stop, worker);
+    Command duplicateAcrossTick =
+        MakeCommand(1, 0, 10, CommandType::Stop, worker);
+    Command regressed = MakeCommand(1, 0, 9, CommandType::Stop, worker);
+    Command next = MakeCommand(1, 0, 11, CommandType::Stop, worker);
+    REQUIRE(sequences.QueueCommand(first));
+    REQUIRE(!sequences.QueueCommand(duplicateAcrossTick));
+    REQUIRE(!sequences.QueueCommand(regressed));
+    REQUIRE(sequences.QueueCommand(next));
+    sequences.Step();
+
+    std::string error;
+    std::optional<Simulation> loaded =
+        Simulation::LoadSnapshot(sequences.SaveSnapshot(), &error);
+    REQUIRE(loaded.has_value());
+    Command stale = MakeCommand(loaded->CurrentTick(), 0, 10,
+                                CommandType::Stop, worker);
+    Command newer = MakeCommand(loaded->CurrentTick(), 0, 12,
+                                CommandType::Stop, worker);
+    REQUIRE(!loaded->QueueCommand(stale));
+    REQUIRE(loaded->QueueCommand(newer));
+
+    Simulation build({24, 24, 20, 1});
+    REQUIRE(build.AddPlayer(0, Faction::MeridianCompact, {1000, 500}));
+    const EntityId builder = build.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(3, 3));
+    Command firstBuild = MakeCommand(0, 0, 1, CommandType::Build, builder);
+    firstBuild.buildType = EntityType::Barracks;
+    firstBuild.position = Vec2::FromTiles(8, 8);
+    Command secondBuild = MakeCommand(0, 0, 2, CommandType::Build, builder);
+    secondBuild.buildType = EntityType::Barracks;
+    secondBuild.position = Vec2::FromTiles(14, 14);
+    REQUIRE(build.QueueCommand(firstBuild));
+    REQUIRE(build.QueueCommand(secondBuild));
+    build.Step();
+    REQUIRE(std::count_if(build.Entities().begin(), build.Entities().end(),
+                          [](const Entity& entity) {
+                              return entity.type == EntityType::Barracks;
+                          }) == 1);
+    REQUIRE(build.FindPlayer(0)->resources.material == 830);
+    REQUIRE(build.FindPlayer(0)->resources.dawnshards == 480);
+}
+
+void TestSnapshotAdversarialBoundsAndIdExhaustion() {
+    constexpr std::size_t mapTiles = 8 * 8;
+    Simulation source({8, 8, 20, 1});
+    REQUIRE(source.AddPlayer(0, Faction::MeridianCompact, {500, 100}));
+    const EntityId worker = source.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
+    const std::vector<std::uint8_t> baseline = source.SaveSnapshot();
+    std::string error;
+
+    std::vector<std::uint8_t> excessiveVision = baseline;
+    WriteU32(excessiveVision, SnapshotFirstEntityOffset(mapTiles) + 27, 50000);
+    ResignSnapshot(excessiveVision);
+    REQUIRE(!Simulation::LoadSnapshot(excessiveVision, &error).has_value());
+    REQUIRE(error == "snapshot entity state is invalid");
+
+    std::vector<std::uint8_t> excessiveTick = baseline;
+    WriteU64(excessiveTick, 28, std::numeric_limits<std::uint64_t>::max());
+    ResignSnapshot(excessiveTick);
+    REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
+
+    std::vector<std::uint8_t> oversizedMap = baseline;
+    WriteU32(oversizedMap, 8, 2048);
+    WriteU32(oversizedMap, 12, 2048);
+    ResignSnapshot(oversizedMap);
+    REQUIRE(!Simulation::LoadSnapshot(oversizedMap, &error).has_value());
+    REQUIRE(error == "snapshot payload is too short for its declared map");
+
+    Simulation empty({8, 8, 20, 1});
+    REQUIRE(empty.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    std::vector<std::uint8_t> truncatedEntities = empty.SaveSnapshot();
+    WriteU32(truncatedEntities, SnapshotEntityCountOffset(mapTiles), 64 * 1024);
+    ResignSnapshot(truncatedEntities);
+    REQUIRE(!Simulation::LoadSnapshot(truncatedEntities, &error).has_value());
+    REQUIRE(error == "snapshot entity count is invalid");
+
+    std::vector<std::uint8_t> exhaustedIds = baseline;
+    WriteU32(exhaustedIds, 36, std::numeric_limits<std::uint32_t>::max());
+    ResignSnapshot(exhaustedIds);
+    std::optional<Simulation> exhausted =
+        Simulation::LoadSnapshot(exhaustedIds, &error);
+    REQUIRE(exhausted.has_value());
+    const std::size_t entityCount = exhausted->Entities().size();
+    REQUIRE(exhausted->SpawnEntity(0, Faction::MeridianCompact,
+                                     EntityType::Worker,
+                                     Vec2::FromTiles(3, 2)) == 0);
+    REQUIRE(exhausted->Entities().size() == entityCount);
+    const std::int32_t material = exhausted->FindPlayer(0)->resources.material;
+    Command build = MakeCommand(0, 0, 1, CommandType::Build, worker);
+    build.position = Vec2::FromTiles(5, 5);
+    build.buildType = EntityType::Barracks;
+    REQUIRE(exhausted->QueueCommand(build));
+    exhausted->Step();
+    REQUIRE(exhausted->Entities().size() == entityCount);
+    REQUIRE(exhausted->FindPlayer(0)->resources.material == material);
+    REQUIRE(Simulation::LoadSnapshot(exhausted->SaveSnapshot(), &error).has_value());
+}
+
 }  // namespace
 
 int main() {
@@ -380,6 +585,10 @@ int main() {
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"Future Well choices", TestFutureWellChoices},
         {"snapshot and replay", TestSnapshotAndReplay},
+        {"numeric and public input hardening", TestNumericAndPublicInputHardening},
+        {"sequence and build hardening", TestSequenceAndBuildHardening},
+        {"snapshot adversarial bounds and id exhaustion",
+         TestSnapshotAdversarialBoundsAndIdExhaustion},
     };
 
     std::size_t passed = 0;

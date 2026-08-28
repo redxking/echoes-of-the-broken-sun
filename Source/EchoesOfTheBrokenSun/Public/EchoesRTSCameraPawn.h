@@ -1,0 +1,59 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Pawn.h"
+#include "EchoesRTSCameraPawn.generated.h"
+
+class UCameraComponent;
+class USceneComponent;
+class USpringArmComponent;
+
+/** Mouse-and-keyboard top-down camera for the runtime prototype. */
+UCLASS(NotBlueprintable)
+class ECHOESOFTHEBROKENSUN_API AEchoesRTSCameraPawn final : public APawn
+{
+    GENERATED_BODY()
+
+public:
+    AEchoesRTSCameraPawn();
+
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaSeconds) override;
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+private:
+    void SetForwardInput(float Value);
+    void SetRightInput(float Value);
+    void ZoomIn();
+    void ZoomOut();
+    void ApplyZoom(float Direction);
+    void ClampToBattlefield();
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|Camera")
+    TObjectPtr<USceneComponent> SceneRoot;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|Camera")
+    TObjectPtr<USpringArmComponent> SpringArm;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|Camera")
+    TObjectPtr<UCameraComponent> Camera;
+
+    float ForwardInput = 0.0f;
+    float RightInput = 0.0f;
+    bool bEdgePanArmed = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
+    float PanSpeed = 2400.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
+    float EdgePanPixels = 18.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
+    float ZoomStep = 500.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
+    float MinimumZoom = 1400.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
+    float MaximumZoom = 6200.0f;
+};

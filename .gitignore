@@ -16,7 +16,8 @@ Saved/
 .build/
 BuildArtifacts/*
 !BuildArtifacts/.gitkeep
+Build/Mac/FileOpenOrder/
+Build/Mac/*.PackageVersionCounter
 .env
 .env.*
 Config/DefaultEngine.ini.local
-

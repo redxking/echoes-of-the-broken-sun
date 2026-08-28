@@ -15,8 +15,8 @@ This is the single authoritative provenance register and is edited in place. An 
 |---|---|---|---|---|---|---|
 | DATA-001 | Faction, unit, structure, and Future Well source definitions | Original project data | Angelis Pseftis | Project-owned original work | Simulation and balance | Approved source data |
 | CODE-001 | Project gameplay and simulation source | Original project code | Angelis Pseftis | Project-owned original work | Runtime and tests | Approved source code |
-| UE-ENGINE | Unreal Engine runtime/editor | Epic Games | Epic Games | Applicable Unreal Engine EULA | Engine dependency; not vendored | Installation paused |
-| PLACEHOLDER-001 | Engine basic-shape geometry, default materials, and debug primitives | Unreal Engine installation | Epic Games | Applicable Unreal Engine EULA | Development placeholder only | Planned; not yet imported |
+| UE-ENGINE | Unreal Engine runtime/editor | Epic Games | Epic Games | Applicable Unreal Engine EULA | Engine dependency; not vendored | UE 5.8.2 installed locally |
+| PLACEHOLDER-001 | Engine basic-shape geometry, default materials, and debug primitives | Unreal Engine installation | Epic Games | Applicable Unreal Engine EULA | Development placeholder only | In use by the runtime prototype; not final art |
 
 ## Rules
 

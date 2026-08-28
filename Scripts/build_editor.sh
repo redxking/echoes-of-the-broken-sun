@@ -12,5 +12,5 @@ if [[ ! -x "$builder" ]]; then
   exit 2
 fi
 
-"$builder" EchoesOfTheBrokenSunEditor Mac Development "$project" -waitmutex
-
+"$builder" EchoesOfTheBrokenSunEditor Mac Development "$project" \
+  -waitmutex -NoHotReloadFromIDE
