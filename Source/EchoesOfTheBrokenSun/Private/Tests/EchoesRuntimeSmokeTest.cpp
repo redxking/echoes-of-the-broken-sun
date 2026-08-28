@@ -11,6 +11,7 @@
 #include "EchoesSimulationSubsystem.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerInput.h"
+#include "InputCoreTypes.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesRuntimeSmokeTest,
@@ -39,6 +40,28 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
         TestTrue(
             TEXT("Legacy InputComponent is explicitly selected"),
             InputSettings->GetDefaultInputComponentClass() == UInputComponent::StaticClass());
+        const TArray<FInputActionKeyMapping>& ActionMappings =
+            InputSettings->GetActionMappings();
+        const auto HasAction = [&ActionMappings](FName Action, const FKey& Key)
+        {
+            return ActionMappings.ContainsByPredicate(
+                [Action, Key](const FInputActionKeyMapping& Mapping)
+                {
+                    return Mapping.ActionName == Action && Mapping.Key == Key;
+                });
+        };
+        TestTrue(TEXT("Barracks construction input is mapped"),
+                 HasAction(TEXT("BuildBarracks"), EKeys::B));
+        TestTrue(TEXT("Drop-off construction input is mapped"),
+                 HasAction(TEXT("BuildDropoff"), EKeys::N));
+        TestTrue(TEXT("Worker production input is mapped"),
+                 HasAction(TEXT("ProduceWorker"), EKeys::Q));
+        TestTrue(TEXT("Soldier production input is mapped"),
+                 HasAction(TEXT("ProduceSoldier"), EKeys::E));
+        TestTrue(TEXT("Pause input is mapped"),
+                 HasAction(TEXT("PauseScenario"), EKeys::P));
+        TestTrue(TEXT("Restart input is mapped"),
+                 HasAction(TEXT("RestartScenario"), EKeys::R));
     }
 
     echoes::sim::SimulationConfig Config;

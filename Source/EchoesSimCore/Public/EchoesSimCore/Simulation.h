@@ -27,8 +27,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 2;
-inline constexpr std::uint32_t kReplayVersion = 2;
+inline constexpr std::uint32_t kSnapshotVersion = 3;
+inline constexpr std::uint32_t kReplayVersion = 3;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -151,6 +151,7 @@ enum class CommandType : std::uint8_t {
     Build = 4,
     Attack = 5,
     FutureWell = 6,
+    Produce = 7,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -160,6 +161,25 @@ enum class PlacementResult : std::uint8_t {
     OutsideMap = 3,
     TerrainRestricted = 4,
     Occupied = 5,
+};
+
+enum class ProductionResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidProducer = 2,
+    ProducerIncomplete = 3,
+    ProducerBusy = 4,
+    UnsupportedUnit = 5,
+    InsufficientResources = 6,
+    CapacityReached = 7,
+    EntityCapacityReached = 8,
+};
+
+enum class MatchOutcome : std::uint8_t {
+    Ongoing = 0,
+    Player0Victory = 1,
+    Player1Victory = 2,
+    Draw = 3,
 };
 
 enum class AiPersonality : std::uint8_t {
@@ -218,6 +238,9 @@ struct Entity final {
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
     Tick reshapeUntilTick = 0;
     std::uint8_t reshapeVariant = 0;
+    EntityType productionType = EntityType::Worker;
+    std::int32_t productionProgress = 0;
+    std::int32_t productionRequired = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -281,6 +304,16 @@ public:
                                                     EntityType buildingType,
                                                     Vec2 position,
                                                     EntityId* blockingEntity = nullptr) const;
+    [[nodiscard]] ProductionResult ValidateProduction(
+        PlayerId player,
+        EntityId producer,
+        EntityType unitType) const;
+    [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
+    [[nodiscard]] ResourcePool ProductionCost(Faction faction,
+                                               EntityType type) const;
+    [[nodiscard]] std::int32_t PopulationUsed(PlayerId player) const;
+    [[nodiscard]] std::int32_t PopulationCapacity(PlayerId player) const;
+    [[nodiscard]] MatchOutcome Outcome() const;
 
     bool QueueCommand(const Command& command, std::string* rejectionReason = nullptr);
     void Step();
@@ -322,11 +355,14 @@ private:
     [[nodiscard]] bool IsBuilding(EntityType type) const;
     [[nodiscard]] bool IsDropoff(EntityType type) const;
     [[nodiscard]] std::int32_t FootprintHalfExtentRaw(EntityType type) const;
-    [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] Entity MakeEntity(PlayerId owner,
                                     Faction faction,
                                     EntityType type,
                                     Vec2 position) const;
+    [[nodiscard]] std::int32_t ProductionTicks(EntityType type) const;
+    [[nodiscard]] std::int32_t PopulationCost(EntityType type) const;
+    [[nodiscard]] std::optional<Vec2> FindProductionSpawnPosition(
+        const Entity& producer) const;
     [[nodiscard]] bool IsReshapedOpen(std::int32_t tileX,
                                       std::int32_t tileY) const;
     [[nodiscard]] bool InInteractionRange(const Entity& first,
@@ -349,6 +385,7 @@ private:
     void ProcessAttack(Entity& attacker,
                        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
+    void ProcessProduction();
     void ApplyPreserveIncome();
     void RemoveDestroyedEntities();
     void ClearInvalidOrders();

@@ -20,9 +20,9 @@ void AEchoesHUD::DrawHUD()
     const echoes::sim::Simulation* Sim =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
 
-    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 590.0f, 154.0f);
+    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 180.0f);
     DrawText(
-        TEXT("ECHOES OF THE BROKEN SUN  |  RUNTIME TECHNICAL PROTOTYPE"),
+        TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
         FLinearColor(0.15f, 0.88f, 1.0f),
         34.0f,
         31.0f,
@@ -37,10 +37,29 @@ void AEchoesHUD::DrawHUD()
             Sim->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId);
         if (Player != nullptr)
         {
+            FString MatchState = Bridge != nullptr && Bridge->IsScenarioPaused()
+                                     ? TEXT("PAUSED")
+                                     : TEXT("ACTIVE");
+            const echoes::sim::MatchOutcome Outcome = Sim->Outcome();
+            if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
+            {
+                MatchState = TEXT("VICTORY");
+            }
+            else if (Outcome == echoes::sim::MatchOutcome::Player1Victory)
+            {
+                MatchState = TEXT("DEFEAT");
+            }
+            else if (Outcome == echoes::sim::MatchOutcome::Draw)
+            {
+                MatchState = TEXT("DRAW");
+            }
             ResourceLine = FString::Printf(
-                TEXT("Matter  %d     Dawnshards  %d     Tick  %llu @ %u Hz"),
+                TEXT("Matter  %d     Dawnshards  %d     Logistics  %d/%d     %s     Tick  %llu @ %u Hz"),
                 Player->resources.material,
                 Player->resources.dawnshards,
+                Sim->PopulationUsed(UEchoesSimulationSubsystem::LocalPlayerId),
+                Sim->PopulationCapacity(UEchoesSimulationSubsystem::LocalPlayerId),
+                *MatchState,
                 static_cast<unsigned long long>(Sim->CurrentTick()),
                 Sim->Config().ticksPerSecond);
         }
@@ -64,6 +83,22 @@ void AEchoesHUD::DrawHUD()
             if (const AEchoesEntityView* View = Bridge->FindEntityView(SelectedIds[0]))
             {
                 SelectedType = FString::Printf(TEXT(" (%s)"), *View->GetDisplayName());
+            }
+            if (const echoes::sim::Entity* Entity =
+                    Bridge->FindEntity(SelectedIds[0]);
+                Entity != nullptr && Entity->productionRequired > 0)
+            {
+                const int32 Percent = FMath::Clamp(
+                    Entity->productionProgress * 100 /
+                        FMath::Max(1, Entity->productionRequired),
+                    0,
+                    100);
+                SelectedType += FString::Printf(
+                    TEXT(" — producing %s %d%%"),
+                    Entity->productionType == echoes::sim::EntityType::Worker
+                        ? TEXT("Worker")
+                        : TEXT("Soldier"),
+                    Percent);
             }
         }
         SelectionLine = FString::Printf(
@@ -90,10 +125,18 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[1] Harvest    [2] Preserve    [3] Reshape    Cyan: Meridian    Red: Kharuun    Orange: Matter"),
+        TEXT("[B] Barracks at pointer    [N] Drop-off at pointer    [Q] Worker    [E] Soldier    [P] Pause    [R] Restart"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         131.0f,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f,
+        false);
+    DrawText(
+        TEXT("[1] Harvest    [2] Preserve    [3] Reshape    Cyan: Meridian    Red: Kharuun    Orange: Matter"),
+        FLinearColor(0.73f, 0.76f, 0.82f),
+        34.0f,
+        154.0f,
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f,
         false);

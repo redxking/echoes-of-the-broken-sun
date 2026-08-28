@@ -29,6 +29,8 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
+    bSimulationPaused = false;
+    bMatchResultReported = false;
 }
 
 void UEchoesSimulationSubsystem::Deinitialize()
@@ -105,6 +107,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
 
     // Meridian Compact: the player-controlled force in the southwest.
     SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::CommandCore, 10, 10);
+    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Barracks, 14, 10);
     SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 8, 13);
     SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 11, 14);
     SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 14, 12);
@@ -114,6 +117,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
 
     // Kharuun Assemblies: deterministic prototype opposition in the northeast.
     SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
+    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Barracks, 50, 54);
     SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 51, 53);
     SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 54, 50);
     SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
@@ -146,6 +150,8 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
     bLoggedFirstTick = false;
+    bSimulationPaused = false;
+    bMatchResultReported = false;
     if (!SyncEntityViews(true))
     {
         UE_LOG(
@@ -179,11 +185,51 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
+    bSimulationPaused = false;
+    bMatchResultReported = false;
+}
+
+bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
+{
+    StopPrototypeScenario();
+    const bool bRestarted = StartPrototypeScenario();
+    if (bRestarted)
+    {
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_MATCH_RESTARTED]"));
+    }
+    else
+    {
+        UE_LOG(LogEchoes, Error, TEXT("[ECHOES_MATCH_RESTART_FAILED]"));
+    }
+    return bRestarted;
+}
+
+void UEchoesSimulationSubsystem::SetScenarioPaused(bool bPaused)
+{
+    if (!bScenarioReady || !Simulation.IsValid() ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        return;
+    }
+    bSimulationPaused = bPaused;
+    FixedTimeAccumulator = 0.0;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_MATCH_PAUSE] paused=%s"),
+        bSimulationPaused ? TEXT("true") : TEXT("false"));
+}
+
+echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
+{
+    return Simulation.IsValid() ? Simulation->Outcome()
+                                : echoes::sim::MatchOutcome::Ongoing;
 }
 
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
-    if (!bScenarioReady || !Simulation.IsValid())
+    if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
         return;
     }
@@ -230,16 +276,37 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
             }
             StopPrototypeScenario();
         }
-        else if (!bLoggedFirstTick)
+        else
         {
-            UE_LOG(
-                LogEchoes,
-                Display,
-                TEXT("[ECHOES_SIM_FIRST_TICK] tick=%llu checksum=%llu visibleViews=%d."),
-                static_cast<unsigned long long>(Simulation->CurrentTick()),
-                static_cast<unsigned long long>(Simulation->StateChecksum()),
-                EntityViews.Num());
-            bLoggedFirstTick = true;
+            const echoes::sim::MatchOutcome Outcome = Simulation->Outcome();
+            if (Outcome != echoes::sim::MatchOutcome::Ongoing &&
+                !bMatchResultReported)
+            {
+                bMatchResultReported = true;
+                if (AEchoesPlayerController* Controller =
+                        Cast<AEchoesPlayerController>(
+                            GetWorld()->GetFirstPlayerController()))
+                {
+                    Controller->NotifyMatchFinished(Outcome);
+                }
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_MATCH_FINISHED] outcome=%u tick=%llu"),
+                    static_cast<uint8>(Outcome),
+                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+            }
+            if (!bLoggedFirstTick)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_SIM_FIRST_TICK] tick=%llu checksum=%llu visibleViews=%d."),
+                    static_cast<unsigned long long>(Simulation->CurrentTick()),
+                    static_cast<unsigned long long>(Simulation->StateChecksum()),
+                    EntityViews.Num());
+                bLoggedFirstTick = true;
+            }
         }
     }
 }
@@ -279,11 +346,69 @@ bool UEchoesSimulationSubsystem::IssueCommand(
     echoes::sim::FutureWellChoice WellChoice,
     FString& OutFeedback)
 {
+    return QueuePlayerCommand(
+        CommandType,
+        ActorId,
+        TargetId,
+        WorldToSim(WorldPosition),
+        WellChoice,
+        echoes::sim::EntityType::Barracks,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueBuildCommand(
+    uint32 WorkerId,
+    echoes::sim::EntityType BuildingType,
+    const FVector& WorldPosition,
+    FString& OutFeedback)
+{
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::Build,
+        WorkerId,
+        0,
+        WorldToSim(WorldPosition),
+        echoes::sim::FutureWellChoice::Dormant,
+        BuildingType,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueProductionCommand(
+    uint32 ProducerId,
+    echoes::sim::EntityType UnitType,
+    FString& OutFeedback)
+{
+    const echoes::sim::Entity* Producer = FindEntity(ProducerId);
+    const echoes::sim::Vec2 Position =
+        Producer != nullptr ? Producer->position : echoes::sim::Vec2{};
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::Produce,
+        ProducerId,
+        0,
+        Position,
+        echoes::sim::FutureWellChoice::Dormant,
+        UnitType,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::QueuePlayerCommand(
+    echoes::sim::CommandType CommandType,
+    uint32 ActorId,
+    uint32 TargetId,
+    const echoes::sim::Vec2& SimPosition,
+    echoes::sim::FutureWellChoice WellChoice,
+    echoes::sim::EntityType BuildType,
+    FString& OutFeedback)
+{
     OutFeedback.Reset();
     if (!Simulation.IsValid() || !bScenarioReady)
     {
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_CMD_SIM_NOT_READY] actor=%u"), ActorId);
+        return false;
+    }
+    if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        OutFeedback = TEXT("[MATCH_FINISHED] Press R to restart before issuing orders.");
         return false;
     }
 
@@ -299,13 +424,13 @@ bool UEchoesSimulationSubsystem::IssueCommand(
         return false;
     }
 
-    const echoes::sim::Vec2 SimPosition = WorldToSim(WorldPosition);
     if (!ValidatePrototypeCommand(
             CommandType,
             *Actor,
             TargetId,
             SimPosition,
             WellChoice,
+            BuildType,
             OutFeedback))
     {
         UE_LOG(
@@ -327,6 +452,7 @@ bool UEchoesSimulationSubsystem::IssueCommand(
     Command.target = TargetId;
     Command.position = SimPosition;
     Command.wellChoice = WellChoice;
+    Command.buildType = BuildType;
 
     std::string Rejection;
     if (!Simulation->QueueCommand(Command, &Rejection))
@@ -363,6 +489,7 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
     uint32 TargetId,
     const echoes::sim::Vec2& Position,
     echoes::sim::FutureWellChoice WellChoice,
+    echoes::sim::EntityType BuildType,
     FString& OutFeedback) const
 {
     using echoes::sim::CommandType;
@@ -427,8 +554,77 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             }
             break;
         case CommandType::Build:
-            OutFeedback = TEXT("[BUILD_UNAVAILABLE] Building placement is outside this technical-prototype slice.");
+        {
+            if (Actor.type != EntityType::Worker)
+            {
+                OutFeedback = TEXT("[BUILD_REQUIRES_WORKER] Select a worker before placing a structure.");
+                return false;
+            }
+            if (Actor.order.type == echoes::sim::OrderType::Build)
+            {
+                OutFeedback = TEXT("[WORKER_BUSY] This worker already has a construction order.");
+                return false;
+            }
+            const echoes::sim::PlacementResult Placement =
+                Simulation->ValidatePlacement(LocalPlayerId, BuildType, Position);
+            if (Placement != echoes::sim::PlacementResult::Valid)
+            {
+                OutFeedback = FString::Printf(
+                    TEXT("[BUILD_PLACEMENT_INVALID] Placement rejected with code %u."),
+                    static_cast<uint8>(Placement));
+                return false;
+            }
+            const echoes::sim::PlayerState* Player =
+                Simulation->FindPlayer(LocalPlayerId);
+            const echoes::sim::ResourcePool Cost =
+                Simulation->BuildCost(Actor.faction, BuildType);
+            if (Player == nullptr || Player->resources.material < Cost.material ||
+                Player->resources.dawnshards < Cost.dawnshards)
+            {
+                OutFeedback = FString::Printf(
+                    TEXT("[INSUFFICIENT_RESOURCES] Requires %d Matter and %d Dawnshards."),
+                    Cost.material,
+                    Cost.dawnshards);
+                return false;
+            }
+            return true;
+        }
+        case CommandType::Produce:
+        {
+            const echoes::sim::ProductionResult Result =
+                Simulation->ValidateProduction(
+                    LocalPlayerId,
+                    Actor.id,
+                    BuildType);
+            switch (Result)
+            {
+                case echoes::sim::ProductionResult::Valid:
+                    return true;
+                case echoes::sim::ProductionResult::InvalidPlayer:
+                case echoes::sim::ProductionResult::InvalidProducer:
+                    OutFeedback = TEXT("[PRODUCER_INVALID] Select an owned production structure.");
+                    break;
+                case echoes::sim::ProductionResult::ProducerIncomplete:
+                    OutFeedback = TEXT("[PRODUCER_INCOMPLETE] Construction must finish before production.");
+                    break;
+                case echoes::sim::ProductionResult::ProducerBusy:
+                    OutFeedback = TEXT("[PRODUCER_BUSY] This structure already has an active production order.");
+                    break;
+                case echoes::sim::ProductionResult::UnsupportedUnit:
+                    OutFeedback = TEXT("[UNIT_UNSUPPORTED] Command Cores produce workers; Barracks produce soldiers.");
+                    break;
+                case echoes::sim::ProductionResult::InsufficientResources:
+                    OutFeedback = TEXT("[INSUFFICIENT_RESOURCES] The selected unit cannot be funded.");
+                    break;
+                case echoes::sim::ProductionResult::CapacityReached:
+                    OutFeedback = TEXT("[LOGISTICS_CAPACITY] Build a drop-off before adding more units.");
+                    break;
+                case echoes::sim::ProductionResult::EntityCapacityReached:
+                    OutFeedback = TEXT("[ENTITY_CAPACITY] The deterministic entity limit was reached.");
+                    break;
+            }
             return false;
+        }
     }
 
     if (Target == nullptr || !Simulation->IsEntityVisibleTo(LocalPlayerId, Target->id))

@@ -5,6 +5,7 @@ project_root="${0:A:h:h}"
 ue_root="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 uat="$ue_root/Engine/Build/BatchFiles/RunUAT.command"
 project="$project_root/EchoesOfTheBrokenSun.uproject"
+expected_version="$(/usr/bin/awk -F= '$1 == "ProjectVersion" { print $2; exit }' "$project_root/Config/DefaultGame.ini")"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 archive_dir="${1:-$project_root/BuildArtifacts/Packages/Mac-Development-$timestamp}"
 source_commit="$(git -C "$project_root" rev-parse HEAD 2>/dev/null || print unknown)"
@@ -20,6 +21,11 @@ archive_dir="${archive_dir:A}"
 
 if [[ ! -x "$uat" ]]; then
   print -u2 "Unreal Automation Tool is not available at: $uat"
+  exit 2
+fi
+
+if [[ -z "$expected_version" ]]; then
+  print -u2 "ProjectVersion is missing from Config/DefaultGame.ini."
   exit 2
 fi
 
@@ -71,8 +77,8 @@ if (( pak_count < 5 )); then
 fi
 
 if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" != "com.angelispseftis.echoesofthebrokensun" ||
-      "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" != "0.1.0" ]]; then
-  print -u2 "The package identity or version does not match the accepted 0.1.0 development baseline."
+      "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" != "$expected_version" ]]; then
+  print -u2 "The package identity or version does not match the configured $expected_version development baseline."
   exit 7
 fi
 

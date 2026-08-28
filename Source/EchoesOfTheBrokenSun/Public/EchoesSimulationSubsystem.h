@@ -36,6 +36,9 @@ public:
     /** Stops the prototype and releases every disposable presentation view. */
     void StopPrototypeScenario();
 
+    /** Recreates the bounded match from its deterministic initial state. */
+    bool RestartPrototypeScenario();
+
     /** Queues one player command for the next deterministic simulation tick. */
     bool IssueCommand(
         echoes::sim::CommandType CommandType,
@@ -44,6 +47,21 @@ public:
         const FVector& WorldPosition,
         echoes::sim::FutureWellChoice WellChoice,
         FString& OutFeedback);
+
+    bool IssueBuildCommand(
+        uint32 WorkerId,
+        echoes::sim::EntityType BuildingType,
+        const FVector& WorldPosition,
+        FString& OutFeedback);
+
+    bool IssueProductionCommand(
+        uint32 ProducerId,
+        echoes::sim::EntityType UnitType,
+        FString& OutFeedback);
+
+    void SetScenarioPaused(bool bPaused);
+    [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
+    [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
@@ -61,7 +79,16 @@ private:
         uint32 TargetId,
         const echoes::sim::Vec2& Position,
         echoes::sim::FutureWellChoice WellChoice,
+        echoes::sim::EntityType BuildType,
         FString& OutFeedback) const;
+    bool QueuePlayerCommand(
+        echoes::sim::CommandType CommandType,
+        uint32 ActorId,
+        uint32 TargetId,
+        const echoes::sim::Vec2& Position,
+        echoes::sim::FutureWellChoice WellChoice,
+        echoes::sim::EntityType BuildType,
+        FString& OutFeedback);
     void QueueOpponentCommands();
     bool SyncEntityViews(bool bTeleportNewViews);
     void DestroyEntityViews();
@@ -73,4 +100,6 @@ private:
     bool bScenarioReady = false;
     bool bWarnedAboutTimeClamp = false;
     bool bLoggedFirstTick = false;
+    bool bSimulationPaused = false;
+    bool bMatchResultReported = false;
 };

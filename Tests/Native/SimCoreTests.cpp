@@ -73,7 +73,7 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v2 fixed header/player/sequence fields plus terrain and two fog grids.
+    // Snapshot v3 fixed header/player/sequence fields plus terrain and two fog grids.
     return 100 + 3 * mapTileCount;
 }
 
@@ -259,6 +259,102 @@ void TestCombatResolvesDeterministically() {
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints > 0);
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints <
             simulation.FindEntity(kharuun)->maxHitPoints);
+}
+
+void TestProductionPopulationAndVictory() {
+    Simulation production({32, 32, 20, 0x51});
+    AddTwoPlayers(production, {1000, 200}, {1000, 200});
+    const EntityId localCore = production.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId localBarracks = production.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 5));
+    const EntityId enemyCore = production.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(26, 26));
+    REQUIRE(localCore != 0 && localBarracks != 0 && enemyCore != 0);
+    REQUIRE(production.Outcome() == MatchOutcome::Ongoing);
+    REQUIRE(production.PopulationUsed(0) == 0);
+    REQUIRE(production.PopulationCapacity(0) == 12);
+    REQUIRE(production.ValidateProduction(
+                0, localCore, EntityType::Worker) == ProductionResult::Valid);
+    REQUIRE(production.ValidateProduction(
+                0, localCore, EntityType::Soldier) ==
+            ProductionResult::UnsupportedUnit);
+
+    Command workerOrder =
+        MakeCommand(0, 0, 1, CommandType::Produce, localCore);
+    workerOrder.buildType = EntityType::Worker;
+    Command soldierOrder =
+        MakeCommand(0, 0, 2, CommandType::Produce, localBarracks);
+    soldierOrder.buildType = EntityType::Soldier;
+    REQUIRE(production.QueueCommand(workerOrder));
+    REQUIRE(production.QueueCommand(soldierOrder));
+    production.Step(10);
+    REQUIRE(production.FindEntity(localCore)->productionProgress == 10);
+    REQUIRE(production.FindEntity(localBarracks)->productionProgress == 10);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(production.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    production.Step(100);
+    restored->Step(100);
+    REQUIRE(restored->StateChecksum() == production.StateChecksum());
+    REQUIRE(production.FindPlayer(0)->resources.material == 865);
+    REQUIRE(production.FindPlayer(0)->resources.dawnshards == 180);
+    REQUIRE(production.PopulationUsed(0) == 3);
+    REQUIRE(std::count_if(
+                production.Entities().begin(), production.Entities().end(),
+                [](const Entity& entity) {
+                    return entity.owner == 0 && entity.type == EntityType::Worker;
+                }) == 1);
+    REQUIRE(std::count_if(
+                production.Entities().begin(), production.Entities().end(),
+                [](const Entity& entity) {
+                    return entity.owner == 0 && entity.type == EntityType::Soldier;
+                }) == 1);
+
+    Simulation capacity({32, 32, 20, 0x52});
+    REQUIRE(capacity.AddPlayer(0, Faction::MeridianCompact, {1000, 200}));
+    const EntityId capacityCore = capacity.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    REQUIRE(capacityCore != 0);
+    for (std::int32_t index = 0; index < 12; ++index) {
+        REQUIRE(capacity.SpawnEntity(
+                    0, Faction::MeridianCompact, EntityType::Worker,
+                    Vec2::FromTiles(10 + index % 6, 10 + index / 6)) != 0);
+    }
+    REQUIRE(capacity.PopulationUsed(0) == 12);
+    REQUIRE(capacity.ValidateProduction(
+                0, capacityCore, EntityType::Worker) ==
+            ProductionResult::CapacityReached);
+
+    Simulation victory({24, 24, 20, 0x53});
+    AddTwoPlayers(victory, {0, 0}, {0, 0});
+    REQUIRE(victory.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::CommandCore,
+                Vec2::FromTiles(4, 4)) != 0);
+    const EntityId targetCore = victory.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(10, 4));
+    REQUIRE(targetCore != 0);
+    for (std::uint64_t index = 0; index < 10; ++index) {
+        const EntityId soldier = victory.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier,
+            Vec2::FromTiles(7, 4));
+        REQUIRE(soldier != 0);
+        Command attack =
+            MakeCommand(0, 0, index + 1, CommandType::Attack, soldier);
+        attack.target = targetCore;
+        REQUIRE(victory.QueueCommand(attack));
+    }
+    victory.Step(80);
+    REQUIRE(victory.FindEntity(targetCore) == nullptr);
+    REQUIRE(victory.Outcome() == MatchOutcome::Player0Victory);
 }
 
 void TestFogAndNonCheatingAi() {
@@ -582,6 +678,7 @@ int main() {
         {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
         {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},
         {"combat", TestCombatResolvesDeterministically},
+        {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"Future Well choices", TestFutureWellChoices},
         {"snapshot and replay", TestSnapshotAndReplay},

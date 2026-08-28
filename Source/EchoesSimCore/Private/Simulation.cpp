@@ -18,7 +18,8 @@ constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
 constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
-constexpr std::size_t kSerializedEntityBytes = 105;
+constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
+constexpr std::size_t kSerializedEntityBytes = 114;
 constexpr std::size_t kSerializedCommandBytes = 36;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 80;
 constexpr std::int32_t kMaximumMapDimension =
@@ -84,7 +85,7 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::FutureWell;
+    return type >= CommandType::Stop && type <= CommandType::Produce;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -210,7 +211,7 @@ void WriteCommand(BinaryWriter& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::FutureWell) ||
+    if (type > static_cast<std::uint8_t>(CommandType::Produce) ||
         buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -527,6 +528,145 @@ ResourcePool Simulation::BuildCost(Faction faction, EntityType type) const {
     }
 }
 
+ResourcePool Simulation::ProductionCost(Faction faction, EntityType type) const {
+    const bool meridian = faction == Faction::MeridianCompact;
+    switch (type) {
+        case EntityType::Worker:
+            return {50, 0};
+        case EntityType::Soldier:
+            return {meridian ? 85 : 75, meridian ? 20 : 30};
+        default:
+            return {};
+    }
+}
+
+std::int32_t Simulation::ProductionTicks(EntityType type) const {
+    switch (type) {
+        case EntityType::Worker:
+            return static_cast<std::int32_t>(config_.ticksPerSecond * 3U);
+        case EntityType::Soldier:
+            return static_cast<std::int32_t>(config_.ticksPerSecond * 5U);
+        default:
+            return 0;
+    }
+}
+
+std::int32_t Simulation::PopulationCost(EntityType type) const {
+    switch (type) {
+        case EntityType::Worker:
+            return 1;
+        case EntityType::Soldier:
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+std::int32_t Simulation::PopulationUsed(PlayerId player) const {
+    if (FindPlayer(player) == nullptr) {
+        return 0;
+    }
+    std::int32_t used = 0;
+    for (const Entity& entity : entities_) {
+        if (entity.owner == player && entity.hitPoints > 0 && entity.completed) {
+            used = SaturatingAdd(used, PopulationCost(entity.type));
+        }
+    }
+    return used;
+}
+
+std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
+    if (FindPlayer(player) == nullptr) {
+        return 0;
+    }
+    std::int32_t capacity = 0;
+    for (const Entity& entity : entities_) {
+        if (entity.owner != player || entity.hitPoints <= 0 || !entity.completed) {
+            continue;
+        }
+        if (entity.type == EntityType::CommandCore) {
+            capacity = SaturatingAdd(capacity, 12);
+        } else if (entity.type == EntityType::Dropoff) {
+            capacity = SaturatingAdd(
+                capacity,
+                entity.faction == Faction::MeridianCompact ? 6 : 5);
+        }
+    }
+    return capacity;
+}
+
+ProductionResult Simulation::ValidateProduction(PlayerId player,
+                                                EntityId producer,
+                                                EntityType unitType) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return ProductionResult::InvalidPlayer;
+    }
+    const Entity* building = FindEntity(producer);
+    if (building == nullptr || building->owner != player ||
+        building->hitPoints <= 0) {
+        return ProductionResult::InvalidProducer;
+    }
+    if (!building->completed) {
+        return ProductionResult::ProducerIncomplete;
+    }
+    if (building->productionRequired > 0) {
+        return ProductionResult::ProducerBusy;
+    }
+    const bool supported =
+        (building->type == EntityType::CommandCore &&
+         unitType == EntityType::Worker) ||
+        (building->type == EntityType::Barracks &&
+         unitType == EntityType::Soldier);
+    if (!supported) {
+        return ProductionResult::UnsupportedUnit;
+    }
+    const ResourcePool cost = ProductionCost(playerState->faction, unitType);
+    if (!ResourceCovers(playerState->resources, cost)) {
+        return ProductionResult::InsufficientResources;
+    }
+    std::int32_t committedPopulation = PopulationUsed(player);
+    for (const Entity& entity : entities_) {
+        if (entity.owner == player && entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation,
+                PopulationCost(entity.productionType));
+        }
+    }
+    if (SaturatingAdd(committedPopulation, PopulationCost(unitType)) >
+        PopulationCapacity(player)) {
+        return ProductionResult::CapacityReached;
+    }
+    if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
+        nextEntityId_ == std::numeric_limits<EntityId>::max()) {
+        return ProductionResult::EntityCapacityReached;
+    }
+    return ProductionResult::Valid;
+}
+
+MatchOutcome Simulation::Outcome() const {
+    if (!players_[0].active || !players_[1].active) {
+        return MatchOutcome::Ongoing;
+    }
+    std::array<bool, 2> hasCommandCore{};
+    for (const Entity& entity : entities_) {
+        if (entity.owner < hasCommandCore.size() && entity.hitPoints > 0 &&
+            entity.type == EntityType::CommandCore) {
+            hasCommandCore[entity.owner] = true;
+        }
+    }
+    if (hasCommandCore[0] && hasCommandCore[1]) {
+        return MatchOutcome::Ongoing;
+    }
+    if (hasCommandCore[0]) {
+        return MatchOutcome::Player0Victory;
+    }
+    if (hasCommandCore[1]) {
+        return MatchOutcome::Player1Victory;
+    }
+    return MatchOutcome::Draw;
+}
+
 PlacementResult Simulation::ValidatePlacement(PlayerId player,
                                                EntityType buildingType,
                                                Vec2 position,
@@ -703,6 +843,45 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
     return nearest;
 }
 
+std::optional<Vec2> Simulation::FindProductionSpawnPosition(
+    const Entity& producer) const {
+    const std::int32_t centerX = producer.position.x.FloorToInt();
+    const std::int32_t centerY = producer.position.y.FloorToInt();
+    for (std::int32_t radius = 2; radius <= 8; ++radius) {
+        for (std::int32_t offsetY = -radius; offsetY <= radius; ++offsetY) {
+            for (std::int32_t offsetX = -radius; offsetX <= radius; ++offsetX) {
+                if (Abs64(offsetX) != radius && Abs64(offsetY) != radius) {
+                    continue;
+                }
+                const Vec2 candidate =
+                    Vec2::FromTiles(centerX + offsetX, centerY + offsetY);
+                if (!IsPositionPassable(candidate)) {
+                    continue;
+                }
+                bool blockedByBuilding = false;
+                for (const Entity& entity : entities_) {
+                    if (entity.hitPoints <= 0 || !IsBuilding(entity.type)) {
+                        continue;
+                    }
+                    const std::int32_t combinedExtent =
+                        FootprintHalfExtentRaw(entity.type) + kFixedScale / 8;
+                    if (Abs64(static_cast<std::int64_t>(candidate.x.Raw()) -
+                              entity.position.x.Raw()) < combinedExtent &&
+                        Abs64(static_cast<std::int64_t>(candidate.y.Raw()) -
+                              entity.position.y.Raw()) < combinedExtent) {
+                        blockedByBuilding = true;
+                        break;
+                    }
+                }
+                if (!blockedByBuilding) {
+                    return candidate;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 void Simulation::ProcessCommandsForCurrentTick() {
     std::vector<Command> due{};
     std::vector<Command> remaining{};
@@ -815,6 +994,24 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.destination = target->position;
                 actor->order.wellChoice = command.wellChoice;
             }
+            return;
+        }
+        case CommandType::Produce: {
+            if (ValidateProduction(command.player, actor->id, command.buildType) !=
+                ProductionResult::Valid) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr) {
+                return;
+            }
+            const ResourcePool cost =
+                ProductionCost(player->faction, command.buildType);
+            player->resources.material -= cost.material;
+            player->resources.dawnshards -= cost.dawnshards;
+            actor->productionType = command.buildType;
+            actor->productionProgress = 0;
+            actor->productionRequired = ProductionTicks(command.buildType);
             return;
         }
     }
@@ -967,6 +1164,53 @@ void Simulation::ProcessFutureWell(Entity& worker) {
             return;
     }
     worker.order = {};
+}
+
+void Simulation::ProcessProduction() {
+    struct CompletedUnit final {
+        EntityId producer = 0;
+        Entity unit{};
+    };
+    std::vector<CompletedUnit> completedUnits{};
+    for (Entity& producer : entities_) {
+        if (producer.hitPoints <= 0 || !producer.completed ||
+            producer.productionRequired <= 0) {
+            continue;
+        }
+        producer.productionProgress = std::min(
+            producer.productionRequired,
+            SaturatingAdd(producer.productionProgress, 1));
+        if (producer.productionProgress < producer.productionRequired) {
+            continue;
+        }
+        const std::optional<Vec2> spawnPosition =
+            FindProductionSpawnPosition(producer);
+        if (!spawnPosition.has_value() ||
+            entities_.size() + completedUnits.size() >=
+                kMaximumSerializedEntities) {
+            continue;
+        }
+        EntityId unitId = 0;
+        if (!TryAllocateEntityId(unitId)) {
+            continue;
+        }
+        Entity unit = MakeEntity(
+            producer.owner,
+            producer.faction,
+            producer.productionType,
+            *spawnPosition);
+        unit.id = unitId;
+        completedUnits.push_back({producer.id, unit});
+    }
+    for (const CompletedUnit& completion : completedUnits) {
+        Entity* producer = MutableEntity(completion.producer);
+        if (producer == nullptr || producer->hitPoints <= 0) {
+            continue;
+        }
+        producer->productionProgress = 0;
+        producer->productionRequired = 0;
+        entities_.push_back(completion.unit);
+    }
 }
 
 void Simulation::ProcessEntityOrders() {
@@ -1144,6 +1388,7 @@ void Simulation::Step() {
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
+    ProcessProduction();
     ApplyPreserveIncome();
     RemoveDestroyedEntities();
     ClearInvalidOrders();
@@ -1248,8 +1493,7 @@ std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
         return commands;
     }
     for (const Entity& actor : entities_) {
-        if (actor.owner != player || !actor.completed ||
-            (actor.type != EntityType::Worker && actor.type != EntityType::Soldier)) {
+        if (actor.owner != player || !actor.completed) {
             continue;
         }
         Command command{};
@@ -1257,6 +1501,22 @@ std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
         command.player = player;
         command.sequence = (currentTick_ << 32U) | actor.id;
         command.actor = actor.id;
+        if (actor.type == EntityType::CommandCore ||
+            actor.type == EntityType::Barracks) {
+            command.type = CommandType::Produce;
+            command.buildType = actor.type == EntityType::CommandCore
+                                    ? EntityType::Worker
+                                    : EntityType::Soldier;
+            if (ValidateProduction(player, actor.id, command.buildType) ==
+                ProductionResult::Valid) {
+                commands.push_back(command);
+            }
+            continue;
+        }
+        if (actor.type != EntityType::Worker &&
+            actor.type != EntityType::Soldier) {
+            continue;
+        }
         if (actor.type == EntityType::Worker) {
             if (actor.cargo > 0) {
                 const EntityId dropoff = FindNearestOwnedDropoff(player, actor.position);
@@ -1437,6 +1697,9 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
         writer.U8(static_cast<std::uint8_t>(entity.wellChoice));
         writer.U64(entity.reshapeUntilTick);
         writer.U8(entity.reshapeVariant);
+        writer.U8(static_cast<std::uint8_t>(entity.productionType));
+        writer.I32(entity.productionProgress);
+        writer.I32(entity.productionRequired);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -1601,6 +1864,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t orderBuildType = 0;
         std::uint8_t orderWellChoice = 0;
         std::uint8_t wellChoice = 0;
+        std::uint8_t productionType = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderRawX = 0;
@@ -1624,7 +1888,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(orderRawY) || !reader.U8(orderBuildType) ||
             !reader.U8(orderWellChoice) || !reader.U8(wellChoice) ||
             !reader.U64(entity.reshapeUntilTick) ||
-            !reader.U8(entity.reshapeVariant)) {
+            !reader.U8(entity.reshapeVariant) || !reader.U8(productionType) ||
+            !reader.I32(entity.productionProgress) ||
+            !reader.I32(entity.productionRequired)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -1637,6 +1903,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             entity.reshapeVariant > 3 ||
+            productionType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -1651,6 +1918,16 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             entity.cargoCapacity < entity.cargo || entity.resourceRemaining < 0 ||
             entity.constructionProgress < 0 || entity.constructionRequired < 0 ||
             entity.constructionProgress > entity.constructionRequired ||
+            entity.productionProgress < 0 || entity.productionRequired < 0 ||
+            entity.productionRequired > kMaximumProductionTicks ||
+            entity.productionProgress > entity.productionRequired ||
+            (entity.productionRequired == 0 &&
+             entity.productionProgress != 0) ||
+            (entity.productionRequired > 0 &&
+             !((type == static_cast<std::uint8_t>(EntityType::CommandCore) &&
+                productionType == static_cast<std::uint8_t>(EntityType::Worker)) ||
+               (type == static_cast<std::uint8_t>(EntityType::Barracks) &&
+                productionType == static_cast<std::uint8_t>(EntityType::Soldier)))) ||
             entity.reshapeUntilTick > kMaximumSupportedTick ||
             (wellChoice != static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
              entity.reshapeUntilTick != 0) ||
@@ -1669,6 +1946,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.order.buildType = static_cast<EntityType>(orderBuildType);
         entity.order.wellChoice = static_cast<FutureWellChoice>(orderWellChoice);
         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+        entity.productionType = static_cast<EntityType>(productionType);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;

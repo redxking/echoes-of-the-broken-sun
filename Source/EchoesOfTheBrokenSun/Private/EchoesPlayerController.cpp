@@ -67,6 +67,25 @@ void AEchoesPlayerController::NotifyRuntimeFailure(const FString& FailureCode)
         15.0f);
 }
 
+void AEchoesPlayerController::NotifyMatchFinished(
+    echoes::sim::MatchOutcome Outcome)
+{
+    ClearSelection();
+    FString Message =
+        TEXT("DRAW — both Command Cores fell in the same deterministic tick. Press R to restart.");
+    if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
+    {
+        Message =
+            TEXT("VICTORY — the opposing Command Core has fallen. Press R to restart.");
+    }
+    else if (Outcome == echoes::sim::MatchOutcome::Player1Victory)
+    {
+        Message =
+            TEXT("DEFEAT — your Command Core has fallen. Press R to restart.");
+    }
+    SetStatusMessage(Message, 3600.0f);
+}
+
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
@@ -117,6 +136,36 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::ChooseReshape);
+    InputComponent->BindAction(
+        TEXT("BuildBarracks"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::BuildBarracks);
+    InputComponent->BindAction(
+        TEXT("BuildDropoff"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::BuildDropoff);
+    InputComponent->BindAction(
+        TEXT("ProduceWorker"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ProduceWorker);
+    InputComponent->BindAction(
+        TEXT("ProduceSoldier"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ProduceSoldier);
+    InputComponent->BindAction(
+        TEXT("PauseScenario"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::TogglePause);
+    InputComponent->BindAction(
+        TEXT("RestartScenario"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::RestartScenario);
 }
 
 void AEchoesPlayerController::SelectionPressed()
@@ -288,6 +337,11 @@ void AEchoesPlayerController::ContextOrderPressed()
     if (Bridge == nullptr || !Bridge->IsScenarioReady())
     {
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
         return;
     }
 
@@ -476,6 +530,178 @@ void AEchoesPlayerController::ChooseReshape()
     SetFutureWellChoice(echoes::sim::FutureWellChoice::Reshape);
 }
 
+void AEchoesPlayerController::BuildBarracks()
+{
+    BuildAtCursor(echoes::sim::EntityType::Barracks);
+}
+
+void AEchoesPlayerController::BuildDropoff()
+{
+    BuildAtCursor(echoes::sim::EntityType::Dropoff);
+}
+
+void AEchoesPlayerController::ProduceWorker()
+{
+    ProduceUnit(echoes::sim::EntityType::Worker);
+}
+
+void AEchoesPlayerController::ProduceSoldier()
+{
+    ProduceUnit(echoes::sim::EntityType::Soldier);
+}
+
+void AEchoesPlayerController::BuildAtCursor(
+    echoes::sim::EntityType BuildingType)
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Construction is unavailable."));
+        return;
+    }
+    uint32 WorkerId = 0;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity != nullptr &&
+            Entity->type == echoes::sim::EntityType::Worker)
+        {
+            WorkerId = EntityId;
+            break;
+        }
+    }
+    if (WorkerId == 0)
+    {
+        SetStatusMessage(
+            TEXT("[BUILD_REQUIRES_WORKER] Select a worker, point at open ground, then press B or N."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at open battlefield ground."));
+        return;
+    }
+    FString Feedback;
+    if (Bridge->IssueBuildCommand(
+            WorkerId,
+            BuildingType,
+            HitResult.Location,
+            Feedback))
+    {
+        SetStatusMessage(
+            BuildingType == echoes::sim::EntityType::Barracks
+                ? TEXT("BARRACKS: construction order queued.")
+                : TEXT("DROP-OFF: construction order queued."));
+    }
+    else
+    {
+        SetStatusMessage(Feedback);
+    }
+}
+
+void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Production is unavailable."));
+        return;
+    }
+    int32 Accepted = 0;
+    FString LastFeedback;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        const bool bCompatible = Entity != nullptr &&
+            ((UnitType == echoes::sim::EntityType::Worker &&
+              Entity->type == echoes::sim::EntityType::CommandCore) ||
+             (UnitType == echoes::sim::EntityType::Soldier &&
+              Entity->type == echoes::sim::EntityType::Barracks));
+        if (!bCompatible)
+        {
+            continue;
+        }
+        FString Feedback;
+        if (Bridge->IssueProductionCommand(EntityId, UnitType, Feedback))
+        {
+            ++Accepted;
+        }
+        else
+        {
+            LastFeedback = Feedback;
+        }
+    }
+    if (Accepted > 0)
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("%s: %d production order%s queued."),
+                UnitType == echoes::sim::EntityType::Worker
+                    ? TEXT("WORKER")
+                    : TEXT("SOLDIER"),
+                Accepted,
+                Accepted == 1 ? TEXT("") : TEXT("s")));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastFeedback.IsEmpty()
+                ? TEXT("[NO_COMPATIBLE_PRODUCER] Select a Command Core for Q or a Barracks for E.")
+                : LastFeedback);
+    }
+}
+
+void AEchoesPlayerController::TogglePause()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Pause is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    const bool bPause = !Bridge->IsScenarioPaused();
+    Bridge->SetScenarioPaused(bPause);
+    SetStatusMessage(
+        bPause ? TEXT("MATCH PAUSED — press P to resume.")
+               : TEXT("MATCH RESUMED."),
+        bPause ? 3600.0f : 3.0f);
+}
+
+void AEchoesPlayerController::RestartScenario()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    ClearSelection();
+    if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
+    {
+        bRuntimeStateKnown = true;
+        SetStatusMessage(TEXT("MATCH RESTARTED — deterministic initial state restored."));
+    }
+    else
+    {
+        NotifyRuntimeFailure(TEXT("ECHOES_MATCH_RESTART_FAILED"));
+    }
+}
+
 void AEchoesPlayerController::SetFutureWellChoice(
     echoes::sim::FutureWellChoice Choice)
 {
@@ -569,6 +795,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("ATTACK");
         case echoes::sim::CommandType::FutureWell:
             return FString::Printf(TEXT("FUTURE WELL: %s"), *GetFutureWellChoiceLabel());
+        case echoes::sim::CommandType::Produce:
+            return TEXT("PRODUCE");
     }
     return TEXT("ORDER");
 }

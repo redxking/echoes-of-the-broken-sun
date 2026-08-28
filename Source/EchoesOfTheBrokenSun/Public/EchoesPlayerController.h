@@ -31,6 +31,7 @@ public:
     [[nodiscard]] FString GetStatusMessage() const;
     void NotifyRuntimeReady();
     void NotifyRuntimeFailure(const FString& FailureCode);
+    void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
 
 private:
     void SelectionPressed();
@@ -39,6 +40,12 @@ private:
     void ChooseHarvest();
     void ChoosePreserve();
     void ChooseReshape();
+    void BuildBarracks();
+    void BuildDropoff();
+    void ProduceWorker();
+    void ProduceSoldier();
+    void TogglePause();
+    void RestartScenario();
 
     void SelectAtCursor(bool bAdditive);
     void SelectInScreenRectangle(bool bAdditive);
@@ -47,6 +54,8 @@ private:
     void PruneSelection();
     bool TraceCursor(FHitResult& OutHitResult);
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
+    void BuildAtCursor(echoes::sim::EntityType BuildingType);
+    void ProduceUnit(echoes::sim::EntityType UnitType);
     void SetStatusMessage(const FString& Message, float DisplaySeconds = 4.0f);
     FString CommandLabel(echoes::sim::CommandType CommandType) const;
 

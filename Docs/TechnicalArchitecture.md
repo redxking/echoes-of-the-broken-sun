@@ -515,13 +515,13 @@ No later step weakens an earlier gate. In particular, presentation quality canno
 
 ## Current evidence boundary
 
-As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter generates a placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded technical prototype, not a vertical slice or completed game. The Project Ledger remains authoritative as test evidence changes.
+As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter generates a placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, construction placement commands, timed one-slot production, logistics capacity, pause/restart, derived Command-Core victory, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded playable-systems prototype, not a vertical slice or completed game. The Project Ledger remains authoritative as test evidence changes.
 
 This architecture does not establish that:
 
 - the installed Unreal/Xcode/Metal combination is supported beyond the exact local generation, build, automation, runtime, and rendering observations recorded in the Project Ledger;
 - the current native core satisfies every numeric, RNG, navigation, visibility, AI, serialization, replay, or security rule in this document;
-- a complete playable map, navigation-scale pathing, player-visible fog/shroud, construction/production/victory/restart loop, audio, save UI, accessibility behavior, or final asset exists;
+- a complete playable map, navigation-scale pathing, player-visible fog/shroud, manually accepted end-to-end construction/production/combat match, audio, save UI, accessibility behavior, or final asset exists;
 - host-authoritative transport, reconnect, spectators, desync recovery, separate-process play, or dedicated-server operation exists;
 - any frame-time, memory, traffic, save, replay, unit-count, compatibility, signing, notarization, distribution, or commercial-readiness target has been measured or met.
 
