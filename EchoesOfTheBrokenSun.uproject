@@ -1,0 +1,12 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Games",
+  "Description": "Echoes of the Broken Sun — an original science-fantasy real-time strategy game for macOS.",
+  "Modules": [
+    {"Name": "EchoesSimCore", "Type": "Runtime", "LoadingPhase": "Default"},
+    {"Name": "EchoesOfTheBrokenSun", "Type": "Runtime", "LoadingPhase": "Default"}
+  ],
+  "TargetPlatforms": ["Mac"]
+}
+

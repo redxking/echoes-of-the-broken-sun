@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "buildings": [
+    {"id":"mc_anchor","faction":"meridian_compact","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1400,"logistics_capacity":12,"footprint_cells":[5,5]},
+    {"id":"mc_power_link","faction":"meridian_compact","role":"supply_node","cost":{"matter":90,"dawn":10},"max_health":450,"logistics_capacity":6,"footprint_cells":[2,2]},
+    {"id":"ka_memory_hearth","faction":"kharuun_assemblies","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1300,"logistics_capacity":12,"footprint_cells":[5,5]},
+    {"id":"ka_waystone","faction":"kharuun_assemblies","role":"mobile_supply_node","cost":{"matter":80,"dawn":20},"max_health":390,"logistics_capacity":5,"footprint_cells":[2,2]}
+  ]
+}
+

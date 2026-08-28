@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "rules": {
+    "capture_radius_cm":420,
+    "capture_ticks":300,
+    "harvest":{"immediate_dawn":500,"permanent_state":"collapsed","telegraph_ticks":180},
+    "preserve":{"dawn_per_interval":15,"interval_ticks":300,"vision_radius_cm":1400},
+    "reshape":{"dawn_cost":120,"manifest_duration_ticks":1800,"telegraph_ticks":180}
+  }
+}
