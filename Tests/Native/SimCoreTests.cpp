@@ -1,0 +1,399 @@
+#include "EchoesSimCore/Simulation.h"
+
+#include <algorithm>
+#include <functional>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace {
+
+using namespace echoes::sim;
+
+class TestFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+#define REQUIRE(condition)                                                        \
+    do {                                                                          \
+        if (!(condition)) {                                                       \
+            throw TestFailure(std::string(__FILE__) + ":" +                     \
+                              std::to_string(__LINE__) + ": " #condition);       \
+        }                                                                         \
+    } while (false)
+
+Command MakeCommand(Tick tick,
+                    PlayerId player,
+                    std::uint64_t sequence,
+                    CommandType type,
+                    EntityId actor) {
+    Command command{};
+    command.executeTick = tick;
+    command.player = player;
+    command.sequence = sequence;
+    command.type = type;
+    command.actor = actor;
+    return command;
+}
+
+void AddTwoPlayers(Simulation& simulation,
+                   ResourcePool playerZero = {1000, 500},
+                   ResourcePool playerOne = {1000, 500}) {
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, playerZero));
+    REQUIRE(simulation.AddPlayer(1, Faction::KharuunAssemblies, playerOne));
+}
+
+void TestFixedTickMovement() {
+    Simulation simulation({16, 16, 20, 17});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
+    REQUIRE(worker != 0);
+
+    Command move = MakeCommand(0, 0, 1, CommandType::Move, worker);
+    move.position = Vec2::FromTiles(4, 2);
+    REQUIRE(simulation.QueueCommand(move));
+    simulation.Step(16);
+
+    const Entity* moved = simulation.FindEntity(worker);
+    REQUIRE(moved != nullptr);
+    REQUIRE(moved->position == Vec2::FromTiles(4, 2));
+    REQUIRE(moved->order.type == OrderType::None);
+    REQUIRE(simulation.CurrentTick() == 16);
+    REQUIRE(Fixed::FromRatio(3, 2).Raw() == 1536);
+}
+
+struct DeterminismScenario final {
+    Simulation simulation;
+    EntityId worker = 0;
+    EntityId well = 0;
+    EntityId meridianSoldier = 0;
+    EntityId kharuunSoldier = 0;
+};
+
+DeterminismScenario MakeDeterminismScenario() {
+    DeterminismScenario scenario{Simulation({24, 24, 20, 0x12345678ULL})};
+    AddTwoPlayers(scenario.simulation);
+    scenario.worker = scenario.simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(3, 4));
+    scenario.well = scenario.simulation.SpawnFutureWell(Vec2::FromTiles(4, 4));
+    scenario.meridianSoldier = scenario.simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(6, 6));
+    scenario.kharuunSoldier = scenario.simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier, Vec2::FromTiles(9, 6));
+    REQUIRE(scenario.worker != 0 && scenario.well != 0 &&
+            scenario.meridianSoldier != 0 && scenario.kharuunSoldier != 0);
+    return scenario;
+}
+
+std::vector<Command> DeterminismCommands(const DeterminismScenario& scenario) {
+    Command reshape = MakeCommand(0, 0, 20, CommandType::FutureWell,
+                                  scenario.worker);
+    reshape.target = scenario.well;
+    reshape.wellChoice = FutureWellChoice::Reshape;
+
+    Command meridianAttack = MakeCommand(0, 0, 40, CommandType::Attack,
+                                         scenario.meridianSoldier);
+    meridianAttack.target = scenario.kharuunSoldier;
+
+    Command kharuunAttack = MakeCommand(0, 1, 10, CommandType::Attack,
+                                        scenario.kharuunSoldier);
+    kharuunAttack.target = scenario.meridianSoldier;
+
+    Command lateMove = MakeCommand(55, 0, 60, CommandType::Move,
+                                   scenario.worker);
+    lateMove.position = Vec2::FromTiles(12, 12);
+    return {reshape, meridianAttack, kharuunAttack, lateMove};
+}
+
+void TestCanonicalCommandOrderingAndDeterminism() {
+    DeterminismScenario forward = MakeDeterminismScenario();
+    DeterminismScenario reverse = MakeDeterminismScenario();
+    const std::vector<Command> commands = DeterminismCommands(forward);
+    for (const Command& command : commands) {
+        REQUIRE(forward.simulation.QueueCommand(command));
+    }
+    for (auto command = commands.rbegin(); command != commands.rend(); ++command) {
+        REQUIRE(reverse.simulation.QueueCommand(*command));
+    }
+
+    Command duplicate = commands.front();
+    duplicate.type = CommandType::Stop;
+    REQUIRE(!forward.simulation.QueueCommand(duplicate));
+
+    for (int tick = 0; tick < 100; ++tick) {
+        forward.simulation.Step();
+        reverse.simulation.Step();
+        REQUIRE(forward.simulation.StateChecksum() ==
+                reverse.simulation.StateChecksum());
+    }
+    REQUIRE(forward.simulation.FindEntity(forward.well)->reshapeVariant ==
+            reverse.simulation.FindEntity(reverse.well)->reshapeVariant);
+}
+
+void TestGatherDeliverBuildAndPlacement() {
+    Simulation simulation({24, 24, 20, 99});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {500, 100}));
+    const EntityId base = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(2, 2));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(4, 2));
+    const EntityId resource =
+        simulation.SpawnResourceNode(Vec2::FromTiles(5, 2), 500);
+    REQUIRE(base != 0 && worker != 0 && resource != 0);
+
+    REQUIRE(simulation.ValidatePlacement(0, EntityType::Barracks,
+                                         Vec2::FromTiles(0, 0)) ==
+            PlacementResult::OutsideMap);
+    EntityId blocker = 0;
+    REQUIRE(simulation.ValidatePlacement(0, EntityType::Barracks,
+                                         Vec2::FromTiles(2, 2), &blocker) ==
+            PlacementResult::Occupied);
+    REQUIRE(blocker == base);
+    REQUIRE(simulation.SetTerrainTile(12, 12, Terrain::Blocked));
+    REQUIRE(simulation.ValidatePlacement(0, EntityType::Barracks,
+                                         Vec2::FromTiles(12, 12)) ==
+            PlacementResult::TerrainRestricted);
+
+    Command gather = MakeCommand(0, 0, 1, CommandType::Gather, worker);
+    gather.target = resource;
+    REQUIRE(simulation.QueueCommand(gather));
+    simulation.Step(20);
+    REQUIRE(simulation.FindEntity(worker)->cargo == 100);
+
+    const std::int32_t materialBeforeDelivery =
+        simulation.FindPlayer(0)->resources.material;
+    Command deliver =
+        MakeCommand(simulation.CurrentTick(), 0, 2, CommandType::Deliver, worker);
+    deliver.target = base;
+    REQUIRE(simulation.QueueCommand(deliver));
+    simulation.Step(30);
+    REQUIRE(simulation.FindEntity(worker)->cargo == 0);
+    REQUIRE(simulation.FindPlayer(0)->resources.material ==
+            materialBeforeDelivery + 100);
+
+    Command build =
+        MakeCommand(simulation.CurrentTick(), 0, 3, CommandType::Build, worker);
+    build.buildType = EntityType::Barracks;
+    build.position = Vec2::FromTiles(8, 8);
+    REQUIRE(simulation.QueueCommand(build));
+    simulation.Step(140);
+
+    const auto barracks = std::find_if(
+        simulation.Entities().begin(), simulation.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 && entity.type == EntityType::Barracks;
+        });
+    REQUIRE(barracks != simulation.Entities().end());
+    REQUIRE(barracks->completed);
+    REQUIRE(barracks->hitPoints == barracks->maxHitPoints);
+    REQUIRE(simulation.FindPlayer(0)->resources.material ==
+            materialBeforeDelivery + 100 - 170);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 80);
+}
+
+void TestCombatResolvesDeterministically() {
+    Simulation simulation({20, 20, 20, 7});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId meridian = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(4, 4));
+    const EntityId kharuun = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(7, 4));
+    Command first = MakeCommand(0, 0, 1, CommandType::Attack, meridian);
+    first.target = kharuun;
+    Command second = MakeCommand(0, 1, 1, CommandType::Attack, kharuun);
+    second.target = meridian;
+    REQUIRE(simulation.QueueCommand(first));
+    REQUIRE(simulation.QueueCommand(second));
+    simulation.Step(100);
+
+    REQUIRE(simulation.FindEntity(meridian) == nullptr);
+    REQUIRE(simulation.FindEntity(kharuun) != nullptr);
+    REQUIRE(simulation.FindEntity(kharuun)->hitPoints > 0);
+    REQUIRE(simulation.FindEntity(kharuun)->hitPoints <
+            simulation.FindEntity(kharuun)->maxHitPoints);
+}
+
+void TestFogAndNonCheatingAi() {
+    Simulation simulation({32, 32, 20, 5});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(3, 2));
+    const EntityId soldier = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(3, 3));
+    const EntityId resource =
+        simulation.SpawnResourceNode(Vec2::FromTiles(4, 2), 100);
+    const EntityId visibleEnemy = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(8, 3));
+    const EntityId hiddenEnemy = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(25, 25));
+    REQUIRE(worker != 0 && soldier != 0 && resource != 0 && visibleEnemy != 0 &&
+            hiddenEnemy != 0);
+    REQUIRE(simulation.VisibilityAt(0, Vec2::FromTiles(3, 3)) ==
+            Visibility::Visible);
+    REQUIRE(simulation.VisibilityAt(0, Vec2::FromTiles(25, 25)) ==
+            Visibility::Unexplored);
+    REQUIRE(!simulation.IsEntityVisibleTo(0, hiddenEnemy));
+
+    const std::vector<Command> ai =
+        simulation.GenerateAiCommands(0, AiPersonality::Balanced);
+    const auto workerDecision = std::find_if(
+        ai.begin(), ai.end(),
+        [worker](const Command& command) { return command.actor == worker; });
+    const auto soldierDecision = std::find_if(
+        ai.begin(), ai.end(),
+        [soldier](const Command& command) { return command.actor == soldier; });
+    REQUIRE(workerDecision != ai.end());
+    REQUIRE(workerDecision->type == CommandType::Gather);
+    REQUIRE(workerDecision->target == resource);
+    REQUIRE(soldierDecision != ai.end());
+    REQUIRE(soldierDecision->type == CommandType::Attack);
+    REQUIRE(soldierDecision->target == visibleEnemy);
+    REQUIRE(std::none_of(ai.begin(), ai.end(), [hiddenEnemy](const Command& command) {
+        return command.target == hiddenEnemy;
+    }));
+
+    Simulation exploredSimulation({32, 32, 20, 5});
+    REQUIRE(exploredSimulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId scout = exploredSimulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(3, 3));
+    Command move = MakeCommand(0, 0, 1, CommandType::Move, scout);
+    move.position = Vec2::FromTiles(20, 20);
+    REQUIRE(exploredSimulation.QueueCommand(move));
+    exploredSimulation.Step(300);
+    REQUIRE(exploredSimulation.VisibilityAt(0, Vec2::FromTiles(3, 3)) ==
+            Visibility::Explored);
+}
+
+void TestFutureWellChoices() {
+    {
+        Simulation harvest({20, 20, 20, 11});
+        REQUIRE(harvest.AddPlayer(0, Faction::MeridianCompact, {500, 50}));
+        const EntityId worker = harvest.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Worker,
+            Vec2::FromTiles(5, 6));
+        const EntityId well = harvest.SpawnFutureWell(Vec2::FromTiles(6, 6));
+        Command action = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+        action.target = well;
+        action.wellChoice = FutureWellChoice::Harvest;
+        REQUIRE(harvest.QueueCommand(action));
+        harvest.Step();
+        REQUIRE(harvest.FindPlayer(0)->resources.dawnshards == 350);
+        REQUIRE(harvest.FindEntity(well)->wellChoice == FutureWellChoice::Harvest);
+        REQUIRE(harvest.TerrainAt(7, 7) == Terrain::Scarred);
+        REQUIRE(harvest.ValidatePlacement(0, EntityType::Barracks,
+                                          Vec2::FromTiles(8, 8)) ==
+                PlacementResult::TerrainRestricted);
+    }
+    {
+        Simulation preserve({24, 24, 20, 11});
+        REQUIRE(preserve.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+        const EntityId worker = preserve.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Worker,
+            Vec2::FromTiles(9, 10));
+        const EntityId well = preserve.SpawnFutureWell(Vec2::FromTiles(10, 10));
+        Command action = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+        action.target = well;
+        action.wellChoice = FutureWellChoice::Preserve;
+        REQUIRE(preserve.QueueCommand(action));
+        preserve.Step(20);
+        REQUIRE(preserve.FindPlayer(0)->resources.dawnshards == 6);
+        REQUIRE(preserve.FindEntity(well)->wellChoice == FutureWellChoice::Preserve);
+        REQUIRE(preserve.VisibilityAt(0, Vec2::FromTiles(18, 10)) ==
+                Visibility::Visible);
+    }
+    {
+        Simulation reshape({20, 20, 20, 0x55});
+        REQUIRE(reshape.AddPlayer(0, Faction::MeridianCompact, {0, 200}));
+        const EntityId worker = reshape.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Worker,
+            Vec2::FromTiles(5, 6));
+        const EntityId well = reshape.SpawnFutureWell(Vec2::FromTiles(6, 6));
+        REQUIRE(reshape.SetTerrainTile(7, 6, Terrain::Blocked));
+        REQUIRE(!reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
+        Command action = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+        action.target = well;
+        action.wellChoice = FutureWellChoice::Reshape;
+        REQUIRE(reshape.QueueCommand(action));
+        reshape.Step();
+        REQUIRE(reshape.FindPlayer(0)->resources.dawnshards == 100);
+        const Entity* reshapedWell = reshape.FindEntity(well);
+        REQUIRE(reshapedWell->wellChoice == FutureWellChoice::Reshape);
+        REQUIRE(reshapedWell->reshapeUntilTick >= 40 &&
+                reshapedWell->reshapeUntilTick <= 60);
+        REQUIRE(reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
+        const Tick end = reshapedWell->reshapeUntilTick;
+        reshape.Step(end - reshape.CurrentTick());
+        REQUIRE(!reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    }
+}
+
+void TestSnapshotAndReplay() {
+    DeterminismScenario scenario = MakeDeterminismScenario();
+    scenario.simulation.CaptureReplayBaseline();
+    const std::vector<Command> commands = DeterminismCommands(scenario);
+    for (const Command& command : commands) {
+        REQUIRE(scenario.simulation.QueueCommand(command));
+    }
+    scenario.simulation.Step(25);
+
+    const std::vector<std::uint8_t> snapshot = scenario.simulation.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> loaded = Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(loaded.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(loaded->StateChecksum() == scenario.simulation.StateChecksum());
+    for (int tick = 0; tick < 50; ++tick) {
+        loaded->Step();
+        scenario.simulation.Step();
+        REQUIRE(loaded->StateChecksum() == scenario.simulation.StateChecksum());
+    }
+
+    std::vector<std::uint8_t> corrupted = snapshot;
+    corrupted[20] ^= 0x40;
+    REQUIRE(!Simulation::LoadSnapshot(corrupted, &error).has_value());
+    REQUIRE(error == "snapshot integrity check failed");
+
+    const ReplayRecord replay = scenario.simulation.ExportReplay();
+    REQUIRE(replay.commands.size() == commands.size());
+    std::optional<Simulation> reproduced = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(reproduced.has_value());
+    REQUIRE(reproduced->CurrentTick() == scenario.simulation.CurrentTick());
+    REQUIRE(reproduced->StateChecksum() == scenario.simulation.StateChecksum());
+}
+
+}  // namespace
+
+int main() {
+    const std::vector<std::pair<std::string, std::function<void()>>> tests{
+        {"fixed tick movement", TestFixedTickMovement},
+        {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
+        {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},
+        {"combat", TestCombatResolvesDeterministically},
+        {"fog and non-cheating AI", TestFogAndNonCheatingAi},
+        {"Future Well choices", TestFutureWellChoices},
+        {"snapshot and replay", TestSnapshotAndReplay},
+    };
+
+    std::size_t passed = 0;
+    for (const auto& [name, test] : tests) {
+        try {
+            test();
+            ++passed;
+            std::cout << "[PASS] " << name << '\n';
+        } catch (const std::exception& failure) {
+            std::cerr << "[FAIL] " << name << ": " << failure.what() << '\n';
+            return 1;
+        }
+    }
+    std::cout << passed << "/" << tests.size()
+              << " native simulation tests passed\n";
+    return 0;
+}
