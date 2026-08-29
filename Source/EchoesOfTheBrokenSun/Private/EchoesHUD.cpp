@@ -325,6 +325,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignCityReserve)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Reserve plan  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1005,6 +1016,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bSevenAccounts = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSevenAccounts;
+    const bool bCityReserve = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignCityReserve;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bNewCampaignArmed =
@@ -1029,6 +1043,7 @@ void AEchoesHUD::DrawTitleScreen(
              SmallFont, 0.92f * TextScale, false);
     DrawText(bPrologue ? TEXT("WHAT THE LEDGER KEEPS")
              : bSevenAccounts ? TEXT("SEVEN ACCOUNTS OF RAIN")
+             : bCityReserve ? TEXT("A CITY ON RESERVE")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1040,6 +1055,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 02  //  %s  //  ORUUN"),
                   *LocalFaction)
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 03  //  %s  //  MARA VEY"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1050,6 +1069,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 01")
     : bSevenAccounts
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 02")
+    : bCityReserve
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 03")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1068,6 +1089,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Recover Talar Venn's displaced archive before the line collapses.")
         : bSevenAccounts
             ? TEXT("Carry the inherited account into terrain changed by the prior decision.")
+        : bCityReserve
+            ? TEXT("Lume Reach is running on reserve. Three districts are outside the stable grid.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1078,6 +1101,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Commit the Well's consequence, then withdraw to Lume Reach.")
         : bSevenAccounts
             ? TEXT("Re-root the Waystone, then bring Oruun to the matching memory site.")
+        : bCityReserve
+            ? TEXT("Extend Power Links and energize every district in the inherited priority order.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1265,6 +1290,72 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignCityReserve)
+    {
+        const FEchoesCityReserveGrid Grid = Bridge->GetCityReserveGrid();
+        const bool bFailed =
+            Objective.CityReservePhase == EEchoesCityReservePhase::Failed;
+        const auto IsPowered = [&Objective](EEchoesCityDistrict District)
+        {
+            switch (District)
+            {
+                case EEchoesCityDistrict::LifeSupport:
+                    return Objective.bLifeSupportPowered;
+                case EEchoesCityDistrict::Transit:
+                    return Objective.bTransitPowered;
+                case EEchoesCityDistrict::Archive:
+                    return Objective.bArchivePowered;
+            }
+            return false;
+        };
+        const auto DistrictLine = [&IsPowered, bFailed](
+                                      EEchoesCityDistrict District)
+        {
+            return FString::Printf(
+                TEXT("%s — %s"),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(District),
+                bFailed ? TEXT("GRID LOST")
+                        : IsPowered(District) ? TEXT("POWERED")
+                                              : TEXT("CONNECT POWER LINK"));
+        };
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("A CITY ON RESERVE  //  MISSION 03"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  %s"), *DistrictLine(Grid.Priority)),
+            bFailed ? Failed : IsPowered(Grid.Priority) ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  %s"), *DistrictLine(Grid.Secondary)),
+            bFailed ? Failed : IsPowered(Grid.Secondary) ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  %s"), *DistrictLine(Grid.Final)),
+            bFailed ? Failed : IsPowered(Grid.Final) ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_CITY_RESERVE_OBJECTIVES_READY] phase=%s branch=%s districts=%u,%u,%u reconstructable=true"),
+                FEchoesCityReserveMissionModel::StableName(
+                    Objective.CityReservePhase),
+                Grid.StableName,
+                Objective.LifeSupportDistrictId,
+                Objective.TransitDistrictId,
+                Objective.ArchiveDistrictId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -1371,6 +1462,9 @@ void AEchoesHUD::DrawMatchResult(
     const bool bSevenAccountsResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignSevenAccounts;
+    const bool bCityReserveResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignCityReserve;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : Outcome == echoes::sim::MatchOutcome::Player0Victory;
@@ -1382,7 +1476,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bSevenAccountsResult
+        ? bCityReserveResult
+            ? bVictory ? TEXT("LUME REACH HOLDS ITS RESERVE")
+                       : TEXT("THE CITY GRID FALLS BELOW MARGIN")
+        : bSevenAccountsResult
             ? bVictory ? TEXT("THE ROUTE REMEMBERS ORUUN")
                        : TEXT("THE SEVENTH ACCOUNT FALLS SILENT")
             : bVictory ? TEXT("THE LEDGER RETURNS TO LUME REACH")
@@ -1391,7 +1488,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bSevenAccountsResult
+        ? bCityReserveResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("Life support, transit, and archive continuity are powered under the inherited %s reserve plan."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("A district post, the local Core, or the grid line failed before reserve service was restored.")
+        : bSevenAccountsResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The Waystone is rooted, Oruun reached the %s account, and the inherited route remains traversable."),
@@ -1420,7 +1524,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bSevenAccountsResult
+                CampaignPersistenceLine = bCityReserveResult
+                    ? FString::Printf(
+                          TEXT("MISSION 03 RECORDED // %s reserve grid stabilized."),
+                          RecordedChoice)
+                : bSevenAccountsResult
                     ? FString::Printf(
                           TEXT("MISSION 02 RECORDED // %s route secured."),
                           RecordedChoice)
@@ -1473,7 +1581,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bSevenAccountsResult
+        ? bCityReserveResult
+            ? FString::Printf(
+                  TEXT("MISSION 03 — A CITY ON RESERVE  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bSevenAccountsResult
             ? FString::Printf(
                   TEXT("MISSION 02 — SEVEN ACCOUNTS OF RAIN  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -1665,10 +1777,17 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bSevenAccounts = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSevenAccounts;
+    const bool bCityReserve = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignCityReserve;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
             : FEchoesSevenAccountsRoute{};
+    const FEchoesCityReserveGrid CityReserveGrid =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetCityReserveGrid()
+            : FEchoesCityReserveGrid{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -1690,6 +1809,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("SEVEN ACCOUNTS OF RAIN  //  MISSION 02  //  %s"),
                   *LocalFaction)
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("A CITY ON RESERVE  //  MISSION 03  //  %s"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -1705,6 +1828,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("The prior %s decision altered the crossing; seven inherited accounts now disagree about the route."),
                   WellChoiceDisplayName(SevenAccountsRoute.PriorChoice))
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("Lume Reach is below reserve margin. The inherited %s decision fixes which district receives power first."),
+                  WellChoiceDisplayName(CityReserveGrid.PriorChoice))
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -1714,6 +1841,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Oruun carries the %s testimony. The Waystone must make that account traversable."),
                   SevenAccountsRoute.DisplayName)
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("Mara Vey is operating under the %s. Three district Aegis posts are intact but disconnected."),
+                  CityReserveGrid.DisplayName)
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -1729,6 +1860,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("01  Uproot, move, and re-root the Waystone at tile %d,%d."),
                   SevenAccountsRoute.WaystoneAnchor.x.FloorToInt(),
                   SevenAccountsRoute.WaystoneAnchor.y.FloorToInt())
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("01  Use workers and [N] Power Links to energize %s first."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      CityReserveGrid.Priority))
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -1739,6 +1875,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("02  After the Waystone roots, bring Oruun's memory-bearer to tile %d,%d."),
                   SevenAccountsRoute.MemoryAccountSite.x.FloorToInt(),
                   SevenAccountsRoute.MemoryAccountSite.y.FloorToInt())
+        : bCityReserve
+            ? FString::Printf(
+                  TEXT("02  Extend the same authoritative grid to %s, then %s."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      CityReserveGrid.Secondary),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      CityReserveGrid.Final))
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -1748,6 +1891,8 @@ void AEchoesHUD::DrawMissionBriefing(
              SmallFont, 0.95f * TextScale, false);
     DrawText(bSevenAccounts
                  ? TEXT("The route is inherited. Mission 01's choice cannot be changed here.")
+             : bCityReserve
+                 ? TEXT("The reserve priority is inherited from both prior records and cannot be changed here.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -1755,6 +1900,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Mission victory is evacuation. Destroying the opposing Core does not replace withdrawal.")
         : bSevenAccounts
             ? TEXT("Victory is migration and recall. Destroying the opposing Core does not replace either objective.")
+        : bCityReserve
+            ? TEXT("Victory is three powered districts. Destroying the opposing Core does not stabilize Lume Reach.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -1770,6 +1917,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
         : bSevenAccounts
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
+        : bCityReserve
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -1975,7 +2124,9 @@ void AEchoesHUD::DrawTacticalMinimap(
 
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignSevenAccounts)
+            EEchoesOperationMode::CampaignSevenAccounts ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignCityReserve)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -2027,7 +2178,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                 TEXT("E"),
                 EvacColor);
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignSevenAccounts)
         {
             const FEchoesSevenAccountsRoute Route =
                 Bridge->GetSevenAccountsRoute();
@@ -2044,6 +2196,30 @@ void AEchoesHUD::DrawTacticalMinimap(
                     ? Border
                     : FLinearColor(0.48f, 0.55f, 0.62f));
         }
+        else
+        {
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::LifeSupport),
+                TEXT("L"),
+                Objective.bLifeSupportPowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Transit),
+                TEXT("T"),
+                Objective.bTransitPowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Archive),
+                TEXT("A"),
+                Objective.bArchivePowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -2056,6 +2232,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignSevenAccounts
             ? TEXT("MISSION NAV  |  WAYSTONE + MEMORY")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignCityReserve
+            ? TEXT("MISSION NAV  |  LIFE + TRANSIT + ARCHIVE")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

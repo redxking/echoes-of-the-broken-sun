@@ -177,6 +177,9 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     ArchiveCarrierId = 0;
     MemoryBearerId = 0;
     MigrationWaystoneId = 0;
+    LifeSupportDistrictId = 0;
+    TransitDistrictId = 0;
+    ArchiveDistrictId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignProgressPath = FEchoesCampaignProgressStore::GetDefaultPath();
 #if !UE_BUILD_SHIPPING
@@ -268,6 +271,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("WHAT THE LEDGER KEEPS");
         case EEchoesOperationMode::CampaignSevenAccounts:
             return TEXT("SEVEN ACCOUNTS OF RAIN");
+        case EEchoesOperationMode::CampaignCityReserve:
+            return TEXT("A CITY ON RESERVE");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -291,6 +296,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_SEVEN_ACCOUNTS_LOCKED] reason=WhatTheLedgerKeeps completion required"));
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve &&
+        !IsCityReserveUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CITY_RESERVE_LOCKED] reason=two consistent prior mission records required"));
         return false;
     }
 
@@ -420,6 +434,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
             ? Faction::KharuunAssemblies
+        : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
+            ? Faction::MeridianCompact
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -438,7 +454,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
-            bUseAnyControlledPresentation
+            bUseAnyControlledPresentation ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignCityReserve
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -473,6 +491,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     ArchiveCarrierId = 0;
     MemoryBearerId = 0;
     MigrationWaystoneId = 0;
+    LifeSupportDistrictId = 0;
+    TransitDistrictId = 0;
+    ArchiveDistrictId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -584,6 +605,38 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
         SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
 
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignCityReserve)
+        {
+            const echoes::sim::Vec2 LifeSupportSite =
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::LifeSupport);
+            const echoes::sim::Vec2 TransitSite =
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Transit);
+            const echoes::sim::Vec2 ArchiveSite =
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Archive);
+            LifeSupportDistrictId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                LifeSupportSite.x.FloorToInt(),
+                LifeSupportSite.y.FloorToInt());
+            TransitDistrictId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                TransitSite.x.FloorToInt(),
+                TransitSite.y.FloorToInt());
+            ArchiveDistrictId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                ArchiveSite.x.FloorToInt(),
+                ArchiveSite.y.FloorToInt());
+        }
+
         if (bUseResearchInterruptionPresentation)
         {
             constexpr int32 InterruptionAttackerCount = 32;
@@ -608,7 +661,10 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         }
 
         const TArray<FIntPoint> MatterNodeTiles = {
-            {16, 16}, {21, 13}, {25, 28}, {33, 22},
+            SelectedOperation == EEchoesOperationMode::CampaignCityReserve
+                ? FIntPoint{17, 27}
+                : FIntPoint{16, 16},
+            {21, 13}, {25, 28}, {33, 22},
             {31, 43}, {43, 36}, {47, 50}, {52, 45}};
         for (const FIntPoint& Tile : MatterNodeTiles)
         {
@@ -971,6 +1027,20 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve &&
+        (LifeSupportDistrictId == 0 || TransitDistrictId == 0 ||
+         ArchiveDistrictId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CITY_RESERVE_INIT_FAILED] reason=district entities unavailable life=%u transit=%u archive=%u"),
+            LifeSupportDistrictId,
+            TransitDistrictId,
+            ArchiveDistrictId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1033,6 +1103,25 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Route.MemoryAccountSite.y.FloorToInt(),
                 SevenAccountsTerrainDelta,
                 GlassScarBlockedTiles);
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignCityReserve)
+        {
+            const FEchoesCityReserveGrid Grid = GetCityReserveGrid();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_CITY_RESERVE_READY] branch=%s priority=%s secondary=%s final=%s life=%u transit=%u archive=%u powered=0 inheritedRecords=2"),
+                Grid.StableName,
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Priority),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Secondary),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Final),
+                LifeSupportDistrictId,
+                TransitDistrictId,
+                ArchiveDistrictId);
         }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
@@ -1141,6 +1230,9 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     ArchiveCarrierId = 0;
     MemoryBearerId = 0;
     MigrationWaystoneId = 0;
+    LifeSupportDistrictId = 0;
+    TransitDistrictId = 0;
+    ArchiveDistrictId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -1254,6 +1346,12 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete What the Ledger Keeps before Seven Accounts of Rain.");
         return false;
     }
+    if (NewOperation == EEchoesOperationMode::CampaignCityReserve &&
+        !IsCityReserveUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Seven Accounts of Rain with a consistent ledger before A City on Reserve.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1277,6 +1375,10 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::KharuunAssemblies;
     }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
+    {
+        LocalFaction = Faction::MeridianCompact;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1290,6 +1392,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT(" — Mara Vey's Meridian force is locked for this mission.")
             : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT(" — Oruun's Kharuun migration force is locked for this mission.")
+            : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
+                ? TEXT(" — Mara Vey's Meridian grid force is locked for this mission.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1299,6 +1403,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT("WhatTheLedgerKeeps")
             : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT("SevenAccountsOfRain")
+            : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
+                ? TEXT("ACityOnReserve")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1405,6 +1511,13 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             TEXT("SaveGames"),
             TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
+    {
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveACityOnReserve.bin"));
+    }
     return GetQuickSavePath();
 }
 
@@ -1500,6 +1613,72 @@ UEchoesSimulationSubsystem::CommitSevenAccountsCompletion(
         static_cast<uint8>(EEchoesSevenAccountsCompletionFact::MemoryBearerArrived) |
         static_cast<uint8>(EEchoesSevenAccountsCompletionFact::LocalCoreSurvived) |
         static_cast<uint8>(EEchoesSevenAccountsCompletionFact::PriorDecisionConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitCityReserveCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation != EEchoesOperationMode::CampaignCityReserve ||
+        GetCityReservePhase() != EEchoesCityReservePhase::Complete ||
+        !IsCityReserveUnlocked() ||
+        Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative City on Reserve operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::ACityOnReserve;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesCityReserveCompletionFact::LifeSupportPowered) |
+        static_cast<uint8>(EEchoesCityReserveCompletionFact::TransitPowered) |
+        static_cast<uint8>(EEchoesCityReserveCompletionFact::ArchivePowered) |
+        static_cast<uint8>(EEchoesCityReserveCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesCityReserveCompletionFact::PriorLedgerConsumed);
     Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
     Record.CompletionTick = Simulation->CurrentTick();
     Record.FinalStateChecksum = Simulation->StateChecksum();
@@ -1959,6 +2138,22 @@ bool UEchoesSimulationSubsystem::IsSevenAccountsUnlocked() const
                EEchoesCampaignMissionId::WhatTheLedgerKeeps) != nullptr;
 }
 
+bool UEchoesSimulationSubsystem::IsCityReserveUnlocked() const
+{
+    if (!bCampaignProgressAvailable)
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* SevenAccounts =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::SevenAccountsOfRain);
+    return Prologue != nullptr && SevenAccounts != nullptr &&
+           Prologue->WellChoice == SevenAccounts->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -1972,6 +2167,27 @@ UEchoesSimulationSubsystem::GetSevenAccountsRoute() const
 {
     return FEchoesSevenAccountsMissionModel::RouteForChoice(
         GetRecordedPrologueChoice());
+}
+
+FEchoesCityReserveGrid UEchoesSimulationSubsystem::GetCityReserveGrid() const
+{
+    return FEchoesCityReserveMissionModel::GridForChoice(
+        GetRecordedPrologueChoice());
+}
+
+echoes::sim::EntityId UEchoesSimulationSubsystem::GetCityDistrictId(
+    EEchoesCityDistrict District) const
+{
+    switch (District)
+    {
+        case EEchoesCityDistrict::LifeSupport:
+            return LifeSupportDistrictId;
+        case EEchoesCityDistrict::Transit:
+            return TransitDistrictId;
+        case EEchoesCityDistrict::Archive:
+            return ArchiveDistrictId;
+    }
+    return 0;
 }
 
 EEchoesSevenAccountsPhase
@@ -2020,6 +2236,49 @@ UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
     return FEchoesSevenAccountsMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
+{
+    FEchoesCityReserveMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation == EEchoesOperationMode::CampaignCityReserve &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesCityReservePhase::Inactive;
+    }
+
+    const echoes::sim::Entity* LifeSupport =
+        Simulation->FindEntity(LifeSupportDistrictId);
+    const echoes::sim::Entity* Transit =
+        Simulation->FindEntity(TransitDistrictId);
+    const echoes::sim::Entity* Archive =
+        Simulation->FindEntity(ArchiveDistrictId);
+    Facts.bLifeSupportIntact =
+        LifeSupport != nullptr && LifeSupport->hitPoints > 0;
+    Facts.bTransitIntact = Transit != nullptr && Transit->hitPoints > 0;
+    Facts.bArchiveIntact = Archive != nullptr && Archive->hitPoints > 0;
+    Facts.bLifeSupportPowered =
+        Facts.bLifeSupportIntact && LifeSupport->aegisPowered;
+    Facts.bTransitPowered =
+        Facts.bTransitIntact && Transit->aegisPowered;
+    Facts.bArchivePowered =
+        Facts.bArchiveIntact && Archive->aegisPowered;
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId &&
+            Entity.type == EntityType::CommandCore && Entity.hitPoints > 0)
+        {
+            Facts.bLocalCoreIntact = true;
+            break;
+        }
+    }
+    return FEchoesCityReserveMissionModel::DeterminePhase(
+        Facts,
+        GetCityReserveGrid());
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -2035,9 +2294,14 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ProloguePhase = GetProloguePhase();
     Snapshot.SevenAccountsPhase = GetSevenAccountsPhase();
     Snapshot.SevenAccountsBranch = GetRecordedPrologueChoice();
+    Snapshot.CityReservePhase = GetCityReservePhase();
+    Snapshot.CityReserveBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
+    Snapshot.LifeSupportDistrictId = LifeSupportDistrictId;
+    Snapshot.TransitDistrictId = TransitDistrictId;
+    Snapshot.ArchiveDistrictId = ArchiveDistrictId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
@@ -2067,6 +2331,21 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     Entity.position,
                     SevenAccountsRoute.WaystoneAnchor,
                     SevenAccountsSiteRadiusTiles);
+        }
+        if (Entity.id == LifeSupportDistrictId)
+        {
+            Snapshot.bLifeSupportPowered =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
+        }
+        if (Entity.id == TransitDistrictId)
+        {
+            Snapshot.bTransitPowered =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
+        }
+        if (Entity.id == ArchiveDistrictId)
+        {
+            Snapshot.bArchivePowered =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
         }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
@@ -2277,6 +2556,61 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : TEXT("failure"),
                         FEchoesSevenAccountsMissionModel::StableName(
                             SevenAccountsPhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                    CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignCityReserve &&
+                     !bMatchResultReported)
+            {
+                const EEchoesCityReservePhase CityReservePhase =
+                    GetCityReservePhase();
+                const bool bCityReserveFinished =
+                    CityReservePhase == EEchoesCityReservePhase::Complete ||
+                    CityReservePhase == EEchoesCityReservePhase::Failed;
+                if (bCityReserveFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        CityReservePhase ==
+                                EEchoesCityReservePhase::Complete
+                            ? CommitCityReserveCompletion(
+                                  RecordedConsequence,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyCityReserveFinished(
+                            CityReservePhase ==
+                                EEchoesCityReservePhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_CITY_RESERVE_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        CityReservePhase ==
+                                EEchoesCityReservePhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesCityReserveMissionModel::StableName(
+                            CityReservePhase),
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(CampaignStatus),

@@ -23,6 +23,12 @@ constexpr uint8 SevenAccountsCompletionFacts =
     static_cast<uint8>(EEchoesSevenAccountsCompletionFact::MemoryBearerArrived) |
     static_cast<uint8>(EEchoesSevenAccountsCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesSevenAccountsCompletionFact::PriorDecisionConsumed);
+constexpr uint8 CityReserveCompletionFacts =
+    static_cast<uint8>(EEchoesCityReserveCompletionFact::LifeSupportPowered) |
+    static_cast<uint8>(EEchoesCityReserveCompletionFact::TransitPowered) |
+    static_cast<uint8>(EEchoesCityReserveCompletionFact::ArchivePowered) |
+    static_cast<uint8>(EEchoesCityReserveCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesCityReserveCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -121,7 +127,8 @@ bool ValidateRecord(
     FString& OutError)
 {
     if (Record.Mission != EEchoesCampaignMissionId::WhatTheLedgerKeeps &&
-        Record.Mission != EEchoesCampaignMissionId::SevenAccountsOfRain)
+        Record.Mission != EEchoesCampaignMissionId::SevenAccountsOfRain &&
+        Record.Mission != EEchoesCampaignMissionId::ACityOnReserve)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -137,7 +144,9 @@ bool ValidateRecord(
     const uint8 RequiredFacts =
         Record.Mission == EEchoesCampaignMissionId::WhatTheLedgerKeeps
             ? PrologueCompletionFacts
-            : SevenAccountsCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::SevenAccountsOfRain
+            ? SevenAccountsCompletionFacts
+            : CityReserveCompletionFacts;
     if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
         (Record.VerifiedFacts & ~RequiredFacts) != 0)
     {

@@ -59,6 +59,11 @@ public:
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
         EEchoesCampaignCommitStatus CommitStatus);
+    void NotifyCityReserveFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();

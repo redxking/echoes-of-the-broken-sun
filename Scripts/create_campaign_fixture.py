@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create one valid mission-01 campaign ledger for isolated runtime smoke tests."""
+"""Create a valid bounded campaign ledger for isolated runtime smoke tests."""
 
 from __future__ import annotations
 
@@ -17,10 +17,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("--choice", choices=CHOICES, default="Preserve")
+    parser.add_argument("--through-mission", type=int, choices=(1, 2), default=1)
     args = parser.parse_args()
 
-    header = b"ECHOCPG1" + struct.pack("<HH", 1, 1)
-    record = struct.pack(
+    records = [struct.pack(
         "<BBBBIQQ",
         1,
         CHOICES[args.choice],
@@ -29,8 +29,20 @@ def main() -> int:
         20,
         120,
         0x7A11A2,
-    )
-    payload = header + record
+    )]
+    if args.through_mission == 2:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            2,
+            CHOICES[args.choice],
+            CHOICE_MASKS[args.choice],
+            0x0F,
+            20,
+            420,
+            0x7A11A3,
+        ))
+    header = b"ECHOCPG1" + struct.pack("<HH", 1, len(records))
+    payload = header + b"".join(records)
     encoded = payload + struct.pack("<I", zlib.crc32(payload) & 0xFFFFFFFF)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(encoded)

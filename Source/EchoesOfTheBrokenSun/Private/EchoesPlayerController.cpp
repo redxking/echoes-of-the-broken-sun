@@ -133,7 +133,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignPrologue
                 ? TEXT("Mara Vey deployed; ")
-                : TEXT("Oruun deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignSevenAccounts
+                ? TEXT("Oruun deployed; ")
+                : TEXT("Mara Vey deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -144,6 +147,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignSevenAccounts
             ? TEXT("SevenAccountsOfRain")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignCityReserve
+            ? TEXT("ACityOnReserve")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -194,11 +200,16 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bSevenAccounts =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignSevenAccounts;
+    const bool bCityReserve =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignCityReserve;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
         : bSevenAccounts
             ? TEXT("SEVEN ACCOUNTS OF RAIN — migrate the Waystone, then bring Oruun to the inherited account. Enter deploys.")
+        : bCityReserve
+            ? TEXT("A CITY ON RESERVE — reconnect three ark-city districts in the inherited priority order. Enter deploys Mara Vey.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -206,8 +217,11 @@ void AEchoesPlayerController::PresentMissionBriefing()
         Display,
         TEXT("[ECHOES_BRIEFING_READY] operation=%s paused=true keyboardStart=true factionChoice=%s"),
         bPrologue ? TEXT("WhatTheLedgerKeeps")
-        : bSevenAccounts ? TEXT("SevenAccountsOfRain") : TEXT("GlassScar"),
-        (bPrologue || bSevenAccounts) ? TEXT("false") : TEXT("true"));
+        : bSevenAccounts ? TEXT("SevenAccountsOfRain")
+        : bCityReserve ? TEXT("ACityOnReserve") : TEXT("GlassScar"),
+        (bPrologue || bSevenAccounts || bCityReserve)
+            ? TEXT("false")
+            : TEXT("true"));
 }
 
 void AEchoesPlayerController::ConfirmMissionBriefing()
@@ -246,6 +260,21 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Route.MemoryAccountSite.y.FloorToInt()),
             10.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignCityReserve)
+    {
+        const FEchoesCityReserveGrid Grid = Bridge->GetCityReserveGrid();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — build Power Links until %s, %s, and %s district posts are powered."),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Priority),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Secondary),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Grid.Final)),
+            12.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -282,6 +311,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignSevenAccounts)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: Seven Accounts of Rain follows Oruun and the Kharuun Assemblies."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignCityReserve)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: A City on Reserve follows Mara Vey and the Meridian Compact."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -334,6 +369,12 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsSevenAccountsUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignSevenAccounts;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignSevenAccounts &&
+             Bridge->IsCityReserveUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignCityReserve;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -904,6 +945,64 @@ void AEchoesPlayerController::NotifySevenAccountsFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=SevenAccountsOfRain success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyCityReserveFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignCityReserve;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — a reserve district, the local Core, or the grid line was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — all three ark-city districts are powered under the inherited %s reserve plan."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this grid result. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=ACityOnReserve success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -3323,6 +3422,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT("MISSION RESTARTED — Oruun's migration begins again from the inherited route state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignCityReserve
+                ? TEXT("MISSION RESTARTED — Mara Vey's reserve grid returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

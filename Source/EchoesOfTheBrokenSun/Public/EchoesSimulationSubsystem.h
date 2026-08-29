@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesCityReserveMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
@@ -44,6 +45,16 @@ struct FEchoesObjectiveSnapshot final
     bool bWaystoneIntact = false;
     bool bWaystoneRootedAtAnchor = false;
     bool bMemoryBearerAtAccountSite = false;
+    EEchoesCityReservePhase CityReservePhase =
+        EEchoesCityReservePhase::Inactive;
+    echoes::sim::FutureWellChoice CityReserveBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId LifeSupportDistrictId = 0;
+    echoes::sim::EntityId TransitDistrictId = 0;
+    echoes::sim::EntityId ArchiveDistrictId = 0;
+    bool bLifeSupportPowered = false;
+    bool bTransitPowered = false;
+    bool bArchivePowered = false;
 };
 
 /**
@@ -160,8 +171,13 @@ public:
     [[nodiscard]] EEchoesProloguePhase GetProloguePhase() const;
     [[nodiscard]] EEchoesSevenAccountsPhase GetSevenAccountsPhase() const;
     [[nodiscard]] bool IsSevenAccountsUnlocked() const;
+    [[nodiscard]] EEchoesCityReservePhase GetCityReservePhase() const;
+    [[nodiscard]] bool IsCityReserveUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
+    [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
+    [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
+        EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
     {
         return MemoryBearerId;
@@ -209,6 +225,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitSevenAccountsCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitCityReserveCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -275,6 +294,9 @@ private:
     echoes::sim::EntityId ArchiveCarrierId = 0;
     echoes::sim::EntityId MemoryBearerId = 0;
     echoes::sim::EntityId MigrationWaystoneId = 0;
+    echoes::sim::EntityId LifeSupportDistrictId = 0;
+    echoes::sim::EntityId TransitDistrictId = 0;
+    echoes::sim::EntityId ArchiveDistrictId = 0;
     FEchoesCampaignProgress CampaignProgress;
     bool bCampaignProgressAvailable = false;
     FString CampaignProgressPath;

@@ -151,7 +151,16 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignSevenAccounts"));
-    if (bCampaignPrologue && bCampaignSevenAccounts)
+    const bool bCampaignCityReserve =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignCityReserve"));
+    const int32 CampaignOperationCount =
+        (bCampaignPrologue ? 1 : 0) +
+        (bCampaignSevenAccounts ? 1 : 0) +
+        (bCampaignCityReserve ? 1 : 0);
+    if (CampaignOperationCount > 1)
     {
         UE_LOG(
             LogEchoes,
@@ -160,10 +169,12 @@ void AEchoesGameMode::BeginPlay()
         CleanupPrototypeEnvironment();
         return;
     }
-    if (bCampaignPrologue || bCampaignSevenAccounts)
+    if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignSevenAccounts
+            bCampaignCityReserve
+                ? EEchoesOperationMode::CampaignCityReserve
+            : bCampaignSevenAccounts
                 ? EEchoesOperationMode::CampaignSevenAccounts
                 : EEchoesOperationMode::CampaignPrologue;
         FString OperationFeedback;
@@ -175,7 +186,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignSevenAccounts
+                bCampaignCityReserve
+                    ? TEXT("ACityOnReserve")
+                : bCampaignSevenAccounts
                     ? TEXT("SevenAccountsOfRain")
                     : TEXT("WhatTheLedgerKeeps"),
                 *OperationFeedback);
@@ -186,7 +199,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignSevenAccounts
+            bCampaignCityReserve
+                ? TEXT("ACityOnReserve")
+            : bCampaignSevenAccounts
                 ? TEXT("SevenAccountsOfRain")
                 : TEXT("WhatTheLedgerKeeps"));
     }
