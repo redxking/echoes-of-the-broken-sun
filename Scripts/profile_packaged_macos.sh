@@ -14,6 +14,7 @@ resolution_y="${ECHOES_PROFILE_RES_Y:-1440}"
 sample_interval="${ECHOES_PROFILE_RSS_INTERVAL_SECONDS:-0.25}"
 anti_aliasing_method="${ECHOES_PROFILE_AA_METHOD:-2}"
 resolution_quality="${ECHOES_PROFILE_RESOLUTION_QUALITY:-100}"
+stress400="${ECHOES_PROFILE_STRESS400:-0}"
 
 if [[ "$app" != /* ]]; then
   app="$project_root/$app"
@@ -53,6 +54,10 @@ if (( resolution_quality > 100 )); then
   print -u2 "ECHOES_PROFILE_RESOLUTION_QUALITY must not exceed 100."
   exit 2
 fi
+if [[ "$stress400" != "0" && "$stress400" != "1" ]]; then
+  print -u2 "ECHOES_PROFILE_STRESS400 must be 0 or 1."
+  exit 2
+fi
 
 if (( warmup_frames >= frames )); then
   print -u2 "ECHOES_PROFILE_WARMUP_FRAMES must be smaller than ECHOES_PROFILE_FRAMES."
@@ -84,10 +89,15 @@ mkdir -p "$evidence_dir"
 print 'elapsed_seconds,rss_mib' > "$rss_samples"
 
 exec_commands="r.SetRes ${resolution_x}x${resolution_y}f,r.VSync 0,rhi.SyncInterval 0,t.MaxFPS 0,sg.ResolutionQuality $resolution_quality,sg.ViewDistanceQuality 1,sg.AntiAliasingQuality 1,sg.ShadowQuality 1,sg.GlobalIlluminationQuality 1,sg.ReflectionQuality 1,sg.PostProcessQuality 1,sg.TextureQuality 1,sg.EffectsQuality 1,sg.FoliageQuality 1,sg.ShadingQuality 1,sg.LandscapeQuality 1,r.AntiAliasingMethod $anti_aliasing_method,csv.TrackMemoryUse 1,csvprofile exitoncompletion,csvprofile frames=$frames"
+stress_arguments=()
+if [[ "$stress400" == "1" ]]; then
+  stress_arguments=(-EchoesStress400)
+fi
 
 start_epoch="$(date +%s)"
 "$binary" /Engine/Maps/Entry \
   -game -unattended -nop4 -nosplash -nosound \
+  "${stress_arguments[@]}" \
   -stdout -FullStdOutLogOutput \
   -fullscreen -ForceRes -ResX="$resolution_x" -ResY="$resolution_y" \
   -csvGpuStats "-ExecCmds=$exec_commands" > "$raw_log" 2>&1 &
@@ -136,6 +146,11 @@ if /usr/bin/grep -Eq 'Fatal error:|Assertion failed:|GPU Crashed|Capture Stop re
   print -u2 "The packaged profile log contains a rejected runtime failure. Inspect: $raw_log"
   exit 9
 fi
+if [[ "$stress400" == "1" ]] &&
+   ! /usr/bin/grep -q '\[ECHOES_STRESS_READY\] units=400 teams=4 entities=401 visibleViews=401' "$raw_log"; then
+  print -u2 "The packaged profile did not reach the accepted four-team scale boundary. Inspect: $raw_log"
+  exit 10
+fi
 
 package_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
 source_commit="$(/usr/bin/awk -F= '$1 == "source_commit" { print $2; exit }' "$manifest")"
@@ -146,7 +161,8 @@ macos_version="$(/usr/bin/sw_vers -productVersion)"
 /usr/bin/python3 - "$raw_csv" "$rss_samples" "$summary" \
   "$frames" "$warmup_frames" "$resolution_x" "$resolution_y" \
   "$anti_aliasing_method" "$resolution_quality" \
-  "$package_version" "$source_commit" "$host_model" "$cpu_brand" "$macos_version" <<'PY'
+  "$package_version" "$source_commit" "$host_model" "$cpu_brand" "$macos_version" \
+  "$stress400" <<'PY'
 import csv
 import json
 import math
@@ -168,6 +184,7 @@ import sys
     host_model,
     cpu_brand,
     macos_version,
+    stress400,
 ) = sys.argv[1:]
 
 expected_frames = int(expected_frames)
@@ -176,6 +193,7 @@ expected_x = int(expected_x)
 expected_y = int(expected_y)
 anti_aliasing_method = int(anti_aliasing_method)
 resolution_quality = int(resolution_quality)
+stress400 = stress400 == "1"
 
 with open(csv_path, newline="", encoding="utf-8-sig") as handle:
     rows = list(csv.reader(handle))
@@ -280,6 +298,7 @@ result = {
     "macos": macos_version,
     "resolution": {"width": observed_x, "height": observed_y},
     "display_mode": "fullscreen",
+    "scenario": "four-team-scale-400" if stress400 else "placeholder-startup-25",
     "quality_preset": {
         "scalability_group_level": 1,
         "resolution_quality_percent": resolution_quality,
@@ -300,6 +319,12 @@ result = {
     "budgets": budgets,
     "all_measured_budgets_pass": all(budgets.values()),
     "claim_boundary": (
+        "Local packaged Mac Development measurement of the 400-unit/four-team "
+        "visibility-scoped proxy scale scenario. All 400 units are visible to the "
+        "local presentation, but the fixture does not include authored weather, "
+        "final effects, formations, or representative broad combat orders. It is "
+        "not a soak test, clean-machine result, or release qualification."
+        if stress400 else
         "Local packaged Mac Development measurement of the current 25-entity "
         "placeholder Glass Scar startup scene. It is not a 400-unit representative "
         "combat/weather workload, a soak test, a clean-machine result, or release qualification."

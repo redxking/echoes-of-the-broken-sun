@@ -91,6 +91,16 @@ bool UEchoesSimulationSubsystem::IsTickable() const
 
 bool UEchoesSimulationSubsystem::StartPrototypeScenario()
 {
+    return StartScenario(false);
+}
+
+bool UEchoesSimulationSubsystem::StartStressScenario()
+{
+    return StartScenario(true);
+}
+
+bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
+{
     if (bScenarioReady && Simulation.IsValid())
     {
         UE_LOG(
@@ -125,12 +135,21 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
         !Simulation->AddPlayer(
             OpponentPlayerId,
             Faction::KharuunAssemblies,
-            ResourcePool{500, 30}))
+            ResourcePool{500, 30}) ||
+        (bUseStressScenario &&
+         (!Simulation->AddPlayer(
+              2,
+              Faction::KharuunAssemblies,
+              ResourcePool{500, 30}) ||
+          !Simulation->AddPlayer(
+              3,
+              Faction::MeridianCompact,
+              ResourcePool{500, 30}))))
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_SIM_PLAYER_INIT_FAILED] Could not initialize both prototype players."));
+            TEXT("[ECHOES_SIM_PLAYER_INIT_FAILED] Could not initialize the requested scenario players."));
         Simulation.Reset();
         return false;
     }
@@ -152,36 +171,74 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
         return Spawned;
     };
 
-    // Meridian Compact: the player-controlled force in the southwest.
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::CommandCore, 10, 10);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Barracks, 14, 10);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 8, 13);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 11, 14);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 14, 12);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 8, 8);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 12, 7);
-    SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 16, 10);
-
-    // Kharuun Assemblies: deterministic prototype opposition in the northeast.
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Barracks, 50, 54);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 51, 53);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 54, 50);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 50, 57);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 54, 58);
-    SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 58, 55);
-
-    const TArray<FIntPoint> MatterNodeTiles = {
-        {16, 16}, {21, 13}, {25, 28}, {33, 22},
-        {31, 43}, {43, 36}, {47, 50}, {52, 45}};
-    for (const FIntPoint& Tile : MatterNodeTiles)
+    if (bUseStressScenario)
     {
+        constexpr int32 GridX[10] = {3, 9, 15, 21, 27, 36, 42, 48, 54, 60};
+        constexpr int32 GridY[10] = {3, 8, 13, 18, 23, 28, 36, 43, 50, 57};
+        constexpr uint8 Owners[4] = {0, 1, 2, 3};
+        constexpr Faction Factions[4] = {
+            Faction::MeridianCompact,
+            Faction::KharuunAssemblies,
+            Faction::KharuunAssemblies,
+            Faction::MeridianCompact};
+        constexpr int32 OffsetX[4] = {0, 1, 0, 1};
+        constexpr int32 OffsetY[4] = {0, 0, 1, 1};
+        for (int32 Team = 0; Team < 4; ++Team)
+        {
+            int32 TeamUnits = 0;
+            for (int32 Row = 0; Row < 10; ++Row)
+            {
+                for (int32 Column = 0; Column < 10; ++Column)
+                {
+                    const EntityType Type = TeamUnits == 0
+                                                ? EntityType::CommandCore
+                                                : EntityType::Soldier;
+                    SpawnUnit(
+                        Owners[Team],
+                        Factions[Team],
+                        Type,
+                        GridX[Column] + OffsetX[Team],
+                        GridY[Row] + OffsetY[Team]);
+                    ++TeamUnits;
+                }
+            }
+        }
         bSpawnSucceeded &=
-            Simulation->SpawnResourceNode(Vec2::FromTiles(Tile.X, Tile.Y), 1600) != 0;
+            Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
     }
-    bSpawnSucceeded &=
-        Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
+    else
+    {
+        // Meridian Compact: the player-controlled force in the southwest.
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::CommandCore, 10, 10);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Barracks, 14, 10);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 8, 13);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 11, 14);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 14, 12);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 8, 8);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 12, 7);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 16, 10);
+
+        // Kharuun Assemblies: deterministic prototype opposition in the northeast.
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Barracks, 50, 54);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 51, 53);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 54, 50);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 50, 57);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 54, 58);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 58, 55);
+
+        const TArray<FIntPoint> MatterNodeTiles = {
+            {16, 16}, {21, 13}, {25, 28}, {33, 22},
+            {31, 43}, {43, 36}, {47, 50}, {52, 45}};
+        for (const FIntPoint& Tile : MatterNodeTiles)
+        {
+            bSpawnSucceeded &=
+                Simulation->SpawnResourceNode(Vec2::FromTiles(Tile.X, Tile.Y), 1600) != 0;
+        }
+        bSpawnSucceeded &=
+            Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
+    }
 
     if (!bSpawnSucceeded)
     {
@@ -199,6 +256,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
     bLoggedFirstTick = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
+    bStressScenario = bUseStressScenario;
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -210,6 +268,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
         DestroyTerrainView();
         Simulation.Reset();
         bScenarioReady = false;
+        bStressScenario = false;
         return false;
     }
     bScenarioReady = true;
@@ -228,6 +287,15 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
         EntityViews.Num(),
         Simulation->Config().ticksPerSecond,
         static_cast<unsigned long long>(Simulation->Config().randomSeed));
+    if (bStressScenario)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_READY] units=400 teams=4 entities=%d visibleViews=%d"),
+            static_cast<int32>(Simulation->Entities().size()),
+            EntityViews.Num());
+    }
     return true;
 }
 
@@ -244,12 +312,14 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedFirstTick = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
+    bStressScenario = false;
 }
 
 bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
 {
+    const bool bRestartStressScenario = bStressScenario;
     StopPrototypeScenario();
-    const bool bRestarted = StartPrototypeScenario();
+    const bool bRestarted = StartScenario(bRestartStressScenario);
     if (bRestarted)
     {
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_MATCH_RESTARTED]"));

@@ -17,6 +17,8 @@
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 namespace
 {
@@ -84,7 +86,11 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
-    const bool bSimulationReady = Bridge->StartPrototypeScenario();
+    const bool bStressScenario =
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesStress400"));
+    const bool bSimulationReady = bStressScenario
+                                      ? Bridge->StartStressScenario()
+                                      : Bridge->StartPrototypeScenario();
     if (!bSimulationReady)
     {
         CleanupPrototypeEnvironment();

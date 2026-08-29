@@ -35,6 +35,9 @@ public:
     /** Creates the bounded runtime-only technical-prototype scenario. */
     bool StartPrototypeScenario();
 
+    /** Creates the opt-in 400-unit/four-team presentation scale scenario. */
+    bool StartStressScenario();
+
     /** Stops the prototype and releases every disposable presentation view. */
     void StopPrototypeScenario();
 
@@ -81,10 +84,12 @@ public:
     [[nodiscard]] FVector SimToWorld(const echoes::sim::Vec2& Position) const;
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
+    [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;
 
 private:
+    bool StartScenario(bool bUseStressScenario);
     bool ValidatePrototypeCommand(
         echoes::sim::CommandType CommandType,
         const echoes::sim::Entity& Actor,
@@ -122,4 +127,5 @@ private:
     bool bLoggedFirstTick = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
+    bool bStressScenario = false;
 };
