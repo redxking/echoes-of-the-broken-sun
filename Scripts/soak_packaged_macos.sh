@@ -2,7 +2,7 @@
 set -euo pipefail
 
 project_root="${0:A:h:h}"
-default_app="$project_root/BuildArtifacts/Packages/Mac-Development-v0.15.0-four-team-scale/EchoesOfTheBrokenSun.app"
+default_app="$project_root/BuildArtifacts/Packages/Mac-Development-v0.22.1-tactical-overview/EchoesOfTheBrokenSun.app"
 app="${1:-$default_app}"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 evidence_dir="${2:-$project_root/BuildArtifacts/Performance/Soak/$timestamp}"
