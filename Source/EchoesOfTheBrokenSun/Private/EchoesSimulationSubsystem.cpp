@@ -158,7 +158,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s foundationalArchetypes=10 catalogUnits=%d catalogBuildings=%d futureWell=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -240,7 +240,11 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 {
                     const EntityType Type = TeamUnits == 0
                                                 ? EntityType::CommandCore
-                                                : EntityType::Soldier;
+                                                : TeamUnits % 3 == 1
+                                                      ? EntityType::Soldier
+                                                      : TeamUnits % 3 == 2
+                                                            ? EntityType::HeavyUnit
+                                                            : EntityType::ScoutUnit;
                     SpawnUnit(
                         Owners[Team],
                         Factions[Team],
@@ -259,12 +263,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         // Meridian Compact: the player-controlled force in the southwest.
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::CommandCore, 10, 10);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Barracks, 14, 10);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Dropoff, 6, 17);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 8, 13);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 11, 14);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 14, 12);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 8, 8);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 12, 7);
         SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 16, 10);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::HeavyUnit, 7, 6);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::ScoutUnit, 15, 6);
+        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::UtilityStructure, 6, 11);
 
         // Kharuun Assemblies: deterministic prototype opposition in the northeast.
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
@@ -274,7 +282,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 50, 57);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 54, 58);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 58, 55);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::HeavyUnit, 57, 58);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::ScoutUnit, 49, 58);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::UtilityStructure, 58, 53);
 
         const TArray<FIntPoint> MatterNodeTiles = {
             {16, 16}, {21, 13}, {25, 28}, {33, 22},
@@ -310,7 +320,10 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         uint64 TeamSequences[4] = {1, 1, 1, 1};
         for (const echoes::sim::Entity& Entity : Simulation->Entities())
         {
-            if (Entity.owner >= 4 || Entity.type != EntityType::Soldier)
+            if (Entity.owner >= 4 ||
+                (Entity.type != EntityType::Soldier &&
+                 Entity.type != EntityType::HeavyUnit &&
+                 Entity.type != EntityType::ScoutUnit))
             {
                 continue;
             }
@@ -808,7 +821,9 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 int32 DamagedSoldiers = 0;
                 for (const echoes::sim::Entity& Entity : Simulation->Entities())
                 {
-                    if (Entity.type != EntityType::Soldier)
+                    if (Entity.type != EntityType::Soldier &&
+                        Entity.type != EntityType::HeavyUnit &&
+                        Entity.type != EntityType::ScoutUnit)
                     {
                         continue;
                     }
@@ -898,7 +913,9 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                 const echoes::sim::Entity* Actor =
                     Simulation->FindEntity(Command.actor);
                 if (Actor != nullptr &&
-                    Actor->type == echoes::sim::EntityType::Soldier &&
+                    (Actor->type == echoes::sim::EntityType::Soldier ||
+                     Actor->type == echoes::sim::EntityType::HeavyUnit ||
+                     Actor->type == echoes::sim::EntityType::ScoutUnit) &&
                     Actor->maxHitPoints > 0 &&
                     static_cast<int64>(Actor->hitPoints) * 100 <=
                         static_cast<int64>(Actor->maxHitPoints) * 35)

@@ -162,7 +162,11 @@ void AEchoesHUD::DrawHUD()
                     TEXT(" — producing %s %d%%"),
                     Entity->productionType == echoes::sim::EntityType::Worker
                         ? TEXT("Worker")
-                        : TEXT("Soldier"),
+                        : Entity->productionType == echoes::sim::EntityType::HeavyUnit
+                              ? TEXT("Heavy")
+                              : Entity->productionType == echoes::sim::EntityType::ScoutUnit
+                                    ? TEXT("Scout")
+                                    : TEXT("Line Unit"),
                     Percent);
             }
         }
@@ -190,7 +194,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [B] Barracks  [N] Drop-off  [Q] Worker  [E] Soldier"),
+        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [B/N/M] Build  [Q/E/;/'] Produce"),
         SecondaryColor,
         TextX,
         HudY(113.0f),
@@ -871,7 +875,8 @@ void AEchoesHUD::DrawTacticalMinimap(
         const bool bStructure =
             Entity.type == echoes::sim::EntityType::CommandCore ||
             Entity.type == echoes::sim::EntityType::Dropoff ||
-            Entity.type == echoes::sim::EntityType::Barracks;
+            Entity.type == echoes::sim::EntityType::Barracks ||
+            Entity.type == echoes::sim::EntityType::UtilityStructure;
         const float MarkerSize = bStructure ? 5.0f : 3.0f;
         FLinearColor Color = MinimapOwnerColor(Entity.owner, bHighContrast);
         if (Entity.type == echoes::sim::EntityType::ResourceNode)

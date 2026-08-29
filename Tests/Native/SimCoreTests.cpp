@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v10 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 864 + 5 * mapTileCount;
+    // Snapshot v11 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1504 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 744, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1384, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 752, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1392, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1272,6 +1272,77 @@ void TestAuthoredRulesDriveSimulationAndPersist() {
     REQUIRE(rejected);
 }
 
+void TestCompleteRosterEntityTypesAndProduction() {
+    Simulation simulation({40, 40, 20, 0x524f535445523136ULL});
+    AddTwoPlayers(simulation, {1000, 500}, {1000, 500});
+    const EntityId core = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId barracks = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 5));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(8, 10));
+    const EntityId heavy = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(12, 10));
+    const EntityId scout = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(14, 10));
+    const EntityId enemyUtility = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::UtilityStructure,
+        Vec2::FromTiles(32, 32));
+    REQUIRE(core != 0 && barracks != 0 && worker != 0 && heavy != 0 &&
+            scout != 0 && enemyUtility != 0);
+    REQUIRE(simulation.FindEntity(heavy)->attackDamage == 10);
+    REQUIRE(simulation.FindEntity(scout)->visionTiles == 15);
+    REQUIRE(simulation.FindEntity(enemyUtility)->visionTiles == 9);
+    REQUIRE(simulation.PopulationUsed(0) == 5);
+    REQUIRE(simulation.ValidateProduction(
+                0, barracks, EntityType::HeavyUnit) == ProductionResult::Valid);
+    REQUIRE(simulation.ValidateProduction(
+                0, barracks, EntityType::ScoutUnit) == ProductionResult::Valid);
+
+    Command produce = MakeCommand(0, 0, 1, CommandType::Produce, barracks);
+    produce.buildType = EntityType::HeavyUnit;
+    REQUIRE(simulation.QueueCommand(produce));
+    simulation.Step(140);
+    REQUIRE(std::count_if(
+                simulation.Entities().begin(), simulation.Entities().end(),
+                [](const Entity& entity) {
+                    return entity.owner == 0 &&
+                           entity.type == EntityType::HeavyUnit;
+                }) == 2);
+
+    Command build = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Build, worker);
+    build.position = Vec2::FromTiles(20, 20);
+    build.buildType = EntityType::UtilityStructure;
+    const std::int32_t materialBefore =
+        simulation.FindPlayer(0)->resources.material;
+    const std::int32_t dawnBefore =
+        simulation.FindPlayer(0)->resources.dawnshards;
+    REQUIRE(simulation.QueueCommand(build));
+    simulation.Step();
+    REQUIRE(simulation.FindPlayer(0)->resources.material == materialBefore - 130);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == dawnBefore - 30);
+    REQUIRE(std::any_of(
+        simulation.Entities().begin(), simulation.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 &&
+                   entity.type == EntityType::UtilityStructure &&
+                   !entity.completed;
+        }));
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+}
+
 }  // namespace
 
 int main() {
@@ -1301,6 +1372,8 @@ int main() {
          TestSnapshotAdversarialBoundsAndIdExhaustion},
         {"authored rules drive simulation and persist",
          TestAuthoredRulesDriveSimulationAndPersist},
+        {"complete roster entity types and production",
+         TestCompleteRosterEntityTypesAndProduction},
     };
 
     std::size_t passed = 0;

@@ -53,6 +53,12 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               Rules.archetypes[1][1].attackRangeRaw, 5120);
     TestEqual(TEXT("Meridian Anchor footprint enters simulation rules"),
               Rules.archetypes[0][2].footprintHalfExtentRaw, 2560);
+    TestEqual(TEXT("Meridian Bulwark health enters distinct heavy rules"),
+              Rules.archetypes[0][7].maxHitPoints, 260);
+    TestEqual(TEXT("Kharuun Resonant sight enters distinct scout rules"),
+              Rules.archetypes[1][8].visionTiles, 16);
+    TestEqual(TEXT("Kharuun Listening Spine enters utility rules"),
+              Rules.archetypes[1][9].maxHitPoints, 440);
     TestEqual(TEXT("Authored Future Well duration enters simulation rules"),
               Rules.futureWell.reshapeDurationMinimumTicks,
               static_cast<echoes::sim::Tick>(1800));

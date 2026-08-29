@@ -298,10 +298,18 @@ bool FEchoesContentCatalog::BuildSimulationRules(
          echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Worker},
         {TEXT("mc_lancer"), TEXT("meridian_compact"), TEXT("ranged_line"),
          echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Soldier},
+        {TEXT("mc_bulwark_team"), TEXT("meridian_compact"), TEXT("heavy_screen"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::HeavyUnit},
+        {TEXT("mc_relay_skiff"), TEXT("meridian_compact"), TEXT("scout_support"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::ScoutUnit},
         {TEXT("ka_tender"), TEXT("kharuun_assemblies"), TEXT("worker"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Worker},
         {TEXT("ka_riftstalker"), TEXT("kharuun_assemblies"), TEXT("mobile_skirmisher"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Soldier},
+        {TEXT("ka_cairnback"), TEXT("kharuun_assemblies"), TEXT("assault_screen"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::HeavyUnit},
+        {TEXT("ka_resonant"), TEXT("kharuun_assemblies"), TEXT("scout_counter_scout"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::ScoutUnit},
     };
     for (const FUnitBinding& Binding : UnitBindings)
     {
@@ -357,12 +365,16 @@ bool FEchoesContentCatalog::BuildSimulationRules(
          echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Dropoff},
         {TEXT("mc_array_foundry"), TEXT("meridian_compact"), TEXT("production"),
          echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Barracks},
+        {TEXT("mc_aegis_post"), TEXT("meridian_compact"), TEXT("defense"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::UtilityStructure},
         {TEXT("ka_memory_hearth"), TEXT("kharuun_assemblies"), TEXT("headquarters_dropoff"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::CommandCore},
         {TEXT("ka_waystone"), TEXT("kharuun_assemblies"), TEXT("mobile_supply_node"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Dropoff},
         {TEXT("ka_growth_basin"), TEXT("kharuun_assemblies"), TEXT("production"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks},
+        {TEXT("ka_listening_spine"), TEXT("kharuun_assemblies"), TEXT("detection"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::UtilityStructure},
     };
     for (const FBuildingBinding& Binding : BuildingBindings)
     {

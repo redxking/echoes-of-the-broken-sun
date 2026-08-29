@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 10;
-inline constexpr std::uint32_t kReplayVersion = 10;
+inline constexpr std::uint32_t kSnapshotVersion = 11;
+inline constexpr std::uint32_t kReplayVersion = 11;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -115,6 +115,9 @@ enum class EntityType : std::uint8_t {
     Barracks = 4,
     ResourceNode = 5,
     FutureWell = 6,
+    HeavyUnit = 7,
+    ScoutUnit = 8,
+    UtilityStructure = 9,
 };
 
 enum class Terrain : std::uint8_t {
@@ -212,7 +215,7 @@ struct ResourcePool final {
 };
 
 inline constexpr std::size_t kFactionCount = 2;
-inline constexpr std::size_t kConfigurableEntityTypeCount = 5;
+inline constexpr std::size_t kConfigurableEntityTypeCount = 10;
 
 /** Deterministic values for one foundational simulation archetype. */
 struct EntityArchetypeRules final {

@@ -81,7 +81,29 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidEntityType(EntityType type) {
-    return type >= EntityType::Worker && type <= EntityType::FutureWell;
+    return type >= EntityType::Worker && type <= EntityType::UtilityStructure;
+}
+
+constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
+    EntityType::Worker,
+    EntityType::Soldier,
+    EntityType::CommandCore,
+    EntityType::Dropoff,
+    EntityType::Barracks,
+    EntityType::HeavyUnit,
+    EntityType::ScoutUnit,
+    EntityType::UtilityStructure,
+};
+
+[[nodiscard]] bool IsConfigurableEntityType(EntityType type) {
+    return std::find(kConfigurableEntityTypes.begin(),
+                     kConfigurableEntityTypes.end(), type) !=
+           kConfigurableEntityTypes.end();
+}
+
+[[nodiscard]] bool IsBarracksUnitType(EntityType type) {
+    return type == EntityType::Soldier || type == EntityType::HeavyUnit ||
+           type == EntityType::ScoutUnit;
 }
 
 [[nodiscard]] bool IsValidTerrain(Terrain terrain) {
@@ -107,7 +129,7 @@ void SetError(std::string* destination, const std::string& message) {
 
 [[nodiscard]] bool IsBuildingType(EntityType type) {
     return type == EntityType::CommandCore || type == EntityType::Dropoff ||
-           type == EntityType::Barracks;
+           type == EntityType::Barracks || type == EntityType::UtilityStructure;
 }
 
 [[nodiscard]] bool IsDropoffType(EntityType type) {
@@ -129,9 +151,12 @@ void SetError(std::string* destination, const std::string& message) {
     switch (type) {
         case EntityType::Worker:
         case EntityType::Soldier:
+        case EntityType::HeavyUnit:
+        case EntityType::ScoutUnit:
         case EntityType::CommandCore:
         case EntityType::Dropoff:
         case EntityType::Barracks:
+        case EntityType::UtilityStructure:
             return ArchetypeFor(rules, faction, type).footprintHalfExtentRaw;
         case EntityType::FutureWell:
             return kFixedScale / 2;
@@ -148,6 +173,7 @@ void SetError(std::string* destination, const std::string& message) {
         case EntityType::CommandCore:
         case EntityType::Dropoff:
         case EntityType::Barracks:
+        case EntityType::UtilityStructure:
             return ArchetypeFor(rules, faction, type).cost;
         default:
             return {};
@@ -160,6 +186,8 @@ void SetError(std::string* destination, const std::string& message) {
     switch (type) {
         case EntityType::Worker:
         case EntityType::Soldier:
+        case EntityType::HeavyUnit:
+        case EntityType::ScoutUnit:
             return ArchetypeFor(rules, faction, type).cost;
         default:
             return {};
@@ -172,6 +200,8 @@ void SetError(std::string* destination, const std::string& message) {
     switch (type) {
         case EntityType::Worker:
         case EntityType::Soldier:
+        case EntityType::HeavyUnit:
+        case EntityType::ScoutUnit:
             return ArchetypeFor(rules, faction, type).populationCost;
         default:
             return 0;
@@ -183,9 +213,9 @@ void SetError(std::string* destination, const std::string& message) {
         return false;
     }
     for (std::size_t faction = 0; faction < kFactionCount; ++faction) {
-        for (std::size_t type = 0; type < kConfigurableEntityTypeCount; ++type) {
+        for (const EntityType type : kConfigurableEntityTypes) {
             const EntityArchetypeRules& archetype =
-                rules.archetypes[faction][type];
+                rules.archetypes[faction][static_cast<std::size_t>(type)];
             if (archetype.cost.material < 0 || archetype.cost.dawnshards < 0 ||
                 archetype.maxHitPoints <= 0 ||
                 archetype.movementPerTickRaw < 0 ||
@@ -213,9 +243,19 @@ void SetError(std::string* destination, const std::string& message) {
             soldier.populationCost <= 0 || soldier.productionTicks <= 0) {
             return false;
         }
+        for (const EntityType type : {EntityType::HeavyUnit,
+                                     EntityType::ScoutUnit}) {
+            const auto& unit =
+                rules.archetypes[faction][static_cast<std::size_t>(type)];
+            if (unit.populationCost <= 0 || unit.productionTicks <= 0 ||
+                unit.attackDamage <= 0 || unit.attackPeriodTicks == 0) {
+                return false;
+            }
+        }
         for (const EntityType type : {EntityType::CommandCore,
                                      EntityType::Dropoff,
-                                     EntityType::Barracks}) {
+                                     EntityType::Barracks,
+                                     EntityType::UtilityStructure}) {
             if (rules.archetypes[faction][static_cast<std::size_t>(type)]
                     .constructionRequired <= 0) {
                 return false;
@@ -341,7 +381,7 @@ void SetError(std::string* destination, const std::string& message) {
         (building->type == EntityType::CommandCore &&
          unitType == EntityType::Worker) ||
         (building->type == EntityType::Barracks &&
-         unitType == EntityType::Soldier);
+         IsBarracksUnitType(unitType));
     if (!supported) {
         return ProductionResult::UnsupportedUnit;
     }
@@ -542,7 +582,7 @@ void WriteCommand(Writer& writer, const Command& command) {
         return false;
     }
     if (type > static_cast<std::uint8_t>(CommandType::Patrol) ||
-        buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
+        buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
     }
@@ -585,6 +625,15 @@ SimulationRules DefaultSimulationRules() {
     set(Faction::MeridianCompact, EntityType::Barracks,
         {{170, 20}, 650, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
          kFixedScale});
+    set(Faction::MeridianCompact, EntityType::HeavyUnit,
+        {{130, 25}, 260, 117, 9, 3 * kFixedScale, 10, 24, 0, 0, 0, 3,
+         0, 140, kFixedScale / 8});
+    set(Faction::MeridianCompact, EntityType::ScoutUnit,
+        {{70, 20}, 75, 256, 15, 4 * kFixedScale, 6, 24, 0, 0, 0, 1,
+         0, 80, kFixedScale / 8});
+    set(Faction::MeridianCompact, EntityType::UtilityStructure,
+        {{130, 30}, 520, 0, 7, 0, 0, 0, 0, 0, 120, 0, 0, 0,
+         kFixedScale});
 
     set(Faction::KharuunAssemblies, EntityType::Worker,
         {{50, 0}, 70, 160, 6, kFixedScale, 5, 16, 9, 90, 0, 1, 0,
@@ -600,6 +649,15 @@ SimulationRules DefaultSimulationRules() {
          3 * kFixedScale / 4});
     set(Faction::KharuunAssemblies, EntityType::Barracks,
         {{150, 30}, 540, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
+         kFixedScale});
+    set(Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        {{120, 30}, 245, 138, 8, 2 * kFixedScale, 16, 28, 0, 0, 0, 3,
+         0, 140, kFixedScale / 8});
+    set(Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        {{80, 25}, 85, 240, 16, 3891, 8, 20, 0, 0, 0, 1,
+         0, 80, kFixedScale / 8});
+    set(Faction::KharuunAssemblies, EntityType::UtilityStructure,
+        {{115, 25}, 440, 0, 9, 0, 0, 0, 0, 0, 120, 0, 0, 0,
          kFixedScale});
     return rules;
 }
@@ -698,7 +756,7 @@ Entity Simulation::MakeEntity(PlayerId owner,
     entity.faction = faction;
     entity.type = type;
     entity.position = position;
-    if (type >= EntityType::Worker && type <= EntityType::Barracks) {
+    if (IsConfigurableEntityType(type)) {
         const EntityArchetypeRules& archetype =
             ArchetypeFor(config_.rules, faction, type);
         entity.maxHitPoints = archetype.maxHitPoints;
@@ -719,6 +777,9 @@ Entity Simulation::MakeEntity(PlayerId owner,
         case EntityType::CommandCore:
         case EntityType::Dropoff:
         case EntityType::Barracks:
+        case EntityType::HeavyUnit:
+        case EntityType::ScoutUnit:
+        case EntityType::UtilityStructure:
             break;
         case EntityType::ResourceNode:
             entity.maxHitPoints = 1;
@@ -887,7 +948,7 @@ ResourcePool Simulation::ProductionCost(Faction faction, EntityType type) const 
 
 std::int32_t Simulation::ProductionTicks(Faction faction,
                                          EntityType type) const {
-    return type == EntityType::Worker || type == EntityType::Soldier
+    return type == EntityType::Worker || IsBarracksUnitType(type)
                ? ArchetypeFor(config_.rules, faction, type).productionTicks
                : 0;
 }
@@ -954,7 +1015,7 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         (building->type == EntityType::CommandCore &&
          unitType == EntityType::Worker) ||
         (building->type == EntityType::Barracks &&
-         unitType == EntityType::Soldier);
+         IsBarracksUnitType(unitType));
     if (!supported) {
         return ProductionResult::UnsupportedUnit;
     }
@@ -2634,7 +2695,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
             continue;
         }
         if (actor.type != EntityType::Worker &&
-            actor.type != EntityType::Soldier) {
+            !IsBarracksUnitType(actor.type)) {
             continue;
         }
         if (actor.type == EntityType::Worker) {
@@ -2902,7 +2963,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     BinaryWriter writer{};
     writer.Reserve(
-        876U + terrain_.size() * (1U + explored_.size()) +
+        1516U + terrain_.size() * (1U + explored_.size()) +
         entities_.size() * kSerializedEntityBytes +
         pendingCommands_.size() * kSerializedCommandBytes);
     WriteSnapshotPayload(writer);
@@ -3136,14 +3197,16 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
         if (entity.id == 0 || entity.id <= priorId ||
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
-            type > static_cast<std::uint8_t>(EntityType::FutureWell) ||
+            type > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             completed > 1 ||
             orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
-            orderBuildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
+            orderBuildType >
+                static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             entity.reshapeVariant > 3 ||
-            productionType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
+            productionType >
+                static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3165,9 +3228,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              entity.productionProgress != 0) ||
             (entity.productionRequired > 0 &&
              !((type == static_cast<std::uint8_t>(EntityType::CommandCore) &&
-                productionType == static_cast<std::uint8_t>(EntityType::Worker)) ||
+               productionType == static_cast<std::uint8_t>(EntityType::Worker)) ||
                (type == static_cast<std::uint8_t>(EntityType::Barracks) &&
-                productionType == static_cast<std::uint8_t>(EntityType::Soldier)))) ||
+                (productionType == static_cast<std::uint8_t>(EntityType::Soldier) ||
+                 productionType == static_cast<std::uint8_t>(EntityType::HeavyUnit) ||
+                 productionType == static_cast<std::uint8_t>(EntityType::ScoutUnit))))) ||
             entity.reshapeUntilTick > kMaximumSupportedTick ||
             (wellChoice != static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
              entity.reshapeUntilTick != 0) ||

@@ -283,6 +283,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::BuildDropoff);
     InputComponent->BindAction(
+        TEXT("BuildUtility"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::BuildUtility);
+    InputComponent->BindAction(
         TEXT("ProduceWorker"),
         IE_Pressed,
         this,
@@ -292,6 +297,16 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::ProduceSoldier);
+    InputComponent->BindAction(
+        TEXT("ProduceHeavy"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ProduceHeavy);
+    InputComponent->BindAction(
+        TEXT("ProduceScout"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ProduceScout);
     InputComponent->BindAction(
         TEXT("AttackMoveAtCursor"),
         IE_Pressed,
@@ -917,6 +932,11 @@ void AEchoesPlayerController::BuildDropoff()
     BuildAtCursor(echoes::sim::EntityType::Dropoff);
 }
 
+void AEchoesPlayerController::BuildUtility()
+{
+    BuildAtCursor(echoes::sim::EntityType::UtilityStructure);
+}
+
 void AEchoesPlayerController::ProduceWorker()
 {
     ProduceUnit(echoes::sim::EntityType::Worker);
@@ -925,6 +945,16 @@ void AEchoesPlayerController::ProduceWorker()
 void AEchoesPlayerController::ProduceSoldier()
 {
     ProduceUnit(echoes::sim::EntityType::Soldier);
+}
+
+void AEchoesPlayerController::ProduceHeavy()
+{
+    ProduceUnit(echoes::sim::EntityType::HeavyUnit);
+}
+
+void AEchoesPlayerController::ProduceScout()
+{
+    ProduceUnit(echoes::sim::EntityType::ScoutUnit);
 }
 
 void AEchoesPlayerController::AttackMoveAtCursor()
@@ -1521,7 +1551,7 @@ void AEchoesPlayerController::BuildAtCursor(
     if (WorkerId == 0)
     {
         SetStatusMessage(
-            TEXT("[BUILD_REQUIRES_WORKER] Select a worker, point at open ground, then press B or N."));
+            TEXT("[BUILD_REQUIRES_WORKER] Select a worker, point at open ground, then press B, N, or M."));
         return;
     }
     FHitResult HitResult;
@@ -1539,8 +1569,10 @@ void AEchoesPlayerController::BuildAtCursor(
     {
         SetStatusMessage(
             BuildingType == echoes::sim::EntityType::Barracks
-                ? TEXT("BARRACKS: construction order queued.")
-                : TEXT("DROP-OFF: construction order queued."));
+                ? TEXT("PRODUCTION STRUCTURE: construction order queued.")
+                : BuildingType == echoes::sim::EntityType::UtilityStructure
+                      ? TEXT("FACTION UTILITY: construction order queued.")
+                      : TEXT("LOGISTICS STRUCTURE: construction order queued."));
     }
     else
     {
@@ -1572,7 +1604,9 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
         const bool bCompatible = Entity != nullptr &&
             ((UnitType == echoes::sim::EntityType::Worker &&
               Entity->type == echoes::sim::EntityType::CommandCore) ||
-             (UnitType == echoes::sim::EntityType::Soldier &&
+             ((UnitType == echoes::sim::EntityType::Soldier ||
+               UnitType == echoes::sim::EntityType::HeavyUnit ||
+               UnitType == echoes::sim::EntityType::ScoutUnit) &&
               Entity->type == echoes::sim::EntityType::Barracks));
         if (!bCompatible)
         {
@@ -1595,7 +1629,11 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
                 TEXT("%s: %d production order%s queued."),
                 UnitType == echoes::sim::EntityType::Worker
                     ? TEXT("WORKER")
-                    : TEXT("SOLDIER"),
+                    : UnitType == echoes::sim::EntityType::HeavyUnit
+                          ? TEXT("HEAVY UNIT")
+                          : UnitType == echoes::sim::EntityType::ScoutUnit
+                                ? TEXT("SCOUT UNIT")
+                                : TEXT("LINE UNIT"),
                 Accepted,
                 Accepted == 1 ? TEXT("") : TEXT("s")));
     }
@@ -1603,7 +1641,7 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
     {
         SetStatusMessage(
             LastFeedback.IsEmpty()
-                ? TEXT("[NO_COMPATIBLE_PRODUCER] Select a Command Core for Q or a Barracks for E.")
+                ? TEXT("[NO_COMPATIBLE_PRODUCER] Select a headquarters for Q or a production structure for E, semicolon, or apostrophe.")
                 : LastFeedback);
     }
 }

@@ -100,6 +100,7 @@ private:
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
+    echoes::sim::Faction EntityFaction = echoes::sim::Faction::MeridianCompact;
     echoes::sim::EntityType EntityType = echoes::sim::EntityType::Worker;
     echoes::sim::FutureWellChoice WellChoice =
         echoes::sim::FutureWellChoice::Dormant;

@@ -92,10 +92,10 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Hostile Command Core is present"), HostileCore != 0);
     TestEqual(TEXT("Initial local logistics are committed"),
               Initial->PopulationUsed(UEchoesSimulationSubsystem::LocalPlayerId),
-              9);
+              13);
     TestEqual(TEXT("Initial local logistics capacity is available"),
               Initial->PopulationCapacity(UEchoesSimulationSubsystem::LocalPlayerId),
-              12);
+              18);
 
     const FEchoesObjectiveSnapshot Objectives =
         Bridge->GetLocalObjectiveSnapshot();
@@ -224,9 +224,9 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Soldier production creates exactly one local soldier"),
               ProducedSoldiers,
               InitialSoldiers + 1);
-    TestEqual(TEXT("Production fills the initial logistics capacity"),
+    TestEqual(TEXT("Production commits the authored logistics costs"),
               Produced->PopulationUsed(UEchoesSimulationSubsystem::LocalPlayerId),
-              12);
+              16);
 
     TestTrue(TEXT("Restart rebuilds the deterministic scenario"),
              Bridge->RestartPrototypeScenario());
@@ -238,7 +238,7 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
                   static_cast<echoes::sim::Tick>(0));
         TestEqual(TEXT("Restart restores initial entity count"),
                   static_cast<int32>(Restarted->Entities().size()),
-                  25);
+                  31);
         TestTrue(TEXT("Restart restores an ongoing match"),
                  Restarted->Outcome() == echoes::sim::MatchOutcome::Ongoing);
         const echoes::sim::PlayerState* Player = Restarted->FindPlayer(

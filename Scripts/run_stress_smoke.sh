@@ -40,7 +40,7 @@ if ! /usr/bin/grep -q \
 fi
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=46bc07c2f792417f880c988b053c2ac825013b695787b0e49da95ebddf92e949 foundationalArchetypes=10 catalogUnits=8 catalogBuildings=8 futureWell=authored' \
+  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=46bc07c2f792417f880c988b053c2ac825013b695787b0e49da95ebddf92e949 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored' \
   "$log"; then
   print -u2 "Stress runtime did not install the authored deterministic rules. Inspect: $log"
   exit 4

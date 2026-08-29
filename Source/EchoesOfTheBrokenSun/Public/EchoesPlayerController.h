@@ -79,8 +79,11 @@ private:
     void ChooseReshape();
     void BuildBarracks();
     void BuildDropoff();
+    void BuildUtility();
     void ProduceWorker();
     void ProduceSoldier();
+    void ProduceHeavy();
+    void ProduceScout();
     void AttackMoveAtCursor();
     void PatrolAtCursor();
     void HoldSelectedUnits();

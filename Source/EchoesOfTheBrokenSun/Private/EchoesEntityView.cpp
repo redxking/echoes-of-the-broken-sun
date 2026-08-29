@@ -172,9 +172,11 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     const int32 PreviousHitPoints = HitPoints;
     const bool bNeedsAppearance = EntityId == 0 || EntityType != State.type ||
                                   OwnerPlayerId != State.owner ||
+                                  EntityFaction != State.faction ||
                                   WellChoice != State.wellChoice;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
+    EntityFaction = State.faction;
     EntityType = State.type;
     WellChoice = State.wellChoice;
     HitPoints = State.hitPoints;
@@ -256,6 +258,22 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             HealthBarWidthScale = 1.05f;
             HealthBarHeight = 112.0f;
             break;
+        case echoes::sim::EntityType::HeavyUnit:
+            DesiredMesh = SphereMesh;
+            BodyScale = FVector(0.90f, 0.78f, 0.72f);
+            BodyOffset.Z = 36.0f;
+            SelectionRadius = 1.05f;
+            HealthBarWidthScale = 1.25f;
+            HealthBarHeight = 102.0f;
+            break;
+        case echoes::sim::EntityType::ScoutUnit:
+            DesiredMesh = ConeMesh;
+            BodyScale = FVector(0.42f, 0.42f, 0.62f);
+            BodyOffset.Z = 42.0f;
+            SelectionRadius = 0.72f;
+            HealthBarWidthScale = 0.85f;
+            HealthBarHeight = 94.0f;
+            break;
         case echoes::sim::EntityType::CommandCore:
             DesiredMesh = CubeMesh;
             BodyScale = FVector(2.0f, 2.0f, 1.25f);
@@ -279,6 +297,14 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             SelectionRadius = 2.15f;
             HealthBarWidthScale = 1.95f;
             HealthBarHeight = 120.0f;
+            break;
+        case echoes::sim::EntityType::UtilityStructure:
+            DesiredMesh = CylinderMesh;
+            BodyScale = FVector(0.85f, 0.85f, 1.45f);
+            BodyOffset.Z = 72.5f;
+            SelectionRadius = 1.15f;
+            HealthBarWidthScale = 1.3f;
+            HealthBarHeight = 165.0f;
             break;
         case echoes::sim::EntityType::ResourceNode:
             DesiredMesh = SphereMesh;
@@ -455,13 +481,29 @@ FString AEchoesEntityView::GetDisplayName() const
         case echoes::sim::EntityType::Worker:
             return TEXT("Worker");
         case echoes::sim::EntityType::Soldier:
-            return TEXT("Soldier");
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Lancer")
+                       : TEXT("Riftstalker");
+        case echoes::sim::EntityType::HeavyUnit:
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Bulwark Team")
+                       : TEXT("Cairnback");
+        case echoes::sim::EntityType::ScoutUnit:
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Relay Skiff")
+                       : TEXT("Resonant");
         case echoes::sim::EntityType::CommandCore:
             return TEXT("Command Core");
         case echoes::sim::EntityType::Dropoff:
             return TEXT("Matter Drop-off");
         case echoes::sim::EntityType::Barracks:
-            return TEXT("Barracks");
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Array Foundry")
+                       : TEXT("Growth Basin");
+        case echoes::sim::EntityType::UtilityStructure:
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Aegis Post")
+                       : TEXT("Listening Spine");
         case echoes::sim::EntityType::ResourceNode:
             return TEXT("Matter Node");
         case echoes::sim::EntityType::FutureWell:
