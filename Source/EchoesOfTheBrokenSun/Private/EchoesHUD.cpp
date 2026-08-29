@@ -2,11 +2,38 @@
 
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+
+namespace
+{
+FLinearColor MinimapOwnerColor(uint8 Owner, bool bHighContrast)
+{
+    if (bHighContrast)
+    {
+        switch (Owner)
+        {
+            case 0: return FLinearColor(0.1f, 0.95f, 1.0f);
+            case 1: return FLinearColor(1.0f, 0.35f, 0.12f);
+            case 2: return FLinearColor(1.0f, 0.9f, 0.1f);
+            case 3: return FLinearColor(0.86f, 0.55f, 1.0f);
+            default: return FLinearColor::White;
+        }
+    }
+    switch (Owner)
+    {
+        case 0: return FLinearColor(0.04f, 0.72f, 0.88f);
+        case 1: return FLinearColor(0.92f, 0.30f, 0.05f);
+        case 2: return FLinearColor(0.95f, 0.74f, 0.08f);
+        case 3: return FLinearColor(0.62f, 0.30f, 0.95f);
+        default: return FLinearColor(0.72f, 0.72f, 0.72f);
+    }
+}
+}
 
 void AEchoesHUD::DrawHUD()
 {
@@ -241,7 +268,179 @@ void AEchoesHUD::DrawHUD()
         }
     }
 
+    DrawTacticalMinimap(Bridge, EchoesController, Settings);
     DrawSelectionRectangle();
+}
+
+void AEchoesHUD::DrawTacticalMinimap(
+    const UEchoesSimulationSubsystem* Bridge,
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || Bridge == nullptr || Bridge->GetSimulation() == nullptr)
+    {
+        return;
+    }
+
+    const echoes::sim::Simulation* Sim = Bridge->GetSimulation();
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float Size = FMath::Clamp(
+        FMath::Min(220.0f * HudScale, Canvas->ClipY * 0.30f),
+        150.0f,
+        240.0f);
+    const float Left = Canvas->ClipX - Size - 20.0f;
+    const float Top = Canvas->ClipY - Size - 92.0f;
+    if (Left < 18.0f || Top < 310.0f)
+    {
+        return;
+    }
+
+    const FLinearColor Border =
+        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f) : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Background =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+                      : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
+    const FLinearColor Scar =
+        bHighContrast ? FLinearColor(0.42f, 0.42f, 0.42f)
+                      : FLinearColor(0.12f, 0.16f, 0.22f);
+    DrawRect(Background, Left, Top, Size, Size);
+
+    const int32 MapWidth = FMath::Max(1, Sim->Config().mapWidthTiles);
+    const int32 MapHeight = FMath::Max(1, Sim->Config().mapHeightTiles);
+    const float CellWidth = Size / static_cast<float>(MapWidth);
+    const float CellHeight = Size / static_cast<float>(MapHeight);
+    for (int32 TileY = 0; TileY < MapHeight; ++TileY)
+    {
+        for (int32 TileX = 0; TileX < MapWidth; ++TileX)
+        {
+            if (Sim->TerrainAt(TileX, TileY) == echoes::sim::Terrain::Blocked &&
+                Sim->VisibilityAt(
+                    UEchoesSimulationSubsystem::LocalPlayerId,
+                    echoes::sim::Vec2::FromTiles(TileX, TileY)) !=
+                    echoes::sim::Visibility::Unexplored)
+            {
+                DrawRect(
+                    Scar,
+                    Left + static_cast<float>(TileX) * CellWidth,
+                    Top + static_cast<float>(TileY) * CellHeight,
+                    FMath::Max(1.0f, CellWidth),
+                    FMath::Max(1.0f, CellHeight));
+            }
+        }
+    }
+
+    const TArray<uint32>* SelectedIds =
+        EchoesController != nullptr ? &EchoesController->GetSelectedEntityIds() : nullptr;
+    int32 VisibleMarkerCount = 0;
+    for (const echoes::sim::Entity& Entity : Sim->Entities())
+    {
+        if (!Sim->IsEntityVisibleTo(
+                UEchoesSimulationSubsystem::LocalPlayerId,
+                Entity.id))
+        {
+            continue;
+        }
+        ++VisibleMarkerCount;
+        const float X = Left +
+            FMath::Clamp(
+                static_cast<float>(Entity.position.x.Raw()) /
+                    static_cast<float>(echoes::sim::kFixedScale * MapWidth),
+                0.0f,
+                1.0f) * Size;
+        const float Y = Top +
+            FMath::Clamp(
+                static_cast<float>(Entity.position.y.Raw()) /
+                    static_cast<float>(echoes::sim::kFixedScale * MapHeight),
+                0.0f,
+                1.0f) * Size;
+        const bool bStructure =
+            Entity.type == echoes::sim::EntityType::CommandCore ||
+            Entity.type == echoes::sim::EntityType::Dropoff ||
+            Entity.type == echoes::sim::EntityType::Barracks;
+        const float MarkerSize = bStructure ? 5.0f : 3.0f;
+        FLinearColor Color = MinimapOwnerColor(Entity.owner, bHighContrast);
+        if (Entity.type == echoes::sim::EntityType::ResourceNode)
+        {
+            Color = FLinearColor(1.0f, 0.62f, 0.08f);
+        }
+        else if (Entity.type == echoes::sim::EntityType::FutureWell)
+        {
+            Color = FLinearColor(0.78f, 0.3f, 1.0f);
+        }
+
+        const bool bSelected = SelectedIds != nullptr && SelectedIds->Contains(Entity.id);
+        if (bSelected)
+        {
+            DrawRect(FLinearColor::White, X - MarkerSize, Y - MarkerSize,
+                     MarkerSize * 2.0f, MarkerSize * 2.0f);
+        }
+        const float HalfMarker = MarkerSize * 0.5f;
+        switch (Entity.owner)
+        {
+            case 1:
+                DrawLine(X - HalfMarker, Y - HalfMarker, X + HalfMarker, Y + HalfMarker, Color, 1.5f);
+                DrawLine(X + HalfMarker, Y - HalfMarker, X - HalfMarker, Y + HalfMarker, Color, 1.5f);
+                break;
+            case 2:
+                DrawLine(X, Y - HalfMarker, X + HalfMarker, Y, Color, 1.5f);
+                DrawLine(X + HalfMarker, Y, X, Y + HalfMarker, Color, 1.5f);
+                DrawLine(X, Y + HalfMarker, X - HalfMarker, Y, Color, 1.5f);
+                DrawLine(X - HalfMarker, Y, X, Y - HalfMarker, Color, 1.5f);
+                break;
+            case 3:
+                DrawLine(X - HalfMarker, Y, X + HalfMarker, Y, Color, 1.5f);
+                DrawLine(X, Y - HalfMarker, X, Y + HalfMarker, Color, 1.5f);
+                break;
+            default:
+                DrawRect(Color, X - HalfMarker, Y - HalfMarker, MarkerSize, MarkerSize);
+                break;
+        }
+    }
+
+    if (const APawn* CameraPawn = GetOwningPawn())
+    {
+        const echoes::sim::Vec2 CameraPosition =
+            Bridge->WorldToSim(CameraPawn->GetActorLocation());
+        const float CameraX = Left +
+            FMath::Clamp(
+                static_cast<float>(CameraPosition.x.Raw()) /
+                    static_cast<float>(echoes::sim::kFixedScale * MapWidth),
+                0.0f,
+                1.0f) * Size;
+        const float CameraY = Top +
+            FMath::Clamp(
+                static_cast<float>(CameraPosition.y.Raw()) /
+                    static_cast<float>(echoes::sim::kFixedScale * MapHeight),
+                0.0f,
+                1.0f) * Size;
+        DrawLine(CameraX - 6.0f, CameraY, CameraX + 6.0f, CameraY, FLinearColor::White, 1.0f);
+        DrawLine(CameraX, CameraY - 6.0f, CameraX, CameraY + 6.0f, FLinearColor::White, 1.0f);
+    }
+
+    DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
+    DrawLine(Left + Size, Top, Left + Size, Top + Size, Border, 2.0f);
+    DrawLine(Left + Size, Top + Size, Left, Top + Size, Border, 2.0f);
+    DrawLine(Left, Top + Size, Left, Top, Border, 2.0f);
+    DrawText(
+        TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
+        Border,
+        Left,
+        Top - 18.0f,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.72f * HudScale,
+        false);
+
+    if (!bLoggedTacticalOverviewReady)
+    {
+        bLoggedTacticalOverviewReady = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_MINIMAP_READY] fogRespecting=true terrainAware=true nonColorTeams=true visibleMarkers=%d"),
+            VisibleMarkerCount);
+    }
 }
 
 void AEchoesHUD::DrawSelectionRectangle()

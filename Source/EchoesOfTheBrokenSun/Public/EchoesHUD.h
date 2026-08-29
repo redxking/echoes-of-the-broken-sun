@@ -4,7 +4,11 @@
 #include "GameFramework/HUD.h"
 #include "EchoesHUD.generated.h"
 
-/** Minimal code-only HUD for prototype state, controls, and order feedback. */
+class AEchoesPlayerController;
+class UEchoesGameUserSettings;
+class UEchoesSimulationSubsystem;
+
+/** Code-only tactical HUD for state, controls, feedback, and battlefield overview. */
 UCLASS(NotBlueprintable)
 class ECHOESOFTHEBROKENSUN_API AEchoesHUD final : public AHUD
 {
@@ -14,5 +18,11 @@ public:
     virtual void DrawHUD() override;
 
 private:
+    void DrawTacticalMinimap(
+        const UEchoesSimulationSubsystem* Bridge,
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawSelectionRectangle();
+
+    bool bLoggedTacticalOverviewReady = false;
 };
