@@ -143,6 +143,27 @@ void AEchoesGameMode::BeginPlay()
             TEXT("[ECHOES_FACTION_REQUESTED] value=%s accepted=true"),
             *RequestedFaction);
     }
+    if (!bStressScenario &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesCampaignPrologue")))
+    {
+        FString OperationFeedback;
+        if (!Bridge->SelectOperationMode(
+                EEchoesOperationMode::CampaignPrologue,
+                OperationFeedback))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=WhatTheLedgerKeeps detail=%s"),
+                *OperationFeedback);
+            CleanupPrototypeEnvironment();
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_OPERATION_REQUESTED] operation=WhatTheLedgerKeeps accepted=true"));
+    }
     const bool bSimulationReady = bStressScenario
                                       ? Bridge->StartStressScenario()
                                       : Bridge->StartPrototypeScenario();

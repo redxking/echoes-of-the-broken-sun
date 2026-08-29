@@ -59,6 +59,17 @@ const TCHAR* ResearchDisplayName(echoes::sim::ResearchType Technology)
     }
 }
 
+const TCHAR* WellChoiceDisplayName(echoes::sim::FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case echoes::sim::FutureWellChoice::Harvest: return TEXT("HARVEST");
+        case echoes::sim::FutureWellChoice::Preserve: return TEXT("PRESERVE");
+        case echoes::sim::FutureWellChoice::Reshape: return TEXT("RESHAPE");
+        default: return TEXT("UNRESOLVED");
+    }
+}
+
 FVector2D FallbackContactProjection(
     APlayerController* Controller,
     const FVector& WorldPosition,
@@ -971,6 +982,12 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("ON") : TEXT("OFF"));
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const bool bPrologue = Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -989,23 +1006,37 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(TEXT("AVAILABLE OPERATION"), Accent,
              Left + 48.0f, Top + 164.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
-    DrawText(TEXT("GLASS SCAR"), Body,
+    DrawText(bPrologue ? TEXT("WHAT THE LEDGER KEEPS") : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
-    DrawText(FString::Printf(
-                 TEXT("SINGLE-PLAYER  //  %s  //  FUTURE WELL CONTEST"),
-                 *LocalFaction),
+    const FString OperationMetadata = bPrologue
+        ? FString::Printf(
+              TEXT("CAMPAIGN PROLOGUE  //  %s  //  MARA VEY"),
+              *LocalFaction)
+        : FString::Printf(
+              TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
+              *LocalFaction);
+    DrawText(OperationMetadata,
              Muted, Left + 48.0f, Top + 246.0f * ContentScale,
              SmallFont, 0.86f * TextScale, false);
-    DrawText(FString::Printf(
-                 TEXT("[TAB] CHANGE FACTION  //  OPPOSITION: ADAPTIVE %s  //  STANDARD"),
-                 *OpponentFaction),
+    DrawText(
+        bPrologue
+            ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 01")
+            : FString::Printf(
+                  TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
+                  *OpponentFaction),
              Accent, Left + 48.0f, Top + 272.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
-    DrawText(TEXT("Cross the shattered approaches, choose what the Well becomes,"),
+    DrawText(
+        bPrologue
+            ? TEXT("Recover Talar Venn's displaced archive before the line collapses.")
+            : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
-    DrawText(TEXT("and break the opposing Command Core before your own line collapses."),
+    DrawText(
+        bPrologue
+            ? TEXT("Commit the Well's consequence, then withdraw to Lume Reach.")
+            : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
 
@@ -1073,6 +1104,65 @@ void AEchoesHUD::DrawObjectiveTracker(
     const FLinearColor Failed = FLinearColor(1.0f, 0.35f, 0.18f);
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const float TextScale = FMath::Clamp(HudScale, 0.82f, 1.2f);
+
+    if (Objective.OperationMode == EEchoesOperationMode::CampaignPrologue)
+    {
+        const bool bFailed =
+            Objective.ProloguePhase == EEchoesProloguePhase::Failed;
+        const bool bArchiveRecovered =
+            Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell ||
+            Objective.ProloguePhase == EEchoesProloguePhase::Withdraw ||
+            Objective.ProloguePhase == EEchoesProloguePhase::Complete;
+        const bool bProtocolChosen =
+            Objective.PrologueWellChoice !=
+            echoes::sim::FutureWellChoice::Dormant;
+        const FString ArchiveState = bFailed
+            ? TEXT("LOST — MISSION FAILED")
+            : bArchiveRecovered
+                ? TEXT("RECOVERED — MARA VEY SECURE")
+                : TEXT("RENDEZVOUS — TILE 22,18");
+        const FString WellState = bProtocolChosen
+            ? FString::Printf(
+                  TEXT("COMMITTED — %s"),
+                  WellChoiceDisplayName(Objective.PrologueWellChoice))
+            : Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell
+                ? TEXT("AUTHORIZE Z / C / V AT WELL")
+                : TEXT("LOCKED — RECOVER ARCHIVE FIRST");
+        const FString WithdrawalState =
+            Objective.ProloguePhase == EEchoesProloguePhase::Complete
+                ? TEXT("COMPLETE — LUME REACH")
+                : Objective.ProloguePhase == EEchoesProloguePhase::Withdraw
+                    ? TEXT("RETURN — TILE 6,17")
+                    : bFailed ? TEXT("FAILED") : TEXT("AWAITING WELL DECISION");
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("WHAT THE LEDGER KEEPS  //  MISSION 01"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont, 0.90f * TextScale, false);
+        DrawText(FString::Printf(TEXT("01  ARCHIVE CARRIER  %s"), *ArchiveState),
+                 bFailed ? Failed : bArchiveRecovered ? Complete : Active,
+                 Left + 18.0f, Top + 52.0f, SmallFont, 0.80f * TextScale, false);
+        DrawText(FString::Printf(TEXT("02  FUTURE WELL     %s"), *WellState),
+                 bProtocolChosen ? Complete : Active,
+                 Left + 18.0f, Top + 89.0f, SmallFont, 0.80f * TextScale, false);
+        DrawText(FString::Printf(TEXT("03  WITHDRAWAL      %s"), *WithdrawalState),
+                 bFailed ? Failed
+                         : Objective.ProloguePhase == EEchoesProloguePhase::Complete
+                               ? Complete
+                               : Active,
+                 Left + 18.0f, Top + 126.0f, SmallFont, 0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_OBJECTIVES_READY] phase=%s carrier=%u reconstructable=true"),
+                FEchoesPrologueMissionModel::StableName(Objective.ProloguePhase),
+                Objective.ArchiveCarrierId);
+        }
+        return;
+    }
 
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
@@ -1176,23 +1266,38 @@ void AEchoesHUD::DrawMatchResult(
     const float TextScale = HudScale * ContentScale;
     const echoes::sim::MatchOutcome Outcome =
         EchoesController->GetPresentedMatchOutcome();
-    const bool bVictory = Outcome == echoes::sim::MatchOutcome::Player0Victory;
-    const bool bDraw = Outcome == echoes::sim::MatchOutcome::Draw;
-    const FString Result = bVictory ? TEXT("VICTORY") : bDraw ? TEXT("DRAW") : TEXT("DEFEAT");
+    const bool bCampaignResult = EchoesController->IsCampaignResult();
+    const bool bVictory = bCampaignResult
+        ? EchoesController->WasCampaignSuccessful()
+        : Outcome == echoes::sim::MatchOutcome::Player0Victory;
+    const bool bDraw = !bCampaignResult &&
+        Outcome == echoes::sim::MatchOutcome::Draw;
+    const FString Result = bCampaignResult
+        ? bVictory ? TEXT("MISSION COMPLETE") : TEXT("MISSION FAILED")
+        : bVictory ? TEXT("VICTORY") : bDraw ? TEXT("DRAW") : TEXT("DEFEAT");
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
-    const FString Headline = bVictory
-        ? TEXT("THE GLASS SCAR HOLDS")
+    const FString Headline = bCampaignResult
+        ? bVictory ? TEXT("THE LEDGER RETURNS TO LUME REACH")
+                   : TEXT("THE ARCHIVE LINE IS LOST")
+        : bVictory ? TEXT("THE GLASS SCAR HOLDS")
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
-    const FString Summary = bVictory
-        ? FString::Printf(
-              TEXT("The %s Command Core is silent. The Future Well remains a consequence, not a prize."),
-              *OpponentFaction)
-        : bDraw ? TEXT("Both command structures fell in the same deterministic tick. Neither force controls the crossing.")
-                : FString::Printf(
-                      TEXT("Your Command Core has fallen. The %s retain the eastern approach and the initiative."),
-                      *OpponentFaction);
+    const FString Summary = bCampaignResult
+        ? bVictory
+            ? FString::Printf(
+                  TEXT("Mara Vey recovered Talar Venn's archive, committed the %s protocol, and completed the withdrawal."),
+                  WellChoiceDisplayName(
+                      EchoesController->GetCampaignConsequence()))
+            : TEXT("The archive carrier or withdrawal line was lost before the evacuation could be completed.")
+        : bVictory
+            ? FString::Printf(
+                  TEXT("The %s Command Core is silent. The Future Well remains a consequence, not a prize."),
+                  *OpponentFaction)
+            : bDraw ? TEXT("Both command structures fell in the same deterministic tick. Neither force controls the crossing.")
+                    : FString::Printf(
+                          TEXT("Your Command Core has fallen. The %s retain the eastern approach and the initiative."),
+                          *OpponentFaction);
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
                       : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
@@ -1221,18 +1326,30 @@ void AEchoesHUD::DrawMatchResult(
              SmallFont, 1.22f * TextScale, false);
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
+    const FString FinalTickLine = bCampaignResult
+        ? FString::Printf(
+              TEXT("MISSION 01 — WHAT THE LEDGER KEEPS  //  FINAL TICK %llu"),
+              static_cast<unsigned long long>(FinalTick))
+        : FString::Printf(
+              TEXT("OPERATION GLASS SCAR  //  FINAL TICK %llu"),
+              static_cast<unsigned long long>(FinalTick));
     DrawText(
-        FString::Printf(TEXT("OPERATION GLASS SCAR  //  FINAL TICK %llu"),
-                        static_cast<unsigned long long>(FinalTick)),
+        FinalTickLine,
         Muted, Left + 44.0f, Top + 204.0f * ContentScale,
         SmallFont, 0.82f * TextScale, false);
-    DrawText(TEXT("The simulation is stopped. Battlefield commands are locked."),
+    DrawText(
+             bCampaignResult && bVictory
+                 ? TEXT("The chosen Well consequence persists; campaign continuation remains in development.")
+                 : TEXT("The simulation is stopped. Battlefield commands are locked."),
              Muted, Left + 44.0f, Top + 244.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
 
     DrawRect(Accent, Left + 44.0f, Top + PanelHeight - 82.0f,
              PanelWidth - 88.0f, 46.0f);
-    DrawText(TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),
+    DrawText(
+             bCampaignResult
+                 ? TEXT("PRESS ENTER OR R TO REPLAY MISSION")
+                 : TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),
              bHighContrast || !bVictory ? FLinearColor::Black
                                          : FLinearColor(0.0f, 0.08f, 0.05f),
              Left + PanelWidth * 0.5f - 176.0f * TextScale,
@@ -1388,6 +1505,13 @@ void AEchoesHUD::DrawMissionBriefing(
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
+    const UEchoesSimulationSubsystem* BriefingBridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const bool bPrologue = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignPrologue;
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -1401,34 +1525,54 @@ void AEchoesHUD::DrawMissionBriefing(
 
     DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f * ContentScale,
              SmallFont, 1.55f * TextScale, false);
-    DrawText(FString::Printf(
-                 TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
-                 *LocalFaction),
+    const FString BriefingTitle = bPrologue
+        ? FString::Printf(
+              TEXT("WHAT THE LEDGER KEEPS  //  CAMPAIGN PROLOGUE  //  %s"),
+              *LocalFaction)
+        : FString::Printf(
+              TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
+              *LocalFaction);
+    DrawText(BriefingTitle,
              Muted, TextLeft, Top + 72.0f * ContentScale, SmallFont, 0.90f * TextScale, false);
 
     DrawText(TEXT("SITUATION"), Accent, TextLeft, Top + 122.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
-    DrawText(TEXT("A dormant Future Well lies inside the shattered crossing."),
+    DrawText(
+        bPrologue
+            ? TEXT("Lume Reach is evacuating. Talar Venn's archive convoy is displaced at tile 22,18.")
+            : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
-    DrawText(FString::Printf(
-                 TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
-                 *OpponentFaction),
+    DrawText(
+        bPrologue
+            ? TEXT("Oruun warns the collapse will reach a birthing cavern. Mara Vey must buy time, then withdraw.")
+            : FString::Printf(
+                  TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
+                  *OpponentFaction),
              Body, TextLeft, Top + 172.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
     DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
-    DrawText(TEXT("01  Secure and choose a protocol for the central Future Well."),
+    DrawText(
+        bPrologue
+            ? TEXT("01  Move Mara Vey's scout carrier to the archive rendezvous at tile 22,18.")
+            : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
-    DrawText(FString::Printf(
-                 TEXT("02  Destroy the %s Command Core without losing your own."),
-                 *OpponentFaction),
+    DrawText(
+        bPrologue
+            ? TEXT("02  Hold the archive site, commit a Well protocol, then return the carrier to tile 6,17.")
+            : FString::Printf(
+                  TEXT("02  Destroy the %s Command Core without losing your own."),
+                  *OpponentFaction),
              Body, TextLeft, Top + 273.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
     DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
-    DrawText(FactionSystems,
+    DrawText(
+        bPrologue
+            ? TEXT("Mission victory is evacuation. Destroying the opposing Core does not replace withdrawal.")
+            : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
     DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f * ContentScale,
@@ -1438,7 +1582,10 @@ void AEchoesHUD::DrawMissionBriefing(
 
     DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
              PanelWidth - 84.0f, 42.0f);
-    DrawText(TEXT("TAB CHANGES FACTION  //  ENTER DEPLOYS"),
+    DrawText(
+        bPrologue
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
+            : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
              Top + PanelHeight - 64.0f,
@@ -1641,12 +1788,64 @@ void AEchoesHUD::DrawTacticalMinimap(
         DrawLine(CameraX, CameraY - 6.0f, CameraX, CameraY + 6.0f, FLinearColor::White, 1.0f);
     }
 
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    {
+        const FEchoesObjectiveSnapshot Objective =
+            Bridge->GetLocalObjectiveSnapshot();
+        const auto DrawMissionSite = [this, Left, Top, Size, MapWidth, MapHeight](
+                                         const echoes::sim::Vec2& Site,
+                                         const TCHAR* Label,
+                                         const FLinearColor& Color)
+        {
+            const float X = Left +
+                FMath::Clamp(
+                    static_cast<float>(Site.x.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale * MapWidth),
+                    0.0f,
+                    1.0f) * Size;
+            const float Y = Top +
+                FMath::Clamp(
+                    static_cast<float>(Site.y.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale * MapHeight),
+                    0.0f,
+                    1.0f) * Size;
+            constexpr float Radius = 7.0f;
+            DrawLine(X, Y - Radius, X + Radius, Y, Color, 2.0f);
+            DrawLine(X + Radius, Y, X, Y + Radius, Color, 2.0f);
+            DrawLine(X, Y + Radius, X - Radius, Y, Color, 2.0f);
+            DrawLine(X - Radius, Y, X, Y - Radius, Color, 2.0f);
+            DrawText(Label, Color, X + 9.0f, Y - 8.0f,
+                     GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                     0.68f, false);
+        };
+        const FLinearColor ArchiveColor =
+            Objective.ProloguePhase == EEchoesProloguePhase::RecoverArchive ||
+            Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell
+                ? Border
+                : FLinearColor(0.25f, 1.0f, 0.66f);
+        const FLinearColor EvacColor =
+            Objective.ProloguePhase == EEchoesProloguePhase::Withdraw ||
+            Objective.ProloguePhase == EEchoesProloguePhase::Complete
+                ? Border
+                : FLinearColor(0.48f, 0.55f, 0.62f);
+        DrawMissionSite(
+            UEchoesSimulationSubsystem::GetArchiveRecoverySite(),
+            TEXT("A"),
+            ArchiveColor);
+        DrawMissionSite(
+            UEchoesSimulationSubsystem::GetEvacuationSite(),
+            TEXT("E"),
+            EvacColor);
+    }
+
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
     DrawLine(Left + Size, Top, Left + Size, Top + Size, Border, 2.0f);
     DrawLine(Left + Size, Top + Size, Left, Top + Size, Border, 2.0f);
     DrawLine(Left, Top + Size, Left, Top, Border, 2.0f);
     DrawText(
-        TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+            ? TEXT("MISSION NAV  |  ARCHIVE + EVAC")
+            : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,
         Top - 18.0f,

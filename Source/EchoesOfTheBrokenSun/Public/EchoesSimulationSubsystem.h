@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "EchoesPrologueMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
@@ -21,6 +22,13 @@ struct FEchoesObjectiveSnapshot final
         echoes::sim::FutureWellChoice::Dormant;
     bool bHostileCoreVisible = false;
     echoes::sim::MatchOutcome Outcome = echoes::sim::MatchOutcome::Ongoing;
+    EEchoesOperationMode OperationMode = EEchoesOperationMode::Skirmish;
+    EEchoesProloguePhase ProloguePhase = EEchoesProloguePhase::Inactive;
+    bool bArchiveCarrierIntact = false;
+    int32 ArchiveCarrierHitPoints = 0;
+    echoes::sim::EntityId ArchiveCarrierId = 0;
+    echoes::sim::FutureWellChoice PrologueWellChoice =
+        echoes::sim::FutureWellChoice::Dormant;
 };
 
 /**
@@ -61,6 +69,11 @@ public:
     /** Rebuilds the undeployed operation for one of the two playable factions. */
     bool SelectLocalFaction(
         echoes::sim::Faction NewFaction,
+        FString& OutFeedback);
+
+    /** Rebuilds the undeployed runtime for the selected operation. */
+    bool SelectOperationMode(
+        EEchoesOperationMode NewOperation,
         FString& OutFeedback);
 
     /** Atomically writes a validated deterministic snapshot and retains one backup. */
@@ -121,6 +134,18 @@ public:
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
     [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
+    [[nodiscard]] EEchoesOperationMode GetOperationMode() const
+    {
+        return SelectedOperation;
+    }
+    [[nodiscard]] FString GetOperationLabel() const;
+    [[nodiscard]] EEchoesProloguePhase GetProloguePhase() const;
+    [[nodiscard]] echoes::sim::EntityId GetArchiveCarrierId() const
+    {
+        return ArchiveCarrierId;
+    }
+    [[nodiscard]] static echoes::sim::Vec2 GetArchiveRecoverySite();
+    [[nodiscard]] static echoes::sim::Vec2 GetEvacuationSite();
     [[nodiscard]] echoes::sim::Faction GetLocalFaction() const
     {
         return bStressScenario
@@ -137,6 +162,7 @@ public:
     [[nodiscard]] int32 GetMapHeightTiles() const;
 
 private:
+    [[nodiscard]] FString GetActiveQuickSavePath() const;
     bool StartScenario(bool bUseStressScenario);
     bool ValidatePrototypeCommand(
         echoes::sim::CommandType CommandType,
@@ -192,6 +218,8 @@ private:
     bool bStressScenario = false;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;
+    EEchoesOperationMode SelectedOperation = EEchoesOperationMode::Skirmish;
+    echoes::sim::EntityId ArchiveCarrierId = 0;
     echoes::sim::ResearchType ResearchPresentationTechnology =
         echoes::sim::ResearchType::None;
 };

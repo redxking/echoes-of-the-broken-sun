@@ -47,12 +47,16 @@ public:
     void NotifyRuntimeReady();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
+    void NotifyCampaignPrologueFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
+    void CycleOperation();
     void CycleOwnedEntityPrevious();
     void SelectCombatForce();
     void CycleFormation();
@@ -105,6 +109,15 @@ public:
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
     {
         return PresentedMatchOutcome;
+    }
+    [[nodiscard]] bool IsCampaignResult() const { return bCampaignResult; }
+    [[nodiscard]] bool WasCampaignSuccessful() const
+    {
+        return bCampaignResult && bCampaignSuccess;
+    }
+    [[nodiscard]] echoes::sim::FutureWellChoice GetCampaignConsequence() const
+    {
+        return CampaignConsequence;
     }
 
 private:
@@ -217,6 +230,10 @@ private:
     bool bTechnologyPanelWasScenarioPaused = false;
     bool bKeyboardTargetingEnabled = false;
     bool bMatchResultVisible = false;
+    bool bCampaignResult = false;
+    bool bCampaignSuccess = false;
+    echoes::sim::FutureWellChoice CampaignConsequence =
+        echoes::sim::FutureWellChoice::Dormant;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;
 };

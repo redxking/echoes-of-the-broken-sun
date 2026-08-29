@@ -113,16 +113,30 @@ void AEchoesPlayerController::PresentTitleScreen()
     bPauseMenuVisible = false;
     bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
+    bCampaignResult = false;
+    bCampaignSuccess = false;
+    CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
-    SetStatusMessage(TEXT("ECHOES OF THE BROKEN SUN — Tab changes faction; Enter opens the Glass Scar brief."),
-                     3600.0f);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("ECHOES OF THE BROKEN SUN — F9 changes operation; %sEnter opens the brief."),
+            Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
+                ? TEXT("Tab changes faction; ")
+                : TEXT("Mara Vey deployed; ")),
+        3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_TITLE_READY] operation=GlassScar unavailableModesHidden=true keyboardStart=true factionChoice=true"));
+        TEXT("[ECHOES_TITLE_READY] operation=%s operationChoice=true keyboardStart=true factionChoice=%s"),
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+            ? TEXT("WhatTheLedgerKeeps")
+            : TEXT("GlassScar"),
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
+            ? TEXT("true")
+            : TEXT("false"));
 }
 
 void AEchoesPlayerController::ConfirmTitleScreen()
@@ -154,13 +168,25 @@ void AEchoesPlayerController::PresentMissionBriefing()
     bPauseMenuVisible = false;
     bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
+    bCampaignResult = false;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
-    SetStatusMessage(TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."), 3600.0f);
-    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_READY] paused=true keyboardStart=true factionChoice=true"));
+    const bool bPrologue =
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    SetStatusMessage(
+        bPrologue
+            ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
+            : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_BRIEFING_READY] operation=%s paused=true keyboardStart=true factionChoice=%s"),
+        bPrologue ? TEXT("WhatTheLedgerKeeps") : TEXT("GlassScar"),
+        bPrologue ? TEXT("false") : TEXT("true"));
 }
 
 void AEchoesPlayerController::ConfirmMissionBriefing()
@@ -183,9 +209,11 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
     SetStatusMessage(
-        FString::Printf(
-            TEXT("DEPLOYED — secure the Future Well or destroy the %s Command Core."),
-            *GetOpponentFactionLabel()),
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+            ? TEXT("DEPLOYED — select Mara Vey's scout carrier and recover the archive at tile 22,18.")
+            : FString::Printf(
+                  TEXT("DEPLOYED — secure the Future Well or destroy the %s Command Core."),
+                  *GetOpponentFactionLabel()),
         8.0f);
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
 }
@@ -204,6 +232,11 @@ void AEchoesPlayerController::CyclePlayableFaction()
     if (Bridge == nullptr || !Bridge->IsScenarioReady())
     {
         SetStatusMessage(TEXT("[FACTION_SIM_NOT_READY] Faction choice is unavailable."));
+        return;
+    }
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: What the Ledger Keeps follows Mara Vey and the Meridian Compact."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -226,6 +259,43 @@ void AEchoesPlayerController::CyclePlayableFaction()
             TEXT("FACTION SELECTED: %s — opposition: %s. Press Enter when ready."),
             *GetLocalFactionLabel(),
             *GetOpponentFactionLabel()),
+        3600.0f);
+}
+
+void AEchoesPlayerController::CycleOperation()
+{
+    if (!bTitleScreenVisible && !bMissionBriefingVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[OPERATION_SIM_NOT_READY] Operation choice is unavailable."));
+        return;
+    }
+    const EEchoesOperationMode NewOperation =
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
+            ? EEchoesOperationMode::CampaignPrologue
+            : EEchoesOperationMode::Skirmish;
+    FString Feedback;
+    if (!Bridge->SelectOperationMode(NewOperation, Feedback))
+    {
+        SetStatusMessage(Feedback);
+        return;
+    }
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    Bridge->SetScenarioPaused(true);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("%s Press Enter when ready."),
+            *Feedback),
         3600.0f);
 }
 
@@ -570,6 +640,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bPauseMenuVisible = false;
     bTechnologyPanelVisible = false;
     bMatchResultVisible = true;
+    bCampaignResult = false;
     PresentedMatchOutcome = Outcome;
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
@@ -593,6 +664,42 @@ void AEchoesPlayerController::NotifyMatchFinished(
         Display,
         TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u keyboardRestart=true"),
         static_cast<uint8>(Outcome));
+}
+
+void AEchoesPlayerController::NotifyCampaignPrologueFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    CampaignConsequence = Consequence;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(
+        bSuccess
+            ? FString::Printf(
+                  TEXT("MISSION COMPLETE — archive recovered, %s protocol committed, and Mara Vey withdrew to Lume Reach. Press R to replay."),
+                  *GetFutureWellChoiceLabel())
+            : TEXT("MISSION FAILED — the archive carrier or withdrawal line was lost. Press R to replay."),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=WhatTheLedgerKeeps success=%s consequence=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence));
 }
 
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
@@ -801,6 +908,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
+    BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
     BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);
@@ -2991,10 +3099,16 @@ void AEchoesPlayerController::RestartScenario()
         bPauseMenuVisible = false;
         bTechnologyPanelVisible = false;
         bMatchResultVisible = false;
+        bCampaignResult = false;
+        bCampaignSuccess = false;
+        CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
         SetIgnoreMoveInput(false);
         SetIgnoreLookInput(false);
-        SetStatusMessage(TEXT("MATCH RESTARTED — deterministic initial state restored."));
+        SetStatusMessage(
+            Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+                ? TEXT("MISSION RESTARTED — Mara Vey's archive recovery begins again from the deterministic initial state.")
+                : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
     else

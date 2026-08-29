@@ -23,6 +23,7 @@ constexpr int32 PrototypeMapHeightTiles = 64;
 constexpr uint32 PrototypeTicksPerSecond = 20;
 constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
 constexpr int32 MaximumCatchUpTicksPerFrame = 8;
+constexpr int32 PrologueSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -83,6 +84,17 @@ using echoes::sim::Vec2;
     }
     return BlockedTiles;
 }
+
+[[nodiscard]] bool IsWithinTiles(
+    const Vec2& Position,
+    const Vec2& Site,
+    int32 RadiusTiles)
+{
+    const int64 DeltaX = static_cast<int64>(Position.x.Raw()) - Site.x.Raw();
+    const int64 DeltaY = static_cast<int64>(Position.y.Raw()) - Site.y.Raw();
+    const int64 RadiusRaw = Vec2::FromTiles(RadiusTiles, 0).x.Raw();
+    return DeltaX * DeltaX + DeltaY * DeltaY <= RadiusRaw * RadiusRaw;
+}
 }
 
 void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -110,6 +122,8 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bSimulationPaused = false;
     bMatchResultReported = false;
     LocalFaction = Faction::MeridianCompact;
+    SelectedOperation = EEchoesOperationMode::Skirmish;
+    ArchiveCarrierId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
     FogView.Reset();
     TerrainView.Reset();
@@ -143,6 +157,23 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
 bool UEchoesSimulationSubsystem::StartStressScenario()
 {
     return StartScenario(true);
+}
+
+echoes::sim::Vec2 UEchoesSimulationSubsystem::GetArchiveRecoverySite()
+{
+    return Vec2::FromTiles(22, 18);
+}
+
+echoes::sim::Vec2 UEchoesSimulationSubsystem::GetEvacuationSite()
+{
+    return Vec2::FromTiles(6, 17);
+}
+
+FString UEchoesSimulationSubsystem::GetOperationLabel() const
+{
+    return SelectedOperation == EEchoesOperationMode::CampaignPrologue
+               ? TEXT("WHAT THE LEDGER KEEPS")
+               : TEXT("GLASS SCAR");
 }
 
 bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
@@ -253,7 +284,10 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         return false;
     }
     const Faction ScenarioLocalFaction =
-        bUseStressScenario ? Faction::MeridianCompact : LocalFaction;
+        bUseStressScenario ? Faction::MeridianCompact
+        : SelectedOperation == EEchoesOperationMode::CampaignPrologue
+            ? Faction::MeridianCompact
+            : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
             ? Faction::KharuunAssemblies
@@ -303,6 +337,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
 
     bool bSpawnSucceeded = true;
+    ArchiveCarrierId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -316,6 +351,11 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Type,
             Vec2::FromTiles(TileX, TileY));
         bSpawnSucceeded &= Spawned != 0;
+        if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+            Owner == LocalPlayerId && Type == EntityType::ScoutUnit)
+        {
+            ArchiveCarrierId = Spawned;
+        }
         return Spawned;
     };
 
@@ -728,6 +768,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
+    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+        ArchiveCarrierId == 0)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_PROLOGUE_INIT_FAILED] reason=archive carrier unavailable"));
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -766,6 +816,14 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             TEXT("[ECHOES_FACTION_SCENARIO_READY] local=%s opposition=%s selectable=true"),
             FactionStableName(ScenarioLocalFaction),
             FactionStableName(ScenarioOpponentFaction));
+        if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_READY] mission=WhatTheLedgerKeeps carrier=%u archive=(22,18) evacuation=(6,17) faction=MeridianCompact completion=withdrawal"),
+                ArchiveCarrierId);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -855,6 +913,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
+    ArchiveCarrierId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -888,6 +947,12 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
     if (bStressScenario)
     {
         OutFeedback = TEXT("[FACTION_STRESS_LOCKED] The scale fixture has fixed teams.");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+        NewFaction != Faction::MeridianCompact)
+    {
+        OutFeedback = TEXT("[FACTION_PROLOGUE_LOCKED] Mara Vey deploys with the Meridian Compact.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -940,12 +1005,91 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
     return false;
 }
 
+bool UEchoesSimulationSubsystem::SelectOperationMode(
+    EEchoesOperationMode NewOperation,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (bStressScenario)
+    {
+        OutFeedback = TEXT("[OPERATION_STRESS_LOCKED] The scale fixture has a fixed operation.");
+        return false;
+    }
+    if (NewOperation == SelectedOperation)
+    {
+        OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
+        return true;
+    }
+
+    const EEchoesOperationMode PreviousOperation = SelectedOperation;
+    const Faction PreviousFaction = LocalFaction;
+    const bool bHadScenario = bScenarioReady && Simulation.IsValid();
+    const bool bWasPaused = bSimulationPaused;
+    if (bHadScenario)
+    {
+        StopPrototypeScenario();
+    }
+    SelectedOperation = NewOperation;
+    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
+    {
+        LocalFaction = Faction::MeridianCompact;
+    }
+    if (!bHadScenario || StartScenario(false))
+    {
+        if (bHadScenario)
+        {
+            SetScenarioPaused(bWasPaused);
+        }
+        OutFeedback = FString::Printf(
+            TEXT("OPERATION SELECTED: %s%s"),
+            *GetOperationLabel(),
+            SelectedOperation == EEchoesOperationMode::CampaignPrologue
+                ? TEXT(" — Mara Vey's Meridian force is locked for this mission.")
+                : TEXT("."));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_OPERATION_SELECTED] operation=%s scenarioReset=%s paused=%s"),
+            SelectedOperation == EEchoesOperationMode::CampaignPrologue
+                ? TEXT("WhatTheLedgerKeeps")
+                : TEXT("GlassScar"),
+            bHadScenario ? TEXT("true") : TEXT("false"),
+            bWasPaused ? TEXT("true") : TEXT("false"));
+        return true;
+    }
+
+    StopPrototypeScenario();
+    SelectedOperation = PreviousOperation;
+    LocalFaction = PreviousFaction;
+    const bool bRollbackSucceeded = !bHadScenario || StartScenario(false);
+    if (bRollbackSucceeded && bHadScenario)
+    {
+        SetScenarioPaused(bWasPaused);
+    }
+    OutFeedback = bRollbackSucceeded
+                      ? TEXT("[OPERATION_REBUILD_FAILED] The prior operation was restored.")
+                      : TEXT("[OPERATION_ROLLBACK_FAILED] The operation could not be restored.");
+    return false;
+}
+
 FString UEchoesSimulationSubsystem::GetQuickSavePath()
 {
     return FPaths::Combine(
         FPaths::ProjectSavedDir(),
         TEXT("SaveGames"),
         TEXT("EchoesQuickSave.bin"));
+}
+
+FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
+{
+    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
+    {
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
+    }
+    return GetQuickSavePath();
 }
 
 bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
@@ -966,7 +1110,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     TArray<uint8> SnapshotBytes;
     SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
 
-    const FString SavePath = GetQuickSavePath();
+    const FString SavePath = GetActiveQuickSavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
     const FString TemporaryPath = SavePath + TEXT(".tmp");
     const FString BackupPath = SavePath + TEXT(".bak");
@@ -1048,7 +1192,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         return false;
     }
 
-    const FString SavePath = GetQuickSavePath();
+    const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
     FString SelectedPath;
@@ -1179,6 +1323,50 @@ echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
                                 : echoes::sim::MatchOutcome::Ongoing;
 }
 
+EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
+{
+    FEchoesPrologueMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesProloguePhase::Inactive;
+    }
+
+    const echoes::sim::Entity* Carrier = Simulation->FindEntity(ArchiveCarrierId);
+    Facts.bArchiveCarrierIntact = Carrier != nullptr && Carrier->hitPoints > 0;
+    if (Facts.bArchiveCarrierIntact)
+    {
+        Facts.bArchiveCarrierAtRecoverySite = IsWithinTiles(
+            Carrier->position,
+            GetArchiveRecoverySite(),
+            PrologueSiteRadiusTiles);
+        Facts.bArchiveCarrierAtEvacuationSite = IsWithinTiles(
+            Carrier->position,
+            GetEvacuationSite(),
+            PrologueSiteRadiusTiles);
+    }
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId &&
+            Entity.type == echoes::sim::EntityType::CommandCore &&
+            Entity.hitPoints > 0)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+        if (Entity.type == echoes::sim::EntityType::FutureWell &&
+            Entity.wellChoice != echoes::sim::FutureWellChoice::Dormant)
+        {
+            Facts.bFutureWellProtocolChosen = Entity.owner == LocalPlayerId;
+            Facts.bFutureWellLost = Entity.owner != LocalPlayerId;
+        }
+    }
+    return FEchoesPrologueMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -1190,8 +1378,16 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     }
 
     Snapshot.Outcome = Simulation->Outcome();
+    Snapshot.OperationMode = SelectedOperation;
+    Snapshot.ProloguePhase = GetProloguePhase();
+    Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
+        if (Entity.id == ArchiveCarrierId)
+        {
+            Snapshot.bArchiveCarrierIntact = Entity.hitPoints > 0;
+            Snapshot.ArchiveCarrierHitPoints = Entity.hitPoints;
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -1199,6 +1395,13 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             Snapshot.LocalCoreHitPoints = Entity.hitPoints;
             Snapshot.LocalCoreMaxHitPoints = Entity.maxHitPoints;
             continue;
+        }
+        if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+            Entity.type == echoes::sim::EntityType::FutureWell &&
+            (Entity.wellChoice == echoes::sim::FutureWellChoice::Dormant ||
+             Entity.owner == LocalPlayerId))
+        {
+            Snapshot.PrologueWellChoice = Entity.wellChoice;
         }
 
         const bool bVisible =
@@ -1209,6 +1412,7 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         }
         if (Entity.type == echoes::sim::EntityType::FutureWell)
         {
+            Snapshot.PrologueWellChoice = Entity.wellChoice;
             Snapshot.bFutureWellVisible = true;
             Snapshot.VisibleFutureWellChoice = Entity.wellChoice;
         }
@@ -1275,8 +1479,46 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         else
         {
             const echoes::sim::MatchOutcome Outcome = Simulation->Outcome();
-            if (Outcome != echoes::sim::MatchOutcome::Ongoing &&
-                !bMatchResultReported)
+            const EEchoesProloguePhase ProloguePhase = GetProloguePhase();
+            const bool bPrologueFinished =
+                ProloguePhase == EEchoesProloguePhase::Complete ||
+                ProloguePhase == EEchoesProloguePhase::Failed;
+            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+                bPrologueFinished && !bMatchResultReported)
+            {
+                bMatchResultReported = true;
+                bSimulationPaused = true;
+                FutureWellChoice Consequence = FutureWellChoice::Dormant;
+                for (const echoes::sim::Entity& Entity : Simulation->Entities())
+                {
+                    if (Entity.type == EntityType::FutureWell)
+                    {
+                        Consequence = Entity.wellChoice;
+                        break;
+                    }
+                }
+                if (AEchoesPlayerController* Controller =
+                        Cast<AEchoesPlayerController>(
+                            GetWorld()->GetFirstPlayerController()))
+                {
+                    Controller->NotifyCampaignPrologueFinished(
+                        ProloguePhase == EEchoesProloguePhase::Complete,
+                        Consequence);
+                }
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_PROLOGUE_FINISHED] result=%s phase=%s consequence=%u tick=%llu"),
+                    ProloguePhase == EEchoesProloguePhase::Complete
+                        ? TEXT("success")
+                        : TEXT("failure"),
+                    FEchoesPrologueMissionModel::StableName(ProloguePhase),
+                    static_cast<uint8>(Consequence),
+                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+            }
+            else if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+                     Outcome != echoes::sim::MatchOutcome::Ongoing &&
+                     !bMatchResultReported)
             {
                 bMatchResultReported = true;
                 if (AEchoesPlayerController* Controller =
@@ -2101,6 +2343,12 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             }
             break;
         case CommandType::FutureWell:
+            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+                GetProloguePhase() != EEchoesProloguePhase::DecideFutureWell)
+            {
+                OutFeedback = TEXT("[ARCHIVE_REQUIRED] Mara Vey's archive carrier must hold the recovery site at tile 22,18 before a Well protocol can be committed.");
+                return false;
+            }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
                 Target->wellChoice != FutureWellChoice::Dormant ||
