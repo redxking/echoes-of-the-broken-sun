@@ -264,13 +264,21 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                  Bridge->FindEntity(FirstKeyboardSelection)->owner ==
                      UEchoesSimulationSubsystem::LocalPlayerId);
     Controller->CycleOwnedEntityPrevious();
-    TestEqual(TEXT("Shift-Tab retains one pointer-independent selection"),
+    TestEqual(TEXT("Backspace retains one pointer-independent selection"),
               Controller->GetSelectedEntityIds().Num(), 1);
     TestNotEqual(TEXT("Reverse cycle wraps to a different owned entity"),
                  Controller->GetSelectedEntityIds().IsEmpty()
                      ? 0u
                      : Controller->GetSelectedEntityIds()[0],
                  FirstKeyboardSelection);
+    TestFalse(TEXT("Keyboard center targeting defaults off"),
+              Controller->IsKeyboardTargetingEnabled());
+    Controller->ToggleKeyboardTargeting();
+    TestTrue(TEXT("F1 path enables fair view-center targeting"),
+             Controller->IsKeyboardTargetingEnabled());
+    Controller->ToggleKeyboardTargeting();
+    TestFalse(TEXT("F1 path restores pointer targeting"),
+              Controller->IsKeyboardTargetingEnabled());
 
     TArray<FString> InputMappings;
     GConfig->GetArray(
@@ -295,6 +303,24 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"CycleOwnedEntityPrevious\"")) &&
                        Mapping.Contains(TEXT("Key=BackSpace"));
+            }));
+    TestTrue(
+        TEXT("F1 center-target mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"ToggleKeyboardTargeting\"")) &&
+                       Mapping.Contains(TEXT("Key=F1"));
+            }));
+    TestTrue(
+        TEXT("Space center-order mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"KeyboardContextOrder\"")) &&
+                       Mapping.Contains(TEXT("Key=SpaceBar"));
             }));
 
     Controller->Destroy();

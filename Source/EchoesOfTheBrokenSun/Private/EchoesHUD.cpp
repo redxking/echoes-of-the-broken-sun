@@ -106,6 +106,26 @@ void AEchoesHUD::DrawHUD()
         return;
     }
 
+    if (Canvas != nullptr && EchoesController != nullptr &&
+        EchoesController->IsKeyboardTargetingEnabled() &&
+        !EchoesController->IsModalOverlayVisible())
+    {
+        const float CenterX = Canvas->ClipX * 0.5f;
+        const float CenterY = Canvas->ClipY * 0.5f;
+        DrawLine(CenterX - 16.0f, CenterY, CenterX - 5.0f, CenterY, AccentColor, 2.0f);
+        DrawLine(CenterX + 5.0f, CenterY, CenterX + 16.0f, CenterY, AccentColor, 2.0f);
+        DrawLine(CenterX, CenterY - 16.0f, CenterX, CenterY - 5.0f, AccentColor, 2.0f);
+        DrawLine(CenterX, CenterY + 5.0f, CenterX, CenterY + 16.0f, AccentColor, 2.0f);
+        DrawText(
+            TEXT("CENTER TARGET"),
+            AccentColor,
+            CenterX + 20.0f,
+            CenterY + 10.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.78f * HudScale,
+            false);
+    }
+
     DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 276.0f * HudScale);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
@@ -246,7 +266,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     DrawText(
-        TEXT("WASD / screen edge: pan    Wheel: zoom    LMB / drag: select    Shift: add/remove    RMB: context order"),
+        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [F1] Center target  [Space] Center order"),
         SecondaryColor,
         TextX,
         HudY(90.0f),

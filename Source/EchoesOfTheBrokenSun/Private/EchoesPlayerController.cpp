@@ -238,6 +238,25 @@ void AEchoesPlayerController::CycleOwnedEntityPrevious()
     CycleOwnedEntity(-1);
 }
 
+void AEchoesPlayerController::ToggleKeyboardTargeting()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    bKeyboardTargetingEnabled = !bKeyboardTargetingEnabled;
+    SetStatusMessage(
+        bKeyboardTargetingEnabled
+            ? TEXT("KEYBOARD TARGET: VIEW CENTER // WASD pans // Space issues context order // F/B/N/M/F6 use reticle")
+            : TEXT("POINTER TARGET: cursor-directed orders restored."),
+        6.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=%s source=view_center hiddenStateRead=false"),
+        bKeyboardTargetingEnabled ? TEXT("true") : TEXT("false"));
+}
+
 void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
 {
     if (IsModalOverlayVisible())
@@ -583,6 +602,8 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
+    BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
+    BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -799,6 +820,64 @@ void AEchoesPlayerController::ContextOrderPressed()
     if (!TraceCursor(HitResult))
     {
         SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the battlefield or an entity."));
+        return;
+    }
+
+    IssueContextOrder(HitResult);
+}
+
+void AEchoesPlayerController::KeyboardContextOrderPressed()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned units first."));
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceViewportCenter(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_CENTER_TARGET] Pan until the center reticle crosses the battlefield or an entity."));
+        return;
+    }
+    if (!bKeyboardTargetingEnabled)
+    {
+        bKeyboardTargetingEnabled = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=true source=view_center hiddenStateRead=false implicit=space"));
+    }
+    IssueContextOrder(HitResult);
+}
+
+void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr)
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
 
@@ -1129,6 +1208,31 @@ bool AEchoesPlayerController::TraceCursor(FHitResult& OutHitResult)
         OutHitResult);
 }
 
+bool AEchoesPlayerController::TraceViewportCenter(FHitResult& OutHitResult)
+{
+    int32 ViewportWidth = 0;
+    int32 ViewportHeight = 0;
+    GetViewportSize(ViewportWidth, ViewportHeight);
+    if (ViewportWidth <= 0 || ViewportHeight <= 0)
+    {
+        return false;
+    }
+    return GetHitResultAtScreenPosition(
+        FVector2D(
+            static_cast<float>(ViewportWidth) * 0.5f,
+            static_cast<float>(ViewportHeight) * 0.5f),
+        ECC_Visibility,
+        true,
+        OutHitResult);
+}
+
+bool AEchoesPlayerController::TraceCommandTarget(FHitResult& OutHitResult)
+{
+    return bKeyboardTargetingEnabled
+        ? TraceViewportCenter(OutHitResult)
+        : TraceCursor(OutHitResult);
+}
+
 void AEchoesPlayerController::ChooseHarvest()
 {
     SetFutureWellChoice(echoes::sim::FutureWellChoice::Harvest);
@@ -1339,9 +1443,9 @@ void AEchoesPlayerController::AttackMoveAtCursor()
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the attack-move destination."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target an attack-move destination with the pointer or center reticle."));
         return;
     }
 
@@ -1429,9 +1533,9 @@ void AEchoesPlayerController::PatrolAtCursor()
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the patrol endpoint."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target a patrol endpoint with the pointer or center reticle."));
         return;
     }
 
@@ -1567,9 +1671,9 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point toward the threat before deploying."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target the threat direction with the pointer or center reticle."));
         return;
     }
 
@@ -1884,9 +1988,9 @@ void AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor()
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point to a clear cover position."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target a clear cover position with the pointer or center reticle."));
         return;
     }
 
@@ -2015,9 +2119,9 @@ void AEchoesPlayerController::GuardAtCursor()
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the owned entity to guard."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target the owned entity to guard with the pointer or center reticle."));
         return;
     }
     const AEchoesEntityView* TargetView =
@@ -2292,9 +2396,9 @@ void AEchoesPlayerController::BuildAtCursor(
         return;
     }
     FHitResult HitResult;
-    if (!TraceCursor(HitResult))
+    if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at open battlefield ground."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target open battlefield ground with the pointer or center reticle."));
         return;
     }
     FString Feedback;

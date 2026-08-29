@@ -44,6 +44,7 @@ public:
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
     void CycleOwnedEntityPrevious();
+    void ToggleKeyboardTargeting();
     void ToggleTechnologyPanel();
     void FocusPreviousTechnologyTier();
     void FocusNextTechnologyTier();
@@ -75,6 +76,10 @@ public:
     {
         return TechnologyPanelFocusedTier;
     }
+    [[nodiscard]] bool IsKeyboardTargetingEnabled() const
+    {
+        return bKeyboardTargetingEnabled;
+    }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
         return bTitleScreenVisible || bMissionBriefingVisible ||
@@ -90,6 +95,7 @@ private:
     void SelectionPressed();
     void SelectionReleased();
     void ContextOrderPressed();
+    void KeyboardContextOrderPressed();
     void ChooseHarvest();
     void ChoosePreserve();
     void ChooseReshape();
@@ -152,6 +158,9 @@ private:
     void RecallControlGroup(int32 GroupIndex);
     void ClearControlGroups();
     bool TraceCursor(FHitResult& OutHitResult);
+    bool TraceViewportCenter(FHitResult& OutHitResult);
+    bool TraceCommandTarget(FHitResult& OutHitResult);
+    void IssueContextOrder(const FHitResult& HitResult);
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
     void ProduceUnit(echoes::sim::EntityType UnitType);
@@ -176,6 +185,7 @@ private:
     bool bPauseMenuVisible = false;
     bool bTechnologyPanelVisible = false;
     bool bTechnologyPanelWasScenarioPaused = false;
+    bool bKeyboardTargetingEnabled = false;
     bool bMatchResultVisible = false;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;
