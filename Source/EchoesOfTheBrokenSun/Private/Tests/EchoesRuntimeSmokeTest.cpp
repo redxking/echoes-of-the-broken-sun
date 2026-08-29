@@ -137,6 +137,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ConfirmPrimaryAction"), EKeys::Enter));
         TestTrue(TEXT("Playable-faction cycle input is mapped"),
                  HasAction(TEXT("CyclePlayableFaction"), EKeys::Tab));
+        TestTrue(TEXT("Reverse keyboard-selection cycle input is mapped"),
+                 HasAction(TEXT("CycleOwnedEntityPrevious"), EKeys::BackSpace));
         TestTrue(TEXT("Faction research input is mapped"),
                  HasAction(TEXT("ResearchNext"), EKeys::R, false, true));
         TestTrue(TEXT("Technology archive input is mapped"),

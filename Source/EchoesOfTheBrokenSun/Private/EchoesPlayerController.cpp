@@ -193,6 +193,7 @@ void AEchoesPlayerController::CyclePlayableFaction()
 {
     if (!bTitleScreenVisible && !bMissionBriefingVisible)
     {
+        CycleOwnedEntity(1);
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -225,6 +226,84 @@ void AEchoesPlayerController::CyclePlayableFaction()
             *GetLocalFactionLabel(),
             *GetOpponentFactionLabel()),
         3600.0f);
+}
+
+void AEchoesPlayerController::CycleOwnedEntityPrevious()
+{
+    if (bTitleScreenVisible || bMissionBriefingVisible)
+    {
+        CyclePlayableFaction();
+        return;
+    }
+    CycleOwnedEntity(-1);
+}
+
+void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Keyboard selection is unavailable."));
+        return;
+    }
+
+    TArray<uint32> Candidates;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity.hitPoints > 0 && !Entity.temporaryMineralCover &&
+            Bridge->FindEntityView(Entity.id) != nullptr)
+        {
+            Candidates.Add(Entity.id);
+        }
+    }
+    Candidates.Sort();
+    if (Candidates.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_OWNED_ENTITIES] No live owned entity can be selected."));
+        return;
+    }
+
+    int32 CandidateIndex = Direction < 0 ? Candidates.Num() - 1 : 0;
+    if (SelectedEntityIds.Num() == 1)
+    {
+        const int32 CurrentIndex = Candidates.IndexOfByKey(SelectedEntityIds[0]);
+        if (CurrentIndex != INDEX_NONE)
+        {
+            CandidateIndex =
+                (CurrentIndex + (Direction < 0 ? -1 : 1) + Candidates.Num()) %
+                Candidates.Num();
+        }
+    }
+
+    ClearSelection();
+    const uint32 SelectedId = Candidates[CandidateIndex];
+    SelectedEntityIds.Add(SelectedId);
+    SetEntitySelected(SelectedId, true);
+    const AEchoesEntityView* View = Bridge->FindEntityView(SelectedId);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("KEYBOARD SELECT: %s  //  entity %u  //  Tab next / Backspace previous"),
+            View != nullptr ? *View->GetDisplayName() : TEXT("owned entity"),
+            SelectedId),
+        4.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_KEYBOARD_SELECTION] entity=%u index=%d total=%d direction=%s owned=true"),
+        SelectedId,
+        CandidateIndex,
+        Candidates.Num(),
+        Direction < 0 ? TEXT("previous") : TEXT("next"));
 }
 
 void AEchoesPlayerController::ConfirmPrimaryAction()
@@ -503,6 +582,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
+    BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);

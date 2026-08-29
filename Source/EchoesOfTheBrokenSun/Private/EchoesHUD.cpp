@@ -268,7 +268,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [F2] Technologies    [P] Pause    [R] Restart"),
+        TEXT("[Tab] Next owned    [Backspace] Previous    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
         SecondaryColor,
         TextX,
         HudY(136.0f),
@@ -1430,6 +1430,51 @@ void AEchoesHUD::DrawVibrationSignatures(
     const FLinearColor SignatureColor = bHighContrast
         ? FLinearColor(1.0f, 0.9f, 0.1f)
         : FLinearColor(1.0f, 0.48f, 0.12f);
+    const float AlertWidth = FMath::Clamp(460.0f * HudScale, 390.0f, 560.0f);
+    const float MainPanelRight =
+        18.0f + FMath::Min(
+            920.0f * HudScale,
+            FMath::Max(320.0f, Canvas->ClipX - 36.0f));
+    float AlertLeft = Canvas->ClipX - AlertWidth - 20.0f;
+    float AlertTop = 208.0f;
+    if (AlertLeft < MainPanelRight + 20.0f)
+    {
+        AlertLeft = 18.0f;
+        AlertTop = 490.0f;
+    }
+    if (AlertTop + 64.0f <= Canvas->ClipY - 24.0f)
+    {
+        const FLinearColor AlertBackdrop = bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+            : FLinearColor(0.025f, 0.012f, 0.008f, 0.94f);
+        DrawRect(AlertBackdrop, AlertLeft, AlertTop, AlertWidth, 64.0f);
+        DrawLine(
+            AlertLeft,
+            AlertTop,
+            AlertLeft + AlertWidth,
+            AlertTop,
+            SignatureColor,
+            2.0f);
+        DrawText(
+            FString::Printf(
+                TEXT("VIBRATION CONTACTS  %02d  //  MOVEMENT DETECTED"),
+                static_cast<int32>(PlayerView->VibrationSignatures().size())),
+            SignatureColor,
+            AlertLeft + 18.0f,
+            AlertTop + 12.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.82f * HudScale,
+            false);
+        DrawText(
+            TEXT("APPROXIMATE LOCATION  //  ANONYMOUS  //  NO DIRECT TARGET"),
+            bHighContrast ? FLinearColor::White
+                          : FLinearColor(0.82f, 0.86f, 0.90f),
+            AlertLeft + 18.0f,
+            AlertTop + 36.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.72f * HudScale,
+            false);
+    }
     int32 Presented = 0;
     for (const echoes::sim::VibrationSignature& Signature :
          PlayerView->VibrationSignatures())
@@ -1463,12 +1508,21 @@ void AEchoesHUD::DrawVibrationSignatures(
                  ScreenPosition.X + Radius * 1.5f, ScreenPosition.Y,
                  SignatureColor, 1.0f);
         DrawText(
-            TEXT("VIBRATION CONTACT"),
+            FString::Printf(TEXT("VIBRATION CONTACT %02d"), Presented),
             SignatureColor,
             ScreenPosition.X + Radius + 5.0f,
-            ScreenPosition.Y - 8.0f,
+            ScreenPosition.Y - 14.0f,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
             0.68f * HudScale,
+            false);
+        DrawText(
+            TEXT("APPROXIMATE // NO UNIT ID"),
+            bHighContrast ? FLinearColor::White
+                          : FLinearColor(0.86f, 0.72f, 0.64f),
+            ScreenPosition.X + Radius + 5.0f,
+            ScreenPosition.Y + 3.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.58f * HudScale,
             false);
     }
     if (Presented > 0 && !bLoggedVibrationPresentationReady)
@@ -1477,7 +1531,7 @@ void AEchoesHUD::DrawVibrationSignatures(
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_VIBRATION_PRESENTATION_READY] contacts=%d anonymous=true quantized=true nonColor=true"),
+            TEXT("[ECHOES_VIBRATION_PRESENTATION_READY] contacts=%d anonymous=true quantized=true nonColor=true directTarget=false alertLegend=true"),
             Presented);
     }
 }

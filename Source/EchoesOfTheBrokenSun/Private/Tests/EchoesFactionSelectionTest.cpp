@@ -248,6 +248,30 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         Bridge->GetLocalFaction() ==
             echoes::sim::Faction::KharuunAssemblies);
 
+    Controller->ConfirmPrimaryAction();
+    TestFalse(TEXT("Second Enter deploys from the operations brief"),
+              Controller->IsMissionBriefingVisible());
+    Controller->CyclePlayableFaction();
+    TestEqual(TEXT("Live Tab selects one owned entity without a pointer"),
+              Controller->GetSelectedEntityIds().Num(), 1);
+    const uint32 FirstKeyboardSelection =
+        Controller->GetSelectedEntityIds().IsEmpty()
+            ? 0
+            : Controller->GetSelectedEntityIds()[0];
+    TestTrue(TEXT("Keyboard selection is locally owned"),
+             FirstKeyboardSelection != 0 &&
+                 Bridge->FindEntity(FirstKeyboardSelection) != nullptr &&
+                 Bridge->FindEntity(FirstKeyboardSelection)->owner ==
+                     UEchoesSimulationSubsystem::LocalPlayerId);
+    Controller->CycleOwnedEntityPrevious();
+    TestEqual(TEXT("Shift-Tab retains one pointer-independent selection"),
+              Controller->GetSelectedEntityIds().Num(), 1);
+    TestNotEqual(TEXT("Reverse cycle wraps to a different owned entity"),
+                 Controller->GetSelectedEntityIds().IsEmpty()
+                     ? 0u
+                     : Controller->GetSelectedEntityIds()[0],
+                 FirstKeyboardSelection);
+
     TArray<FString> InputMappings;
     GConfig->GetArray(
         TEXT("/Script/Engine.InputSettings"),
@@ -262,6 +286,15 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"CyclePlayableFaction\"")) &&
                        Mapping.Contains(TEXT("Key=Tab"));
+            }));
+    TestTrue(
+        TEXT("Backspace reverse-selection mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"CycleOwnedEntityPrevious\"")) &&
+                       Mapping.Contains(TEXT("Key=BackSpace"));
             }));
 
     Controller->Destroy();

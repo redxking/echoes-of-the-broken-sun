@@ -102,9 +102,11 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiVibrationResponse = false;
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
+    bKharuunSystemsPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
+    bLoggedKharuunSystemsPresentation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     LocalFaction = Faction::MeridianCompact;
@@ -157,6 +159,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 #if UE_BUILD_SHIPPING
     const bool bUseResearchPresentation = false;
     const bool bUseResearchInterruptionPresentation = false;
+    const bool bUseKharuunSystemsPresentation = false;
 #else
     const bool bUseResearchPresentation =
         !bUseStressScenario &&
@@ -166,17 +169,28 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesResearchInterruptionPresentation"));
+    const bool bUseKharuunSystemsPresentation =
+        !bUseStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesKharuunSystemsPresentation"));
 #endif
-    if (bUseResearchPresentation && bUseResearchInterruptionPresentation)
+    const int32 PresentationModeCount =
+        (bUseResearchPresentation ? 1 : 0) +
+        (bUseResearchInterruptionPresentation ? 1 : 0) +
+        (bUseKharuunSystemsPresentation ? 1 : 0);
+    if (PresentationModeCount > 1)
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] reason=conflicting presentation modes"));
+            TEXT("[ECHOES_PRESENTATION_MODE_FAILED] reason=conflicting presentation modes"));
         return false;
     }
     const bool bUseAnyResearchPresentation =
         bUseResearchPresentation || bUseResearchInterruptionPresentation;
+    const bool bUseAnyControlledPresentation =
+        bUseAnyResearchPresentation || bUseKharuunSystemsPresentation;
 
     const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
@@ -244,17 +258,28 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         ScenarioLocalFaction == Faction::MeridianCompact
             ? Faction::KharuunAssemblies
             : Faction::MeridianCompact;
+    if (bUseKharuunSystemsPresentation &&
+        ScenarioLocalFaction != Faction::KharuunAssemblies)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_FAILED] reason=local faction must be KharuunAssemblies"));
+        Simulation.Reset();
+        return false;
+    }
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
-            bUseAnyResearchPresentation
+            bUseAnyControlledPresentation
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
             ScenarioOpponentFaction,
             ResourcePool{500, 30}) ||
-        (bUseResearchInterruptionPresentation &&
+        ((bUseResearchInterruptionPresentation ||
+          bUseKharuunSystemsPresentation) &&
          !Simulation->AddPlayer(
              2,
              ScenarioOpponentFaction,
@@ -294,6 +319,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         return Spawned;
     };
 
+    EntityId KharuunSystemsMover = 0;
     if (bUseStressScenario)
     {
         constexpr int32 GridX[10] = {3, 9, 15, 21, 27, 36, 42, 48, 54, 60};
@@ -383,6 +409,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     17,
                     10);
             }
+        }
+        if (bUseKharuunSystemsPresentation)
+        {
+            KharuunSystemsMover = SpawnUnit(
+                2,
+                Faction::MeridianCompact,
+                EntityType::Soldier,
+                31,
+                0);
         }
 
         const TArray<FIntPoint> MatterNodeTiles = {
@@ -501,6 +536,123 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             }
         }
     }
+    if (bUseKharuunSystemsPresentation)
+    {
+        uint32 WaystoneId = 0;
+        uint32 BasinId = 0;
+        uint32 WarformId = 0;
+        uint32 CairnbackId = 0;
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner != LocalPlayerId)
+            {
+                continue;
+            }
+            WaystoneId = Entity.type == EntityType::Dropoff
+                             ? Entity.id
+                             : WaystoneId;
+            BasinId = Entity.type == EntityType::Barracks
+                          ? Entity.id
+                          : BasinId;
+            CairnbackId = Entity.type == EntityType::HeavyUnit
+                              ? Entity.id
+                              : CairnbackId;
+        }
+        const echoes::sim::Entity* Basin = Simulation->FindEntity(BasinId);
+        uint64 NearestWarformDistance = TNumericLimits<uint64>::Max();
+        if (Basin != nullptr)
+        {
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (Entity.owner != LocalPlayerId ||
+                    Entity.type != EntityType::Soldier)
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Entity.position.x.Raw()) -
+                    Basin->position.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Entity.position.y.Raw()) -
+                    Basin->position.y.Raw();
+                const uint64 Distance = static_cast<uint64>(
+                    DeltaX * DeltaX + DeltaY * DeltaY);
+                if (Distance < NearestWarformDistance)
+                {
+                    NearestWarformDistance = Distance;
+                    WarformId = Entity.id;
+                }
+            }
+        }
+        if (WaystoneId == 0 || BasinId == 0 || WarformId == 0 ||
+            CairnbackId == 0 || KharuunSystemsMover == 0)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_FAILED] reason=fixture entities unavailable"));
+            Simulation.Reset();
+            return false;
+        }
+        const auto QueueFixtureCommand = [this](
+                                             echoes::sim::Command Command,
+                                             const TCHAR* Label)
+        {
+            std::string Rejection;
+            if (Simulation->QueueCommand(Command, &Rejection))
+            {
+                return true;
+            }
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_FAILED] command=%s reason=%s"),
+                Label,
+                UTF8_TO_TCHAR(Rejection.c_str()));
+            return false;
+        };
+
+        echoes::sim::Command Waystone{};
+        Waystone.executeTick = 1;
+        Waystone.player = LocalPlayerId;
+        Waystone.sequence = 1;
+        Waystone.type = echoes::sim::CommandType::ToggleWaystoneRoot;
+        Waystone.actor = WaystoneId;
+
+        echoes::sim::Command Adapt{};
+        Adapt.executeTick = 1;
+        Adapt.player = LocalPlayerId;
+        Adapt.sequence = 2;
+        Adapt.type = echoes::sim::CommandType::AdaptWarform;
+        Adapt.actor = WarformId;
+        Adapt.target = BasinId;
+        Adapt.warformAdaptation = echoes::sim::WarformAdaptation::Carapace;
+
+        echoes::sim::Command Cover{};
+        Cover.executeTick = 1;
+        Cover.player = LocalPlayerId;
+        Cover.sequence = 3;
+        Cover.type = echoes::sim::CommandType::RaiseMineralCover;
+        Cover.actor = CairnbackId;
+        Cover.position = Vec2::FromTiles(7, 4);
+
+        echoes::sim::Command Move{};
+        Move.executeTick = 1;
+        Move.player = 2;
+        Move.sequence = 1;
+        Move.type = echoes::sim::CommandType::Move;
+        Move.actor = KharuunSystemsMover;
+        Move.position = Vec2::FromTiles(30, 0);
+
+        if (!QueueFixtureCommand(Waystone, TEXT("waystone")) ||
+            !QueueFixtureCommand(Adapt, TEXT("carapace")) ||
+            !QueueFixtureCommand(Cover, TEXT("mineral_cover")) ||
+            !QueueFixtureCommand(Move, TEXT("hidden_movement")))
+        {
+            Simulation.Reset();
+            return false;
+        }
+    }
     int32 StressAttackMoveCommands = 0;
     if (bUseStressScenario)
     {
@@ -553,7 +705,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         }
     }
     FixedTimeAccumulator = 0.0;
-    NextPlayerCommandSequence = bUseAnyResearchPresentation ? 2 : 1;
+    NextPlayerCommandSequence = bUseKharuunSystemsPresentation
+                                    ? 4
+                                    : bUseAnyResearchPresentation ? 2 : 1;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
@@ -565,9 +719,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bResearchPresentationScenario = bUseResearchPresentation;
     bResearchInterruptionPresentationScenario =
         bUseResearchInterruptionPresentation;
+    bKharuunSystemsPresentationScenario =
+        bUseKharuunSystemsPresentation;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
+    bLoggedKharuunSystemsPresentation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -645,6 +802,13 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 TEXT("[ECHOES_RESEARCH_INTERRUPTION_PRESENTATION_READY] technology=%s attackers=32 attackTick=60 controlled=true release=false"),
                 ResearchStableName(ResearchPresentationTechnology));
         }
+        if (bKharuunSystemsPresentationScenario)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_READY] commands=3 hiddenMovers=1 controlled=true release=false"));
+        }
     }
     if (bStressScenario)
     {
@@ -683,9 +847,11 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiVibrationResponse = false;
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
+    bKharuunSystemsPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
+    bLoggedKharuunSystemsPresentation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -1196,6 +1362,62 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                                 TEXT("[ECHOES_RESEARCH_INTERRUPTION_PANEL_READY] visible=true paused=true controlled=true release=false"));
                         }
                     }
+                }
+            }
+            if (bKharuunSystemsPresentationScenario &&
+                !bLoggedKharuunSystemsPresentation)
+            {
+                bool bWaystoneTransitioning = false;
+                bool bCarapaceMoltActive = false;
+                bool bMineralCoverActive = false;
+                for (const echoes::sim::Entity& Entity : Simulation->Entities())
+                {
+                    if (Entity.owner == LocalPlayerId &&
+                        Entity.type == EntityType::Dropoff &&
+                        Entity.waystoneMode ==
+                            echoes::sim::WaystoneMode::Uprooting)
+                    {
+                        bWaystoneTransitioning = true;
+                    }
+                    if (Entity.owner == LocalPlayerId &&
+                        Entity.pendingWarformAdaptation ==
+                            echoes::sim::WarformAdaptation::Carapace)
+                    {
+                        bCarapaceMoltActive = true;
+                    }
+                    if (Entity.owner == LocalPlayerId &&
+                        Entity.temporaryMineralCover && Entity.hitPoints > 0)
+                    {
+                        bMineralCoverActive = true;
+                    }
+                }
+                const std::optional<echoes::sim::PlayerView> LocalView =
+                    Simulation->CreatePlayerView(LocalPlayerId);
+                const int32 VibrationContacts =
+                    LocalView.has_value()
+                        ? static_cast<int32>(
+                              LocalView->VibrationSignatures().size())
+                        : 0;
+                const bool bHiddenSourceDisclosed =
+                    LocalView.has_value() &&
+                    std::any_of(
+                        LocalView->Entities().begin(),
+                        LocalView->Entities().end(),
+                        [](const echoes::sim::Entity& Entity)
+                        {
+                            return Entity.owner == 2;
+                        });
+                if (bWaystoneTransitioning && bCarapaceMoltActive &&
+                    bMineralCoverActive && VibrationContacts > 0 &&
+                    !bHiddenSourceDisclosed)
+                {
+                    bLoggedKharuunSystemsPresentation = true;
+                    bSimulationPaused = true;
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_ACTIVE] waystone=uprooting warform=carapace_molt cover=active vibrationContacts=%d anonymous=true hiddenSourceDisclosed=false paused=true controlled=true release=false"),
+                        VibrationContacts);
                 }
             }
             if (bStressScenario && !bLoggedStressCombat &&

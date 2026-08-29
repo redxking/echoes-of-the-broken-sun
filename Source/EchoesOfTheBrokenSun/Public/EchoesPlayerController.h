@@ -43,6 +43,7 @@ public:
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
+    void CycleOwnedEntityPrevious();
     void ToggleTechnologyPanel();
     void FocusPreviousTechnologyTier();
     void FocusNextTechnologyTier();
@@ -139,6 +140,7 @@ private:
     void RecallControlGroup8();
     void RecallControlGroup9();
     void RecallControlGroup0();
+    void CycleOwnedEntity(int32 Direction);
 
     void SelectAtCursor(bool bAdditive);
     void SelectInScreenRectangle(bool bAdditive);

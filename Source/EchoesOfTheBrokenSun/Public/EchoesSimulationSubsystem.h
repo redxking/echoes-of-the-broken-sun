@@ -182,9 +182,11 @@ private:
     bool bLoggedAiVibrationResponse = false;
     bool bResearchPresentationScenario = false;
     bool bResearchInterruptionPresentationScenario = false;
+    bool bKharuunSystemsPresentationScenario = false;
     bool bLoggedResearchPresentationActive = false;
     bool bLoggedResearchPresentationComplete = false;
     bool bLoggedResearchPresentationInterrupted = false;
+    bool bLoggedKharuunSystemsPresentation = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
