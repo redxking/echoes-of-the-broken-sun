@@ -9,6 +9,9 @@
 namespace
 {
 const FName TerrainColorParameterName(TEXT("Color"));
+const FName TerrainMetallicParameterName(TEXT("Metallic"));
+const FName TerrainRoughnessParameterName(TEXT("Roughness"));
+const FName TerrainEmissiveParameterName(TEXT("EmissiveStrength"));
 }
 
 AEchoesTerrainView::AEchoesTerrainView()
@@ -33,12 +36,15 @@ AEchoesTerrainView::AEchoesTerrainView()
         Layer->SetReceivesDecals(false);
     }
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
-        TEXT("/Engine/BasicShapes/Cube.Cube"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> RidgeFinder(
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge.SM_World_GlassScarRidge"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> ShelfFinder(
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf.SM_World_GlassScarShelf"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialFinder(
-        TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-    CubeMesh = CubeFinder.Object;
-    BasicMaterial = MaterialFinder.Object;
+        TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
+    BlockedMesh = RidgeFinder.Object;
+    ScarredMesh = ShelfFinder.Object;
+    AuthoredSurfaceMaterial = MaterialFinder.Object;
     Tags.Add(TEXT("EchoesTerrainView"));
 }
 
@@ -50,18 +56,18 @@ FTransform AEchoesTerrainView::TileTransform(
     const float HalfWidth = static_cast<float>(MapWidthTiles) * 0.5f;
     const float HalfHeight = static_cast<float>(MapHeightTiles) * 0.5f;
     const bool bBlocked = Terrain == echoes::sim::Terrain::Blocked;
-    const float Height = bBlocked ? 8.0f : 2.0f;
-    const float Inset = bBlocked ? 0.94f : 0.86f;
+    const float SourceWidth = bBlocked ? 188.0f : 780.0f;
+    const float Inset = bBlocked ? 0.94f : 0.90f;
+    const float PlanarScale = WorldUnitsPerTile * Inset / SourceWidth;
     return FTransform(
         FRotator::ZeroRotator,
         FVector(
             (static_cast<float>(TileX) - HalfWidth) * WorldUnitsPerTile,
             (static_cast<float>(TileY) - HalfHeight) * WorldUnitsPerTile,
-            Height * 0.5f),
-        FVector(
-            WorldUnitsPerTile * Inset / 100.0f,
-            WorldUnitsPerTile * Inset / 100.0f,
-            Height / 100.0f));
+            bBlocked ? 8.0f : 0.0f),
+        bBlocked
+            ? FVector(PlanarScale, PlanarScale, 0.62f)
+            : FVector(PlanarScale, PlanarScale, PlanarScale * 0.72f));
 }
 
 FTransform AEchoesTerrainView::HiddenTransform()
@@ -76,7 +82,8 @@ bool AEchoesTerrainView::InitializeTerrain(
     const echoes::sim::Simulation& Simulation,
     float TileWorldSize)
 {
-    if (CubeMesh == nullptr || BasicMaterial == nullptr || TileWorldSize <= 0.0f)
+    if (BlockedMesh == nullptr || ScarredMesh == nullptr ||
+        AuthoredSurfaceMaterial == nullptr || TileWorldSize <= 0.0f)
     {
         return false;
     }
@@ -87,22 +94,54 @@ bool AEchoesTerrainView::InitializeTerrain(
     const int32 TileCount = MapWidthTiles * MapHeightTiles;
     CachedTerrain.Init(255, TileCount);
 
-    BlockedTiles->SetStaticMesh(CubeMesh);
-    ScarredTiles->SetStaticMesh(CubeMesh);
-    BlockedMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
-    ScarredMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
-    if (BlockedMaterial == nullptr || ScarredMaterial == nullptr)
+    BlockedTiles->SetStaticMesh(BlockedMesh);
+    ScarredTiles->SetStaticMesh(ScarredMesh);
+    BlockedMaterials.Reset();
+    ScarredMaterials.Reset();
+    const FLinearColor BlockedColors[] = {
+        FLinearColor(0.075f, 0.045f, 0.050f),
+        FLinearColor(0.010f, 0.014f, 0.020f),
+        FLinearColor(0.24f, 0.18f, 0.15f),
+        FLinearColor(0.58f, 0.035f, 0.18f)};
+    const FLinearColor ScarredColors[] = {
+        FLinearColor(0.12f, 0.065f, 0.035f),
+        FLinearColor(0.025f, 0.020f, 0.018f),
+        FLinearColor(0.30f, 0.21f, 0.13f),
+        FLinearColor(0.94f, 0.26f, 0.035f)};
+    for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
     {
-        return false;
+        UMaterialInstanceDynamic* BlockedMaterial =
+            UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+        UMaterialInstanceDynamic* ScarredMaterial =
+            UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+        if (BlockedMaterial == nullptr || ScarredMaterial == nullptr)
+        {
+            return false;
+        }
+        const float Emissive = MaterialIndex == 3 ? 1.6f : 0.0f;
+        BlockedMaterial->SetVectorParameterValue(
+            TerrainColorParameterName,
+            BlockedColors[MaterialIndex]);
+        ScarredMaterial->SetVectorParameterValue(
+            TerrainColorParameterName,
+            ScarredColors[MaterialIndex]);
+        for (UMaterialInstanceDynamic* Material : {BlockedMaterial, ScarredMaterial})
+        {
+            Material->SetScalarParameterValue(
+                TerrainMetallicParameterName,
+                MaterialIndex == 1 ? 0.42f : 0.12f);
+            Material->SetScalarParameterValue(
+                TerrainRoughnessParameterName,
+                MaterialIndex == 1 ? 0.20f : 0.66f);
+            Material->SetScalarParameterValue(
+                TerrainEmissiveParameterName,
+                Emissive);
+        }
+        BlockedMaterials.Add(BlockedMaterial);
+        ScarredMaterials.Add(ScarredMaterial);
+        BlockedTiles->SetMaterial(MaterialIndex, BlockedMaterial);
+        ScarredTiles->SetMaterial(MaterialIndex, ScarredMaterial);
     }
-    BlockedMaterial->SetVectorParameterValue(
-        TerrainColorParameterName,
-        FLinearColor(0.12f, 0.055f, 0.045f));
-    ScarredMaterial->SetVectorParameterValue(
-        TerrainColorParameterName,
-        FLinearColor(0.16f, 0.075f, 0.025f));
-    BlockedTiles->SetMaterial(0, BlockedMaterial);
-    ScarredTiles->SetMaterial(0, ScarredMaterial);
 
     BlockedTiles->ClearInstances();
     ScarredTiles->ClearInstances();

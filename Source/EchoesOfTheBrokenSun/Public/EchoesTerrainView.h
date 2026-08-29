@@ -29,6 +29,11 @@ public:
 
     [[nodiscard]] int32 GetBlockedTileCount() const { return BlockedTileCount; }
     [[nodiscard]] int32 GetScarredTileCount() const { return ScarredTileCount; }
+    [[nodiscard]] bool IsUsingAuthoredTerrainMeshes() const
+    {
+        return BlockedMesh != nullptr && ScarredMesh != nullptr &&
+               AuthoredSurfaceMaterial != nullptr;
+    }
 
 private:
     [[nodiscard]] FTransform TileTransform(
@@ -47,16 +52,19 @@ private:
     TObjectPtr<UInstancedStaticMeshComponent> ScarredTiles;
 
     UPROPERTY(Transient)
-    TObjectPtr<UMaterialInstanceDynamic> BlockedMaterial;
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> BlockedMaterials;
 
     UPROPERTY(Transient)
-    TObjectPtr<UMaterialInstanceDynamic> ScarredMaterial;
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> ScarredMaterials;
 
     UPROPERTY(Transient)
-    TObjectPtr<UStaticMesh> CubeMesh;
+    TObjectPtr<UStaticMesh> BlockedMesh;
 
     UPROPERTY(Transient)
-    TObjectPtr<UMaterialInterface> BasicMaterial;
+    TObjectPtr<UStaticMesh> ScarredMesh;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInterface> AuthoredSurfaceMaterial;
 
     TArray<uint8> CachedTerrain;
     int32 MapWidthTiles = 0;

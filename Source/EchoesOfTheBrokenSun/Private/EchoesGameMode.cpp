@@ -31,6 +31,9 @@
 namespace
 {
 const FName EnvironmentColorParameterName(TEXT("Color"));
+const FName EnvironmentMetallicParameterName(TEXT("Metallic"));
+const FName EnvironmentRoughnessParameterName(TEXT("Roughness"));
+const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
 }
 
 AEchoesGameMode::AEchoesGameMode()
@@ -372,14 +375,150 @@ void AEchoesGameMode::BeginPlay()
     }
 #endif
 
+#if !UE_BUILD_SHIPPING
+    FString GlassScarReviewMode;
+    const bool bGlassScarArtReview =
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarArtReview")) ||
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarReview="),
+            GlassScarReviewMode);
+    if (bGlassScarArtReview)
+    {
+        if (GlassScarReviewMode.IsEmpty())
+        {
+            GlassScarReviewMode = TEXT("Overview");
+        }
+        const bool bKnownMode =
+            GlassScarReviewMode.Equals(TEXT("Overview"), ESearchCase::IgnoreCase) ||
+            GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase) ||
+            GlassScarReviewMode.Equals(TEXT("BuriedCauseway"), ESearchCase::IgnoreCase) ||
+            GlassScarReviewMode.Equals(TEXT("FoldedVerge"), ESearchCase::IgnoreCase);
+        if (!bKnownMode)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_GLASS_SCAR_ART_REVIEW_FAILED] reason=unknown-mode value=%s"),
+                *GlassScarReviewMode);
+        }
+        else
+        {
+            if (const echoes::sim::Simulation* Simulation = Bridge->GetSimulation())
+            {
+                for (const echoes::sim::Entity& Entity : Simulation->Entities())
+                {
+                    if (AEchoesEntityView* ExistingView =
+                            Bridge->FindEntityView(Entity.id))
+                    {
+                        ExistingView->SetActorHiddenInGame(true);
+                    }
+                }
+            }
+            if (AEchoesFogView* FogView = Bridge->GetFogView())
+            {
+                FogView->SetActorHiddenInGame(true);
+            }
+            if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
+            {
+                TerrainView->SetActorHiddenInGame(true);
+            }
+
+            int32 PreviewEntityCount = 0;
+            const auto SpawnPreview = [this, &PreviewEntityCount](
+                                          uint32 Id,
+                                          echoes::sim::EntityType Type,
+                                          echoes::sim::Faction Faction,
+                                          uint8 Owner,
+                                          int32 TileX,
+                                          int32 TileY)
+            {
+                AEchoesEntityView* Preview =
+                    GetWorld()->SpawnActor<AEchoesEntityView>();
+                if (Preview == nullptr)
+                {
+                    return;
+                }
+                echoes::sim::Entity State{};
+                State.id = Id;
+                State.type = Type;
+                State.faction = Faction;
+                State.owner = Owner;
+                State.position = echoes::sim::Vec2::FromTiles(TileX, TileY);
+                State.hitPoints = 1;
+                State.maxHitPoints = 1;
+                Preview->ApplyAuthoritativeState(State, true);
+                ++PreviewEntityCount;
+            };
+
+            if (GlassScarReviewMode.Equals(
+                    TEXT("Overview"),
+                    ESearchCase::IgnoreCase))
+            {
+                SpawnPreview(
+                    910001,
+                    echoes::sim::EntityType::CommandCore,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    10,
+                    10);
+                SpawnPreview(
+                    910002,
+                    echoes::sim::EntityType::CommandCore,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    54,
+                    54);
+                SpawnPreview(
+                    910003,
+                    echoes::sim::EntityType::FutureWell,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    32,
+                    32);
+                for (const FIntPoint Tile : {
+                         FIntPoint(14, 16),
+                         FIntPoint(48, 16),
+                         FIntPoint(32, 25),
+                         FIntPoint(16, 48),
+                         FIntPoint(49, 47)})
+                {
+                    SpawnPreview(
+                        910100 + PreviewEntityCount,
+                        echoes::sim::EntityType::ResourceNode,
+                        echoes::sim::Faction::MeridianCompact,
+                        echoes::sim::kNeutralPlayer,
+                        Tile.X,
+                        Tile.Y);
+                }
+            }
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_GLASS_SCAR_ART_REVIEW_READY] mode=%s previewEntities=%d ordinaryViewsHidden=true fogHidden=true terrainGridHidden=true editorOnly=true"),
+                *GlassScarReviewMode,
+                PreviewEntityCount);
+        }
+    }
+#endif
+
     if (AEchoesPlayerController* Controller =
             Cast<AEchoesPlayerController>(GetWorld()->GetFirstPlayerController()))
     {
         Controller->NotifyRuntimeReady();
 #if !UE_BUILD_SHIPPING
-        if (FParse::Param(
-                FCommandLine::Get(),
-                TEXT("EchoesFutureWellArtReview")) &&
+        if ((FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesFutureWellArtReview")) ||
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesGlassScarArtReview")) ||
+             FParse::Value(
+                 FCommandLine::Get(),
+                 TEXT("EchoesGlassScarReview="),
+                 GlassScarReviewMode)) &&
             Controller->GetHUD() != nullptr)
         {
             Controller->GetHUD()->bShowHUD = false;
@@ -436,18 +575,36 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(
         nullptr,
         TEXT("/Engine/BasicShapes/Cube.Cube"));
-    UStaticMesh* ConeMesh = LoadObject<UStaticMesh>(
+    UMaterialInterface* SurfaceMaterial = LoadObject<UMaterialInterface>(
         nullptr,
-        TEXT("/Engine/BasicShapes/Cone.Cone"));
-    UMaterialInterface* BasicMaterial = LoadObject<UMaterialInterface>(
+        TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
+    UStaticMesh* ShelfMesh = LoadObject<UStaticMesh>(
         nullptr,
-        TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-    if (CubeMesh == nullptr || ConeMesh == nullptr || BasicMaterial == nullptr)
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf.SM_World_GlassScarShelf"));
+    UStaticMesh* RidgeMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge.SM_World_GlassScarRidge"));
+    UStaticMesh* ShardMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShard.SM_World_GlassScarShard"));
+    UStaticMesh* AshCutMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarAshCut.SM_World_GlassScarAshCut"));
+    UStaticMesh* BuriedCausewayMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarBuriedCauseway.SM_World_GlassScarBuriedCauseway"));
+    UStaticMesh* FoldedVergeMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.SM_World_GlassScarFoldedVerge"));
+    if (CubeMesh == nullptr || SurfaceMaterial == nullptr || ShelfMesh == nullptr ||
+        RidgeMesh == nullptr || ShardMesh == nullptr ||
+        AshCutMesh == nullptr || BuriedCausewayMesh == nullptr ||
+        FoldedVergeMesh == nullptr)
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_ENV_ENGINE_ASSET_MISSING] Required Engine basic-shape assets were not found."));
+            TEXT("[ECHOES_ENV_ASSET_MISSING] Required collision or authored Glass Scar assets were not found."));
         return false;
     }
 
@@ -475,59 +632,26 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     FloorMesh->SetMobility(EComponentMobility::Movable);
     FloorMesh->SetStaticMesh(CubeMesh);
     FloorMesh->SetCollisionProfileName(TEXT("BlockAll"));
+    FloorMesh->SetCastShadow(false);
+    FloorMesh->SetVisibility(true, true);
     Floor->SetActorScale3D(FVector(
         ArenaWidth / 100.0f,
         ArenaHeight / 100.0f,
         FloorThickness / 100.0f));
     UMaterialInstanceDynamic* FloorMaterial =
-        UMaterialInstanceDynamic::Create(BasicMaterial, Floor);
+        UMaterialInstanceDynamic::Create(SurfaceMaterial, Floor);
     if (FloorMaterial != nullptr)
     {
         FloorMaterial->SetVectorParameterValue(
             EnvironmentColorParameterName,
-            FLinearColor(0.025f, 0.045f, 0.065f));
+            FLinearColor(0.018f, 0.027f, 0.032f));
+        FloorMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.08f);
+        FloorMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.88f);
+        FloorMaterial->SetScalarParameterValue(TEXT("EmissiveStrength"), 0.0f);
         FloorMesh->SetMaterial(0, FloorMaterial);
     }
 
-    // A low, colored pad makes the local spawn region legible without revealing
-    // information about the opponent through the presentation layer.
-    const auto SpawnFactionPad = [World, CubeMesh, BasicMaterial](
-                                     const FVector& Location,
-                                     const FLinearColor& Color)
-    {
-        FActorSpawnParameters PadSpawnParameters;
-        PadSpawnParameters.SpawnCollisionHandlingOverride =
-            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        AStaticMeshActor* Pad = World->SpawnActor<AStaticMeshActor>(
-            Location,
-            FRotator::ZeroRotator,
-            PadSpawnParameters);
-        if (Pad == nullptr)
-        {
-            return false;
-        }
-        Pad->Tags.Add(TEXT("EchoesPlaceholder"));
-        UStaticMeshComponent* Mesh = Pad->GetStaticMeshComponent();
-        Mesh->SetMobility(EComponentMobility::Movable);
-        Mesh->SetStaticMesh(CubeMesh);
-        Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Mesh->SetCastShadow(false);
-        Pad->SetActorScale3D(FVector(7.0f, 7.0f, 0.04f));
-        UMaterialInstanceDynamic* Material =
-            UMaterialInstanceDynamic::Create(BasicMaterial, Pad);
-        if (Material != nullptr)
-        {
-            Material->SetVectorParameterValue(EnvironmentColorParameterName, Color);
-            Mesh->SetMaterial(0, Material);
-        }
-        return true;
-    };
-
-    const bool bLocalPadReady = SpawnFactionPad(
-        FVector(-4400.0f, -4400.0f, 2.0f),
-        FLinearColor(0.02f, 0.24f, 0.31f));
-
-    const auto SpawnScarAccent = [World, BasicMaterial](
+    const auto SpawnScarAccent = [World, SurfaceMaterial](
                                      UStaticMesh* MeshAsset,
                                      const FVector& Location,
                                      const FRotator& Rotation,
@@ -557,19 +681,104 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         AccentMesh->SetCastShadow(bCastShadow);
         AccentMesh->SetReceivesDecals(false);
         Accent->SetActorScale3D(Scale);
-        UMaterialInstanceDynamic* AccentMaterial =
-            UMaterialInstanceDynamic::Create(BasicMaterial, Accent);
-        if (AccentMaterial == nullptr)
+        const FLinearColor Palette[] = {
+            Color,
+            FLinearColor(Color.R * 0.22f, Color.G * 0.22f, Color.B * 0.25f),
+            FLinearColor(
+                FMath::Min(Color.R * 1.75f + 0.04f, 1.0f),
+                FMath::Min(Color.G * 1.75f + 0.04f, 1.0f),
+                FMath::Min(Color.B * 1.75f + 0.04f, 1.0f)),
+            FLinearColor(
+                FMath::Min(Color.R * 3.2f + 0.08f, 1.0f),
+                FMath::Min(Color.G * 3.2f + 0.04f, 1.0f),
+                FMath::Min(Color.B * 3.2f + 0.10f, 1.0f))};
+        for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
         {
-            Accent->Destroy();
-            return false;
+            UMaterialInstanceDynamic* AccentMaterial =
+                UMaterialInstanceDynamic::Create(SurfaceMaterial, Accent);
+            if (AccentMaterial == nullptr)
+            {
+                Accent->Destroy();
+                return false;
+            }
+            AccentMaterial->SetVectorParameterValue(
+                EnvironmentColorParameterName,
+                Palette[MaterialIndex]);
+            AccentMaterial->SetScalarParameterValue(
+                EnvironmentMetallicParameterName,
+                MaterialIndex == 1 ? 0.46f : 0.14f);
+            AccentMaterial->SetScalarParameterValue(
+                EnvironmentRoughnessParameterName,
+                MaterialIndex == 1 ? 0.18f : 0.66f);
+            AccentMaterial->SetScalarParameterValue(
+                EnvironmentEmissiveParameterName,
+                MaterialIndex == 3 ? 1.8f : 0.0f);
+            AccentMesh->SetMaterial(MaterialIndex, AccentMaterial);
         }
-        AccentMaterial->SetVectorParameterValue(
-            EnvironmentColorParameterName,
-            Color);
-        AccentMesh->SetMaterial(0, AccentMaterial);
         return true;
     };
+
+    struct FTerrainShelfSpec final
+    {
+        FVector Location;
+        float YawDegrees;
+    };
+    const FTerrainShelfSpec TerrainShelves[] = {
+        {FVector(-4550.0f, -4550.0f, 2.0f), 7.0f},
+        {FVector(4550.0f, -4550.0f, 2.0f), 83.0f},
+        {FVector(-4550.0f, 4550.0f, 2.0f), -83.0f},
+        {FVector(4550.0f, 4550.0f, 2.0f), 173.0f},
+    };
+    int32 SpawnedTerrainShelves = 0;
+    for (const FTerrainShelfSpec& Spec : TerrainShelves)
+    {
+        SpawnedTerrainShelves += SpawnScarAccent(
+                                     ShelfMesh,
+                                     Spec.Location,
+                                     FRotator(0.0f, Spec.YawDegrees, 0.0f),
+                                     FVector(4.2f, 4.2f, 0.72f),
+                                     FLinearColor(0.034f, 0.047f, 0.055f),
+                                     TEXT("EchoesTerrainShelf"),
+                                     false)
+                                     ? 1
+                                     : 0;
+    }
+
+    struct FRouteSpec final
+    {
+        UStaticMesh* Mesh;
+        FVector Location;
+        FLinearColor Color;
+        FName Tag;
+    };
+    const FRouteSpec Routes[] = {
+        {AshCutMesh,
+         FVector(-3800.0f, 0.0f, 18.0f),
+         FLinearColor(0.040f, 0.032f, 0.030f),
+         TEXT("EchoesRouteAshCut")},
+        {BuriedCausewayMesh,
+         FVector(0.0f, 0.0f, 20.0f),
+         FLinearColor(0.13f, 0.12f, 0.10f),
+         TEXT("EchoesRouteBuriedCauseway")},
+        {FoldedVergeMesh,
+         FVector(3400.0f, 0.0f, 20.0f),
+         FLinearColor(0.040f, 0.026f, 0.068f),
+         TEXT("EchoesRouteFoldedVerge")},
+    };
+    int32 SpawnedRoutes = 0;
+    for (const FRouteSpec& Spec : Routes)
+    {
+        SpawnedRoutes += SpawnScarAccent(
+                             Spec.Mesh,
+                             Spec.Location,
+                             FRotator::ZeroRotator,
+                             FVector::OneVector,
+                             Spec.Color,
+                             Spec.Tag,
+                             true)
+                             ? 1
+                             : 0;
+    }
 
     struct FScarBandSpec final
     {
@@ -579,26 +788,26 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         FLinearColor Color;
     };
     const FScarBandSpec ScarBands[] = {
-        {FVector(-5450.0f, -90.0f, 1.5f), -7.0f,
-         FVector(18.0f, 1.15f, 0.035f), FLinearColor(0.19f, 0.025f, 0.09f)},
-        {FVector(-3650.0f, 40.0f, 1.6f), 9.0f,
-         FVector(18.5f, 1.35f, 0.038f), FLinearColor(0.24f, 0.055f, 0.035f)},
-        {FVector(-1830.0f, -55.0f, 1.7f), -11.0f,
-         FVector(18.0f, 1.45f, 0.040f), FLinearColor(0.22f, 0.025f, 0.10f)},
-        {FVector(0.0f, 65.0f, 1.8f), 8.0f,
-         FVector(18.5f, 1.55f, 0.042f), FLinearColor(0.27f, 0.07f, 0.025f)},
-        {FVector(1830.0f, -45.0f, 1.7f), -10.0f,
-         FVector(18.0f, 1.40f, 0.040f), FLinearColor(0.22f, 0.025f, 0.10f)},
-        {FVector(3650.0f, 55.0f, 1.6f), 10.0f,
-         FVector(18.5f, 1.30f, 0.038f), FLinearColor(0.24f, 0.055f, 0.035f)},
-        {FVector(5450.0f, -75.0f, 1.5f), -8.0f,
-         FVector(18.0f, 1.10f, 0.035f), FLinearColor(0.19f, 0.025f, 0.09f)},
+        {FVector(-5720.0f, -75.0f, 1.5f), -7.0f,
+         FVector(5.8f, 1.15f, 0.62f), FLinearColor(0.19f, 0.025f, 0.09f)},
+        {FVector(-4750.0f, 45.0f, 1.6f), 9.0f,
+         FVector(3.7f, 1.30f, 0.62f), FLinearColor(0.24f, 0.055f, 0.035f)},
+        {FVector(-2820.0f, -55.0f, 1.7f), -11.0f,
+         FVector(6.7f, 1.42f, 0.62f), FLinearColor(0.22f, 0.025f, 0.10f)},
+        {FVector(-1450.0f, 55.0f, 1.8f), 8.0f,
+         FVector(4.8f, 1.48f, 0.62f), FLinearColor(0.27f, 0.07f, 0.025f)},
+        {FVector(1300.0f, -45.0f, 1.7f), -10.0f,
+         FVector(5.2f, 1.38f, 0.62f), FLinearColor(0.22f, 0.025f, 0.10f)},
+        {FVector(2400.0f, 55.0f, 1.6f), 10.0f,
+         FVector(3.7f, 1.28f, 0.62f), FLinearColor(0.24f, 0.055f, 0.035f)},
+        {FVector(5200.0f, -70.0f, 1.5f), -8.0f,
+         FVector(11.5f, 1.15f, 0.62f), FLinearColor(0.19f, 0.025f, 0.09f)},
     };
     int32 SpawnedScarBands = 0;
     for (const FScarBandSpec& Spec : ScarBands)
     {
         SpawnedScarBands += SpawnScarAccent(
-                                CubeMesh,
+                                RidgeMesh,
                                 Spec.Location,
                                 FRotator(0.0f, Spec.YawDegrees, 0.0f),
                                 Spec.Scale,
@@ -646,10 +855,16 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     for (const FGlassShardSpec& Spec : GlassShards)
     {
         SpawnedGlassShards += SpawnScarAccent(
-                                  ConeMesh,
-                                  Spec.Location,
+                                  ShardMesh,
+                                  FVector(
+                                      Spec.Location.X,
+                                      Spec.Location.Y,
+                                      10.0f),
                                   FRotator(0.0f, Spec.YawDegrees, 0.0f),
-                                  Spec.Scale,
+                                  FVector(
+                                      Spec.Scale.X * 1.5f,
+                                      Spec.Scale.Y * 1.5f,
+                                      Spec.Scale.Z * 0.65f),
                                   Spec.Color,
                                   TEXT("EchoesGlassShard"),
                                   true)
@@ -702,14 +917,20 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         GlowComponent->SetCastShadows(false);
         ++SpawnedScarGlows;
     }
-    if (SpawnedScarBands != UE_ARRAY_COUNT(ScarBands) ||
+    if (SpawnedTerrainShelves != UE_ARRAY_COUNT(TerrainShelves) ||
+        SpawnedRoutes != UE_ARRAY_COUNT(Routes) ||
+        SpawnedScarBands != UE_ARRAY_COUNT(ScarBands) ||
         SpawnedGlassShards != UE_ARRAY_COUNT(GlassShards) ||
         SpawnedScarGlows != UE_ARRAY_COUNT(ScarGlows))
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_SCAR_COMPOSITION_FAILED] bands=%d/%d shards=%d/%d glows=%d/%d"),
+            TEXT("[ECHOES_SCAR_COMPOSITION_FAILED] shelves=%d/%d routes=%d/%d bands=%d/%d shards=%d/%d glows=%d/%d"),
+            SpawnedTerrainShelves,
+            UE_ARRAY_COUNT(TerrainShelves),
+            SpawnedRoutes,
+            UE_ARRAY_COUNT(Routes),
             SpawnedScarBands,
             UE_ARRAY_COUNT(ScarBands),
             SpawnedGlassShards,
@@ -766,22 +987,14 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             TEXT("[ECHOES_ENV_DIRECTIONAL_COMPONENT_MISSING]"));
         return false;
     }
-    SunComponent->SetIntensity(7.0f);
+    SunComponent->SetIntensity(12.0f);
     SunComponent->SetLightColor(FLinearColor(1.0f, 0.86f, 0.72f));
-    Sky->GetLightComponent()->SetIntensity(0.7f);
-
-    if (!bLocalPadReady)
-    {
-        UE_LOG(
-            LogEchoes,
-            Warning,
-            TEXT("[ECHOES_ENV_PAD_SPAWN_FAILED] The nonessential local faction marker could not be created."));
-    }
+    Sky->GetLightComponent()->SetIntensity(1.1f);
 
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v1 bands=7 shards=12 glows=5 collisionAuthority=false shadowCasting=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v2 authoredAssets=7 shelves=4 routes=3 bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,

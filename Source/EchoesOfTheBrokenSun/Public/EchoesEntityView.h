@@ -70,6 +70,10 @@ public:
     {
         return bUsingAuthoredFutureWellMesh;
     }
+    [[nodiscard]] bool IsUsingAuthoredResourceMesh() const
+    {
+        return bUsingAuthoredResourceMesh;
+    }
     [[nodiscard]] bool IsFutureWellPresentationVisible() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellVisualChoice() const
     {
@@ -166,6 +170,9 @@ private:
     UPROPERTY()
     TObjectPtr<UMaterialInterface> AuthoredSurfaceMaterial;
 
+    UPROPERTY()
+    TObjectPtr<UMaterialInterface> AuthoredWorldSurfaceMaterial;
+
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
 
@@ -249,6 +256,7 @@ private:
     bool bAegisPowered = false;
     bool bUsingAuthoredRosterMesh = false;
     bool bUsingAuthoredFutureWellMesh = false;
+    bool bUsingAuthoredResourceMesh = false;
     float FutureWellVisualTimeSeconds = 0.0f;
     FVector FutureWellCoreBaseScale = FVector::OneVector;
 };

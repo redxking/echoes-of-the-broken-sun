@@ -1,4 +1,4 @@
-"""Generate the first authored-looking Echoes unit and structure mesh set in Unreal.
+"""Generate the authored Echoes roster, landmark, and Glass Scar mesh set.
 
 Run this script only through Scripts/generate_art_assets.sh.  The generated
 assets are ordinary StaticMesh and Material assets; Geometry Scripting and
@@ -16,6 +16,7 @@ import unreal
 
 ART_ROOT = "/Game/Art/Generated"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
+WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
 
 PRIMARY = 0
 DARK = 1
@@ -85,10 +86,11 @@ def cylinder(
     material_id: int = PRIMARY,
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
     sides: int = 12,
+    scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
 ) -> None:
     mesh.append_cylinder(
         primitive_options(material_id),
-        transform(at, rotation),
+        transform(at, rotation, scale),
         radius,
         height,
         sides,
@@ -565,6 +567,210 @@ def world_future_well_glyph(mesh: unreal.DynamicMesh, high: bool) -> None:
     torus(mesh, 91.0, 5.0, (0.0, 0.0, 2.0), GLOW, high_detail=high)
 
 
+def world_glass_scar_shelf(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A broad, broken plate used to compose the two sides of the impact basin."""
+    box(mesh, (780.0, 780.0, 54.0), (0.0, 0.0, -27.0), PRIMARY)
+    box(mesh, (720.0, 700.0, 18.0), (6.0, -8.0, 9.0), DARK, (0.0, 2.5, 0.0))
+    for x, y, yaw, sx, sy in (
+        (-255.0, -222.0, 8.0, 250.0, 205.0),
+        (208.0, -232.0, -7.0, 292.0, 190.0),
+        (-230.0, 214.0, -5.0, 285.0, 218.0),
+        (224.0, 220.0, 6.0, 266.0, 205.0),
+    ):
+        box(mesh, (sx, sy, 12.0), (x, y, 22.0), LIGHT, (0.0, yaw, 0.0))
+    for x, y, yaw, length in (
+        (-170.0, -40.0, 24.0, 270.0),
+        (95.0, 120.0, -31.0, 230.0),
+        (205.0, -92.0, 14.0, 180.0),
+    ):
+        box(mesh, (length, 12.0, 6.0), (x, y, 30.0), GLOW, (0.0, yaw, 0.0))
+    if high:
+        for angle in range(0, 360, 45):
+            a = math.radians(angle)
+            cone(
+                mesh,
+                22.0,
+                5.0,
+                58.0,
+                (math.cos(a) * 350.0, math.sin(a) * 350.0, 12.0),
+                DARK,
+                (12.0, float(angle), 5.0),
+                6,
+            )
+
+
+def world_glass_scar_ridge(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """One tile-sized cliff tooth; instances preserve the authoritative grid."""
+    box(mesh, (188.0, 188.0, 42.0), (0.0, 0.0, 12.0), PRIMARY, (0.0, 4.0, 0.0))
+    box(mesh, (176.0, 152.0, 22.0), (-3.0, 5.0, 40.0), DARK, (0.0, -6.0, 0.0))
+    for x, y, radius, height, pitch, yaw in (
+        (-48.0, -26.0, 45.0, 154.0, -8.0, -18.0),
+        (18.0, 22.0, 52.0, 196.0, 6.0, 11.0),
+        (61.0, -18.0, 32.0, 126.0, -11.0, 24.0),
+    ):
+        cone(mesh, radius, 7.0, height, (x, y, 48.0 + height * 0.5), DARK, (pitch, yaw, 0.0), 6)
+    box(mesh, (154.0, 8.0, 7.0), (0.0, -47.0, 57.0), GLOW, (0.0, 9.0, 0.0))
+    if high:
+        cone(mesh, 18.0, 3.0, 78.0, (-72.0, 48.0, 72.0), LIGHT, (13.0, -14.0, 0.0), 5)
+        cone(mesh, 15.0, 2.0, 66.0, (72.0, 43.0, 62.0), LIGHT, (-9.0, 19.0, 0.0), 5)
+
+
+def world_glass_scar_shard(mesh: unreal.DynamicMesh, high: bool) -> None:
+    box(mesh, (230.0, 190.0, 32.0), (0.0, 0.0, 2.0), PRIMARY, (0.0, 7.0, 0.0))
+    for x, y, base_radius, height, pitch, yaw, material in (
+        (0.0, 0.0, 62.0, 344.0, -7.0, 8.0, DARK),
+        (-68.0, 22.0, 34.0, 214.0, 14.0, -19.0, LIGHT),
+        (62.0, -32.0, 29.0, 178.0, -16.0, 27.0, DARK),
+        (48.0, 54.0, 20.0, 126.0, 9.0, 42.0, LIGHT),
+    ):
+        cone(
+            mesh,
+            base_radius,
+            4.0,
+            height,
+            (x, y, 18.0 + height * 0.5),
+            material,
+            (pitch, yaw, 0.0),
+            6 if high else 5,
+        )
+    box(mesh, (16.0, 8.0, 248.0), (8.0, -43.0, 148.0), GLOW, (-6.0, 10.0, 0.0))
+    if high:
+        box(mesh, (9.0, 7.0, 142.0), (-58.0, 1.0, 115.0), GLOW, (14.0, -19.0, 0.0))
+
+
+def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
+    cylinder(mesh, 128.0, 24.0, (0.0, 0.0, 12.0), PRIMARY, sides=12 if high else 8)
+    torus(mesh, 104.0, 9.0, (0.0, 0.0, 26.0), DARK, high_detail=high)
+    for index, (x, y, radius, height, pitch, yaw) in enumerate((
+        (0.0, 0.0, 42.0, 226.0, -5.0, 8.0),
+        (-52.0, 24.0, 30.0, 166.0, 12.0, -18.0),
+        (48.0, -31.0, 27.0, 148.0, -13.0, 24.0),
+        (42.0, 46.0, 21.0, 112.0, 7.0, 43.0),
+        (-46.0, -43.0, 19.0, 96.0, -9.0, -39.0),
+    )):
+        cone(
+            mesh,
+            radius,
+            3.0,
+            height,
+            (x, y, 25.0 + height * 0.5),
+            GLOW if index == 0 else LIGHT,
+            (pitch, yaw, 0.0),
+            7 if high else 5,
+        )
+    for angle in range(0, 360, 60 if high else 120):
+        radial_box(mesh, float(angle), 94.0, (88.0, 9.0, 7.0), 29.0, GLOW)
+
+
+def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """An irregular, low trench crossing readable by its scalloped outline."""
+    for index, y in enumerate((-630.0, -315.0, 0.0, 315.0, 630.0)):
+        x = (-34.0, 24.0, -12.0, 38.0, -26.0)[index]
+        yaw = (-7.0, 5.0, -3.0, 7.0, -5.0)[index]
+        cylinder(
+            mesh,
+            248.0,
+            30.0,
+            (x, y, 3.0),
+            DARK,
+            (0.0, yaw, 0.0),
+            6,
+            (0.82 + (index % 2) * 0.08, 1.0, 1.0),
+        )
+        cylinder(
+            mesh,
+            202.0,
+            12.0,
+            (x, y, 24.0),
+            LIGHT,
+            (0.0, yaw + 4.0, 0.0),
+            6,
+            (0.78, 1.0, 1.0),
+        )
+        box(mesh, (13.0, 226.0, 6.0), (x - 31.0, y, 34.0), GLOW, (0.0, yaw + 3.0, 0.0))
+    for side in (-1.0, 1.0):
+        for y, height, lean in ((-470.0, 198.0, 14.0), (50.0, 260.0, -9.0), (510.0, 176.0, 11.0)):
+            cone(
+                mesh,
+                34.0,
+                4.0,
+                height,
+                (side * 248.0, y, 28.0 + height * 0.5),
+                PRIMARY,
+                (side * lean, side * 12.0, 0.0),
+                6 if high else 5,
+            )
+
+
+def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A straight, repeated transit deck readable by uninterrupted linear rhythm."""
+    box(mesh, (580.0, 1710.0, 44.0), (0.0, 0.0, 2.0), PRIMARY)
+    for y in range(-720, 721, 240):
+        box(mesh, (530.0, 210.0, 20.0), (0.0, float(y), 34.0), LIGHT)
+        box(mesh, (26.0, 210.0, 8.0), (0.0, float(y), 49.0), GLOW)
+        for side in (-1.0, 1.0):
+            box(mesh, (42.0, 86.0, 92.0), (side * 286.0, float(y), 62.0), DARK, (0.0, 0.0, side * 6.0))
+    for side in (-1.0, 1.0):
+        box(mesh, (34.0, 1660.0, 42.0), (side * 272.0, 0.0, 45.0), DARK)
+    if high:
+        for y in (-600.0, -120.0, 360.0, 720.0):
+            box(mesh, (470.0, 8.0, 7.0), (0.0, y, 55.0), GLOW)
+
+
+def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """An offset, stepped possibility road readable as a five-plate zigzag."""
+    plate_specs = (
+        (-72.0, -650.0, -11.0, 14.0),
+        (88.0, -330.0, 13.0, 28.0),
+        (-58.0, 0.0, -14.0, 42.0),
+        (104.0, 330.0, 12.0, 28.0),
+        (-48.0, 650.0, -9.0, 14.0),
+    )
+    for index, (x, y, yaw, z) in enumerate(plate_specs):
+        cylinder(
+            mesh,
+            278.0,
+            28.0,
+            (x, y, z),
+            DARK,
+            (0.0, yaw, 0.0),
+            5,
+            (0.82, 1.0, 1.0),
+        )
+        cylinder(
+            mesh,
+            228.0,
+            12.0,
+            (x, y, z + 21.0),
+            LIGHT,
+            (0.0, yaw + 8.0, 0.0),
+            5,
+            (0.80, 1.0, 1.0),
+        )
+        box(mesh, (310.0, 13.0, 7.0), (x, y, z + 32.0), GLOW, (0.0, yaw + 90.0, 0.0))
+        if index < len(plate_specs) - 1:
+            nx, ny, _, nz = plate_specs[index + 1]
+            box(
+                mesh,
+                (180.0, 250.0, 22.0),
+                ((x + nx) * 0.5, (y + ny) * 0.5, (z + nz) * 0.5 + 3.0),
+                PRIMARY,
+                (0.0, 0.0, 0.0),
+            )
+    for side in (-1.0, 1.0):
+        for y, height in ((-500.0, 188.0), (0.0, 244.0), (500.0, 168.0)):
+            cone(
+                mesh,
+                31.0,
+                4.0,
+                height,
+                (side * 305.0, y, 20.0 + height * 0.5),
+                GLOW if y == 0.0 else DARK,
+                (side * 12.0, side * 20.0, 0.0),
+                6 if high else 5,
+            )
+
+
 ASSETS = (
     AssetSpec("Meridian", "Units", "Surveyor", "Surveyor", "worker engineer", meridian_surveyor),
     AssetSpec("Meridian", "Units", "Lancer", "Lancer", "ranged line unit", meridian_lancer),
@@ -586,13 +792,23 @@ ASSETS = (
     AssetSpec("World", "Landmarks", "FutureWellOrbit", "Future Well orbit", "animated possibility orbit", world_future_well_orbit),
     AssetSpec("World", "Landmarks", "FutureWellCore", "Future Well core", "fractured unrealized-future core", world_future_well_core),
     AssetSpec("World", "Landmarks", "FutureWellGlyph", "Future Well ground glyph", "state-readable ground manifestation", world_future_well_glyph),
+    AssetSpec("World", "Environment", "GlassScarShelf", "Glass Scar terrain shelf", "impact-basin ground plate", world_glass_scar_shelf),
+    AssetSpec("World", "Environment", "GlassScarRidge", "Glass Scar cliff tooth", "blocked-terrain silhouette", world_glass_scar_ridge),
+    AssetSpec("World", "Environment", "GlassScarShard", "Glass Scar shard cluster", "fracture landmark and route edge", world_glass_scar_shard),
+    AssetSpec("World", "Environment", "GlassScarAshCut", "Ash Cut crossing", "irregular western route signature", world_glass_scar_ash_cut),
+    AssetSpec("World", "Environment", "GlassScarBuriedCauseway", "Buried Causeway crossing", "straight central route signature", world_glass_scar_buried_causeway),
+    AssetSpec("World", "Environment", "GlassScarFoldedVerge", "Folded Verge crossing", "offset eastern route signature", world_glass_scar_folded_verge),
+    AssetSpec("World", "Resources", "MatterDeposit", "Matter deposit", "neutral gatherable resource landmark", world_matter_deposit),
 )
 
 
 def create_surface_material() -> unreal.Material:
     if unreal.EditorAssetLibrary.does_asset_exist(MATERIAL_PATH):
-        if not unreal.EditorAssetLibrary.delete_asset(MATERIAL_PATH):
-            raise RuntimeError(f"Could not replace generated material {MATERIAL_PATH}")
+        existing = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+        if isinstance(existing, unreal.Material):
+            unreal.log(f"[ECHOES_ART_MATERIAL] path={MATERIAL_PATH} action=reused")
+            return existing
+        raise RuntimeError(f"Existing asset is not a Material: {MATERIAL_PATH}")
 
     tools = unreal.AssetToolsHelpers.get_asset_tools()
     material = tools.create_asset(
@@ -654,6 +870,127 @@ def create_surface_material() -> unreal.Material:
     return material
 
 
+def create_world_surface_material() -> unreal.Material:
+    if unreal.EditorAssetLibrary.does_asset_exist(WORLD_MATERIAL_PATH):
+        existing = unreal.EditorAssetLibrary.load_asset(WORLD_MATERIAL_PATH)
+        if isinstance(existing, unreal.Material):
+            unreal.log(
+                f"[ECHOES_ART_MATERIAL] path={WORLD_MATERIAL_PATH} action=reused"
+            )
+            return existing
+        raise RuntimeError(
+            f"Existing asset is not a Material: {WORLD_MATERIAL_PATH}"
+        )
+
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    material = tools.create_asset(
+        "M_EchoesWorldSurface",
+        f"{ART_ROOT}/Materials",
+        unreal.Material,
+        unreal.MaterialFactoryNew(),
+    )
+    if material is None:
+        raise RuntimeError("Could not create M_EchoesWorldSurface")
+
+    color = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionVectorParameter, -740, -220
+    )
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property(
+        "default_value", unreal.LinearColor(0.055, 0.07, 0.08, 1.0)
+    )
+
+    world_position = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionWorldPosition, -760, 70
+    )
+    noise = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionNoise, -520, 35
+    )
+    noise.set_editor_property("scale", 180.0)
+    noise.set_editor_property("quality", 2)
+    noise.set_editor_property("levels", 3)
+    noise.set_editor_property("output_min", 0.58)
+    noise.set_editor_property("output_max", 1.0)
+    noise.set_editor_property("turbulence", True)
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        world_position, "", noise, "Position"
+    )
+
+    color_variation = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -250, -155
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        color, "", color_variation, "A"
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        noise, "", color_variation, "B"
+    )
+
+    metallic = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -520, 230
+    )
+    metallic.set_editor_property("parameter_name", "Metallic")
+    metallic.set_editor_property("default_value", 0.16)
+
+    roughness = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -520, 330
+    )
+    roughness.set_editor_property("parameter_name", "Roughness")
+    roughness.set_editor_property("default_value", 0.68)
+    roughness_variation = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -245, 260
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        roughness, "", roughness_variation, "A"
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        noise, "", roughness_variation, "B"
+    )
+
+    emission = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -520, -315
+    )
+    emission.set_editor_property("parameter_name", "EmissiveStrength")
+    emission.set_editor_property("default_value", 0.0)
+    emissive_color = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -245, -300
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        color, "", emissive_color, "A"
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        emission, "", emissive_color, "B"
+    )
+
+    unreal.MaterialEditingLibrary.connect_material_property(
+        color_variation, "", unreal.MaterialProperty.MP_BASE_COLOR
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        metallic, "", unreal.MaterialProperty.MP_METALLIC
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        roughness_variation, "", unreal.MaterialProperty.MP_ROUGHNESS
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+    )
+    unreal.MaterialEditingLibrary.layout_material_expressions(material)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.Creator", "Angelis Pseftis"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material,
+        "Echoes.Provenance",
+        "Original scripted Unreal world material",
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.Status", "Vertical-slice environment candidate"
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
+    return material
+
+
 def build_dynamic_mesh(spec: AssetSpec, high_detail: bool) -> unreal.DynamicMesh:
     mesh = unreal.DynamicMesh()
     mesh.enable_material_i_ds()
@@ -665,8 +1002,18 @@ def build_dynamic_mesh(spec: AssetSpec, high_detail: bool) -> unreal.DynamicMesh
 
 def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> unreal.StaticMesh:
     if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
-        if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
-            raise RuntimeError(f"Could not replace generated asset {spec.asset_path}")
+        existing = unreal.EditorAssetLibrary.load_asset(spec.asset_path)
+        if isinstance(existing, unreal.StaticMesh):
+            unreal.log(
+                "[ECHOES_ART_ASSET] "
+                f"path={spec.asset_path} display={spec.display_name} faction={spec.faction} "
+                f"lods={existing.get_num_lods()} "
+                f"lod0Vertices={existing.get_num_vertices(0)} lod0Triangles={existing.get_num_triangles(0)} "
+                f"lod1Vertices={existing.get_num_vertices(1)} lod1Triangles={existing.get_num_triangles(1)} "
+                "action=reused"
+            )
+            return existing
+        raise RuntimeError(f"Existing asset is not a StaticMesh: {spec.asset_path}")
 
     lod_zero = build_dynamic_mesh(spec, True)
     lod_one = build_dynamic_mesh(spec, False)
@@ -707,17 +1054,23 @@ def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> un
 
 
 def main() -> None:
-    unreal.log("[ECHOES_ART_BEGIN] generating 16 roster assets and 4 Future Well assets")
-    for spec in ASSETS:
-        if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
-            if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
-                raise RuntimeError(f"Could not prepare generated asset path {spec.asset_path}")
+    unreal.log(
+        "[ECHOES_ART_BEGIN] generating 16 roster assets, 4 Future Well assets, "
+        "and 7 Glass Scar environment assets"
+    )
     surface_material = create_surface_material()
-    generated = [create_static_mesh(spec, surface_material) for spec in ASSETS]
-    unreal.EditorAssetLibrary.save_loaded_assets(generated + [surface_material], False)
+    world_surface_material = create_world_surface_material()
+    generated = [
+        create_static_mesh(
+            spec,
+            world_surface_material if spec.faction == "World" else surface_material,
+        )
+        for spec in ASSETS
+    ]
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated)} "
-        f"roster=16 landmarks=4 material={MATERIAL_PATH}"
+        f"roster=16 landmarks=4 environment=7 material={MATERIAL_PATH} "
+        f"worldMaterial={WORLD_MATERIAL_PATH}"
     )
 
 

@@ -62,7 +62,7 @@ const TCHAR* AuthoredPresentationMeshPath(
                        ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")
                        : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.SM_Meridian_AegisPost");
         case echoes::sim::EntityType::ResourceNode:
-            return nullptr;
+            return TEXT("/Game/Art/Generated/World/Resources/SM_World_MatterDeposit.SM_World_MatterDeposit");
         case echoes::sim::EntityType::FutureWell:
             return TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellBase.SM_World_FutureWellBase");
     }
@@ -254,6 +254,8 @@ AEchoesEntityView::AEchoesEntityView()
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> ArtMaterialFinder(
         TEXT("/Game/Art/Generated/Materials/M_EchoesSurface.M_EchoesSurface"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> WorldMaterialFinder(
+        TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
 
     CubeMesh = CubeFinder.Object;
     SphereMesh = SphereFinder.Object;
@@ -266,6 +268,9 @@ AEchoesEntityView::AEchoesEntityView()
     AuthoredSurfaceMaterial = ArtMaterialFinder.Succeeded()
                                   ? ArtMaterialFinder.Object
                                   : BasicMaterial;
+    AuthoredWorldSurfaceMaterial = WorldMaterialFinder.Succeeded()
+                                       ? WorldMaterialFinder.Object
+                                       : AuthoredSurfaceMaterial;
 
     BodyMesh->SetStaticMesh(CylinderMesh);
     SilhouetteAccent->SetStaticMesh(CubeMesh);
@@ -559,6 +564,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 
     bUsingAuthoredRosterMesh = false;
     bUsingAuthoredFutureWellMesh = false;
+    bUsingAuthoredResourceMesh = false;
     if (!State.temporaryMineralCover)
     {
         const TCHAR* AuthoredPath =
@@ -573,9 +579,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 BodyOffset = FVector::ZeroVector;
                 bUsingAuthoredFutureWellMesh =
                     State.type == echoes::sim::EntityType::FutureWell;
+                bUsingAuthoredResourceMesh =
+                    State.type == echoes::sim::EntityType::ResourceNode;
                 bUsingAuthoredRosterMesh =
                     !bUsingAuthoredFutureWellMesh &&
-                    State.type != echoes::sim::EntityType::ResourceNode;
+                    !bUsingAuthoredResourceMesh;
 
                 switch (State.type)
                 {
@@ -620,6 +628,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                         HealthBarHeight = bKharuun ? 332.0f : 232.0f;
                         break;
                     case echoes::sim::EntityType::ResourceNode:
+                        SelectionRadius = 1.45f;
+                        HealthBarWidthScale = 1.25f;
+                        HealthBarHeight = 278.0f;
                         break;
                     case echoes::sim::EntityType::FutureWell:
                         SelectionRadius = 3.15f;
@@ -839,11 +850,14 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         BodyMaterials.Reset();
         BodyMaterial = nullptr;
         const bool bUsingAuthoredPresentationMesh =
-            bUsingAuthoredRosterMesh || bUsingAuthoredFutureWellMesh;
+            bUsingAuthoredRosterMesh || bUsingAuthoredFutureWellMesh ||
+            bUsingAuthoredResourceMesh;
         const int32 BodyMaterialCount =
             bUsingAuthoredPresentationMesh ? 4 : 1;
         UMaterialInterface* BodyParent =
-            bUsingAuthoredPresentationMesh && AuthoredSurfaceMaterial != nullptr
+            bUsingAuthoredResourceMesh && AuthoredWorldSurfaceMaterial != nullptr
+                ? AuthoredWorldSurfaceMaterial
+            : bUsingAuthoredPresentationMesh && AuthoredSurfaceMaterial != nullptr
                 ? AuthoredSurfaceMaterial
                 : BasicMaterial;
         for (int32 MaterialIndex = 0;
@@ -941,6 +955,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = bUsingAuthoredFutureWellMesh
                             ? FLinearColor(0.030f, 0.034f, 0.042f)
+                        : bUsingAuthoredResourceMesh
+                            ? FLinearColor(0.055f, 0.075f, 0.085f)
                             : TeamColor;
         SetBodyColor(BaseBodyColor);
         if (bUsingAuthoredRosterMesh && BodyMaterials.Num() >= 4)
@@ -965,6 +981,34 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             const float MetallicValues[] = {0.30f, 0.48f, 0.08f, 0.22f};
             const float RoughnessValues[] = {0.34f, 0.28f, 0.52f, 0.20f};
             const float EmissiveValues[] = {0.0f, 0.0f, 0.0f, 1.8f};
+            for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+            {
+                UMaterialInstanceDynamic* Material =
+                    BodyMaterials[MaterialIndex];
+                Material->SetVectorParameterValue(
+                    EntityColorParameterName,
+                    SlotColors[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    MetallicParameterName,
+                    MetallicValues[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    RoughnessParameterName,
+                    RoughnessValues[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    EmissiveStrengthParameterName,
+                    EmissiveValues[MaterialIndex]);
+            }
+        }
+        if (bUsingAuthoredResourceMesh && BodyMaterials.Num() >= 4)
+        {
+            const FLinearColor SlotColors[] = {
+                FLinearColor(0.055f, 0.075f, 0.085f),
+                FLinearColor(0.012f, 0.020f, 0.027f),
+                FLinearColor(0.30f, 0.55f, 0.60f),
+                FLinearColor(0.56f, 0.94f, 1.0f)};
+            const float MetallicValues[] = {0.16f, 0.48f, 0.22f, 0.10f};
+            const float RoughnessValues[] = {0.72f, 0.18f, 0.30f, 0.12f};
+            const float EmissiveValues[] = {0.0f, 0.0f, 0.18f, 2.5f};
             for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
             {
                 UMaterialInstanceDynamic* Material =

@@ -20,8 +20,8 @@ mkdir -p "$project_root/Saved/Logs"
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=20 roster=16 landmarks=4' "$log"; then
-  print -u2 "The Unreal art generator did not report all 20 assets."
+if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=27 roster=16 landmarks=4 environment=7' "$log"; then
+  print -u2 "The Unreal art generator did not report all 27 assets."
   print -u2 "Inspect: $log"
   exit 3
 fi
@@ -32,5 +32,5 @@ if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:' "$log"; t
   exit 4
 fi
 
-print "Generated 16 roster meshes, 4 Future Well meshes, and the shared surface material."
+print "Generated 16 roster meshes, 4 Future Well meshes, 7 Glass Scar environment meshes, and the shared surface material."
 print "Evidence log: $log"

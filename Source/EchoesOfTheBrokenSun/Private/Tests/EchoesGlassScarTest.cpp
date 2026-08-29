@@ -3,8 +3,10 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesEntityView.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTerrainView.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
 
@@ -50,6 +52,51 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
         return false;
+    }
+    TestTrue(
+        TEXT("Blocked and scarred terrain use project-authored world meshes"),
+        TerrainView->IsUsingAuthoredTerrainMeshes());
+
+    const TCHAR* AuthoredWorldMeshes[] = {
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf.SM_World_GlassScarShelf"),
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge.SM_World_GlassScarRidge"),
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShard.SM_World_GlassScarShard"),
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarAshCut.SM_World_GlassScarAshCut"),
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarBuriedCauseway.SM_World_GlassScarBuriedCauseway"),
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.SM_World_GlassScarFoldedVerge"),
+        TEXT("/Game/Art/Generated/World/Resources/SM_World_MatterDeposit.SM_World_MatterDeposit")};
+    for (const TCHAR* MeshPath : AuthoredWorldMeshes)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, MeshPath);
+        TestNotNull(
+            FString::Printf(TEXT("Authored Glass Scar mesh loads: %s"), MeshPath),
+            Mesh);
+        if (Mesh != nullptr)
+        {
+            TestTrue(
+                FString::Printf(TEXT("Authored Glass Scar mesh has two LODs: %s"), MeshPath),
+                Mesh->GetNumLODs() >= 2);
+            TestTrue(
+                FString::Printf(TEXT("Authored Glass Scar mesh has four material zones: %s"), MeshPath),
+                Mesh->GetStaticMaterials().Num() >= 4);
+        }
+    }
+
+    AEchoesEntityView* MatterPreview = World->SpawnActor<AEchoesEntityView>();
+    if (TestNotNull(TEXT("Matter presentation view can be created"), MatterPreview))
+    {
+        echoes::sim::Entity MatterState{};
+        MatterState.id = 920001;
+        MatterState.owner = echoes::sim::kNeutralPlayer;
+        MatterState.type = echoes::sim::EntityType::ResourceNode;
+        MatterState.position = echoes::sim::Vec2::FromTiles(12, 12);
+        MatterState.hitPoints = 1;
+        MatterState.maxHitPoints = 1;
+        MatterPreview->ApplyAuthoritativeState(MatterState, true);
+        TestTrue(
+            TEXT("Matter presentation uses the project-authored deposit mesh"),
+            MatterPreview->IsUsingAuthoredResourceMesh());
+        MatterPreview->Destroy();
     }
 
     int32 AuthoritativeBlockedTiles = 0;

@@ -10,4 +10,5 @@
 
 .light p, .content-band p, .tint-band p, .page-hero p { color: #344349; }
 .dark p, .dark-band p, .story-feature p { color: #cbd5d7; }
+.content-band .route-card p { color: #cbd5d7; }
 .site-footer span { color: #bac6c9; }

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Glass Scar | Echoes of the Broken Sun</title>
+  <meta name="description" content="Explore the Glass Scar battlefield, its Matter deposits, three campaign-shaped crossings, and current Unreal environment art for Echoes of the Broken Sun.">
+  <link rel="stylesheet" href="styles.css?v=20260829l">
+  <link rel="stylesheet" href="pages.css?v=20260829l">
+  <link rel="stylesheet" href="contrast.css?v=20260829l">
+</head>
+<body class="detail-page">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a href="index.html" class="brand"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
+    <div class="nav-links">
+      <a href="story.html">Story</a>
+      <a href="characters.html">Characters</a>
+      <a href="factions.html">Factions</a>
+      <a href="glass-scar.html" aria-current="page">World</a>
+      <a href="arsenal.html">Arsenal</a>
+      <a href="campaign.html">Campaign</a>
+      <a href="updates.html">Updates</a>
+    </div>
+  </nav>
+
+  <main id="main-content" class="page-main">
+    <header class="page-hero scar-page-hero">
+      <span class="section-kicker">World archive / First battlefield</span>
+      <h1>The road broke.<br><em>Three answers crossed it.</em></h1>
+      <p class="lead">The Glass Scar is a long impact basin beneath Lume Reach, split by black-glass ridges and the remains of an old transit line. A Future Well waits at its center. What the player does there decides which road will still exist when the campaign returns.</p>
+      <div class="status-note"><strong>Environment status:</strong> The current Unreal build now uses seven original world-asset candidates for the Glass Scar terrain shelf, cliff ridge, shard clusters, three named crossings, and Matter deposits. The captures on this page come directly from the development build. They are a readable vertical-slice pass—not final terrain, textures, foliage, destruction, effects, audio, performance qualification, or a public release.</div>
+    </header>
+
+    <section class="content-band scar-spotlight">
+      <div class="scar-spotlight-copy">
+        <span class="section-kicker">01 / The wound beneath the city</span>
+        <h2>A battlefield<br><em>with a memory.</em></h2>
+        <p>Before the Crownfall, a transit route crossed this ground. The impact dropped the basin floor, buried much of the roadway, and fused exposed stone into dark glass. The Compact later rebuilt along one rim. Kharuun memory paths grew through caverns beneath the other.</p>
+        <p>Neither side owns the center. The Well stands there like a question made physical, surrounded by broken infrastructure, exposed Matter, and routes that do not all belong to the same version of history.</p>
+        <dl class="scar-anatomy">
+          <div><dt>Starting shelves</dt><dd>Opposed, readable territories give both armies space to gather, scout, and establish their first network.</dd></div>
+          <div><dt>Glassy ridge</dt><dd>A continuous east-west wound blocks a simple advance and turns each surviving crossing into a strategic commitment.</dd></div>
+          <div><dt>Future Well</dt><dd>The neutral center offers power, intelligence, or temporary terrain—and records which possibility the player chose.</dd></div>
+          <div><dt>Matter seams</dt><dd>Safer outer deposits support the opening economy. The richer center asks players to risk workers and supply routes.</dd></div>
+        </dl>
+      </div>
+      <figure class="scar-concept">
+        <picture>
+          <source type="image/webp" srcset="assets/concepts/glass-scar-routes.webp?v=20260829i">
+          <img src="assets/concepts/glass-scar-routes.png?v=20260829i" width="1254" height="1254" loading="lazy" decoding="async" alt="Four-view Glass Scar concept sheet showing the full impact basin and distinct Ash Cut, Buried Causeway, and Folded Verge crossings.">
+        </picture>
+        <figcaption><b>Environment direction</b><span>Concept target · not gameplay</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="dark-band">
+      <span class="section-kicker">02 / Current Unreal implementation</span>
+      <div class="section-head">
+        <h2>The map reads<br>before the fighting starts.</h2>
+        <p>The current overview uses authored silhouettes for the basin edges, fractured ridge, route markers, Matter deposits, and central Well. The terrain presentation does not control movement: the deterministic map remains the authority for blocked ground and each open crossing.</p>
+      </div>
+      <figure class="scar-overview">
+        <picture>
+          <source type="image/webp" srcset="assets/engine/glass-scar-overview-in-engine.webp?v=20260829i">
+          <img src="assets/engine/glass-scar-overview-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current top-down Unreal view of the Glass Scar with three shape-distinct crossings, a central Future Well, two opposed base shelves, and pale Matter deposits.">
+        </picture>
+        <figcaption><b>Glass Scar overview</b><span>Current in-engine art-review capture · UI hidden</span></figcaption>
+      </figure>
+      <div class="scar-map-facts">
+        <article><small>Read first</small><h3>The dividing scar</h3><p>Dark ridge forms announce blocked ground as one continuous wound rather than a row of anonymous tiles.</p></article>
+        <article><small>Fight over</small><h3>The center</h3><p>The Future Well and contested Matter sit between the factions, making the shorter economy route the more dangerous one.</p></article>
+        <article><small>Recognize</small><h3>Three crossings</h3><p>Scalloped plates, a straight engineered deck, and a broken zigzag remain different when viewed in grayscale.</p></article>
+        <article><small>Remember</small><h3>The consequence</h3><p>The campaign does not quietly reset the map. The road inherited later comes from the Well decision made earlier.</p></article>
+      </div>
+      <p class="prototype-data">This capture isolates presentation for inspection. It is not a gameplay screenshot, a packaged build, final lighting, or evidence of broad player readability.</p>
+    </section>
+
+    <section class="content-band">
+      <span class="section-kicker">03 / The inherited roads</span>
+      <div class="section-head">
+        <h2>One old decision.<br><em>Three possible routes.</em></h2>
+        <p>Mission 04, <i>The Unburied Road</i>, does not ask the player to choose again. It makes Oruun’s force travel through the physical consequence of the first mission’s Well protocol.</p>
+      </div>
+
+      <div class="route-grid">
+        <article class="route-card ash-route">
+          <figure><picture><source type="image/webp" srcset="assets/engine/glass-scar-ash-cut-in-engine.webp?v=20260829i"><img src="assets/engine/glass-scar-ash-cut-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal close view of Ash Cut, an irregular crossing made from six scalloped pale plates between black-glass shards."></picture></figure>
+          <div class="route-card-body">
+            <span class="route-number">01</span>
+            <small>Inherited from Harvest</small>
+            <h3>Ash Cut</h3>
+            <div class="route-signature">Low profile · Scalloped edges · Raw passage</div>
+            <p>When the Well is consumed, the collapse tears open a rough way through the brittle ridge. Ash Cut looks improvised because it is: a wound inside a wound, useful now because another possibility was spent.</p>
+            <div class="route-facts"><span>Shape language<b>Irregular cleft</b></span><span>Story meaning<b>Power taken</b></span></div>
+          </div>
+        </article>
+
+        <article class="route-card causeway-route">
+          <figure><picture><source type="image/webp" srcset="assets/engine/glass-scar-buried-causeway-in-engine.webp?v=20260829i"><img src="assets/engine/glass-scar-buried-causeway-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal close view of the Buried Causeway, a broad straight transit deck with repeated pale slabs, ribs, and broken dark parapets."></picture></figure>
+          <div class="route-card-body">
+            <span class="route-number">02</span>
+            <small>Inherited from Preserve</small>
+            <h3>Buried Causeway</h3>
+            <div class="route-signature">Straight deck · Repeated ribs · Exposed line</div>
+            <p>Preserving the Well leaves the oldest surviving road coherent enough to uncover. The causeway is broad and unmistakably built, but its clean approach gives an enemy the same clear view it gives the traveler.</p>
+            <div class="route-facts"><span>Shape language<b>Engineered span</b></span><span>Story meaning<b>Possibility held</b></span></div>
+          </div>
+        </article>
+
+        <article class="route-card verge-route">
+          <figure><picture><source type="image/webp" srcset="assets/engine/glass-scar-folded-verge-in-engine.webp?v=20260829i"><img src="assets/engine/glass-scar-folded-verge-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal close view of the Folded Verge, an angular violet crossing of offset plates and displaced shards."></picture></figure>
+          <div class="route-card-body">
+            <span class="route-number">03</span>
+            <small>Inherited from Reshape</small>
+            <h3>Folded Verge</h3>
+            <div class="route-signature">Offset plates · Broken rhythm · Borrowed road</div>
+            <p>Reshape pulls a route from a future in which the basin broke differently. Its plates do not meet as ordinary construction would. They overlap, turn, and briefly agree to carry an army across.</p>
+            <div class="route-facts"><span>Shape language<b>Angular zigzag</b></span><span>Story meaning<b>Future borrowed</b></span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tint-band">
+      <span class="section-kicker">04 / Matter and the opening economy</span>
+      <div class="section-head">
+        <h2>A resource line<br><em>is also a risk.</em></h2>
+        <p>Matter is the practical substance of the war: mineral strata and reclaimed wreckage used for frames, bodies, and basic structures. It is different from Dawn, which comes from unrealized possibility and pays for more advanced systems.</p>
+      </div>
+      <div class="resource-story-grid">
+        <article><span class="resource-mark" aria-hidden="true">◆</span><h3>Find the seam</h3><p>Surveyors and Tenders gather from pale, faceted deposits. The new Matter silhouette is narrow at the top and rooted at the base, so it does not resemble a unit or building.</p></article>
+        <article><span class="resource-mark" aria-hidden="true">◇</span><h3>Carry it home</h3><p>Workers have limited cargo and must return to a valid drop-off. Distance, exposure, and the survival of the route matter as much as the deposit itself.</p></article>
+        <article><span class="resource-mark" aria-hidden="true">✦</span><h3>Risk the center</h3><p>Outer deposits support a safer opening. Central Matter can shorten an economy, but workers near the Well are visible prizes in the most contested part of the map.</p></article>
+      </div>
+    </section>
+
+    <section class="dark-band">
+      <span class="section-kicker">05 / The campaign thread</span>
+      <div class="section-head">
+        <h2>The ground keeps<br>what the ledger records.</h2>
+        <p>The Glass Scar is more than the prologue map. It is the campaign’s first proof that a strategic choice can become geography, obligation, and evidence several missions later.</p>
+      </div>
+      <ol class="scar-campaign-thread">
+        <li><span>M01</span><div><h3>Choose at the Well</h3><p>Mara recovers the archive, commits Harvest, Preserve, or Reshape, and withdraws. The campaign stores the result as an irreversible fact.</p></div></li>
+        <li><span>M02–03</span><div><h3>See who carries the cost</h3><p>Oruun reads the choice through Kharuun memory, while Lume Reach turns it into a real priority among life support, transit, and archive continuity.</p></div></li>
+        <li><span>M04</span><div><h3>Cross the road that remains</h3><p>Ash Cut, Buried Causeway, or Folded Verge becomes Oruun’s only open route to the missing shard.</p></div></li>
+        <li><span>M05–06</span><div><h3>Follow the surviving record</h3><p>The same ordered history continues into treaty geometry and the census trace. It shapes what can be found without pretending it has already revealed who caused the omissions.</p></div></li>
+      </ol>
+      <a class="back" href="campaign.html">Read the complete planned campaign →</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand" href="index.html"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
+    <span>World archive · Concept direction and current engine evidence clearly separated</span>
+  </footer>
+</body>
+</html>

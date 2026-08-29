@@ -40,6 +40,49 @@ void AEchoesRTSCameraPawn::BeginPlay()
     Super::BeginPlay();
     bEdgePanArmed = false;
 #if !UE_BUILD_SHIPPING
+    FString GlassScarReviewMode;
+    if (FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarArtReview")) ||
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarReview="),
+            GlassScarReviewMode))
+    {
+        if (GlassScarReviewMode.IsEmpty())
+        {
+            GlassScarReviewMode = TEXT("Overview");
+        }
+        const bool bOverview = GlassScarReviewMode.Equals(
+            TEXT("Overview"),
+            ESearchCase::IgnoreCase);
+        const float CenterX =
+            GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase)
+                ? -3800.0f
+            : GlassScarReviewMode.Equals(
+                  TEXT("FoldedVerge"),
+                  ESearchCase::IgnoreCase)
+                ? 3400.0f
+                : 0.0f;
+        bArtReviewMode = true;
+        SetActorLocation(FVector(CenterX, 0.0f, 100.0f));
+        SpringArm->TargetArmLength = bOverview ? 10800.0f : 2300.0f;
+        SpringArm->SetRelativeRotation(
+            FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
+        SpringArm->bEnableCameraLag = false;
+        Camera->SetFieldOfView(bOverview ? 58.0f : 52.0f);
+        Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+        Camera->PostProcessSettings.AutoExposureBias = bOverview ? -0.05f : 0.15f;
+        Camera->PostProcessBlendWeight = 1.0f;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_GLASS_SCAR_ART_REVIEW_CAMERA] mode=%s centerX=%.0f zoom=%.0f editorOnly=true"),
+            *GlassScarReviewMode,
+            CenterX,
+            SpringArm->TargetArmLength);
+        return;
+    }
     if (FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesFutureWellArtReview")))
