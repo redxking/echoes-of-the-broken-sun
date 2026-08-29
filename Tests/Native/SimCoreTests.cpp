@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v18 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1660 + 5 * mapTileCount;
+    // Snapshot v19 header/rules/research/player/sequence fields plus terrain and four fog grids.
+    return 1858 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1540, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1670, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1548, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1678, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -2381,6 +2381,159 @@ void TestPoweredAegisNetworkAndCounterplay() {
     REQUIRE(!isolated.FindEntity(isolatedAegis)->aegisPowered);
 }
 
+void TestFactionResearchProgressionAndPersistence() {
+    Simulation simulation({32, 32, 20, 91});
+    AddTwoPlayers(simulation, {1000, 500}, {1000, 500});
+    const EntityId meridianFoundry = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(5, 5));
+    const EntityId kharuunBasin = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(24, 24));
+    const EntityId lancer = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 5));
+    const EntityId riftstalker = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(23, 24));
+    REQUIRE(meridianFoundry != 0 && kharuunBasin != 0 &&
+            lancer != 0 && riftstalker != 0);
+    REQUIRE(simulation.ValidateResearch(
+                0, meridianFoundry,
+                ResearchType::MeridianHorizonLattice) ==
+            ResearchResult::PrerequisiteMissing);
+    REQUIRE(simulation.ValidateResearch(
+                0, meridianFoundry,
+                ResearchType::KharuunEchoCartography) ==
+            ResearchResult::WrongFaction);
+
+    simulation.CaptureReplayBaseline();
+    Command targeting = MakeCommand(
+        0, 0, 1, CommandType::Research, meridianFoundry);
+    targeting.researchType = ResearchType::MeridianPrismaticTargeting;
+    REQUIRE(simulation.QueueCommand(targeting));
+    simulation.Step();
+    const PlayerState* meridian = simulation.FindPlayer(0);
+    REQUIRE(meridian != nullptr);
+    REQUIRE(meridian->activeResearch ==
+            ResearchType::MeridianPrismaticTargeting);
+    REQUIRE(meridian->researchProgress == 1);
+    REQUIRE(meridian->researchRequired == 180);
+    REQUIRE(meridian->resources.material == 880);
+    REQUIRE(meridian->resources.dawnshards == 460);
+    REQUIRE(simulation.ValidateProduction(
+                0, meridianFoundry, EntityType::Soldier) ==
+            ProductionResult::ProducerBusy);
+    const std::optional<PlayerView> researchingView =
+        simulation.CreatePlayerView(0);
+    REQUIRE(researchingView.has_value());
+    REQUIRE(researchingView->Player().activeResearch ==
+            ResearchType::MeridianPrismaticTargeting);
+
+    std::string error;
+    const std::vector<std::uint8_t> activeSnapshot = simulation.SaveSnapshot();
+    const std::optional<Simulation> activeLoaded =
+        Simulation::LoadSnapshot(activeSnapshot, &error);
+    REQUIRE(activeLoaded.has_value());
+    REQUIRE(activeLoaded->StateChecksum() == simulation.StateChecksum());
+
+    simulation.Step(179);
+    meridian = simulation.FindPlayer(0);
+    REQUIRE(meridian->activeResearch == ResearchType::None);
+    REQUIRE(meridian->HasCompletedResearch(
+        ResearchType::MeridianPrismaticTargeting));
+    REQUIRE(simulation.FindEntity(lancer)->attackDamage == 20);
+    const EntityId upgradedLancer = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(7, 5));
+    REQUIRE(simulation.FindEntity(upgradedLancer)->attackDamage == 20);
+    REQUIRE(simulation.ValidateResearch(
+                0, meridianFoundry,
+                ResearchType::MeridianPrismaticTargeting) ==
+            ResearchResult::AlreadyCompleted);
+    simulation.CaptureReplayBaseline();
+
+    Command lattice = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Research,
+        meridianFoundry);
+    lattice.researchType = ResearchType::MeridianHorizonLattice;
+    REQUIRE(simulation.QueueCommand(lattice));
+    simulation.Step(220);
+    REQUIRE(simulation.FindPlayer(0)->HasCompletedResearch(
+        ResearchType::MeridianHorizonLattice));
+    REQUIRE(simulation.FindEntity(lancer)->visionTiles == 7);
+
+    Command cartography = MakeCommand(
+        simulation.CurrentTick(), 1, 1, CommandType::Research, kharuunBasin);
+    cartography.researchType = ResearchType::KharuunEchoCartography;
+    REQUIRE(simulation.QueueCommand(cartography));
+    simulation.Step(180);
+    REQUIRE(simulation.FindPlayer(1)->HasCompletedResearch(
+        ResearchType::KharuunEchoCartography));
+    REQUIRE(simulation.FindEntity(riftstalker)->visionTiles == 8);
+
+    Command edge = MakeCommand(
+        simulation.CurrentTick(), 1, 2, CommandType::Research, kharuunBasin);
+    edge.researchType = ResearchType::KharuunAncestralEdge;
+    REQUIRE(simulation.QueueCommand(edge));
+    simulation.Step(220);
+    REQUIRE(simulation.FindPlayer(1)->HasCompletedResearch(
+        ResearchType::KharuunAncestralEdge));
+    REQUIRE(simulation.FindEntity(riftstalker)->attackDamage == 28);
+
+    Command striker = MakeCommand(
+        simulation.CurrentTick(), 1, 3, CommandType::AdaptWarform,
+        riftstalker);
+    striker.target = kharuunBasin;
+    striker.warformAdaptation = WarformAdaptation::Striker;
+    REQUIRE(simulation.QueueCommand(striker));
+    simulation.Step(80);
+    REQUIRE(simulation.FindEntity(riftstalker)->warformAdaptation ==
+            WarformAdaptation::Striker);
+    REQUIRE(simulation.FindEntity(riftstalker)->attackDamage == 35);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    const std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    SimulationConfig interruptedConfig{20, 20, 20, 92};
+    interruptedConfig.rules
+        .archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
+                   [static_cast<std::size_t>(EntityType::Soldier)]
+        .attackDamage = 2000;
+    Simulation interrupted(interruptedConfig);
+    AddTwoPlayers(interrupted, {0, 0}, {1000, 500});
+    const EntityId interruptedBasin = interrupted.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(10, 10));
+    const EntityId researchBreaker = interrupted.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(11, 10));
+    REQUIRE(interruptedBasin != 0 && researchBreaker != 0);
+    Command interruptedResearch = MakeCommand(
+        0, 1, 1, CommandType::Research, interruptedBasin);
+    interruptedResearch.researchType = ResearchType::KharuunEchoCartography;
+    Command destroyResearchSite = MakeCommand(
+        0, 0, 1, CommandType::Attack, researchBreaker);
+    destroyResearchSite.target = interruptedBasin;
+    REQUIRE(interrupted.QueueCommand(interruptedResearch));
+    REQUIRE(interrupted.QueueCommand(destroyResearchSite));
+    interrupted.Step();
+    const PlayerState* interruptedPlayer = interrupted.FindPlayer(1);
+    REQUIRE(interrupted.FindEntity(interruptedBasin) == nullptr);
+    REQUIRE(interruptedPlayer != nullptr);
+    REQUIRE(interruptedPlayer->activeResearch == ResearchType::None);
+    REQUIRE(interruptedPlayer->researchProducer == 0);
+    REQUIRE(interruptedPlayer->researchProgress == 0);
+    REQUIRE(interruptedPlayer->researchRequired == 0);
+    REQUIRE(interruptedPlayer->resources.material == 900);
+    REQUIRE(interruptedPlayer->resources.dawnshards == 455);
+    REQUIRE(!interruptedPlayer->HasCompletedResearch(
+        ResearchType::KharuunEchoCartography));
+}
+
 }  // namespace
 
 int main() {
@@ -2426,6 +2579,8 @@ int main() {
          TestVibrationDetectionAndAnonymousSignatures},
         {"powered Aegis network and counterplay",
          TestPoweredAegisNetworkAndCounterplay},
+        {"faction research progression and persistence",
+         TestFactionResearchProgressionAndPersistence},
     };
 
     std::size_t passed = 0;

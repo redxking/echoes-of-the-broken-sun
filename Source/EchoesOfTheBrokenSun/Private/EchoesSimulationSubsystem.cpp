@@ -171,7 +171,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d technologies=4 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -1163,6 +1163,76 @@ bool UEchoesSimulationSubsystem::IssueProductionCommand(
         OutFeedback);
 }
 
+bool UEchoesSimulationSubsystem::IssueResearchCommand(
+    uint32 ProducerId,
+    echoes::sim::ResearchType ResearchType,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!Simulation.IsValid() || !bScenarioReady)
+    {
+        OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
+        return false;
+    }
+    const echoes::sim::ResearchResult Result = Simulation->ValidateResearch(
+        LocalPlayerId, ProducerId, ResearchType);
+    if (Result != echoes::sim::ResearchResult::Valid)
+    {
+        switch (Result)
+        {
+            case echoes::sim::ResearchResult::InvalidPlayer:
+            case echoes::sim::ResearchResult::InvalidProducer:
+                OutFeedback = TEXT("[RESEARCH_PRODUCER_INVALID] Select an owned production structure.");
+                break;
+            case echoes::sim::ResearchResult::ProducerIncomplete:
+                OutFeedback = TEXT("[RESEARCH_PRODUCER_INCOMPLETE] Construction must finish before research.");
+                break;
+            case echoes::sim::ResearchResult::ProducerBusy:
+                OutFeedback = TEXT("[RESEARCH_BUSY] Production or another research project is active.");
+                break;
+            case echoes::sim::ResearchResult::InvalidTechnology:
+            case echoes::sim::ResearchResult::WrongFaction:
+                OutFeedback = TEXT("[RESEARCH_UNAVAILABLE] This technology is unavailable to the local faction.");
+                break;
+            case echoes::sim::ResearchResult::AlreadyCompleted:
+                OutFeedback = TEXT("[RESEARCH_COMPLETE] This technology is already operational.");
+                break;
+            case echoes::sim::ResearchResult::PrerequisiteMissing:
+                OutFeedback = TEXT("[RESEARCH_PREREQUISITE] Complete the preceding technology first.");
+                break;
+            case echoes::sim::ResearchResult::InsufficientResources:
+                OutFeedback = TEXT("[INSUFFICIENT_RESOURCES] The selected research cannot be funded.");
+                break;
+            case echoes::sim::ResearchResult::Valid:
+                break;
+        }
+        return false;
+    }
+    echoes::sim::Command Command{};
+    Command.executeTick = Simulation->CurrentTick();
+    Command.player = LocalPlayerId;
+    Command.sequence = NextPlayerCommandSequence++;
+    Command.type = echoes::sim::CommandType::Research;
+    Command.actor = ProducerId;
+    Command.researchType = ResearchType;
+    std::string Rejection;
+    if (!Simulation->QueueCommand(Command, &Rejection))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[RESEARCH_REJECTED] %s"), UTF8_TO_TCHAR(Rejection.c_str()));
+        return false;
+    }
+    OutFeedback = TEXT("RESEARCH QUEUED: production is suspended until completion.");
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_RESEARCH_QUEUED] player=%u producer=%u technology=%u"),
+        LocalPlayerId,
+        ProducerId,
+        static_cast<uint8>(ResearchType));
+    return true;
+}
+
 bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     uint32 ActorId,
     uint32 SiteId,
@@ -1499,6 +1569,9 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = TEXT("[ENTITY_CAPACITY_REACHED] No additional battlefield object can be created.");
                     break;
             }
+            return false;
+        case CommandType::Research:
+            OutFeedback = TEXT("[RESEARCH_FORM_REQUIRED] Use a declared research command.");
             return false;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)

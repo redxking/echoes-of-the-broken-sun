@@ -33,14 +33,14 @@ for marker in ECHOES_CONTENT_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_
 done
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4 source=canonical' \
+  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 technologies=4 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 source=canonical' \
   "$log"; then
   print -u2 "Stress runtime did not load the reviewed canonical content digest. Inspect: $log"
   exit 4
 fi
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' \
+  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 technologies=4 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' \
   "$log"; then
   print -u2 "Stress runtime did not install the authored deterministic rules. Inspect: $log"
   exit 4

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "technologies": [
+    {
+      "id": "mc_prismatic_targeting",
+      "display_name": "Prismatic Targeting",
+      "faction": "meridian_compact",
+      "cost": {"matter": 120, "dawn": 40},
+      "research_ticks": 180,
+      "prerequisite": null,
+      "effects": {"combat_damage_percent": 115, "combat_vision_percent": 100}
+    },
+    {
+      "id": "mc_horizon_lattice",
+      "display_name": "Horizon Lattice",
+      "faction": "meridian_compact",
+      "cost": {"matter": 90, "dawn": 55},
+      "research_ticks": 220,
+      "prerequisite": "mc_prismatic_targeting",
+      "effects": {"combat_damage_percent": 100, "combat_vision_percent": 120}
+    },
+    {
+      "id": "ka_echo_cartography",
+      "display_name": "Echo Cartography",
+      "faction": "kharuun_assemblies",
+      "cost": {"matter": 100, "dawn": 45},
+      "research_ticks": 180,
+      "prerequisite": null,
+      "effects": {"combat_damage_percent": 100, "combat_vision_percent": 120}
+    },
+    {
+      "id": "ka_ancestral_edge",
+      "display_name": "Ancestral Edge",
+      "faction": "kharuun_assemblies",
+      "cost": {"matter": 110, "dawn": 50},
+      "research_ticks": 220,
+      "prerequisite": "ka_echo_cartography",
+      "effects": {"combat_damage_percent": 115, "combat_vision_percent": 100}
+    }
+  ]
+}

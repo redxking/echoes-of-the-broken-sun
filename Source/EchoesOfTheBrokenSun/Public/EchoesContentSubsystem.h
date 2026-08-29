@@ -97,6 +97,19 @@ struct FEchoesFutureWellContent final
     int32 ReshapeTelegraphTicks = 0;
 };
 
+struct FEchoesTechnologyContent final
+{
+    FString Id;
+    FString DisplayName;
+    FString FactionId;
+    FString PrerequisiteId;
+    int32 MatterCost = 0;
+    int32 DawnCost = 0;
+    int32 ResearchTicks = 0;
+    int32 CombatDamagePercent = 100;
+    int32 CombatVisionPercent = 100;
+};
+
 /** Immutable runtime representation of the validated canonical data pack. */
 struct ECHOESOFTHEBROKENSUN_API FEchoesContentCatalog final
 {
@@ -106,11 +119,14 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesContentCatalog final
     TArray<FEchoesFactionContent> Factions;
     TArray<FEchoesUnitContent> Units;
     TArray<FEchoesBuildingContent> Buildings;
+    TArray<FEchoesTechnologyContent> Technologies;
     FEchoesFutureWellContent FutureWell;
 
     [[nodiscard]] int32 PlayableFactionCount() const;
     [[nodiscard]] const FEchoesUnitContent* FindUnit(const FString& Id) const;
     [[nodiscard]] const FEchoesBuildingContent* FindBuilding(const FString& Id) const;
+    [[nodiscard]] const FEchoesTechnologyContent* FindTechnology(
+        const FString& Id) const;
     [[nodiscard]] bool BuildSimulationRules(
         uint32 TicksPerSecond,
         echoes::sim::SimulationRules& OutRules,

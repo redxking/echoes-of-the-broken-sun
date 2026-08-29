@@ -87,6 +87,7 @@ private:
     void ProduceSoldier();
     void ProduceHeavy();
     void ProduceScout();
+    void ResearchNextTechnology();
     void AttackMoveAtCursor();
     void PatrolAtCursor();
     void HoldSelectedUnits();

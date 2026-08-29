@@ -37,10 +37,11 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Two factions are slice-playable"), Catalog.PlayableFactionCount(), 2);
     TestEqual(TEXT("Eight authored units are present"), Catalog.Units.Num(), 8);
     TestEqual(TEXT("Eight authored buildings are present"), Catalog.Buildings.Num(), 8);
+    TestEqual(TEXT("Four authored technologies are present"), Catalog.Technologies.Num(), 4);
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4")));
+        FString(TEXT("100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -131,6 +132,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Powered Aegis cadence enters simulation rules"),
               Rules.archetypes[0][9].attackPeriodTicks,
               static_cast<echoes::sim::Tick>(20));
+    TestEqual(TEXT("Prismatic Targeting damage enters simulation rules"),
+              Rules.research[static_cast<std::size_t>(
+                  echoes::sim::ResearchType::MeridianPrismaticTargeting)]
+                  .combatDamagePercent,
+              115);
+    TestTrue(TEXT("Horizon Lattice dependency enters simulation rules"),
+             Rules.research[static_cast<std::size_t>(
+                 echoes::sim::ResearchType::MeridianHorizonLattice)]
+                     .prerequisite ==
+                 echoes::sim::ResearchType::MeridianPrismaticTargeting);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))

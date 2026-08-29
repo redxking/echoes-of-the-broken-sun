@@ -18,7 +18,13 @@ PACK_VERSION = 1
 SCHEMA_VERSION = 1
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
-SOURCE_FILES = ("factions.json", "units.json", "buildings.json", "future_wells.json")
+SOURCE_FILES = (
+    "factions.json",
+    "units.json",
+    "buildings.json",
+    "future_wells.json",
+    "technologies.json",
+)
 
 
 class ContentValidationError(ValueError):
@@ -503,6 +509,109 @@ def validate_future_wells(root: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def validate_technologies(
+    root: dict[str, Any], faction_ids: set[str], playable: set[str]
+) -> list[dict[str, Any]]:
+    records = require_schema(root, "technologies", "technologies.json")
+    validated: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    counts = {faction: 0 for faction in playable}
+    for index, raw in enumerate(records):
+        path = f"technologies.json.technologies[{index}]"
+        record = require_object(raw, path)
+        require_exact_keys(
+            record,
+            {
+                "id",
+                "display_name",
+                "faction",
+                "cost",
+                "research_ticks",
+                "prerequisite",
+                "effects",
+            },
+            set(),
+            path,
+        )
+        technology_id = require_id(record["id"], f"{path}.id")
+        if technology_id in seen:
+            fail(f"{path}.id", f"duplicate technology id '{technology_id}'")
+        seen.add(technology_id)
+        faction = require_id(record["faction"], f"{path}.faction")
+        if faction not in faction_ids:
+            fail(f"{path}.faction", f"unknown faction '{faction}'")
+        if faction not in playable:
+            fail(f"{path}.faction", "vertical-slice research is limited to playable factions")
+        prerequisite = record["prerequisite"]
+        if prerequisite is not None:
+            prerequisite = require_id(prerequisite, f"{path}.prerequisite")
+        effects = require_object(record["effects"], f"{path}.effects")
+        require_exact_keys(
+            effects,
+            {"combat_damage_percent", "combat_vision_percent"},
+            set(),
+            f"{path}.effects",
+        )
+        damage = require_int(
+            effects["combat_damage_percent"],
+            f"{path}.effects.combat_damage_percent",
+            100,
+            300,
+        )
+        vision = require_int(
+            effects["combat_vision_percent"],
+            f"{path}.effects.combat_vision_percent",
+            100,
+            300,
+        )
+        if damage == 100 and vision == 100:
+            fail(f"{path}.effects", "at least one combat modifier must change gameplay")
+        counts[faction] += 1
+        validated.append(
+            {
+                "id": technology_id,
+                "display_name": require_text(record["display_name"], f"{path}.display_name"),
+                "faction": faction,
+                "cost": require_cost(record["cost"], f"{path}.cost"),
+                "research_ticks": require_int(
+                    record["research_ticks"], f"{path}.research_ticks", 1, 60_000
+                ),
+                "prerequisite": prerequisite,
+                "effects": {
+                    "combat_damage_percent": damage,
+                    "combat_vision_percent": vision,
+                },
+            }
+        )
+    by_id = {item["id"]: item for item in validated}
+    for item in validated:
+        prerequisite = item["prerequisite"]
+        if prerequisite is None:
+            continue
+        if prerequisite not in by_id:
+            fail(
+                f"technologies.json.{item['id']}.prerequisite",
+                f"unknown technology '{prerequisite}'",
+            )
+        if by_id[prerequisite]["faction"] != item["faction"]:
+            fail(
+                f"technologies.json.{item['id']}.prerequisite",
+                "prerequisite must belong to the same faction",
+            )
+        if by_id[prerequisite]["prerequisite"] is not None:
+            fail(
+                f"technologies.json.{item['id']}.prerequisite",
+                "schema 1 supports one prerequisite tier",
+            )
+    for faction, count in counts.items():
+        if count != 2:
+            fail(
+                "technologies.json.technologies",
+                f"playable faction '{faction}' requires exactly two technologies",
+            )
+    return sorted(validated, key=lambda item: item["id"])
+
+
 def build_pack(source_dir: Path) -> dict[str, Any]:
     roots = {filename: load_json(source_dir, filename) for filename in SOURCE_FILES}
     factions, playable = validate_factions(roots["factions.json"])
@@ -515,6 +624,9 @@ def build_pack(source_dir: Path) -> dict[str, Any]:
         "units": validate_units(roots["units.json"], faction_ids, playable),
         "buildings": validate_buildings(roots["buildings.json"], faction_ids, playable),
         "future_wells": validate_future_wells(roots["future_wells.json"]),
+        "technologies": validate_technologies(
+            roots["technologies.json"], faction_ids, playable
+        ),
     }
 
 

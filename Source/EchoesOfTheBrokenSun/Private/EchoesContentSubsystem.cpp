@@ -243,6 +243,16 @@ const FEchoesBuildingContent* FEchoesContentCatalog::FindBuilding(const FString&
         });
 }
 
+const FEchoesTechnologyContent* FEchoesContentCatalog::FindTechnology(
+    const FString& Id) const
+{
+    return Technologies.FindByPredicate(
+        [&Id](const FEchoesTechnologyContent& Technology)
+        {
+            return Technology.Id == Id;
+        });
+}
+
 bool FEchoesContentCatalog::BuildSimulationRules(
     const uint32 TicksPerSecond,
     echoes::sim::SimulationRules& OutRules,
@@ -598,6 +608,59 @@ bool FEchoesContentCatalog::BuildSimulationRules(
         }
     }
 
+    struct FTechnologyBinding final
+    {
+        const TCHAR* Id;
+        const TCHAR* FactionId;
+        const TCHAR* PrerequisiteId;
+        echoes::sim::Faction Faction;
+        echoes::sim::ResearchType Type;
+        echoes::sim::ResearchType Prerequisite;
+    };
+    constexpr FTechnologyBinding TechnologyBindings[] = {
+        {TEXT("mc_prismatic_targeting"), TEXT("meridian_compact"), TEXT(""),
+         echoes::sim::Faction::MeridianCompact,
+         echoes::sim::ResearchType::MeridianPrismaticTargeting,
+         echoes::sim::ResearchType::None},
+        {TEXT("mc_horizon_lattice"), TEXT("meridian_compact"),
+         TEXT("mc_prismatic_targeting"),
+         echoes::sim::Faction::MeridianCompact,
+         echoes::sim::ResearchType::MeridianHorizonLattice,
+         echoes::sim::ResearchType::MeridianPrismaticTargeting},
+        {TEXT("ka_echo_cartography"), TEXT("kharuun_assemblies"), TEXT(""),
+         echoes::sim::Faction::KharuunAssemblies,
+         echoes::sim::ResearchType::KharuunEchoCartography,
+         echoes::sim::ResearchType::None},
+        {TEXT("ka_ancestral_edge"), TEXT("kharuun_assemblies"),
+         TEXT("ka_echo_cartography"),
+         echoes::sim::Faction::KharuunAssemblies,
+         echoes::sim::ResearchType::KharuunAncestralEdge,
+         echoes::sim::ResearchType::KharuunEchoCartography},
+    };
+    for (const FTechnologyBinding& Binding : TechnologyBindings)
+    {
+        const FEchoesTechnologyContent* Technology = FindTechnology(Binding.Id);
+        if (Technology == nullptr || Technology->FactionId != Binding.FactionId ||
+            Technology->PrerequisiteId != Binding.PrerequisiteId ||
+            Technology->ResearchTicks <= 0 ||
+            (Technology->CombatDamagePercent == 100 &&
+             Technology->CombatVisionPercent == 100))
+        {
+            OutError = FString::Printf(
+                TEXT("SIM_RULES_TECHNOLOGY_BINDING_INVALID:%s"), Binding.Id);
+            return false;
+        }
+        echoes::sim::ResearchRules& Rules =
+            OutRules.research[static_cast<std::size_t>(Binding.Type)];
+        Rules.faction = Binding.Faction;
+        Rules.cost = {Technology->MatterCost, Technology->DawnCost};
+        Rules.researchTicks = static_cast<echoes::sim::Tick>(
+            Technology->ResearchTicks);
+        Rules.prerequisite = Binding.Prerequisite;
+        Rules.combatDamagePercent = Technology->CombatDamagePercent;
+        Rules.combatVisionPercent = Technology->CombatVisionPercent;
+    }
+
     OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
     OutRules.futureWell.preserveDawnPerInterval = FutureWell.PreserveDawnPerInterval;
     OutRules.futureWell.preserveIntervalTicks = FutureWell.PreserveIntervalTicks;
@@ -675,11 +738,15 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
     const TArray<TSharedPtr<FJsonValue>>* FactionValues = nullptr;
     const TArray<TSharedPtr<FJsonValue>>* UnitValues = nullptr;
     const TArray<TSharedPtr<FJsonValue>>* BuildingValues = nullptr;
+    const TArray<TSharedPtr<FJsonValue>>* TechnologyValues = nullptr;
     if (!Root->TryGetArrayField(TEXT("factions"), FactionValues) ||
         !Root->TryGetArrayField(TEXT("units"), UnitValues) ||
         !Root->TryGetArrayField(TEXT("buildings"), BuildingValues) ||
+        !Root->TryGetArrayField(TEXT("technologies"), TechnologyValues) ||
         FactionValues == nullptr || UnitValues == nullptr || BuildingValues == nullptr ||
-        FactionValues->IsEmpty() || UnitValues->IsEmpty() || BuildingValues->IsEmpty())
+        TechnologyValues == nullptr || FactionValues->IsEmpty() ||
+        UnitValues->IsEmpty() || BuildingValues->IsEmpty() ||
+        TechnologyValues->IsEmpty())
     {
         OutError = TEXT("CONTENT_COLLECTION_MISSING");
         return false;
@@ -888,6 +955,81 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         OutCatalog.Buildings.Add(MoveTemp(Building));
     }
 
+    TSet<FString> TechnologyIds;
+    for (int32 Index = 0; Index < TechnologyValues->Num(); ++Index)
+    {
+        const FString Path = FString::Printf(TEXT("technologies[%d]"), Index);
+        const TSharedPtr<FJsonObject> Object = (*TechnologyValues)[Index]->AsObject();
+        FEchoesTechnologyContent Technology;
+        const TSharedPtr<FJsonValue> Prerequisite = Object.IsValid()
+            ? Object->TryGetField(TEXT("prerequisite"))
+            : nullptr;
+        if (!ReadRequiredString(Object, TEXT("id"), Technology.Id, Path, OutError) ||
+            !ReadRequiredString(Object, TEXT("display_name"), Technology.DisplayName, Path, OutError) ||
+            !ReadRequiredString(Object, TEXT("faction"), Technology.FactionId, Path, OutError) ||
+            !FactionIds.Contains(Technology.FactionId) ||
+            !ValidateUniqueId(Technology.Id, TechnologyIds, Path, OutError) ||
+            Prerequisite == nullptr ||
+            !ReadCost(Object, Technology.MatterCost, Technology.DawnCost, Path, OutError) ||
+            !ReadRequiredInteger(Object, TEXT("research_ticks"), Technology.ResearchTicks, Path, OutError, 1))
+        {
+            if (OutError.IsEmpty())
+            {
+                OutError = FString::Printf(TEXT("CONTENT_TECHNOLOGY_INVALID:%s"), *Path);
+            }
+            return false;
+        }
+        if (Prerequisite->Type == EJson::String)
+        {
+            Technology.PrerequisiteId = Prerequisite->AsString();
+            if (Technology.PrerequisiteId.IsEmpty())
+            {
+                OutError = FString::Printf(TEXT("CONTENT_FIELD_INVALID:%s.prerequisite"), *Path);
+                return false;
+            }
+        }
+        else if (Prerequisite->Type != EJson::Null)
+        {
+            OutError = FString::Printf(TEXT("CONTENT_FIELD_INVALID:%s.prerequisite"), *Path);
+            return false;
+        }
+        const TSharedPtr<FJsonObject>* Effects = nullptr;
+        if (!Object->TryGetObjectField(TEXT("effects"), Effects) ||
+            Effects == nullptr || !Effects->IsValid() ||
+            !ReadRequiredInteger(*Effects, TEXT("combat_damage_percent"),
+                Technology.CombatDamagePercent, Path + TEXT(".effects"), OutError, 100) ||
+            !ReadRequiredInteger(*Effects, TEXT("combat_vision_percent"),
+                Technology.CombatVisionPercent, Path + TEXT(".effects"), OutError, 100) ||
+            Technology.CombatDamagePercent > 300 ||
+            Technology.CombatVisionPercent > 300 ||
+            (Technology.CombatDamagePercent == 100 &&
+             Technology.CombatVisionPercent == 100))
+        {
+            if (OutError.IsEmpty())
+            {
+                OutError = FString::Printf(TEXT("CONTENT_TECHNOLOGY_EFFECT_INVALID:%s"), *Path);
+            }
+            return false;
+        }
+        OutCatalog.Technologies.Add(MoveTemp(Technology));
+    }
+    for (const FEchoesTechnologyContent& Technology : OutCatalog.Technologies)
+    {
+        if (!Technology.PrerequisiteId.IsEmpty())
+        {
+            const FEchoesTechnologyContent* Prerequisite =
+                OutCatalog.FindTechnology(Technology.PrerequisiteId);
+            if (Prerequisite == nullptr ||
+                Prerequisite->FactionId != Technology.FactionId)
+            {
+                OutError = FString::Printf(
+                    TEXT("CONTENT_TECHNOLOGY_PREREQUISITE_INVALID:%s"),
+                    *Technology.Id);
+                return false;
+            }
+        }
+    }
+
     const TSharedPtr<FJsonObject>* FutureWell = nullptr;
     if (!Root->TryGetObjectField(TEXT("future_wells"), FutureWell) ||
         FutureWell == nullptr || !FutureWell->IsValid())
@@ -1007,13 +1149,14 @@ void UEchoesContentSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_CONTENT_READY] packVersion=%d schema=%d factions=%d playable=%d units=%d buildings=%d sha256=%s source=canonical"),
+        TEXT("[ECHOES_CONTENT_READY] packVersion=%d schema=%d factions=%d playable=%d units=%d buildings=%d technologies=%d sha256=%s source=canonical"),
         Catalog.PackVersion,
         Catalog.SchemaVersion,
         Catalog.Factions.Num(),
         Catalog.PlayableFactionCount(),
         Catalog.Units.Num(),
         Catalog.Buildings.Num(),
+        Catalog.Technologies.Num(),
         *Catalog.Sha256);
 }
 

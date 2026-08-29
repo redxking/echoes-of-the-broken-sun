@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 18;
-inline constexpr std::uint32_t kReplayVersion = 18;
+inline constexpr std::uint32_t kSnapshotVersion = 19;
+inline constexpr std::uint32_t kReplayVersion = 19;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -107,6 +107,16 @@ enum class Faction : std::uint8_t {
     KharuunAssemblies = 1,
 };
 
+enum class ResearchType : std::uint8_t {
+    None = 0,
+    MeridianPrismaticTargeting = 1,
+    MeridianHorizonLattice = 2,
+    KharuunEchoCartography = 3,
+    KharuunAncestralEdge = 4,
+};
+
+inline constexpr std::size_t kResearchTypeCount = 5;
+
 enum class EntityType : std::uint8_t {
     Worker = 0,
     Soldier = 1,
@@ -171,6 +181,7 @@ enum class CommandType : std::uint8_t {
     ToggleWaystoneRoot = 14,
     AdaptWarform = 15,
     RaiseMineralCover = 16,
+    Research = 17,
 };
 
 enum class WaystoneMode : std::uint8_t {
@@ -206,6 +217,19 @@ enum class ProductionResult : std::uint8_t {
     InsufficientResources = 6,
     CapacityReached = 7,
     EntityCapacityReached = 8,
+};
+
+enum class ResearchResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidProducer = 2,
+    ProducerIncomplete = 3,
+    ProducerBusy = 4,
+    InvalidTechnology = 5,
+    WrongFaction = 6,
+    AlreadyCompleted = 7,
+    PrerequisiteMissing = 8,
+    InsufficientResources = 9,
 };
 
 enum class RelaySupplyResult : std::uint8_t {
@@ -393,6 +417,18 @@ struct PoweredAegisRules final {
                            const PoweredAegisRules&) = default;
 };
 
+/** Authored deterministic research definition. Index matches ResearchType. */
+struct ResearchRules final {
+    Faction faction = Faction::MeridianCompact;
+    ResourcePool cost{};
+    Tick researchTicks = 0;
+    ResearchType prerequisite = ResearchType::None;
+    std::int32_t combatDamagePercent = 100;
+    std::int32_t combatVisionPercent = 100;
+
+    friend bool operator==(const ResearchRules&, const ResearchRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -409,6 +445,7 @@ struct SimulationRules final {
     MineralCoverRules mineralCover{};
     VibrationDetectionRules vibrationDetection{};
     PoweredAegisRules poweredAegis{};
+    std::array<ResearchRules, kResearchTypeCount> research{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -421,6 +458,17 @@ struct PlayerState final {
     Faction faction = Faction::MeridianCompact;
     ResourcePool resources{};
     bool active = false;
+    std::uint32_t completedResearchMask = 0;
+    ResearchType activeResearch = ResearchType::None;
+    EntityId researchProducer = 0;
+    std::int32_t researchProgress = 0;
+    std::int32_t researchRequired = 0;
+
+    [[nodiscard]] bool HasCompletedResearch(ResearchType type) const {
+        const std::uint8_t value = static_cast<std::uint8_t>(type);
+        return value > 0 && value < 32 &&
+               (completedResearchMask & (1U << value)) != 0;
+    }
 };
 
 struct Order final {
@@ -495,6 +543,7 @@ struct Command final {
     EntityType buildType = EntityType::Barracks;
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
     WarformAdaptation warformAdaptation = WarformAdaptation::None;
+    ResearchType researchType = ResearchType::None;
 
     friend bool operator==(const Command&, const Command&) = default;
 };
@@ -607,6 +656,12 @@ public:
         PlayerId player,
         EntityId producer,
         EntityType unitType) const;
+    [[nodiscard]] ResearchResult ValidateResearch(
+        PlayerId player,
+        EntityId producer,
+        ResearchType researchType) const;
+    [[nodiscard]] const ResearchRules* ResearchDefinition(
+        ResearchType researchType) const;
     [[nodiscard]] RelaySupplyResult ValidateRelaySupply(
         PlayerId player,
         EntityId actor) const;
@@ -730,6 +785,7 @@ private:
         const Entity& target) const;
     void ApplyWarformAdaptation(Entity& entity,
                                 WarformAdaptation adaptation);
+    void ApplyResearchRule(Entity& entity, const ResearchRules& rules) const;
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
         const Entity& attacker,
         const Entity& target,
@@ -781,6 +837,7 @@ private:
         std::vector<PendingDamage>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
     void ProcessProduction();
+    void ProcessResearch();
     void ApplyPreserveIncome();
     void RemoveDestroyedEntities();
     void ClearInvalidOrders();

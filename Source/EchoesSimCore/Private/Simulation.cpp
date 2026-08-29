@@ -24,7 +24,7 @@ constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::size_t kSerializedEntityBytes = 202;
-constexpr std::size_t kSerializedCommandBytes = 37;
+constexpr std::size_t kSerializedCommandBytes = 38;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
@@ -59,7 +59,8 @@ void SetError(std::string* destination, const std::string& message) {
                     lhs.position.y,
                     lhs.buildType,
                     lhs.wellChoice,
-                    lhs.warformAdaptation) <
+                    lhs.warformAdaptation,
+                    lhs.researchType) <
            std::tie(rhs.executeTick,
                     rhs.player,
                     rhs.sequence,
@@ -70,7 +71,8 @@ void SetError(std::string* destination, const std::string& message) {
                     rhs.position.y,
                     rhs.buildType,
                     rhs.wellChoice,
-                    rhs.warformAdaptation);
+                    rhs.warformAdaptation,
+                    rhs.researchType);
 }
 
 [[nodiscard]] bool HasSameCommandKey(const Command& lhs, const Command& rhs) {
@@ -113,7 +115,12 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::RaiseMineralCover;
+    return type >= CommandType::Stop && type <= CommandType::Research;
+}
+
+[[nodiscard]] bool IsValidResearchType(ResearchType type) {
+    return type >= ResearchType::None &&
+           type <= ResearchType::KharuunAncestralEdge;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -280,7 +287,28 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const EntityArchetypeRules& aegisArchetype =
         rules.archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
                         [static_cast<std::size_t>(EntityType::UtilityStructure)];
-    return well.harvestImmediateDawn >= 0 &&
+    bool researchValid = true;
+    for (std::size_t index = 1; index < rules.research.size(); ++index) {
+        const ResearchRules& research = rules.research[index];
+        const ResearchType type = static_cast<ResearchType>(index);
+        researchValid = researchValid && IsValidFaction(research.faction) &&
+            research.cost.material >= 0 && research.cost.dawnshards >= 0 &&
+            research.researchTicks > 0 &&
+            research.researchTicks <= kMaximumProductionTicks &&
+            IsValidResearchType(research.prerequisite) &&
+            research.prerequisite != type &&
+            research.combatDamagePercent >= 100 &&
+            research.combatDamagePercent <= 300 &&
+            research.combatVisionPercent >= 100 &&
+            research.combatVisionPercent <= 300;
+        if (research.prerequisite != ResearchType::None) {
+            const ResearchRules& prerequisite = rules.research[
+                static_cast<std::size_t>(research.prerequisite)];
+            researchValid = researchValid && prerequisite.faction == research.faction &&
+                prerequisite.prerequisite == ResearchType::None;
+        }
+    }
+    return researchValid && well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
            well.preserveIntervalTicks <= kMaximumSupportedTick &&
@@ -651,6 +679,7 @@ void WriteCommand(Writer& writer, const Command& command) {
     writer.U8(static_cast<std::uint8_t>(command.buildType));
     writer.U8(static_cast<std::uint8_t>(command.wellChoice));
     writer.U8(static_cast<std::uint8_t>(command.warformAdaptation));
+    writer.U8(static_cast<std::uint8_t>(command.researchType));
 }
 
 [[nodiscard]] bool ReadCommand(BinaryReader& reader, Command& command) {
@@ -658,20 +687,24 @@ void WriteCommand(Writer& writer, const Command& command) {
     std::uint8_t buildType = 0;
     std::uint8_t wellChoice = 0;
     std::uint8_t warformAdaptation = 0;
+    std::uint8_t researchType = 0;
     std::int32_t rawX = 0;
     std::int32_t rawY = 0;
     if (!reader.U64(command.executeTick) || !reader.U8(command.player) ||
         !reader.U64(command.sequence) || !reader.U8(type) ||
         !reader.U32(command.actor) || !reader.U32(command.target) ||
         !reader.I32(rawX) || !reader.I32(rawY) || !reader.U8(buildType) ||
-        !reader.U8(wellChoice) || !reader.U8(warformAdaptation)) {
+        !reader.U8(wellChoice) || !reader.U8(warformAdaptation) ||
+        !reader.U8(researchType)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::RaiseMineralCover) ||
+    if (type > static_cast<std::uint8_t>(CommandType::Research) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
         warformAdaptation >
-            static_cast<std::uint8_t>(WarformAdaptation::Striker)) {
+            static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
+        researchType >
+            static_cast<std::uint8_t>(ResearchType::KharuunAncestralEdge)) {
         return false;
     }
     command.type = static_cast<CommandType>(type);
@@ -680,6 +713,7 @@ void WriteCommand(Writer& writer, const Command& command) {
     command.wellChoice = static_cast<FutureWellChoice>(wellChoice);
     command.warformAdaptation =
         static_cast<WarformAdaptation>(warformAdaptation);
+    command.researchType = static_cast<ResearchType>(researchType);
     return true;
 }
 
@@ -749,6 +783,22 @@ SimulationRules DefaultSimulationRules() {
     set(Faction::KharuunAssemblies, EntityType::UtilityStructure,
         {{115, 25}, 440, 0, 9, 0, 0, 0, 0, 0, 120, 0, 0, 0,
          kFixedScale});
+    rules.research[static_cast<std::size_t>(
+        ResearchType::MeridianPrismaticTargeting)] = {
+            Faction::MeridianCompact, {120, 40}, 180, ResearchType::None,
+            115, 100};
+    rules.research[static_cast<std::size_t>(
+        ResearchType::MeridianHorizonLattice)] = {
+            Faction::MeridianCompact, {90, 55}, 220,
+            ResearchType::MeridianPrismaticTargeting, 100, 120};
+    rules.research[static_cast<std::size_t>(
+        ResearchType::KharuunEchoCartography)] = {
+            Faction::KharuunAssemblies, {100, 45}, 180, ResearchType::None,
+            100, 120};
+    rules.research[static_cast<std::size_t>(
+        ResearchType::KharuunAncestralEdge)] = {
+            Faction::KharuunAssemblies, {110, 50}, 220,
+            ResearchType::KharuunEchoCartography, 115, 100};
     return rules;
 }
 
@@ -863,6 +913,16 @@ Entity Simulation::MakeEntity(PlayerId owner,
             type == EntityType::Dropoff) {
             entity.waystoneMode = WaystoneMode::Rooted;
         }
+        const PlayerState* player = FindPlayer(owner);
+        if (player != nullptr && IsBarracksUnitType(type)) {
+            for (std::size_t index = 1; index < config_.rules.research.size();
+                 ++index) {
+                const ResearchType research = static_cast<ResearchType>(index);
+                if (player->HasCompletedResearch(research)) {
+                    ApplyResearchRule(entity, config_.rules.research[index]);
+                }
+            }
+        }
         return entity;
     }
     switch (type) {
@@ -884,6 +944,24 @@ Entity Simulation::MakeEntity(PlayerId owner,
     }
     entity.hitPoints = entity.maxHitPoints;
     return entity;
+}
+
+void Simulation::ApplyResearchRule(Entity& entity,
+                                   const ResearchRules& rules) const {
+    if (entity.faction != rules.faction || !IsBarracksUnitType(entity.type)) {
+        return;
+    }
+    const auto ApplyPercent = [](std::int32_t value, std::int32_t percent) {
+        const std::int64_t scaled =
+            static_cast<std::int64_t>(value) * percent / 100;
+        return static_cast<std::int32_t>(std::clamp<std::int64_t>(
+            scaled, 0, std::numeric_limits<std::int32_t>::max()));
+    };
+    entity.attackDamage = ApplyPercent(
+        entity.attackDamage, rules.combatDamagePercent);
+    entity.visionTiles = std::min(
+        kMaximumVisionTiles,
+        ApplyPercent(entity.visionTiles, rules.combatVisionPercent));
 }
 
 EntityId Simulation::SpawnEntity(PlayerId owner,
@@ -1229,34 +1307,35 @@ void Simulation::ApplyWarformAdaptation(
     if (!IsWarform(entity)) {
         return;
     }
-    const EntityArchetypeRules& base =
-        ArchetypeFor(config_.rules, entity.faction, entity.type);
+    const Entity researchedBase = MakeEntity(
+        entity.owner, entity.faction, entity.type, entity.position);
     const std::int32_t missingHitPoints =
         std::max(0, entity.maxHitPoints - entity.hitPoints);
-    entity.maxHitPoints = base.maxHitPoints;
-    entity.movementPerTickRaw = base.movementPerTickRaw;
-    entity.attackDamage = base.attackDamage;
-    entity.attackPeriodTicks = base.attackPeriodTicks;
+    entity.maxHitPoints = researchedBase.maxHitPoints;
+    entity.movementPerTickRaw = researchedBase.movementPerTickRaw;
+    entity.visionTiles = researchedBase.visionTiles;
+    entity.attackDamage = researchedBase.attackDamage;
+    entity.attackPeriodTicks = researchedBase.attackPeriodTicks;
     if (adaptation == WarformAdaptation::Carapace) {
         entity.maxHitPoints = std::max(
             1,
             static_cast<std::int32_t>(
-                static_cast<std::int64_t>(base.maxHitPoints) *
+                static_cast<std::int64_t>(researchedBase.maxHitPoints) *
                 config_.rules.warformAdaptation.carapaceHealthPercent / 100));
         entity.movementPerTickRaw = std::max(
             1,
             static_cast<std::int32_t>(
-                static_cast<std::int64_t>(base.movementPerTickRaw) *
+                static_cast<std::int64_t>(researchedBase.movementPerTickRaw) *
                 config_.rules.warformAdaptation.carapaceMovementPercent / 100));
     } else if (adaptation == WarformAdaptation::Striker) {
         entity.attackDamage = std::max(
             1,
             static_cast<std::int32_t>(
-                static_cast<std::int64_t>(base.attackDamage) *
+                static_cast<std::int64_t>(researchedBase.attackDamage) *
                 config_.rules.warformAdaptation.strikerDamagePercent / 100));
         entity.attackPeriodTicks = std::max<Tick>(
             1,
-            base.attackPeriodTicks *
+            researchedBase.attackPeriodTicks *
                 static_cast<Tick>(
                     config_.rules.warformAdaptation.strikerCooldownPercent) /
                 100);
@@ -1529,6 +1608,10 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
     if (building->productionRequired > 0) {
         return ProductionResult::ProducerBusy;
     }
+    if (playerState->activeResearch != ResearchType::None &&
+        playerState->researchProducer == producer) {
+        return ProductionResult::ProducerBusy;
+    }
     const bool supported =
         (building->type == EntityType::CommandCore &&
          unitType == EntityType::Worker) ||
@@ -1559,6 +1642,55 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         return ProductionResult::EntityCapacityReached;
     }
     return ProductionResult::Valid;
+}
+
+const ResearchRules* Simulation::ResearchDefinition(
+    ResearchType researchType) const {
+    if (researchType == ResearchType::None ||
+        !IsValidResearchType(researchType)) {
+        return nullptr;
+    }
+    return &config_.rules.research[static_cast<std::size_t>(researchType)];
+}
+
+ResearchResult Simulation::ValidateResearch(
+    PlayerId player,
+    EntityId producer,
+    ResearchType researchType) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return ResearchResult::InvalidPlayer;
+    }
+    const Entity* building = FindEntity(producer);
+    if (building == nullptr || building->owner != player ||
+        building->hitPoints <= 0 || building->type != EntityType::Barracks) {
+        return ResearchResult::InvalidProducer;
+    }
+    if (!building->completed) {
+        return ResearchResult::ProducerIncomplete;
+    }
+    if (building->productionRequired > 0 ||
+        playerState->activeResearch != ResearchType::None) {
+        return ResearchResult::ProducerBusy;
+    }
+    const ResearchRules* rules = ResearchDefinition(researchType);
+    if (rules == nullptr || rules->researchTicks == 0) {
+        return ResearchResult::InvalidTechnology;
+    }
+    if (rules->faction != playerState->faction) {
+        return ResearchResult::WrongFaction;
+    }
+    if (playerState->HasCompletedResearch(researchType)) {
+        return ResearchResult::AlreadyCompleted;
+    }
+    if (rules->prerequisite != ResearchType::None &&
+        !playerState->HasCompletedResearch(rules->prerequisite)) {
+        return ResearchResult::PrerequisiteMissing;
+    }
+    if (!ResourceCovers(playerState->resources, rules->cost)) {
+        return ResearchResult::InsufficientResources;
+    }
+    return ResearchResult::Valid;
 }
 
 MatchOutcome Simulation::Outcome() const {
@@ -1664,6 +1796,7 @@ bool Simulation::QueueCommand(const Command& command, std::string* rejectionReas
         !IsValidEntityType(command.buildType) ||
         !IsValidWellChoice(command.wellChoice) ||
         !IsValidWarformAdaptation(command.warformAdaptation) ||
+        !IsValidResearchType(command.researchType) ||
         command.actor == 0) {
         SetError(rejectionReason, "command encoding is invalid");
         return false;
@@ -2268,6 +2401,25 @@ void Simulation::ApplyCommand(const Command& command) {
                 ProductionTicks(player->faction, command.buildType);
             return;
         }
+        case CommandType::Research: {
+            if (ValidateResearch(command.player, actor->id,
+                                 command.researchType) != ResearchResult::Valid) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            const ResearchRules* rules = ResearchDefinition(command.researchType);
+            if (player == nullptr || rules == nullptr) {
+                return;
+            }
+            player->resources.material -= rules->cost.material;
+            player->resources.dawnshards -= rules->cost.dawnshards;
+            player->activeResearch = command.researchType;
+            player->researchProducer = actor->id;
+            player->researchProgress = 0;
+            player->researchRequired = static_cast<std::int32_t>(
+                rules->researchTicks);
+            return;
+        }
         case CommandType::AttackMove:
             if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
                 IsPositionPassable(command.position)) {
@@ -2817,6 +2969,54 @@ void Simulation::ProcessProduction() {
     }
 }
 
+void Simulation::ProcessResearch() {
+    for (PlayerState& player : players_) {
+        if (!player.active || player.activeResearch == ResearchType::None) {
+            continue;
+        }
+        const Entity* producer = FindEntity(player.researchProducer);
+        if (producer == nullptr || producer->owner != player.id ||
+            producer->hitPoints <= 0 || !producer->completed ||
+            producer->type != EntityType::Barracks) {
+            player.activeResearch = ResearchType::None;
+            player.researchProducer = 0;
+            player.researchProgress = 0;
+            player.researchRequired = 0;
+            continue;
+        }
+        player.researchProgress = std::min(
+            player.researchRequired,
+            SaturatingAdd(player.researchProgress, 1));
+        if (player.researchProgress < player.researchRequired) {
+            continue;
+        }
+        const ResearchType completed = player.activeResearch;
+        const ResearchRules* rules = ResearchDefinition(completed);
+        if (rules != nullptr) {
+            player.completedResearchMask |=
+                1U << static_cast<std::uint8_t>(completed);
+            for (Entity& entity : entities_) {
+                if (entity.owner != player.id || entity.hitPoints <= 0 ||
+                    !IsBarracksUnitType(entity.type)) {
+                    continue;
+                }
+                Entity refreshed = MakeEntity(
+                    entity.owner, entity.faction, entity.type, entity.position);
+                if (entity.warformAdaptation != WarformAdaptation::None) {
+                    ApplyWarformAdaptation(
+                        refreshed, entity.warformAdaptation);
+                }
+                entity.attackDamage = refreshed.attackDamage;
+                entity.visionTiles = refreshed.visionTiles;
+            }
+        }
+        player.activeResearch = ResearchType::None;
+        player.researchProducer = 0;
+        player.researchProgress = 0;
+        player.researchRequired = 0;
+    }
+}
+
 void Simulation::ProcessEntityOrders() {
     std::vector<PendingDamage> pendingDamage{};
     for (Entity& entity : entities_) {
@@ -3190,6 +3390,7 @@ void Simulation::Step() {
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
     ProcessProduction();
+    ProcessResearch();
     ApplyPreserveIncome();
     RemoveDestroyedEntities();
     ClearInvalidOrders();
@@ -3544,6 +3745,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
     };
 
     const Entity* commandCore = nullptr;
+    EntityId researchProducer = 0;
     std::int32_t barracksCount = 0;
     std::int32_t dropoffCount = 0;
     std::int32_t visibleHeavyThreats = 0;
@@ -3568,6 +3770,10 @@ std::vector<Command> Simulation::GenerateAiCommands(
         }
         if (entity.type == EntityType::Barracks) {
             ++barracksCount;
+            if (entity.completed && entity.productionRequired == 0 &&
+                (researchProducer == 0 || entity.id < researchProducer)) {
+                researchProducer = entity.id;
+            }
         } else if (entity.type == EntityType::Dropoff) {
             ++dropoffCount;
         }
@@ -3699,6 +3905,29 @@ std::vector<Command> Simulation::GenerateAiCommands(
         }
         if (actor.type == EntityType::CommandCore ||
             actor.type == EntityType::Barracks) {
+            if (actor.id == researchProducer &&
+                playerState->activeResearch == ResearchType::None) {
+                for (std::size_t index = 1;
+                     index < config_.rules.research.size(); ++index) {
+                    const ResearchType research =
+                        static_cast<ResearchType>(index);
+                    const ResearchRules& rules = config_.rules.research[index];
+                    if (rules.faction != playerState->faction ||
+                        playerState->HasCompletedResearch(research) ||
+                        (rules.prerequisite != ResearchType::None &&
+                         !playerState->HasCompletedResearch(rules.prerequisite)) ||
+                        !ResourceCovers(playerState->resources, rules.cost)) {
+                        continue;
+                    }
+                    command.type = CommandType::Research;
+                    command.researchType = research;
+                    commands.push_back(command);
+                    break;
+                }
+                if (command.type == CommandType::Research) {
+                    continue;
+                }
+            }
             command.type = CommandType::Produce;
             command.buildType = actor.type == EntityType::CommandCore
                                     ? EntityType::Worker
@@ -4089,6 +4318,15 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.U64(config_.rules.vibrationDetection.signatureLingerTicks);
     writer.I32(config_.rules.vibrationDetection.contactResolutionRaw);
     writer.I32(config_.rules.poweredAegis.connectionRadiusRaw);
+    for (const ResearchRules& research : config_.rules.research) {
+        writer.U8(static_cast<std::uint8_t>(research.faction));
+        writer.I32(research.cost.material);
+        writer.I32(research.cost.dawnshards);
+        writer.U64(research.researchTicks);
+        writer.U8(static_cast<std::uint8_t>(research.prerequisite));
+        writer.I32(research.combatDamagePercent);
+        writer.I32(research.combatVisionPercent);
+    }
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -4098,6 +4336,11 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(player.faction));
         writer.I32(player.resources.material);
         writer.I32(player.resources.dawnshards);
+        writer.U32(player.completedResearchMask);
+        writer.U8(static_cast<std::uint8_t>(player.activeResearch));
+        writer.U32(player.researchProducer);
+        writer.I32(player.researchProgress);
+        writer.I32(player.researchRequired);
     }
     for (PlayerId player = 0; player < players_.size(); ++player) {
         writer.U8(hasExecutedSequence_[player] ? 1 : 0);
@@ -4306,6 +4549,23 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
+    for (ResearchRules& research : config.rules.research) {
+        std::uint8_t faction = 0;
+        std::uint8_t prerequisite = 0;
+        if (!reader.U8(faction) || !reader.I32(research.cost.material) ||
+            !reader.I32(research.cost.dawnshards) ||
+            !reader.U64(research.researchTicks) || !reader.U8(prerequisite) ||
+            !reader.I32(research.combatDamagePercent) ||
+            !reader.I32(research.combatVisionPercent) ||
+            faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+            prerequisite > static_cast<std::uint8_t>(
+                ResearchType::KharuunAncestralEdge)) {
+            SetError(error, "snapshot research rules are invalid");
+            return std::nullopt;
+        }
+        research.faction = static_cast<Faction>(faction);
+        research.prerequisite = static_cast<ResearchType>(prerequisite);
+    }
     const std::int64_t tileCount =
         static_cast<std::int64_t>(config.mapWidthTiles) * config.mapHeightTiles;
     if (config.mapWidthTiles <= 0 || config.mapHeightTiles <= 0 ||
@@ -4338,18 +4598,33 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t active = 0;
         std::uint8_t id = 0;
         std::uint8_t faction = 0;
+        std::uint8_t activeResearch = 0;
         PlayerState player{};
         if (!reader.U8(active) || !reader.U8(id) || !reader.U8(faction) ||
             !reader.I32(player.resources.material) ||
-            !reader.I32(player.resources.dawnshards) || id != index || active > 1 ||
+            !reader.I32(player.resources.dawnshards) ||
+            !reader.U32(player.completedResearchMask) ||
+            !reader.U8(activeResearch) || !reader.U32(player.researchProducer) ||
+            !reader.I32(player.researchProgress) ||
+            !reader.I32(player.researchRequired) || id != index || active > 1 ||
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
-            player.resources.material < 0 || player.resources.dawnshards < 0) {
+            activeResearch > static_cast<std::uint8_t>(
+                ResearchType::KharuunAncestralEdge) ||
+            (player.completedResearchMask & ~0x1eU) != 0 ||
+            player.resources.material < 0 || player.resources.dawnshards < 0 ||
+            player.researchProgress < 0 || player.researchRequired < 0 ||
+            player.researchRequired > kMaximumProductionTicks ||
+            player.researchProgress > player.researchRequired ||
+            ((activeResearch == 0) !=
+             (player.researchProducer == 0 && player.researchProgress == 0 &&
+              player.researchRequired == 0))) {
             SetError(error, "snapshot player state is invalid");
             return std::nullopt;
         }
         player.id = id;
         player.active = active != 0;
         player.faction = static_cast<Faction>(faction);
+        player.activeResearch = static_cast<ResearchType>(activeResearch);
         simulation.players_[index] = player;
     }
     for (PlayerId player = 0; player < simulation.players_.size(); ++player) {
@@ -4669,6 +4944,28 @@ std::optional<Simulation> Simulation::LoadSnapshot(
          simulation.nextEntityId_ <= simulation.entities_.back().id)) {
         SetError(error, "snapshot next entity identifier is invalid");
         return std::nullopt;
+    }
+    for (const PlayerState& player : simulation.players_) {
+        if (!player.active || player.activeResearch == ResearchType::None) {
+            continue;
+        }
+        const ResearchRules* rules =
+            simulation.ResearchDefinition(player.activeResearch);
+        const Entity* producer = simulation.FindEntity(player.researchProducer);
+        if (rules == nullptr || rules->faction != player.faction ||
+            player.HasCompletedResearch(player.activeResearch) ||
+            player.researchRequired !=
+                static_cast<std::int32_t>(rules->researchTicks) ||
+            player.researchProgress >= player.researchRequired ||
+            (rules->prerequisite != ResearchType::None &&
+             !player.HasCompletedResearch(rules->prerequisite)) ||
+            producer == nullptr || producer->owner != player.id ||
+            producer->hitPoints <= 0 || !producer->completed ||
+            producer->type != EntityType::Barracks ||
+            producer->productionRequired != 0) {
+            SetError(error, "snapshot research state is invalid");
+            return std::nullopt;
+        }
     }
     for (const Entity& entity : simulation.entities_) {
         if (entity.aegisPowered !=

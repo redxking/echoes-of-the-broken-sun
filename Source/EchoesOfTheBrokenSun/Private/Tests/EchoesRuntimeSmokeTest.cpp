@@ -137,6 +137,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ConfirmPrimaryAction"), EKeys::Enter));
         TestTrue(TEXT("Playable-faction cycle input is mapped"),
                  HasAction(TEXT("CyclePlayableFaction"), EKeys::Tab));
+        TestTrue(TEXT("Faction research input is mapped"),
+                 HasAction(TEXT("ResearchNext"), EKeys::R, false, true));
     }
 
     echoes::sim::SimulationConfig Config;

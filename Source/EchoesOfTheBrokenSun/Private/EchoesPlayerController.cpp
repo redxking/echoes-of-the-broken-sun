@@ -381,6 +381,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::ProduceScout);
     InputComponent->BindAction(
+        TEXT("ResearchNext"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ResearchNextTechnology);
+    InputComponent->BindAction(
         TEXT("AttackMoveAtCursor"),
         IE_Pressed,
         this,
@@ -1059,6 +1064,85 @@ void AEchoesPlayerController::ProduceHeavy()
 void AEchoesPlayerController::ProduceScout()
 {
     ProduceUnit(echoes::sim::EntityType::ScoutUnit);
+}
+
+void AEchoesPlayerController::ResearchNextTechnology()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const echoes::sim::PlayerState* Player =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || Player == nullptr)
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Research is unavailable."));
+        return;
+    }
+    if (Player->activeResearch != echoes::sim::ResearchType::None)
+    {
+        SetStatusMessage(TEXT("[RESEARCH_BUSY] A technology is already in progress."));
+        return;
+    }
+    uint32 ProducerId = 0;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity != nullptr &&
+            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity->type == echoes::sim::EntityType::Barracks)
+        {
+            ProducerId = EntityId;
+            break;
+        }
+    }
+    if (ProducerId == 0)
+    {
+        SetStatusMessage(TEXT("[RESEARCH_PRODUCER_INVALID] Select a production structure, then press Shift+R."));
+        return;
+    }
+    const echoes::sim::ResearchType Candidates[] = {
+        Player->faction == echoes::sim::Faction::MeridianCompact
+            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+            : echoes::sim::ResearchType::KharuunEchoCartography,
+        Player->faction == echoes::sim::Faction::MeridianCompact
+            ? echoes::sim::ResearchType::MeridianHorizonLattice
+            : echoes::sim::ResearchType::KharuunAncestralEdge,
+    };
+    for (const echoes::sim::ResearchType Research : Candidates)
+    {
+        if (Player->HasCompletedResearch(Research))
+        {
+            continue;
+        }
+        FString Feedback;
+        if (Bridge->IssueResearchCommand(ProducerId, Research, Feedback))
+        {
+            const TCHAR* Label =
+                Research == echoes::sim::ResearchType::MeridianPrismaticTargeting
+                    ? TEXT("PRISMATIC TARGETING")
+                    : Research == echoes::sim::ResearchType::MeridianHorizonLattice
+                          ? TEXT("HORIZON LATTICE")
+                          : Research == echoes::sim::ResearchType::KharuunEchoCartography
+                                ? TEXT("ECHO CARTOGRAPHY")
+                                : TEXT("ANCESTRAL EDGE");
+            SetStatusMessage(FString::Printf(
+                TEXT("%s: research queued."), Label));
+            return;
+        }
+        SetStatusMessage(Feedback);
+        return;
+    }
+    SetStatusMessage(TEXT("RESEARCH COMPLETE: both faction technologies are operational."));
 }
 
 void AEchoesPlayerController::AttackMoveAtCursor()
@@ -2317,6 +2401,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("ADAPT WARFORM");
         case echoes::sim::CommandType::RaiseMineralCover:
             return TEXT("RAISE MINERAL COVER");
+        case echoes::sim::CommandType::Research:
+            return TEXT("RESEARCH");
     }
     return TEXT("ORDER");
 }

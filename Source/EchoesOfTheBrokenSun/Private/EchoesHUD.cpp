@@ -97,6 +97,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     FString ResourceLine = TEXT("Simulation unavailable");
+    FString ResearchLine = TEXT("RESEARCH unavailable");
     if (Sim != nullptr)
     {
         const echoes::sim::PlayerState* Player =
@@ -130,6 +131,46 @@ void AEchoesHUD::DrawHUD()
                 *MatchState,
                 static_cast<unsigned long long>(Sim->CurrentTick()),
                 Sim->Config().ticksPerSecond);
+            const bool bMeridian =
+                Player->faction == echoes::sim::Faction::MeridianCompact;
+            const echoes::sim::ResearchType First = bMeridian
+                ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+                : echoes::sim::ResearchType::KharuunEchoCartography;
+            const echoes::sim::ResearchType Second = bMeridian
+                ? echoes::sim::ResearchType::MeridianHorizonLattice
+                : echoes::sim::ResearchType::KharuunAncestralEdge;
+            if (Player->activeResearch != echoes::sim::ResearchType::None)
+            {
+                const int32 Percent = FMath::Clamp(
+                    Player->researchProgress * 100 /
+                        FMath::Max(1, Player->researchRequired),
+                    0,
+                    100);
+                const TCHAR* Name =
+                    Player->activeResearch ==
+                            echoes::sim::ResearchType::MeridianPrismaticTargeting
+                        ? TEXT("Prismatic Targeting")
+                        : Player->activeResearch ==
+                                  echoes::sim::ResearchType::MeridianHorizonLattice
+                              ? TEXT("Horizon Lattice")
+                              : Player->activeResearch ==
+                                        echoes::sim::ResearchType::KharuunEchoCartography
+                                    ? TEXT("Echo Cartography")
+                                    : TEXT("Ancestral Edge");
+                ResearchLine = FString::Printf(
+                    TEXT("RESEARCH  %s  %d%%     production suspended"),
+                    Name,
+                    Percent);
+            }
+            else
+            {
+                const int32 Completed =
+                    (Player->HasCompletedResearch(First) ? 1 : 0) +
+                    (Player->HasCompletedResearch(Second) ? 1 : 0);
+                ResearchLine = FString::Printf(
+                    TEXT("RESEARCH  %d/2 complete     [Shift+R] next from selected production structure     [K/L] save/load"),
+                    Completed);
+            }
         }
     }
     DrawText(
@@ -211,7 +252,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [P] Pause    [R] Restart"),
+        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [P] Pause    [R] Restart    [Shift+R] Research"),
         SecondaryColor,
         TextX,
         HudY(136.0f),
@@ -231,7 +272,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[K] Checkpoint    [L] Load Checkpoint    Validated with one backup"),
+        ResearchLine,
         SecondaryColor,
         TextX,
         HudY(182.0f),

@@ -83,6 +83,10 @@ class ContentCompilerTests(unittest.TestCase):
         aegis = next(item for item in first_pack["buildings"] if item["id"] == "mc_aegis_post")
         self.assertEqual(aegis["powered_defense"]["connection_radius_cm"], 800)
         self.assertEqual(aegis["powered_defense"]["range_cm"], 900)
+        technologies = {item["id"]: item for item in first_pack["technologies"]}
+        self.assertEqual(technologies["mc_prismatic_targeting"]["effects"]["combat_damage_percent"], 115)
+        self.assertEqual(technologies["mc_horizon_lattice"]["prerequisite"], "mc_prismatic_targeting")
+        self.assertEqual(technologies["ka_echo_cartography"]["effects"]["combat_vision_percent"], 120)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -127,6 +131,30 @@ class ContentCompilerTests(unittest.TestCase):
         wells["rules"]["reshape"]["manifest_duration_ticks"] = -1
         self.write("future_wells.json", wells)
         self.assert_invalid("must be between 1 and 10000000")
+
+    def test_unknown_technology_prerequisite_is_rejected(self) -> None:
+        technologies = self.load("technologies.json")
+        technologies["technologies"][1]["prerequisite"] = "missing_technology"
+        self.write("technologies.json", technologies)
+        self.assert_invalid("unknown technology 'missing_technology'")
+
+    def test_playable_faction_requires_two_technologies(self) -> None:
+        technologies = self.load("technologies.json")
+        technologies["technologies"] = [
+            item
+            for item in technologies["technologies"]
+            if item["id"] != "ka_ancestral_edge"
+        ]
+        self.write("technologies.json", technologies)
+        self.assert_invalid("requires exactly two technologies")
+
+    def test_no_op_technology_is_rejected(self) -> None:
+        technologies = self.load("technologies.json")
+        technology = technologies["technologies"][0]
+        technology["effects"]["combat_damage_percent"] = 100
+        technology["effects"]["combat_vision_percent"] = 100
+        self.write("technologies.json", technologies)
+        self.assert_invalid("at least one combat modifier must change gameplay")
 
     def test_malformed_json_is_rejected(self) -> None:
         (self.source / "factions.json").write_text("{not-json", encoding="utf-8")

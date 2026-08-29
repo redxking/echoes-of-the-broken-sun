@@ -91,6 +91,11 @@ public:
         echoes::sim::EntityType UnitType,
         FString& OutFeedback);
 
+    bool IssueResearchCommand(
+        uint32 ProducerId,
+        echoes::sim::ResearchType ResearchType,
+        FString& OutFeedback);
+
     bool IssueWarformAdaptation(
         uint32 ActorId,
         uint32 SiteId,
