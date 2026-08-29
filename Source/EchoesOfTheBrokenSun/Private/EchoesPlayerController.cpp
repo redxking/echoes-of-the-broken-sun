@@ -1,5 +1,6 @@
 #include "EchoesPlayerController.h"
 
+#include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -1159,6 +1160,12 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
                 *OrderLabel,
                 AcceptedCount,
                 *RejectionSuffix));
+        ShowAcceptedCommandMarker(
+            Destination,
+            CommandType == echoes::sim::CommandType::Attack
+                ? EEchoesCommandMarkerType::AttackMove
+                : EEchoesCommandMarkerType::Move,
+            AcceptedCount);
     }
     else
     {
@@ -1670,6 +1677,10 @@ void AEchoesPlayerController::AttackMoveAtCursor()
             TEXT("ATTACK-MOVE: %d queued%s"),
             AcceptedCount,
             *RejectionSuffix));
+        ShowAcceptedCommandMarker(
+            HitResult.Location,
+            EEchoesCommandMarkerType::AttackMove,
+            AcceptedCount);
     }
     else
     {
@@ -1761,6 +1772,10 @@ void AEchoesPlayerController::PatrolAtCursor()
             AcceptedCount,
             AcceptedCount == 1 ? TEXT("") : TEXT("s"),
             *RejectionSuffix));
+        ShowAcceptedCommandMarker(
+            HitResult.Location,
+            EEchoesCommandMarkerType::Patrol,
+            AcceptedCount);
     }
     else
     {
@@ -2345,6 +2360,10 @@ void AEchoesPlayerController::GuardAtCursor()
             AcceptedCount == 1 ? TEXT("") : TEXT("s"),
             Target->id,
             *RejectionSuffix));
+        ShowAcceptedCommandMarker(
+            Bridge->SimToWorld(Target->position),
+            EEchoesCommandMarkerType::Guard,
+            AcceptedCount);
     }
     else
     {
@@ -2588,11 +2607,79 @@ void AEchoesPlayerController::BuildAtCursor(
                 : BuildingType == echoes::sim::EntityType::UtilityStructure
                       ? TEXT("FACTION UTILITY: construction order queued.")
                       : TEXT("LOGISTICS STRUCTURE: construction order queued."));
+        ShowAcceptedCommandMarker(
+            HitResult.Location,
+            EEchoesCommandMarkerType::Build,
+            1);
     }
     else
     {
         SetStatusMessage(Feedback);
     }
+}
+
+void AEchoesPlayerController::ShowAcceptedCommandMarker(
+    const FVector& WorldLocation,
+    EEchoesCommandMarkerType MarkerType,
+    int32 AcceptedCount)
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr || AcceptedCount <= 0)
+    {
+        return;
+    }
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.ObjectFlags |= RF_Transient;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesCommandMarkerView* Marker = World->SpawnActor<AEchoesCommandMarkerView>(
+        WorldLocation + FVector(0.0f, 0.0f, 8.0f),
+        FRotator::ZeroRotator,
+        SpawnParameters);
+    if (Marker == nullptr)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_COMMAND_MARKER_FAILED] accepted=%d authorityChanged=false"),
+            AcceptedCount);
+        return;
+    }
+
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const bool bReducedMotion =
+        Settings != nullptr && Settings->IsReducedMotionEnabled();
+    const bool bReducedFlashing =
+        Settings != nullptr && Settings->IsReducedFlashingEnabled();
+    Marker->InitializeMarker(MarkerType, bReducedMotion, bReducedFlashing);
+
+    const TCHAR* MarkerLabel = TEXT("move");
+    switch (MarkerType)
+    {
+        case EEchoesCommandMarkerType::AttackMove:
+            MarkerLabel = TEXT("attack_move");
+            break;
+        case EEchoesCommandMarkerType::Patrol:
+            MarkerLabel = TEXT("patrol");
+            break;
+        case EEchoesCommandMarkerType::Guard:
+            MarkerLabel = TEXT("guard");
+            break;
+        case EEchoesCommandMarkerType::Build:
+            MarkerLabel = TEXT("build");
+            break;
+        case EEchoesCommandMarkerType::Move:
+            break;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d collision=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
+        MarkerLabel,
+        AcceptedCount,
+        bReducedMotion ? TEXT("true") : TEXT("false"),
+        bReducedFlashing ? TEXT("true") : TEXT("false"));
 }
 
 void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)

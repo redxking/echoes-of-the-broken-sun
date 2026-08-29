@@ -6,6 +6,7 @@
 #include "EchoesPlayerController.generated.h"
 
 class AEchoesEntityView;
+enum class EEchoesCommandMarkerType : uint8;
 class UEchoesSimulationSubsystem;
 
 /** RTS selection, faction choice, and context-order input for the local player. */
@@ -174,6 +175,10 @@ private:
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
     void ProduceUnit(echoes::sim::EntityType UnitType);
     void SetStatusMessage(const FString& Message, float DisplaySeconds = 4.0f);
+    void ShowAcceptedCommandMarker(
+        const FVector& WorldLocation,
+        EEchoesCommandMarkerType MarkerType,
+        int32 AcceptedCount);
     FString CommandLabel(echoes::sim::CommandType CommandType) const;
 
     TArray<uint32> SelectedEntityIds;
