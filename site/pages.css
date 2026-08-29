@@ -133,10 +133,10 @@
   letter-spacing: .08em;
 }
 
-.meridian-units { background-image: url('assets/concepts/meridian-units.png'); }
-.meridian-structures { background-image: url('assets/concepts/meridian-structures.png'); }
-.kharuun-units { background-image: url('assets/concepts/kharuun-units.png'); }
-.kharuun-structures { background-image: url('assets/concepts/kharuun-structures.png'); }
+.meridian-units { background-image: url('assets/concepts/meridian-units.png?v=20260829g'); }
+.meridian-structures { background-image: url('assets/concepts/meridian-structures.png?v=20260829g'); }
+.kharuun-units { background-image: url('assets/concepts/kharuun-units.png?v=20260829g'); }
+.kharuun-structures { background-image: url('assets/concepts/kharuun-structures.png?v=20260829g'); }
 .quadrant-tl { background-position: left top; }
 .quadrant-tr { background-position: right top; }
 .quadrant-bl { background-position: left bottom; }
