@@ -126,7 +126,18 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
         World->SpawnActor<AEchoesPlayerController>();
     if (TestNotNull(TEXT("Mission briefing controller can be created"), BriefingController))
     {
-        BriefingController->PresentMissionBriefing();
+        BriefingController->PresentTitleScreen();
+        TestTrue(TEXT("Title screen is visible at interactive launch"),
+                 BriefingController->IsTitleScreenVisible());
+        TestTrue(TEXT("Title screen pauses the deterministic scenario"),
+                 Bridge->IsScenarioPaused());
+        Bridge->Tick(0.5f);
+        TestEqual(TEXT("Title screen prevents deterministic simulation advancement"),
+                  Bridge->GetSimulation()->CurrentTick(),
+                  PausedTick);
+        BriefingController->ConfirmPrimaryAction();
+        TestFalse(TEXT("Title confirmation dismisses the title screen"),
+                  BriefingController->IsTitleScreenVisible());
         TestTrue(TEXT("Mission briefing is visible before deployment"),
                  BriefingController->IsMissionBriefingVisible());
         TestTrue(TEXT("Mission briefing pauses the deterministic scenario"),
@@ -135,7 +146,7 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Briefing prevents deterministic simulation advancement"),
                   Bridge->GetSimulation()->CurrentTick(),
                   PausedTick);
-        BriefingController->ConfirmMissionBriefing();
+        BriefingController->ConfirmPrimaryAction();
         TestFalse(TEXT("Deployment dismisses the mission briefing"),
                   BriefingController->IsMissionBriefingVisible());
         TestFalse(TEXT("Deployment resumes the deterministic scenario"),

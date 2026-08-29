@@ -37,6 +37,8 @@ public:
     void NotifyRuntimeReady();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
+    void PresentTitleScreen();
+    void ConfirmTitleScreen();
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
@@ -44,6 +46,10 @@ public:
     [[nodiscard]] bool IsMissionBriefingVisible() const
     {
         return bMissionBriefingVisible;
+    }
+    [[nodiscard]] bool IsTitleScreenVisible() const
+    {
+        return bTitleScreenVisible;
     }
     [[nodiscard]] bool IsMatchResultVisible() const
     {
@@ -55,7 +61,8 @@ public:
     }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
-        return bMissionBriefingVisible || bPauseMenuVisible ||
+        return bTitleScreenVisible || bMissionBriefingVisible ||
+               bPauseMenuVisible ||
                bMatchResultVisible;
     }
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
@@ -133,6 +140,7 @@ private:
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
+    bool bTitleScreenVisible = false;
     bool bMissionBriefingVisible = false;
     bool bPauseMenuVisible = false;
     bool bMatchResultVisible = false;

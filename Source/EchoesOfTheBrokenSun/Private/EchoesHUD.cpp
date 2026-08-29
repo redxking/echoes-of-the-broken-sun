@@ -71,6 +71,12 @@ void AEchoesHUD::DrawHUD()
     const FLinearColor SecondaryColor =
         bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
 
+    if (EchoesController != nullptr && EchoesController->IsTitleScreenVisible())
+    {
+        DrawTitleScreen(EchoesController, Settings);
+        return;
+    }
+
     if (EchoesController != nullptr && EchoesController->IsMissionBriefingVisible())
     {
         DrawMissionBriefing(EchoesController, Settings);
@@ -285,6 +291,100 @@ void AEchoesHUD::DrawHUD()
     {
         DrawMatchResult(EchoesController, Bridge, Settings);
     }
+}
+
+void AEchoesHUD::DrawTitleScreen(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsTitleScreenVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float PanelWidth = FMath::Min(
+        FMath::Max(700.0f, Canvas->ClipX - 60.0f),
+        FMath::Clamp(Canvas->ClipX * 0.60f, 860.0f, 1220.0f));
+    const float PanelHeight = FMath::Min(
+        FMath::Max(560.0f, Canvas->ClipY - 60.0f),
+        FMath::Clamp(Canvas->ClipY * 0.72f, 620.0f, 760.0f));
+    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
+    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
+    const float ContentScale = FMath::Clamp(
+        FMath::Min(PanelWidth / 940.0f, PanelHeight / 650.0f),
+        0.76f,
+        1.22f);
+    const float TextScale = HudScale * ContentScale;
+    const FLinearColor Backdrop =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.985f);
+    const FLinearColor Accent =
+        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
+                      : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted =
+        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
+                      : FLinearColor(0.55f, 0.64f, 0.73f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const FString AccessLine = FString::Printf(
+        TEXT("[U] UI %d%%    [I] HIGH CONTRAST %s    [O] REDUCED MOTION %s    [/] REDUCED FLASHING %s"),
+        FMath::RoundToInt(HudScale * 100.0f),
+        bHighContrast ? TEXT("ON") : TEXT("OFF"),
+        Settings != nullptr && Settings->IsReducedMotionEnabled()
+            ? TEXT("ON") : TEXT("OFF"),
+        Settings != nullptr && Settings->IsReducedFlashingEnabled()
+            ? TEXT("ON") : TEXT("OFF"));
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
+             Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight,
+             Accent, 4.0f);
+
+    DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent,
+             Left + 48.0f, Top + 42.0f * ContentScale,
+             SmallFont, 1.85f * TextScale, false);
+    DrawText(TEXT("THE FUTURE IS A RESOURCE. EVERY USE DESTROYS AN ALTERNATIVE."),
+             Muted, Left + 48.0f, Top + 94.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+
+    DrawText(TEXT("AVAILABLE OPERATION"), Accent,
+             Left + 48.0f, Top + 164.0f * ContentScale,
+             SmallFont, 0.92f * TextScale, false);
+    DrawText(TEXT("GLASS SCAR"), Body,
+             Left + 48.0f, Top + 202.0f * ContentScale,
+             SmallFont, 1.42f * TextScale, false);
+    DrawText(TEXT("SINGLE-PLAYER  //  MERIDIAN COMPACT  //  FUTURE WELL CONTEST"),
+             Muted, Left + 48.0f, Top + 246.0f * ContentScale,
+             SmallFont, 0.86f * TextScale, false);
+    DrawText(TEXT("Cross the shattered approaches, choose what the Well becomes,"),
+             Body, Left + 48.0f, Top + 294.0f * ContentScale,
+             SmallFont, 0.96f * TextScale, false);
+    DrawText(TEXT("and break the Kharuun Command Core before your own line collapses."),
+             Body, Left + 48.0f, Top + 322.0f * ContentScale,
+             SmallFont, 0.96f * TextScale, false);
+
+    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent,
+             Left + 48.0f, Top + 390.0f * ContentScale,
+             SmallFont, 0.90f * TextScale, false);
+    DrawText(AccessLine, Body,
+             Left + 48.0f, Top + 424.0f * ContentScale,
+             SmallFont, 0.80f * TextScale, false);
+
+    DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,
+             PanelWidth - 96.0f, 46.0f);
+    DrawText(TEXT("PRESS ENTER TO OPEN THE OPERATIONS BRIEF"),
+             bHighContrast ? FLinearColor::Black
+                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Left + PanelWidth * 0.5f - 174.0f * TextScale,
+             Top + PanelHeight - 69.0f,
+             SmallFont, 0.94f * TextScale, false);
 }
 
 void AEchoesHUD::DrawObjectiveTracker(

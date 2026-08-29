@@ -150,7 +150,7 @@ void AEchoesGameMode::BeginPlay()
         if (!FApp::IsUnattended() &&
             !FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
         {
-            Controller->PresentMissionBriefing();
+            Controller->PresentTitleScreen();
         }
     }
 

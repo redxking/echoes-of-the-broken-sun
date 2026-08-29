@@ -59,6 +59,47 @@ void AEchoesPlayerController::NotifyRuntimeReady()
         7.0f);
 }
 
+void AEchoesPlayerController::PresentTitleScreen()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[TITLE_SIM_NOT_READY] The operation is unavailable."));
+        return;
+    }
+    ClearSelection();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    bTitleScreenVisible = true;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bMatchResultVisible = false;
+    PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+    Bridge->SetScenarioPaused(true);
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(TEXT("ECHOES OF THE BROKEN SUN — press Enter to open the Glass Scar brief."),
+                     3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_TITLE_READY] operation=GlassScar unavailableModesHidden=true keyboardStart=true"));
+}
+
+void AEchoesPlayerController::ConfirmTitleScreen()
+{
+    if (!bTitleScreenVisible)
+    {
+        return;
+    }
+    bTitleScreenVisible = false;
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TITLE_CONFIRMED] next=OperationsBrief"));
+    PresentMissionBriefing();
+}
+
 void AEchoesPlayerController::PresentMissionBriefing()
 {
     UEchoesSimulationSubsystem* Bridge =
@@ -73,6 +114,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
+    bTitleScreenVisible = false;
     bPauseMenuVisible = false;
     bMatchResultVisible = false;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
@@ -111,7 +153,11 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
 
 void AEchoesPlayerController::ConfirmPrimaryAction()
 {
-    if (bMissionBriefingVisible)
+    if (bTitleScreenVisible)
+    {
+        ConfirmTitleScreen();
+    }
+    else if (bMissionBriefingVisible)
     {
         ConfirmMissionBriefing();
     }
@@ -141,6 +187,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
     bMissionBriefingVisible = false;
     bPauseMenuVisible = false;
     bMatchResultVisible = true;
@@ -1563,7 +1610,7 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 
 void AEchoesPlayerController::TogglePauseMenu()
 {
-    if (bMissionBriefingVisible || bMatchResultVisible)
+    if (bTitleScreenVisible || bMissionBriefingVisible || bMatchResultVisible)
     {
         return;
     }
@@ -1600,7 +1647,7 @@ void AEchoesPlayerController::TogglePauseMenu()
 
 void AEchoesPlayerController::RestartScenario()
 {
-    if (bMissionBriefingVisible)
+    if (bTitleScreenVisible || bMissionBriefingVisible)
     {
         return;
     }
@@ -1614,6 +1661,7 @@ void AEchoesPlayerController::RestartScenario()
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         bRuntimeStateKnown = true;
+        bTitleScreenVisible = false;
         bPauseMenuVisible = false;
         bMatchResultVisible = false;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;

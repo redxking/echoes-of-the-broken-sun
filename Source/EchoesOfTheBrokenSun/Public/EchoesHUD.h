@@ -18,6 +18,9 @@ public:
     virtual void DrawHUD() override;
 
 private:
+    void DrawTitleScreen(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawMissionBriefing(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
