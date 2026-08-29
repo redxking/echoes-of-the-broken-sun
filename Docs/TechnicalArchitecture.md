@@ -217,12 +217,14 @@ Hot reload of authoritative content is disabled during a match. An editor change
 
 The authoritative navigation cell is the one-meter simulation tile. Sub-tile position remains Q22.10. A map pack supplies passability, integer base cost, height band, movement-class mask, transformation membership, and region ID per cell.
 
-Routing has two levels:
+The current schema-8 technical spike uses a shared reverse breadth-first distance field keyed by destination cell. A field stores shortest cardinal distance for every reachable tile; each unit then selects its next tile in the original north, east, south, west order, preserving prior equal-cost route semantics. Up to 128 derived fields are retained. Eviction is deterministic by `(LastUsedTick, DestinationCell)`, and any authoritative terrain change clears the cache. Active Reshape openings are included when a field is constructed. The cache is derived acceleration state: it is neither serialized nor checksummed, and loading or replaying reconstructs the same field from authoritative terrain and entities.
+
+The production design extends routing to two levels:
 
 1. a static region/portal graph provides the corridor across large maps;
 2. a Dijkstra integration field and direction field guide units within the active corridor or bounded destination area.
 
-The flow-field key is `(NavigationRevision, MovementClass, DestinationCell, GoalRadius, CorridorId)`. Cardinal edge cost is 1,000 and diagonal cost is 1,414 before integer terrain modifiers. Diagonal movement cannot cut a blocked corner. Cell index is `Y * Width + X`. The fixed neighbor order is north, east, south, west, northeast, southeast, southwest, northwest. The integration queue orders by `(AccumulatedCost, CellIndex)`, and equal-cost direction choice uses the neighbor order. Unreachable cost is an explicit sentinel; arithmetic saturates before that sentinel rather than wrapping.
+The planned production flow-field key is `(NavigationRevision, MovementClass, DestinationCell, GoalRadius, CorridorId)`. Cardinal edge cost is 1,000 and diagonal cost is 1,414 before integer terrain modifiers. Diagonal movement cannot cut a blocked corner. Cell index is `Y * Width + X`. The fixed neighbor order is north, east, south, west, northeast, southeast, southwest, northwest. The integration queue orders by `(AccumulatedCost, CellIndex)`, and equal-cost direction choice uses the neighbor order. Unreachable cost is an explicit sentinel; arithmetic saturates before that sentinel rather than wrapping. Region corridors, movement classes, weighted/diagonal costs, incremental work budgets, dynamic reservations, local avoidance, and formation slots remain production requirements rather than current implementation claims.
 
 Path requests are ordered by `(RequestTick, PlayerId, CommandSequence, EntityId)`. Authoritative work is budgeted by a fixed number of queue expansions per simulation tick, never elapsed milliseconds. A field becomes usable only after deterministic completion. Cache eviction is ordered by `(LastUsedTick, FlowFieldKey)` and never by allocator or memory-pressure timing.
 
@@ -392,7 +394,7 @@ The core writes canonical uncompressed bytes. Unreal performs bounded file I/O a
 
 Integers use fixed-width little-endian encoding. Booleans and enums occupy declared byte widths. Vectors write a count followed by canonically ordered elements. Strings are UTF-8 with byte limits and are never used as runtime identity. Padding, native struct dumps, RTTI names, pointers, UObject paths, locale formatting, and compiler-dependent container layout are forbidden.
 
-The existing 64-bit deterministic checksum may remain a fast replay/desync signal if its byte stream and algorithm are frozen and golden-tested. It is not a security primitive. Save/replay integrity uses SHA-256 over the canonical uncompressed payload; authenticity, when required for official or competitive records, depends on an authenticated server or signed manifest rather than a bare hash.
+Schema 8 traverses the same canonical state fields used by snapshot serialization through a non-allocating versioned 64-bit hash writer. This checksum is a fast replay/desync signal, not a security primitive, and the algorithm change intentionally broke prior development-schema compatibility. Snapshot bytes retain their independently verified appended FNV-1a integrity field. The production container still requires SHA-256 over the canonical uncompressed payload; authenticity, when required for official or competitive records, depends on an authenticated server or signed manifest rather than a bare hash.
 
 Offline save content includes the complete core snapshot, pending commands, AI memory, scenario objectives, campaign fact ledger, and presentation-independent checkpoint metadata. Online clients do not save authoritative matches; the server retains reconnect state and replay. Unreal writes a temporary file, flushes it, validates it by reopening, then atomically replaces the target while retaining the prior autosave generation. A corrupt newest autosave falls back only after the user is told which generation failed.
 
@@ -417,7 +419,7 @@ Network encryption and account authentication are delegated to the selected supp
 
 ## Performance, profiling, and Apple Silicon
 
-The Project Ledger is the authority for budgets and measured results. The architecture is designed around its initial 20 Hz, 400-unit slice budget: 4.0 ms p95 game-thread simulation, 1.5 ms p95 fog, 6.0 ms amortized path burst, a checksum every 20 ticks within 0.25 ms p95, and 60 FPS at 2560×1440 medium on the inspected M1 Pro. These remain pre-spike targets, not observed performance.
+The Project Ledger is the authority for budgets and measured results. The architecture is designed around its 20 Hz, 400-unit slice budget: 4.0 ms p95 game-thread simulation, 1.5 ms p95 fog, 6.0 ms path burst, a checksum every 20 ticks within 0.25 ms p95, and 60 FPS at 2560×1440 medium on the inspected M1 Pro. PERF-001 is the first bounded observation: in an isolated optimized native two-team harness, visibility refresh measured 0.553708 ms p95, 100 cold path requests 3.492334 ms p95, simulation ticks with 100 moving units 1.267833 ms p95, and state checksum 0.195075 ms p95. These pass the implemented native budgets only. Four-team fog, Unreal game/render/GPU frame time, resident memory, packaged behavior, and soak stability remain unmeasured.
 
 The measurement scene must record map, rules/map hashes, active and visible unit counts, team count, path requests, sight sources, effects, weather, resolution, preset, build configuration, hardware, macOS, engine hotfix, and sample duration. Required tools are Unreal Insights, `stat unit`, `stat game`, `stat gpu`, `stat rhi`, memory reports, Xcode Instruments Time Profiler/Allocations/Leaks, and Metal capture where useful. Measurements from the editor are recorded separately from native packaged development builds.
 
@@ -522,9 +524,9 @@ As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configu
 This architecture does not establish that:
 
 - the installed Unreal/Xcode/Metal combination is supported beyond the exact local generation, build, automation, runtime, and rendering observations recorded in the Project Ledger;
-- the current native core satisfies every numeric, RNG, navigation, visibility, AI, serialization, replay, or security rule in this document;
-- a complete playable map, navigation-scale pathing qualification, manually accepted end-to-end construction/production/combat match, final fog art, audio, save UI, accessibility behavior, or final asset exists;
+- the current native core satisfies every numeric, RNG, production-navigation, four-team visibility, AI, serialization, replay, or security rule in this document;
+- a complete playable map, Unreal performance qualification, manually accepted end-to-end construction/production/combat match, final fog art, audio, save UI, accessibility behavior, or final asset exists;
 - host-authoritative transport, reconnect, spectators, desync recovery, separate-process play, or dedicated-server operation exists;
-- any frame-time, memory, traffic, save, replay, unit-count, compatibility, signing, notarization, distribution, or commercial-readiness target has been measured or met.
+- any unrecorded frame-time, GPU, memory, four-team fog, traffic, save, replay-seek, compatibility, signing, notarization, distribution, or commercial-readiness target has been measured or met.
 
 Evidence is promoted only by updating the Project Ledger with the exact build, scenario, toolchain, hardware, command, result, and remaining claim limit.

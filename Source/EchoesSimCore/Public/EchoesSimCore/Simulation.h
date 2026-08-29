@@ -10,6 +10,7 @@
 #include <compare>
 #include <cstdint>
 #include <limits>
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -27,8 +28,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 7;
-inline constexpr std::uint32_t kReplayVersion = 7;
+inline constexpr std::uint32_t kSnapshotVersion = 8;
+inline constexpr std::uint32_t kReplayVersion = 8;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -351,7 +352,21 @@ public:
         const ReplayRecord& replay,
         std::string* error = nullptr);
 
+#if defined(ECHOES_SIMCORE_PROFILE)
+    // Compiled only into the native profiler so subsystem costs can be isolated.
+    void ProfileRefreshVisibility();
+    [[nodiscard]] bool ProfilePathRequest(Vec2 from, Vec2 destination) const;
+#endif
+
 private:
+    template <typename Writer>
+    void WriteSnapshotPayload(Writer& writer) const;
+
+    struct PathFieldCacheEntry final {
+        std::vector<std::size_t> distanceToGoal{};
+        Tick lastUsedTick = 0;
+    };
+
     struct DeterministicRng final {
         explicit DeterministicRng(std::uint64_t seed = 1) : state(seed) {}
         [[nodiscard]] std::uint32_t NextU32();
@@ -444,6 +459,7 @@ private:
     std::vector<std::uint8_t> replayInitialSnapshot_{};
     std::array<std::uint64_t, 2> lastExecutedSequence_{};
     std::array<bool, 2> hasExecutedSequence_{};
+    mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};
 };
 
 }  // namespace echoes::sim

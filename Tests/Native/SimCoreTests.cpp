@@ -531,6 +531,31 @@ void TestDeterministicObstaclePathing() {
     REQUIRE(first.FindEntity(scout)->position == Vec2::FromTiles(8, 2));
     REQUIRE(first.FindEntity(scout)->order.type == OrderType::None);
     REQUIRE(first.StateChecksum() == second.StateChecksum());
+
+    Simulation invalidation({14, 10, 20, 0x4341434845494e56ULL});
+    REQUIRE(invalidation.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    const EntityId rerouted = invalidation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(2, 4));
+    REQUIRE(rerouted != 0);
+    Command cachedMove =
+        MakeCommand(0, 0, 1, CommandType::Move, rerouted);
+    cachedMove.position = Vec2::FromTiles(11, 4);
+    REQUIRE(invalidation.QueueCommand(cachedMove));
+    invalidation.Step(8);
+    REQUIRE(invalidation.SetTerrainTile(5, 4, Terrain::Blocked));
+    for (std::int32_t tick = 0; tick < 180; ++tick) {
+        invalidation.Step();
+        const Entity* moving = invalidation.FindEntity(rerouted);
+        REQUIRE(moving != nullptr);
+        REQUIRE(invalidation.TerrainAt(
+                    moving->position.x.FloorToInt(),
+                    moving->position.y.FloorToInt()) != Terrain::Blocked);
+    }
+    REQUIRE(invalidation.FindEntity(rerouted)->position ==
+            Vec2::FromTiles(11, 4));
+    REQUIRE(invalidation.FindEntity(rerouted)->order.type == OrderType::None);
 }
 
 void TestProductionPopulationAndVictory() {
@@ -725,10 +750,26 @@ void TestFutureWellChoices() {
         const EntityId worker = reshape.SpawnEntity(
             0, Faction::MeridianCompact, EntityType::Worker,
             Vec2::FromTiles(5, 6));
+        const EntityId pathfinder = reshape.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier,
+            Vec2::FromTiles(4, 6));
+        const EntityId expiryProbe = reshape.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier,
+            Vec2::FromTiles(3, 7));
         const EntityId well = reshape.SpawnFutureWell(Vec2::FromTiles(6, 6));
-        REQUIRE(reshape.SetTerrainTile(7, 6, Terrain::Blocked));
+        for (std::int32_t tileY = 0; tileY < 20; ++tileY) {
+            REQUIRE(reshape.SetTerrainTile(7, tileY, Terrain::Blocked));
+        }
         REQUIRE(!reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
-        Command action = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+        Command initiallyBlocked = MakeCommand(
+            0, 0, 1, CommandType::Move, pathfinder);
+        initiallyBlocked.position = Vec2::FromTiles(9, 6);
+        REQUIRE(reshape.QueueCommand(initiallyBlocked));
+        reshape.Step();
+        REQUIRE(reshape.FindEntity(pathfinder)->position ==
+                Vec2::FromTiles(4, 6));
+
+        Command action = MakeCommand(1, 0, 2, CommandType::FutureWell, worker);
         action.target = well;
         action.wellChoice = FutureWellChoice::Reshape;
         REQUIRE(reshape.QueueCommand(action));
@@ -739,17 +780,27 @@ void TestFutureWellChoices() {
         REQUIRE(reshapedWell->reshapeUntilTick >= 40 &&
                 reshapedWell->reshapeUntilTick <= 60);
         REQUIRE(reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
-        Command enter = MakeCommand(reshape.CurrentTick(), 0, 2,
+        Command enter = MakeCommand(reshape.CurrentTick(), 0, 3,
                                     CommandType::Move, worker);
         enter.position = Vec2::FromTiles(7, 6);
         REQUIRE(reshape.QueueCommand(enter));
         reshape.Step(20);
         REQUIRE(reshape.FindEntity(worker)->position == Vec2::FromTiles(7, 6));
+        REQUIRE(reshape.FindEntity(pathfinder)->position.x.Raw() >
+                Vec2::FromTiles(4, 6).x.Raw());
         const Tick end = reshapedWell->reshapeUntilTick;
         reshape.Step(end - reshape.CurrentTick());
         REQUIRE(!reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
         REQUIRE(reshape.FindEntity(worker)->position != Vec2::FromTiles(7, 6));
         REQUIRE(reshape.IsPositionPassable(reshape.FindEntity(worker)->position));
+
+        Command afterExpiry = MakeCommand(
+            reshape.CurrentTick(), 0, 4, CommandType::Move, expiryProbe);
+        afterExpiry.position = Vec2::FromTiles(9, 6);
+        REQUIRE(reshape.QueueCommand(afterExpiry));
+        reshape.Step(80);
+        REQUIRE(reshape.FindEntity(expiryProbe)->position ==
+                Vec2::FromTiles(3, 7));
     }
 }
 

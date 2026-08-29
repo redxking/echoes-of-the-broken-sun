@@ -15,6 +15,7 @@ constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 constexpr std::uint32_t kMaximumMapTiles = 4U * 1024U * 1024U;
 constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
 constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
+constexpr std::size_t kMaximumCachedPathFields = 128;
 constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
 constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
 constexpr std::int32_t kPatrolLeashRaw = 6 * kFixedScale;
@@ -109,6 +110,7 @@ void SetError(std::string* destination, const std::string& message) {
 
 class BinaryWriter final {
 public:
+    void Reserve(std::size_t byteCount) { bytes_.reserve(byteCount); }
     void U8(std::uint8_t value) { bytes_.push_back(value); }
     void U32(std::uint32_t value) {
         for (std::uint32_t shift = 0; shift < 32; shift += 8) {
@@ -129,6 +131,41 @@ public:
 
 private:
     std::vector<std::uint8_t> bytes_{};
+};
+
+class HashWriter final {
+public:
+    void U8(std::uint8_t value) { Mix(0x0100000000000000ULL | value); }
+    void U32(std::uint32_t value) { Mix(0x0400000000000000ULL | value); }
+    void U64(std::uint64_t value) {
+        Mix(0x0800000000000000ULL ^ value);
+    }
+    void I32(std::int32_t value) { U32(static_cast<std::uint32_t>(value)); }
+    void Bytes(std::span<const std::uint8_t> values) {
+        Mix(0x4200000000000000ULL ^ values.size());
+        std::size_t index = 0;
+        while (index < values.size()) {
+            std::uint64_t packed = 0;
+            const std::size_t count =
+                std::min<std::size_t>(8, values.size() - index);
+            for (std::size_t byte = 0; byte < count; ++byte) {
+                packed |= static_cast<std::uint64_t>(values[index + byte])
+                          << (byte * 8U);
+            }
+            Mix(packed ^ (static_cast<std::uint64_t>(count) << 56U));
+            index += count;
+        }
+    }
+    [[nodiscard]] std::uint64_t Value() const { return hash_; }
+
+private:
+    void Mix(std::uint64_t value) {
+        hash_ ^= value + 0x9e3779b97f4a7c15ULL;
+        hash_ *= 0xd6e8feb86659fd93ULL;
+        hash_ = (hash_ << 27U) | (hash_ >> 37U);
+    }
+
+    std::uint64_t hash_ = 0x243f6a8885a308d3ULL;
 };
 
 class BinaryReader final {
@@ -188,7 +225,8 @@ private:
     std::size_t position_ = 0;
 };
 
-void WriteCommand(BinaryWriter& writer, const Command& command) {
+template <typename Writer>
+void WriteCommand(Writer& writer, const Command& command) {
     writer.U64(command.executeTick);
     writer.U8(command.player);
     writer.U64(command.sequence);
@@ -459,7 +497,12 @@ bool Simulation::SetTerrainTile(std::int32_t tileX,
         tileY >= config_.mapHeightTiles || !IsValidTerrain(terrain)) {
         return false;
     }
-    terrain_[static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX)] = terrain;
+    const std::size_t tile =
+        static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX);
+    if (terrain_[tile] != terrain) {
+        terrain_[tile] = terrain;
+        pathFieldCache_.clear();
+    }
     return true;
 }
 
@@ -833,54 +876,116 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
     const std::size_t start = tileIndex(startX, startY);
     const std::size_t goal = tileIndex(goalX, goalY);
     constexpr std::size_t kUnvisited = std::numeric_limits<std::size_t>::max();
-    std::vector<std::size_t> parent(tileCount, kUnvisited);
-    std::vector<std::size_t> frontier{};
-    frontier.reserve(std::min<std::size_t>(tileCount, 4096));
-    parent[start] = start;
-    frontier.push_back(start);
 
-    // Fixed direction order is part of deterministic equal-cost path selection.
+    auto cached = pathFieldCache_.find(goal);
+    if (cached == pathFieldCache_.end()) {
+        PathFieldCacheEntry field{};
+        field.distanceToGoal.assign(tileCount, kUnvisited);
+        field.lastUsedTick = currentTick_;
+        std::vector<std::uint8_t> passable(tileCount, 0);
+        for (std::size_t tile = 0; tile < tileCount; ++tile) {
+            passable[tile] = terrain_[tile] != Terrain::Blocked ? 1 : 0;
+        }
+        for (const Entity& entity : entities_) {
+            if (entity.type != EntityType::FutureWell ||
+                entity.wellChoice != FutureWellChoice::Reshape ||
+                currentTick_ >= entity.reshapeUntilTick) {
+                continue;
+            }
+            const std::int32_t wellX = entity.position.x.FloorToInt();
+            const std::int32_t wellY = entity.position.y.FloorToInt();
+            for (std::int32_t offsetY = -1; offsetY <= 1; ++offsetY) {
+                for (std::int32_t offsetX = -1; offsetX <= 1; ++offsetX) {
+                    const std::int32_t tileX = wellX + offsetX;
+                    const std::int32_t tileY = wellY + offsetY;
+                    if (tileX >= 0 && tileY >= 0 &&
+                        tileX < config_.mapWidthTiles &&
+                        tileY < config_.mapHeightTiles) {
+                        passable[tileIndex(tileX, tileY)] = 1;
+                    }
+                }
+            }
+        }
+        std::vector<std::size_t> frontier{};
+        frontier.reserve(std::min<std::size_t>(tileCount, 4096));
+        field.distanceToGoal[goal] = 0;
+        frontier.push_back(goal);
+
+        // Reverse expansion produces the shortest distance for every reachable
+        // tile sharing this destination. Waypoint selection below retains the
+        // original forward-search N/E/S/W equal-cost preference.
+        constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+            {{0, -1}},
+            {{1, 0}},
+            {{0, 1}},
+            {{-1, 0}},
+        }};
+        std::size_t head = 0;
+        while (head < frontier.size()) {
+            const std::size_t current = frontier[head++];
+            const std::int32_t currentX =
+                static_cast<std::int32_t>(current % width);
+            const std::int32_t currentY =
+                static_cast<std::int32_t>(current / width);
+            for (const auto& direction : directions) {
+                const std::int32_t nextX = currentX + direction[0];
+                const std::int32_t nextY = currentY + direction[1];
+                if (nextX < 0 || nextY < 0 ||
+                    nextX >= config_.mapWidthTiles ||
+                    nextY >= config_.mapHeightTiles) {
+                    continue;
+                }
+                const std::size_t next = tileIndex(nextX, nextY);
+                if (field.distanceToGoal[next] != kUnvisited ||
+                    passable[next] == 0) {
+                    continue;
+                }
+                field.distanceToGoal[next] =
+                    field.distanceToGoal[current] + 1;
+                frontier.push_back(next);
+            }
+        }
+
+        if (pathFieldCache_.size() >= kMaximumCachedPathFields) {
+            const auto oldest = std::min_element(
+                pathFieldCache_.begin(), pathFieldCache_.end(),
+                [](const auto& lhs, const auto& rhs) {
+                    return std::tie(lhs.second.lastUsedTick, lhs.first) <
+                           std::tie(rhs.second.lastUsedTick, rhs.first);
+                });
+            pathFieldCache_.erase(oldest);
+        }
+        cached = pathFieldCache_.emplace(goal, std::move(field)).first;
+    } else {
+        cached->second.lastUsedTick = currentTick_;
+    }
+    const std::size_t startDistance =
+        cached->second.distanceToGoal[start];
+    if (startDistance == kUnvisited) {
+        return std::nullopt;
+    }
+
     constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
         {{0, -1}},
         {{1, 0}},
         {{0, 1}},
         {{-1, 0}},
     }};
-    std::size_t head = 0;
-    while (head < frontier.size() && parent[goal] == kUnvisited) {
-        const std::size_t current = frontier[head++];
-        const std::int32_t currentX =
-            static_cast<std::int32_t>(current % width);
-        const std::int32_t currentY =
-            static_cast<std::int32_t>(current / width);
-        for (const auto& direction : directions) {
-            const std::int32_t nextX = currentX + direction[0];
-            const std::int32_t nextY = currentY + direction[1];
-            if (nextX < 0 || nextY < 0 ||
-                nextX >= config_.mapWidthTiles ||
-                nextY >= config_.mapHeightTiles) {
-                continue;
-            }
-            const std::size_t next = tileIndex(nextX, nextY);
-            if (parent[next] != kUnvisited ||
-                !IsPositionPassable(Vec2::FromTiles(nextX, nextY))) {
-                continue;
-            }
-            parent[next] = current;
-            frontier.push_back(next);
+    for (const auto& direction : directions) {
+        const std::int32_t nextX = startX + direction[0];
+        const std::int32_t nextY = startY + direction[1];
+        if (nextX < 0 || nextY < 0 ||
+            nextX >= config_.mapWidthTiles ||
+            nextY >= config_.mapHeightTiles) {
+            continue;
+        }
+        const std::size_t next = tileIndex(nextX, nextY);
+        if (cached->second.distanceToGoal[next] != kUnvisited &&
+            cached->second.distanceToGoal[next] + 1 == startDistance) {
+            return Vec2::FromTiles(nextX, nextY);
         }
     }
-    if (parent[goal] == kUnvisited) {
-        return std::nullopt;
-    }
-
-    std::size_t next = goal;
-    while (parent[next] != start) {
-        next = parent[next];
-    }
-    const std::int32_t nextX = static_cast<std::int32_t>(next % width);
-    const std::int32_t nextY = static_cast<std::int32_t>(next / width);
-    return Vec2::FromTiles(nextX, nextY);
+    return std::nullopt;
 }
 
 bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
@@ -1545,6 +1650,7 @@ void Simulation::ProcessFutureWell(Entity& worker) {
             well->wellChoice = FutureWellChoice::Reshape;
             well->reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
             well->reshapeUntilTick = currentTick_ + 40 + rng_.Uniform(21);
+            pathFieldCache_.clear();
             break;
         case FutureWellChoice::Dormant:
             worker.order = {};
@@ -1741,6 +1847,7 @@ void Simulation::ResolveExpiredReshapes() {
     if (expiredCenters.empty()) {
         return;
     }
+    pathFieldCache_.clear();
 
     for (Entity& entity : entities_) {
         if (entity.hitPoints <= 0 || entity.movementPerTickRaw <= 0) {
@@ -1872,6 +1979,16 @@ void Simulation::UpdateVisibility() {
         }
     }
 }
+
+#if defined(ECHOES_SIMCORE_PROFILE)
+void Simulation::ProfileRefreshVisibility() {
+    UpdateVisibility();
+}
+
+bool Simulation::ProfilePathRequest(Vec2 from, Vec2 destination) const {
+    return FindNextPathWaypoint(from, destination).has_value();
+}
+#endif
 
 Visibility Simulation::VisibilityAt(PlayerId player, Vec2 position) const {
     if (player >= players_.size() || !players_[player].active ||
@@ -2054,8 +2171,8 @@ std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
     return commands;
 }
 
-std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
-    BinaryWriter writer{};
+template <typename Writer>
+void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.U8('E');
     writer.U8('B');
     writer.U8('S');
@@ -2080,9 +2197,9 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
         writer.U64(lastExecutedSequence_[player]);
     }
     writer.U32(static_cast<std::uint32_t>(terrain_.size()));
-    for (const Terrain terrain : terrain_) {
-        writer.U8(static_cast<std::uint8_t>(terrain));
-    }
+    writer.Bytes(std::span<const std::uint8_t>(
+        reinterpret_cast<const std::uint8_t*>(terrain_.data()),
+        terrain_.size()));
     for (const auto& explored : explored_) {
         writer.U32(static_cast<std::uint32_t>(explored.size()));
         writer.Bytes(explored);
@@ -2131,14 +2248,24 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     for (const Command& command : pending) {
         WriteCommand(writer, command);
     }
+}
+
+std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
+    BinaryWriter writer{};
+    writer.Reserve(
+        128U + terrain_.size() * 3U +
+        entities_.size() * kSerializedEntityBytes +
+        pendingCommands_.size() * kSerializedCommandBytes);
+    WriteSnapshotPayload(writer);
     const std::uint64_t integrity = Fnv1a(writer.Data());
     writer.U64(integrity);
     return writer.Take();
 }
 
 std::uint64_t Simulation::StateChecksum() const {
-    const std::vector<std::uint8_t> snapshot = SaveSnapshot();
-    return Fnv1a(snapshot);
+    HashWriter writer{};
+    WriteSnapshotPayload(writer);
+    return writer.Value();
 }
 
 std::optional<Simulation> Simulation::LoadSnapshot(
