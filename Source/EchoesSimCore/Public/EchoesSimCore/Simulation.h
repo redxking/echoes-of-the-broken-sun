@@ -27,8 +27,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 5;
-inline constexpr std::uint32_t kReplayVersion = 5;
+inline constexpr std::uint32_t kSnapshotVersion = 6;
+inline constexpr std::uint32_t kReplayVersion = 6;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -143,6 +143,7 @@ enum class OrderType : std::uint8_t {
     FutureWell = 6,
     AttackMove = 7,
     Hold = 8,
+    Guard = 9,
 };
 
 enum class CommandType : std::uint8_t {
@@ -156,6 +157,7 @@ enum class CommandType : std::uint8_t {
     Produce = 7,
     AttackMove = 8,
     Hold = 9,
+    Guard = 10,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -402,6 +404,9 @@ private:
         Entity& attacker,
         std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessHold(
+        Entity& attacker,
+        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+    void ProcessGuard(
         Entity& attacker,
         std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessFutureWell(Entity& worker);

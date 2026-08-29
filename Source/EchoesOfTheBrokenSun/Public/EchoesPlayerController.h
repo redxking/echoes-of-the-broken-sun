@@ -51,6 +51,7 @@ private:
     void ProduceSoldier();
     void AttackMoveAtCursor();
     void HoldSelectedUnits();
+    void GuardAtCursor();
     void StopSelectedUnits();
     void TogglePause();
     void RestartScenario();

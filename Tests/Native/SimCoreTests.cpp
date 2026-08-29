@@ -73,7 +73,7 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v5 fixed header/player/sequence fields plus terrain and two fog grids.
+    // Snapshot v6 fixed header/player/sequence fields plus terrain and two fog grids.
     return 100 + 3 * mapTileCount;
 }
 
@@ -368,6 +368,66 @@ void TestHoldPositionDefendsWithoutChasing() {
     simulation.Step();
     REQUIRE(simulation.FindEntity(defender)->order.type == OrderType::None);
     REQUIRE(simulation.FindEntity(defender)->position == anchor);
+}
+
+void TestGuardDefendsAndFollowsOwnedTarget() {
+    Simulation simulation({30, 20, 20, 0x47554152444f5244ULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId guard = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(4, 4));
+    const EntityId protectedWorker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(6, 4));
+    const EntityId nearbyEnemy = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(10, 4));
+    REQUIRE(guard != 0 && protectedWorker != 0 && nearbyEnemy != 0);
+
+    Command guardOrder = MakeCommand(0, 0, 1, CommandType::Guard, guard);
+    guardOrder.target = protectedWorker;
+    REQUIRE(simulation.QueueCommand(guardOrder));
+    simulation.Step(180);
+    REQUIRE(simulation.FindEntity(nearbyEnemy) == nullptr);
+    const Entity* guardState = simulation.FindEntity(guard);
+    const Entity* workerState = simulation.FindEntity(protectedWorker);
+    REQUIRE(guardState != nullptr && workerState != nullptr);
+    REQUIRE(guardState->order.type == OrderType::Guard);
+    REQUIRE(guardState->order.target == protectedWorker);
+    REQUIRE(guardState->position.x.Raw() >=
+            workerState->position.x.Raw() - 2 * kFixedScale);
+    REQUIRE(guardState->position.x.Raw() <=
+            workerState->position.x.Raw() + 2 * kFixedScale);
+
+    Command moveWorker = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Move, protectedWorker);
+    moveWorker.position = Vec2::FromTiles(18, 4);
+    REQUIRE(simulation.QueueCommand(moveWorker));
+    simulation.Step(240);
+    guardState = simulation.FindEntity(guard);
+    workerState = simulation.FindEntity(protectedWorker);
+    REQUIRE(guardState != nullptr && workerState != nullptr);
+    REQUIRE(workerState->position == Vec2::FromTiles(18, 4));
+    REQUIRE(guardState->order.type == OrderType::Guard);
+    REQUIRE(guardState->order.destination == workerState->position);
+    REQUIRE(guardState->position.x.Raw() >=
+            workerState->position.x.Raw() - 2 * kFixedScale);
+    REQUIRE(guardState->position.x.Raw() <=
+            workerState->position.x.Raw() + 2 * kFixedScale);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->FindEntity(guard)->order.type == OrderType::Guard);
+    REQUIRE(restored->FindEntity(guard)->order.target == protectedWorker);
+
+    Command stop = MakeCommand(
+        simulation.CurrentTick(), 0, 3, CommandType::Stop, guard);
+    REQUIRE(simulation.QueueCommand(stop));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(guard)->order.type == OrderType::None);
 }
 
 void TestDeterministicObstaclePathing() {
@@ -831,6 +891,8 @@ int main() {
          TestAttackMoveAcquiresResumesAndStops},
         {"hold position defends without chasing",
          TestHoldPositionDefendsWithoutChasing},
+        {"guard defends and follows owned target",
+         TestGuardDefendsAndFollowsOwnedTarget},
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},

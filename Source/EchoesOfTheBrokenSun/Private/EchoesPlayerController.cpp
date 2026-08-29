@@ -175,6 +175,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::HoldSelectedUnits);
     InputComponent->BindAction(
+        TEXT("GuardAtCursor"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::GuardAtCursor);
+    InputComponent->BindAction(
         TEXT("StopSelected"),
         IE_Pressed,
         this,
@@ -954,6 +959,86 @@ void AEchoesPlayerController::HoldSelectedUnits()
     }
 }
 
+void AEchoesPlayerController::GuardAtCursor()
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Guard is unavailable."));
+        return;
+    }
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian defenders first."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the Meridian entity to guard."));
+        return;
+    }
+    const AEchoesEntityView* TargetView =
+        Cast<AEchoesEntityView>(HitResult.GetActor());
+    const echoes::sim::Entity* Target =
+        TargetView != nullptr
+            ? Bridge->FindEntity(TargetView->GetEntityId())
+            : nullptr;
+    if (Target == nullptr ||
+        Target->owner != UEchoesSimulationSubsystem::LocalPlayerId)
+    {
+        SetStatusMessage(TEXT("[GUARD_TARGET_INVALID] Point at a live Meridian entity."));
+        return;
+    }
+
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        FString Feedback;
+        if (Bridge->IssueCommand(
+                echoes::sim::CommandType::Guard,
+                EntityId,
+                Target->id,
+                Bridge->SimToWorld(Target->position),
+                FutureWellChoice,
+                Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    if (AcceptedCount > 0)
+    {
+        const FString RejectionSuffix =
+            RejectedCount > 0
+                ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
+                : TEXT(".");
+        SetStatusMessage(FString::Printf(
+            TEXT("GUARD: %d defender%s assigned to entity %u%s"),
+            AcceptedCount,
+            AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+            Target->id,
+            *RejectionSuffix));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastRejection.IsEmpty()
+                ? TEXT("[GUARD_REJECTED] No selected entity accepted the guard order.")
+                : LastRejection);
+    }
+}
+
 void AEchoesPlayerController::QuickSaveScenario()
 {
     UEchoesSimulationSubsystem* Bridge =
@@ -1244,6 +1329,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("ATTACK-MOVE");
         case echoes::sim::CommandType::Hold:
             return TEXT("HOLD POSITION");
+        case echoes::sim::CommandType::Guard:
+            return TEXT("GUARD");
     }
     return TEXT("ORDER");
 }

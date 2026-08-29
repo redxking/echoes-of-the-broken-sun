@@ -805,6 +805,19 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 return false;
             }
             return true;
+        case CommandType::Guard:
+            if (Actor.attackDamage <= 0)
+            {
+                OutFeedback = TEXT("[GUARD_REQUIRES_DEFENDER] Select an attack-capable unit.");
+                return false;
+            }
+            if (Target == nullptr || Target->owner != LocalPlayerId ||
+                Target->id == Actor.id)
+            {
+                OutFeedback = TEXT("[GUARD_TARGET_INVALID] Guard requires a different live Meridian entity.");
+                return false;
+            }
+            return true;
         case CommandType::Gather:
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::ResourceNode ||

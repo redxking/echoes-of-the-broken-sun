@@ -71,6 +71,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("AttackMoveAtCursor"), EKeys::F));
         TestTrue(TEXT("Hold-position input is mapped"),
                  HasAction(TEXT("HoldSelected"), EKeys::H));
+        TestTrue(TEXT("Guard input is mapped"),
+                 HasAction(TEXT("GuardAtCursor"), EKeys::J));
         TestTrue(TEXT("Stop input is mapped"),
                  HasAction(TEXT("StopSelected"), EKeys::X));
         TestTrue(TEXT("Pause input is mapped"),

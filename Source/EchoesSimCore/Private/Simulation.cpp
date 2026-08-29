@@ -15,6 +15,8 @@ constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 constexpr std::uint32_t kMaximumMapTiles = 4U * 1024U * 1024U;
 constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
 constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
+constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
+constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
 constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
@@ -85,7 +87,7 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::Hold;
+    return type >= CommandType::Stop && type <= CommandType::Guard;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -211,7 +213,7 @@ void WriteCommand(BinaryWriter& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::Hold) ||
+    if (type > static_cast<std::uint8_t>(CommandType::Guard) ||
         buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -1171,6 +1173,16 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.destination = actor->position;
             }
             return;
+        case CommandType::Guard: {
+            const Entity* guarded = FindEntity(command.target);
+            if (actor->attackDamage > 0 && guarded != nullptr &&
+                guarded->owner == command.player && guarded->id != actor->id) {
+                actor->order.type = OrderType::Guard;
+                actor->order.target = guarded->id;
+                actor->order.destination = guarded->position;
+            }
+            return;
+        }
     }
 }
 
@@ -1335,6 +1347,50 @@ void Simulation::ProcessHold(
     }
 }
 
+void Simulation::ProcessGuard(
+    Entity& attacker,
+    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    Entity* guarded = MutableEntity(attacker.order.target);
+    if (attacker.attackDamage <= 0 || guarded == nullptr ||
+        guarded->owner != attacker.owner || guarded->id == attacker.id) {
+        attacker.order = {};
+        return;
+    }
+    attacker.order.destination = guarded->position;
+
+    const std::uint64_t leashSquared =
+        static_cast<std::uint64_t>(kGuardLeashRaw) * kGuardLeashRaw;
+    if (DistanceSquaredRaw(attacker.position, guarded->position) >
+        leashSquared) {
+        (void)MoveTowards(attacker, guarded->position);
+        return;
+    }
+
+    const EntityId enemyId = FindNearestVisibleEnemy(
+        attacker.owner,
+        guarded->position,
+        kGuardLeashRaw);
+    Entity* enemy = enemyId != 0 ? MutableEntity(enemyId) : nullptr;
+    if (enemy != nullptr) {
+        if (!InInteractionRange(attacker, *enemy, attacker.attackRangeRaw)) {
+            (void)MoveTowards(attacker, enemy->position);
+            return;
+        }
+        if (attacker.attackCooldownTicks == 0) {
+            pendingDamage.emplace_back(enemy->id, attacker.attackDamage);
+            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+        }
+        return;
+    }
+
+    const std::uint64_t followSquared =
+        static_cast<std::uint64_t>(kGuardFollowRaw) * kGuardFollowRaw;
+    if (DistanceSquaredRaw(attacker.position, guarded->position) >
+        followSquared) {
+        (void)MoveTowards(attacker, guarded->position);
+    }
+}
+
 void Simulation::ProcessFutureWell(Entity& worker) {
     Entity* well = MutableEntity(worker.order.target);
     if (well == nullptr || well->type != EntityType::FutureWell ||
@@ -1480,6 +1536,9 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::Hold:
                 ProcessHold(entity, pendingDamage);
                 break;
+            case OrderType::Guard:
+                ProcessGuard(entity, pendingDamage);
+                break;
         }
     }
     std::sort(pendingDamage.begin(), pendingDamage.end());
@@ -1543,6 +1602,11 @@ void Simulation::ClearInvalidOrders() {
                 if (entity.order.target != 0 &&
                     FindEntity(entity.order.target) == nullptr) {
                     entity.order.target = 0;
+                }
+                break;
+            case OrderType::Guard:
+                if (FindEntity(entity.order.target) == nullptr) {
+                    entity.order = {};
                 }
                 break;
             case OrderType::None:
@@ -2145,7 +2209,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             completed > 1 ||
-            orderType > static_cast<std::uint8_t>(OrderType::Hold) ||
+            orderType > static_cast<std::uint8_t>(OrderType::Guard) ||
             orderBuildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
