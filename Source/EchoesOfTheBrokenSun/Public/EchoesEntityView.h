@@ -41,6 +41,7 @@ public:
     [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
     [[nodiscard]] bool IsWaystoneStateVisible() const;
     [[nodiscard]] bool IsWarformStateVisible() const;
+    [[nodiscard]] bool IsAegisPowerFieldVisible() const;
     [[nodiscard]] bool IsTemporaryMineralCover() const
     {
         return bTemporaryMineralCover;
@@ -99,6 +100,9 @@ private:
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> WarformStateField;
 
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> AegisPowerField;
+
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
 
@@ -141,6 +145,9 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> WarformStateFieldMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> AegisPowerFieldMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -168,4 +175,5 @@ private:
     echoes::sim::WarformAdaptation PendingWarformAdaptation =
         echoes::sim::WarformAdaptation::None;
     bool bTemporaryMineralCover = false;
+    bool bAegisPowered = false;
 };

@@ -137,6 +137,15 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetReceivesDecals(false);
     WarformStateField->SetVisibility(false);
 
+    AegisPowerField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("AegisPowerField"));
+    AegisPowerField->SetupAttachment(SceneRoot);
+    AegisPowerField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    AegisPowerField->SetGenerateOverlapEvents(false);
+    AegisPowerField->SetCastShadow(false);
+    AegisPowerField->SetReceivesDecals(false);
+    AegisPowerField->SetVisibility(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -166,6 +175,9 @@ AEchoesEntityView::AEchoesEntityView()
     WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
     WarformStateField->SetStaticMesh(CylinderMesh);
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+    AegisPowerField->SetStaticMesh(CylinderMesh);
+    AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
+    AegisPowerField->SetRelativeScale3D(FVector(1.35f, 1.35f, 0.045f));
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -230,7 +242,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   PendingWarformAdaptation !=
                                       State.pendingWarformAdaptation ||
                                   bTemporaryMineralCover !=
-                                      State.temporaryMineralCover;
+                                      State.temporaryMineralCover ||
+                                  bAegisPowered != State.aegisPowered;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -243,6 +256,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     WarformAdaptation = State.warformAdaptation;
     PendingWarformAdaptation = State.pendingWarformAdaptation;
     bTemporaryMineralCover = State.temporaryMineralCover;
+    bAegisPowered = State.aegisPowered;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -483,6 +497,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
     WarformStateField->SetVisibility(bIsPublicWarformState, true);
+    AegisPowerField->SetVisibility(
+        State.aegisPowered &&
+            State.faction == echoes::sim::Faction::MeridianCompact &&
+            State.type == echoes::sim::EntityType::UtilityStructure,
+        true);
 
     UStaticMesh* MarkerMesh = nullptr;
     switch (State.owner)
@@ -585,6 +604,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.88f, 0.56f, 0.14f));
             WarformStateField->SetMaterial(0, WarformStateFieldMaterial);
         }
+        if (AegisPowerFieldMaterial == nullptr)
+        {
+            AegisPowerFieldMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            AegisPowerFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.98f, 0.84f, 0.18f));
+            AegisPowerField->SetMaterial(0, AegisPowerFieldMaterial);
+        }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
@@ -612,6 +640,11 @@ bool AEchoesEntityView::IsWaystoneStateVisible() const
 bool AEchoesEntityView::IsWarformStateVisible() const
 {
     return WarformStateField != nullptr && WarformStateField->IsVisible();
+}
+
+bool AEchoesEntityView::IsAegisPowerFieldVisible() const
+{
+    return AegisPowerField != nullptr && AegisPowerField->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)

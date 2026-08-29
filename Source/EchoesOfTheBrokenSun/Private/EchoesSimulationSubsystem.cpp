@@ -12,6 +12,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
+#include <algorithm>
+
 namespace
 {
 constexpr int32 PrototypeMapWidthTiles = 64;
@@ -161,7 +163,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -407,6 +409,25 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         EntityViews.Num(),
         Simulation->Config().ticksPerSecond,
         static_cast<unsigned long long>(Simulation->Config().randomSeed));
+    if (!bStressScenario)
+    {
+        const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
+            Simulation->Entities().begin(),
+            Simulation->Entities().end(),
+            [](const echoes::sim::Entity& Entity)
+            {
+                return Entity.faction ==
+                           echoes::sim::Faction::MeridianCompact &&
+                       Entity.type ==
+                           echoes::sim::EntityType::UtilityStructure &&
+                       Entity.aegisPowered;
+            }));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POWERED_AEGIS_READY] powered=%d publicState=true networkCounterplay=true"),
+            PoweredAegisCount);
+    }
     if (bStressScenario)
     {
         UE_LOG(

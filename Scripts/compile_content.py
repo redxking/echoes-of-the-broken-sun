@@ -329,7 +329,7 @@ def validate_buildings(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "sight_cm", "construction_ticks", "logistics_capacity", "footprint_cells"},
-            {"migration", "adaptation", "vibration_detection"},
+            {"migration", "adaptation", "vibration_detection", "powered_defense"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -415,6 +415,25 @@ def validate_buildings(
             }
         if faction == "kharuun_assemblies" and role == "detection" and vibration_detection is None:
             fail(f"{path}.vibration_detection", "the Kharuun detection structure requires authored vibration-detection rules")
+        powered_defense: dict[str, int] | None = None
+        if "powered_defense" in record:
+            raw_defense = require_object(record["powered_defense"], f"{path}.powered_defense")
+            require_exact_keys(
+                raw_defense,
+                {"connection_radius_cm", "damage", "range_cm", "cooldown_ticks"},
+                set(),
+                f"{path}.powered_defense",
+            )
+            if faction != "meridian_compact" or role != "defense":
+                fail(f"{path}.powered_defense", "schema 1 powered defense is reserved for the Meridian defense structure")
+            powered_defense = {
+                "connection_radius_cm": require_int(raw_defense["connection_radius_cm"], f"{path}.powered_defense.connection_radius_cm", 100, 3200),
+                "damage": require_int(raw_defense["damage"], f"{path}.powered_defense.damage", 1, 1_000_000),
+                "range_cm": require_int(raw_defense["range_cm"], f"{path}.powered_defense.range_cm", 100, 10_000),
+                "cooldown_ticks": require_int(raw_defense["cooldown_ticks"], f"{path}.powered_defense.cooldown_ticks", 1, 100_000),
+            }
+        if faction == "meridian_compact" and role == "defense" and powered_defense is None:
+            fail(f"{path}.powered_defense", "the Meridian defense structure requires authored powered-defense rules")
         output.append(
             {
                 "id": identifier,
@@ -433,6 +452,7 @@ def validate_buildings(
                 "migration": migration,
                 "adaptation": adaptation,
                 "vibration_detection": vibration_detection,
+                "powered_defense": powered_defense,
             }
         )
     for faction in sorted(playable):

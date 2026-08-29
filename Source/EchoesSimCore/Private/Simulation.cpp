@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 201;
+constexpr std::size_t kSerializedEntityBytes = 202;
 constexpr std::size_t kSerializedCommandBytes = 37;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -276,6 +276,10 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const WarformAdaptationRules& adaptation = rules.warformAdaptation;
     const MineralCoverRules& mineralCover = rules.mineralCover;
     const VibrationDetectionRules& vibration = rules.vibrationDetection;
+    const PoweredAegisRules& aegis = rules.poweredAegis;
+    const EntityArchetypeRules& aegisArchetype =
+        rules.archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
+                        [static_cast<std::size_t>(EntityType::UtilityStructure)];
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -344,7 +348,13 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            vibration.signatureLingerTicks > 0 &&
            vibration.signatureLingerTicks <= kMaximumSupportedTick &&
            vibration.contactResolutionRaw >= kFixedScale &&
-           vibration.contactResolutionRaw <= 16 * kFixedScale;
+           vibration.contactResolutionRaw <= 16 * kFixedScale &&
+           aegis.connectionRadiusRaw > 0 &&
+           aegis.connectionRadiusRaw <= 32 * kFixedScale &&
+           aegisArchetype.attackRangeRaw > 0 &&
+           aegisArchetype.attackRangeRaw <= 64 * kFixedScale &&
+           aegisArchetype.attackDamage > 0 &&
+           aegisArchetype.attackPeriodTicks > 0;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -712,7 +722,7 @@ SimulationRules DefaultSimulationRules() {
         {{70, 20}, 75, 256, 15, 4 * kFixedScale, 6, 24, 0, 0, 0, 1,
          0, 80, kFixedScale / 8});
     set(Faction::MeridianCompact, EntityType::UtilityStructure,
-        {{130, 30}, 520, 0, 7, 0, 0, 0, 0, 0, 120, 0, 0, 0,
+        {{130, 30}, 520, 0, 7, 9 * kFixedScale, 28, 20, 0, 0, 120, 0, 0, 0,
          kFixedScale});
 
     set(Faction::KharuunAssemblies, EntityType::Worker,
@@ -891,6 +901,7 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
         return 0;
     }
     entities_.push_back(entity);
+    ResolveAegisPower();
     UpdateVisibility();
     return entity.id;
 }
@@ -1274,6 +1285,66 @@ std::int32_t Simulation::VibrationDetectionRadiusRaw(
         return config_.rules.vibrationDetection.listeningSpineRadiusRaw;
     }
     return 0;
+}
+
+bool Simulation::IsAegisPost(const Entity& entity) const {
+    return entity.faction == Faction::MeridianCompact &&
+           entity.type == EntityType::UtilityStructure &&
+           !entity.temporaryMineralCover;
+}
+
+bool Simulation::IsAegisNetworkPowered(const Entity& aegis) const {
+    if (!IsAegisPost(aegis) || aegis.owner == kNeutralPlayer ||
+        !aegis.completed || aegis.hitPoints <= 0) {
+        return false;
+    }
+    const std::int64_t radius = config_.rules.poweredAegis.connectionRadiusRaw;
+    const std::uint64_t radiusSquared =
+        static_cast<std::uint64_t>(radius * radius);
+    std::vector<EntityId> poweredNodes{};
+    poweredNodes.reserve(entities_.size());
+    for (const Entity& entity : entities_) {
+        if (entity.owner == aegis.owner && entity.completed &&
+            entity.hitPoints > 0 &&
+            entity.faction == Faction::MeridianCompact &&
+            entity.type == EntityType::CommandCore) {
+            poweredNodes.push_back(entity.id);
+        }
+    }
+    bool added = true;
+    while (added) {
+        added = false;
+        for (const Entity& link : entities_) {
+            if (link.owner != aegis.owner || !link.completed ||
+                link.hitPoints <= 0 ||
+                link.faction != Faction::MeridianCompact ||
+                link.type != EntityType::Dropoff ||
+                std::find(poweredNodes.begin(), poweredNodes.end(), link.id) !=
+                    poweredNodes.end()) {
+                continue;
+            }
+            const bool connected = std::any_of(
+                poweredNodes.begin(), poweredNodes.end(),
+                [&](EntityId nodeId) {
+                    const Entity* node = FindEntity(nodeId);
+                    return node != nullptr &&
+                           DistanceSquaredRaw(link.position, node->position) <=
+                               radiusSquared;
+                });
+            if (connected) {
+                poweredNodes.push_back(link.id);
+                added = true;
+            }
+        }
+    }
+    return std::any_of(
+        poweredNodes.begin(), poweredNodes.end(),
+        [&](EntityId nodeId) {
+            const Entity* node = FindEntity(nodeId);
+            return node != nullptr &&
+                   DistanceSquaredRaw(aegis.position, node->position) <=
+                       radiusSquared;
+        });
 }
 
 MineralCoverResult Simulation::ValidateMineralCover(
@@ -2612,6 +2683,20 @@ void Simulation::ProcessPatrol(
     }
 }
 
+void Simulation::ProcessAegisDefense(
+    Entity& aegis,
+    std::vector<PendingDamage>& pendingDamage) {
+    if (!aegis.aegisPowered || aegis.attackDamage <= 0 ||
+        aegis.attackPeriodTicks == 0) {
+        return;
+    }
+    const EntityId targetId = FindNearestVisibleEnemyInRange(aegis);
+    if (targetId != 0 && aegis.attackCooldownTicks == 0) {
+        pendingDamage.push_back({targetId, aegis.id, aegis.attackDamage});
+        aegis.attackCooldownTicks = aegis.attackPeriodTicks;
+    }
+}
+
 void Simulation::ProcessFutureWell(Entity& worker) {
     Entity* well = MutableEntity(worker.order.target);
     if (well == nullptr || well->type != EntityType::FutureWell ||
@@ -2740,6 +2825,11 @@ void Simulation::ProcessEntityOrders() {
         }
         if (entity.attackCooldownTicks > 0) {
             --entity.attackCooldownTicks;
+        }
+        if (IsAegisPost(entity)) {
+            entity.order = {};
+            ProcessAegisDefense(entity, pendingDamage);
+            continue;
         }
         switch (entity.order.type) {
             case OrderType::None:
@@ -3080,6 +3170,13 @@ void Simulation::ResolveMineralCovers() {
     }
 }
 
+void Simulation::ResolveAegisPower() {
+    for (Entity& entity : entities_) {
+        entity.aegisPowered =
+            IsAegisPost(entity) && IsAegisNetworkPowered(entity);
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
@@ -3088,6 +3185,7 @@ void Simulation::Step() {
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
     ResolveMineralCovers();
+    ResolveAegisPower();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -3101,6 +3199,7 @@ void Simulation::Step() {
     ResolveWarformMolts();
     ResolveMineralCovers();
     RemoveDestroyedEntities();
+    ResolveAegisPower();
     ResolveExpiredReshapes();
     UpdateVisibility();
 }
@@ -3989,6 +4088,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.vibrationDetection.listeningSpineRadiusRaw);
     writer.U64(config_.rules.vibrationDetection.signatureLingerTicks);
     writer.I32(config_.rules.vibrationDetection.contactResolutionRaw);
+    writer.I32(config_.rules.poweredAegis.connectionRadiusRaw);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -4067,6 +4167,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(
             entity.mineralCoverUnderlyingTerrain));
         writer.U64(entity.vibrationSignatureUntilTick);
+        writer.U8(entity.aegisPowered ? 1 : 0);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -4200,7 +4301,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.vibrationDetection.resonantRadiusRaw) ||
         !reader.I32(config.rules.vibrationDetection.listeningSpineRadiusRaw) ||
         !reader.U64(config.rules.vibrationDetection.signatureLingerTicks) ||
-        !reader.I32(config.rules.vibrationDetection.contactResolutionRaw)) {
+        !reader.I32(config.rules.vibrationDetection.contactResolutionRaw) ||
+        !reader.I32(config.rules.poweredAegis.connectionRadiusRaw)) {
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
@@ -4316,6 +4418,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t pendingWarformAdaptation = 0;
         std::uint8_t temporaryMineralCover = 0;
         std::uint8_t mineralCoverUnderlyingTerrain = 0;
+        std::uint8_t aegisPowered = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -4363,7 +4466,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U32(entity.mineralCoverCreator) ||
             !reader.U64(entity.mineralCoverUntilTick) ||
             !reader.U8(mineralCoverUnderlyingTerrain) ||
-            !reader.U64(entity.vibrationSignatureUntilTick)) {
+            !reader.U64(entity.vibrationSignatureUntilTick) ||
+            !reader.U8(aegisPowered)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -4387,6 +4491,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             pendingWarformAdaptation >
                 static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
             temporaryMineralCover > 1 ||
+            aegisPowered > 1 ||
             mineralCoverUnderlyingTerrain >
                 static_cast<std::uint8_t>(Terrain::Scarred) ||
             (entity.owner != kNeutralPlayer &&
@@ -4482,6 +4587,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              (faction !=
                   static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
               type != static_cast<std::uint8_t>(EntityType::HeavyUnit))) ||
+            (aegisPowered != 0 &&
+             (faction !=
+                  static_cast<std::uint8_t>(Faction::MeridianCompact) ||
+              type !=
+                  static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
+              completed == 0)) ||
             (temporaryMineralCover == 0 &&
              (entity.mineralCoverCreator != 0 ||
               entity.mineralCoverUntilTick != 0 ||
@@ -4532,6 +4643,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.temporaryMineralCover = temporaryMineralCover != 0;
         entity.mineralCoverUnderlyingTerrain =
             static_cast<Terrain>(mineralCoverUnderlyingTerrain);
+        entity.aegisPowered = aegisPowered != 0;
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;
@@ -4557,6 +4669,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
          simulation.nextEntityId_ <= simulation.entities_.back().id)) {
         SetError(error, "snapshot next entity identifier is invalid");
         return std::nullopt;
+    }
+    for (const Entity& entity : simulation.entities_) {
+        if (entity.aegisPowered !=
+            simulation.IsAegisNetworkPowered(entity)) {
+            SetError(error, "snapshot Aegis power state is invalid");
+            return std::nullopt;
+        }
     }
     std::map<std::pair<std::int32_t, std::int32_t>, EntityId> mineralCoverTiles;
     for (const Entity& entity : simulation.entities_) {

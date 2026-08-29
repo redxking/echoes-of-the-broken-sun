@@ -77,6 +77,10 @@ struct FEchoesBuildingContent final
     int32 VibrationDetectionRadiusCentimeters = 0;
     int32 VibrationSignatureLingerTicks = 0;
     int32 VibrationContactResolutionCentimeters = 0;
+    int32 PoweredDefenseConnectionRadiusCentimeters = 0;
+    int32 PoweredDefenseDamage = 0;
+    int32 PoweredDefenseRangeCentimeters = 0;
+    int32 PoweredDefenseCooldownTicks = 0;
 };
 
 struct FEchoesFutureWellContent final

@@ -928,6 +928,19 @@ void AEchoesHUD::DrawTacticalMinimap(
             DrawRect(FLinearColor::White, X - MarkerSize, Y - MarkerSize,
                      MarkerSize * 2.0f, MarkerSize * 2.0f);
         }
+        if (Entity.aegisPowered &&
+            Entity.faction == echoes::sim::Faction::MeridianCompact &&
+            Entity.type == echoes::sim::EntityType::UtilityStructure)
+        {
+            const float PowerRadius = MarkerSize + 2.5f;
+            const FLinearColor PowerColor = bHighContrast
+                ? FLinearColor::White
+                : FLinearColor(1.0f, 0.84f, 0.18f);
+            DrawLine(X, Y - PowerRadius, X + PowerRadius, Y, PowerColor, 1.5f);
+            DrawLine(X + PowerRadius, Y, X, Y + PowerRadius, PowerColor, 1.5f);
+            DrawLine(X, Y + PowerRadius, X - PowerRadius, Y, PowerColor, 1.5f);
+            DrawLine(X - PowerRadius, Y, X, Y - PowerRadius, PowerColor, 1.5f);
+        }
         const float HalfMarker = MarkerSize * 0.5f;
         switch (Entity.owner)
         {

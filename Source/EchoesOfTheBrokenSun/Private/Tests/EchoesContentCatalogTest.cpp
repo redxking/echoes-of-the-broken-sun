@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("c5f516ab05fcdcb06716b2d6a6786612ba4cb19267ac7fd3bbd4f206efedd1db")));
+        FString(TEXT("e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -122,6 +122,15 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               static_cast<echoes::sim::Tick>(40));
     TestEqual(TEXT("Vibration contact resolution enters fixed-point rules"),
               Rules.vibrationDetection.contactResolutionRaw, 2048);
+    TestEqual(TEXT("Aegis power connection radius enters fixed-point rules"),
+              Rules.poweredAegis.connectionRadiusRaw, 8192);
+    TestEqual(TEXT("Powered Aegis range enters fixed-point rules"),
+              Rules.archetypes[0][9].attackRangeRaw, 9216);
+    TestEqual(TEXT("Powered Aegis damage enters simulation rules"),
+              Rules.archetypes[0][9].attackDamage, 28);
+    TestEqual(TEXT("Powered Aegis cadence enters simulation rules"),
+              Rules.archetypes[0][9].attackPeriodTicks,
+              static_cast<echoes::sim::Tick>(20));
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -212,6 +221,19 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
                   ListeningSpine->VibrationDetectionRadiusCentimeters, 2600);
         TestEqual(TEXT("Listening Spine signature linger is authored"),
                   ListeningSpine->VibrationSignatureLingerTicks, 40);
+    }
+    const FEchoesBuildingContent* Aegis =
+        Catalog.FindBuilding(TEXT("mc_aegis_post"));
+    if (TestNotNull(TEXT("Meridian Aegis is addressable by stable ID"), Aegis))
+    {
+        TestEqual(TEXT("Aegis power connection radius is authored"),
+                  Aegis->PoweredDefenseConnectionRadiusCentimeters, 800);
+        TestEqual(TEXT("Aegis powered damage is authored"),
+                  Aegis->PoweredDefenseDamage, 28);
+        TestEqual(TEXT("Aegis powered range is authored"),
+                  Aegis->PoweredDefenseRangeCentimeters, 900);
+        TestEqual(TEXT("Aegis powered cooldown is authored"),
+                  Aegis->PoweredDefenseCooldownTicks, 20);
     }
     const FEchoesBuildingContent* GrowthBasin =
         Catalog.FindBuilding(TEXT("ka_growth_basin"));

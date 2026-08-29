@@ -571,7 +571,30 @@ bool FEchoesContentCatalog::BuildSimulationRules(
                 static_cast<int32>(
                     static_cast<int64>(
                         Building->VibrationDetectionRadiusCentimeters) *
-                    echoes::sim::kFixedScale / 100);
+                        echoes::sim::kFixedScale / 100);
+        }
+        if (Binding.Faction == echoes::sim::Faction::MeridianCompact &&
+            Binding.Type == echoes::sim::EntityType::UtilityStructure)
+        {
+            if (Building->PoweredDefenseConnectionRadiusCentimeters <= 0 ||
+                Building->PoweredDefenseDamage <= 0 ||
+                Building->PoweredDefenseRangeCentimeters <= 0 ||
+                Building->PoweredDefenseCooldownTicks <= 0)
+            {
+                OutError = TEXT("SIM_RULES_POWERED_AEGIS_INVALID");
+                return false;
+            }
+            OutRules.poweredAegis.connectionRadiusRaw = static_cast<int32>(
+                static_cast<int64>(
+                    Building->PoweredDefenseConnectionRadiusCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            Rules.attackDamage = Building->PoweredDefenseDamage;
+            Rules.attackRangeRaw = static_cast<int32>(
+                static_cast<int64>(
+                    Building->PoweredDefenseRangeCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            Rules.attackPeriodTicks = static_cast<echoes::sim::Tick>(
+                Building->PoweredDefenseCooldownTicks);
         }
     }
 
@@ -846,6 +869,18 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
             if (!ReadRequiredInteger(*VibrationDetection, TEXT("radius_cm"), Building.VibrationDetectionRadiusCentimeters, Path + TEXT(".vibration_detection"), OutError, 1) ||
                 !ReadRequiredInteger(*VibrationDetection, TEXT("signature_linger_ticks"), Building.VibrationSignatureLingerTicks, Path + TEXT(".vibration_detection"), OutError, 1) ||
                 !ReadRequiredInteger(*VibrationDetection, TEXT("contact_resolution_cm"), Building.VibrationContactResolutionCentimeters, Path + TEXT(".vibration_detection"), OutError, 100))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* PoweredDefense = nullptr;
+        if (Object->TryGetObjectField(TEXT("powered_defense"), PoweredDefense) &&
+            PoweredDefense != nullptr && PoweredDefense->IsValid())
+        {
+            if (!ReadRequiredInteger(*PoweredDefense, TEXT("connection_radius_cm"), Building.PoweredDefenseConnectionRadiusCentimeters, Path + TEXT(".powered_defense"), OutError, 1) ||
+                !ReadRequiredInteger(*PoweredDefense, TEXT("damage"), Building.PoweredDefenseDamage, Path + TEXT(".powered_defense"), OutError, 1) ||
+                !ReadRequiredInteger(*PoweredDefense, TEXT("range_cm"), Building.PoweredDefenseRangeCentimeters, Path + TEXT(".powered_defense"), OutError, 1) ||
+                !ReadRequiredInteger(*PoweredDefense, TEXT("cooldown_ticks"), Building.PoweredDefenseCooldownTicks, Path + TEXT(".powered_defense"), OutError, 1))
             {
                 return false;
             }

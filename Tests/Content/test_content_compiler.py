@@ -80,6 +80,9 @@ class ContentCompilerTests(unittest.TestCase):
         listening_spine = next(item for item in first_pack["buildings"] if item["id"] == "ka_listening_spine")
         self.assertEqual(listening_spine["vibration_detection"]["radius_cm"], 2600)
         self.assertEqual(listening_spine["vibration_detection"]["signature_linger_ticks"], 40)
+        aegis = next(item for item in first_pack["buildings"] if item["id"] == "mc_aegis_post")
+        self.assertEqual(aegis["powered_defense"]["connection_radius_cm"], 800)
+        self.assertEqual(aegis["powered_defense"]["range_cm"], 900)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -233,6 +236,21 @@ class ContentCompilerTests(unittest.TestCase):
         aegis["vibration_detection"] = copy.deepcopy(spine["vibration_detection"])
         self.write("buildings.json", buildings)
         self.assert_invalid("reserved for the Kharuun detection structure")
+
+    def test_missing_aegis_powered_defense_rules_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        aegis = next(item for item in buildings["buildings"] if item["id"] == "mc_aegis_post")
+        del aegis["powered_defense"]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("Meridian defense structure requires authored powered-defense rules")
+
+    def test_powered_defense_rules_on_other_buildings_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        aegis = next(item for item in buildings["buildings"] if item["id"] == "mc_aegis_post")
+        power_link = next(item for item in buildings["buildings"] if item["id"] == "mc_power_link")
+        power_link["powered_defense"] = copy.deepcopy(aegis["powered_defense"])
+        self.write("buildings.json", buildings)
+        self.assert_invalid("reserved for the Meridian defense structure")
 
 
 if __name__ == "__main__":

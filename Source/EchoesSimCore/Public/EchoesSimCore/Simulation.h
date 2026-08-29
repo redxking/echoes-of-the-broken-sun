@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 17;
-inline constexpr std::uint32_t kReplayVersion = 17;
+inline constexpr std::uint32_t kSnapshotVersion = 18;
+inline constexpr std::uint32_t kReplayVersion = 18;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -385,6 +385,14 @@ struct VibrationDetectionRules final {
                            const VibrationDetectionRules&) = default;
 };
 
+/** Authored Meridian Aegis power-network connection behavior. */
+struct PoweredAegisRules final {
+    std::int32_t connectionRadiusRaw = 8 * kFixedScale;
+
+    friend bool operator==(const PoweredAegisRules&,
+                           const PoweredAegisRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -400,6 +408,7 @@ struct SimulationRules final {
     WarformAdaptationRules warformAdaptation{};
     MineralCoverRules mineralCover{};
     VibrationDetectionRules vibrationDetection{};
+    PoweredAegisRules poweredAegis{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -470,6 +479,7 @@ struct Entity final {
     Tick mineralCoverUntilTick = 0;
     Terrain mineralCoverUnderlyingTerrain = Terrain::Open;
     Tick vibrationSignatureUntilTick = 0;
+    bool aegisPowered = false;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -713,6 +723,8 @@ private:
     [[nodiscard]] bool IsCairnback(const Entity& entity) const;
     [[nodiscard]] std::int32_t VibrationDetectionRadiusRaw(
         const Entity& entity) const;
+    [[nodiscard]] bool IsAegisPost(const Entity& entity) const;
+    [[nodiscard]] bool IsAegisNetworkPowered(const Entity& aegis) const;
     [[nodiscard]] EntityId InterceptingMineralCover(
         const Entity& attacker,
         const Entity& target) const;
@@ -743,6 +755,7 @@ private:
     void ResolveWaystoneTransitions();
     void ResolveWarformMolts();
     void ResolveMineralCovers();
+    void ResolveAegisPower();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();
@@ -762,6 +775,9 @@ private:
         std::vector<PendingDamage>& pendingDamage);
     void ProcessPatrol(
         Entity& attacker,
+        std::vector<PendingDamage>& pendingDamage);
+    void ProcessAegisDefense(
+        Entity& aegis,
         std::vector<PendingDamage>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
     void ProcessProduction();

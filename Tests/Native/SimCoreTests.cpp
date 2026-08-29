@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v17 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1656 + 5 * mapTileCount;
+    // Snapshot v18 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1660 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1536, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1540, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1544, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1548, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -2270,6 +2270,117 @@ void TestVibrationDetectionAndAnonymousSignatures() {
     REQUIRE(uncovered.CreatePlayerView(1)->VibrationSignatures().empty());
 }
 
+void TestPoweredAegisNetworkAndCounterplay() {
+    SimulationConfig config{64, 64, 20, 0x4145474953504f57ULL};
+    config.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
+    auto& aegisRules =
+        config.rules.archetypes[static_cast<std::size_t>(
+            Faction::MeridianCompact)]
+                               [static_cast<std::size_t>(
+                                   EntityType::UtilityStructure)];
+    aegisRules.attackRangeRaw = 9 * kFixedScale;
+    aegisRules.attackDamage = 28;
+    aegisRules.attackPeriodTicks = 1;
+    auto& breakerRules =
+        config.rules.archetypes[static_cast<std::size_t>(
+            Faction::KharuunAssemblies)]
+                               [static_cast<std::size_t>(
+                                   EntityType::HeavyUnit)];
+    breakerRules.attackRangeRaw = 5 * kFixedScale;
+    breakerRules.attackDamage = 1000;
+    breakerRules.attackPeriodTicks = 1;
+
+    Simulation simulation(config);
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId anchor = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(2, 2));
+    const EntityId firstLink = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(9, 2));
+    const EntityId bridgeLink = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(16, 2));
+    const EntityId aegis = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::UtilityStructure,
+        Vec2::FromTiles(23, 2));
+    const EntityId target = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(28, 2));
+    const EntityId breaker = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(16, 4));
+    REQUIRE(anchor != 0 && firstLink != 0 && bridgeLink != 0 &&
+            aegis != 0 && target != 0 && breaker != 0);
+    REQUIRE(simulation.FindEntity(aegis)->aegisPowered);
+    REQUIRE(simulation.FindEntity(aegis)->attackRangeRaw == 9 * kFixedScale);
+    REQUIRE(simulation.FindEntity(aegis)->attackDamage == 28);
+
+    const std::optional<PlayerView> opponentView =
+        simulation.CreatePlayerView(1);
+    REQUIRE(opponentView.has_value());
+    const auto observedAegis = std::find_if(
+        opponentView->Entities().begin(), opponentView->Entities().end(),
+        [aegis](const Entity& entity) { return entity.id == aegis; });
+    REQUIRE(observedAegis != opponentView->Entities().end());
+    REQUIRE(observedAegis->aegisPowered);
+    REQUIRE(observedAegis->attackDamage == 0);
+    REQUIRE(observedAegis->attackRangeRaw == 0);
+
+    std::string error;
+    const std::vector<std::uint8_t> poweredSnapshot =
+        simulation.SaveSnapshot();
+    const std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(poweredSnapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->Config().rules.poweredAegis ==
+            simulation.Config().rules.poweredAegis);
+    REQUIRE(restored->FindEntity(aegis)->aegisPowered);
+
+    std::vector<std::uint8_t> forgedPower = poweredSnapshot;
+    constexpr std::size_t kSerializedEntitySize = 202;
+    constexpr std::size_t kAegisEntityIndex = 3;
+    const std::size_t aegisPowerOffset =
+        SnapshotFirstEntityOffset(64U * 64U) +
+        kAegisEntityIndex * kSerializedEntitySize +
+        (kSerializedEntitySize - 1);
+    REQUIRE(forgedPower[aegisPowerOffset] == 1);
+    forgedPower[aegisPowerOffset] = 0;
+    ResignSnapshot(forgedPower);
+    REQUIRE(!Simulation::LoadSnapshot(forgedPower, &error).has_value());
+    REQUIRE(error == "snapshot Aegis power state is invalid");
+
+    simulation.CaptureReplayBaseline();
+    const std::int32_t targetHealth = simulation.FindEntity(target)->hitPoints;
+    Command sever = MakeCommand(
+        0, 1, 1, CommandType::Attack, breaker);
+    sever.target = bridgeLink;
+    REQUIRE(simulation.QueueCommand(sever));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(bridgeLink) == nullptr);
+    REQUIRE(!simulation.FindEntity(aegis)->aegisPowered);
+    REQUIRE(simulation.FindEntity(target)->hitPoints == targetHealth - 28);
+    const std::int32_t healthAfterPowerLoss =
+        simulation.FindEntity(target)->hitPoints;
+    simulation.Step(3);
+    REQUIRE(simulation.FindEntity(target)->hitPoints == healthAfterPowerLoss);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    const std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    Simulation isolated(config);
+    REQUIRE(isolated.AddPlayer(
+        0, Faction::MeridianCompact, {0, 0}));
+    const EntityId isolatedAegis = isolated.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::UtilityStructure,
+        Vec2::FromTiles(20, 20));
+    REQUIRE(isolatedAegis != 0);
+    REQUIRE(!isolated.FindEntity(isolatedAegis)->aegisPowered);
+}
+
 }  // namespace
 
 int main() {
@@ -2313,6 +2424,8 @@ int main() {
          TestCairnbackTemporaryMineralCover},
         {"vibration detection and anonymous signatures",
          TestVibrationDetectionAndAnonymousSignatures},
+        {"powered Aegis network and counterplay",
+         TestPoweredAegisNetworkAndCounterplay},
     };
 
     std::size_t passed = 0;

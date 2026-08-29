@@ -20,10 +20,11 @@ mkdir -p "$project_root/BuildArtifacts"
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=c5f516ab05fcdcb06716b2d6a6786612ba4cb19267ac7fd3bbd4f206efedd1db source=canonical' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=c5f516ab05fcdcb06716b2d6a6786612ba4cb19267ac7fd3bbd4f206efedd1db rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4 source=canonical' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_POWERED_AEGIS_READY\] powered=1 publicState=true networkCounterplay=true' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_AI_PLAYER_VIEW\] player=[1-9][0-9]* owned=[1-9][0-9]* observed=[1-9][0-9]* hiddenEntitiesExcluded=true opponentInternalsRedacted=true authoritativeWorldHandle=false' "$log" ||
