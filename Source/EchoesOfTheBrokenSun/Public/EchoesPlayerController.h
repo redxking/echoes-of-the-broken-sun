@@ -44,6 +44,8 @@ public:
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
     void ToggleTechnologyPanel();
+    void FocusPreviousTechnologyTier();
+    void FocusNextTechnologyTier();
     void TogglePauseMenu();
     bool HandleTechnologyPanelPointer(const FVector2D& ScreenPosition);
     [[nodiscard]] FString GetLocalFactionLabel() const;
@@ -67,6 +69,10 @@ public:
     [[nodiscard]] bool IsTechnologyPanelVisible() const
     {
         return bTechnologyPanelVisible;
+    }
+    [[nodiscard]] int32 GetTechnologyPanelFocusedTier() const
+    {
+        return TechnologyPanelFocusedTier;
     }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
@@ -159,6 +165,7 @@ private:
     FString StatusMessage;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
+    int32 TechnologyPanelFocusedTier = 0;
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;

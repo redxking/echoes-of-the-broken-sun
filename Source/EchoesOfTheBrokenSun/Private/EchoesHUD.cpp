@@ -514,6 +514,8 @@ void AEchoesHUD::DrawTechnologyPanel(
         const FBox2D& Row = Layout.TechnologyRows[TierIndex];
         const bool bComplete = Player->HasCompletedResearch(Technology);
         const bool bActive = Player->activeResearch == Technology;
+        const bool bFocused =
+            EchoesController->GetTechnologyPanelFocusedTier() == TierIndex;
         const bool bPrerequisiteMet =
             Rules != nullptr &&
             (Rules->prerequisite == echoes::sim::ResearchType::None ||
@@ -570,6 +572,15 @@ void AEchoesHUD::DrawTechnologyPanel(
                       : FLinearColor(0.025f, 0.055f, 0.09f, 0.94f);
         DrawRect(RowColor, Row.Min.X, Row.Min.Y,
                  Row.GetSize().X, Row.GetSize().Y);
+        if (bFocused)
+        {
+            DrawLine(Row.Min.X, Row.Min.Y, Row.Max.X, Row.Min.Y,
+                     AccentColor, 3.0f * Scale);
+            DrawLine(Row.Min.X, Row.Max.Y, Row.Max.X, Row.Max.Y,
+                     AccentColor, 3.0f * Scale);
+            DrawLine(Row.Max.X, Row.Min.Y, Row.Max.X, Row.Max.Y,
+                     AccentColor, 3.0f * Scale);
+        }
         DrawRect(
             FLinearColor(AccentColor.R, AccentColor.G, AccentColor.B, 0.7f),
             Row.Min.X, Row.Min.Y, 4.0f * Scale, Row.GetSize().Y);
@@ -624,7 +635,7 @@ void AEchoesHUD::DrawTechnologyPanel(
     }
 
     DrawText(
-        TEXT("LMB: choose tier    Enter / Shift+R: next available    F2 / Escape / P: close"),
+        TEXT("Up/Down: focus    Enter: activate    Shift+R: next available    F2 / Escape / P: close"),
         AccentColor,
         TextX,
         Layout.Origin.Y + Layout.Size.Y - 38.0f * Scale,

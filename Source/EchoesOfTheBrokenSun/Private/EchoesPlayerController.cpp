@@ -243,7 +243,7 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     }
     else if (bTechnologyPanelVisible)
     {
-        ResearchNextTechnology();
+        ResearchTechnologyByTier(TechnologyPanelFocusedTier);
     }
     else if (bPauseMenuVisible)
     {
@@ -398,6 +398,16 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::ToggleTechnologyPanel);
+    InputComponent->BindAction(
+        TEXT("TechnologyFocusPrevious"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::FocusPreviousTechnologyTier);
+    InputComponent->BindAction(
+        TEXT("TechnologyFocusNext"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::FocusNextTechnologyTier);
     InputComponent->BindAction(
         TEXT("AttackMoveAtCursor"),
         IE_Pressed,
@@ -2325,6 +2335,20 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
     }
     else
     {
+        const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+        const echoes::sim::PlayerState* Player =
+            Simulation != nullptr
+                ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+                : nullptr;
+        const echoes::sim::ResearchType FirstTechnology =
+            Player != nullptr &&
+                    Player->faction == echoes::sim::Faction::KharuunAssemblies
+                ? echoes::sim::ResearchType::KharuunEchoCartography
+                : echoes::sim::ResearchType::MeridianPrismaticTargeting;
+        TechnologyPanelFocusedTier =
+            Player != nullptr && Player->HasCompletedResearch(FirstTechnology)
+                ? 1
+                : 0;
         bTechnologyPanelWasScenarioPaused = Bridge->IsScenarioPaused();
         bTechnologyPanelVisible = true;
         bSelectionButtonDown = false;
@@ -2332,15 +2356,46 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
         SetIgnoreMoveInput(true);
         SetIgnoreLookInput(true);
         SetStatusMessage(
-            TEXT("TECHNOLOGY ARCHIVE — click a tier or press Enter for the next available project; F2, Escape, or P closes."),
+            TEXT("TECHNOLOGY ARCHIVE — Up/Down chooses a tier; Enter activates it; Shift+R chooses the next available project."),
             3600.0f);
     }
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_TECHNOLOGY_PANEL] visible=%s paused=%s pointerRows=true keyboardConfirm=true"),
+        TEXT("[ECHOES_TECHNOLOGY_PANEL] visible=%s paused=%s focusedTier=%d pointerRows=true keyboardFocus=true keyboardConfirm=true"),
         bTechnologyPanelVisible ? TEXT("true") : TEXT("false"),
-        Bridge->IsScenarioPaused() ? TEXT("true") : TEXT("false"));
+        Bridge->IsScenarioPaused() ? TEXT("true") : TEXT("false"),
+        TechnologyPanelFocusedTier + 1);
+}
+
+void AEchoesPlayerController::FocusPreviousTechnologyTier()
+{
+    if (!bTechnologyPanelVisible)
+    {
+        return;
+    }
+    TechnologyPanelFocusedTier =
+        FMath::Clamp(TechnologyPanelFocusedTier - 1, 0, 1);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("TECHNOLOGY ARCHIVE — Tier %d focused; press Enter to activate."),
+            TechnologyPanelFocusedTier + 1),
+        3600.0f);
+}
+
+void AEchoesPlayerController::FocusNextTechnologyTier()
+{
+    if (!bTechnologyPanelVisible)
+    {
+        return;
+    }
+    TechnologyPanelFocusedTier =
+        FMath::Clamp(TechnologyPanelFocusedTier + 1, 0, 1);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("TECHNOLOGY ARCHIVE — Tier %d focused; press Enter to activate."),
+            TechnologyPanelFocusedTier + 1),
+        3600.0f);
 }
 
 bool AEchoesPlayerController::HandleTechnologyPanelPointer(
@@ -2372,6 +2427,7 @@ bool AEchoesPlayerController::HandleTechnologyPanelPointer(
     {
         if (Layout.TechnologyRows[TierIndex].IsInsideOrOn(ScreenPosition))
         {
+            TechnologyPanelFocusedTier = TierIndex;
             ResearchTechnologyByTier(TierIndex);
             return true;
         }

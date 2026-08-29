@@ -141,6 +141,10 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ResearchNext"), EKeys::R, false, true));
         TestTrue(TEXT("Technology archive input is mapped"),
                  HasAction(TEXT("ToggleTechnologyPanel"), EKeys::F2));
+        TestTrue(TEXT("Technology archive previous-tier input is mapped"),
+                 HasAction(TEXT("TechnologyFocusPrevious"), EKeys::Up));
+        TestTrue(TEXT("Technology archive next-tier input is mapped"),
+                 HasAction(TEXT("TechnologyFocusNext"), EKeys::Down));
     }
 
     echoes::sim::SimulationConfig Config;

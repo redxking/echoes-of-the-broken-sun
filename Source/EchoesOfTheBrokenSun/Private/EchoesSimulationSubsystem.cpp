@@ -9,7 +9,9 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
+#include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
 #include <algorithm>
@@ -35,6 +37,23 @@ using echoes::sim::Vec2;
     return Value == Faction::KharuunAssemblies
                ? TEXT("KharuunAssemblies")
                : TEXT("MeridianCompact");
+}
+
+[[nodiscard]] const TCHAR* ResearchStableName(echoes::sim::ResearchType Value)
+{
+    switch (Value)
+    {
+        case echoes::sim::ResearchType::MeridianPrismaticTargeting:
+            return TEXT("MeridianPrismaticTargeting");
+        case echoes::sim::ResearchType::MeridianHorizonLattice:
+            return TEXT("MeridianHorizonLattice");
+        case echoes::sim::ResearchType::KharuunEchoCartography:
+            return TEXT("KharuunEchoCartography");
+        case echoes::sim::ResearchType::KharuunAncestralEdge:
+            return TEXT("KharuunAncestralEdge");
+        default:
+            return TEXT("None");
+    }
 }
 
 [[nodiscard]] bool IsGlassScarCrossing(int32 TileX)
@@ -81,9 +100,13 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bResearchPresentationScenario = false;
+    bLoggedResearchPresentationActive = false;
+    bLoggedResearchPresentationComplete = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     LocalFaction = Faction::MeridianCompact;
+    ResearchPresentationTechnology = echoes::sim::ResearchType::None;
     FogView.Reset();
     TerrainView.Reset();
 }
@@ -128,6 +151,14 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             TEXT("[ECHOES_SIM_ALREADY_READY] Prototype simulation start ignored."));
         return true;
     }
+
+#if UE_BUILD_SHIPPING
+    const bool bUseResearchPresentation = false;
+#else
+    const bool bUseResearchPresentation =
+        !bUseStressScenario &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesResearchPresentation"));
+#endif
 
     const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
@@ -198,7 +229,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
-            ResourcePool{500, 30}) ||
+            bUseResearchPresentation
+                ? ResourcePool{1000, 500}
+                : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
             ScenarioOpponentFaction,
@@ -338,6 +371,47 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
 
     Simulation->CaptureReplayBaseline();
+    ResearchPresentationTechnology = echoes::sim::ResearchType::None;
+    if (bUseResearchPresentation)
+    {
+        uint32 ProducerId = 0;
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner == LocalPlayerId &&
+                Entity.type == EntityType::Barracks)
+            {
+                ProducerId = Entity.id;
+                break;
+            }
+        }
+        ResearchPresentationTechnology =
+            ScenarioLocalFaction == Faction::MeridianCompact
+                ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+                : echoes::sim::ResearchType::KharuunEchoCartography;
+        echoes::sim::Command Command{};
+        Command.executeTick = Simulation->CurrentTick() + 1;
+        Command.player = LocalPlayerId;
+        Command.sequence = 1;
+        Command.type = echoes::sim::CommandType::Research;
+        Command.actor = ProducerId;
+        Command.researchType = ResearchPresentationTechnology;
+        std::string Rejection;
+        if (ProducerId == 0 || !Simulation->QueueCommand(Command, &Rejection))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] producer=%u reason=%s"),
+                ProducerId,
+                ProducerId == 0
+                    ? TEXT("local production structure unavailable")
+                    : UTF8_TO_TCHAR(Rejection.c_str()));
+            Simulation.Reset();
+            ResearchPresentationTechnology =
+                echoes::sim::ResearchType::None;
+            return false;
+        }
+    }
     int32 StressAttackMoveCommands = 0;
     if (bUseStressScenario)
     {
@@ -390,7 +464,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         }
     }
     FixedTimeAccumulator = 0.0;
-    NextPlayerCommandSequence = 1;
+    NextPlayerCommandSequence = bUseResearchPresentation ? 2 : 1;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
@@ -399,6 +473,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bResearchPresentationScenario = bUseResearchPresentation;
+    bLoggedResearchPresentationActive = false;
+    bLoggedResearchPresentationComplete = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -456,6 +533,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Display,
             TEXT("[ECHOES_POWERED_AEGIS_READY] powered=%d publicState=true networkCounterplay=true"),
             PoweredAegisCount);
+        if (bResearchPresentationScenario)
+        {
+            const echoes::sim::PlayerState* Player =
+                Simulation->FindPlayer(LocalPlayerId);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_RESEARCH_PRESENTATION_READY] technology=%s producerQueued=true controlled=true release=false material=%d dawn=%d"),
+                ResearchStableName(ResearchPresentationTechnology),
+                Player != nullptr ? Player->resources.material : 0,
+                Player != nullptr ? Player->resources.dawnshards : 0);
+        }
     }
     if (bStressScenario)
     {
@@ -492,9 +581,13 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bResearchPresentationScenario = false;
+    bLoggedResearchPresentationActive = false;
+    bLoggedResearchPresentationComplete = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
+    ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
 bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
@@ -941,6 +1034,36 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                     static_cast<unsigned long long>(Simulation->StateChecksum()),
                     EntityViews.Num());
                 bLoggedFirstTick = true;
+            }
+            if (bResearchPresentationScenario)
+            {
+                const echoes::sim::PlayerState* Player =
+                    Simulation->FindPlayer(LocalPlayerId);
+                if (Player != nullptr &&
+                    !bLoggedResearchPresentationActive &&
+                    Player->activeResearch == ResearchPresentationTechnology)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_RESEARCH_PRESENTATION_ACTIVE] technology=%s progress=%d required=%d controlled=true"),
+                        ResearchStableName(ResearchPresentationTechnology),
+                        Player->researchProgress,
+                        Player->researchRequired);
+                    bLoggedResearchPresentationActive = true;
+                }
+                if (Player != nullptr &&
+                    !bLoggedResearchPresentationComplete &&
+                    Player->HasCompletedResearch(
+                        ResearchPresentationTechnology))
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_RESEARCH_PRESENTATION_COMPLETE] technology=%s completed=true controlled=true"),
+                        ResearchStableName(ResearchPresentationTechnology));
+                    bLoggedResearchPresentationComplete = true;
+                }
             }
             if (bStressScenario && !bLoggedStressCombat &&
                 Simulation->CurrentTick() >= 20)

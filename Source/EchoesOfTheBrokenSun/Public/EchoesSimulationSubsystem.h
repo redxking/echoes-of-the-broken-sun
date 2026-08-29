@@ -180,9 +180,14 @@ private:
     bool bLoggedAiAdaptation = false;
     bool bLoggedAiMineralCover = false;
     bool bLoggedAiVibrationResponse = false;
+    bool bResearchPresentationScenario = false;
+    bool bLoggedResearchPresentationActive = false;
+    bool bLoggedResearchPresentationComplete = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;
+    echoes::sim::ResearchType ResearchPresentationTechnology =
+        echoes::sim::ResearchType::None;
 };

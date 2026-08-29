@@ -152,6 +152,24 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
                            TEXT("ActionName=\"ToggleTechnologyPanel\"")) &&
                        Mapping.Contains(TEXT("Key=F2"));
             }));
+    TestTrue(
+        TEXT("Up technology archive focus mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"TechnologyFocusPrevious\"")) &&
+                       Mapping.Contains(TEXT("Key=Up"));
+            }));
+    TestTrue(
+        TEXT("Down technology archive focus mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"TechnologyFocusNext\"")) &&
+                       Mapping.Contains(TEXT("Key=Down"));
+            }));
 
     const FEchoesTechnologyPanelLayout PanelLayout =
         FEchoesTechnologyPanelLayout::Build(FVector2D(1600.0f, 900.0f), 1.0f);

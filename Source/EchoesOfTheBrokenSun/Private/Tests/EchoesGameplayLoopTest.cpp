@@ -160,12 +160,20 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
                  Bridge->IsScenarioPaused());
         TestTrue(TEXT("Technology archive is a modal input boundary"),
                  BriefingController->IsModalOverlayVisible());
+        TestEqual(TEXT("Technology archive initially focuses Tier 1"),
+                  BriefingController->GetTechnologyPanelFocusedTier(), 0);
+        BriefingController->FocusNextTechnologyTier();
+        TestEqual(TEXT("Down focuses Tier 2"),
+                  BriefingController->GetTechnologyPanelFocusedTier(), 1);
+        BriefingController->FocusPreviousTechnologyTier();
+        TestEqual(TEXT("Up returns focus to Tier 1"),
+                  BriefingController->GetTechnologyPanelFocusedTier(), 0);
         Bridge->Tick(0.5f);
         TestEqual(TEXT("Technology archive prevents simulation advancement"),
                   Bridge->GetSimulation()->CurrentTick(),
                   TechnologyPausedTick);
         BriefingController->ConfirmPrimaryAction();
-        TestTrue(TEXT("Enter uses the archive research action"),
+        TestTrue(TEXT("Enter activates the focused archive tier"),
                  BriefingController->GetStatusMessage().Contains(
                      TEXT("RESEARCH_PRODUCER_INVALID")));
         BriefingController->TogglePauseMenu();
