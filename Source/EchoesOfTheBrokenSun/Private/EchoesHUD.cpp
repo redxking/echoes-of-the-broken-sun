@@ -229,6 +229,26 @@ void AEchoesHUD::DrawHUD()
             if (const AEchoesEntityView* View = Bridge->FindEntityView(SelectedIds[0]))
             {
                 SelectedType = FString::Printf(TEXT(" (%s)"), *View->GetDisplayName());
+                if (View->GetPendingWarformAdaptation() ==
+                    echoes::sim::WarformAdaptation::Carapace)
+                {
+                    SelectedType += TEXT(" — molting CARAPACE");
+                }
+                else if (View->GetPendingWarformAdaptation() ==
+                         echoes::sim::WarformAdaptation::Striker)
+                {
+                    SelectedType += TEXT(" — molting STRIKER");
+                }
+                else if (View->GetWarformAdaptation() ==
+                         echoes::sim::WarformAdaptation::Carapace)
+                {
+                    SelectedType += TEXT(" — CARAPACE");
+                }
+                else if (View->GetWarformAdaptation() ==
+                         echoes::sim::WarformAdaptation::Striker)
+                {
+                    SelectedType += TEXT(" — STRIKER");
+                }
             }
             if (const echoes::sim::Entity* Entity =
                     Bridge->FindEntity(SelectedIds[0]);
@@ -267,7 +287,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     DrawText(
-        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [Arrows] Move  [Space] Order"),
+        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order"),
         SecondaryColor,
         TextX,
         HudY(90.0f),

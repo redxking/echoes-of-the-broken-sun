@@ -342,6 +342,15 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                            TEXT("ActionName=\"KeyboardTargetRight\"")) &&
                        Mapping.Contains(TEXT("Key=Right"));
             }));
+    TestTrue(
+        TEXT("End selected-view target-snap mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"SnapKeyboardTargetToSelection\"")) &&
+                       Mapping.Contains(TEXT("Key=End"));
+            }));
 
     Controller->Destroy();
     Bridge->StopPrototypeScenario();

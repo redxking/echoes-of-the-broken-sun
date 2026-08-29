@@ -147,6 +147,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("KeyboardTargetLeft"), EKeys::Left));
         TestTrue(TEXT("Keyboard target-right input is mapped"),
                  HasAction(TEXT("KeyboardTargetRight"), EKeys::Right));
+        TestTrue(TEXT("Keyboard target-snap input is mapped"),
+                 HasAction(TEXT("SnapKeyboardTargetToSelection"), EKeys::End));
         TestTrue(TEXT("Faction research input is mapped"),
                  HasAction(TEXT("ResearchNext"), EKeys::R, false, true));
         TestTrue(TEXT("Technology archive input is mapped"),

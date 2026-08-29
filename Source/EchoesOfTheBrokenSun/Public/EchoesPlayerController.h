@@ -102,6 +102,7 @@ private:
     void KeyboardContextOrderPressed();
     void NudgeKeyboardTargetLeft();
     void NudgeKeyboardTargetRight();
+    void SnapKeyboardTargetToSelection();
     void ChooseHarvest();
     void ChoosePreserve();
     void ChooseReshape();

@@ -307,6 +307,46 @@ void AEchoesPlayerController::NudgeKeyboardTargetRight()
     NudgeKeyboardTarget(FVector2D(1.0f, 0.0f));
 }
 
+void AEchoesPlayerController::SnapKeyboardTargetToSelection()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    if (SelectedEntityIds.Num() != 1)
+    {
+        SetStatusMessage(TEXT("[SNAP_REQUIRES_ONE_SELECTION] Select one visible owned entity first."));
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const AEchoesEntityView* View =
+        Bridge != nullptr ? Bridge->FindEntityView(SelectedEntityIds[0]) : nullptr;
+    APawn* CameraPawn = GetPawn();
+    if (View == nullptr || CameraPawn == nullptr)
+    {
+        SetStatusMessage(TEXT("[SELECTED_VIEW_UNAVAILABLE] The selected presentation view is unavailable."));
+        return;
+    }
+    FVector CameraLocation = CameraPawn->GetActorLocation();
+    CameraLocation.X = View->GetActorLocation().X;
+    CameraLocation.Y = View->GetActorLocation().Y;
+    CameraPawn->SetActorLocation(CameraLocation);
+    KeyboardTargetOffset = FVector2D::ZeroVector;
+    bKeyboardTargetingEnabled = true;
+    SetStatusMessage(
+        TEXT("KEYBOARD TARGET: camera and reticle centered on selected visible entity // use one arrow step for nearby placement."),
+        4.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_KEYBOARD_TARGET_SNAP] entity=%u offsetPx=(0,0) cameraCentered=true source=selected_owned_view hiddenStateRead=false"),
+        SelectedEntityIds[0]);
+}
+
 void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
 {
     if (IsModalOverlayVisible())
@@ -656,6 +696,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
     BindPressed(TEXT("KeyboardTargetLeft"), &AEchoesPlayerController::NudgeKeyboardTargetLeft);
     BindPressed(TEXT("KeyboardTargetRight"), &AEchoesPlayerController::NudgeKeyboardTargetRight);
+    BindPressed(TEXT("SnapKeyboardTargetToSelection"), &AEchoesPlayerController::SnapKeyboardTargetToSelection);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -2450,7 +2491,7 @@ void AEchoesPlayerController::BuildAtCursor(
     FHitResult HitResult;
     if (!TraceCommandTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target open battlefield ground with the pointer or center reticle."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Target open battlefield ground with the pointer or keyboard reticle."));
         return;
     }
     FString Feedback;
