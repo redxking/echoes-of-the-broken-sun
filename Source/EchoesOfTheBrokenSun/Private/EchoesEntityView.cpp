@@ -3,6 +3,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EchoesOfTheBrokenSun.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -12,6 +13,7 @@
 namespace
 {
 const FName EntityColorParameterName(TEXT("Color"));
+constexpr float DamagePulseDurationSeconds = 0.18f;
 
 FLinearColor ColorForState(const echoes::sim::Entity& State)
 {
@@ -136,12 +138,38 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
         DeltaSeconds,
         14.0f);
     SetActorLocation(SmoothedLocation, false, nullptr, ETeleportType::None);
+
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings != nullptr && Settings->IsReducedFlashingEnabled())
+    {
+        DamagePulseRemainingSeconds = 0.0f;
+    }
+    if (DamagePulseRemainingSeconds > 0.0f)
+    {
+        DamagePulseRemainingSeconds = FMath::Max(
+            0.0f,
+            DamagePulseRemainingSeconds - DeltaSeconds);
+        const float PulseAlpha = FMath::Clamp(
+            DamagePulseRemainingSeconds / DamagePulseDurationSeconds,
+            0.0f,
+            1.0f);
+        SetBodyColor(FMath::Lerp(
+            BaseBodyColor,
+            FLinearColor(1.0f, 0.82f, 0.28f),
+            PulseAlpha));
+    }
+    else
+    {
+        SetBodyColor(BaseBodyColor);
+    }
 }
 
 void AEchoesEntityView::ApplyAuthoritativeState(
     const echoes::sim::Entity& State,
     bool bTeleport)
 {
+    const bool bHadAuthoritativeState = EntityId != 0;
+    const int32 PreviousHitPoints = HitPoints;
     const bool bNeedsAppearance = EntityId == 0 || EntityType != State.type ||
                                   OwnerPlayerId != State.owner ||
                                   WellChoice != State.wellChoice;
@@ -180,6 +208,19 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     if (bNeedsAppearance)
     {
         ConfigureAppearance(State);
+    }
+
+    if (bHadAuthoritativeState && HitPoints < PreviousHitPoints)
+    {
+        const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+        const bool bReducedFlashing =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        DamagePulseRemainingSeconds =
+            bReducedFlashing ? 0.0f : DamagePulseDurationSeconds;
+        SetBodyColor(
+            bReducedFlashing
+                ? BaseBodyColor
+                : FLinearColor(1.0f, 0.82f, 0.28f));
     }
 
     DisplayedHealthFraction = MaxHitPoints > 0
@@ -329,7 +370,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             OwnerMarker->SetMaterial(0, OwnerMarkerMaterial);
         }
         const FLinearColor TeamColor = ColorForState(State);
-        SetBodyColor(TeamColor);
+        BaseBodyColor = TeamColor;
+        SetBodyColor(BaseBodyColor);
         OwnerMarkerMaterial->SetVectorParameterValue(
             EntityColorParameterName,
             TeamColor);

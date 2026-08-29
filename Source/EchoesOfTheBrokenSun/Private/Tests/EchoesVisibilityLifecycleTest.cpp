@@ -4,6 +4,7 @@
 
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -109,6 +110,13 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
                   ScoutView->IsHealthBarVisible());
         echoes::sim::Entity DamagedScout =
             *InitialSimulation->FindEntity(ScoutId);
+        UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+        const bool bPreviousReducedFlashing =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        if (Settings != nullptr)
+        {
+            Settings->SetReducedFlashingEnabled(false);
+        }
         DamagedScout.hitPoints = DamagedScout.maxHitPoints / 4;
         ScoutView->ApplyAuthoritativeState(DamagedScout, true);
         TestTrue(TEXT("A damaged scout exposes its health bar without selection"),
@@ -116,6 +124,18 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Damaged scout health fraction mirrors authoritative hit points"),
                   ScoutView->GetDisplayedHealthFraction(),
                   0.25f);
+        TestTrue(TEXT("Damage starts a readable presentation pulse"),
+                 ScoutView->IsDamagePulseActive());
+        if (Settings != nullptr)
+        {
+            Settings->SetReducedFlashingEnabled(true);
+            echoes::sim::Entity MoreDamagedScout = DamagedScout;
+            MoreDamagedScout.hitPoints -= 1;
+            ScoutView->ApplyAuthoritativeState(MoreDamagedScout, true);
+            TestFalse(TEXT("Reduced flashing suppresses the combat pulse"),
+                      ScoutView->IsDamagePulseActive());
+            Settings->SetReducedFlashingEnabled(bPreviousReducedFlashing);
+        }
         ScoutView->ApplyAuthoritativeState(
             *InitialSimulation->FindEntity(ScoutId),
             true);

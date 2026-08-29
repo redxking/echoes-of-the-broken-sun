@@ -36,6 +36,7 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Default HUD scale is 100%"), Settings->GetHudScale(), 1.0f);
     TestFalse(TEXT("High contrast defaults off"), Settings->IsHighContrastHudEnabled());
     TestFalse(TEXT("Reduced motion defaults off"), Settings->IsReducedMotionEnabled());
+    TestFalse(TEXT("Reduced flashing defaults off"), Settings->IsReducedFlashingEnabled());
     TestTrue(TEXT("Edge pan defaults on"), Settings->IsEdgePanEnabled());
 
     Settings->SetHudScale(99.0f);
@@ -43,6 +44,7 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     Settings->SetCameraZoomScale(99.0f);
     Settings->SetHighContrastHudEnabled(true);
     Settings->SetReducedMotionEnabled(true);
+    Settings->SetReducedFlashingEnabled(true);
     Settings->SetEdgePanEnabled(false);
     Settings->ValidateSettings();
 
@@ -51,6 +53,7 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Zoom scale is clamped"), Settings->GetCameraZoomScale(), 2.0f);
     TestTrue(TEXT("High contrast can be enabled"), Settings->IsHighContrastHudEnabled());
     TestTrue(TEXT("Reduced motion can be enabled"), Settings->IsReducedMotionEnabled());
+    TestTrue(TEXT("Reduced flashing can be enabled"), Settings->IsReducedFlashingEnabled());
     TestFalse(TEXT("Edge pan can be disabled"), Settings->IsEdgePanEnabled());
 
     return true;

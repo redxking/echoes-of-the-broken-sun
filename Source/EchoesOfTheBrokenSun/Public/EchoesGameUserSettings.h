@@ -23,6 +23,8 @@ public:
     void SetHighContrastHudEnabled(bool bEnabled);
     [[nodiscard]] bool IsReducedMotionEnabled() const;
     void SetReducedMotionEnabled(bool bEnabled);
+    [[nodiscard]] bool IsReducedFlashingEnabled() const;
+    void SetReducedFlashingEnabled(bool bEnabled);
     [[nodiscard]] bool IsEdgePanEnabled() const;
     void SetEdgePanEnabled(bool bEnabled);
     [[nodiscard]] float GetCameraPanSpeedScale() const;
@@ -39,6 +41,9 @@ private:
 
     UPROPERTY(Config)
     bool bReducedMotion = false;
+
+    UPROPERTY(Config)
+    bool bReducedFlashing = false;
 
     UPROPERTY(Config)
     bool bEdgePan = true;

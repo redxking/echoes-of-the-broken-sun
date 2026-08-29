@@ -63,6 +63,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
+    bLoggedStressCombat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -302,6 +303,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
     bLoggedFirstTick = false;
+    bLoggedStressCombat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -363,6 +365,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
+    bLoggedStressCombat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -702,13 +705,42 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                     EntityViews.Num());
                 bLoggedFirstTick = true;
             }
+            if (bStressScenario && !bLoggedStressCombat &&
+                Simulation->CurrentTick() >= 20)
+            {
+                int32 RemainingSoldiers = 0;
+                int32 DamagedSoldiers = 0;
+                for (const echoes::sim::Entity& Entity : Simulation->Entities())
+                {
+                    if (Entity.type != EntityType::Soldier)
+                    {
+                        continue;
+                    }
+                    ++RemainingSoldiers;
+                    DamagedSoldiers += Entity.hitPoints < Entity.maxHitPoints ? 1 : 0;
+                }
+                const int32 DestroyedSoldiers = 396 - RemainingSoldiers;
+                if (DamagedSoldiers > 0 || DestroyedSoldiers > 0)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_STRESS_COMBAT_ACTIVE] tick=%llu damaged=%d destroyed=%d remaining=%d visibleViews=%d"),
+                        static_cast<unsigned long long>(Simulation->CurrentTick()),
+                        DamagedSoldiers,
+                        DestroyedSoldiers,
+                        RemainingSoldiers,
+                        EntityViews.Num());
+                    bLoggedStressCombat = true;
+                }
+            }
         }
     }
 }
 
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
-    if (!Simulation.IsValid() ||
+    if (bStressScenario || !Simulation.IsValid() ||
         Simulation->CurrentTick() % Simulation->Config().ticksPerSecond != 0)
     {
         return;

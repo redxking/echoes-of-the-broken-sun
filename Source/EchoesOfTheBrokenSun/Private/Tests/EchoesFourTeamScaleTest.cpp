@@ -139,6 +139,24 @@ bool FEchoesFourTeamScaleTest::RunTest(const FString& Parameters)
             100);
     }
 
+    for (int32 TickIndex = 0; TickIndex < 20; ++TickIndex)
+    {
+        Bridge->Tick(0.05f);
+    }
+    int32 DamagedSoldiers = 0;
+    int32 RemainingSoldiers = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.type == echoes::sim::EntityType::Soldier)
+        {
+            ++RemainingSoldiers;
+            DamagedSoldiers += Entity.hitPoints < Entity.maxHitPoints ? 1 : 0;
+        }
+    }
+    TestTrue(
+        TEXT("Four-team attack-move fixture enters real deterministic combat by tick 20"),
+        DamagedSoldiers > 0 || RemainingSoldiers < 396);
+
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors();

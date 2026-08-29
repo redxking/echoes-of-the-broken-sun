@@ -61,6 +61,7 @@ private:
     void CycleHudScale();
     void ToggleHighContrast();
     void ToggleReducedMotion();
+    void ToggleReducedFlashing();
     void ToggleEdgePan();
     void DecreaseCameraPanSpeed();
     void IncreaseCameraPanSpeed();

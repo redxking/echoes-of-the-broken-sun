@@ -156,6 +156,11 @@ if [[ "$stress400" == "1" ]] &&
   print -u2 "The packaged profile did not queue the accepted four-team broad-order fixture. Inspect: $raw_log"
   exit 11
 fi
+if [[ "$stress400" == "1" ]] &&
+   ! /usr/bin/grep -q '\[ECHOES_STRESS_COMBAT_ACTIVE\]' "$raw_log"; then
+  print -u2 "The packaged profile did not observe active four-team combat. Inspect: $raw_log"
+  exit 12
+fi
 
 package_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
 source_commit="$(/usr/bin/awk -F= '$1 == "source_commit" { print $2; exit }' "$manifest")"
@@ -327,8 +332,9 @@ result = {
         "Local packaged Mac Development measurement of the 400-unit/four-team "
         "visibility-scoped scale scenario. All 400 units are visible to the local "
         "presentation and begin with 396 deterministic attack-move orders split "
-        "evenly across four teams. The fixture does not include authored weather, "
-        "final effects, or formations. It is "
+        "evenly across four teams. Damage drives placeholder health bars and a "
+        "reduced-flashing-aware combat pulse. The fixture does not include authored "
+        "weather, final effects, or formations. It is "
         "not a soak test, clean-machine result, or release qualification."
         if stress400 else
         "Local packaged Mac Development measurement of the current 25-entity "

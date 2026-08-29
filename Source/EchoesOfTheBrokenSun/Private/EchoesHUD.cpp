@@ -184,10 +184,11 @@ void AEchoesHUD::DrawHUD()
         false);
 
     const FString SettingsLine = FString::Printf(
-        TEXT("[U] UI %d%%  [I] High contrast %s  [O] Reduced motion %s  [Y] Edge pan %s"),
+        TEXT("[U] UI %d%%  [I] Contrast %s  [O] Reduced motion %s  [/] Reduced flash %s  [Y] Edge pan %s"),
         FMath::RoundToInt(HudScale * 100.0f),
         bHighContrast ? TEXT("ON") : TEXT("OFF"),
         Settings != nullptr && Settings->IsReducedMotionEnabled() ? TEXT("ON") : TEXT("OFF"),
+        Settings != nullptr && Settings->IsReducedFlashingEnabled() ? TEXT("ON") : TEXT("OFF"),
         Settings == nullptr || Settings->IsEdgePanEnabled() ? TEXT("ON") : TEXT("OFF"));
     DrawText(
         SettingsLine,

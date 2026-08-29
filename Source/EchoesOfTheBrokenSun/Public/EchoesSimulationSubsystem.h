@@ -125,6 +125,7 @@ private:
     bool bScenarioReady = false;
     bool bWarnedAboutTimeClamp = false;
     bool bLoggedFirstTick = false;
+    bool bLoggedStressCombat = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

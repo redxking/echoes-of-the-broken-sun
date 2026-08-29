@@ -224,6 +224,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CycleHudScale"), &AEchoesPlayerController::CycleHudScale);
     BindPressed(TEXT("ToggleHighContrast"), &AEchoesPlayerController::ToggleHighContrast);
     BindPressed(TEXT("ToggleReducedMotion"), &AEchoesPlayerController::ToggleReducedMotion);
+    BindPressed(TEXT("ToggleReducedFlashing"), &AEchoesPlayerController::ToggleReducedFlashing);
     BindPressed(TEXT("ToggleEdgePan"), &AEchoesPlayerController::ToggleEdgePan);
     BindPressed(TEXT("DecreaseCameraPanSpeed"), &AEchoesPlayerController::DecreaseCameraPanSpeed);
     BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
@@ -1229,6 +1230,22 @@ void AEchoesPlayerController::ToggleReducedMotion()
     Settings->SaveSettings();
     SetStatusMessage(FString::Printf(
         TEXT("ACCESSIBILITY: reduced camera motion %s."),
+        bEnabled ? TEXT("enabled") : TEXT("disabled")));
+}
+
+void AEchoesPlayerController::ToggleReducedFlashing()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Reduced flashing could not be changed."));
+        return;
+    }
+    const bool bEnabled = !Settings->IsReducedFlashingEnabled();
+    Settings->SetReducedFlashingEnabled(bEnabled);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("ACCESSIBILITY: reduced combat flashing %s."),
         bEnabled ? TEXT("enabled") : TEXT("disabled")));
 }
 

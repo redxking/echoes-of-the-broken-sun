@@ -25,7 +25,7 @@ mkdir -p "${log:h}"
 
 for marker in ECHOES_ENV_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY \
   ECHOES_SIM_READY ECHOES_STRESS_ORDERS_READY ECHOES_STRESS_READY \
-  ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
+  ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK ECHOES_STRESS_COMBAT_ACTIVE; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then
     print -u2 "Stress runtime marker $marker was absent. Inspect: $log"
     exit 3
@@ -53,5 +53,5 @@ if /usr/bin/grep -Eq \
   exit 6
 fi
 
-print "Stress runtime passed: 400 units across four teams produced 401 visibility-scoped entity views, queued 396 deterministic attack-move orders, and completed the first fixed tick."
+print "Stress runtime passed: 400 units across four teams produced 401 visibility-scoped entity views, queued 396 deterministic attack-move orders, and entered active combat."
 print "Evidence log: $log"

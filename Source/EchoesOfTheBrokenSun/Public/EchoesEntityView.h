@@ -37,6 +37,10 @@ public:
     }
     [[nodiscard]] bool IsHealthBarVisible() const;
     [[nodiscard]] bool IsOwnerMarkerVisible() const;
+    [[nodiscard]] bool IsDamagePulseActive() const
+    {
+        return DamagePulseRemainingSeconds > 0.0f;
+    }
     [[nodiscard]] uint8 GetOwnerMarkerVariant() const;
     [[nodiscard]] FString GetDisplayName() const;
 
@@ -104,6 +108,8 @@ private:
     float DisplayedHealthFraction = 1.0f;
     float HealthBarWidthScale = 0.9f;
     float HealthBarHeight = 92.0f;
+    FLinearColor BaseBodyColor = FLinearColor::White;
+    float DamagePulseRemainingSeconds = 0.0f;
     bool bHasAuthoritativeLocation = false;
     bool bSelected = false;
 };

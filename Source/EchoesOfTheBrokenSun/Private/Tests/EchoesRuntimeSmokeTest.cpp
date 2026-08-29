@@ -105,6 +105,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ToggleHighContrast"), EKeys::I));
         TestTrue(TEXT("Reduced-motion accessibility input is mapped"),
                  HasAction(TEXT("ToggleReducedMotion"), EKeys::O));
+        TestTrue(TEXT("Reduced-flashing accessibility input is mapped"),
+                 HasAction(TEXT("ToggleReducedFlashing"), EKeys::Slash));
         TestTrue(TEXT("Edge-pan preference input is mapped"),
                  HasAction(TEXT("ToggleEdgePan"), EKeys::Y));
         TestTrue(TEXT("Camera pan decrease input is mapped"),

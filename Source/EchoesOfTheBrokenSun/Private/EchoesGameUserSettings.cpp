@@ -25,6 +25,7 @@ void UEchoesGameUserSettings::SetToDefaults()
     HudScale = 1.0f;
     bHighContrastHud = false;
     bReducedMotion = false;
+    bReducedFlashing = false;
     bEdgePan = true;
     CameraPanSpeedScale = 1.0f;
     CameraZoomScale = 1.0f;
@@ -72,6 +73,16 @@ bool UEchoesGameUserSettings::IsReducedMotionEnabled() const
 void UEchoesGameUserSettings::SetReducedMotionEnabled(bool bEnabled)
 {
     bReducedMotion = bEnabled;
+}
+
+bool UEchoesGameUserSettings::IsReducedFlashingEnabled() const
+{
+    return bReducedFlashing;
+}
+
+void UEchoesGameUserSettings::SetReducedFlashingEnabled(bool bEnabled)
+{
+    bReducedFlashing = bEnabled;
 }
 
 bool UEchoesGameUserSettings::IsEdgePanEnabled() const
