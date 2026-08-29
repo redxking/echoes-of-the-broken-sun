@@ -70,6 +70,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
+    bLoggedAiMineralCover = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -159,7 +160,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -370,6 +371,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
+    bLoggedAiMineralCover = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -436,6 +438,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
+    bLoggedAiMineralCover = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -949,6 +952,18 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                     static_cast<uint8>(Command.warformAdaptation));
                 bLoggedAiAdaptation = true;
             }
+            if (!bLoggedAiMineralCover &&
+                Command.type == echoes::sim::CommandType::RaiseMineralCover)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_AI_MINERAL_COVER] personality=adaptive actor=%u tile=(%d,%d) visibilityBounded=true"),
+                    Command.actor,
+                    Command.position.x.FloorToInt(),
+                    Command.position.y.FloorToInt());
+                bLoggedAiMineralCover = true;
+            }
         }
         else
         {
@@ -1089,6 +1104,21 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     }
     OutFeedback = TEXT("[QUEUED] Warform molt accepted for the next simulation tick.");
     return true;
+}
+
+bool UEchoesSimulationSubsystem::IssueMineralCover(
+    uint32 ActorId,
+    const FVector& WorldPosition,
+    FString& OutFeedback)
+{
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::RaiseMineralCover,
+        ActorId,
+        0,
+        WorldToSim(WorldPosition),
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Barracks,
+        OutFeedback);
 }
 
 bool UEchoesSimulationSubsystem::QueuePlayerCommand(
@@ -1302,6 +1332,39 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             return false;
         case CommandType::AdaptWarform:
             OutFeedback = TEXT("[ADAPTATION_FORM_REQUIRED] Use a declared warform adaptation command.");
+            return false;
+        case CommandType::RaiseMineralCover:
+            switch (Simulation->ValidateMineralCover(
+                LocalPlayerId, Actor.id, Position))
+            {
+                case echoes::sim::MineralCoverResult::Valid:
+                    return true;
+                case echoes::sim::MineralCoverResult::InvalidPlayer:
+                case echoes::sim::MineralCoverResult::InvalidActor:
+                    OutFeedback = TEXT("[CAIRNBACK_REQUIRED] Select a Kharuun Cairnback.");
+                    break;
+                case echoes::sim::MineralCoverResult::MoltActive:
+                    OutFeedback = TEXT("[MOLT_ACTIVE] A molting Cairnback cannot raise cover.");
+                    break;
+                case echoes::sim::MineralCoverResult::CooldownActive:
+                    OutFeedback = TEXT("[MINERAL_COVER_COOLDOWN] This Cairnback has not regrown its mineral reserve.");
+                    break;
+                case echoes::sim::MineralCoverResult::OutsideCastRange:
+                    OutFeedback = TEXT("[MINERAL_COVER_OUT_OF_RANGE] Choose a position closer to the Cairnback.");
+                    break;
+                case echoes::sim::MineralCoverResult::InvalidPosition:
+                    OutFeedback = TEXT("[MINERAL_COVER_TERRAIN_INVALID] Choose an open or scarred battlefield position.");
+                    break;
+                case echoes::sim::MineralCoverResult::Occupied:
+                    OutFeedback = TEXT("[MINERAL_COVER_OCCUPIED] The mineral barrier needs a clear footprint.");
+                    break;
+                case echoes::sim::MineralCoverResult::InsufficientDawn:
+                    OutFeedback = TEXT("[INSUFFICIENT_DAWN] The mineral barrier cannot be funded.");
+                    break;
+                case echoes::sim::MineralCoverResult::EntityCapacityReached:
+                    OutFeedback = TEXT("[ENTITY_CAPACITY_REACHED] No additional battlefield object can be created.");
+                    break;
+            }
             return false;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)

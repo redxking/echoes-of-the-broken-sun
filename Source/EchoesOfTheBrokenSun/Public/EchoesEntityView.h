@@ -41,6 +41,10 @@ public:
     [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
     [[nodiscard]] bool IsWaystoneStateVisible() const;
     [[nodiscard]] bool IsWarformStateVisible() const;
+    [[nodiscard]] bool IsTemporaryMineralCover() const
+    {
+        return bTemporaryMineralCover;
+    }
     [[nodiscard]] echoes::sim::WaystoneMode GetWaystoneMode() const
     {
         return WaystoneMode;
@@ -163,4 +167,5 @@ private:
         echoes::sim::WarformAdaptation::None;
     echoes::sim::WarformAdaptation PendingWarformAdaptation =
         echoes::sim::WarformAdaptation::None;
+    bool bTemporaryMineralCover = false;
 };

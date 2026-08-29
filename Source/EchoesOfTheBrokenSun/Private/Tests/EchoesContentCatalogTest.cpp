@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("4adb4a203a575ec510158baf57f40cc856e52d94609f41b22dd8474938a2e70a")));
+        FString(TEXT("7fd659168e66bebf020e7ffb13f0e0bcbb770f5f67ad5dfa22cd5a471bd84ecd")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -101,6 +101,18 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               Rules.warformAdaptation.carapaceHealthPercent, 135);
     TestEqual(TEXT("Striker damage enters simulation rules"),
               Rules.warformAdaptation.strikerDamagePercent, 125);
+    TestEqual(TEXT("Cairnback cover range enters fixed-point rules"),
+              Rules.mineralCover.castRangeRaw, 4608);
+    TestEqual(TEXT("Mineral cover duration enters simulation rules"),
+              Rules.mineralCover.durationTicks,
+              static_cast<echoes::sim::Tick>(300));
+    TestEqual(TEXT("Mineral cover cooldown enters simulation rules"),
+              Rules.mineralCover.cooldownTicks,
+              static_cast<echoes::sim::Tick>(600));
+    TestEqual(TEXT("Mineral cover health enters simulation rules"),
+              Rules.mineralCover.maxHitPoints, 180);
+    TestEqual(TEXT("Mineral cover footprint enters fixed-point rules"),
+              Rules.mineralCover.halfExtentRaw, 768);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -137,6 +149,18 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
                   Bulwark->DeploymentDamageReductionPercent, 40);
         TestEqual(TEXT("Bulwark movement tradeoff is authored"),
                   Bulwark->DeploymentMoveSpeedPercent, 35);
+    }
+    const FEchoesUnitContent* Cairnback = Catalog.FindUnit(TEXT("ka_cairnback"));
+    if (TestNotNull(TEXT("Kharuun Cairnback is addressable by stable ID"), Cairnback))
+    {
+        TestEqual(TEXT("Cairnback cover range is authored"),
+                  Cairnback->MineralCoverCastRangeCentimeters, 450);
+        TestEqual(TEXT("Cairnback cover duration is authored"),
+                  Cairnback->MineralCoverDurationTicks, 300);
+        TestEqual(TEXT("Cairnback cover cooldown is authored"),
+                  Cairnback->MineralCoverCooldownTicks, 600);
+        TestEqual(TEXT("Cairnback cover health is authored"),
+                  Cairnback->MineralCoverMaxHealth, 180);
     }
     const FEchoesBuildingContent* Hearth =
         Catalog.FindBuilding(TEXT("ka_memory_hearth"));

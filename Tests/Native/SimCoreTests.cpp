@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v15 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1604 + 5 * mapTileCount;
+    // Snapshot v16 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1636 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1484, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1516, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1492, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1524, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1964,6 +1964,202 @@ void TestWarformAdaptationAndMoltCounterplay() {
     REQUIRE(cancelled.FindEntity(cancelWarform)->moltUntilTick == 0);
 }
 
+void TestCairnbackTemporaryMineralCover() {
+    Simulation unfunded({16, 16, 20, 0x434f5645524e4fULL});
+    AddTwoPlayers(unfunded, {0, 0}, {0, 14});
+    const EntityId unfundedCairnback = unfunded.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(6, 6));
+    REQUIRE(unfundedCairnback != 0);
+    REQUIRE(unfunded.ValidateMineralCover(
+                1, unfundedCairnback, Vec2::FromTiles(7, 6)) ==
+            MineralCoverResult::InsufficientDawn);
+
+    Simulation molting({16, 16, 20, 0x434f5645524d4fULL});
+    AddTwoPlayers(molting, {0, 0}, {0, 100});
+    const EntityId moltBasin = molting.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(6, 6));
+    const EntityId moltingCairnback = molting.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(7, 6));
+    REQUIRE(moltBasin != 0 && moltingCairnback != 0);
+    Command beginMolt = MakeCommand(
+        0, 1, 1, CommandType::AdaptWarform, moltingCairnback);
+    beginMolt.target = moltBasin;
+    beginMolt.warformAdaptation = WarformAdaptation::Carapace;
+    REQUIRE(molting.QueueCommand(beginMolt));
+    molting.Step();
+    REQUIRE(molting.ValidateMineralCover(
+                1, moltingCairnback, Vec2::FromTiles(8, 6)) ==
+            MineralCoverResult::MoltActive);
+
+    SimulationConfig config{24, 24, 20, 0x4d494e4552414cULL};
+    config.rules.mineralCover.durationTicks = 6;
+    config.rules.mineralCover.cooldownTicks = 12;
+    config.rules.mineralCover.maxHitPoints = 30;
+    Simulation simulation(config);
+    AddTwoPlayers(simulation, {0, 0}, {0, 100});
+    REQUIRE(simulation.SetTerrainTile(9, 10, Terrain::Scarred));
+    const EntityId cairnback = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    const EntityId expiryCairnback = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 14));
+    const EntityId protectedWarform = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(8, 10));
+    const EntityId attacker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(12, 10));
+    const EntityId counterplayAttacker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(13, 10));
+    const EntityId invalidActor = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(18, 18));
+    REQUIRE(cairnback != 0 && expiryCairnback != 0 &&
+            protectedWarform != 0 && attacker != 0 &&
+            counterplayAttacker != 0 && invalidActor != 0);
+    REQUIRE(simulation.ValidateMineralCover(
+                3, cairnback, Vec2::FromTiles(9, 10)) ==
+            MineralCoverResult::InvalidPlayer);
+    REQUIRE(simulation.ValidateMineralCover(
+                0, invalidActor, Vec2::FromTiles(17, 18)) ==
+            MineralCoverResult::InvalidActor);
+    REQUIRE(simulation.ValidateMineralCover(
+                1, cairnback, Vec2::FromTiles(20, 20)) ==
+            MineralCoverResult::OutsideCastRange);
+    REQUIRE(simulation.ValidateMineralCover(
+                1, cairnback, cairnback == 0
+                                  ? Vec2{}
+                                  : simulation.FindEntity(cairnback)->position) ==
+            MineralCoverResult::Occupied);
+    REQUIRE(simulation.ValidateMineralCover(
+                1, cairnback, Vec2::FromTiles(9, 10)) ==
+            MineralCoverResult::Valid);
+    const std::int32_t startingDawn =
+        simulation.FindPlayer(1)->resources.dawnshards;
+    const std::int32_t protectedHealth =
+        simulation.FindEntity(protectedWarform)->hitPoints;
+    simulation.CaptureReplayBaseline();
+
+    Command raise = MakeCommand(
+        0, 1, 1, CommandType::RaiseMineralCover, cairnback);
+    raise.position = Vec2::FromTiles(9, 10);
+    Command attack = MakeCommand(
+        0, 0, 1, CommandType::Attack, attacker);
+    attack.target = protectedWarform;
+    REQUIRE(simulation.QueueCommand(raise));
+    REQUIRE(simulation.QueueCommand(attack));
+    simulation.Step();
+
+    const auto coverIt = std::find_if(
+        simulation.Entities().begin(), simulation.Entities().end(),
+        [](const Entity& entity) { return entity.temporaryMineralCover; });
+    REQUIRE(coverIt != simulation.Entities().end());
+    const EntityId cover = coverIt->id;
+    REQUIRE(coverIt->owner == 1);
+    REQUIRE(coverIt->mineralCoverCreator == cairnback);
+    REQUIRE(coverIt->maxHitPoints == 30);
+    REQUIRE(coverIt->hitPoints ==
+            30 - simulation.FindEntity(attacker)->attackDamage);
+    REQUIRE(coverIt->mineralCoverUnderlyingTerrain == Terrain::Scarred);
+    REQUIRE(coverIt->mineralCoverUntilTick == 6);
+    REQUIRE(simulation.TerrainAt(9, 10) == Terrain::Blocked);
+    REQUIRE(!simulation.IsPositionPassable(Vec2::FromTiles(9, 10)));
+    REQUIRE(simulation.FindEntity(protectedWarform)->hitPoints ==
+            protectedHealth);
+    REQUIRE(simulation.FindPlayer(1)->resources.dawnshards ==
+            startingDawn - simulation.Config().rules.mineralCover.dawnCost);
+    REQUIRE(simulation.ValidateMineralCover(
+                1, cairnback, Vec2::FromTiles(11, 10)) ==
+            MineralCoverResult::CooldownActive);
+
+    const std::optional<PlayerView> opponentView =
+        simulation.CreatePlayerView(0);
+    REQUIRE(opponentView.has_value());
+    const auto observedCover = std::find_if(
+        opponentView->Entities().begin(), opponentView->Entities().end(),
+        [cover](const Entity& entity) { return entity.id == cover; });
+    REQUIRE(observedCover != opponentView->Entities().end());
+    REQUIRE(observedCover->temporaryMineralCover);
+    REQUIRE(observedCover->hitPoints == 1);
+    REQUIRE(observedCover->mineralCoverUntilTick == 0);
+    REQUIRE(observedCover->mineralCoverUnderlyingTerrain == Terrain::Open);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->FindEntity(cover) != nullptr);
+    REQUIRE(restored->FindEntity(cover)->temporaryMineralCover);
+    REQUIRE(restored->Config().rules.mineralCover ==
+            simulation.Config().rules.mineralCover);
+    REQUIRE(restored->TerrainAt(9, 10) == Terrain::Blocked);
+
+    Command destroyCover = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Attack,
+        counterplayAttacker);
+    destroyCover.target = cover;
+    REQUIRE(simulation.QueueCommand(destroyCover));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(cover) == nullptr);
+    REQUIRE(simulation.TerrainAt(9, 10) == Terrain::Scarred);
+    REQUIRE(simulation.IsPositionPassable(Vec2::FromTiles(9, 10)));
+    REQUIRE(simulation.FindEntity(protectedWarform)->hitPoints ==
+            protectedHealth);
+
+    Command expiringCover = MakeCommand(
+        simulation.CurrentTick(), 1, 2, CommandType::RaiseMineralCover,
+        expiryCairnback);
+    expiringCover.position = Vec2::FromTiles(9, 14);
+    REQUIRE(simulation.QueueCommand(expiringCover));
+    simulation.Step();
+    const auto expiringIt = std::find_if(
+        simulation.Entities().begin(), simulation.Entities().end(),
+        [expiryCairnback](const Entity& entity) {
+            return entity.temporaryMineralCover &&
+                   entity.mineralCoverCreator == expiryCairnback;
+        });
+    REQUIRE(expiringIt != simulation.Entities().end());
+    const EntityId expiring = expiringIt->id;
+    const Tick expiryTick = expiringIt->mineralCoverUntilTick;
+    REQUIRE(simulation.TerrainAt(9, 14) == Terrain::Blocked);
+    simulation.Step(expiryTick - simulation.CurrentTick());
+    REQUIRE(simulation.FindEntity(expiring) == nullptr);
+    REQUIRE(simulation.TerrainAt(9, 14) == Terrain::Open);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    Simulation ai({20, 20, 20, 0x434f5645524149ULL});
+    REQUIRE(ai.AddPlayer(0, Faction::KharuunAssemblies, {0, 100}));
+    REQUIRE(ai.AddPlayer(1, Faction::MeridianCompact, {0, 0}));
+    const EntityId aiCairnback = ai.SpawnEntity(
+        0, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(6, 6));
+    const EntityId visibleEnemy = ai.SpawnEntity(
+        1, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(10, 6));
+    REQUIRE(aiCairnback != 0 && visibleEnemy != 0);
+    const std::optional<PlayerView> aiView = ai.CreatePlayerView(0);
+    REQUIRE(aiView.has_value());
+    const std::vector<Command> aiCommands =
+        Simulation::GenerateAiCommands(*aiView, AiPersonality::Adaptive);
+    REQUIRE(std::any_of(
+        aiCommands.begin(), aiCommands.end(),
+        [aiCairnback](const Command& command) {
+            return command.type == CommandType::RaiseMineralCover &&
+                   command.actor == aiCairnback &&
+                   command.position == Vec2::FromTiles(7, 6);
+        }));
+}
+
 }  // namespace
 
 int main() {
@@ -2003,6 +2199,8 @@ int main() {
          TestWaystoneMigrationAndRooting},
         {"Warform adaptation and molt counterplay",
          TestWarformAdaptationAndMoltCounterplay},
+        {"Cairnback temporary mineral cover",
+         TestCairnbackTemporaryMineralCover},
     };
 
     std::size_t passed = 0;

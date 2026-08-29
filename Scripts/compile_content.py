@@ -178,7 +178,7 @@ def validate_units(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm", "population_cost", "production_ticks"},
-            {"work_rate", "cargo_capacity", "attack", "deployment", "supply_extension"},
+            {"work_rate", "cargo_capacity", "attack", "deployment", "supply_extension", "mineral_cover"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -247,6 +247,29 @@ def validate_units(
                 fail(f"{path}.supply_extension.cooldown_ticks", "must be at least duration_ticks")
         if faction == "meridian_compact" and role == "scout_support" and supply_extension is None:
             fail(f"{path}.supply_extension", "the Meridian scout support requires authored supply-extension rules")
+        mineral_cover: dict[str, int] | None = None
+        if "mineral_cover" in record:
+            raw_cover = require_object(record["mineral_cover"], f"{path}.mineral_cover")
+            require_exact_keys(
+                raw_cover,
+                {"cast_range_cm", "duration_ticks", "cooldown_ticks", "dawn_cost", "max_health", "half_extent_cm"},
+                set(),
+                f"{path}.mineral_cover",
+            )
+            if faction != "kharuun_assemblies" or role != "assault_screen":
+                fail(f"{path}.mineral_cover", "schema 1 mineral cover is reserved for the Kharuun assault screen")
+            mineral_cover = {
+                "cast_range_cm": require_int(raw_cover["cast_range_cm"], f"{path}.mineral_cover.cast_range_cm", 100, 3200),
+                "duration_ticks": require_int(raw_cover["duration_ticks"], f"{path}.mineral_cover.duration_ticks", 1, 100_000),
+                "cooldown_ticks": require_int(raw_cover["cooldown_ticks"], f"{path}.mineral_cover.cooldown_ticks", 1, 1_000_000),
+                "dawn_cost": require_int(raw_cover["dawn_cost"], f"{path}.mineral_cover.dawn_cost", 1, 100_000),
+                "max_health": require_int(raw_cover["max_health"], f"{path}.mineral_cover.max_health", 1, 1_000_000),
+                "half_extent_cm": require_int(raw_cover["half_extent_cm"], f"{path}.mineral_cover.half_extent_cm", 25, 200),
+            }
+            if mineral_cover["cooldown_ticks"] < mineral_cover["duration_ticks"]:
+                fail(f"{path}.mineral_cover.cooldown_ticks", "must be at least duration_ticks")
+        if faction == "kharuun_assemblies" and role == "assault_screen" and mineral_cover is None:
+            fail(f"{path}.mineral_cover", "the Kharuun assault screen requires authored mineral-cover rules")
         output.append(
             {
                 "id": identifier,
@@ -264,6 +287,7 @@ def validate_units(
                 "attack": attack,
                 "deployment": deployment,
                 "supply_extension": supply_extension,
+                "mineral_cover": mineral_cover,
             }
         )
     for faction in sorted(playable):

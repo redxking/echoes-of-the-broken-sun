@@ -358,6 +358,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::AdaptSelectedWarformsStriker);
     InputComponent->BindAction(
+        TEXT("RaiseMineralCover"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor);
+    InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
@@ -1532,6 +1537,71 @@ void AEchoesPlayerController::AdaptSelectedWarforms(
                   : LastRejection);
 }
 
+void AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Mineral cover is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point to a clear cover position."));
+        return;
+    }
+
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr ||
+            Entity->faction != echoes::sim::Faction::KharuunAssemblies ||
+            Entity->type != echoes::sim::EntityType::HeavyUnit ||
+            Entity->temporaryMineralCover)
+        {
+            ++RejectedCount;
+            continue;
+        }
+        FString Feedback;
+        if (Bridge->IssueMineralCover(EntityId, HitResult.Location, Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    SetStatusMessage(
+        AcceptedCount > 0
+            ? FString::Printf(
+                  TEXT("MINERAL COVER: %d barrier%s raised, %d rejected."),
+                  AcceptedCount,
+                  AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+                  RejectedCount)
+            : LastRejection.IsEmpty()
+                  ? TEXT("[CAIRNBACK_REQUIRED] Select a Kharuun Cairnback.")
+                  : LastRejection);
+}
+
 void AEchoesPlayerController::HoldSelectedUnits()
 {
     if (IsModalOverlayVisible())
@@ -2171,6 +2241,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("TOGGLE WAYSTONE ROOT");
         case echoes::sim::CommandType::AdaptWarform:
             return TEXT("ADAPT WARFORM");
+        case echoes::sim::CommandType::RaiseMineralCover:
+            return TEXT("RAISE MINERAL COVER");
     }
     return TEXT("ORDER");
 }

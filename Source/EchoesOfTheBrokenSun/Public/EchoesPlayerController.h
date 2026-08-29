@@ -95,6 +95,7 @@ private:
     void AdaptSelectedWarformsCarapace();
     void AdaptSelectedWarformsStriker();
     void AdaptSelectedWarforms(echoes::sim::WarformAdaptation Adaptation);
+    void RaiseSelectedCairnbackCoverAtCursor();
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

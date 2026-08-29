@@ -38,6 +38,12 @@ struct FEchoesUnitContent final
     int32 SupplyCapacityBonus = 0;
     int32 SupplyDurationTicks = 0;
     int32 SupplyCooldownTicks = 0;
+    int32 MineralCoverCastRangeCentimeters = 0;
+    int32 MineralCoverDurationTicks = 0;
+    int32 MineralCoverCooldownTicks = 0;
+    int32 MineralCoverDawnCost = 0;
+    int32 MineralCoverMaxHealth = 0;
+    int32 MineralCoverHalfExtentCentimeters = 0;
 };
 
 struct FEchoesBuildingContent final

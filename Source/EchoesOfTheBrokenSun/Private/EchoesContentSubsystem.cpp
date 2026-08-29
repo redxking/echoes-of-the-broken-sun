@@ -392,6 +392,32 @@ bool FEchoesContentCatalog::BuildSimulationRules(
             OutRules.relaySupply.cooldownTicks =
                 static_cast<echoes::sim::Tick>(Unit->SupplyCooldownTicks);
         }
+        if (Binding.Faction == echoes::sim::Faction::KharuunAssemblies &&
+            Binding.Type == echoes::sim::EntityType::HeavyUnit)
+        {
+            if (Unit->MineralCoverCastRangeCentimeters <= 0 ||
+                Unit->MineralCoverDurationTicks <= 0 ||
+                Unit->MineralCoverCooldownTicks < Unit->MineralCoverDurationTicks ||
+                Unit->MineralCoverDawnCost <= 0 ||
+                Unit->MineralCoverMaxHealth <= 0 ||
+                Unit->MineralCoverHalfExtentCentimeters <= 0)
+            {
+                OutError = TEXT("SIM_RULES_MINERAL_COVER_INVALID");
+                return false;
+            }
+            OutRules.mineralCover.castRangeRaw = static_cast<int32>(
+                static_cast<int64>(Unit->MineralCoverCastRangeCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.mineralCover.durationTicks =
+                static_cast<echoes::sim::Tick>(Unit->MineralCoverDurationTicks);
+            OutRules.mineralCover.cooldownTicks =
+                static_cast<echoes::sim::Tick>(Unit->MineralCoverCooldownTicks);
+            OutRules.mineralCover.dawnCost = Unit->MineralCoverDawnCost;
+            OutRules.mineralCover.maxHitPoints = Unit->MineralCoverMaxHealth;
+            OutRules.mineralCover.halfExtentRaw = static_cast<int32>(
+                static_cast<int64>(Unit->MineralCoverHalfExtentCentimeters) *
+                echoes::sim::kFixedScale / 100);
+        }
     }
 
     struct FBuildingBinding final
@@ -667,6 +693,20 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
                 !ReadRequiredInteger(*SupplyExtension, TEXT("capacity_bonus"), Unit.SupplyCapacityBonus, Path + TEXT(".supply_extension"), OutError, 1) ||
                 !ReadRequiredInteger(*SupplyExtension, TEXT("duration_ticks"), Unit.SupplyDurationTicks, Path + TEXT(".supply_extension"), OutError, 1) ||
                 !ReadRequiredInteger(*SupplyExtension, TEXT("cooldown_ticks"), Unit.SupplyCooldownTicks, Path + TEXT(".supply_extension"), OutError, 1))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* MineralCover = nullptr;
+        if (Object->TryGetObjectField(TEXT("mineral_cover"), MineralCover) &&
+            MineralCover != nullptr && MineralCover->IsValid())
+        {
+            if (!ReadRequiredInteger(*MineralCover, TEXT("cast_range_cm"), Unit.MineralCoverCastRangeCentimeters, Path + TEXT(".mineral_cover"), OutError, 1) ||
+                !ReadRequiredInteger(*MineralCover, TEXT("duration_ticks"), Unit.MineralCoverDurationTicks, Path + TEXT(".mineral_cover"), OutError, 1) ||
+                !ReadRequiredInteger(*MineralCover, TEXT("cooldown_ticks"), Unit.MineralCoverCooldownTicks, Path + TEXT(".mineral_cover"), OutError, 1) ||
+                !ReadRequiredInteger(*MineralCover, TEXT("dawn_cost"), Unit.MineralCoverDawnCost, Path + TEXT(".mineral_cover"), OutError, 1) ||
+                !ReadRequiredInteger(*MineralCover, TEXT("max_health"), Unit.MineralCoverMaxHealth, Path + TEXT(".mineral_cover"), OutError, 1) ||
+                !ReadRequiredInteger(*MineralCover, TEXT("half_extent_cm"), Unit.MineralCoverHalfExtentCentimeters, Path + TEXT(".mineral_cover"), OutError, 1))
             {
                 return false;
             }

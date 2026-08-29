@@ -17,6 +17,10 @@ constexpr float DamagePulseDurationSeconds = 0.18f;
 
 FLinearColor ColorForState(const echoes::sim::Entity& State)
 {
+    if (State.temporaryMineralCover)
+    {
+        return FLinearColor(0.42f, 0.28f, 0.16f);
+    }
     if (State.type == echoes::sim::EntityType::FutureWell)
     {
         switch (State.wellChoice)
@@ -224,7 +228,9 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   WaystoneMode != State.waystoneMode ||
                                   WarformAdaptation != State.warformAdaptation ||
                                   PendingWarformAdaptation !=
-                                      State.pendingWarformAdaptation;
+                                      State.pendingWarformAdaptation ||
+                                  bTemporaryMineralCover !=
+                                      State.temporaryMineralCover;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -236,6 +242,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     WaystoneMode = State.waystoneMode;
     WarformAdaptation = State.warformAdaptation;
     PendingWarformAdaptation = State.pendingWarformAdaptation;
+    bTemporaryMineralCover = State.temporaryMineralCover;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -302,8 +309,19 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     HealthBarWidthScale = 0.9f;
     HealthBarHeight = 92.0f;
 
-    switch (State.type)
+    if (State.temporaryMineralCover)
     {
+        DesiredMesh = CubeMesh;
+        BodyScale = FVector(1.50f, 1.50f, 1.10f);
+        BodyOffset.Z = 55.0f;
+        SelectionRadius = 1.35f;
+        HealthBarWidthScale = 1.55f;
+        HealthBarHeight = 132.0f;
+    }
+    else
+    {
+        switch (State.type)
+        {
         case echoes::sim::EntityType::Worker:
             DesiredMesh = CylinderMesh;
             break;
@@ -379,6 +397,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             HealthBarWidthScale = 1.5f;
             HealthBarHeight = 42.0f;
             break;
+        }
     }
 
     BodyMesh->SetStaticMesh(DesiredMesh);
@@ -694,7 +713,9 @@ FString AEchoesEntityView::GetDisplayName() const
                        ? TEXT("Array Foundry")
                        : TEXT("Growth Basin");
         case echoes::sim::EntityType::UtilityStructure:
-            return EntityFaction == echoes::sim::Faction::MeridianCompact
+            return bTemporaryMineralCover
+                       ? TEXT("Mineral Cover")
+                       : EntityFaction == echoes::sim::Faction::MeridianCompact
                        ? TEXT("Aegis Post")
                        : TEXT("Listening Spine");
         case echoes::sim::EntityType::ResourceNode:

@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 171;
+constexpr std::size_t kSerializedEntityBytes = 193;
 constexpr std::size_t kSerializedCommandBytes = 37;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -113,7 +113,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::AdaptWarform;
+    return type >= CommandType::Stop && type <= CommandType::RaiseMineralCover;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -274,6 +274,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const RelaySupplyRules& relay = rules.relaySupply;
     const WaystoneMigrationRules& waystone = rules.waystoneMigration;
     const WarformAdaptationRules& adaptation = rules.warformAdaptation;
+    const MineralCoverRules& mineralCover = rules.mineralCover;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -324,7 +325,17 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            adaptation.strikerDamagePercent > 100 &&
            adaptation.strikerDamagePercent <= 300 &&
            adaptation.strikerCooldownPercent > 0 &&
-           adaptation.strikerCooldownPercent < 100;
+           adaptation.strikerCooldownPercent < 100 &&
+           mineralCover.castRangeRaw > 0 &&
+           mineralCover.castRangeRaw <= 32 * kFixedScale &&
+           mineralCover.durationTicks > 0 &&
+           mineralCover.durationTicks <= mineralCover.cooldownTicks &&
+           mineralCover.cooldownTicks <= kMaximumSupportedTick &&
+           mineralCover.dawnCost > 0 && mineralCover.dawnCost <= 100000 &&
+           mineralCover.maxHitPoints > 0 &&
+           mineralCover.maxHitPoints <= 1000000 &&
+           mineralCover.halfExtentRaw >= kFixedScale / 4 &&
+           mineralCover.halfExtentRaw <= 2 * kFixedScale;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -637,7 +648,7 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(wellChoice) || !reader.U8(warformAdaptation)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::AdaptWarform) ||
+    if (type > static_cast<std::uint8_t>(CommandType::RaiseMineralCover) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
         warformAdaptation >
@@ -1232,6 +1243,130 @@ void Simulation::ApplyWarformAdaptation(
     }
     entity.hitPoints = std::max(1, entity.maxHitPoints - missingHitPoints);
     entity.warformAdaptation = adaptation;
+}
+
+bool Simulation::IsCairnback(const Entity& entity) const {
+    return entity.faction == Faction::KharuunAssemblies &&
+           entity.type == EntityType::HeavyUnit &&
+           !entity.temporaryMineralCover;
+}
+
+MineralCoverResult Simulation::ValidateMineralCover(
+    PlayerId player,
+    EntityId actor,
+    Vec2 position) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return MineralCoverResult::InvalidPlayer;
+    }
+    const Entity* cairnback = FindEntity(actor);
+    if (cairnback == nullptr || cairnback->owner != player ||
+        !cairnback->completed || cairnback->hitPoints <= 0 ||
+        !IsCairnback(*cairnback)) {
+        return MineralCoverResult::InvalidActor;
+    }
+    if (cairnback->pendingWarformAdaptation !=
+        WarformAdaptation::None) {
+        return MineralCoverResult::MoltActive;
+    }
+    if (currentTick_ < cairnback->mineralCoverCooldownUntilTick) {
+        return MineralCoverResult::CooldownActive;
+    }
+    const MineralCoverRules& rules = config_.rules.mineralCover;
+    const std::int64_t castRange = rules.castRangeRaw;
+    if (DistanceSquaredRaw(cairnback->position, position) >
+        static_cast<std::uint64_t>(castRange * castRange)) {
+        return MineralCoverResult::OutsideCastRange;
+    }
+    if (!IsInsideMap(position, rules.halfExtentRaw)) {
+        return MineralCoverResult::InvalidPosition;
+    }
+    const std::int32_t tileX = position.x.FloorToInt();
+    const std::int32_t tileY = position.y.FloorToInt();
+    if (TerrainAt(tileX, tileY) == Terrain::Blocked) {
+        return MineralCoverResult::InvalidPosition;
+    }
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints <= 0) {
+            continue;
+        }
+        const std::int32_t halfExtent = entity.temporaryMineralCover
+                                            ? rules.halfExtentRaw
+                                            : FootprintHalfExtentRaw(
+                                                  entity.faction,
+                                                  entity.type);
+        const std::int32_t combinedExtent = rules.halfExtentRaw + halfExtent;
+        if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
+                  entity.position.x.Raw()) < combinedExtent &&
+            Abs64(static_cast<std::int64_t>(position.y.Raw()) -
+                  entity.position.y.Raw()) < combinedExtent) {
+            return MineralCoverResult::Occupied;
+        }
+    }
+    if (playerState->resources.dawnshards < rules.dawnCost) {
+        return MineralCoverResult::InsufficientDawn;
+    }
+    if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
+        nextEntityId_ == std::numeric_limits<EntityId>::max()) {
+        return MineralCoverResult::EntityCapacityReached;
+    }
+    return MineralCoverResult::Valid;
+}
+
+EntityId Simulation::InterceptingMineralCover(
+    const Entity& attacker,
+    const Entity& target) const {
+    if (target.temporaryMineralCover || attacker.owner == target.owner) {
+        return 0;
+    }
+    const std::int64_t deltaX =
+        static_cast<std::int64_t>(target.position.x.Raw()) -
+        attacker.position.x.Raw();
+    const std::int64_t deltaY =
+        static_cast<std::int64_t>(target.position.y.Raw()) -
+        attacker.position.y.Raw();
+    const std::int64_t lengthSquared = deltaX * deltaX + deltaY * deltaY;
+    if (lengthSquared <= 0) {
+        return 0;
+    }
+    EntityId nearest = 0;
+    std::int64_t nearestProgress = kFixedScale + 1;
+    for (const Entity& cover : entities_) {
+        if (!cover.temporaryMineralCover || cover.hitPoints <= 0 ||
+            cover.owner != target.owner || cover.id == attacker.id ||
+            cover.id == target.id || currentTick_ >= cover.mineralCoverUntilTick) {
+            continue;
+        }
+        const std::int64_t coverX =
+            static_cast<std::int64_t>(cover.position.x.Raw()) -
+            attacker.position.x.Raw();
+        const std::int64_t coverY =
+            static_cast<std::int64_t>(cover.position.y.Raw()) -
+            attacker.position.y.Raw();
+        const std::int64_t dot = coverX * deltaX + coverY * deltaY;
+        if (dot <= 0 || dot >= lengthSquared) {
+            continue;
+        }
+        const std::int64_t progress = dot * kFixedScale / lengthSquared;
+        const std::int64_t closestX =
+            static_cast<std::int64_t>(attacker.position.x.Raw()) +
+            deltaX * progress / kFixedScale;
+        const std::int64_t closestY =
+            static_cast<std::int64_t>(attacker.position.y.Raw()) +
+            deltaY * progress / kFixedScale;
+        if (Abs64(closestX - cover.position.x.Raw()) >
+                config_.rules.mineralCover.halfExtentRaw ||
+            Abs64(closestY - cover.position.y.Raw()) >
+                config_.rules.mineralCover.halfExtentRaw) {
+            continue;
+        }
+        if (progress < nearestProgress ||
+            (progress == nearestProgress && (nearest == 0 || cover.id < nearest))) {
+            nearest = cover.id;
+            nearestProgress = progress;
+        }
+    }
+    return nearest;
 }
 
 bool Simulation::IsRelayConnected(const Entity& relay) const {
@@ -2152,6 +2287,52 @@ void Simulation::ApplyCommand(const Command& command) {
                 currentTick_ + config_.rules.warformAdaptation.moltTicks);
             return;
         }
+        case CommandType::RaiseMineralCover: {
+            if (ValidateMineralCover(command.player, actor->id,
+                                     command.position) !=
+                MineralCoverResult::Valid) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr) {
+                return;
+            }
+            EntityId coverId = 0;
+            if (!TryAllocateEntityId(coverId)) {
+                return;
+            }
+            const MineralCoverRules& rules = config_.rules.mineralCover;
+            const std::int32_t tileX = command.position.x.FloorToInt();
+            const std::int32_t tileY = command.position.y.FloorToInt();
+            Entity cover = MakeEntity(command.player, actor->faction,
+                                      EntityType::UtilityStructure,
+                                      command.position);
+            cover.id = coverId;
+            cover.hitPoints = rules.maxHitPoints;
+            cover.maxHitPoints = rules.maxHitPoints;
+            cover.movementPerTickRaw = 0;
+            cover.visionTiles = 0;
+            cover.attackRangeRaw = 0;
+            cover.attackDamage = 0;
+            cover.attackPeriodTicks = 0;
+            cover.workRate = 0;
+            cover.cargoCapacity = 0;
+            cover.constructionRequired = 0;
+            cover.temporaryMineralCover = true;
+            cover.mineralCoverCreator = actor->id;
+            cover.mineralCoverUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + rules.durationTicks);
+            cover.mineralCoverUnderlyingTerrain = TerrainAt(tileX, tileY);
+            player->resources.dawnshards -= rules.dawnCost;
+            actor->order = {};
+            actor->mineralCoverCooldownUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + rules.cooldownTicks);
+            (void)SetTerrainTile(tileX, tileY, Terrain::Blocked);
+            entities_.push_back(cover);
+            return;
+        }
     }
 }
 
@@ -2567,6 +2748,17 @@ void Simulation::ProcessEntityOrders() {
                 break;
         }
     }
+    for (PendingDamage& damage : pendingDamage) {
+        const Entity* attacker = FindEntity(damage.source);
+        const Entity* target = FindEntity(damage.target);
+        if (attacker == nullptr || target == nullptr) {
+            continue;
+        }
+        const EntityId cover = InterceptingMineralCover(*attacker, *target);
+        if (cover != 0) {
+            damage.target = cover;
+        }
+    }
     std::sort(
         pendingDamage.begin(),
         pendingDamage.end(),
@@ -2642,6 +2834,17 @@ void Simulation::ApplyPreserveIncome() {
 }
 
 void Simulation::RemoveDestroyedEntities() {
+    for (const Entity& entity : entities_) {
+        if (!entity.temporaryMineralCover || entity.hitPoints > 0) {
+            continue;
+        }
+        const std::int32_t tileX = entity.position.x.FloorToInt();
+        const std::int32_t tileY = entity.position.y.FloorToInt();
+        if (TerrainAt(tileX, tileY) == Terrain::Blocked) {
+            (void)SetTerrainTile(
+                tileX, tileY, entity.mineralCoverUnderlyingTerrain);
+        }
+    }
     std::erase_if(entities_, [](const Entity& entity) {
         return entity.hitPoints <= 0 ||
                (entity.type == EntityType::ResourceNode &&
@@ -2832,6 +3035,21 @@ void Simulation::ResolveWarformMolts() {
     }
 }
 
+void Simulation::ResolveMineralCovers() {
+    for (Entity& entity : entities_) {
+        if (entity.temporaryMineralCover && entity.hitPoints > 0 &&
+            currentTick_ >= entity.mineralCoverUntilTick) {
+            entity.hitPoints = 0;
+            const std::int32_t tileX = entity.position.x.FloorToInt();
+            const std::int32_t tileY = entity.position.y.FloorToInt();
+            if (TerrainAt(tileX, tileY) == Terrain::Blocked) {
+                (void)SetTerrainTile(
+                    tileX, tileY, entity.mineralCoverUnderlyingTerrain);
+            }
+        }
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
@@ -2839,6 +3057,7 @@ void Simulation::Step() {
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
+    ResolveMineralCovers();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -2850,6 +3069,8 @@ void Simulation::Step() {
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
+    ResolveMineralCovers();
+    RemoveDestroyedEntities();
     ResolveExpiredReshapes();
     UpdateVisibility();
 }
@@ -3000,6 +3221,19 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
             tile.visibility = visibility;
             if (visibility != Visibility::Unexplored) {
                 tile.terrain = TerrainAt(tileX, tileY);
+                if (visibility != Visibility::Visible &&
+                    tile.terrain == Terrain::Blocked) {
+                    for (const Entity& entity : entities_) {
+                        if (entity.temporaryMineralCover &&
+                            entity.hitPoints > 0 &&
+                            entity.position.x.FloorToInt() == tileX &&
+                            entity.position.y.FloorToInt() == tileY) {
+                            tile.terrain =
+                                entity.mineralCoverUnderlyingTerrain;
+                            break;
+                        }
+                    }
+                }
                 tile.passable =
                     tile.terrain != Terrain::Blocked ||
                     (visibility == Visibility::Visible &&
@@ -3040,6 +3274,14 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.relaySupplyCooldownUntilTick = 0;
                 observed.waystoneTransitionUntilTick = 0;
                 observed.moltUntilTick = 0;
+                observed.mineralCoverCooldownUntilTick = 0;
+                observed.mineralCoverUntilTick = 0;
+                observed.mineralCoverUnderlyingTerrain = Terrain::Open;
+                if (observed.mineralCoverCreator != 0 &&
+                    !IsEntityVisibleTo(player,
+                                       observed.mineralCoverCreator)) {
+                    observed.mineralCoverCreator = 0;
+                }
                 if (observed.moltSite != 0 &&
                     !IsEntityVisibleTo(player, observed.moltSite)) {
                     observed.moltSite = 0;
@@ -3343,6 +3585,88 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 continue;
             }
         } else {
+            if ((personality == AiPersonality::Adaptive ||
+                 personality == AiPersonality::Defensive) &&
+                playerState->faction == Faction::KharuunAssemblies &&
+                actor.type == EntityType::HeavyUnit &&
+                !actor.temporaryMineralCover &&
+                currentTick_ >= actor.mineralCoverCooldownUntilTick &&
+                playerState->resources.dawnshards >=
+                    config_.rules.mineralCover.dawnCost) {
+                const Entity* nearestThreat = nullptr;
+                std::uint64_t nearestThreatDistance =
+                    std::numeric_limits<std::uint64_t>::max();
+                for (const Entity& candidate : entities_) {
+                    if (candidate.owner == kNeutralPlayer ||
+                        candidate.owner == player || candidate.hitPoints <= 0 ||
+                        !IsEntityVisibleTo(player, candidate.id)) {
+                        continue;
+                    }
+                    const std::uint64_t distance =
+                        DistanceSquaredRaw(actor.position, candidate.position);
+                    if (distance < nearestThreatDistance ||
+                        (distance == nearestThreatDistance &&
+                         (nearestThreat == nullptr ||
+                          candidate.id < nearestThreat->id))) {
+                        nearestThreat = &candidate;
+                        nearestThreatDistance = distance;
+                    }
+                }
+                const std::int64_t responseRadius =
+                    config_.rules.mineralCover.castRangeRaw + 3 * kFixedScale;
+                if (nearestThreat != nullptr &&
+                    nearestThreatDistance <=
+                        static_cast<std::uint64_t>(responseRadius * responseRadius)) {
+                    const std::int64_t deltaX =
+                        static_cast<std::int64_t>(nearestThreat->position.x.Raw()) -
+                        actor.position.x.Raw();
+                    const std::int64_t deltaY =
+                        static_cast<std::int64_t>(nearestThreat->position.y.Raw()) -
+                        actor.position.y.Raw();
+                    const Vec2 coverPosition = Abs64(deltaX) >= Abs64(deltaY)
+                                                   ? Vec2::FromRaw(
+                                                         actor.position.x.Raw() +
+                                                             (deltaX >= 0 ? kFixedScale
+                                                                          : -kFixedScale),
+                                                         actor.position.y.Raw())
+                                                   : Vec2::FromRaw(
+                                                         actor.position.x.Raw(),
+                                                         actor.position.y.Raw() +
+                                                             (deltaY >= 0 ? kFixedScale
+                                                                          : -kFixedScale));
+                    bool occupied = !IsPositionPassable(coverPosition) ||
+                                    VisibilityAt(player, coverPosition) !=
+                                        Visibility::Visible;
+                    for (const Entity& candidate : entities_) {
+                        const std::int32_t candidateExtent =
+                            candidate.temporaryMineralCover
+                                ? config_.rules.mineralCover.halfExtentRaw
+                                : FootprintHalfExtentFor(
+                                      config_.rules,
+                                      candidate.faction,
+                                      candidate.type);
+                        const std::int32_t combinedExtent =
+                            config_.rules.mineralCover.halfExtentRaw +
+                            candidateExtent;
+                        if (candidate.hitPoints > 0 &&
+                            Abs64(static_cast<std::int64_t>(
+                                      coverPosition.x.Raw()) -
+                                  candidate.position.x.Raw()) < combinedExtent &&
+                            Abs64(static_cast<std::int64_t>(
+                                      coverPosition.y.Raw()) -
+                                  candidate.position.y.Raw()) < combinedExtent) {
+                            occupied = true;
+                            break;
+                        }
+                    }
+                    if (!occupied) {
+                        command.type = CommandType::RaiseMineralCover;
+                        command.position = coverPosition;
+                        commands.push_back(command);
+                        continue;
+                    }
+                }
+            }
             if (personality == AiPersonality::Adaptive &&
                 playerState->faction == Faction::KharuunAssemblies &&
                 actor.pendingWarformAdaptation == WarformAdaptation::None &&
@@ -3540,6 +3864,12 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.warformAdaptation.carapaceMovementPercent);
     writer.I32(config_.rules.warformAdaptation.strikerDamagePercent);
     writer.I32(config_.rules.warformAdaptation.strikerCooldownPercent);
+    writer.I32(config_.rules.mineralCover.castRangeRaw);
+    writer.U64(config_.rules.mineralCover.durationTicks);
+    writer.U64(config_.rules.mineralCover.cooldownTicks);
+    writer.I32(config_.rules.mineralCover.dawnCost);
+    writer.I32(config_.rules.mineralCover.maxHitPoints);
+    writer.I32(config_.rules.mineralCover.halfExtentRaw);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -3611,6 +3941,12 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(entity.pendingWarformAdaptation));
         writer.U32(entity.moltSite);
         writer.U64(entity.moltUntilTick);
+        writer.U64(entity.mineralCoverCooldownUntilTick);
+        writer.U8(entity.temporaryMineralCover ? 1 : 0);
+        writer.U32(entity.mineralCoverCreator);
+        writer.U64(entity.mineralCoverUntilTick);
+        writer.U8(static_cast<std::uint8_t>(
+            entity.mineralCoverUnderlyingTerrain));
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3734,7 +4070,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.warformAdaptation.carapaceHealthPercent) ||
         !reader.I32(config.rules.warformAdaptation.carapaceMovementPercent) ||
         !reader.I32(config.rules.warformAdaptation.strikerDamagePercent) ||
-        !reader.I32(config.rules.warformAdaptation.strikerCooldownPercent)) {
+        !reader.I32(config.rules.warformAdaptation.strikerCooldownPercent) ||
+        !reader.I32(config.rules.mineralCover.castRangeRaw) ||
+        !reader.U64(config.rules.mineralCover.durationTicks) ||
+        !reader.U64(config.rules.mineralCover.cooldownTicks) ||
+        !reader.I32(config.rules.mineralCover.dawnCost) ||
+        !reader.I32(config.rules.mineralCover.maxHitPoints) ||
+        !reader.I32(config.rules.mineralCover.halfExtentRaw)) {
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
@@ -3848,6 +4190,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t waystoneMode = 0;
         std::uint8_t warformAdaptation = 0;
         std::uint8_t pendingWarformAdaptation = 0;
+        std::uint8_t temporaryMineralCover = 0;
+        std::uint8_t mineralCoverUnderlyingTerrain = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -3889,7 +4233,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U8(warformAdaptation) ||
             !reader.U8(pendingWarformAdaptation) ||
             !reader.U32(entity.moltSite) ||
-            !reader.U64(entity.moltUntilTick)) {
+            !reader.U64(entity.moltUntilTick) ||
+            !reader.U64(entity.mineralCoverCooldownUntilTick) ||
+            !reader.U8(temporaryMineralCover) ||
+            !reader.U32(entity.mineralCoverCreator) ||
+            !reader.U64(entity.mineralCoverUntilTick) ||
+            !reader.U8(mineralCoverUnderlyingTerrain)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -3912,6 +4261,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
             pendingWarformAdaptation >
                 static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
+            temporaryMineralCover > 1 ||
+            mineralCoverUnderlyingTerrain >
+                static_cast<std::uint8_t>(Terrain::Scarred) ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3991,7 +4343,35 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                   static_cast<std::uint8_t>(WarformAdaptation::None) ||
               entity.moltSite == 0 ||
               entity.moltUntilTick <= simulation.currentTick_ ||
-              entity.moltUntilTick > kMaximumSupportedTick))) {
+              entity.moltUntilTick > kMaximumSupportedTick)) ||
+            entity.mineralCoverCooldownUntilTick > kMaximumSupportedTick ||
+            (entity.mineralCoverCooldownUntilTick != 0 &&
+             (faction !=
+                  static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+              type != static_cast<std::uint8_t>(EntityType::HeavyUnit))) ||
+            (temporaryMineralCover == 0 &&
+             (entity.mineralCoverCreator != 0 ||
+              entity.mineralCoverUntilTick != 0 ||
+              mineralCoverUnderlyingTerrain !=
+                  static_cast<std::uint8_t>(Terrain::Open))) ||
+            (temporaryMineralCover != 0 &&
+             (faction !=
+                  static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+              type !=
+                  static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
+              completed == 0 || entity.mineralCoverCreator == 0 ||
+              entity.mineralCoverCreator >= entity.id ||
+              entity.mineralCoverUntilTick <= simulation.currentTick_ ||
+              entity.mineralCoverUntilTick > kMaximumSupportedTick ||
+              mineralCoverUnderlyingTerrain ==
+                  static_cast<std::uint8_t>(Terrain::Blocked) ||
+              entity.maxHitPoints !=
+                  simulation.config_.rules.mineralCover.maxHitPoints ||
+              entity.movementPerTickRaw != 0 || entity.visionTiles != 0 ||
+              entity.attackRangeRaw != 0 || entity.attackDamage != 0 ||
+              entity.attackPeriodTicks != 0 || entity.workRate != 0 ||
+              entity.cargoCapacity != 0 ||
+              entity.constructionRequired != 0))) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -4016,8 +4396,18 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             static_cast<WarformAdaptation>(warformAdaptation);
         entity.pendingWarformAdaptation =
             static_cast<WarformAdaptation>(pendingWarformAdaptation);
+        entity.temporaryMineralCover = temporaryMineralCover != 0;
+        entity.mineralCoverUnderlyingTerrain =
+            static_cast<Terrain>(mineralCoverUnderlyingTerrain);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
+            return std::nullopt;
+        }
+        if (entity.temporaryMineralCover &&
+            simulation.TerrainAt(entity.position.x.FloorToInt(),
+                                 entity.position.y.FloorToInt()) !=
+                Terrain::Blocked) {
+            SetError(error, "snapshot mineral cover terrain is invalid");
             return std::nullopt;
         }
         if (entity.order.type == OrderType::Patrol &&
@@ -4034,6 +4424,25 @@ std::optional<Simulation> Simulation::LoadSnapshot(
          simulation.nextEntityId_ <= simulation.entities_.back().id)) {
         SetError(error, "snapshot next entity identifier is invalid");
         return std::nullopt;
+    }
+    std::map<std::pair<std::int32_t, std::int32_t>, EntityId> mineralCoverTiles;
+    for (const Entity& entity : simulation.entities_) {
+        if (!entity.temporaryMineralCover) {
+            continue;
+        }
+        const auto tile = std::pair{
+            entity.position.x.FloorToInt(),
+            entity.position.y.FloorToInt()};
+        if (!mineralCoverTiles.emplace(tile, entity.id).second) {
+            SetError(error, "snapshot mineral covers overlap");
+            return std::nullopt;
+        }
+        if (const Entity* creator =
+                simulation.FindEntity(entity.mineralCoverCreator);
+            creator != nullptr && creator->owner != entity.owner) {
+            SetError(error, "snapshot mineral cover creator is invalid");
+            return std::nullopt;
+        }
     }
     for (const Entity& entity : simulation.entities_) {
         if (!simulation.IsWarform(entity)) {

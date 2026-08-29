@@ -92,6 +92,11 @@ public:
         echoes::sim::WarformAdaptation Adaptation,
         FString& OutFeedback);
 
+    bool IssueMineralCover(
+        uint32 ActorId,
+        const FVector& WorldPosition,
+        FString& OutFeedback);
+
     void SetScenarioPaused(bool bPaused);
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
@@ -151,6 +156,7 @@ private:
     bool bLoggedAiRetreat = false;
     bool bLoggedAiPlayerView = false;
     bool bLoggedAiAdaptation = false;
+    bool bLoggedAiMineralCover = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

@@ -63,6 +63,9 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual(bulwark["deployment"]["damage_reduction_percent"], 40)
         relay = next(item for item in first_pack["units"] if item["id"] == "mc_relay_skiff")
         self.assertEqual(relay["supply_extension"]["capacity_bonus"], 4)
+        cairnback = next(item for item in first_pack["units"] if item["id"] == "ka_cairnback")
+        self.assertEqual(cairnback["mineral_cover"]["duration_ticks"], 300)
+        self.assertEqual(cairnback["mineral_cover"]["max_health"], 180)
         waystone = next(item for item in first_pack["buildings"] if item["id"] == "ka_waystone")
         self.assertEqual(waystone["migration"]["move_speed_cm_s"], 120)
         self.assertEqual(waystone["migration"]["mobile_damage_taken_percent"], 125)
@@ -149,6 +152,21 @@ class ContentCompilerTests(unittest.TestCase):
         resonant["supply_extension"] = copy.deepcopy(relay["supply_extension"])
         self.write("units.json", units)
         self.assert_invalid("reserved for the Meridian scout support")
+
+    def test_missing_cairnback_mineral_cover_rules_are_rejected(self) -> None:
+        units = self.load("units.json")
+        cairnback = next(item for item in units["units"] if item["id"] == "ka_cairnback")
+        del cairnback["mineral_cover"]
+        self.write("units.json", units)
+        self.assert_invalid("requires authored mineral-cover rules")
+
+    def test_mineral_cover_rules_on_other_units_are_rejected(self) -> None:
+        units = self.load("units.json")
+        cairnback = next(item for item in units["units"] if item["id"] == "ka_cairnback")
+        bulwark = next(item for item in units["units"] if item["id"] == "mc_bulwark_team")
+        bulwark["mineral_cover"] = copy.deepcopy(cairnback["mineral_cover"])
+        self.write("units.json", units)
+        self.assert_invalid("reserved for the Kharuun assault screen")
 
     def test_missing_waystone_migration_rules_are_rejected(self) -> None:
         buildings = self.load("buildings.json")

@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 15;
-inline constexpr std::uint32_t kReplayVersion = 15;
+inline constexpr std::uint32_t kSnapshotVersion = 16;
+inline constexpr std::uint32_t kReplayVersion = 16;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -170,6 +170,7 @@ enum class CommandType : std::uint8_t {
     ActivateRelaySupply = 13,
     ToggleWaystoneRoot = 14,
     AdaptWarform = 15,
+    RaiseMineralCover = 16,
 };
 
 enum class WaystoneMode : std::uint8_t {
@@ -234,6 +235,19 @@ enum class WarformAdaptationResult : std::uint8_t {
     InvalidSite = 6,
     OutsideSiteRadius = 7,
     InsufficientDawn = 8,
+};
+
+enum class MineralCoverResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidActor = 2,
+    MoltActive = 3,
+    CooldownActive = 4,
+    OutsideCastRange = 5,
+    InvalidPosition = 6,
+    Occupied = 7,
+    InsufficientDawn = 8,
+    EntityCapacityReached = 9,
 };
 
 enum class MatchOutcome : std::uint8_t {
@@ -347,6 +361,19 @@ struct WarformAdaptationRules final {
                            const WarformAdaptationRules&) = default;
 };
 
+/** Authored Kharuun Cairnback destructible temporary-cover behavior. */
+struct MineralCoverRules final {
+    std::int32_t castRangeRaw = 4 * kFixedScale + kFixedScale / 2;
+    Tick durationTicks = 300;
+    Tick cooldownTicks = 600;
+    std::int32_t dawnCost = 15;
+    std::int32_t maxHitPoints = 180;
+    std::int32_t halfExtentRaw = 3 * kFixedScale / 4;
+
+    friend bool operator==(const MineralCoverRules&,
+                           const MineralCoverRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -360,6 +387,7 @@ struct SimulationRules final {
     RelaySupplyRules relaySupply{};
     WaystoneMigrationRules waystoneMigration{};
     WarformAdaptationRules warformAdaptation{};
+    MineralCoverRules mineralCover{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -424,6 +452,11 @@ struct Entity final {
     WarformAdaptation pendingWarformAdaptation = WarformAdaptation::None;
     EntityId moltSite = 0;
     Tick moltUntilTick = 0;
+    Tick mineralCoverCooldownUntilTick = 0;
+    bool temporaryMineralCover = false;
+    EntityId mineralCoverCreator = 0;
+    Tick mineralCoverUntilTick = 0;
+    Terrain mineralCoverUnderlyingTerrain = Terrain::Open;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -550,6 +583,10 @@ public:
         EntityId actor,
         EntityId site,
         WarformAdaptation adaptation) const;
+    [[nodiscard]] MineralCoverResult ValidateMineralCover(
+        PlayerId player,
+        EntityId actor,
+        Vec2 position) const;
     [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] ResourcePool ProductionCost(Faction faction,
                                                EntityType type) const;
@@ -648,6 +685,10 @@ private:
     [[nodiscard]] bool CanRootWaystone(const Entity& waystone) const;
     [[nodiscard]] bool IsOperationalDropoff(const Entity& entity) const;
     [[nodiscard]] bool IsWarform(const Entity& entity) const;
+    [[nodiscard]] bool IsCairnback(const Entity& entity) const;
+    [[nodiscard]] EntityId InterceptingMineralCover(
+        const Entity& attacker,
+        const Entity& target) const;
     void ApplyWarformAdaptation(Entity& entity,
                                 WarformAdaptation adaptation);
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
@@ -674,6 +715,7 @@ private:
     void ResolveExpiredRelaySupply();
     void ResolveWaystoneTransitions();
     void ResolveWarformMolts();
+    void ResolveMineralCovers();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();
