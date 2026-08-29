@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesEntityView.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
@@ -277,6 +278,7 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
     for (const uint32 EntityId : Controller->GetSelectedEntityIds())
     {
         const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        const AEchoesEntityView* EntityView = Bridge->FindEntityView(EntityId);
         TestTrue(
             FString::Printf(TEXT("Combat-force entity %u is an owned live combat presentation"), EntityId),
             Entity != nullptr &&
@@ -285,7 +287,10 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 (Entity->type == echoes::sim::EntityType::Soldier ||
                  Entity->type == echoes::sim::EntityType::HeavyUnit ||
                  Entity->type == echoes::sim::EntityType::ScoutUnit) &&
-                Bridge->FindEntityView(EntityId) != nullptr);
+                EntityView != nullptr);
+        TestTrue(
+            FString::Printf(TEXT("Combat-force entity %u exposes its faction silhouette accent"), EntityId),
+            EntityView != nullptr && EntityView->IsSilhouetteAccentVisible());
     }
     TestFalse(TEXT("Keyboard center targeting defaults off"),
               Controller->IsKeyboardTargetingEnabled());

@@ -72,6 +72,15 @@ AEchoesEntityView::AEchoesEntityView()
     BodyMesh->SetGenerateOverlapEvents(false);
     BodyMesh->SetCastShadow(true);
 
+    SilhouetteAccent = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("SilhouetteAccent"));
+    SilhouetteAccent->SetupAttachment(SceneRoot);
+    SilhouetteAccent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    SilhouetteAccent->SetGenerateOverlapEvents(false);
+    SilhouetteAccent->SetCastShadow(true);
+    SilhouetteAccent->SetReceivesDecals(false);
+    SilhouetteAccent->SetVisibility(false);
+
     SelectionRing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SelectionRing"));
     SelectionRing->SetupAttachment(SceneRoot);
     SelectionRing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -164,6 +173,7 @@ AEchoesEntityView::AEchoesEntityView()
     BasicMaterial = MaterialFinder.Object;
 
     BodyMesh->SetStaticMesh(CylinderMesh);
+    SilhouetteAccent->SetStaticMesh(CubeMesh);
     SelectionRing->SetStaticMesh(CylinderMesh);
     HealthBarBackground->SetStaticMesh(CubeMesh);
     HealthBarFill->SetStaticMesh(CubeMesh);
@@ -417,6 +427,89 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     BodyMesh->SetStaticMesh(DesiredMesh);
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
+    UStaticMesh* AccentMesh = CubeMesh;
+    FVector AccentScale(0.18f, 0.54f, 0.12f);
+    FVector AccentOffset(0.0f, 0.0f, HealthBarHeight - 28.0f);
+    FRotator AccentRotation = FRotator::ZeroRotator;
+    bool bShowSilhouetteAccent = !State.temporaryMineralCover;
+    const bool bKharuun =
+        State.faction == echoes::sim::Faction::KharuunAssemblies;
+    switch (State.type)
+    {
+        case echoes::sim::EntityType::Worker:
+            AccentMesh = bKharuun ? ConeMesh : CubeMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.22f, 0.22f, 0.32f)
+                              : FVector(0.18f, 0.44f, 0.12f);
+            AccentOffset.Z = 72.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::Soldier:
+            AccentMesh = bKharuun ? ConeMesh : CubeMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.30f, 0.30f, 0.40f)
+                              : FVector(0.14f, 0.62f, 0.14f);
+            AccentOffset.Z = bKharuun ? 93.0f : 82.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::HeavyUnit:
+            AccentMesh = bKharuun ? ConeMesh : CubeMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.42f, 0.42f, 0.48f)
+                              : FVector(0.94f, 0.20f, 0.14f);
+            AccentOffset.Z = bKharuun ? 78.0f : 72.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::ScoutUnit:
+            AccentMesh = bKharuun ? ConeMesh : SphereMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.24f, 0.24f, 0.34f)
+                              : FVector(0.18f, 0.54f, 0.12f);
+            AccentOffset.Z = 72.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::CommandCore:
+            AccentMesh = bKharuun ? ConeMesh : CylinderMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.76f, 0.76f, 0.82f)
+                              : FVector(1.05f, 1.05f, 0.20f);
+            AccentOffset.Z = bKharuun ? 150.0f : 132.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::Dropoff:
+            AccentMesh = bKharuun ? ConeMesh : CylinderMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.56f, 0.56f, 0.62f)
+                              : FVector(0.72f, 0.72f, 0.18f);
+            AccentOffset.Z = bKharuun ? 103.0f : 87.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::Barracks:
+            AccentMesh = bKharuun ? SphereMesh : CubeMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.62f, 0.62f, 0.42f)
+                              : FVector(1.28f, 0.28f, 0.18f);
+            AccentOffset.Z = 102.0f;
+            AccentRotation.Yaw = bKharuun ? 0.0f : 90.0f;
+            break;
+        case echoes::sim::EntityType::UtilityStructure:
+            AccentMesh = bKharuun ? ConeMesh : SphereMesh;
+            AccentScale = bKharuun
+                              ? FVector(0.44f, 0.44f, 0.62f)
+                              : FVector(0.42f, 0.42f, 0.24f);
+            AccentOffset.Z = 154.0f;
+            AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
+            break;
+        case echoes::sim::EntityType::ResourceNode:
+        case echoes::sim::EntityType::FutureWell:
+            bShowSilhouetteAccent = false;
+            break;
+    }
+    SilhouetteAccent->SetStaticMesh(AccentMesh);
+    SilhouetteAccent->SetRelativeScale3D(AccentScale);
+    SilhouetteAccent->SetRelativeLocation(AccentOffset);
+    SilhouetteAccent->SetRelativeRotation(AccentRotation);
+    SilhouetteAccent->SetVisibility(bShowSilhouetteAccent, true);
     SelectionRing->SetRelativeScale3D(
         FVector(SelectionRadius, SelectionRadius, 0.025f));
 
@@ -540,6 +633,12 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             BodyMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
             BodyMesh->SetMaterial(0, BodyMaterial);
         }
+        if (SilhouetteAccentMaterial == nullptr)
+        {
+            SilhouetteAccentMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            SilhouetteAccent->SetMaterial(0, SilhouetteAccentMaterial);
+        }
         if (RingMaterial == nullptr)
         {
             RingMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
@@ -616,6 +715,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
+        SilhouetteAccentMaterial->SetVectorParameterValue(
+            EntityColorParameterName,
+            bKharuun
+                ? FLinearColor(1.0f, 0.34f, 0.08f)
+                : FLinearColor(0.42f, 0.96f, 1.0f));
         OwnerMarkerMaterial->SetVectorParameterValue(
             EntityColorParameterName,
             TeamColor);
@@ -625,6 +729,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 bool AEchoesEntityView::IsDeploymentCoverVisible() const
 {
     return DeploymentCover != nullptr && DeploymentCover->IsVisible();
+}
+
+bool AEchoesEntityView::IsSilhouetteAccentVisible() const
+{
+    return SilhouetteAccent != nullptr && SilhouetteAccent->IsVisible();
 }
 
 bool AEchoesEntityView::IsRelaySupplyFieldVisible() const
@@ -661,6 +770,8 @@ void AEchoesEntityView::SetSelected(bool bInSelected)
     SelectionRing->SetVisibility(bSelected, true);
     BodyMesh->SetRenderCustomDepth(bSelected);
     BodyMesh->SetCustomDepthStencilValue(bSelected ? 1 : 0);
+    SilhouetteAccent->SetRenderCustomDepth(bSelected);
+    SilhouetteAccent->SetCustomDepthStencilValue(bSelected ? 1 : 0);
     UpdateHealthBar();
 }
 
