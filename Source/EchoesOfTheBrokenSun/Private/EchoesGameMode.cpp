@@ -5,10 +5,13 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EchoesHUD.h"
+#include "EchoesEntityView.h"
+#include "EchoesFogView.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTerrainView.h"
 #include "EchoesWeatherView.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
@@ -18,6 +21,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/HUD.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/App.h"
@@ -267,10 +271,108 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
+#if !UE_BUILD_SHIPPING
+    if (FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesFutureWellArtReview")))
+    {
+        if (const echoes::sim::Simulation* Simulation = Bridge->GetSimulation())
+        {
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (AEchoesEntityView* ExistingView =
+                        Bridge->FindEntityView(Entity.id))
+                {
+                    ExistingView->SetActorHiddenInGame(true);
+                }
+            }
+        }
+        if (AEchoesFogView* FogView = Bridge->GetFogView())
+        {
+            FogView->SetActorHiddenInGame(true);
+        }
+        if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
+        {
+            TerrainView->SetActorHiddenInGame(true);
+        }
+        int32 HiddenEnvironmentActorCount = 0;
+        int32 RecoloredEnvironmentActorCount = 0;
+        for (TActorIterator<AStaticMeshActor> ActorIterator(GetWorld());
+             ActorIterator;
+             ++ActorIterator)
+        {
+            AStaticMeshActor* EnvironmentActor = *ActorIterator;
+            if (EnvironmentActor->ActorHasTag(TEXT("EchoesScarBand")) ||
+                EnvironmentActor->ActorHasTag(TEXT("EchoesGlassShard")))
+            {
+                EnvironmentActor->SetActorHiddenInGame(true);
+                ++HiddenEnvironmentActorCount;
+                continue;
+            }
+            if (EnvironmentActor->ActorHasTag(TEXT("EchoesPlaceholder")))
+            {
+                UStaticMeshComponent* EnvironmentMesh =
+                    EnvironmentActor->GetStaticMeshComponent();
+                UMaterialInstanceDynamic* EnvironmentMaterial =
+                    EnvironmentMesh != nullptr
+                        ? EnvironmentMesh->CreateDynamicMaterialInstance(0)
+                        : nullptr;
+                if (EnvironmentMaterial == nullptr)
+                {
+                    continue;
+                }
+                const bool bArenaFloor =
+                    EnvironmentActor->GetActorScale3D().X > 50.0f;
+                EnvironmentMaterial->SetVectorParameterValue(
+                    EnvironmentColorParameterName,
+                    bArenaFloor
+                        ? FLinearColor(0.010f, 0.016f, 0.024f)
+                        : FLinearColor(0.024f, 0.038f, 0.052f));
+                ++RecoloredEnvironmentActorCount;
+            }
+        }
+        AEchoesEntityView* Preview =
+            GetWorld()->SpawnActor<AEchoesEntityView>();
+        if (Preview != nullptr)
+        {
+            echoes::sim::Entity PreviewState{};
+            PreviewState.id = 900001;
+            PreviewState.owner = echoes::sim::kNeutralPlayer;
+            PreviewState.type = echoes::sim::EntityType::FutureWell;
+            PreviewState.position = echoes::sim::Vec2::FromTiles(10, 10);
+            PreviewState.hitPoints = 1;
+            PreviewState.maxHitPoints = 1;
+            Preview->ApplyAuthoritativeState(PreviewState, true);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_FUTURE_WELL_ART_REVIEW_READY] preview=true ordinaryViewsHidden=true environmentActorsHidden=%d environmentActorsRecolored=%d tile=(10,10) editorOnly=true"),
+                HiddenEnvironmentActorCount,
+                RecoloredEnvironmentActorCount);
+        }
+        else
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_FUTURE_WELL_ART_REVIEW_FAILED] reason=preview-spawn"));
+        }
+    }
+#endif
+
     if (AEchoesPlayerController* Controller =
             Cast<AEchoesPlayerController>(GetWorld()->GetFirstPlayerController()))
     {
         Controller->NotifyRuntimeReady();
+#if !UE_BUILD_SHIPPING
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesFutureWellArtReview")) &&
+            Controller->GetHUD() != nullptr)
+        {
+            Controller->GetHUD()->bShowHUD = false;
+        }
+#endif
 #if WITH_EDITOR
         FString ResultPreview;
         if (FParse::Value(

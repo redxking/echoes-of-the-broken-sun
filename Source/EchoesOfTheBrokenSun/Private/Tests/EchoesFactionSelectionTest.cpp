@@ -158,6 +158,41 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Direct Kharuun roster contains a Listening Spine"),
              LocalListeningSpine != 0);
 
+    AEchoesEntityView* FutureWellPreview =
+        World->SpawnActor<AEchoesEntityView>();
+    TestNotNull(TEXT("A presentation-only Future Well view can be created"),
+                FutureWellPreview);
+    if (FutureWellPreview != nullptr)
+    {
+        echoes::sim::Entity PreviewState{};
+        PreviewState.id = 900001;
+        PreviewState.owner = echoes::sim::kNeutralPlayer;
+        PreviewState.type = echoes::sim::EntityType::FutureWell;
+        PreviewState.position = echoes::sim::Vec2::FromTiles(32, 32);
+        PreviewState.hitPoints = 1;
+        PreviewState.maxHitPoints = 1;
+        const echoes::sim::FutureWellChoice Choices[] = {
+            echoes::sim::FutureWellChoice::Dormant,
+            echoes::sim::FutureWellChoice::Harvest,
+            echoes::sim::FutureWellChoice::Preserve,
+            echoes::sim::FutureWellChoice::Reshape};
+        for (const echoes::sim::FutureWellChoice Choice : Choices)
+        {
+            PreviewState.wellChoice = Choice;
+            FutureWellPreview->ApplyAuthoritativeState(PreviewState, true);
+            TestTrue(
+                TEXT("Each Future Well state uses authored landmark geometry"),
+                FutureWellPreview->IsUsingAuthoredFutureWellMesh());
+            TestTrue(
+                TEXT("Each Future Well state presents its orbit and fractured core"),
+                FutureWellPreview->IsFutureWellPresentationVisible());
+            TestTrue(
+                TEXT("Each Future Well state retains its requested visual variant"),
+                FutureWellPreview->GetFutureWellVisualChoice() == Choice);
+        }
+        FutureWellPreview->Destroy();
+    }
+
     FString Feedback;
     TestTrue(
         TEXT("The locally owned Waystone accepts its faction command"),
@@ -326,6 +361,27 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 Mesh->GetNumLODs() >= 2);
             TestTrue(
                 FString::Printf(TEXT("Authored roster mesh has four material zones: %s"), MeshPath),
+                Mesh->GetStaticMaterials().Num() >= 4);
+        }
+    }
+    const TCHAR* AuthoredFutureWellMeshes[] = {
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellBase.SM_World_FutureWellBase"),
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellOrbit.SM_World_FutureWellOrbit"),
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellCore.SM_World_FutureWellCore"),
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellGlyph.SM_World_FutureWellGlyph")};
+    for (const TCHAR* MeshPath : AuthoredFutureWellMeshes)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, MeshPath);
+        TestNotNull(
+            FString::Printf(TEXT("Authored Future Well mesh loads: %s"), MeshPath),
+            Mesh);
+        if (Mesh != nullptr)
+        {
+            TestTrue(
+                FString::Printf(TEXT("Authored Future Well mesh has two LODs: %s"), MeshPath),
+                Mesh->GetNumLODs() >= 2);
+            TestTrue(
+                FString::Printf(TEXT("Authored Future Well mesh has four material zones: %s"), MeshPath),
                 Mesh->GetStaticMaterials().Num() >= 4);
         }
     }

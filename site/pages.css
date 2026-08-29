@@ -488,12 +488,231 @@
 
 .dark-band .back { color: var(--teal-bright); }
 
+.well-spotlight {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(420px, 1.18fr);
+  gap: clamp(42px, 7vw, 86px);
+  align-items: center;
+}
+
+.well-spotlight h2 { margin: 18px 0 24px; }
+.well-spotlight-copy p { max-width: 620px; }
+
+.concept-proof,
+.well-concept {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #69767b;
+  background: #0e141a;
+}
+
+.concept-proof img,
+.well-concept img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.concept-proof picture,
+.well-concept picture,
+.well-state-card picture { display: block; }
+
+.concept-proof figcaption,
+.well-concept figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  background: #121d29;
+  color: #f8f6ef;
+}
+
+.concept-proof figcaption b,
+.well-concept figcaption b {
+  color: #ffffff;
+  font: 600 15px/1.3 'Space Grotesk', sans-serif;
+}
+
+.concept-proof figcaption span,
+.well-concept figcaption span {
+  color: #cbd5d7;
+  font: 500 11px/1.4 'DM Mono', monospace;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.well-anatomy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 30px 0 0;
+}
+
+.well-anatomy div {
+  padding: 17px 18px;
+  border: 1px solid var(--line);
+  background: var(--paper-card);
+}
+
+.well-anatomy dt {
+  color: #205f56;
+  font: 600 11px/1.5 'DM Mono', monospace;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.well-anatomy dd {
+  margin: 6px 0 0;
+  color: var(--body);
+  font-size: 14px;
+}
+
+.well-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 42px;
+}
+
+.well-state-card {
+  overflow: hidden;
+  border: 1px solid var(--night-line);
+  background: var(--night-card);
+}
+
+.well-state-card figure { margin: 0; }
+
+.well-state-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-bottom: 1px solid var(--night-line);
+  background: #0d141b;
+}
+
+.well-state-body { padding: 26px 28px 28px; }
+
+.well-state-number {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 18px;
+  place-items: center;
+  border: 1px solid #9fb0b4;
+  color: #ffffff;
+  font: 600 12px/1 'DM Mono', monospace;
+}
+
+.well-state-card small {
+  display: block;
+  color: var(--teal-bright);
+  font: 600 11px/1.5 'DM Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.well-state-card h3 {
+  margin: 10px 0 7px;
+  color: var(--night-text);
+  font-size: 32px;
+}
+
+.well-state-role {
+  margin: 0 0 17px;
+  color: #ffffff;
+  font: 600 11px/1.5 'DM Mono', monospace;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.well-state-card p { color: var(--night-body); }
+
+.well-state-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--night-line);
+}
+
+.well-state-facts span {
+  color: var(--night-muted);
+  font-size: 12px;
+}
+
+.well-state-facts b {
+  display: block;
+  margin-top: 3px;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.campaign-consequence {
+  display: grid;
+  grid-template-columns: 130px minmax(0, .72fr) minmax(240px, .56fr);
+  gap: 24px;
+  align-items: start;
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+}
+
+.campaign-consequence:first-of-type { margin-top: 36px; }
+
+.campaign-consequence .mission-number {
+  color: #205f56;
+  font-size: 24px;
+  letter-spacing: -.03em;
+}
+
+.campaign-consequence h3 { margin: 0 0 9px; font-size: 28px; }
+.campaign-consequence p { margin: 0; }
+
+.campaign-consequence .consequence-note {
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.readability-contract {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.readability-contract article {
+  padding: 24px;
+  border: 1px solid var(--night-line);
+  background: var(--night-card);
+}
+
+.readability-contract h3 {
+  margin: 0 0 10px;
+  color: #ffffff;
+  font-size: 23px;
+}
+
+.readability-contract p { margin: 0; color: var(--night-body); font-size: 14px; }
+
 @media (max-width: 980px) {
   .detail-page .site-nav { width: 100%; padding: 18px 24px; }
   .choice-grid, .ending-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mission-card { grid-template-columns: 70px minmax(0, 1fr); }
 
   .mission-card .mission-purpose {
+    grid-column: 2;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .well-spotlight { grid-template-columns: 1fr; }
+  .campaign-consequence { grid-template-columns: 90px minmax(0, 1fr); }
+  .campaign-consequence .consequence-note {
     grid-column: 2;
     padding: 18px 0 0;
     border-top: 1px solid var(--line);
@@ -515,6 +734,27 @@
   .choice-grid, .ending-list { grid-template-columns: 1fr; }
 
   .engine-proof-grid { grid-template-columns: 1fr; }
+
+  .well-state-grid,
+  .readability-contract,
+  .well-anatomy { grid-template-columns: 1fr; }
+
+  .well-spotlight { display: block; }
+  .well-spotlight .concept-proof { margin-top: 38px; }
+
+  .concept-proof figcaption,
+  .well-concept figcaption {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .concept-proof figcaption span,
+  .well-concept figcaption span { text-align: left; }
+
+  .campaign-consequence {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 16px;
+  }
 
   .engine-proof-grid figcaption {
     align-items: flex-start;

@@ -9,6 +9,8 @@
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -19,7 +21,7 @@ const FName RoughnessParameterName(TEXT("Roughness"));
 const FName EmissiveStrengthParameterName(TEXT("EmissiveStrength"));
 constexpr float DamagePulseDurationSeconds = 0.18f;
 
-const TCHAR* AuthoredRosterMeshPath(
+const TCHAR* AuthoredPresentationMeshPath(
     echoes::sim::Faction Faction,
     echoes::sim::EntityType Type)
 {
@@ -60,8 +62,9 @@ const TCHAR* AuthoredRosterMeshPath(
                        ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")
                        : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.SM_Meridian_AegisPost");
         case echoes::sim::EntityType::ResourceNode:
-        case echoes::sim::EntityType::FutureWell:
             return nullptr;
+        case echoes::sim::EntityType::FutureWell:
+            return TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellBase.SM_World_FutureWellBase");
     }
     return nullptr;
 }
@@ -206,6 +209,33 @@ AEchoesEntityView::AEchoesEntityView()
     AegisPowerField->SetReceivesDecals(false);
     AegisPowerField->SetVisibility(false);
 
+    FutureWellOrbitOuter = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellOrbitOuter"));
+    FutureWellOrbitInner = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellOrbitInner"));
+    FutureWellCore = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellCore"));
+    FutureWellGroundGlyphA = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellGroundGlyphA"));
+    FutureWellGroundGlyphB = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellGroundGlyphB"));
+    for (UStaticMeshComponent* FutureWellComponent : {
+             FutureWellOrbitOuter,
+             FutureWellOrbitInner,
+             FutureWellCore,
+             FutureWellGroundGlyphA,
+             FutureWellGroundGlyphB})
+    {
+        FutureWellComponent->SetupAttachment(SceneRoot);
+        FutureWellComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        FutureWellComponent->SetGenerateOverlapEvents(false);
+        FutureWellComponent->SetReceivesDecals(false);
+        FutureWellComponent->SetCastShadow(true);
+        FutureWellComponent->SetVisibility(false);
+    }
+    FutureWellGroundGlyphA->SetCastShadow(false);
+    FutureWellGroundGlyphB->SetCastShadow(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -214,6 +244,12 @@ AEchoesEntityView::AEchoesEntityView()
         TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeFinder(
         TEXT("/Engine/BasicShapes/Cone.Cone"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellOrbitFinder(
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellOrbit.SM_World_FutureWellOrbit"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellCoreFinder(
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellCore.SM_World_FutureWellCore"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellGlyphFinder(
+        TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellGlyph.SM_World_FutureWellGlyph"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialFinder(
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> ArtMaterialFinder(
@@ -223,6 +259,9 @@ AEchoesEntityView::AEchoesEntityView()
     SphereMesh = SphereFinder.Object;
     CylinderMesh = CylinderFinder.Object;
     ConeMesh = ConeFinder.Object;
+    FutureWellOrbitMesh = FutureWellOrbitFinder.Object;
+    FutureWellCoreMesh = FutureWellCoreFinder.Object;
+    FutureWellGlyphMesh = FutureWellGlyphFinder.Object;
     BasicMaterial = MaterialFinder.Object;
     AuthoredSurfaceMaterial = ArtMaterialFinder.Succeeded()
                                   ? ArtMaterialFinder.Object
@@ -244,6 +283,11 @@ AEchoesEntityView::AEchoesEntityView()
     AegisPowerField->SetStaticMesh(CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeScale3D(FVector(1.35f, 1.35f, 0.045f));
+    FutureWellOrbitOuter->SetStaticMesh(FutureWellOrbitMesh);
+    FutureWellOrbitInner->SetStaticMesh(FutureWellOrbitMesh);
+    FutureWellCore->SetStaticMesh(FutureWellCoreMesh);
+    FutureWellGroundGlyphA->SetStaticMesh(FutureWellGlyphMesh);
+    FutureWellGroundGlyphB->SetStaticMesh(FutureWellGlyphMesh);
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -266,6 +310,37 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
     SetActorLocation(SmoothedLocation, false, nullptr, ETeleportType::None);
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (EntityType == echoes::sim::EntityType::FutureWell &&
+        bUsingAuthoredFutureWellMesh &&
+        FutureWellOrbitOuter != nullptr &&
+        FutureWellOrbitInner != nullptr &&
+        FutureWellCore != nullptr)
+    {
+        const bool bReducedMotion =
+            Settings != nullptr && Settings->IsReducedMotionEnabled();
+        if (!bReducedMotion)
+        {
+            FutureWellVisualTimeSeconds += DeltaSeconds;
+            const float OuterSpeed =
+                FutureWellVisualChoice == echoes::sim::FutureWellChoice::Harvest
+                    ? 10.0f
+                    : FutureWellVisualChoice == echoes::sim::FutureWellChoice::Reshape
+                          ? 8.0f
+                          : 4.0f;
+            FutureWellOrbitOuter->AddLocalRotation(
+                FRotator(0.0f, OuterSpeed * DeltaSeconds, 0.0f));
+            FutureWellOrbitInner->AddLocalRotation(
+                FRotator(0.0f, -OuterSpeed * 1.45f * DeltaSeconds, 0.0f));
+            const float Pulse =
+                1.0f + 0.035f * FMath::Sin(FutureWellVisualTimeSeconds * 1.6f);
+            FutureWellCore->SetRelativeScale3D(
+                FutureWellCoreBaseScale * Pulse);
+        }
+        else
+        {
+            FutureWellCore->SetRelativeScale3D(FutureWellCoreBaseScale);
+        }
+    }
     if (Settings != nullptr && Settings->IsReducedFlashingEnabled())
     {
         DamagePulseRemainingSeconds = 0.0f;
@@ -483,10 +558,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     }
 
     bUsingAuthoredRosterMesh = false;
+    bUsingAuthoredFutureWellMesh = false;
     if (!State.temporaryMineralCover)
     {
         const TCHAR* AuthoredPath =
-            AuthoredRosterMeshPath(State.faction, State.type);
+            AuthoredPresentationMeshPath(State.faction, State.type);
         if (AuthoredPath != nullptr)
         {
             if (UStaticMesh* AuthoredMesh =
@@ -495,7 +571,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 DesiredMesh = AuthoredMesh;
                 BodyScale = FVector::OneVector;
                 BodyOffset = FVector::ZeroVector;
-                bUsingAuthoredRosterMesh = true;
+                bUsingAuthoredFutureWellMesh =
+                    State.type == echoes::sim::EntityType::FutureWell;
+                bUsingAuthoredRosterMesh =
+                    !bUsingAuthoredFutureWellMesh &&
+                    State.type != echoes::sim::EntityType::ResourceNode;
 
                 switch (State.type)
                 {
@@ -540,7 +620,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                         HealthBarHeight = bKharuun ? 332.0f : 232.0f;
                         break;
                     case echoes::sim::EntityType::ResourceNode:
+                        break;
                     case echoes::sim::EntityType::FutureWell:
+                        SelectionRadius = 3.15f;
+                        HealthBarWidthScale = 2.75f;
+                        HealthBarHeight = 322.0f;
                         break;
                 }
             }
@@ -631,7 +715,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
     SilhouetteAccent->SetVisibility(
-        bShowSilhouetteAccent && !bUsingAuthoredRosterMesh,
+        bShowSilhouetteAccent && !bUsingAuthoredRosterMesh &&
+            !bUsingAuthoredFutureWellMesh,
         true);
     SelectionRing->SetRelativeScale3D(
         FVector(SelectionRadius, SelectionRadius, 0.025f));
@@ -753,10 +838,12 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     {
         BodyMaterials.Reset();
         BodyMaterial = nullptr;
+        const bool bUsingAuthoredPresentationMesh =
+            bUsingAuthoredRosterMesh || bUsingAuthoredFutureWellMesh;
         const int32 BodyMaterialCount =
-            bUsingAuthoredRosterMesh ? 4 : 1;
+            bUsingAuthoredPresentationMesh ? 4 : 1;
         UMaterialInterface* BodyParent =
-            bUsingAuthoredRosterMesh && AuthoredSurfaceMaterial != nullptr
+            bUsingAuthoredPresentationMesh && AuthoredSurfaceMaterial != nullptr
                 ? AuthoredSurfaceMaterial
                 : BasicMaterial;
         for (int32 MaterialIndex = 0;
@@ -852,7 +939,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             AegisPowerField->SetMaterial(0, AegisPowerFieldMaterial);
         }
         const FLinearColor TeamColor = ColorForState(State);
-        BaseBodyColor = TeamColor;
+        BaseBodyColor = bUsingAuthoredFutureWellMesh
+                            ? FLinearColor(0.030f, 0.034f, 0.042f)
+                            : TeamColor;
         SetBodyColor(BaseBodyColor);
         if (bUsingAuthoredRosterMesh && BodyMaterials.Num() >= 4)
         {
@@ -903,6 +992,285 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             EntityColorParameterName,
             TeamColor);
     }
+
+    ConfigureFutureWellPresentation(State);
+}
+
+void AEchoesEntityView::EnsureFutureWellMaterialSet(
+    UStaticMeshComponent* Component,
+    TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials)
+{
+    if (Component == nullptr || AuthoredSurfaceMaterial == nullptr)
+    {
+        return;
+    }
+    if (Materials.Num() != 4)
+    {
+        Materials.Reset();
+        for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+        {
+            UMaterialInstanceDynamic* Material =
+                UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+            Materials.Add(Material);
+        }
+    }
+    for (int32 MaterialIndex = 0; MaterialIndex < Materials.Num(); ++MaterialIndex)
+    {
+        Component->SetMaterial(MaterialIndex, Materials[MaterialIndex]);
+    }
+}
+
+void AEchoesEntityView::ConfigureFutureWellPresentation(
+    const echoes::sim::Entity& State)
+{
+    const bool bVisible =
+        State.type == echoes::sim::EntityType::FutureWell &&
+        bUsingAuthoredFutureWellMesh &&
+        FutureWellOrbitMesh != nullptr &&
+        FutureWellCoreMesh != nullptr &&
+        FutureWellGlyphMesh != nullptr;
+    if (!bVisible)
+    {
+        for (UStaticMeshComponent* Component : {
+                 FutureWellOrbitOuter,
+                 FutureWellOrbitInner,
+                 FutureWellCore,
+                 FutureWellGroundGlyphA,
+                 FutureWellGroundGlyphB})
+        {
+            if (Component != nullptr)
+            {
+                Component->SetVisibility(false, true);
+            }
+        }
+        return;
+    }
+
+    FutureWellOrbitOuter->SetStaticMesh(FutureWellOrbitMesh);
+    FutureWellOrbitInner->SetStaticMesh(FutureWellOrbitMesh);
+    FutureWellCore->SetStaticMesh(FutureWellCoreMesh);
+    FutureWellGroundGlyphA->SetStaticMesh(FutureWellGlyphMesh);
+    FutureWellGroundGlyphB->SetStaticMesh(FutureWellGlyphMesh);
+
+    FVector OuterLocation(0.0f, 0.0f, 205.0f);
+    FVector InnerLocation(0.0f, 0.0f, 145.0f);
+    FVector CoreLocation(0.0f, 0.0f, 154.0f);
+    FVector GlyphLocation(0.0f, 0.0f, 58.0f);
+    FVector OuterScale(0.92f);
+    FVector InnerScale(0.62f);
+    FVector CoreScale(0.72f, 0.72f, 1.0f);
+    FVector GlyphAScale(1.0f);
+    FVector GlyphBScale(1.0f);
+    FRotator OuterRotation = FRotator::ZeroRotator;
+    FRotator InnerRotation(0.0f, 18.0f, 0.0f);
+    FRotator GlyphARotation = FRotator::ZeroRotator;
+    FRotator GlyphBRotation = FRotator::ZeroRotator;
+    bool bShowGlyphA = false;
+    bool bShowGlyphB = false;
+
+    FLinearColor SecondaryColor(0.28f, 0.24f, 0.18f);
+    FLinearColor GlowColor(1.0f, 0.58f, 0.10f);
+    float SecondaryEmissive = 0.05f;
+    float GlowEmissive = 1.25f;
+
+    FutureWellVisualChoice = State.wellChoice;
+#if !UE_BUILD_SHIPPING
+    FString PreviewChoice;
+    if (FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesFutureWellPreview="),
+            PreviewChoice))
+    {
+        if (PreviewChoice.Equals(TEXT("Harvest"), ESearchCase::IgnoreCase))
+        {
+            FutureWellVisualChoice = echoes::sim::FutureWellChoice::Harvest;
+        }
+        else if (PreviewChoice.Equals(TEXT("Preserve"), ESearchCase::IgnoreCase))
+        {
+            FutureWellVisualChoice = echoes::sim::FutureWellChoice::Preserve;
+        }
+        else if (PreviewChoice.Equals(TEXT("Reshape"), ESearchCase::IgnoreCase))
+        {
+            FutureWellVisualChoice = echoes::sim::FutureWellChoice::Reshape;
+        }
+        else
+        {
+            FutureWellVisualChoice = echoes::sim::FutureWellChoice::Dormant;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_FUTURE_WELL_PREVIEW] requested=%s visualChoice=%u authoritativeChoice=%u editorOnly=true"),
+            *PreviewChoice,
+            static_cast<uint8>(FutureWellVisualChoice),
+            static_cast<uint8>(State.wellChoice));
+    }
+#endif
+
+    switch (FutureWellVisualChoice)
+    {
+        case echoes::sim::FutureWellChoice::Harvest:
+            OuterLocation.Z = 145.0f;
+            InnerLocation.Z = 105.0f;
+            CoreLocation.Z = 106.0f;
+            OuterScale = FVector(0.72f);
+            InnerScale = FVector(0.48f);
+            CoreScale = FVector(0.55f, 0.55f, 1.40f);
+            GlyphAScale = FVector(0.66f, 0.66f, 0.35f);
+            OuterRotation = FRotator(18.0f, 0.0f, 0.0f);
+            InnerRotation = FRotator(-22.0f, 30.0f, 0.0f);
+            bShowGlyphA = true;
+            SecondaryColor = FLinearColor(0.72f, 0.12f, 0.025f);
+            GlowColor = FLinearColor(1.0f, 0.46f, 0.045f);
+            SecondaryEmissive = 0.45f;
+            GlowEmissive = 3.1f;
+            break;
+        case echoes::sim::FutureWellChoice::Preserve:
+            OuterLocation.Z = 224.0f;
+            InnerLocation.Z = 164.0f;
+            CoreLocation.Z = 160.0f;
+            OuterScale = FVector(1.0f);
+            InnerScale = FVector(0.78f);
+            CoreScale = FVector(0.90f, 0.90f, 1.10f);
+            GlyphAScale = FVector(1.0f, 1.0f, 0.40f);
+            GlyphBScale = FVector(0.68f, 0.68f, 0.42f);
+            InnerRotation = FRotator(0.0f, 28.0f, 0.0f);
+            GlyphBRotation.Yaw = 22.5f;
+            bShowGlyphA = true;
+            bShowGlyphB = true;
+            SecondaryColor = FLinearColor(0.04f, 0.62f, 0.78f);
+            GlowColor = FLinearColor(1.0f, 0.72f, 0.16f);
+            SecondaryEmissive = 0.85f;
+            GlowEmissive = 2.4f;
+            break;
+        case echoes::sim::FutureWellChoice::Reshape:
+            OuterLocation.Z = 188.0f;
+            InnerLocation.Z = 172.0f;
+            CoreLocation.Z = 150.0f;
+            OuterScale = FVector(0.94f);
+            InnerScale = FVector(0.82f);
+            CoreScale = FVector(0.82f, 0.82f, 1.12f);
+            GlyphAScale = FVector(1.38f, 0.42f, 0.42f);
+            GlyphBScale = FVector(1.38f, 0.42f, 0.42f);
+            OuterRotation = FRotator(54.0f, 15.0f, 12.0f);
+            InnerRotation = FRotator(-50.0f, 72.0f, -8.0f);
+            GlyphARotation.Yaw = 45.0f;
+            GlyphBRotation.Yaw = -45.0f;
+            bShowGlyphA = true;
+            bShowGlyphB = true;
+            SecondaryColor = FLinearColor(0.025f, 0.66f, 0.82f);
+            GlowColor = FLinearColor(0.62f, 0.12f, 1.0f);
+            SecondaryEmissive = 1.0f;
+            GlowEmissive = 2.8f;
+            break;
+        case echoes::sim::FutureWellChoice::Dormant:
+            break;
+    }
+
+    FutureWellOrbitOuter->SetRelativeLocation(OuterLocation);
+    FutureWellOrbitOuter->SetRelativeScale3D(OuterScale);
+    FutureWellOrbitOuter->SetRelativeRotation(OuterRotation);
+    FutureWellOrbitInner->SetRelativeLocation(InnerLocation);
+    FutureWellOrbitInner->SetRelativeScale3D(InnerScale);
+    FutureWellOrbitInner->SetRelativeRotation(InnerRotation);
+    FutureWellCore->SetRelativeLocation(CoreLocation);
+    FutureWellCoreBaseScale = CoreScale;
+    FutureWellCore->SetRelativeScale3D(CoreScale);
+    FutureWellGroundGlyphA->SetRelativeLocation(GlyphLocation);
+    FutureWellGroundGlyphA->SetRelativeScale3D(GlyphAScale);
+    FutureWellGroundGlyphA->SetRelativeRotation(GlyphARotation);
+    FutureWellGroundGlyphB->SetRelativeLocation(GlyphLocation);
+    FutureWellGroundGlyphB->SetRelativeScale3D(GlyphBScale);
+    FutureWellGroundGlyphB->SetRelativeRotation(GlyphBRotation);
+    FutureWellVisualTimeSeconds = 0.0f;
+
+    FutureWellOrbitOuter->SetVisibility(true, true);
+    FutureWellOrbitInner->SetVisibility(true, true);
+    FutureWellCore->SetVisibility(true, true);
+    FutureWellGroundGlyphA->SetVisibility(bShowGlyphA, true);
+    FutureWellGroundGlyphB->SetVisibility(bShowGlyphB, true);
+
+    EnsureFutureWellMaterialSet(
+        FutureWellOrbitOuter,
+        FutureWellOrbitOuterMaterials);
+    EnsureFutureWellMaterialSet(
+        FutureWellOrbitInner,
+        FutureWellOrbitInnerMaterials);
+    EnsureFutureWellMaterialSet(FutureWellCore, FutureWellCoreMaterials);
+    EnsureFutureWellMaterialSet(
+        FutureWellGroundGlyphA,
+        FutureWellGroundGlyphAMaterials);
+    EnsureFutureWellMaterialSet(
+        FutureWellGroundGlyphB,
+        FutureWellGroundGlyphBMaterials);
+
+    const FLinearColor StoneColor(0.030f, 0.034f, 0.042f);
+    const FLinearColor GlassColor(0.006f, 0.008f, 0.014f);
+    auto ApplyPalette = [&StoneColor,
+                         &GlassColor,
+                         &SecondaryColor,
+                         &GlowColor](
+                            TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials,
+                            float InSecondaryEmissive,
+                            float InGlowEmissive)
+    {
+        if (Materials.Num() < 4)
+        {
+            return;
+        }
+        const FLinearColor Colors[] = {
+            StoneColor,
+            GlassColor,
+            SecondaryColor,
+            GlowColor};
+        const float Metallic[] = {0.12f, 0.56f, 0.32f, 0.18f};
+        const float Roughness[] = {0.70f, 0.16f, 0.34f, 0.14f};
+        const float Emissive[] = {
+            0.0f,
+            0.0f,
+            InSecondaryEmissive,
+            InGlowEmissive};
+        for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+        {
+            UMaterialInstanceDynamic* Material = Materials[MaterialIndex];
+            Material->SetVectorParameterValue(
+                EntityColorParameterName,
+                Colors[MaterialIndex]);
+            Material->SetScalarParameterValue(
+                MetallicParameterName,
+                Metallic[MaterialIndex]);
+            Material->SetScalarParameterValue(
+                RoughnessParameterName,
+                Roughness[MaterialIndex]);
+            Material->SetScalarParameterValue(
+                EmissiveStrengthParameterName,
+                Emissive[MaterialIndex]);
+        }
+    };
+
+    ApplyPalette(BodyMaterials, SecondaryEmissive * 0.08f, GlowEmissive * 0.72f);
+    ApplyPalette(
+        FutureWellOrbitOuterMaterials,
+        SecondaryEmissive * 0.30f,
+        GlowEmissive);
+    ApplyPalette(
+        FutureWellOrbitInnerMaterials,
+        SecondaryEmissive * 0.38f,
+        GlowEmissive * 1.08f);
+    ApplyPalette(
+        FutureWellCoreMaterials,
+        SecondaryEmissive * 0.85f,
+        GlowEmissive * 1.28f);
+    ApplyPalette(
+        FutureWellGroundGlyphAMaterials,
+        SecondaryEmissive,
+        GlowEmissive * 0.90f);
+    ApplyPalette(
+        FutureWellGroundGlyphBMaterials,
+        SecondaryEmissive,
+        GlowEmissive * 0.90f);
+    BaseBodyColor = StoneColor;
+    SetBodyColor(BaseBodyColor);
 }
 
 bool AEchoesEntityView::IsDeploymentCoverVisible() const
@@ -933,6 +1301,17 @@ bool AEchoesEntityView::IsWarformStateVisible() const
 bool AEchoesEntityView::IsAegisPowerFieldVisible() const
 {
     return AegisPowerField != nullptr && AegisPowerField->IsVisible();
+}
+
+bool AEchoesEntityView::IsFutureWellPresentationVisible() const
+{
+    return bUsingAuthoredFutureWellMesh &&
+           FutureWellOrbitOuter != nullptr &&
+           FutureWellOrbitOuter->IsVisible() &&
+           FutureWellOrbitInner != nullptr &&
+           FutureWellOrbitInner->IsVisible() &&
+           FutureWellCore != nullptr &&
+           FutureWellCore->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)

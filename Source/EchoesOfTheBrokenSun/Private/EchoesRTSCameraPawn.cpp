@@ -40,6 +40,24 @@ void AEchoesRTSCameraPawn::BeginPlay()
     Super::BeginPlay();
     bEdgePanArmed = false;
 #if !UE_BUILD_SHIPPING
+    if (FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesFutureWellArtReview")))
+    {
+        bArtReviewMode = true;
+        SetActorLocation(FVector(-4400.0f, -4400.0f, 100.0f));
+        SpringArm->TargetArmLength = 1350.0f;
+        SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
+        SpringArm->bEnableCameraLag = false;
+        Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+        Camera->PostProcessSettings.AutoExposureBias = -1.75f;
+        Camera->PostProcessBlendWeight = 1.0f;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_FUTURE_WELL_ART_REVIEW_CAMERA] previewTile=(10,10) zoom=1350 editorOnly=true"));
+        return;
+    }
     if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
     {
         bArtReviewMode = true;
@@ -92,12 +110,35 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         ArtReviewElapsedSeconds += DeltaSeconds;
         if (ArtReviewElapsedSeconds >= 1.5f)
         {
-            FScreenshotRequest::RequestScreenshot(true, true);
+            FString OutputPath;
+            const bool bShowUI = !FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesArtReviewHideUI"));
+            if (FParse::Value(
+                    FCommandLine::Get(),
+                    TEXT("EchoesArtReviewOutput="),
+                    OutputPath) &&
+                !OutputPath.IsEmpty())
+            {
+                FScreenshotRequest::RequestScreenshot(
+                    OutputPath,
+                    bShowUI,
+                    false,
+                    false,
+                    FIntRect(),
+                    true);
+            }
+            else
+            {
+                FScreenshotRequest::RequestScreenshot(bShowUI, true);
+            }
             bArtReviewScreenshotRequested = true;
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=true delay=1.5"));
+                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=%s delay=1.5 output=%s"),
+                bShowUI ? TEXT("true") : TEXT("false"),
+                OutputPath.IsEmpty() ? TEXT("default") : *OutputPath);
         }
     }
 #endif

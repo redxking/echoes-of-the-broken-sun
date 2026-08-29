@@ -180,6 +180,25 @@ def radial_box(
     )
 
 
+def radial_tangent_box(
+    mesh: unreal.DynamicMesh,
+    angle_degrees: float,
+    radius: float,
+    size: tuple[float, float, float],
+    z: float,
+    material_id: int,
+    pitch: float = 0.0,
+) -> None:
+    angle = math.radians(angle_degrees)
+    box(
+        mesh,
+        size,
+        (math.cos(angle) * radius, math.sin(angle) * radius, z),
+        material_id,
+        (pitch, angle_degrees + 90.0, 0.0),
+    )
+
+
 def paired_leg(
     mesh: unreal.DynamicMesh,
     y: float,
@@ -446,6 +465,106 @@ def kharuun_listening_spine(mesh: unreal.DynamicMesh, high: bool) -> None:
         cone(mesh, 17.0, 1.0, 78.0, (0.0, 0.0, 278.0), LIGHT, sides=6)
 
 
+def world_future_well_base(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Neutral foundation: neither Meridian-built nor Kharuun-grown."""
+    cylinder(mesh, 238.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=16)
+    cylinder(mesh, 207.0, 14.0, (0.0, 0.0, 30.0), PRIMARY, sides=16)
+    cylinder(mesh, 76.0, 28.0, (0.0, 0.0, 39.0), DARK, sides=12)
+    torus(mesh, 78.0, 7.0, (0.0, 0.0, 54.0), GLOW, high_detail=high)
+    torus(mesh, 148.0, 5.0, (0.0, 0.0, 38.0), LIGHT, high_detail=high)
+    for angle in range(0, 360, 60):
+        radial_box(mesh, angle, 151.0, (134.0, 18.0, 10.0), 39.0, LIGHT)
+        radial_box(mesh, angle, 178.0, (111.0, 6.0, 5.0), 47.0, GLOW)
+        radial_box(mesh, angle, 242.0, (58.0, 52.0, 18.0), 18.0, DARK)
+        a = math.radians(angle)
+        pylon_x = math.cos(a) * 188.0
+        pylon_y = math.sin(a) * 188.0
+        cone(
+            mesh,
+            38.0,
+            18.0,
+            172.0,
+            (pylon_x, pylon_y, 122.0),
+            PRIMARY,
+            (-10.0, angle + 180.0, 0.0),
+            6,
+        )
+        cone(
+            mesh,
+            20.0,
+            8.0,
+            132.0,
+            (pylon_x - math.cos(a) * 10.0,
+             pylon_y - math.sin(a) * 10.0,
+             132.0),
+            LIGHT,
+            (-10.0, angle + 180.0, 0.0),
+            6,
+        )
+        radial_box(mesh, angle, 178.0, (8.0, 13.0, 126.0), 126.0, GLOW, -10.0)
+        if high:
+            radial_tangent_box(mesh, angle + 15.0, 218.0, (54.0, 18.0, 15.0), 45.0, PRIMARY)
+            radial_tangent_box(mesh, angle - 15.0, 218.0, (54.0, 12.0, 8.0), 52.0, LIGHT)
+
+
+def world_future_well_orbit(mesh: unreal.DynamicMesh, high: bool) -> None:
+    segment_step = 24 if high else 36
+    skipped = {72, 96, 252, 276} if high else {72, 252}
+    for angle in range(0, 360, segment_step):
+        if angle in skipped:
+            continue
+        segment_length = 65.0 if high else 90.0
+        radial_tangent_box(
+            mesh,
+            float(angle),
+            158.0,
+            (segment_length, 22.0, 16.0),
+            0.0,
+            LIGHT,
+        )
+        radial_tangent_box(
+            mesh,
+            float(angle),
+            158.0,
+            (segment_length * 0.78, 6.0, 5.0),
+            10.0,
+            GLOW,
+        )
+        if high and angle % 48 == 0:
+            radial_box(mesh, float(angle), 158.0, (28.0, 9.0, 34.0), 2.0, DARK)
+
+
+def world_future_well_core(mesh: unreal.DynamicMesh, high: bool) -> None:
+    sides = 8 if high else 6
+    cone(mesh, 3.0, 34.0, 92.0, (0.0, 0.0, -46.0), GLOW, sides=sides)
+    cone(mesh, 34.0, 3.0, 92.0, (0.0, 0.0, 46.0), GLOW, sides=sides)
+    torus(mesh, 39.0, 4.0, (0.0, 0.0, 0.0), LIGHT, (90.0, 0.0, 0.0), high)
+    shard_angles = range(0, 360, 45 if high else 90)
+    for index, angle in enumerate(shard_angles):
+        a = math.radians(angle)
+        radius = 50.0 + (index % 2) * 17.0
+        z = -30.0 + (index % 3) * 31.0
+        cone(
+            mesh,
+            9.0,
+            2.0,
+            42.0,
+            (math.cos(a) * radius, math.sin(a) * radius, z),
+            DARK,
+            (12.0, angle, 18.0),
+            5,
+        )
+
+
+def world_future_well_glyph(mesh: unreal.DynamicMesh, high: bool) -> None:
+    for angle in range(0, 360, 45):
+        radial_box(mesh, float(angle), 116.0, (185.0, 13.0, 7.0), 0.0, GLOW)
+        radial_box(mesh, float(angle), 205.0, (72.0, 5.0, 4.0), 5.0, LIGHT)
+        if high:
+            radial_tangent_box(mesh, float(angle), 205.0, (38.0, 12.0, 6.0), 3.0, DARK)
+    torus(mesh, 91.0, 5.0, (0.0, 0.0, 2.0), GLOW, high_detail=high)
+
+
 ASSETS = (
     AssetSpec("Meridian", "Units", "Surveyor", "Surveyor", "worker engineer", meridian_surveyor),
     AssetSpec("Meridian", "Units", "Lancer", "Lancer", "ranged line unit", meridian_lancer),
@@ -463,6 +582,10 @@ ASSETS = (
     AssetSpec("Kharuun", "Structures", "Waystone", "Waystone", "mobile supply node", kharuun_waystone),
     AssetSpec("Kharuun", "Structures", "GrowthBasin", "Growth Basin", "production and adaptation", kharuun_growth_basin),
     AssetSpec("Kharuun", "Structures", "ListeningSpine", "Listening Spine", "vibration detection", kharuun_listening_spine),
+    AssetSpec("World", "Landmarks", "FutureWellBase", "Future Well foundation", "signature world landmark foundation", world_future_well_base),
+    AssetSpec("World", "Landmarks", "FutureWellOrbit", "Future Well orbit", "animated possibility orbit", world_future_well_orbit),
+    AssetSpec("World", "Landmarks", "FutureWellCore", "Future Well core", "fractured unrealized-future core", world_future_well_core),
+    AssetSpec("World", "Landmarks", "FutureWellGlyph", "Future Well ground glyph", "state-readable ground manifestation", world_future_well_glyph),
 )
 
 
@@ -584,7 +707,7 @@ def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> un
 
 
 def main() -> None:
-    unreal.log("[ECHOES_ART_BEGIN] generating 16 authored roster assets")
+    unreal.log("[ECHOES_ART_BEGIN] generating 16 roster assets and 4 Future Well assets")
     for spec in ASSETS:
         if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
             if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
@@ -592,7 +715,10 @@ def main() -> None:
     surface_material = create_surface_material()
     generated = [create_static_mesh(spec, surface_material) for spec in ASSETS]
     unreal.EditorAssetLibrary.save_loaded_assets(generated + [surface_material], False)
-    unreal.log(f"[ECHOES_ART_COMPLETE] generated={len(generated)} material={MATERIAL_PATH}")
+    unreal.log(
+        f"[ECHOES_ART_COMPLETE] generated={len(generated)} "
+        f"roster=16 landmarks=4 material={MATERIAL_PATH}"
+    )
 
 
 if __name__ == "__main__":

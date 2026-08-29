@@ -66,12 +66,25 @@ public:
     {
         return bUsingAuthoredRosterMesh;
     }
+    [[nodiscard]] bool IsUsingAuthoredFutureWellMesh() const
+    {
+        return bUsingAuthoredFutureWellMesh;
+    }
+    [[nodiscard]] bool IsFutureWellPresentationVisible() const;
+    [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellVisualChoice() const
+    {
+        return FutureWellVisualChoice;
+    }
     [[nodiscard]] bool IsSilhouetteAccentVisible() const;
     [[nodiscard]] uint8 GetOwnerMarkerVariant() const;
     [[nodiscard]] FString GetDisplayName() const;
 
 private:
     void ConfigureAppearance(const echoes::sim::Entity& State);
+    void ConfigureFutureWellPresentation(const echoes::sim::Entity& State);
+    void EnsureFutureWellMaterialSet(
+        UStaticMeshComponent* Component,
+        TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials);
     void SetBodyColor(const FLinearColor& Color);
     void UpdateHealthBar();
 
@@ -111,6 +124,21 @@ private:
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> AegisPowerField;
 
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellOrbitOuter;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellOrbitInner;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellCore;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellGroundGlyphA;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellGroundGlyphB;
+
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
 
@@ -124,6 +152,15 @@ private:
     TObjectPtr<UStaticMesh> ConeMesh;
 
     UPROPERTY()
+    TObjectPtr<UStaticMesh> FutureWellOrbitMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> FutureWellCoreMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> FutureWellGlyphMesh;
+
+    UPROPERTY()
     TObjectPtr<UMaterialInterface> BasicMaterial;
 
     UPROPERTY()
@@ -134,6 +171,21 @@ private:
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellOrbitOuterMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellOrbitInnerMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellCoreMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellGroundGlyphAMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellGroundGlyphBMaterials;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> SilhouetteAccentMaterial;
@@ -172,6 +224,8 @@ private:
     echoes::sim::EntityType EntityType = echoes::sim::EntityType::Worker;
     echoes::sim::FutureWellChoice WellChoice =
         echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice FutureWellVisualChoice =
+        echoes::sim::FutureWellChoice::Dormant;
     int32 HitPoints = 1;
     int32 MaxHitPoints = 1;
     float DisplayedHealthFraction = 1.0f;
@@ -194,4 +248,7 @@ private:
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
     bool bUsingAuthoredRosterMesh = false;
+    bool bUsingAuthoredFutureWellMesh = false;
+    float FutureWellVisualTimeSeconds = 0.0f;
+    FVector FutureWellCoreBaseScale = FVector::OneVector;
 };
