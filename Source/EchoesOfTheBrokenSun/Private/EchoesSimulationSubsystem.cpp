@@ -28,6 +28,7 @@ constexpr int32 PrologueSiteRadiusTiles = 3;
 constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
 constexpr int32 TermsOfContinuanceSiteRadiusTiles = 3;
+constexpr int32 NamesWithoutBirthsSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -306,6 +307,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("THE UNBURIED ROAD");
         case EEchoesOperationMode::CampaignTermsOfContinuance:
             return TEXT("TERMS OF CONTINUANCE");
+        case EEchoesOperationMode::CampaignNamesWithoutBirths:
+            return TEXT("NAMES WITHOUT BIRTHS");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -357,6 +360,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_TERMS_OF_CONTINUANCE_LOCKED] reason=four consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        !IsNamesWithoutBirthsUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_LOCKED] reason=five consistent prior mission records required"));
         return false;
     }
 
@@ -481,7 +494,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const int32 UnburiedRoadTerrainDelta =
         (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad ||
          SelectedOperation ==
-             EEchoesOperationMode::CampaignTermsOfContinuance)
+             EEchoesOperationMode::CampaignTermsOfContinuance ||
+         SelectedOperation ==
+             EEchoesOperationMode::CampaignNamesWithoutBirths)
             ? ApplyUnburiedRoadTerrain(*Simulation, SevenAccountsBranch)
             : 0;
     const int32 GlassScarBlockedTiles =
@@ -499,6 +514,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? Faction::KharuunAssemblies
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignTermsOfContinuance
+            ? Faction::MeridianCompact
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignNamesWithoutBirths
             ? Faction::MeridianCompact
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
@@ -524,7 +542,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignUnburiedRoad ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignTermsOfContinuance
+                        EEchoesOperationMode::CampaignTermsOfContinuance ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignNamesWithoutBirths
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -566,6 +586,10 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     KharuunContinuanceSpineId = 0;
     MeridianContinuanceWitnessId = 0;
     KharuunContinuanceWitnessId = 0;
+    TalarId = 0;
+    CensusArchiveId = 0;
+    FirstCivilianId = 0;
+    SecondCivilianId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -772,6 +796,81 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 KharuunContinuanceSpineId,
                 MeridianContinuanceWitnessId,
                 KharuunContinuanceWitnessId,
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
+        }
+
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths)
+        {
+            const FEchoesNamesWithoutBirthsPlan Plan =
+                GetNamesWithoutBirthsPlan();
+            CensusArchiveId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                Plan.CensusSite.x.FloorToInt(),
+                Plan.CensusSite.y.FloorToInt());
+            TalarId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::ScoutUnit,
+                18,
+                20);
+            FirstCivilianId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::Worker,
+                20,
+                24);
+            SecondCivilianId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::Worker,
+                23,
+                24);
+            const FIntPoint CommonArchiveLinks[] = {{18, 10}, {24, 15}};
+            for (const FIntPoint& Link : CommonArchiveLinks)
+            {
+                SpawnUnit(
+                    LocalPlayerId,
+                    Faction::MeridianCompact,
+                    EntityType::Dropoff,
+                    Link.X,
+                    Link.Y);
+            }
+            if (Plan.PriorChoice == FutureWellChoice::Reshape)
+            {
+                const FIntPoint EasternArchiveLinks[] = {{31, 17}, {38, 19}};
+                for (const FIntPoint& Link : EasternArchiveLinks)
+                {
+                    SpawnUnit(
+                        LocalPlayerId,
+                        Faction::MeridianCompact,
+                        EntityType::Dropoff,
+                        Link.X,
+                        Link.Y);
+                }
+            }
+            for (int32 Index = 0; Index < 3; ++Index)
+            {
+                SpawnUnit(
+                    OpponentPlayerId,
+                    ScenarioOpponentFaction,
+                    EntityType::ScoutUnit,
+                    46 + Index * 3,
+                    54);
+            }
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_SPAWN] branch=%s talar=%u archive=%u civilianA=%u civilianB=%u requiredLink=%d,%d success=%s"),
+                Plan.StableName,
+                TalarId,
+                CensusArchiveId,
+                FirstCivilianId,
+                SecondCivilianId,
+                Plan.PowerLinkSite.x.FloorToInt(),
+                Plan.PowerLinkSite.y.FloorToInt(),
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
@@ -1209,6 +1308,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        (TalarId == 0 || CensusArchiveId == 0 || FirstCivilianId == 0 ||
+         SecondCivilianId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_INIT_FAILED] reason=mission entities unavailable talar=%u archive=%u civilianA=%u civilianB=%u"),
+            TalarId,
+            CensusArchiveId,
+            FirstCivilianId,
+            SecondCivilianId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1338,6 +1453,27 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 UnburiedRoadTerrainDelta,
                 GlassScarBlockedTiles);
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignNamesWithoutBirths)
+        {
+            const FEchoesNamesWithoutBirthsPlan Plan =
+                GetNamesWithoutBirthsPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_READY] branch=%s talar=%u archive=%u civilianA=%u civilianB=%u census=(%d,%d) shelter=(%d,%d) extraction=(%d,%d) pressureProxies=3 pressureFaction=KharuunAssemblies pressureBehavior=genericAdaptive inheritedRecords=5"),
+                Plan.StableName,
+                TalarId,
+                CensusArchiveId,
+                FirstCivilianId,
+                SecondCivilianId,
+                Plan.CensusSite.x.FloorToInt(),
+                Plan.CensusSite.y.FloorToInt(),
+                Plan.CivilianShelterSite.x.FloorToInt(),
+                Plan.CivilianShelterSite.y.FloorToInt(),
+                Plan.EvidenceExtractionSite.x.FloorToInt(),
+                Plan.EvidenceExtractionSite.y.FloorToInt());
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -1452,6 +1588,10 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     KharuunContinuanceSpineId = 0;
     MeridianContinuanceWitnessId = 0;
     KharuunContinuanceWitnessId = 0;
+    TalarId = 0;
+    CensusArchiveId = 0;
+    FirstCivilianId = 0;
+    SecondCivilianId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -1510,6 +1650,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::MeridianCompact)
     {
         OutFeedback = TEXT("[FACTION_TERMS_OF_CONTINUANCE_LOCKED] Meridian-authoritative treaty proxies are fixed for this prototype mission.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        NewFaction != Faction::MeridianCompact)
+    {
+        OutFeedback = TEXT("[FACTION_NAMES_WITHOUT_BIRTHS_LOCKED] Talar's protected archive convoy deploys under Meridian command authority.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -1597,6 +1744,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Unburied Road with a consistent ledger before Terms of Continuance.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        !IsNamesWithoutBirthsUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Terms of Continuance with a consistent ledger before Names Without Births.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1633,6 +1787,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::MeridianCompact;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignNamesWithoutBirths)
+    {
+        LocalFaction = Faction::MeridianCompact;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1653,6 +1812,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT(" — Meridian-authoritative treaty proxies are locked for this prototype mission.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignNamesWithoutBirths
+                ? TEXT(" — Talar and the civilian archive convoy are locked under Meridian authority.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1669,6 +1831,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT("TermsOfContinuance")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignNamesWithoutBirths
+                ? TEXT("NamesWithoutBirths")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1790,7 +1955,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
     }
     if (SelectedOperation ==
-        EEchoesOperationMode::CampaignTermsOfContinuance)
+            EEchoesOperationMode::CampaignTermsOfContinuance ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -1807,14 +1974,22 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
-                FString::Printf(
-                    TEXT("EchoesQuickSaveTermsOfContinuance-%08X.bin"),
-                    LedgerFingerprint));
+                SelectedOperation ==
+                        EEchoesOperationMode::CampaignTermsOfContinuance
+                    ? FString::Printf(
+                          TEXT("EchoesQuickSaveTermsOfContinuance-%08X.bin"),
+                          LedgerFingerprint)
+                    : FString::Printf(
+                          TEXT("EchoesQuickSaveNamesWithoutBirths-%08X.bin"),
+                          LedgerFingerprint));
         }
         return FPaths::Combine(
             FPaths::ProjectSavedDir(),
             TEXT("SaveGames"),
-            TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin"));
+            SelectedOperation ==
+                    EEchoesOperationMode::CampaignTermsOfContinuance
+                ? TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveNamesWithoutBirths-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -2137,6 +2312,72 @@ UEchoesSimulationSubsystem::CommitTermsOfContinuanceCompletion(
             CampaignProgressPath,
             Candidate,
             SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitNamesWithoutBirthsCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignNamesWithoutBirths ||
+        GetNamesWithoutBirthsPhase() !=
+            EEchoesNamesWithoutBirthsPhase::Complete ||
+        !IsNamesWithoutBirthsUnlocked() ||
+        Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative Names Without Births operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::NamesWithoutBirths;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::CensusEvidenceLocated) |
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::ArchivePowered) |
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::BothCiviliansSheltered) |
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::EvidenceExtracted) |
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
     {
         OutFeedback = SaveFeedback;
         return EEchoesCampaignCommitStatus::StorageFailure;
@@ -2469,6 +2710,38 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 return false;
             }
         }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths)
+        {
+            const FEchoesNamesWithoutBirthsPlan Plan =
+                GetNamesWithoutBirthsPlan();
+            const echoes::sim::Entity* Talar =
+                Candidate->FindEntity(TalarId);
+            const echoes::sim::Entity* Archive =
+                Candidate->FindEntity(CensusArchiveId);
+            const echoes::sim::Entity* FirstCivilian =
+                Candidate->FindEntity(FirstCivilianId);
+            const echoes::sim::Entity* SecondCivilian =
+                Candidate->FindEntity(SecondCivilianId);
+            const auto IsMeridianProxy = [](const echoes::sim::Entity* Entity,
+                                            EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::MeridianCompact &&
+                       Entity->type == Type;
+            };
+            if (!IsMeridianProxy(Talar, EntityType::ScoutUnit) ||
+                !IsMeridianProxy(Archive, EntityType::UtilityStructure) ||
+                !IsMeridianProxy(FirstCivilian, EntityType::Worker) ||
+                !IsMeridianProxy(SecondCivilian, EntityType::Worker) ||
+                Archive->position != Plan.CensusSite)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active Names Without Births ledger branch");
+                return false;
+            }
+        }
         LoadedSimulation =
             MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
         return true;
@@ -2660,6 +2933,22 @@ bool UEchoesSimulationSubsystem::IsTermsOfContinuanceUnlocked() const
            Prologue->WellChoice == UnburiedRoad->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsNamesWithoutBirthsUnlocked() const
+{
+    if (!IsTermsOfContinuanceUnlocked())
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Continuance =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::TermsOfContinuance);
+    return Prologue != nullptr && Continuance != nullptr &&
+           Prologue->WellChoice == Continuance->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -2692,6 +2981,13 @@ FEchoesTermsOfContinuancePlan
 UEchoesSimulationSubsystem::GetTermsOfContinuancePlan() const
 {
     return FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
+        GetRecordedPrologueChoice());
+}
+
+FEchoesNamesWithoutBirthsPlan
+UEchoesSimulationSubsystem::GetNamesWithoutBirthsPlan() const
+{
+    return FEchoesNamesWithoutBirthsMissionModel::PlanForChoice(
         GetRecordedPrologueChoice());
 }
 
@@ -2940,6 +3236,76 @@ UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
     return FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesNamesWithoutBirthsPhase
+UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
+{
+    FEchoesNamesWithoutBirthsMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesNamesWithoutBirthsPhase::Inactive;
+    }
+
+    const FEchoesNamesWithoutBirthsPlan Plan =
+        GetNamesWithoutBirthsPlan();
+    const echoes::sim::Entity* Talar = Simulation->FindEntity(TalarId);
+    const echoes::sim::Entity* Archive =
+        Simulation->FindEntity(CensusArchiveId);
+    const echoes::sim::Entity* FirstCivilian =
+        Simulation->FindEntity(FirstCivilianId);
+    const echoes::sim::Entity* SecondCivilian =
+        Simulation->FindEntity(SecondCivilianId);
+    Facts.bTalarIntact = Talar != nullptr && Talar->hitPoints > 0;
+    Facts.bArchiveIntact = Archive != nullptr && Archive->hitPoints > 0;
+    Facts.bFirstCivilianIntact =
+        FirstCivilian != nullptr && FirstCivilian->hitPoints > 0;
+    Facts.bSecondCivilianIntact =
+        SecondCivilian != nullptr && SecondCivilian->hitPoints > 0;
+    Facts.bArchivePowered =
+        Facts.bArchiveIntact && Archive->aegisPowered;
+    Facts.bCensusEvidenceLocated =
+        Facts.bArchivePowered ||
+        (Facts.bTalarIntact &&
+         IsWithinTiles(
+             Talar->position,
+             Plan.CensusSite,
+             NamesWithoutBirthsSiteRadiusTiles));
+    Facts.bFirstCivilianSheltered =
+        Facts.bFirstCivilianIntact &&
+        IsWithinTiles(
+            FirstCivilian->position,
+            Plan.CivilianShelterSite,
+            NamesWithoutBirthsSiteRadiusTiles);
+    Facts.bSecondCivilianSheltered =
+        Facts.bSecondCivilianIntact &&
+        IsWithinTiles(
+            SecondCivilian->position,
+            Plan.CivilianShelterSite,
+            NamesWithoutBirthsSiteRadiusTiles);
+    Facts.bTalarAtEvidenceExtraction =
+        Facts.bTalarIntact && Facts.bArchivePowered &&
+        Facts.bFirstCivilianSheltered && Facts.bSecondCivilianSheltered &&
+        IsWithinTiles(
+            Talar->position,
+            Plan.EvidenceExtractionSite,
+            NamesWithoutBirthsSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+            break;
+        }
+    }
+    return FEchoesNamesWithoutBirthsMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -2961,6 +3327,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.UnburiedRoadBranch = GetRecordedPrologueChoice();
     Snapshot.TermsOfContinuancePhase = GetTermsOfContinuancePhase();
     Snapshot.TermsOfContinuanceBranch = GetRecordedPrologueChoice();
+    Snapshot.NamesWithoutBirthsPhase = GetNamesWithoutBirthsPhase();
+    Snapshot.NamesWithoutBirthsBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -2971,12 +3339,18 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.KharuunContinuanceSpineId = KharuunContinuanceSpineId;
     Snapshot.MeridianContinuanceWitnessId = MeridianContinuanceWitnessId;
     Snapshot.KharuunContinuanceWitnessId = KharuunContinuanceWitnessId;
+    Snapshot.TalarId = TalarId;
+    Snapshot.CensusArchiveId = CensusArchiveId;
+    Snapshot.FirstCivilianId = FirstCivilianId;
+    Snapshot.SecondCivilianId = SecondCivilianId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
         GetUnburiedRoadRoute();
     const FEchoesTermsOfContinuancePlan ContinuancePlan =
         GetTermsOfContinuancePlan();
+    const FEchoesNamesWithoutBirthsPlan NamesPlan =
+        GetNamesWithoutBirthsPlan();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.id == ArchiveCarrierId)
@@ -3070,6 +3444,39 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     ContinuancePlan.WitnessExtractionSite,
                     TermsOfContinuanceSiteRadiusTiles);
         }
+        if (Entity.id == CensusArchiveId)
+        {
+            Snapshot.bCensusArchivePowered =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
+        }
+        if (Entity.id == TalarId)
+        {
+            Snapshot.bCensusEvidenceLocated =
+                Entity.hitPoints > 0 &&
+                (Snapshot.bCensusArchivePowered ||
+                 IsWithinTiles(
+                     Entity.position,
+                     NamesPlan.CensusSite,
+                     NamesWithoutBirthsSiteRadiusTiles));
+        }
+        if (Entity.id == FirstCivilianId)
+        {
+            Snapshot.bFirstCivilianSheltered =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    NamesPlan.CivilianShelterSite,
+                    NamesWithoutBirthsSiteRadiusTiles);
+        }
+        if (Entity.id == SecondCivilianId)
+        {
+            Snapshot.bSecondCivilianSheltered =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    NamesPlan.CivilianShelterSite,
+                    NamesWithoutBirthsSiteRadiusTiles);
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -3108,6 +3515,16 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.bContinuanceWindowHeld =
         Simulation->CurrentTick() >=
         ContinuancePlan.ContinuanceWindowEndTick;
+    const echoes::sim::Entity* Talar = Simulation->FindEntity(TalarId);
+    Snapshot.bTalarAtEvidenceExtraction =
+        Talar != nullptr && Talar->hitPoints > 0 &&
+        Snapshot.bCensusArchivePowered &&
+        Snapshot.bFirstCivilianSheltered &&
+        Snapshot.bSecondCivilianSheltered &&
+        IsWithinTiles(
+            Talar->position,
+            NamesPlan.EvidenceExtractionSite,
+            NamesWithoutBirthsSiteRadiusTiles);
     return Snapshot;
 }
 
@@ -3449,6 +3866,60 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : TEXT("failure"),
                         FEchoesTermsOfContinuanceMissionModel::StableName(
                             ContinuancePhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignNamesWithoutBirths &&
+                     !bMatchResultReported)
+            {
+                const EEchoesNamesWithoutBirthsPhase NamesPhase =
+                    GetNamesWithoutBirthsPhase();
+                const bool bNamesFinished =
+                    NamesPhase == EEchoesNamesWithoutBirthsPhase::Complete ||
+                    NamesPhase == EEchoesNamesWithoutBirthsPhase::Failed;
+                if (bNamesFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        NamesPhase ==
+                                EEchoesNamesWithoutBirthsPhase::Complete
+                            ? CommitNamesWithoutBirthsCompletion(
+                                  RecordedConsequence, CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyNamesWithoutBirthsFinished(
+                            NamesPhase ==
+                                EEchoesNamesWithoutBirthsPhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        NamesPhase ==
+                                EEchoesNamesWithoutBirthsPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesNamesWithoutBirthsMissionModel::StableName(
+                            NamesPhase),
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(CampaignStatus),
@@ -4312,6 +4783,15 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             if (Actor.order.type == echoes::sim::OrderType::Build)
             {
                 OutFeedback = TEXT("[WORKER_BUSY] This worker already has a construction order.");
+                return false;
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignNamesWithoutBirths &&
+                BuildType == EntityType::Dropoff &&
+                GetNamesWithoutBirthsPhase() ==
+                    EEchoesNamesWithoutBirthsPhase::LocateCensus)
+            {
+                OutFeedback = TEXT("[CENSUS_TRACE_REQUIRED] Talar must reach the inherited census site before a Power Link can stabilize its archive.");
                 return false;
             }
             const echoes::sim::PlacementResult Placement =

@@ -9,7 +9,8 @@ enum class EEchoesCampaignMissionId : uint8
     SevenAccountsOfRain = 2,
     ACityOnReserve = 3,
     TheUnburiedRoad = 4,
-    TermsOfContinuance = 5
+    TermsOfContinuance = 5,
+    NamesWithoutBirths = 6
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -52,6 +53,16 @@ enum class EEchoesTermsOfContinuanceCompletionFact : uint8
     KharuunSpineSynchronized = 1 << 1,
     ContinuanceWindowHeld = 1 << 2,
     BothWitnessesExtracted = 1 << 3,
+    LocalCoreSurvived = 1 << 4,
+    PriorLedgerConsumed = 1 << 5
+};
+
+enum class EEchoesNamesWithoutBirthsCompletionFact : uint8
+{
+    CensusEvidenceLocated = 1 << 0,
+    ArchivePowered = 1 << 1,
+    BothCiviliansSheltered = 1 << 2,
+    EvidenceExtracted = 1 << 3,
     LocalCoreSurvived = 1 << 4,
     PriorLedgerConsumed = 1 << 5
 };

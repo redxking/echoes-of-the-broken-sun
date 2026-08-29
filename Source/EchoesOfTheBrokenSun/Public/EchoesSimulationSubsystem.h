@@ -4,6 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesCityReserveMissionModel.h"
+#include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
@@ -77,6 +78,19 @@ struct FEchoesObjectiveSnapshot final
     bool bContinuanceWindowHeld = false;
     bool bMeridianWitnessExtracted = false;
     bool bKharuunWitnessExtracted = false;
+    EEchoesNamesWithoutBirthsPhase NamesWithoutBirthsPhase =
+        EEchoesNamesWithoutBirthsPhase::Inactive;
+    echoes::sim::FutureWellChoice NamesWithoutBirthsBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId TalarId = 0;
+    echoes::sim::EntityId CensusArchiveId = 0;
+    echoes::sim::EntityId FirstCivilianId = 0;
+    echoes::sim::EntityId SecondCivilianId = 0;
+    bool bCensusEvidenceLocated = false;
+    bool bCensusArchivePowered = false;
+    bool bFirstCivilianSheltered = false;
+    bool bSecondCivilianSheltered = false;
+    bool bTalarAtEvidenceExtraction = false;
 };
 
 /**
@@ -200,12 +214,17 @@ public:
     [[nodiscard]] EEchoesTermsOfContinuancePhase
     GetTermsOfContinuancePhase() const;
     [[nodiscard]] bool IsTermsOfContinuanceUnlocked() const;
+    [[nodiscard]] EEchoesNamesWithoutBirthsPhase
+    GetNamesWithoutBirthsPhase() const;
+    [[nodiscard]] bool IsNamesWithoutBirthsUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
     [[nodiscard]] FEchoesUnburiedRoadRoute GetUnburiedRoadRoute() const;
     [[nodiscard]] FEchoesTermsOfContinuancePlan
     GetTermsOfContinuancePlan() const;
+    [[nodiscard]] FEchoesNamesWithoutBirthsPlan
+    GetNamesWithoutBirthsPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -264,6 +283,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitTermsOfContinuanceCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitNamesWithoutBirthsCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -337,6 +359,10 @@ private:
     echoes::sim::EntityId KharuunContinuanceSpineId = 0;
     echoes::sim::EntityId MeridianContinuanceWitnessId = 0;
     echoes::sim::EntityId KharuunContinuanceWitnessId = 0;
+    echoes::sim::EntityId TalarId = 0;
+    echoes::sim::EntityId CensusArchiveId = 0;
+    echoes::sim::EntityId FirstCivilianId = 0;
+    echoes::sim::EntityId SecondCivilianId = 0;
     FEchoesCampaignProgress CampaignProgress;
     bool bCampaignProgressAvailable = false;
     FString CampaignProgressPath;

@@ -358,6 +358,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignNamesWithoutBirths)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Census branch  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1047,6 +1058,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bTermsOfContinuance = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignTermsOfContinuance;
+    const bool bNamesWithoutBirths = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bNewCampaignArmed =
@@ -1074,6 +1088,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bCityReserve ? TEXT("A CITY ON RESERVE")
              : bUnburiedRoad ? TEXT("THE UNBURIED ROAD")
              : bTermsOfContinuance ? TEXT("TERMS OF CONTINUANCE")
+             : bNamesWithoutBirths ? TEXT("NAMES WITHOUT BIRTHS")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1095,6 +1110,8 @@ void AEchoesHUD::DrawTitleScreen(
                   *LocalFaction)
         : bTermsOfContinuance
             ? TEXT("CAMPAIGN MISSION 05  //  MERIDIAN TREATY PROXIES")
+        : bNamesWithoutBirths
+            ? TEXT("CAMPAIGN MISSION 06  //  TALAR + CIVILIAN PROXIES")
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1111,6 +1128,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 04")
     : bTermsOfContinuance
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN PROXY AUTHORITY  //  MISSION 05")
+    : bNamesWithoutBirths
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN AUTHORITY  //  MISSION 06")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1135,6 +1154,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("A route absent from every current map carries the echo of a missing memory shard.")
         : bTermsOfContinuance
             ? TEXT("A ceasefire channel opens under Meridian authority as generic unresolved pressure enters the operation.")
+        : bNamesWithoutBirths
+            ? TEXT("Five consistent records expose a branch-specific census whose named people were never assigned births.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1151,6 +1172,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Root the Waystone, raise a Listening Spine beyond the crossing, and recover the shard.")
         : bTermsOfContinuance
             ? TEXT("Synchronize both treaty proxies by tick 300, hold through tick 900, then extract both witness proxies.")
+        : bNamesWithoutBirths
+            ? TEXT("Locate the census with Talar, power its archive, shelter both civilians, then extract the evidence.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1561,6 +1584,90 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignNamesWithoutBirths)
+    {
+        const FEchoesNamesWithoutBirthsPlan Plan =
+            Bridge->GetNamesWithoutBirthsPlan();
+        const bool bFailed =
+            Objective.NamesWithoutBirthsPhase ==
+            EEchoesNamesWithoutBirthsPhase::Failed;
+        const bool bCiviliansSheltered =
+            Objective.bFirstCivilianSheltered &&
+            Objective.bSecondCivilianSheltered;
+        const FString CensusState = bFailed
+            ? TEXT("TRACE LOST")
+            : Objective.bCensusEvidenceLocated
+                ? TEXT("LOCATED")
+                : FString::Printf(
+                      TEXT("TALAR TO %d,%d"),
+                      Plan.CensusSite.x.FloorToInt(),
+                      Plan.CensusSite.y.FloorToInt());
+        const FString ArchiveState = bFailed
+            ? TEXT("ARCHIVE LOST")
+            : Objective.bCensusArchivePowered
+                ? TEXT("POWERED")
+                : Objective.bCensusEvidenceLocated
+                    ? FString::Printf(
+                          TEXT("LINK AT %d,%d"),
+                          Plan.PowerLinkSite.x.FloorToInt(),
+                          Plan.PowerLinkSite.y.FloorToInt())
+                    : TEXT("WAITING — LOCATE TRACE");
+        const FString RecoveryState = bFailed
+            ? TEXT("PROTECTED LINE LOST")
+            : Objective.bTalarAtEvidenceExtraction && bCiviliansSheltered
+                ? TEXT("EVIDENCE EXTRACTED")
+                : bCiviliansSheltered
+                    ? FString::Printf(
+                          TEXT("TALAR TO %d,%d"),
+                          Plan.EvidenceExtractionSite.x.FloorToInt(),
+                          Plan.EvidenceExtractionSite.y.FloorToInt())
+                    : Objective.bCensusArchivePowered
+                        ? FString::Printf(
+                              TEXT("BOTH CIVILIANS TO %d,%d"),
+                              Plan.CivilianShelterSite.x.FloorToInt(),
+                              Plan.CivilianShelterSite.y.FloorToInt())
+                        : TEXT("WAITING — POWER ARCHIVE");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("NAMES WITHOUT BIRTHS  //  MISSION 06"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  CENSUS TRACE       %s"), *CensusState),
+            bFailed ? Failed : Objective.bCensusEvidenceLocated ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  CENSUS ARCHIVE     %s"), *ArchiveState),
+            bFailed ? Failed : Objective.bCensusArchivePowered ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  PROTECTED RECOVERY %s"), *RecoveryState),
+            bFailed ? Failed
+                    : Objective.bTalarAtEvidenceExtraction && bCiviliansSheltered
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_OBJECTIVES_READY] phase=%s branch=%s talar=%u archive=%u civilianA=%u civilianB=%u reconstructable=true"),
+                FEchoesNamesWithoutBirthsMissionModel::StableName(
+                    Objective.NamesWithoutBirthsPhase),
+                Plan.StableName,
+                Objective.TalarId,
+                Objective.CensusArchiveId,
+                Objective.FirstCivilianId,
+                Objective.SecondCivilianId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -1676,6 +1783,9 @@ void AEchoesHUD::DrawMatchResult(
     const bool bTermsOfContinuanceResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignTermsOfContinuance;
+    const bool bNamesWithoutBirthsResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : Outcome == echoes::sim::MatchOutcome::Player0Victory;
@@ -1687,7 +1797,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bTermsOfContinuanceResult
+        ? bNamesWithoutBirthsResult
+            ? bVictory ? TEXT("THE CENSUS LEAVES WITH ITS NAMES")
+                       : TEXT("THE UNBORN RECORD FALLS SILENT")
+        : bTermsOfContinuanceResult
             ? bVictory ? TEXT("BOTH WITNESSES LEAVE THE BROKEN ACCORD")
                        : TEXT("THE CONTINUANCE TERMS COLLAPSE")
         : bUnburiedRoadResult
@@ -1705,7 +1818,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bTermsOfContinuanceResult
+        ? bNamesWithoutBirthsResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("Talar extracted the %s census trace after its archive was powered and both civilian proxies reached shelter."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Talar, the census archive, a civilian proxy, the local Core, or the operation was lost before evidence extraction.")
+        : bTermsOfContinuanceResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("Both treaty proxies held, both witness proxies extracted, and the generic hostile pressure remains unresolved under the inherited %s accord."),
@@ -1755,7 +1875,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bTermsOfContinuanceResult
+                CampaignPersistenceLine = bNamesWithoutBirthsResult
+                    ? FString::Printf(
+                          TEXT("MISSION 06 RECORDED // %s census evidence extracted."),
+                          RecordedChoice)
+                : bTermsOfContinuanceResult
                     ? FString::Printf(
                           TEXT("MISSION 05 RECORDED // %s accord witnesses extracted."),
                           RecordedChoice)
@@ -1820,7 +1944,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bTermsOfContinuanceResult
+        ? bNamesWithoutBirthsResult
+            ? FString::Printf(
+                  TEXT("MISSION 06 — NAMES WITHOUT BIRTHS  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bTermsOfContinuanceResult
             ? FString::Printf(
                   TEXT("MISSION 05 — TERMS OF CONTINUANCE  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -2033,6 +2161,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bTermsOfContinuance = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignTermsOfContinuance;
+    const bool bNamesWithoutBirths = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -2049,6 +2180,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetTermsOfContinuancePlan()
             : FEchoesTermsOfContinuancePlan{};
+    const FEchoesNamesWithoutBirthsPlan NamesPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetNamesWithoutBirthsPlan()
+            : FEchoesNamesWithoutBirthsPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -2080,6 +2215,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   *LocalFaction)
         : bTermsOfContinuance
             ? TEXT("TERMS OF CONTINUANCE  //  MISSION 05  //  MERIDIAN-AUTHORITATIVE PROXIES")
+        : bNamesWithoutBirths
+            ? TEXT("NAMES WITHOUT BIRTHS  //  MISSION 06  //  MERIDIAN AUTHORITY")
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -2107,6 +2244,12 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Four consistent records authorize the %s. A ceasefire channel opens across both networks."),
                   ContinuancePlan.DisplayName)
+        : bNamesWithoutBirths
+            ? FString::Printf(
+                  TEXT("Five consistent records expose the %s census trace at tile %d,%d."),
+                  NamesPlan.DisplayName,
+                  NamesPlan.CensusSite.x.FloorToInt(),
+                  NamesPlan.CensusSite.y.FloorToInt())
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2124,6 +2267,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Oruun hears a removed memory shard beyond shifting terrain. The Waystone and a Listening Spine must make it recoverable.")
         : bTermsOfContinuance
             ? TEXT("Generic unresolved pressure threatens the operation. Both treaty witnesses use Meridian scout proxies in this prototype.")
+        : bNamesWithoutBirths
+            ? TEXT("Talar and two civilian workers are explicit Meridian-authoritative proxies. The record establishes branch geometry, not hidden authorship or cause.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2156,6 +2301,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   ContinuancePlan.MeridianRelaySite.y.FloorToInt(),
                   ContinuancePlan.KharuunSpineSite.x.FloorToInt(),
                   ContinuancePlan.KharuunSpineSite.y.FloorToInt())
+        : bNamesWithoutBirths
+            ? FString::Printf(
+                  TEXT("01  Bring Talar to census %d,%d, then build the missing [N] Power Link at %d,%d."),
+                  NamesPlan.CensusSite.x.FloorToInt(),
+                  NamesPlan.CensusSite.y.FloorToInt(),
+                  NamesPlan.PowerLinkSite.x.FloorToInt(),
+                  NamesPlan.PowerLinkSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2189,6 +2341,13 @@ void AEchoesHUD::DrawMissionBriefing(
                       ContinuancePlan.ContinuanceWindowEndTick),
                   ContinuancePlan.WitnessExtractionSite.x.FloorToInt(),
                   ContinuancePlan.WitnessExtractionSite.y.FloorToInt())
+        : bNamesWithoutBirths
+            ? FString::Printf(
+                  TEXT("02  Shelter both civilian proxies at %d,%d, then extract Talar and the evidence at %d,%d."),
+                  NamesPlan.CivilianShelterSite.x.FloorToInt(),
+                  NamesPlan.CivilianShelterSite.y.FloorToInt(),
+                  NamesPlan.EvidenceExtractionSite.x.FloorToInt(),
+                  NamesPlan.EvidenceExtractionSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -2204,6 +2363,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The road is derived from all three prior records and cannot be selected or rewritten here.")
              : bTermsOfContinuance
                  ? TEXT("The accord geometry is inherited from all four prior records and cannot be selected or rewritten here.")
+             : bNamesWithoutBirths
+                 ? TEXT("The census geometry is inherited from all five prior records; it does not identify an unseen actor or establish why births are absent.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -2217,6 +2378,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is infrastructure-backed recovery. Destroying the opposing Core does not recover the missing shard.")
         : bTermsOfContinuance
             ? TEXT("Victory is synchronized survival and paired proxy extraction. Destroying the opposing Core invalidates the ceasefire evidence.")
+        : bNamesWithoutBirths
+            ? TEXT("Victory is protected evidence recovery. Any protected loss or either terminal Core outcome invalidates the operation.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -2238,6 +2401,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
         : bTermsOfContinuance
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MERIDIAN TREATY PROXIES")
+        : bNamesWithoutBirths
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS TALAR + CIVILIAN PROXIES")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -2449,7 +2614,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignUnburiedRoad ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignTermsOfContinuance)
+            EEchoesOperationMode::CampaignTermsOfContinuance ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -2572,7 +2739,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignTermsOfContinuance)
         {
             const FEchoesTermsOfContinuancePlan Plan =
                 Bridge->GetTermsOfContinuancePlan();
@@ -2598,6 +2766,43 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
+        else
+        {
+            const FEchoesNamesWithoutBirthsPlan Plan =
+                Bridge->GetNamesWithoutBirthsPlan();
+            DrawMissionSite(
+                Plan.CensusSite,
+                TEXT("C"),
+                Objective.bCensusEvidenceLocated
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Plan.PowerLinkSite,
+                TEXT("P"),
+                Objective.bCensusArchivePowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bCensusEvidenceLocated
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Plan.CivilianShelterSite,
+                TEXT("S"),
+                Objective.bFirstCivilianSheltered &&
+                        Objective.bSecondCivilianSheltered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bCensusArchivePowered
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Plan.EvidenceExtractionSite,
+                TEXT("E"),
+                Objective.bTalarAtEvidenceExtraction
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bFirstCivilianSheltered &&
+                            Objective.bSecondCivilianSheltered
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -2619,6 +2824,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignTermsOfContinuance
             ? TEXT("MISSION NAV  |  AEGIS + TREATY + EXTRACTION")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignNamesWithoutBirths
+            ? TEXT("MISSION NAV  |  CENSUS + SHELTER + EVIDENCE")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

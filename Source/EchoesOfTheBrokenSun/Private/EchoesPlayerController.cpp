@@ -142,7 +142,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignUnburiedRoad
                 ? TEXT("Oruun deployed; ")
-                : TEXT("Meridian treaty proxies deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignTermsOfContinuance
+                ? TEXT("Meridian treaty proxies deployed; ")
+                : TEXT("Talar and two civilian proxies deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -162,6 +165,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignTermsOfContinuance
             ? TEXT("TermsOfContinuance")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignNamesWithoutBirths
+            ? TEXT("NamesWithoutBirths")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -221,6 +227,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bTermsOfContinuance =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignTermsOfContinuance;
+    const bool bNamesWithoutBirths =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignNamesWithoutBirths;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -232,6 +241,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("THE UNBURIED ROAD — root the Waystone, raise a Listening Spine, and recover the missing shard. Enter deploys Oruun.")
         : bTermsOfContinuance
             ? TEXT("TERMS OF CONTINUANCE — synchronize both treaty proxies, hold the fixed window, then extract both witness proxies. Enter deploys Meridian authority.")
+        : bNamesWithoutBirths
+            ? TEXT("NAMES WITHOUT BIRTHS — Talar must locate the inherited census trace, a worker must power its archive, both civilian proxies must reach shelter, and Talar must extract the evidence. Enter deploys Meridian authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -243,9 +254,10 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bCityReserve ? TEXT("ACityOnReserve")
         : bUnburiedRoad ? TEXT("TheUnburiedRoad")
         : bTermsOfContinuance ? TEXT("TermsOfContinuance")
+        : bNamesWithoutBirths ? TEXT("NamesWithoutBirths")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
-         bTermsOfContinuance)
+         bTermsOfContinuance || bNamesWithoutBirths)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -336,6 +348,24 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.WitnessExtractionSite.y.FloorToInt()),
             16.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignNamesWithoutBirths)
+    {
+        const FEchoesNamesWithoutBirthsPlan Plan =
+            Bridge->GetNamesWithoutBirthsPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — bring Talar to census %d,%d; build its Power Link at %d,%d; shelter both civilians at %d,%d; extract Talar at %d,%d."),
+                Plan.CensusSite.x.FloorToInt(),
+                Plan.CensusSite.y.FloorToInt(),
+                Plan.PowerLinkSite.x.FloorToInt(),
+                Plan.PowerLinkSite.y.FloorToInt(),
+                Plan.CivilianShelterSite.x.FloorToInt(),
+                Plan.CivilianShelterSite.y.FloorToInt(),
+                Plan.EvidenceExtractionSite.x.FloorToInt(),
+                Plan.EvidenceExtractionSite.y.FloorToInt()),
+            16.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -390,6 +420,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignTermsOfContinuance)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: Terms of Continuance uses Meridian-authoritative treaty and witness proxies; mixed-faction command is not implemented."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignNamesWithoutBirths)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Names Without Births uses Meridian-authoritative Talar and civilian proxies."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -461,6 +497,12 @@ void AEchoesPlayerController::CycleOperation()
     {
         NewOperation =
             EEchoesOperationMode::CampaignTermsOfContinuance;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignTermsOfContinuance &&
+             Bridge->IsNamesWithoutBirthsUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignNamesWithoutBirths;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -1206,6 +1248,64 @@ void AEchoesPlayerController::NotifyTermsOfContinuanceFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TermsOfContinuance success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyNamesWithoutBirthsFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignNamesWithoutBirths;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Talar, the census archive, a civilian proxy, the local Core, or the operation was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — Talar extracted the %s census trace after the archive was powered and both civilian proxies reached shelter."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this census recovery. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=NamesWithoutBirths success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -3634,6 +3734,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT("MISSION RESTARTED — the Meridian-authoritative treaty proxy scenario returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignNamesWithoutBirths
+                ? TEXT("MISSION RESTARTED — Talar's protected census recovery returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
