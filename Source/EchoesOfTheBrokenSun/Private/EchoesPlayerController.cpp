@@ -116,6 +116,8 @@ void AEchoesPlayerController::PresentTitleScreen()
     bCampaignResult = false;
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
@@ -169,6 +171,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
     bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
     bCampaignResult = false;
+    RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
     Bridge->SetScenarioPaused(true);
@@ -668,7 +672,9 @@ void AEchoesPlayerController::NotifyMatchFinished(
 
 void AEchoesPlayerController::NotifyCampaignPrologueFinished(
     bool bSuccess,
-    echoes::sim::FutureWellChoice Consequence)
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
 {
     ClearSelection();
     bControlGroupAssignmentArmed = false;
@@ -681,25 +687,47 @@ void AEchoesPlayerController::NotifyCampaignPrologueFinished(
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
     FutureWellChoice = Consequence;
     PresentedMatchOutcome = bSuccess
         ? echoes::sim::MatchOutcome::Player0Victory
         : echoes::sim::MatchOutcome::Player1Victory;
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
-    SetStatusMessage(
-        bSuccess
-            ? FString::Printf(
-                  TEXT("MISSION COMPLETE — archive recovered, %s protocol committed, and Mara Vey withdrew to Lume Reach. Press R to replay."),
-                  *GetFutureWellChoiceLabel())
-            : TEXT("MISSION FAILED — the archive carrier or withdrawal line was lost. Press R to replay."),
-        3600.0f);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — the archive carrier or withdrawal line was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — archive recovered, %s protocol completed, and Mara Vey withdrew to Lume Reach."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this decision. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            ResultMessage += TEXT(" Replay choice retained for this result; the original campaign decision remains unchanged. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=WhatTheLedgerKeeps success=%s consequence=%u keyboardRestart=true"),
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=WhatTheLedgerKeeps success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
-        static_cast<uint8>(Consequence));
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
 }
 
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
@@ -3102,6 +3130,8 @@ void AEchoesPlayerController::RestartScenario()
         bCampaignResult = false;
         bCampaignSuccess = false;
         CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+        RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+        CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
         SetIgnoreMoveInput(false);
         SetIgnoreLookInput(false);

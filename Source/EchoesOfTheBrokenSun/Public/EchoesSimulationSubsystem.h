@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "EchoesCampaignProgress.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.generated.h"
@@ -9,6 +10,9 @@
 class AEchoesEntityView;
 class AEchoesFogView;
 class AEchoesTerrainView;
+#if WITH_DEV_AUTOMATION_TESTS
+class FEchoesPrologueMissionTest;
+#endif
 
 /** Information the local presentation may use without exposing hidden state. */
 struct FEchoesObjectiveSnapshot final
@@ -146,6 +150,14 @@ public:
     }
     [[nodiscard]] static echoes::sim::Vec2 GetArchiveRecoverySite();
     [[nodiscard]] static echoes::sim::Vec2 GetEvacuationSite();
+    [[nodiscard]] const FEchoesCampaignProgress& GetCampaignProgress() const
+    {
+        return CampaignProgress;
+    }
+    [[nodiscard]] bool IsCampaignProgressAvailable() const
+    {
+        return bCampaignProgressAvailable;
+    }
     [[nodiscard]] echoes::sim::Faction GetLocalFaction() const
     {
         return bStressScenario
@@ -162,7 +174,15 @@ public:
     [[nodiscard]] int32 GetMapHeightTiles() const;
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FEchoesPrologueMissionTest;
+#endif
     [[nodiscard]] FString GetActiveQuickSavePath() const;
+    EEchoesCampaignCommitStatus CommitPrologueCompletion(
+        echoes::sim::FutureWellChoice CurrentChoice,
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
     bool ValidatePrototypeCommand(
         echoes::sim::CommandType CommandType,
@@ -209,10 +229,14 @@ private:
     bool bResearchPresentationScenario = false;
     bool bResearchInterruptionPresentationScenario = false;
     bool bKharuunSystemsPresentationScenario = false;
+    bool bPrologueCompletionPresentationScenario = false;
     bool bLoggedResearchPresentationActive = false;
     bool bLoggedResearchPresentationComplete = false;
     bool bLoggedResearchPresentationInterrupted = false;
     bool bLoggedKharuunSystemsPresentation = false;
+    int32 PrologueCompletionPresentationStage = 0;
+    echoes::sim::EntityId ProloguePresentationWorkerId = 0;
+    echoes::sim::EntityId ProloguePresentationWellId = 0;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
@@ -220,6 +244,9 @@ private:
         echoes::sim::Faction::MeridianCompact;
     EEchoesOperationMode SelectedOperation = EEchoesOperationMode::Skirmish;
     echoes::sim::EntityId ArchiveCarrierId = 0;
+    FEchoesCampaignProgress CampaignProgress;
+    bool bCampaignProgressAvailable = false;
+    FString CampaignProgressPath;
     echoes::sim::ResearchType ResearchPresentationTechnology =
         echoes::sim::ResearchType::None;
 };

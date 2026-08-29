@@ -6,7 +6,38 @@
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
 #include "Tests/AutomationCommon.h"
+
+namespace
+{
+struct FPreservedPrologueCampaignFile final
+{
+    explicit FPreservedPrologueCampaignFile(FString InPath)
+        : Path(MoveTemp(InPath))
+    {
+        bExisted = IFileManager::Get().FileExists(*Path);
+        if (bExisted)
+        {
+            FFileHelper::LoadFileToArray(Contents, *Path);
+        }
+    }
+
+    ~FPreservedPrologueCampaignFile()
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+        if (bExisted)
+        {
+            FFileHelper::SaveArrayToFile(Contents, *Path);
+        }
+    }
+
+    FString Path;
+    TArray<uint8> Contents;
+    bool bExisted = false;
+};
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesPrologueMissionTest,
@@ -18,6 +49,19 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    const FString CampaignPath =
+        FEchoesCampaignProgressStore::GetDefaultPath();
+    FPreservedPrologueCampaignFile PreservedCampaign(CampaignPath);
+    FPreservedPrologueCampaignFile PreservedBackup(
+        CampaignPath + TEXT(".bak"));
+    FPreservedPrologueCampaignFile PreservedTemporary(
+        CampaignPath + TEXT(".tmp"));
+    IFileManager::Get().Delete(*CampaignPath, false, true, true);
+    IFileManager::Get().Delete(
+        *(CampaignPath + TEXT(".bak")), false, true, true);
+    IFileManager::Get().Delete(
+        *(CampaignPath + TEXT(".tmp")), false, true, true);
 
     FEchoesPrologueMissionFacts Facts;
     TestTrue(
@@ -238,9 +282,41 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
                     EEchoesProloguePhase::Complete;
             },
             900));
+
+    echoes::sim::FutureWellChoice RecordedConsequence =
+        echoes::sim::FutureWellChoice::Dormant;
+    Feedback.Reset();
+    const EEchoesCampaignCommitStatus CommitStatus =
+        Bridge->CommitPrologueCompletion(
+            echoes::sim::FutureWellChoice::Preserve,
+            RecordedConsequence,
+            Feedback);
+    TestTrue(TEXT("The tick path already committed authoritative completion"),
+             CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded);
+    TestTrue(TEXT("The committed ledger retains Preserve"),
+             RecordedConsequence == echoes::sim::FutureWellChoice::Preserve);
+    TestTrue(TEXT("The transactional campaign file exists"),
+             IFileManager::Get().FileExists(*CampaignPath));
+    FEchoesCampaignProgress PersistedProgress;
+    TestTrue(TEXT("The integrated campaign record reloads from storage"),
+             FEchoesCampaignProgressStore::LoadWithBackup(
+                 CampaignPath,
+                 PersistedProgress,
+                 Feedback));
+    const FEchoesCampaignDecisionRecord* PersistedDecision =
+        PersistedProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    TestTrue(TEXT("Reloaded progress binds the prologue to Preserve"),
+             PersistedDecision != nullptr &&
+                 PersistedDecision->WellChoice ==
+                     echoes::sim::FutureWellChoice::Preserve);
+
     Controller->NotifyCampaignPrologueFinished(
         true,
-        echoes::sim::FutureWellChoice::Preserve);
+        echoes::sim::FutureWellChoice::Preserve,
+        RecordedConsequence,
+        CommitStatus);
     TestTrue(TEXT("Campaign completion uses the dedicated result presentation"),
              Controller->IsMatchResultVisible() &&
                  Controller->IsCampaignResult() &&
@@ -248,6 +324,11 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("The Well consequence survives into the campaign result"),
              Controller->GetCampaignConsequence() ==
                  echoes::sim::FutureWellChoice::Preserve);
+    TestTrue(TEXT("The result confirms the existing campaign consequence"),
+             Controller->GetRecordedCampaignConsequence() ==
+                     echoes::sim::FutureWellChoice::Preserve &&
+                 Controller->GetCampaignCommitStatus() ==
+                     EEchoesCampaignCommitStatus::AlreadyRecorded);
     Controller->ConfirmPrimaryAction();
     TestFalse(TEXT("Enter replays the completed mission"),
               Controller->IsMatchResultVisible());

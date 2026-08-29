@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesCampaignProgress.h"
 #include "EchoesFormationLayout.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/Simulation.h"
@@ -49,7 +50,9 @@ public:
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
         bool bSuccess,
-        echoes::sim::FutureWellChoice Consequence);
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
@@ -118,6 +121,15 @@ public:
     [[nodiscard]] echoes::sim::FutureWellChoice GetCampaignConsequence() const
     {
         return CampaignConsequence;
+    }
+    [[nodiscard]] echoes::sim::FutureWellChoice
+    GetRecordedCampaignConsequence() const
+    {
+        return RecordedCampaignConsequence;
+    }
+    [[nodiscard]] EEchoesCampaignCommitStatus GetCampaignCommitStatus() const
+    {
+        return CampaignCommitStatus;
     }
 
 private:
@@ -234,6 +246,10 @@ private:
     bool bCampaignSuccess = false;
     echoes::sim::FutureWellChoice CampaignConsequence =
         echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice RecordedCampaignConsequence =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesCampaignCommitStatus CampaignCommitStatus =
+        EEchoesCampaignCommitStatus::NotApplicable;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;
 };

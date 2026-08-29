@@ -1298,6 +1298,34 @@ void AEchoesHUD::DrawMatchResult(
                     : FString::Printf(
                           TEXT("Your Command Core has fallen. The %s retain the eastern approach and the initiative."),
                           *OpponentFaction);
+    FString CampaignPersistenceLine;
+    if (bCampaignResult && bVictory)
+    {
+        const TCHAR* RecordedChoice = WellChoiceDisplayName(
+            EchoesController->GetRecordedCampaignConsequence());
+        switch (EchoesController->GetCampaignCommitStatus())
+        {
+            case EEchoesCampaignCommitStatus::Added:
+                CampaignPersistenceLine = FString::Printf(
+                    TEXT("LEDGER COMMITTED // %s is fixed for this campaign."),
+                    RecordedChoice);
+                break;
+            case EEchoesCampaignCommitStatus::AlreadyRecorded:
+                CampaignPersistenceLine = FString::Printf(
+                    TEXT("LEDGER VERIFIED // %s remains recorded."),
+                    RecordedChoice);
+                break;
+            case EEchoesCampaignCommitStatus::ReplayConflict:
+                CampaignPersistenceLine = FString::Printf(
+                    TEXT("REPLAY ONLY // campaign ledger remains %s."),
+                    RecordedChoice);
+                break;
+            default:
+                CampaignPersistenceLine =
+                    TEXT("LEDGER NOT SAVED // mission complete; progress unavailable.");
+                break;
+        }
+    }
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
                       : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
@@ -1339,7 +1367,7 @@ void AEchoesHUD::DrawMatchResult(
         SmallFont, 0.82f * TextScale, false);
     DrawText(
              bCampaignResult && bVictory
-                 ? TEXT("The chosen Well consequence persists; campaign continuation remains in development.")
+                 ? CampaignPersistenceLine
                  : TEXT("The simulation is stopped. Battlefield commands are locked."),
              Muted, Left + 44.0f, Top + 244.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);

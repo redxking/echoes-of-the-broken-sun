@@ -115,15 +115,57 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
+    bPrologueCompletionPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
     bLoggedKharuunSystemsPresentation = false;
+    PrologueCompletionPresentationStage = 0;
+    ProloguePresentationWorkerId = 0;
+    ProloguePresentationWellId = 0;
     bSimulationPaused = false;
     bMatchResultReported = false;
     LocalFaction = Faction::MeridianCompact;
     SelectedOperation = EEchoesOperationMode::Skirmish;
     ArchiveCarrierId = 0;
+    CampaignProgress = FEchoesCampaignProgress{};
+    CampaignProgressPath = FEchoesCampaignProgressStore::GetDefaultPath();
+#if !UE_BUILD_SHIPPING
+    FString CampaignPathOverride;
+    if (FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignProgressPath="),
+            CampaignPathOverride) &&
+        !CampaignPathOverride.IsEmpty())
+    {
+        CampaignProgressPath = FPaths::ConvertRelativePathToFull(
+            CampaignPathOverride);
+    }
+#endif
+    FString CampaignFeedback;
+    bCampaignProgressAvailable =
+        FEchoesCampaignProgressStore::LoadWithBackup(
+            CampaignProgressPath,
+            CampaignProgress,
+            CampaignFeedback);
+    if (bCampaignProgressAvailable)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CAMPAIGN_LEDGER_LOAD] available=true records=%d detail=%s"),
+            CampaignProgress.Decisions.Num(),
+            *CampaignFeedback);
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CAMPAIGN_LEDGER_LOAD] available=false records=%d detail=%s"),
+            CampaignProgress.Decisions.Num(),
+            *CampaignFeedback);
+    }
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
     FogView.Reset();
     TerrainView.Reset();
@@ -191,6 +233,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const bool bUseResearchPresentation = false;
     const bool bUseResearchInterruptionPresentation = false;
     const bool bUseKharuunSystemsPresentation = false;
+    const bool bUsePrologueCompletionPresentation = false;
 #else
     const bool bUseResearchPresentation =
         !bUseStressScenario &&
@@ -205,11 +248,17 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesKharuunSystemsPresentation"));
+    const bool bUsePrologueCompletionPresentation =
+        !bUseStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesPrologueCompletionPresentation"));
 #endif
     const int32 PresentationModeCount =
         (bUseResearchPresentation ? 1 : 0) +
         (bUseResearchInterruptionPresentation ? 1 : 0) +
-        (bUseKharuunSystemsPresentation ? 1 : 0);
+        (bUseKharuunSystemsPresentation ? 1 : 0) +
+        (bUsePrologueCompletionPresentation ? 1 : 0);
     if (PresentationModeCount > 1)
     {
         UE_LOG(
@@ -221,7 +270,17 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const bool bUseAnyResearchPresentation =
         bUseResearchPresentation || bUseResearchInterruptionPresentation;
     const bool bUseAnyControlledPresentation =
-        bUseAnyResearchPresentation || bUseKharuunSystemsPresentation;
+        bUseAnyResearchPresentation || bUseKharuunSystemsPresentation ||
+        bUsePrologueCompletionPresentation;
+    if (bUsePrologueCompletionPresentation &&
+        SelectedOperation != EEchoesOperationMode::CampaignPrologue)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_FAILED] reason=campaign prologue operation required"));
+        return false;
+    }
 
     const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
@@ -483,6 +542,37 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
 
     Simulation->CaptureReplayBaseline();
+    ProloguePresentationWorkerId = 0;
+    ProloguePresentationWellId = 0;
+    if (bUsePrologueCompletionPresentation)
+    {
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner == LocalPlayerId &&
+                Entity.type == EntityType::Worker &&
+                ProloguePresentationWorkerId == 0)
+            {
+                ProloguePresentationWorkerId = Entity.id;
+            }
+            if (Entity.type == EntityType::FutureWell)
+            {
+                ProloguePresentationWellId = Entity.id;
+            }
+        }
+        if (ArchiveCarrierId == 0 || ProloguePresentationWorkerId == 0 ||
+            ProloguePresentationWellId == 0)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_FAILED] reason=fixture entities unavailable carrier=%u worker=%u well=%u"),
+                ArchiveCarrierId,
+                ProloguePresentationWorkerId,
+                ProloguePresentationWellId);
+            Simulation.Reset();
+            return false;
+        }
+    }
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
     if (bUseAnyResearchPresentation)
     {
@@ -761,10 +851,13 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         bUseResearchInterruptionPresentation;
     bKharuunSystemsPresentationScenario =
         bUseKharuunSystemsPresentation;
+    bPrologueCompletionPresentationScenario =
+        bUsePrologueCompletionPresentation;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
     bLoggedKharuunSystemsPresentation = false;
+    PrologueCompletionPresentationStage = 0;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -867,6 +960,17 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Display,
                 TEXT("[ECHOES_KHARUUN_SYSTEMS_PRESENTATION_READY] commands=3 hiddenMovers=1 controlled=true release=false"));
         }
+        if (bPrologueCompletionPresentationScenario)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_READY] carrier=%u worker=%u well=%u protocol=Preserve controlled=true release=false ledgerPath=%s"),
+                ArchiveCarrierId,
+                ProloguePresentationWorkerId,
+                ProloguePresentationWellId,
+                *CampaignProgressPath);
+        }
     }
     if (bStressScenario)
     {
@@ -906,10 +1010,14 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
+    bPrologueCompletionPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
     bLoggedKharuunSystemsPresentation = false;
+    PrologueCompletionPresentationStage = 0;
+    ProloguePresentationWorkerId = 0;
+    ProloguePresentationWellId = 0;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -1090,6 +1198,211 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
     }
     return GetQuickSavePath();
+}
+
+EEchoesCampaignCommitStatus UEchoesSimulationSubsystem::CommitPrologueCompletion(
+    echoes::sim::FutureWellChoice CurrentChoice,
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    OutRecordedChoice = CurrentChoice;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation != EEchoesOperationMode::CampaignPrologue ||
+        GetProloguePhase() != EEchoesProloguePhase::Complete ||
+        CurrentChoice == echoes::sim::FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative prologue can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    Record.WellChoice = CurrentChoice;
+    Record.AvailableWellChoices = 0x07;
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
+        static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
+        static_cast<uint8>(EEchoesCampaignDecisionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesCampaignDecisionFact::FutureWellControlled);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
+{
+    if (!bPrologueCompletionPresentationScenario ||
+        PrologueCompletionPresentationStage < 0 ||
+        !bScenarioReady || !Simulation.IsValid())
+    {
+        return;
+    }
+
+    FString Feedback;
+    bool bCommandAccepted = false;
+    const auto FailFixture = [this, &Feedback](const TCHAR* Stage)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_FAILED] stage=%s detail=%s"),
+            Stage,
+            Feedback.IsEmpty() ? TEXT("command rejected") : *Feedback);
+        PrologueCompletionPresentationStage = -1;
+        bSimulationPaused = true;
+    };
+
+    switch (PrologueCompletionPresentationStage)
+    {
+        case 0:
+            bCommandAccepted = IssueCommand(
+                echoes::sim::CommandType::Move,
+                ArchiveCarrierId,
+                0,
+                SimToWorld(GetArchiveRecoverySite()),
+                echoes::sim::FutureWellChoice::Dormant,
+                Feedback);
+            if (!bCommandAccepted)
+            {
+                FailFixture(TEXT("recover_archive"));
+                return;
+            }
+            PrologueCompletionPresentationStage = 1;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=recover_archive command=ordinary_move"));
+            return;
+
+        case 1:
+            if (GetProloguePhase() !=
+                EEchoesProloguePhase::DecideFutureWell)
+            {
+                return;
+            }
+            bCommandAccepted = IssueCommand(
+                echoes::sim::CommandType::Move,
+                ProloguePresentationWorkerId,
+                0,
+                SimToWorld(Vec2::FromTiles(29, 29)),
+                echoes::sim::FutureWellChoice::Dormant,
+                Feedback);
+            if (!bCommandAccepted)
+            {
+                FailFixture(TEXT("approach_well"));
+                return;
+            }
+            PrologueCompletionPresentationStage = 2;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=decide_well command=ordinary_move protocol=Preserve"));
+            return;
+
+        case 2:
+            if (!Simulation->IsEntityVisibleTo(
+                    LocalPlayerId,
+                    ProloguePresentationWellId))
+            {
+                return;
+            }
+            if (const echoes::sim::Entity* Well =
+                    Simulation->FindEntity(ProloguePresentationWellId))
+            {
+                bCommandAccepted = IssueCommand(
+                    echoes::sim::CommandType::FutureWell,
+                    ProloguePresentationWorkerId,
+                    ProloguePresentationWellId,
+                    SimToWorld(Well->position),
+                    echoes::sim::FutureWellChoice::Preserve,
+                    Feedback);
+            }
+            if (!bCommandAccepted)
+            {
+                FailFixture(TEXT("commit_preserve"));
+                return;
+            }
+            PrologueCompletionPresentationStage = 3;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=preserve command=ordinary_future_well"));
+            return;
+
+        case 3:
+            if (GetProloguePhase() != EEchoesProloguePhase::Withdraw)
+            {
+                return;
+            }
+            bCommandAccepted = IssueCommand(
+                echoes::sim::CommandType::Move,
+                ArchiveCarrierId,
+                0,
+                SimToWorld(GetEvacuationSite()),
+                echoes::sim::FutureWellChoice::Dormant,
+                Feedback);
+            if (!bCommandAccepted)
+            {
+                FailFixture(TEXT("withdraw"));
+                return;
+            }
+            PrologueCompletionPresentationStage = 4;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=withdraw command=ordinary_move"));
+            return;
+
+        case 4:
+            if (GetProloguePhase() == EEchoesProloguePhase::Complete &&
+                bMatchResultReported)
+            {
+                PrologueCompletionPresentationStage = 5;
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_COMPLETE] phase=complete resultPresented=true ledgerRecords=%d controlled=true release=false"),
+                    CampaignProgress.Decisions.Num());
+            }
+            return;
+
+        default:
+            return;
+    }
 }
 
 bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
@@ -1497,24 +1810,61 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         break;
                     }
                 }
+                FutureWellChoice RecordedConsequence = Consequence;
+                FString CampaignFeedback;
+                const EEchoesCampaignCommitStatus CampaignStatus =
+                    ProloguePhase == EEchoesProloguePhase::Complete
+                        ? CommitPrologueCompletion(
+                              Consequence,
+                              RecordedConsequence,
+                              CampaignFeedback)
+                        : EEchoesCampaignCommitStatus::NotApplicable;
                 if (AEchoesPlayerController* Controller =
                         Cast<AEchoesPlayerController>(
                             GetWorld()->GetFirstPlayerController()))
                 {
                     Controller->NotifyCampaignPrologueFinished(
                         ProloguePhase == EEchoesProloguePhase::Complete,
-                        Consequence);
+                        Consequence,
+                        RecordedConsequence,
+                        CampaignStatus);
                 }
-                UE_LOG(
-                    LogEchoes,
-                    Display,
-                    TEXT("[ECHOES_PROLOGUE_FINISHED] result=%s phase=%s consequence=%u tick=%llu"),
+                const TCHAR* ResultName =
                     ProloguePhase == EEchoesProloguePhase::Complete
                         ? TEXT("success")
-                        : TEXT("failure"),
-                    FEchoesPrologueMissionModel::StableName(ProloguePhase),
-                    static_cast<uint8>(Consequence),
-                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+                        : TEXT("failure");
+                const TCHAR* CampaignDetail = CampaignFeedback.IsEmpty()
+                    ? TEXT("not-applicable")
+                    : *CampaignFeedback;
+                if (CampaignStatus ==
+                    EEchoesCampaignCommitStatus::StorageFailure)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Error,
+                        TEXT("[ECHOES_PROLOGUE_FINISHED] result=%s phase=%s consequence=%u recordedConsequence=%u campaignStatus=%u tick=%llu detail=%s"),
+                        ResultName,
+                        FEchoesPrologueMissionModel::StableName(ProloguePhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(Simulation->CurrentTick()),
+                        CampaignDetail);
+                }
+                else
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_PROLOGUE_FINISHED] result=%s phase=%s consequence=%u recordedConsequence=%u campaignStatus=%u tick=%llu detail=%s"),
+                        ResultName,
+                        FEchoesPrologueMissionModel::StableName(ProloguePhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(Simulation->CurrentTick()),
+                        CampaignDetail);
+                }
             }
             else if (SelectedOperation == EEchoesOperationMode::Skirmish &&
                      Outcome != echoes::sim::MatchOutcome::Ongoing &&
@@ -1534,6 +1884,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                     static_cast<uint8>(Outcome),
                     static_cast<unsigned long long>(Simulation->CurrentTick()));
             }
+            AdvancePrologueCompletionPresentation();
             if (!bLoggedFirstTick)
             {
                 UE_LOG(
