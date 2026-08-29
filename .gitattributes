@@ -12,5 +12,6 @@
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.flac filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
+site/hero-soryn.png -filter -diff -merge
+website/public/hero-soryn.png -filter -diff -merge
 *.exr filter=lfs diff=lfs merge=lfs -text
-
