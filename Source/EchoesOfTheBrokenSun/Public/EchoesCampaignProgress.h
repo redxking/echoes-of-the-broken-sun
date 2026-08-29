@@ -5,7 +5,8 @@
 
 enum class EEchoesCampaignMissionId : uint8
 {
-    WhatTheLedgerKeeps = 1
+    WhatTheLedgerKeeps = 1,
+    SevenAccountsOfRain = 2
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -14,6 +15,14 @@ enum class EEchoesCampaignDecisionFact : uint8
     CarrierEvacuated = 1 << 1,
     LocalCoreSurvived = 1 << 2,
     FutureWellControlled = 1 << 3
+};
+
+enum class EEchoesSevenAccountsCompletionFact : uint8
+{
+    WaystoneRootedAtAnchor = 1 << 0,
+    MemoryBearerArrived = 1 << 1,
+    LocalCoreSurvived = 1 << 2,
+    PriorDecisionConsumed = 1 << 3
 };
 
 enum class EEchoesCampaignCommitStatus : uint8

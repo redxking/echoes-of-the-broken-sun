@@ -143,18 +143,41 @@ void AEchoesGameMode::BeginPlay()
             TEXT("[ECHOES_FACTION_REQUESTED] value=%s accepted=true"),
             *RequestedFaction);
     }
-    if (!bStressScenario &&
-        FParse::Param(FCommandLine::Get(), TEXT("EchoesCampaignPrologue")))
+    const bool bCampaignPrologue =
+        !bStressScenario &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesCampaignPrologue"));
+    const bool bCampaignSevenAccounts =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignSevenAccounts"));
+    if (bCampaignPrologue && bCampaignSevenAccounts)
     {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] reason=conflicting campaign operation flags"));
+        CleanupPrototypeEnvironment();
+        return;
+    }
+    if (bCampaignPrologue || bCampaignSevenAccounts)
+    {
+        const EEchoesOperationMode RequestedOperation =
+            bCampaignSevenAccounts
+                ? EEchoesOperationMode::CampaignSevenAccounts
+                : EEchoesOperationMode::CampaignPrologue;
         FString OperationFeedback;
         if (!Bridge->SelectOperationMode(
-                EEchoesOperationMode::CampaignPrologue,
+                RequestedOperation,
                 OperationFeedback))
         {
             UE_LOG(
                 LogEchoes,
                 Error,
-                TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=WhatTheLedgerKeeps detail=%s"),
+                TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
+                bCampaignSevenAccounts
+                    ? TEXT("SevenAccountsOfRain")
+                    : TEXT("WhatTheLedgerKeeps"),
                 *OperationFeedback);
             CleanupPrototypeEnvironment();
             return;
@@ -162,7 +185,10 @@ void AEchoesGameMode::BeginPlay()
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_OPERATION_REQUESTED] operation=WhatTheLedgerKeeps accepted=true"));
+            TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
+            bCampaignSevenAccounts
+                ? TEXT("SevenAccountsOfRain")
+                : TEXT("WhatTheLedgerKeeps"));
     }
     const bool bSimulationReady = bStressScenario
                                       ? Bridge->StartStressScenario()

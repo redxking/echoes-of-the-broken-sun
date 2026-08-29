@@ -4,6 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesPrologueMissionModel.h"
+#include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
@@ -33,6 +34,16 @@ struct FEchoesObjectiveSnapshot final
     echoes::sim::EntityId ArchiveCarrierId = 0;
     echoes::sim::FutureWellChoice PrologueWellChoice =
         echoes::sim::FutureWellChoice::Dormant;
+    EEchoesSevenAccountsPhase SevenAccountsPhase =
+        EEchoesSevenAccountsPhase::Inactive;
+    echoes::sim::FutureWellChoice SevenAccountsBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId MemoryBearerId = 0;
+    echoes::sim::EntityId MigrationWaystoneId = 0;
+    bool bMemoryBearerIntact = false;
+    bool bWaystoneIntact = false;
+    bool bWaystoneRootedAtAnchor = false;
+    bool bMemoryBearerAtAccountSite = false;
 };
 
 /**
@@ -144,6 +155,18 @@ public:
     }
     [[nodiscard]] FString GetOperationLabel() const;
     [[nodiscard]] EEchoesProloguePhase GetProloguePhase() const;
+    [[nodiscard]] EEchoesSevenAccountsPhase GetSevenAccountsPhase() const;
+    [[nodiscard]] bool IsSevenAccountsUnlocked() const;
+    [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
+    [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
+    [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
+    {
+        return MemoryBearerId;
+    }
+    [[nodiscard]] echoes::sim::EntityId GetMigrationWaystoneId() const
+    {
+        return MigrationWaystoneId;
+    }
     [[nodiscard]] echoes::sim::EntityId GetArchiveCarrierId() const
     {
         return ArchiveCarrierId;
@@ -180,6 +203,9 @@ private:
     [[nodiscard]] FString GetActiveQuickSavePath() const;
     EEchoesCampaignCommitStatus CommitPrologueCompletion(
         echoes::sim::FutureWellChoice CurrentChoice,
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitSevenAccountsCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -244,6 +270,8 @@ private:
         echoes::sim::Faction::MeridianCompact;
     EEchoesOperationMode SelectedOperation = EEchoesOperationMode::Skirmish;
     echoes::sim::EntityId ArchiveCarrierId = 0;
+    echoes::sim::EntityId MemoryBearerId = 0;
+    echoes::sim::EntityId MigrationWaystoneId = 0;
     FEchoesCampaignProgress CampaignProgress;
     bool bCampaignProgressAvailable = false;
     FString CampaignProgressPath;

@@ -24,6 +24,7 @@ constexpr uint32 PrototypeTicksPerSecond = 20;
 constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
 constexpr int32 MaximumCatchUpTicksPerFrame = 8;
 constexpr int32 PrologueSiteRadiusTiles = 3;
+constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -85,6 +86,52 @@ using echoes::sim::Vec2;
     return BlockedTiles;
 }
 
+[[nodiscard]] int32 ApplySevenAccountsTerrain(
+    echoes::sim::Simulation& Simulation,
+    FutureWellChoice Branch)
+{
+    int32 Delta = 0;
+    if (Branch == FutureWellChoice::Harvest)
+    {
+        for (int32 TileY = 30; TileY <= 34; ++TileY)
+        {
+            for (int32 TileX = 29; TileX <= 35; ++TileX)
+            {
+                if (Simulation.SetTerrainTile(TileX, TileY, Terrain::Blocked))
+                {
+                    ++Delta;
+                }
+            }
+        }
+    }
+    else if (Branch == FutureWellChoice::Reshape)
+    {
+        constexpr int32 OpenColumns[] = {27, 28, 36, 37};
+        for (int32 TileY = 30; TileY <= 34; ++TileY)
+        {
+            for (const int32 TileX : OpenColumns)
+            {
+                if (Simulation.SetTerrainTile(TileX, TileY, Terrain::Open))
+                {
+                    --Delta;
+                }
+            }
+        }
+    }
+    return Delta;
+}
+
+[[nodiscard]] uint8 WellChoiceMask(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return 1 << 0;
+        case FutureWellChoice::Preserve: return 1 << 1;
+        case FutureWellChoice::Reshape: return 1 << 2;
+        default: return 0;
+    }
+}
+
 [[nodiscard]] bool IsWithinTiles(
     const Vec2& Position,
     const Vec2& Site,
@@ -128,6 +175,8 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     LocalFaction = Faction::MeridianCompact;
     SelectedOperation = EEchoesOperationMode::Skirmish;
     ArchiveCarrierId = 0;
+    MemoryBearerId = 0;
+    MigrationWaystoneId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignProgressPath = FEchoesCampaignProgressStore::GetDefaultPath();
 #if !UE_BUILD_SHIPPING
@@ -213,9 +262,15 @@ echoes::sim::Vec2 UEchoesSimulationSubsystem::GetEvacuationSite()
 
 FString UEchoesSimulationSubsystem::GetOperationLabel() const
 {
-    return SelectedOperation == EEchoesOperationMode::CampaignPrologue
-               ? TEXT("WHAT THE LEDGER KEEPS")
-               : TEXT("GLASS SCAR");
+    switch (SelectedOperation)
+    {
+        case EEchoesOperationMode::CampaignPrologue:
+            return TEXT("WHAT THE LEDGER KEEPS");
+        case EEchoesOperationMode::CampaignSevenAccounts:
+            return TEXT("SEVEN ACCOUNTS OF RAIN");
+        default:
+            return TEXT("GLASS SCAR");
+    }
 }
 
 bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
@@ -227,6 +282,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Verbose,
             TEXT("[ECHOES_SIM_ALREADY_READY] Prototype simulation start ignored."));
         return true;
+    }
+
+    if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        !IsSevenAccountsUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SEVEN_ACCOUNTS_LOCKED] reason=WhatTheLedgerKeeps completion required"));
+        return false;
     }
 
 #if UE_BUILD_SHIPPING
@@ -331,21 +396,30 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Content->GetCatalog().Buildings.Num());
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
-    const int32 GlassScarBlockedTiles = ConfigureGlassScar(*Simulation);
-    if (GlassScarBlockedTiles != 165)
+    const int32 BaseGlassScarBlockedTiles = ConfigureGlassScar(*Simulation);
+    if (BaseGlassScarBlockedTiles != 165)
     {
         UE_LOG(
             LogEchoes,
             Error,
             TEXT("[ECHOES_GLASS_SCAR_INIT_FAILED] blocked=%d expected=165"),
-            GlassScarBlockedTiles);
+            BaseGlassScarBlockedTiles);
         Simulation.Reset();
         return false;
     }
+    const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();
+    const int32 SevenAccountsTerrainDelta =
+        SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
+            ? ApplySevenAccountsTerrain(*Simulation, SevenAccountsBranch)
+            : 0;
+    const int32 GlassScarBlockedTiles =
+        BaseGlassScarBlockedTiles + SevenAccountsTerrainDelta;
     const Faction ScenarioLocalFaction =
         bUseStressScenario ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignPrologue
             ? Faction::MeridianCompact
+        : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -397,6 +471,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 
     bool bSpawnSucceeded = true;
     ArchiveCarrierId = 0;
+    MemoryBearerId = 0;
+    MigrationWaystoneId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -414,6 +490,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Owner == LocalPlayerId && Type == EntityType::ScoutUnit)
         {
             ArchiveCarrierId = Spawned;
+        }
+        if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+            Owner == LocalPlayerId)
+        {
+            if (Type == EntityType::ScoutUnit)
+            {
+                MemoryBearerId = Spawned;
+            }
+            else if (Type == EntityType::Dropoff)
+            {
+                MigrationWaystoneId = Spawned;
+            }
         }
         return Spawned;
     };
@@ -871,6 +959,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        (MemoryBearerId == 0 || MigrationWaystoneId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SEVEN_ACCOUNTS_INIT_FAILED] reason=mission entities unavailable bearer=%u waystone=%u"),
+            MemoryBearerId,
+            MigrationWaystoneId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -916,6 +1016,23 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Display,
                 TEXT("[ECHOES_PROLOGUE_READY] mission=WhatTheLedgerKeeps carrier=%u archive=(22,18) evacuation=(6,17) faction=MeridianCompact completion=withdrawal"),
                 ArchiveCarrierId);
+        }
+        else if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
+        {
+            const FEchoesSevenAccountsRoute Route = GetSevenAccountsRoute();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SEVEN_ACCOUNTS_READY] branch=%s waystone=%u bearer=%u anchor=(%d,%d) account=(%d,%d) terrainDelta=%d blocked=%d"),
+                Route.StableName,
+                MigrationWaystoneId,
+                MemoryBearerId,
+                Route.WaystoneAnchor.x.FloorToInt(),
+                Route.WaystoneAnchor.y.FloorToInt(),
+                Route.MemoryAccountSite.x.FloorToInt(),
+                Route.MemoryAccountSite.y.FloorToInt(),
+                SevenAccountsTerrainDelta,
+                GlassScarBlockedTiles);
         }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
@@ -1022,6 +1139,8 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bMatchResultReported = false;
     bStressScenario = false;
     ArchiveCarrierId = 0;
+    MemoryBearerId = 0;
+    MigrationWaystoneId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -1061,6 +1180,12 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::MeridianCompact)
     {
         OutFeedback = TEXT("[FACTION_PROLOGUE_LOCKED] Mara Vey deploys with the Meridian Compact.");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_SEVEN_ACCOUNTS_LOCKED] Oruun deploys with the Kharuun Assemblies.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -1123,6 +1248,12 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[OPERATION_STRESS_LOCKED] The scale fixture has a fixed operation.");
         return false;
     }
+    if (NewOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        !IsSevenAccountsUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete What the Ledger Keeps before Seven Accounts of Rain.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1142,6 +1273,10 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::MeridianCompact;
     }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1153,6 +1288,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             *GetOperationLabel(),
             SelectedOperation == EEchoesOperationMode::CampaignPrologue
                 ? TEXT(" — Mara Vey's Meridian force is locked for this mission.")
+            : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
+                ? TEXT(" — Oruun's Kharuun migration force is locked for this mission.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1160,6 +1297,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             TEXT("[ECHOES_OPERATION_SELECTED] operation=%s scenarioReset=%s paused=%s"),
             SelectedOperation == EEchoesOperationMode::CampaignPrologue
                 ? TEXT("WhatTheLedgerKeeps")
+            : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
+                ? TEXT("SevenAccountsOfRain")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1197,6 +1336,13 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             TEXT("SaveGames"),
             TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
+    }
     return GetQuickSavePath();
 }
 
@@ -1228,6 +1374,70 @@ EEchoesCampaignCommitStatus UEchoesSimulationSubsystem::CommitPrologueCompletion
         static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
         static_cast<uint8>(EEchoesCampaignDecisionFact::LocalCoreSurvived) |
         static_cast<uint8>(EEchoesCampaignDecisionFact::FutureWellControlled);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitSevenAccountsCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation != EEchoesOperationMode::CampaignSevenAccounts ||
+        GetSevenAccountsPhase() != EEchoesSevenAccountsPhase::Complete ||
+        Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative Seven Accounts operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::SevenAccountsOfRain;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesSevenAccountsCompletionFact::WaystoneRootedAtAnchor) |
+        static_cast<uint8>(EEchoesSevenAccountsCompletionFact::MemoryBearerArrived) |
+        static_cast<uint8>(EEchoesSevenAccountsCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesSevenAccountsCompletionFact::PriorDecisionConsumed);
     Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
     Record.CompletionTick = Simulation->CurrentTick();
     Record.FinalStateChecksum = Simulation->StateChecksum();
@@ -1680,6 +1890,74 @@ EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
     return FEchoesPrologueMissionModel::DeterminePhase(Facts);
 }
 
+bool UEchoesSimulationSubsystem::IsSevenAccountsUnlocked() const
+{
+    return bCampaignProgressAvailable &&
+           CampaignProgress.FindDecision(
+               EEchoesCampaignMissionId::WhatTheLedgerKeeps) != nullptr;
+}
+
+FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
+{
+    const FEchoesCampaignDecisionRecord* Record =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    return Record != nullptr ? Record->WellChoice : FutureWellChoice::Dormant;
+}
+
+FEchoesSevenAccountsRoute
+UEchoesSimulationSubsystem::GetSevenAccountsRoute() const
+{
+    return FEchoesSevenAccountsMissionModel::RouteForChoice(
+        GetRecordedPrologueChoice());
+}
+
+EEchoesSevenAccountsPhase
+UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
+{
+    FEchoesSevenAccountsMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesSevenAccountsPhase::Inactive;
+    }
+
+    const FEchoesSevenAccountsRoute Route = GetSevenAccountsRoute();
+    const echoes::sim::Entity* Bearer =
+        Simulation->FindEntity(MemoryBearerId);
+    const echoes::sim::Entity* Waystone =
+        Simulation->FindEntity(MigrationWaystoneId);
+    Facts.bMemoryBearerIntact = Bearer != nullptr && Bearer->hitPoints > 0;
+    Facts.bWaystoneIntact = Waystone != nullptr && Waystone->hitPoints > 0;
+    Facts.bMemoryBearerAtAccountSite =
+        Facts.bMemoryBearerIntact &&
+        IsWithinTiles(
+            Bearer->position,
+            Route.MemoryAccountSite,
+            SevenAccountsSiteRadiusTiles);
+    Facts.bWaystoneRootedAtAnchor =
+        Facts.bWaystoneIntact &&
+        Waystone->waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+        IsWithinTiles(
+            Waystone->position,
+            Route.WaystoneAnchor,
+            SevenAccountsSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId &&
+            Entity.type == EntityType::CommandCore && Entity.hitPoints > 0)
+        {
+            Facts.bLocalCoreIntact = true;
+            break;
+        }
+    }
+    return FEchoesSevenAccountsMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -1693,13 +1971,40 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.Outcome = Simulation->Outcome();
     Snapshot.OperationMode = SelectedOperation;
     Snapshot.ProloguePhase = GetProloguePhase();
+    Snapshot.SevenAccountsPhase = GetSevenAccountsPhase();
+    Snapshot.SevenAccountsBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
+    Snapshot.MemoryBearerId = MemoryBearerId;
+    Snapshot.MigrationWaystoneId = MigrationWaystoneId;
+    const FEchoesSevenAccountsRoute SevenAccountsRoute =
+        GetSevenAccountsRoute();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.id == ArchiveCarrierId)
         {
             Snapshot.bArchiveCarrierIntact = Entity.hitPoints > 0;
             Snapshot.ArchiveCarrierHitPoints = Entity.hitPoints;
+        }
+        if (Entity.id == MemoryBearerId)
+        {
+            Snapshot.bMemoryBearerIntact = Entity.hitPoints > 0;
+            Snapshot.bMemoryBearerAtAccountSite =
+                Snapshot.bMemoryBearerIntact &&
+                IsWithinTiles(
+                    Entity.position,
+                    SevenAccountsRoute.MemoryAccountSite,
+                    SevenAccountsSiteRadiusTiles);
+        }
+        if (Entity.id == MigrationWaystoneId)
+        {
+            Snapshot.bWaystoneIntact = Entity.hitPoints > 0;
+            Snapshot.bWaystoneRootedAtAnchor =
+                Snapshot.bWaystoneIntact &&
+                Entity.waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+                IsWithinTiles(
+                    Entity.position,
+                    SevenAccountsRoute.WaystoneAnchor,
+                    SevenAccountsSiteRadiusTiles);
         }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
@@ -1864,6 +2169,60 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         static_cast<uint8>(CampaignStatus),
                         static_cast<unsigned long long>(Simulation->CurrentTick()),
                         CampaignDetail);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignSevenAccounts &&
+                     !bMatchResultReported)
+            {
+                const EEchoesSevenAccountsPhase SevenAccountsPhase =
+                    GetSevenAccountsPhase();
+                const bool bSevenAccountsFinished =
+                    SevenAccountsPhase == EEchoesSevenAccountsPhase::Complete ||
+                    SevenAccountsPhase == EEchoesSevenAccountsPhase::Failed;
+                if (bSevenAccountsFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        SevenAccountsPhase == EEchoesSevenAccountsPhase::Complete
+                            ? CommitSevenAccountsCompletion(
+                                  RecordedConsequence,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifySevenAccountsFinished(
+                            SevenAccountsPhase ==
+                                EEchoesSevenAccountsPhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_SEVEN_ACCOUNTS_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        SevenAccountsPhase ==
+                                EEchoesSevenAccountsPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesSevenAccountsMissionModel::StableName(
+                            SevenAccountsPhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
                 }
             }
             else if (SelectedOperation == EEchoesOperationMode::Skirmish &&

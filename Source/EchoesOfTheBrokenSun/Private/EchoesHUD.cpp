@@ -314,12 +314,26 @@ void AEchoesHUD::DrawHUD()
                     Percent);
             }
         }
-        SelectionLine = FString::Printf(
-            TEXT("Selected  %d%s     Formation  %s     Future Well protocol  %s"),
-            SelectedIds.Num(),
-            *SelectedType,
-            *EchoesController->GetFormationLabel(),
-            *EchoesController->GetFutureWellChoiceLabel());
+        if (Bridge != nullptr &&
+            Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignSevenAccounts)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Inherited route  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
+        else
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Future Well protocol  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                *EchoesController->GetFutureWellChoiceLabel());
+        }
     }
     DrawText(
         SelectionLine,
@@ -988,6 +1002,9 @@ void AEchoesHUD::DrawTitleScreen(
             : nullptr;
     const bool bPrologue = Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    const bool bSevenAccounts = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSevenAccounts;
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -1006,13 +1023,19 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(TEXT("AVAILABLE OPERATION"), Accent,
              Left + 48.0f, Top + 164.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
-    DrawText(bPrologue ? TEXT("WHAT THE LEDGER KEEPS") : TEXT("GLASS SCAR"), Body,
+    DrawText(bPrologue ? TEXT("WHAT THE LEDGER KEEPS")
+             : bSevenAccounts ? TEXT("SEVEN ACCOUNTS OF RAIN")
+                              : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
     const FString OperationMetadata = bPrologue
         ? FString::Printf(
               TEXT("CAMPAIGN PROLOGUE  //  %s  //  MARA VEY"),
               *LocalFaction)
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 02  //  %s  //  ORUUN"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1022,6 +1045,8 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(
         bPrologue
             ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 01")
+        : bSevenAccounts
+            ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 02")
             : FString::Printf(
                   TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
                   *OpponentFaction),
@@ -1030,12 +1055,16 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(
         bPrologue
             ? TEXT("Recover Talar Venn's displaced archive before the line collapses.")
+        : bSevenAccounts
+            ? TEXT("Carry the inherited account into terrain changed by the prior decision.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
     DrawText(
         bPrologue
             ? TEXT("Commit the Well's consequence, then withdraw to Lume Reach.")
+        : bSevenAccounts
+            ? TEXT("Re-root the Waystone, then bring Oruun to the matching memory site.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1164,6 +1193,65 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        const FEchoesSevenAccountsRoute Route = Bridge->GetSevenAccountsRoute();
+        const bool bFailed =
+            Objective.SevenAccountsPhase == EEchoesSevenAccountsPhase::Failed;
+        const FString WaystoneState = bFailed
+            ? TEXT("LOST — MISSION FAILED")
+            : Objective.bWaystoneRootedAtAnchor
+                ? TEXT("ROOTED — ANCHOR SECURE")
+                : FString::Printf(
+                      TEXT("MIGRATE — TILE %d,%d"),
+                      Route.WaystoneAnchor.x.FloorToInt(),
+                      Route.WaystoneAnchor.y.FloorToInt());
+        const FString MemoryState = bFailed
+            ? TEXT("LOST — MISSION FAILED")
+            : Objective.bMemoryBearerAtAccountSite
+                ? TEXT("ORUUN — ACCOUNT RECALLED")
+                : Objective.bWaystoneRootedAtAnchor
+                    ? FString::Printf(
+                          TEXT("ORUUN — TILE %d,%d"),
+                          Route.MemoryAccountSite.x.FloorToInt(),
+                          Route.MemoryAccountSite.y.FloorToInt())
+                    : TEXT("WAITING — ROOT WAYSTONE FIRST");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("SEVEN ACCOUNTS OF RAIN  //  MISSION 02"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont, 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  WAYSTONE        %s"), *WaystoneState),
+            bFailed ? Failed : Objective.bWaystoneRootedAtAnchor ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont, 0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  MEMORY ACCOUNT  %s"), *MemoryState),
+            bFailed ? Failed : Objective.bMemoryBearerAtAccountSite ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont, 0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(
+                TEXT("03  PRIOR DECISION  %s // %s"),
+                WellChoiceDisplayName(Objective.SevenAccountsBranch),
+                Route.DisplayName),
+            Complete,
+            Left + 18.0f, Top + 126.0f, SmallFont, 0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SEVEN_ACCOUNTS_OBJECTIVES_READY] phase=%s bearer=%u waystone=%u branch=%s reconstructable=true"),
+                FEchoesSevenAccountsMissionModel::StableName(
+                    Objective.SevenAccountsPhase),
+                Objective.MemoryBearerId,
+                Objective.MigrationWaystoneId,
+                Route.StableName);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -1267,6 +1355,9 @@ void AEchoesHUD::DrawMatchResult(
     const echoes::sim::MatchOutcome Outcome =
         EchoesController->GetPresentedMatchOutcome();
     const bool bCampaignResult = EchoesController->IsCampaignResult();
+    const bool bSevenAccountsResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignSevenAccounts;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : Outcome == echoes::sim::MatchOutcome::Player0Victory;
@@ -1278,18 +1369,28 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bVictory ? TEXT("THE LEDGER RETURNS TO LUME REACH")
-                   : TEXT("THE ARCHIVE LINE IS LOST")
+        ? bSevenAccountsResult
+            ? bVictory ? TEXT("THE ROUTE REMEMBERS ORUUN")
+                       : TEXT("THE SEVENTH ACCOUNT FALLS SILENT")
+            : bVictory ? TEXT("THE LEDGER RETURNS TO LUME REACH")
+                       : TEXT("THE ARCHIVE LINE IS LOST")
         : bVictory ? TEXT("THE GLASS SCAR HOLDS")
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bVictory
-            ? FString::Printf(
+        ? bSevenAccountsResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The Waystone is rooted, Oruun reached the %s account, and the inherited route remains traversable."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the Waystone, the local Core, or the migration route was lost before the account could be reconciled.")
+            : bVictory
+                ? FString::Printf(
                   TEXT("Mara Vey recovered Talar Venn's archive, committed the %s protocol, and completed the withdrawal."),
                   WellChoiceDisplayName(
                       EchoesController->GetCampaignConsequence()))
-            : TEXT("The archive carrier or withdrawal line was lost before the evacuation could be completed.")
+                : TEXT("The archive carrier or withdrawal line was lost before the evacuation could be completed.")
         : bVictory
             ? FString::Printf(
                   TEXT("The %s Command Core is silent. The Future Well remains a consequence, not a prize."),
@@ -1306,9 +1407,13 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = FString::Printf(
-                    TEXT("LEDGER COMMITTED // %s is fixed for this campaign."),
-                    RecordedChoice);
+                CampaignPersistenceLine = bSevenAccountsResult
+                    ? FString::Printf(
+                          TEXT("MISSION 02 RECORDED // %s route secured."),
+                          RecordedChoice)
+                    : FString::Printf(
+                          TEXT("LEDGER COMMITTED // %s is fixed for this campaign."),
+                          RecordedChoice);
                 break;
             case EEchoesCampaignCommitStatus::AlreadyRecorded:
                 CampaignPersistenceLine = FString::Printf(
@@ -1355,9 +1460,13 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? FString::Printf(
-              TEXT("MISSION 01 — WHAT THE LEDGER KEEPS  //  FINAL TICK %llu"),
-              static_cast<unsigned long long>(FinalTick))
+        ? bSevenAccountsResult
+            ? FString::Printf(
+                  TEXT("MISSION 02 — SEVEN ACCOUNTS OF RAIN  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+            : FString::Printf(
+                  TEXT("MISSION 01 — WHAT THE LEDGER KEEPS  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
         : FString::Printf(
               TEXT("OPERATION GLASS SCAR  //  FINAL TICK %llu"),
               static_cast<unsigned long long>(FinalTick));
@@ -1540,6 +1649,13 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bPrologue = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignPrologue;
+    const bool bSevenAccounts = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSevenAccounts;
+    const FEchoesSevenAccountsRoute SevenAccountsRoute =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetSevenAccountsRoute()
+            : FEchoesSevenAccountsRoute{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -1557,6 +1673,10 @@ void AEchoesHUD::DrawMissionBriefing(
         ? FString::Printf(
               TEXT("WHAT THE LEDGER KEEPS  //  CAMPAIGN PROLOGUE  //  %s"),
               *LocalFaction)
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("SEVEN ACCOUNTS OF RAIN  //  MISSION 02  //  %s"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -1568,11 +1688,19 @@ void AEchoesHUD::DrawMissionBriefing(
     DrawText(
         bPrologue
             ? TEXT("Lume Reach is evacuating. Talar Venn's archive convoy is displaced at tile 22,18.")
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("The prior %s decision altered the crossing; seven inherited accounts now disagree about the route."),
+                  WellChoiceDisplayName(SevenAccountsRoute.PriorChoice))
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
         bPrologue
             ? TEXT("Oruun warns the collapse will reach a birthing cavern. Mara Vey must buy time, then withdraw.")
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("Oruun carries the %s testimony. The Waystone must make that account traversable."),
+                  SevenAccountsRoute.DisplayName)
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -1583,11 +1711,21 @@ void AEchoesHUD::DrawMissionBriefing(
     DrawText(
         bPrologue
             ? TEXT("01  Move Mara Vey's scout carrier to the archive rendezvous at tile 22,18.")
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("01  Uproot, move, and re-root the Waystone at tile %d,%d."),
+                  SevenAccountsRoute.WaystoneAnchor.x.FloorToInt(),
+                  SevenAccountsRoute.WaystoneAnchor.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
         bPrologue
             ? TEXT("02  Hold the archive site, commit a Well protocol, then return the carrier to tile 6,17.")
+        : bSevenAccounts
+            ? FString::Printf(
+                  TEXT("02  After the Waystone roots, bring Oruun's memory-bearer to tile %d,%d."),
+                  SevenAccountsRoute.MemoryAccountSite.x.FloorToInt(),
+                  SevenAccountsRoute.MemoryAccountSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -1595,11 +1733,15 @@ void AEchoesHUD::DrawMissionBriefing(
 
     DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
-    DrawText(TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
+    DrawText(bSevenAccounts
+                 ? TEXT("The route is inherited. Mission 01's choice cannot be changed here.")
+                 : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
         bPrologue
             ? TEXT("Mission victory is evacuation. Destroying the opposing Core does not replace withdrawal.")
+        : bSevenAccounts
+            ? TEXT("Victory is migration and recall. Destroying the opposing Core does not replace either objective.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -1613,6 +1755,8 @@ void AEchoesHUD::DrawMissionBriefing(
     DrawText(
         bPrologue
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
+        : bSevenAccounts
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -1816,7 +1960,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         DrawLine(CameraX, CameraY - 6.0f, CameraX, CameraY + 6.0f, FLinearColor::White, 1.0f);
     }
 
-    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSevenAccounts)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -1846,24 +1992,45 @@ void AEchoesHUD::DrawTacticalMinimap(
                      GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
                      0.68f, false);
         };
-        const FLinearColor ArchiveColor =
-            Objective.ProloguePhase == EEchoesProloguePhase::RecoverArchive ||
-            Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell
-                ? Border
-                : FLinearColor(0.25f, 1.0f, 0.66f);
-        const FLinearColor EvacColor =
-            Objective.ProloguePhase == EEchoesProloguePhase::Withdraw ||
-            Objective.ProloguePhase == EEchoesProloguePhase::Complete
-                ? Border
-                : FLinearColor(0.48f, 0.55f, 0.62f);
-        DrawMissionSite(
-            UEchoesSimulationSubsystem::GetArchiveRecoverySite(),
-            TEXT("A"),
-            ArchiveColor);
-        DrawMissionSite(
-            UEchoesSimulationSubsystem::GetEvacuationSite(),
-            TEXT("E"),
-            EvacColor);
+        if (Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignPrologue)
+        {
+            const FLinearColor ArchiveColor =
+                Objective.ProloguePhase == EEchoesProloguePhase::RecoverArchive ||
+                Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell
+                    ? Border
+                    : FLinearColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor EvacColor =
+                Objective.ProloguePhase == EEchoesProloguePhase::Withdraw ||
+                Objective.ProloguePhase == EEchoesProloguePhase::Complete
+                    ? Border
+                    : FLinearColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                UEchoesSimulationSubsystem::GetArchiveRecoverySite(),
+                TEXT("A"),
+                ArchiveColor);
+            DrawMissionSite(
+                UEchoesSimulationSubsystem::GetEvacuationSite(),
+                TEXT("E"),
+                EvacColor);
+        }
+        else
+        {
+            const FEchoesSevenAccountsRoute Route =
+                Bridge->GetSevenAccountsRoute();
+            DrawMissionSite(
+                Route.WaystoneAnchor,
+                TEXT("W"),
+                Objective.bWaystoneRootedAtAnchor
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Route.MemoryAccountSite,
+                TEXT("M"),
+                Objective.bWaystoneRootedAtAnchor
+                    ? Border
+                    : FLinearColor(0.48f, 0.55f, 0.62f));
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -1873,6 +2040,9 @@ void AEchoesHUD::DrawTacticalMinimap(
     DrawText(
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
             ? TEXT("MISSION NAV  |  ARCHIVE + EVAC")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignSevenAccounts
+            ? TEXT("MISSION NAV  |  WAYSTONE + MEMORY")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

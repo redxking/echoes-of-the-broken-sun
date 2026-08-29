@@ -13,11 +13,16 @@ constexpr int32 HeaderSize = 12;
 constexpr int32 RecordSize = 24;
 constexpr int32 ChecksumSize = 4;
 constexpr uint8 AllWellChoicesMask = 0x07;
-constexpr uint8 RequiredCompletionFacts =
+constexpr uint8 PrologueCompletionFacts =
     static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::FutureWellControlled);
+constexpr uint8 SevenAccountsCompletionFacts =
+    static_cast<uint8>(EEchoesSevenAccountsCompletionFact::WaystoneRootedAtAnchor) |
+    static_cast<uint8>(EEchoesSevenAccountsCompletionFact::MemoryBearerArrived) |
+    static_cast<uint8>(EEchoesSevenAccountsCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesSevenAccountsCompletionFact::PriorDecisionConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -115,7 +120,8 @@ bool ValidateRecord(
     const FEchoesCampaignDecisionRecord& Record,
     FString& OutError)
 {
-    if (Record.Mission != EEchoesCampaignMissionId::WhatTheLedgerKeeps)
+    if (Record.Mission != EEchoesCampaignMissionId::WhatTheLedgerKeeps &&
+        Record.Mission != EEchoesCampaignMissionId::SevenAccountsOfRain)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -128,9 +134,12 @@ bool ValidateRecord(
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The recorded Well decision is inconsistent.");
         return false;
     }
-    if ((Record.VerifiedFacts & RequiredCompletionFacts) !=
-            RequiredCompletionFacts ||
-        (Record.VerifiedFacts & ~RequiredCompletionFacts) != 0)
+    const uint8 RequiredFacts =
+        Record.Mission == EEchoesCampaignMissionId::WhatTheLedgerKeeps
+            ? PrologueCompletionFacts
+            : SevenAccountsCompletionFacts;
+    if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
+        (Record.VerifiedFacts & ~RequiredFacts) != 0)
     {
         OutError = TEXT("[CAMPAIGN_UNVERIFIED_COMPLETION] The record does not prove the mission completion contract.");
         return false;

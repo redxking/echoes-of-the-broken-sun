@@ -119,6 +119,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+    PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
@@ -127,7 +128,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             TEXT("ECHOES OF THE BROKEN SUN — F9 changes operation; %sEnter opens the brief."),
             Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
                 ? TEXT("Tab changes faction; ")
-                : TEXT("Mara Vey deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignPrologue
+                ? TEXT("Mara Vey deployed; ")
+                : TEXT("Oruun deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -135,6 +139,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         TEXT("[ECHOES_TITLE_READY] operation=%s operationChoice=true keyboardStart=true factionChoice=%s"),
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
             ? TEXT("WhatTheLedgerKeeps")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignSevenAccounts
+            ? TEXT("SevenAccountsOfRain")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -180,17 +187,23 @@ void AEchoesPlayerController::PresentMissionBriefing()
     SetIgnoreLookInput(true);
     const bool bPrologue =
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    const bool bSevenAccounts =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignSevenAccounts;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
+        : bSevenAccounts
+            ? TEXT("SEVEN ACCOUNTS OF RAIN — migrate the Waystone, then bring Oruun to the inherited account. Enter deploys.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
         TEXT("[ECHOES_BRIEFING_READY] operation=%s paused=true keyboardStart=true factionChoice=%s"),
-        bPrologue ? TEXT("WhatTheLedgerKeeps") : TEXT("GlassScar"),
-        bPrologue ? TEXT("false") : TEXT("true"));
+        bPrologue ? TEXT("WhatTheLedgerKeeps")
+        : bSevenAccounts ? TEXT("SevenAccountsOfRain") : TEXT("GlassScar"),
+        (bPrologue || bSevenAccounts) ? TEXT("false") : TEXT("true"));
 }
 
 void AEchoesPlayerController::ConfirmMissionBriefing()
@@ -212,13 +225,31 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     Bridge->SetScenarioPaused(false);
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
-    SetStatusMessage(
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
-            ? TEXT("DEPLOYED — select Mara Vey's scout carrier and recover the archive at tile 22,18.")
-            : FString::Printf(
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    {
+        SetStatusMessage(TEXT("DEPLOYED — select Mara Vey's scout carrier and recover the archive at tile 22,18."), 8.0f);
+    }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        const FEchoesSevenAccountsRoute Route = Bridge->GetSevenAccountsRoute();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — uproot and re-root the Waystone at %d,%d; then bring Oruun to %d,%d."),
+                Route.WaystoneAnchor.x.FloorToInt(),
+                Route.WaystoneAnchor.y.FloorToInt(),
+                Route.MemoryAccountSite.x.FloorToInt(),
+                Route.MemoryAccountSite.y.FloorToInt()),
+            10.0f);
+    }
+    else
+    {
+        SetStatusMessage(
+            FString::Printf(
                   TEXT("DEPLOYED — secure the Future Well or destroy the %s Command Core."),
                   *GetOpponentFactionLabel()),
-        8.0f);
+            8.0f);
+    }
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
 }
 
@@ -241,6 +272,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: What the Ledger Keeps follows Mara Vey and the Meridian Compact."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Seven Accounts of Rain follows Oruun and the Kharuun Assemblies."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -281,10 +318,17 @@ void AEchoesPlayerController::CycleOperation()
         SetStatusMessage(TEXT("[OPERATION_SIM_NOT_READY] Operation choice is unavailable."));
         return;
     }
-    const EEchoesOperationMode NewOperation =
-        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
-            ? EEchoesOperationMode::CampaignPrologue
-            : EEchoesOperationMode::Skirmish;
+    EEchoesOperationMode NewOperation = EEchoesOperationMode::Skirmish;
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
+    {
+        NewOperation = EEchoesOperationMode::CampaignPrologue;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignPrologue &&
+             Bridge->IsSevenAccountsUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignSevenAccounts;
+    }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
     {
@@ -645,6 +689,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bTechnologyPanelVisible = false;
     bMatchResultVisible = true;
     bCampaignResult = false;
+    PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = Outcome;
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
@@ -685,6 +730,7 @@ void AEchoesPlayerController::NotifyCampaignPrologueFinished(
     bTechnologyPanelVisible = false;
     bMatchResultVisible = true;
     bCampaignResult = true;
+    PresentedCampaignOperation = EEchoesOperationMode::CampaignPrologue;
     bCampaignSuccess = bSuccess;
     CampaignConsequence = Consequence;
     RecordedCampaignConsequence = RecordedConsequence;
@@ -724,6 +770,64 @@ void AEchoesPlayerController::NotifyCampaignPrologueFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=WhatTheLedgerKeeps success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifySevenAccountsFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignSevenAccounts;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Oruun, the Waystone, the local Core, or the migration route was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — the %s route is rooted and Oruun reached the matching account."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this route. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=SevenAccountsOfRain success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -3133,11 +3237,15 @@ void AEchoesPlayerController::RestartScenario()
         RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
         CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+        PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
         SetIgnoreMoveInput(false);
         SetIgnoreLookInput(false);
         SetStatusMessage(
             Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
                 ? TEXT("MISSION RESTARTED — Mara Vey's archive recovery begins again from the deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignSevenAccounts
+                ? TEXT("MISSION RESTARTED — Oruun's migration begins again from the inherited route state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

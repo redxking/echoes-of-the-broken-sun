@@ -6,7 +6,8 @@
 enum class EEchoesOperationMode : uint8
 {
     Skirmish,
-    CampaignPrologue
+    CampaignPrologue,
+    CampaignSevenAccounts
 };
 
 /** Reconstructable objective state for What the Ledger Keeps. */

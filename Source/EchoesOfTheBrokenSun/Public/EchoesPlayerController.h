@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesFormationLayout.h"
+#include "EchoesPrologueMissionModel.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesPlayerController.generated.h"
@@ -49,6 +50,11 @@ public:
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
+    void NotifySevenAccountsFinished(
         bool bSuccess,
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
@@ -112,6 +118,10 @@ public:
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
     {
         return PresentedMatchOutcome;
+    }
+    [[nodiscard]] EEchoesOperationMode GetPresentedCampaignOperation() const
+    {
+        return PresentedCampaignOperation;
     }
     [[nodiscard]] bool IsCampaignResult() const { return bCampaignResult; }
     [[nodiscard]] bool WasCampaignSuccessful() const
@@ -250,6 +260,8 @@ private:
         echoes::sim::FutureWellChoice::Dormant;
     EEchoesCampaignCommitStatus CampaignCommitStatus =
         EEchoesCampaignCommitStatus::NotApplicable;
+    EEchoesOperationMode PresentedCampaignOperation =
+        EEchoesOperationMode::Skirmish;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;
 };
