@@ -50,6 +50,7 @@ private:
     void ProduceWorker();
     void ProduceSoldier();
     void AttackMoveAtCursor();
+    void HoldSelectedUnits();
     void StopSelectedUnits();
     void TogglePause();
     void RestartScenario();

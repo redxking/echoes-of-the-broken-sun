@@ -170,6 +170,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::AttackMoveAtCursor);
     InputComponent->BindAction(
+        TEXT("HoldSelected"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::HoldSelectedUnits);
+    InputComponent->BindAction(
         TEXT("StopSelected"),
         IE_Pressed,
         this,
@@ -879,12 +884,74 @@ void AEchoesPlayerController::StopSelectedUnits()
     }
     SetStatusMessage(
         AcceptedCount > 0
-            ? FString::Printf(TEXT("STOP: %d unit%s ordered to hold."),
+            ? FString::Printf(TEXT("STOP: %d unit%s stopped."),
                               AcceptedCount,
                               AcceptedCount == 1 ? TEXT("") : TEXT("s"))
             : LastRejection.IsEmpty()
                   ? TEXT("[STOP_REJECTED] No selected entity accepted the order.")
                   : LastRejection);
+}
+
+void AEchoesPlayerController::HoldSelectedUnits()
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Hold position is unavailable."));
+        return;
+    }
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian defenders first."));
+        return;
+    }
+
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        FString Feedback;
+        if (Entity != nullptr && Bridge->IssueCommand(
+                echoes::sim::CommandType::Hold,
+                EntityId,
+                0,
+                Bridge->SimToWorld(Entity->position),
+                FutureWellChoice,
+                Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    if (AcceptedCount > 0)
+    {
+        const FString RejectionSuffix =
+            RejectedCount > 0
+                ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
+                : TEXT(".");
+        SetStatusMessage(FString::Printf(
+            TEXT("HOLD POSITION: %d defender%s anchored%s"),
+            AcceptedCount,
+            AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+            *RejectionSuffix));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastRejection.IsEmpty()
+                ? TEXT("[HOLD_REJECTED] No selected entity can defend a position.")
+                : LastRejection);
+    }
 }
 
 void AEchoesPlayerController::QuickSaveScenario()
@@ -1175,6 +1242,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("PRODUCE");
         case echoes::sim::CommandType::AttackMove:
             return TEXT("ATTACK-MOVE");
+        case echoes::sim::CommandType::Hold:
+            return TEXT("HOLD POSITION");
     }
     return TEXT("ORDER");
 }

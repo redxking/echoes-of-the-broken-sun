@@ -85,7 +85,7 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::AttackMove;
+    return type >= CommandType::Stop && type <= CommandType::Hold;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -211,7 +211,7 @@ void WriteCommand(BinaryWriter& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::AttackMove) ||
+    if (type > static_cast<std::uint8_t>(CommandType::Hold) ||
         buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -962,6 +962,29 @@ EntityId Simulation::FindNearestVisibleEnemy(PlayerId player,
     return nearest;
 }
 
+EntityId Simulation::FindNearestVisibleEnemyInRange(
+    const Entity& attacker) const {
+    EntityId nearest = 0;
+    std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+    for (const Entity& entity : entities_) {
+        if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
+            entity.hitPoints <= 0 ||
+            !IsEntityVisibleTo(attacker.owner, entity.id) ||
+            !InInteractionRange(attacker, entity, attacker.attackRangeRaw)) {
+            continue;
+        }
+        const std::uint64_t distance =
+            DistanceSquaredRaw(attacker.position, entity.position);
+        if (distance < nearestDistance ||
+            (distance == nearestDistance &&
+             (nearest == 0 || entity.id < nearest))) {
+            nearest = entity.id;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
 std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     const Entity& producer) const {
     const std::int32_t centerX = producer.position.x.FloorToInt();
@@ -1141,6 +1164,13 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.destination = command.position;
             }
             return;
+        case CommandType::Hold:
+            if (actor->attackDamage > 0) {
+                actor->order.type = OrderType::Hold;
+                actor->order.target = 0;
+                actor->order.destination = actor->position;
+            }
+            return;
     }
 }
 
@@ -1272,6 +1302,36 @@ void Simulation::ProcessAttackMove(
     }
     if (MoveTowards(attacker, attacker.order.destination)) {
         attacker.order = {};
+    }
+}
+
+void Simulation::ProcessHold(
+    Entity& attacker,
+    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    if (attacker.attackDamage <= 0) {
+        attacker.order = {};
+        return;
+    }
+
+    Entity* target = attacker.order.target != 0
+                         ? MutableEntity(attacker.order.target)
+                         : nullptr;
+    if (target == nullptr || target->owner == kNeutralPlayer ||
+        target->owner == attacker.owner ||
+        !IsEntityVisibleTo(attacker.owner, target->id) ||
+        !InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+        attacker.order.target = 0;
+        target = nullptr;
+    }
+    if (target == nullptr) {
+        attacker.order.target = FindNearestVisibleEnemyInRange(attacker);
+        target = attacker.order.target != 0
+                     ? MutableEntity(attacker.order.target)
+                     : nullptr;
+    }
+    if (target != nullptr && attacker.attackCooldownTicks == 0) {
+        pendingDamage.emplace_back(target->id, attacker.attackDamage);
+        attacker.attackCooldownTicks = attacker.attackPeriodTicks;
     }
 }
 
@@ -1417,6 +1477,9 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::AttackMove:
                 ProcessAttackMove(entity, pendingDamage);
                 break;
+            case OrderType::Hold:
+                ProcessHold(entity, pendingDamage);
+                break;
         }
     }
     std::sort(pendingDamage.begin(), pendingDamage.end());
@@ -1471,6 +1534,12 @@ void Simulation::ClearInvalidOrders() {
                 }
                 break;
             case OrderType::AttackMove:
+                if (entity.order.target != 0 &&
+                    FindEntity(entity.order.target) == nullptr) {
+                    entity.order.target = 0;
+                }
+                break;
+            case OrderType::Hold:
                 if (entity.order.target != 0 &&
                     FindEntity(entity.order.target) == nullptr) {
                     entity.order.target = 0;
@@ -2076,7 +2145,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             completed > 1 ||
-            orderType > static_cast<std::uint8_t>(OrderType::AttackMove) ||
+            orderType > static_cast<std::uint8_t>(OrderType::Hold) ||
             orderBuildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||

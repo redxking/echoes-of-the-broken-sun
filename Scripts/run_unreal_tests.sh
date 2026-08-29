@@ -31,12 +31,12 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "7" ||
+if [[ "$(read_report_value succeeded)" != "8" ||
       "$(read_report_value succeededWithWarnings)" != "0" ||
       "$(read_report_value failed)" != "0" ||
       "$(read_report_value notRun)" != "0" ||
       "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the accepted 7/7 clean result."
+  print -u2 "Unreal automation totals did not match the accepted 8/8 clean result."
   print -u2 "Inspect: $report"
   exit 4
 fi
@@ -45,6 +45,7 @@ expected_tests=(
   "Echoes.Runtime.Bootstrap.ClassesAndCore"
   "Echoes.Runtime.Controls.ControlGroups"
   "Echoes.Runtime.Gameplay.CompleteSkirmish"
+  "Echoes.Runtime.Gameplay.HoldPosition"
   "Echoes.Runtime.Gameplay.ProductionPauseRestart"
   "Echoes.Runtime.Map.GlassScar"
   "Echoes.Runtime.Persistence.QuickSaveLoad"
@@ -53,7 +54,7 @@ expected_tests=(
 
 for expected_test in "${expected_tests[@]}"; do
   matched=false
-  for test_index in 0 1 2 3 4 5 6; do
+  for test_index in 0 1 2 3 4 5 6 7; do
     if [[ "$(read_report_value tests.$test_index.fullTestPath)" == "$expected_test" ]]; then
       matched=true
       if [[ "$(read_report_value tests.$test_index.state)" != "Success" ||
@@ -72,5 +73,5 @@ for expected_test in "${expected_tests[@]}"; do
   fi
 done
 
-print "Unreal automation passed: 7/7 Echoes tests, 0 warnings, 0 errors."
+print "Unreal automation passed: 8/8 Echoes tests, 0 warnings, 0 errors."
 print "Evidence report: $report"

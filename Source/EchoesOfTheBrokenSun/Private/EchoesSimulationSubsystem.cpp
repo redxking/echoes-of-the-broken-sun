@@ -707,7 +707,7 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     {
         UE_LOG(
             LogEchoes,
-            Warning,
+            Verbose,
             TEXT("[ECHOES_CMD_VALIDATION_REJECTED] actor=%u type=%u detail=%s"),
             ActorId,
             static_cast<uint8>(CommandType),
@@ -795,6 +795,13 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             if (!Simulation->IsPositionPassable(Position))
             {
                 OutFeedback = TEXT("[INVALID_DESTINATION] The attack-move destination is outside or blocked.");
+                return false;
+            }
+            return true;
+        case CommandType::Hold:
+            if (Actor.attackDamage <= 0)
+            {
+                OutFeedback = TEXT("[HOLD_REQUIRES_DEFENDER] Select an attack-capable unit.");
                 return false;
             }
             return true;

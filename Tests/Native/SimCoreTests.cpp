@@ -73,7 +73,7 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v4 fixed header/player/sequence fields plus terrain and two fog grids.
+    // Snapshot v5 fixed header/player/sequence fields plus terrain and two fog grids.
     return 100 + 3 * mapTileCount;
 }
 
@@ -305,6 +305,69 @@ void TestAttackMoveAcquiresResumesAndStops() {
     REQUIRE(simulation.FindEntity(attacker)->position == stoppedPosition);
     simulation.Step(20);
     REQUIRE(simulation.FindEntity(attacker)->position == stoppedPosition);
+}
+
+void TestHoldPositionDefendsWithoutChasing() {
+    Simulation simulation({24, 24, 20, 0x484f4c44504f534eULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId defender = simulation.SpawnEntity(
+        0,
+        Faction::MeridianCompact,
+        EntityType::Soldier,
+        Vec2::FromTiles(4, 4));
+    const EntityId retreatingEnemy = simulation.SpawnEntity(
+        1,
+        Faction::KharuunAssemblies,
+        EntityType::Soldier,
+        Vec2::FromTiles(7, 4));
+    REQUIRE(defender != 0 && retreatingEnemy != 0);
+    const Vec2 anchor = simulation.FindEntity(defender)->position;
+
+    Command hold = MakeCommand(0, 0, 1, CommandType::Hold, defender);
+    Command retreat = MakeCommand(0, 1, 1, CommandType::Move, retreatingEnemy);
+    retreat.position = Vec2::FromTiles(18, 4);
+    REQUIRE(simulation.QueueCommand(hold));
+    REQUIRE(simulation.QueueCommand(retreat));
+    simulation.Step(60);
+
+    const Entity* held = simulation.FindEntity(defender);
+    const Entity* retreated = simulation.FindEntity(retreatingEnemy);
+    REQUIRE(held != nullptr && retreated != nullptr);
+    REQUIRE(held->position == anchor);
+    REQUIRE(held->order.type == OrderType::Hold);
+    REQUIRE(held->order.target == 0);
+    REQUIRE(retreated->hitPoints < retreated->maxHitPoints);
+    REQUIRE(retreated->position != Vec2::FromTiles(7, 4));
+
+    const EntityId closeEnemy = simulation.SpawnEntity(
+        1,
+        Faction::KharuunAssemblies,
+        EntityType::Soldier,
+        Vec2::FromTiles(6, 4));
+    REQUIRE(closeEnemy != 0);
+    simulation.Step(120);
+    REQUIRE(simulation.FindEntity(closeEnemy) == nullptr);
+    held = simulation.FindEntity(defender);
+    REQUIRE(held != nullptr);
+    REQUIRE(held->position == anchor);
+    REQUIRE(held->order.type == OrderType::Hold);
+
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    REQUIRE(restored->FindEntity(defender)->order.type == OrderType::Hold);
+    REQUIRE(restored->FindEntity(defender)->position == anchor);
+
+    Command stop = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Stop, defender);
+    REQUIRE(simulation.QueueCommand(stop));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(defender)->order.type == OrderType::None);
+    REQUIRE(simulation.FindEntity(defender)->position == anchor);
 }
 
 void TestDeterministicObstaclePathing() {
@@ -766,6 +829,8 @@ int main() {
         {"combat", TestCombatResolvesDeterministically},
         {"attack-move acquisition resume and stop",
          TestAttackMoveAcquiresResumesAndStops},
+        {"hold position defends without chasing",
+         TestHoldPositionDefendsWithoutChasing},
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},

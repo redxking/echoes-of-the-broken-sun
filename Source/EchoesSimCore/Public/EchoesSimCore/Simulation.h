@@ -27,8 +27,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 4;
-inline constexpr std::uint32_t kReplayVersion = 4;
+inline constexpr std::uint32_t kSnapshotVersion = 5;
+inline constexpr std::uint32_t kReplayVersion = 5;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -142,6 +142,7 @@ enum class OrderType : std::uint8_t {
     Attack = 5,
     FutureWell = 6,
     AttackMove = 7,
+    Hold = 8,
 };
 
 enum class CommandType : std::uint8_t {
@@ -154,6 +155,7 @@ enum class CommandType : std::uint8_t {
     FutureWell = 6,
     Produce = 7,
     AttackMove = 8,
+    Hold = 9,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -381,6 +383,8 @@ private:
     [[nodiscard]] EntityId FindNearestVisibleEnemy(PlayerId player,
                                                    Vec2 from,
                                                    std::int32_t radiusRaw) const;
+    [[nodiscard]] EntityId FindNearestVisibleEnemyInRange(
+        const Entity& attacker) const;
     [[nodiscard]] std::uint64_t DistanceSquaredRaw(Vec2 first, Vec2 second) const;
     [[nodiscard]] bool TryAllocateEntityId(EntityId& id);
 
@@ -395,6 +399,9 @@ private:
     void ProcessAttack(Entity& attacker,
                        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessAttackMove(
+        Entity& attacker,
+        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+    void ProcessHold(
         Entity& attacker,
         std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
