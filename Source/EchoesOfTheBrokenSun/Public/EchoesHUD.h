@@ -51,9 +51,14 @@ private:
         const UEchoesSimulationSubsystem* Bridge,
         const UEchoesGameUserSettings* Settings,
         const echoes::sim::PlayerView* PlayerView);
+    void DrawCommandDeck(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesSimulationSubsystem* Bridge,
+        const UEchoesGameUserSettings* Settings);
     void DrawSelectionRectangle();
 
     bool bLoggedTacticalOverviewReady = false;
     bool bLoggedObjectiveTrackerReady = false;
     bool bLoggedVibrationPresentationReady = false;
+    bool bLoggedCommandDeckReady = false;
 };

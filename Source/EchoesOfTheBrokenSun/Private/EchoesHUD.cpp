@@ -1,6 +1,7 @@
 #include "EchoesHUD.h"
 
 #include "EchoesContentSubsystem.h"
+#include "EchoesCommandDeckModel.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -373,6 +374,8 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
 
+    DrawCommandDeck(EchoesController, Bridge, Settings);
+
     if (EchoesController != nullptr)
     {
         const FString Feedback = EchoesController->GetStatusMessage();
@@ -444,6 +447,183 @@ void AEchoesHUD::DrawHUD()
     else if (EchoesController != nullptr && EchoesController->IsMatchResultVisible())
     {
         DrawMatchResult(EchoesController, Bridge, Settings);
+    }
+}
+
+void AEchoesHUD::DrawCommandDeck(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesSimulationSubsystem* Bridge,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr || Bridge == nullptr ||
+        EchoesController->IsModalOverlayVisible())
+    {
+        return;
+    }
+    const TArray<uint32>& SelectedIds = EchoesController->GetSelectedEntityIds();
+    if (SelectedIds.IsEmpty())
+    {
+        return;
+    }
+
+    FEchoesCommandDeckProfile Profile;
+    for (const uint32 EntityId : SelectedIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr || Entity->owner != UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            continue;
+        }
+        switch (Entity->type)
+        {
+            case echoes::sim::EntityType::Worker:
+                ++Profile.WorkerCount;
+                break;
+            case echoes::sim::EntityType::Soldier:
+            case echoes::sim::EntityType::HeavyUnit:
+            case echoes::sim::EntityType::ScoutUnit:
+                ++Profile.CombatCount;
+                break;
+            case echoes::sim::EntityType::CommandCore:
+            case echoes::sim::EntityType::Dropoff:
+            case echoes::sim::EntityType::Barracks:
+            case echoes::sim::EntityType::UtilityStructure:
+                ++Profile.StructureCount;
+                Profile.bHasCommandCore =
+                    Profile.bHasCommandCore ||
+                    Entity->type == echoes::sim::EntityType::CommandCore;
+                Profile.bHasBarracks =
+                    Profile.bHasBarracks ||
+                    Entity->type == echoes::sim::EntityType::Barracks;
+                break;
+            default:
+                ++Profile.OtherCount;
+                break;
+        }
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float PanelWidth = FMath::Min(
+        900.0f * HudScale,
+        FMath::Max(520.0f, Canvas->ClipX - 300.0f));
+    const float PanelHeight = 112.0f * HudScale;
+    const float Left = 18.0f;
+    const float Top = Canvas->ClipY - 84.0f - PanelHeight;
+    if (Top < 306.0f)
+    {
+        return;
+    }
+
+    const FLinearColor Backdrop = bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+        : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body = bHighContrast
+        ? FLinearColor::White
+        : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted = bHighContrast
+        ? FLinearColor(0.9f, 0.9f, 0.9f)
+        : FLinearColor(0.58f, 0.67f, 0.76f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawRect(Accent, Left, Top, PanelWidth, 3.0f * HudScale);
+    DrawRect(
+        FLinearColor(Accent.R, Accent.G, Accent.B, 0.75f),
+        Left,
+        Top,
+        5.0f * HudScale,
+        PanelHeight);
+    DrawText(
+        FString::Printf(
+            TEXT("TACTICAL COMMAND  //  %d SELECTED  //  FORMATION %s"),
+            SelectedIds.Num(),
+            *EchoesController->GetFormationLabel()),
+        Accent,
+        Left + 18.0f * HudScale,
+        Top + 13.0f * HudScale,
+        SmallFont,
+        0.88f * HudScale,
+        false);
+    DrawText(
+        FString::Printf(
+            TEXT("FORCE PROFILE    COMBAT %d    WORKERS %d    STRUCTURES %d    OTHER %d"),
+            Profile.CombatCount,
+            Profile.WorkerCount,
+            Profile.StructureCount,
+            Profile.OtherCount),
+        Muted,
+        Left + 18.0f * HudScale,
+        Top + 39.0f * HudScale,
+        SmallFont,
+        0.76f * HudScale,
+        false);
+
+    const FString PrimaryActions =
+        FEchoesCommandDeckModel::BuildPrimaryActions(Profile);
+    DrawText(
+        PrimaryActions,
+        Body,
+        Left + 18.0f * HudScale,
+        Top + 63.0f * HudScale,
+        SmallFont,
+        0.75f * HudScale,
+        false);
+
+    EEchoesFormationType NextFormation = EEchoesFormationType::Box;
+    switch (EchoesController->GetFormationType())
+    {
+        case EEchoesFormationType::Box:
+            NextFormation = EEchoesFormationType::Line;
+            break;
+        case EEchoesFormationType::Line:
+            NextFormation = EEchoesFormationType::Wedge;
+            break;
+        case EEchoesFormationType::Wedge:
+            NextFormation = EEchoesFormationType::Box;
+            break;
+    }
+    FString ContextLine = FString::Printf(
+        TEXT("[F8] CYCLE FORMATION  %s -> %s    [G + 1-0] ASSIGN GROUP    [1-0] RECALL"),
+        *EchoesController->GetFormationLabel(),
+        *FEchoesFormationLayout::DisplayName(NextFormation));
+    if (Bridge->GetLocalFaction() == echoes::sim::Faction::MeridianCompact &&
+        Profile.CombatCount > 0)
+    {
+        ContextLine += TEXT("    [\\] BULWARK");
+    }
+    else if (
+        Bridge->GetLocalFaction() == echoes::sim::Faction::KharuunAssemblies &&
+        Profile.CombatCount > 0)
+    {
+        ContextLine += TEXT("    [F4/F5] WARFORM");
+    }
+    DrawText(
+        ContextLine,
+        Accent,
+        Left + 18.0f * HudScale,
+        Top + 87.0f * HudScale,
+        SmallFont,
+        0.72f * HudScale,
+        false);
+
+    if (!bLoggedCommandDeckReady)
+    {
+        bLoggedCommandDeckReady = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_COMMAND_DECK_READY] selected=%d combat=%d workers=%d structures=%d formation=%s highContrast=%s finalUI=false"),
+            SelectedIds.Num(),
+            Profile.CombatCount,
+            Profile.WorkerCount,
+            Profile.StructureCount,
+            *EchoesController->GetFormationLabel(),
+            bHighContrast ? TEXT("true") : TEXT("false"));
     }
 }
 
