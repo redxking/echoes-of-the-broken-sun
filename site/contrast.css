@@ -1,0 +1,6 @@
+/* Readability pass: darker small text on light surfaces and brighter labels on dark surfaces. */
+.light label,.light .section-kicker{color:#52635f}
+.light blockquote small,.well-number,.wells b,.timeline b{color:#5b6862}
+.resource-strip small,.quiet-link,.archive-link{color:#4f635f}
+.dark label,.story label{color:#98c2c1}
+footer span{color:#a3b0b4}

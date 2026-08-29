@@ -1,0 +1,6 @@
+/* Readability pass: keep supporting text comfortably legible on both themes. */
+.section-kicker{color:#52635f}
+.quote span,.well-number,.resource-strip small,.timeline small{color:#5b6862}
+.faction-intro p,.dark-section .faction-card p:not(.card-tag),.story-card{color:#c5d0d2}
+.faction-tabs button{color:#b8c3c8}
+.card-number{color:#a9b9bf}

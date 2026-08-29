@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './contrast.css';
 
 export const metadata: Metadata = {
   title: 'Echoes of the Broken Sun | A science-fantasy RTS in development',
