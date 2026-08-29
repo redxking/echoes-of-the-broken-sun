@@ -161,11 +161,17 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignUnburiedRoad"));
+    const bool bCampaignTermsOfContinuance =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignTermsOfContinuance"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
         (bCampaignCityReserve ? 1 : 0) +
-        (bCampaignUnburiedRoad ? 1 : 0);
+        (bCampaignUnburiedRoad ? 1 : 0) +
+        (bCampaignTermsOfContinuance ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -178,7 +184,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignUnburiedRoad
+            bCampaignTermsOfContinuance
+                ? EEchoesOperationMode::CampaignTermsOfContinuance
+            : bCampaignUnburiedRoad
                 ? EEchoesOperationMode::CampaignUnburiedRoad
             : bCampaignCityReserve
                 ? EEchoesOperationMode::CampaignCityReserve
@@ -196,6 +204,8 @@ void AEchoesGameMode::BeginPlay()
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
                 bCampaignUnburiedRoad
                     ? TEXT("TheUnburiedRoad")
+                : bCampaignTermsOfContinuance
+                    ? TEXT("TermsOfContinuance")
                 : bCampaignCityReserve
                     ? TEXT("ACityOnReserve")
                 : bCampaignSevenAccounts
@@ -211,6 +221,8 @@ void AEchoesGameMode::BeginPlay()
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
             bCampaignUnburiedRoad
                 ? TEXT("TheUnburiedRoad")
+            : bCampaignTermsOfContinuance
+                ? TEXT("TermsOfContinuance")
             : bCampaignCityReserve
                 ? TEXT("ACityOnReserve")
             : bCampaignSevenAccounts

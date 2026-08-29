@@ -139,7 +139,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignCityReserve
                 ? TEXT("Mara Vey deployed; ")
-                : TEXT("Oruun deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignUnburiedRoad
+                ? TEXT("Oruun deployed; ")
+                : TEXT("joint witnesses deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -156,6 +159,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignUnburiedRoad
             ? TEXT("TheUnburiedRoad")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignTermsOfContinuance
+            ? TEXT("TermsOfContinuance")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -212,6 +218,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bUnburiedRoad =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignUnburiedRoad;
+    const bool bTermsOfContinuance =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignTermsOfContinuance;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -221,6 +230,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("A CITY ON RESERVE — reconnect three ark-city districts in the inherited priority order. Enter deploys Mara Vey.")
         : bUnburiedRoad
             ? TEXT("THE UNBURIED ROAD — root the Waystone, raise a Listening Spine, and recover the missing shard. Enter deploys Oruun.")
+        : bTermsOfContinuance
+            ? TEXT("TERMS OF CONTINUANCE — synchronize both networks, hold the ceasefire window, and extract both witnesses. Enter deploys the joint detachment.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -230,8 +241,11 @@ void AEchoesPlayerController::PresentMissionBriefing()
         bPrologue ? TEXT("WhatTheLedgerKeeps")
         : bSevenAccounts ? TEXT("SevenAccountsOfRain")
         : bCityReserve ? TEXT("ACityOnReserve")
-        : bUnburiedRoad ? TEXT("TheUnburiedRoad") : TEXT("GlassScar"),
-        (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad)
+        : bUnburiedRoad ? TEXT("TheUnburiedRoad")
+        : bTermsOfContinuance ? TEXT("TermsOfContinuance")
+        : TEXT("GlassScar"),
+        (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
+         bTermsOfContinuance)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -302,6 +316,24 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Route.MemoryShardSite.y.FloorToInt()),
             14.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        const FEchoesTermsOfContinuancePlan Plan =
+            Bridge->GetTermsOfContinuancePlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — power the Meridian relay at %d,%d and the Kharuun treaty interface at %d,%d; hold through tick %llu; extract both witnesses at %d,%d."),
+                Plan.MeridianRelaySite.x.FloorToInt(),
+                Plan.MeridianRelaySite.y.FloorToInt(),
+                Plan.KharuunSpineSite.x.FloorToInt(),
+                Plan.KharuunSpineSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    Plan.ContinuanceWindowEndTick),
+                Plan.WitnessExtractionSite.x.FloorToInt(),
+                Plan.WitnessExtractionSite.y.FloorToInt()),
+            16.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -350,6 +382,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignUnburiedRoad)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: The Unburied Road follows Oruun and the Kharuun Assemblies."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Terms of Continuance follows a joint Meridian-Kharuun witness detachment."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -414,6 +452,13 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsUnburiedRoadUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignUnburiedRoad;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignUnburiedRoad &&
+             Bridge->IsTermsOfContinuanceUnlocked())
+    {
+        NewOperation =
+            EEchoesOperationMode::CampaignTermsOfContinuance;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -1100,6 +1145,65 @@ void AEchoesPlayerController::NotifyUnburiedRoadFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheUnburiedRoad success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyTermsOfContinuanceFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignTermsOfContinuance;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — a witness, network, local Core, or the continuance window was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — both witnesses survived the apparent attacks and extracted under the inherited %s accord."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this continuance result. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TermsOfContinuance success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -3525,6 +3629,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignUnburiedRoad
                 ? TEXT("MISSION RESTARTED — Oruun's road recovery returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignTermsOfContinuance
+                ? TEXT("MISSION RESTARTED — the joint witness accord returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

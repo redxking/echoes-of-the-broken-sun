@@ -8,7 +8,8 @@ enum class EEchoesCampaignMissionId : uint8
     WhatTheLedgerKeeps = 1,
     SevenAccountsOfRain = 2,
     ACityOnReserve = 3,
-    TheUnburiedRoad = 4
+    TheUnburiedRoad = 4,
+    TermsOfContinuance = 5
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -43,6 +44,16 @@ enum class EEchoesUnburiedRoadCompletionFact : uint8
     MemoryShardRecovered = 1 << 2,
     LocalCoreSurvived = 1 << 3,
     PriorLedgerConsumed = 1 << 4
+};
+
+enum class EEchoesTermsOfContinuanceCompletionFact : uint8
+{
+    MeridianRelaySynchronized = 1 << 0,
+    KharuunSpineSynchronized = 1 << 1,
+    ContinuanceWindowHeld = 1 << 2,
+    BothWitnessesExtracted = 1 << 3,
+    LocalCoreSurvived = 1 << 4,
+    PriorLedgerConsumed = 1 << 5
 };
 
 enum class EEchoesCampaignCommitStatus : uint8

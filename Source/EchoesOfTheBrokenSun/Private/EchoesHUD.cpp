@@ -347,6 +347,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignTermsOfContinuance)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Accord  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1033,6 +1044,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bUnburiedRoad = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignUnburiedRoad;
+    const bool bTermsOfContinuance = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTermsOfContinuance;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bNewCampaignArmed =
@@ -1059,6 +1073,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bSevenAccounts ? TEXT("SEVEN ACCOUNTS OF RAIN")
              : bCityReserve ? TEXT("A CITY ON RESERVE")
              : bUnburiedRoad ? TEXT("THE UNBURIED ROAD")
+             : bTermsOfContinuance ? TEXT("TERMS OF CONTINUANCE")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1078,6 +1093,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 04  //  %s  //  ORUUN"),
                   *LocalFaction)
+        : bTermsOfContinuance
+            ? TEXT("CAMPAIGN MISSION 05  //  JOINT WITNESS DETACHMENT")
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1092,6 +1109,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 03")
     : bUnburiedRoad
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 04")
+    : bTermsOfContinuance
+        ? TEXT("[F9] CHANGE OPERATION  //  JOINT AUTHORITY  //  MISSION 05")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1114,6 +1133,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Lume Reach is running on reserve. Three districts are outside the stable grid.")
         : bUnburiedRoad
             ? TEXT("A route absent from every current map carries the echo of a missing memory shard.")
+        : bTermsOfContinuance
+            ? TEXT("A ceasefire channel opens. Apparent apparitions strike both network interfaces.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1128,6 +1149,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Extend Power Links and energize every district in the inherited priority order.")
         : bUnburiedRoad
             ? TEXT("Root the Waystone, raise a Listening Spine beyond the crossing, and recover the shard.")
+        : bTermsOfContinuance
+            ? TEXT("Synchronize both interfaces, hold the continuance window, and extract both witnesses.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1455,6 +1478,89 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        const FEchoesTermsOfContinuancePlan Plan =
+            Bridge->GetTermsOfContinuancePlan();
+        const bool bFailed =
+            Objective.TermsOfContinuancePhase ==
+            EEchoesTermsOfContinuancePhase::Failed;
+        const bool bNetworksReady =
+            Objective.bMeridianRelaySynchronized &&
+            Objective.bKharuunSpineSynchronized;
+        const bool bWitnessesExtracted =
+            Objective.bMeridianWitnessExtracted &&
+            Objective.bKharuunWitnessExtracted;
+        const FString NetworkState = bFailed
+            ? TEXT("INTERFACES LOST")
+            : bNetworksReady
+                ? TEXT("SYNCHRONIZED")
+                : FString::Printf(
+                      TEXT("MERIDIAN %s  KHARUUN %s"),
+                      Objective.bMeridianRelaySynchronized
+                          ? TEXT("UP") : TEXT("DOWN"),
+                      Objective.bKharuunSpineSynchronized
+                          ? TEXT("UP") : TEXT("DOWN"));
+        const FString HoldState = bFailed
+            ? TEXT("WINDOW BROKEN")
+            : Objective.bContinuanceWindowHeld
+                ? TEXT("HELD")
+                : bNetworksReady
+                    ? FString::Printf(
+                          TEXT("HOLD TO TICK %llu"),
+                          static_cast<unsigned long long>(
+                              Plan.ContinuanceWindowEndTick))
+                    : TEXT("WAITING — SYNC NETWORKS");
+        const FString WitnessState = bFailed
+            ? TEXT("WITNESS LOST")
+            : bWitnessesExtracted
+                ? TEXT("BOTH EXTRACTED")
+                : Objective.bContinuanceWindowHeld
+                    ? FString::Printf(
+                          TEXT("BOTH TO %d,%d"),
+                          Plan.WitnessExtractionSite.x.FloorToInt(),
+                          Plan.WitnessExtractionSite.y.FloorToInt())
+                    : TEXT("WAITING — HOLD WINDOW");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("TERMS OF CONTINUANCE  //  MISSION 05"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  NETWORK INTERFACES  %s"), *NetworkState),
+            bFailed ? Failed : bNetworksReady ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  CONTINUANCE WINDOW  %s"), *HoldState),
+            bFailed ? Failed
+                    : Objective.bContinuanceWindowHeld ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  JOINT WITNESSES     %s"), *WitnessState),
+            bFailed ? Failed : bWitnessesExtracted ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_OBJECTIVES_READY] phase=%s branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u reconstructable=true"),
+                FEchoesTermsOfContinuanceMissionModel::StableName(
+                    Objective.TermsOfContinuancePhase),
+                Plan.StableName,
+                Objective.MeridianContinuanceRelayId,
+                Objective.KharuunContinuanceSpineId,
+                Objective.MeridianContinuanceWitnessId,
+                Objective.KharuunContinuanceWitnessId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -1567,6 +1673,9 @@ void AEchoesHUD::DrawMatchResult(
     const bool bUnburiedRoadResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignUnburiedRoad;
+    const bool bTermsOfContinuanceResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignTermsOfContinuance;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : Outcome == echoes::sim::MatchOutcome::Player0Victory;
@@ -1578,7 +1687,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bUnburiedRoadResult
+        ? bTermsOfContinuanceResult
+            ? bVictory ? TEXT("BOTH WITNESSES LEAVE THE BROKEN ACCORD")
+                       : TEXT("THE CONTINUANCE TERMS COLLAPSE")
+        : bUnburiedRoadResult
             ? bVictory ? TEXT("THE MISSING ROAD REMEMBERS")
                        : TEXT("THE ROAD CLOSES OVER THE SHARD")
         : bCityReserveResult
@@ -1593,7 +1705,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bUnburiedRoadResult
+        ? bTermsOfContinuanceResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("Both network interfaces held, both witnesses extracted, and the apparent attacks remain unresolved under the inherited %s accord."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("A witness, network interface, local Core, or the continuance window was lost before joint extraction.")
+        : bUnburiedRoadResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The Waystone holds the %s roadhead, the Listening Spine resolves the echo, and Oruun carries the missing shard."),
@@ -1636,7 +1755,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bUnburiedRoadResult
+                CampaignPersistenceLine = bTermsOfContinuanceResult
+                    ? FString::Printf(
+                          TEXT("MISSION 05 RECORDED // %s accord witnesses extracted."),
+                          RecordedChoice)
+                : bUnburiedRoadResult
                     ? FString::Printf(
                           TEXT("MISSION 04 RECORDED // %s road shard recovered."),
                           RecordedChoice)
@@ -1697,7 +1820,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bUnburiedRoadResult
+        ? bTermsOfContinuanceResult
+            ? FString::Printf(
+                  TEXT("MISSION 05 — TERMS OF CONTINUANCE  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bUnburiedRoadResult
             ? FString::Printf(
                   TEXT("MISSION 04 — THE UNBURIED ROAD  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -1903,6 +2030,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bUnburiedRoad = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignUnburiedRoad;
+    const bool bTermsOfContinuance = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTermsOfContinuance;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -1915,6 +2045,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetUnburiedRoadRoute()
             : FEchoesUnburiedRoadRoute{};
+    const FEchoesTermsOfContinuancePlan ContinuancePlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetTermsOfContinuancePlan()
+            : FEchoesTermsOfContinuancePlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -1944,6 +2078,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("THE UNBURIED ROAD  //  MISSION 04  //  %s"),
                   *LocalFaction)
+        : bTermsOfContinuance
+            ? TEXT("TERMS OF CONTINUANCE  //  MISSION 05  //  JOINT WITNESSES")
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -1967,6 +2103,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Three consistent records point to the %s, a road absent from every current map."),
                   UnburiedRoadRoute.DisplayName)
+        : bTermsOfContinuance
+            ? FString::Printf(
+                  TEXT("Four consistent records authorize the %s. A ceasefire channel opens across both networks."),
+                  ContinuancePlan.DisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -1982,6 +2122,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   CityReserveGrid.DisplayName)
         : bUnburiedRoad
             ? TEXT("Oruun hears a removed memory shard beyond shifting terrain. The Waystone and a Listening Spine must make it recoverable.")
+        : bTermsOfContinuance
+            ? TEXT("Apparent apparitions attack both interfaces. Their identity is unresolved; preserve evidence and both witnesses.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2007,6 +2149,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("01  Uproot, move, and re-root the Waystone at the roadhead at tile %d,%d."),
                   UnburiedRoadRoute.Roadhead.x.FloorToInt(),
                   UnburiedRoadRoute.Roadhead.y.FloorToInt())
+        : bTermsOfContinuance
+            ? FString::Printf(
+                  TEXT("01  Use workers and [N] Power Links to synchronize both interfaces at %d,%d and %d,%d."),
+                  ContinuancePlan.MeridianRelaySite.x.FloorToInt(),
+                  ContinuancePlan.MeridianRelaySite.y.FloorToInt(),
+                  ContinuancePlan.KharuunSpineSite.x.FloorToInt(),
+                  ContinuancePlan.KharuunSpineSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2031,6 +2180,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   UnburiedRoadRoute.ListeningSpineSite.y.FloorToInt(),
                   UnburiedRoadRoute.MemoryShardSite.x.FloorToInt(),
                   UnburiedRoadRoute.MemoryShardSite.y.FloorToInt())
+        : bTermsOfContinuance
+            ? FString::Printf(
+                  TEXT("02  Hold through tick %llu, then extract both witnesses at %d,%d."),
+                  static_cast<unsigned long long>(
+                      ContinuancePlan.ContinuanceWindowEndTick),
+                  ContinuancePlan.WitnessExtractionSite.x.FloorToInt(),
+                  ContinuancePlan.WitnessExtractionSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -2044,6 +2200,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The reserve priority is inherited from both prior records and cannot be changed here.")
              : bUnburiedRoad
                  ? TEXT("The road is derived from all three prior records and cannot be selected or rewritten here.")
+             : bTermsOfContinuance
+                 ? TEXT("The accord geometry is inherited from all four prior records and cannot be selected or rewritten here.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -2055,6 +2213,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is three powered districts. Destroying the opposing Core does not stabilize Lume Reach.")
         : bUnburiedRoad
             ? TEXT("Victory is infrastructure-backed recovery. Destroying the opposing Core does not recover the missing shard.")
+        : bTermsOfContinuance
+            ? TEXT("Victory is synchronized survival and joint extraction. Destroying the opposing Core invalidates the ceasefire evidence.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -2074,6 +2234,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
         : bUnburiedRoad
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
+        : bTermsOfContinuance
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS JOINT WITNESSES")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -2283,7 +2445,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignCityReserve ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignUnburiedRoad)
+            EEchoesOperationMode::CampaignUnburiedRoad ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTermsOfContinuance)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -2378,7 +2542,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                     ? FLinearColor(0.25f, 1.0f, 0.66f)
                     : Border);
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignUnburiedRoad)
         {
             const FEchoesUnburiedRoadRoute Route =
                 Bridge->GetUnburiedRoadRoute();
@@ -2405,6 +2570,32 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
+        else
+        {
+            const FEchoesTermsOfContinuancePlan Plan =
+                Bridge->GetTermsOfContinuancePlan();
+            DrawMissionSite(
+                Plan.MeridianRelaySite,
+                TEXT("A"),
+                Objective.bMeridianRelaySynchronized
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Plan.KharuunSpineSite,
+                TEXT("K"),
+                Objective.bKharuunSpineSynchronized
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Plan.WitnessExtractionSite,
+                TEXT("E"),
+                Objective.bMeridianWitnessExtracted &&
+                        Objective.bKharuunWitnessExtracted
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bContinuanceWindowHeld
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -2423,6 +2614,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignUnburiedRoad
             ? TEXT("MISSION NAV  |  WAYSTONE + SPINE + SHARD")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignTermsOfContinuance
+            ? TEXT("MISSION NAV  |  AEGIS + TREATY + EXTRACTION")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

@@ -26,6 +26,7 @@ constexpr int32 MaximumCatchUpTicksPerFrame = 8;
 constexpr int32 PrologueSiteRadiusTiles = 3;
 constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
+constexpr int32 TermsOfContinuanceSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -302,6 +303,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("A CITY ON RESERVE");
         case EEchoesOperationMode::CampaignUnburiedRoad:
             return TEXT("THE UNBURIED ROAD");
+        case EEchoesOperationMode::CampaignTermsOfContinuance:
+            return TEXT("TERMS OF CONTINUANCE");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -343,6 +346,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_UNBURIED_ROAD_LOCKED] reason=three consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        !IsTermsOfContinuanceUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_TERMS_OF_CONTINUANCE_LOCKED] reason=four consistent prior mission records required"));
         return false;
     }
 
@@ -465,7 +478,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? ApplySevenAccountsTerrain(*Simulation, SevenAccountsBranch)
             : 0;
     const int32 UnburiedRoadTerrainDelta =
-        SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
+        (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad ||
+         SelectedOperation ==
+             EEchoesOperationMode::CampaignTermsOfContinuance)
             ? ApplyUnburiedRoadTerrain(*Simulation, SevenAccountsBranch)
             : 0;
     const int32 GlassScarBlockedTiles =
@@ -481,6 +496,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
             ? Faction::KharuunAssemblies
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignTermsOfContinuance
+            ? Faction::MeridianCompact
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -503,7 +521,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignCityReserve ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignUnburiedRoad
+                        EEchoesOperationMode::CampaignUnburiedRoad ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignTermsOfContinuance
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -541,6 +561,10 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     LifeSupportDistrictId = 0;
     TransitDistrictId = 0;
     ArchiveDistrictId = 0;
+    MeridianContinuanceRelayId = 0;
+    KharuunContinuanceSpineId = 0;
+    MeridianContinuanceWitnessId = 0;
+    KharuunContinuanceWitnessId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -683,6 +707,71 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 EntityType::UtilityStructure,
                 ArchiveSite.x.FloorToInt(),
                 ArchiveSite.y.FloorToInt());
+        }
+
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance)
+        {
+            const FEchoesTermsOfContinuancePlan Plan =
+                GetTermsOfContinuancePlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] branch=%s begin=true"),
+                Plan.StableName);
+            MeridianContinuanceRelayId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                Plan.MeridianRelaySite.x.FloorToInt(),
+                Plan.MeridianRelaySite.y.FloorToInt());
+            KharuunContinuanceSpineId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::UtilityStructure,
+                Plan.KharuunSpineSite.x.FloorToInt(),
+                Plan.KharuunSpineSite.y.FloorToInt());
+            MeridianContinuanceWitnessId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::ScoutUnit,
+                20,
+                24);
+            KharuunContinuanceWitnessId = SpawnUnit(
+                LocalPlayerId,
+                Faction::MeridianCompact,
+                EntityType::ScoutUnit,
+                23,
+                24);
+            const FIntPoint TreatyLinks[] = {
+                {18, 10}, {24, 15}, {29, 20}, {29, 36}, {29, 40}};
+            for (const FIntPoint& Link : TreatyLinks)
+            {
+                SpawnUnit(
+                    LocalPlayerId,
+                    Faction::MeridianCompact,
+                    EntityType::Dropoff,
+                    Link.X,
+                    Link.Y);
+            }
+            for (int32 Index = 0; Index < 2; ++Index)
+            {
+                SpawnUnit(
+                    OpponentPlayerId,
+                    ScenarioOpponentFaction,
+                    EntityType::ScoutUnit,
+                    48 + Index * 3,
+                    56);
+            }
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u success=%s"),
+                MeridianContinuanceRelayId,
+                KharuunContinuanceSpineId,
+                MeridianContinuanceWitnessId,
+                KharuunContinuanceWitnessId,
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
         if (bUseResearchInterruptionPresentation)
@@ -1101,6 +1190,24 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        (MeridianContinuanceRelayId == 0 ||
+         KharuunContinuanceSpineId == 0 ||
+         MeridianContinuanceWitnessId == 0 ||
+         KharuunContinuanceWitnessId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_TERMS_OF_CONTINUANCE_INIT_FAILED] reason=mission entities unavailable meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u"),
+            MeridianContinuanceRelayId,
+            KharuunContinuanceSpineId,
+            MeridianContinuanceWitnessId,
+            KharuunContinuanceWitnessId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1200,6 +1307,31 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Route.ListeningSpineSite.y.FloorToInt(),
                 Route.MemoryShardSite.x.FloorToInt(),
                 Route.MemoryShardSite.y.FloorToInt(),
+                UnburiedRoadTerrainDelta,
+                GlassScarBlockedTiles);
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignTermsOfContinuance)
+        {
+            const FEchoesTermsOfContinuancePlan Plan =
+                GetTermsOfContinuancePlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_READY] branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u relay=(%d,%d) spine=(%d,%d) extraction=(%d,%d) holdUntil=%llu apparentAttackers=2 terrainDelta=%d blocked=%d inheritedRecords=4"),
+                Plan.StableName,
+                MeridianContinuanceRelayId,
+                KharuunContinuanceSpineId,
+                MeridianContinuanceWitnessId,
+                KharuunContinuanceWitnessId,
+                Plan.MeridianRelaySite.x.FloorToInt(),
+                Plan.MeridianRelaySite.y.FloorToInt(),
+                Plan.KharuunSpineSite.x.FloorToInt(),
+                Plan.KharuunSpineSite.y.FloorToInt(),
+                Plan.WitnessExtractionSite.x.FloorToInt(),
+                Plan.WitnessExtractionSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    Plan.ContinuanceWindowEndTick),
                 UnburiedRoadTerrainDelta,
                 GlassScarBlockedTiles);
         }
@@ -1313,6 +1445,10 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     LifeSupportDistrictId = 0;
     TransitDistrictId = 0;
     ArchiveDistrictId = 0;
+    MeridianContinuanceRelayId = 0;
+    KharuunContinuanceSpineId = 0;
+    MeridianContinuanceWitnessId = 0;
+    KharuunContinuanceWitnessId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -1364,6 +1500,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies)
     {
         OutFeedback = TEXT("[FACTION_UNBURIED_ROAD_LOCKED] Oruun deploys with the Kharuun Assemblies.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        NewFaction != Faction::MeridianCompact)
+    {
+        OutFeedback = TEXT("[FACTION_TERMS_OF_CONTINUANCE_LOCKED] The joint witness detachment deploys under Meridian command authority.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -1444,6 +1587,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete A City on Reserve with a consistent ledger before The Unburied Road.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        !IsTermsOfContinuanceUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Unburied Road with a consistent ledger before Terms of Continuance.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1475,6 +1625,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::KharuunAssemblies;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        LocalFaction = Faction::MeridianCompact;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1492,6 +1647,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT(" — Mara Vey's Meridian grid force is locked for this mission.")
             : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
                 ? TEXT(" — Oruun's Kharuun road force is locked for this mission.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignTermsOfContinuance
+                ? TEXT(" — the joint Meridian-Kharuun witness detachment is locked for this mission.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1505,6 +1663,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT("ACityOnReserve")
             : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
                 ? TEXT("TheUnburiedRoad")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignTermsOfContinuance
+                ? TEXT("TermsOfContinuance")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1624,6 +1785,14 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             FPaths::ProjectSavedDir(),
             TEXT("SaveGames"),
             TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
+    }
+    if (SelectedOperation ==
+        EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveTermsOfContinuance.bin"));
     }
     return GetQuickSavePath();
 }
@@ -1851,6 +2020,75 @@ UEchoesSimulationSubsystem::CommitUnburiedRoadCompletion(
         static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::MemoryShardRecovered) |
         static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::LocalCoreSurvived) |
         static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitTermsOfContinuanceCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignTermsOfContinuance ||
+        GetTermsOfContinuancePhase() !=
+            EEchoesTermsOfContinuancePhase::Complete ||
+        !IsTermsOfContinuanceUnlocked() ||
+        Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative Terms of Continuance operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::TermsOfContinuance;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::MeridianRelaySynchronized) |
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::KharuunSpineSynchronized) |
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::ContinuanceWindowHeld) |
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::BothWitnessesExtracted) |
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesTermsOfContinuanceCompletionFact::PriorLedgerConsumed);
     Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
     Record.CompletionTick = Simulation->CurrentTick();
     Record.FinalStateChecksum = Simulation->StateChecksum();
@@ -2342,6 +2580,22 @@ bool UEchoesSimulationSubsystem::IsUnburiedRoadUnlocked() const
            Prologue->WellChoice == CityReserve->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsTermsOfContinuanceUnlocked() const
+{
+    if (!IsUnburiedRoadUnlocked())
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* UnburiedRoad =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::TheUnburiedRoad);
+    return Prologue != nullptr && UnburiedRoad != nullptr &&
+           Prologue->WellChoice == UnburiedRoad->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -2367,6 +2621,13 @@ FEchoesUnburiedRoadRoute
 UEchoesSimulationSubsystem::GetUnburiedRoadRoute() const
 {
     return FEchoesUnburiedRoadMissionModel::RouteForChoice(
+        GetRecordedPrologueChoice());
+}
+
+FEchoesTermsOfContinuancePlan
+UEchoesSimulationSubsystem::GetTermsOfContinuancePlan() const
+{
+    return FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
         GetRecordedPrologueChoice());
 }
 
@@ -2528,6 +2789,69 @@ UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
     return FEchoesUnburiedRoadMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesTermsOfContinuancePhase
+UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
+{
+    FEchoesTermsOfContinuanceMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesTermsOfContinuancePhase::Inactive;
+    }
+
+    const FEchoesTermsOfContinuancePlan Plan =
+        GetTermsOfContinuancePlan();
+    const echoes::sim::Entity* MeridianRelay =
+        Simulation->FindEntity(MeridianContinuanceRelayId);
+    const echoes::sim::Entity* KharuunSpine =
+        Simulation->FindEntity(KharuunContinuanceSpineId);
+    const echoes::sim::Entity* MeridianWitness =
+        Simulation->FindEntity(MeridianContinuanceWitnessId);
+    const echoes::sim::Entity* KharuunWitness =
+        Simulation->FindEntity(KharuunContinuanceWitnessId);
+    Facts.bMeridianRelayIntact =
+        MeridianRelay != nullptr && MeridianRelay->hitPoints > 0;
+    Facts.bKharuunSpineIntact =
+        KharuunSpine != nullptr && KharuunSpine->hitPoints > 0;
+    Facts.bMeridianWitnessIntact =
+        MeridianWitness != nullptr && MeridianWitness->hitPoints > 0;
+    Facts.bKharuunWitnessIntact =
+        KharuunWitness != nullptr && KharuunWitness->hitPoints > 0;
+    Facts.bMeridianRelaySynchronized =
+        Facts.bMeridianRelayIntact && MeridianRelay->aegisPowered;
+    Facts.bKharuunSpineSynchronized =
+        Facts.bKharuunSpineIntact && KharuunSpine->aegisPowered;
+    Facts.bContinuanceWindowHeld =
+        Simulation->CurrentTick() >= Plan.ContinuanceWindowEndTick;
+    Facts.bMeridianWitnessExtracted =
+        Facts.bMeridianWitnessIntact &&
+        IsWithinTiles(
+            MeridianWitness->position,
+            Plan.WitnessExtractionSite,
+            TermsOfContinuanceSiteRadiusTiles);
+    Facts.bKharuunWitnessExtracted =
+        Facts.bKharuunWitnessIntact &&
+        IsWithinTiles(
+            KharuunWitness->position,
+            Plan.WitnessExtractionSite,
+            TermsOfContinuanceSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+            break;
+        }
+    }
+    return FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -2547,16 +2871,24 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.CityReserveBranch = GetRecordedPrologueChoice();
     Snapshot.UnburiedRoadPhase = GetUnburiedRoadPhase();
     Snapshot.UnburiedRoadBranch = GetRecordedPrologueChoice();
+    Snapshot.TermsOfContinuancePhase = GetTermsOfContinuancePhase();
+    Snapshot.TermsOfContinuanceBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
     Snapshot.LifeSupportDistrictId = LifeSupportDistrictId;
     Snapshot.TransitDistrictId = TransitDistrictId;
     Snapshot.ArchiveDistrictId = ArchiveDistrictId;
+    Snapshot.MeridianContinuanceRelayId = MeridianContinuanceRelayId;
+    Snapshot.KharuunContinuanceSpineId = KharuunContinuanceSpineId;
+    Snapshot.MeridianContinuanceWitnessId = MeridianContinuanceWitnessId;
+    Snapshot.KharuunContinuanceWitnessId = KharuunContinuanceWitnessId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
         GetUnburiedRoadRoute();
+    const FEchoesTermsOfContinuancePlan ContinuancePlan =
+        GetTermsOfContinuancePlan();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.id == ArchiveCarrierId)
@@ -2622,6 +2954,34 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             Snapshot.bArchivePowered =
                 Entity.hitPoints > 0 && Entity.aegisPowered;
         }
+        if (Entity.id == MeridianContinuanceRelayId)
+        {
+            Snapshot.bMeridianRelaySynchronized =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
+        }
+        if (Entity.id == KharuunContinuanceSpineId)
+        {
+            Snapshot.bKharuunSpineSynchronized =
+                Entity.hitPoints > 0 && Entity.aegisPowered;
+        }
+        if (Entity.id == MeridianContinuanceWitnessId)
+        {
+            Snapshot.bMeridianWitnessExtracted =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    ContinuancePlan.WitnessExtractionSite,
+                    TermsOfContinuanceSiteRadiusTiles);
+        }
+        if (Entity.id == KharuunContinuanceWitnessId)
+        {
+            Snapshot.bKharuunWitnessExtracted =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    ContinuancePlan.WitnessExtractionSite,
+                    TermsOfContinuanceSiteRadiusTiles);
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -2657,6 +3017,9 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             Snapshot.bHostileCoreVisible = true;
         }
     }
+    Snapshot.bContinuanceWindowHeld =
+        Simulation->CurrentTick() >=
+        ContinuancePlan.ContinuanceWindowEndTick;
     return Snapshot;
 }
 
@@ -2941,6 +3304,63 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : TEXT("failure"),
                         FEchoesUnburiedRoadMissionModel::StableName(
                             UnburiedRoadPhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignTermsOfContinuance &&
+                     !bMatchResultReported)
+            {
+                const EEchoesTermsOfContinuancePhase ContinuancePhase =
+                    GetTermsOfContinuancePhase();
+                const bool bContinuanceFinished =
+                    ContinuancePhase ==
+                        EEchoesTermsOfContinuancePhase::Complete ||
+                    ContinuancePhase ==
+                        EEchoesTermsOfContinuancePhase::Failed;
+                if (bContinuanceFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        ContinuancePhase ==
+                                EEchoesTermsOfContinuancePhase::Complete
+                            ? CommitTermsOfContinuanceCompletion(
+                                  RecordedConsequence,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyTermsOfContinuanceFinished(
+                            ContinuancePhase ==
+                                EEchoesTermsOfContinuancePhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_TERMS_OF_CONTINUANCE_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        ContinuancePhase ==
+                                EEchoesTermsOfContinuancePhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesTermsOfContinuanceMissionModel::StableName(
+                            ContinuancePhase),
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(CampaignStatus),

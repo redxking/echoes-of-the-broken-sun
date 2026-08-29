@@ -6,6 +6,7 @@
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
+#include "EchoesTermsOfContinuanceMissionModel.h"
 #include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.generated.h"
@@ -63,6 +64,19 @@ struct FEchoesObjectiveSnapshot final
     bool bWaystoneRootedAtRoadhead = false;
     bool bListeningSpineComplete = false;
     bool bMemoryBearerAtShard = false;
+    EEchoesTermsOfContinuancePhase TermsOfContinuancePhase =
+        EEchoesTermsOfContinuancePhase::Inactive;
+    echoes::sim::FutureWellChoice TermsOfContinuanceBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId MeridianContinuanceRelayId = 0;
+    echoes::sim::EntityId KharuunContinuanceSpineId = 0;
+    echoes::sim::EntityId MeridianContinuanceWitnessId = 0;
+    echoes::sim::EntityId KharuunContinuanceWitnessId = 0;
+    bool bMeridianRelaySynchronized = false;
+    bool bKharuunSpineSynchronized = false;
+    bool bContinuanceWindowHeld = false;
+    bool bMeridianWitnessExtracted = false;
+    bool bKharuunWitnessExtracted = false;
 };
 
 /**
@@ -183,10 +197,15 @@ public:
     [[nodiscard]] bool IsCityReserveUnlocked() const;
     [[nodiscard]] EEchoesUnburiedRoadPhase GetUnburiedRoadPhase() const;
     [[nodiscard]] bool IsUnburiedRoadUnlocked() const;
+    [[nodiscard]] EEchoesTermsOfContinuancePhase
+    GetTermsOfContinuancePhase() const;
+    [[nodiscard]] bool IsTermsOfContinuanceUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
     [[nodiscard]] FEchoesUnburiedRoadRoute GetUnburiedRoadRoute() const;
+    [[nodiscard]] FEchoesTermsOfContinuancePlan
+    GetTermsOfContinuancePlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -242,6 +261,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitUnburiedRoadCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitTermsOfContinuanceCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -311,6 +333,10 @@ private:
     echoes::sim::EntityId LifeSupportDistrictId = 0;
     echoes::sim::EntityId TransitDistrictId = 0;
     echoes::sim::EntityId ArchiveDistrictId = 0;
+    echoes::sim::EntityId MeridianContinuanceRelayId = 0;
+    echoes::sim::EntityId KharuunContinuanceSpineId = 0;
+    echoes::sim::EntityId MeridianContinuanceWitnessId = 0;
+    echoes::sim::EntityId KharuunContinuanceWitnessId = 0;
     FEchoesCampaignProgress CampaignProgress;
     bool bCampaignProgressAvailable = false;
     FString CampaignProgressPath;
