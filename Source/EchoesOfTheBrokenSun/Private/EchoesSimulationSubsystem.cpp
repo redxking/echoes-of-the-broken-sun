@@ -158,7 +158,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -1148,6 +1148,19 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             if (Position == Actor.position)
             {
                 OutFeedback = TEXT("[PATROL_ENDPOINT_UNCHANGED] Choose a different patrol endpoint.");
+                return false;
+            }
+            return true;
+        case CommandType::ToggleDeploy:
+            if (Actor.faction != echoes::sim::Faction::MeridianCompact ||
+                Actor.type != EntityType::HeavyUnit)
+            {
+                OutFeedback = TEXT("[BULWARK_REQUIRED] Deployment requires a Meridian Bulwark Team.");
+                return false;
+            }
+            if (!Actor.deployed && Position == Actor.position)
+            {
+                OutFeedback = TEXT("[DEPLOY_FACING_REQUIRED] Point away from the Bulwark to set cover facing.");
                 return false;
             }
             return true;

@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("46bc07c2f792417f880c988b053c2ac825013b695787b0e49da95ebddf92e949")));
+        FString(TEXT("a5ac74b23b572f2db4baf1236738a7f09b682d0de91580336af1f5a57dbb5586")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -62,6 +62,14 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Authored Future Well duration enters simulation rules"),
               Rules.futureWell.reshapeDurationMinimumTicks,
               static_cast<echoes::sim::Tick>(1800));
+    TestEqual(TEXT("Bulwark cover depth enters fixed-point rules"),
+              Rules.bulwarkDeployment.coverDepthRaw, 3584);
+    TestEqual(TEXT("Bulwark cover half-width enters fixed-point rules"),
+              Rules.bulwarkDeployment.coverHalfWidthRaw, 2560);
+    TestEqual(TEXT("Bulwark cover reduction enters simulation rules"),
+              Rules.bulwarkDeployment.damageReductionPercent, 40);
+    TestEqual(TEXT("Bulwark deployed movement enters simulation rules"),
+              Rules.bulwarkDeployment.deployedMovementPercent, 35);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -76,6 +84,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Resonant role is authored"), Resonant->Role, FString(TEXT("scout_counter_scout")));
         TestEqual(TEXT("Resonant sight comes from authored data"), Resonant->SightCentimeters, 1550);
+    }
+    const FEchoesUnitContent* Bulwark = Catalog.FindUnit(TEXT("mc_bulwark_team"));
+    if (TestNotNull(TEXT("Meridian Bulwark is addressable by stable ID"), Bulwark))
+    {
+        TestEqual(TEXT("Bulwark cover depth is authored"),
+                  Bulwark->DeploymentCoverDepthCentimeters, 350);
+        TestEqual(TEXT("Bulwark damage reduction is authored"),
+                  Bulwark->DeploymentDamageReductionPercent, 40);
+        TestEqual(TEXT("Bulwark movement tradeoff is authored"),
+                  Bulwark->DeploymentMoveSpeedPercent, 35);
     }
     const FEchoesBuildingContent* Hearth =
         Catalog.FindBuilding(TEXT("ka_memory_hearth"));

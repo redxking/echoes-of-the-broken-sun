@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v11 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1504 + 5 * mapTileCount;
+    // Snapshot v12 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1520 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1384, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1400, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1392, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1408, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1343,6 +1343,143 @@ void TestCompleteRosterEntityTypesAndProduction() {
     REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
 }
 
+void TestBulwarkDirectionalCoverDeployment() {
+    Simulation simulation({24, 24, 20, 0x42554c5741524bULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId bulwark = simulation.SpawnEntity(
+        0,
+        Faction::MeridianCompact,
+        EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    const EntityId protectedLancer = simulation.SpawnEntity(
+        0,
+        Faction::MeridianCompact,
+        EntityType::Soldier,
+        Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
+                      10 * kFixedScale));
+    const EntityId attacker = simulation.SpawnEntity(
+        1,
+        Faction::KharuunAssemblies,
+        EntityType::Soldier,
+        Vec2::FromTiles(11, 10));
+    REQUIRE(bulwark != 0 && protectedLancer != 0 && attacker != 0);
+    simulation.CaptureReplayBaseline();
+
+    Command deploy =
+        MakeCommand(0, 0, 1, CommandType::ToggleDeploy, bulwark);
+    deploy.position = Vec2::FromTiles(12, 10);
+    Command attack =
+        MakeCommand(0, 1, 1, CommandType::Attack, attacker);
+    attack.target = protectedLancer;
+    REQUIRE(simulation.QueueCommand(deploy));
+    REQUIRE(simulation.QueueCommand(attack));
+    const std::int32_t healthBefore =
+        simulation.FindEntity(protectedLancer)->hitPoints;
+    simulation.Step();
+
+    const Entity* deployed = simulation.FindEntity(bulwark);
+    REQUIRE(deployed != nullptr && deployed->deployed);
+    REQUIRE(deployed->deploymentFacing == Vec2::FromRaw(kFixedScale, 0));
+    const std::optional<PlayerView> opponentView = simulation.CreatePlayerView(1);
+    REQUIRE(opponentView.has_value());
+    const auto observedBulwark = std::find_if(
+        opponentView->Entities().begin(),
+        opponentView->Entities().end(),
+        [bulwark](const Entity& entity) { return entity.id == bulwark; });
+    REQUIRE(observedBulwark != opponentView->Entities().end());
+    REQUIRE(observedBulwark->deployed);
+    REQUIRE(observedBulwark->deploymentFacing == Vec2::FromRaw(kFixedScale, 0));
+    REQUIRE(observedBulwark->hitPoints == 1);
+    const std::int32_t attackDamage =
+        simulation.Config()
+            .rules.archetypes[static_cast<std::size_t>(Faction::KharuunAssemblies)]
+                             [static_cast<std::size_t>(EntityType::Soldier)]
+            .attackDamage;
+    const std::int32_t reducedDamage = std::max(
+        1,
+        attackDamage *
+            (100 - simulation.Config().rules.bulwarkDeployment.damageReductionPercent) /
+            100);
+    REQUIRE(simulation.FindEntity(protectedLancer)->hitPoints ==
+            healthBefore - reducedDamage);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->FindEntity(bulwark)->deployed);
+    REQUIRE(restored->FindEntity(bulwark)->deploymentFacing ==
+            Vec2::FromRaw(kFixedScale, 0));
+    REQUIRE(restored->Config().rules.bulwarkDeployment ==
+            simulation.Config().rules.bulwarkDeployment);
+
+    const std::int32_t deployedStartX = deployed->position.x.Raw();
+    const std::int32_t baseMovement = deployed->movementPerTickRaw;
+    Command slowMove =
+        MakeCommand(simulation.CurrentTick(), 0, 2, CommandType::Move, bulwark);
+    slowMove.position = Vec2::FromTiles(14, 10);
+    REQUIRE(simulation.QueueCommand(slowMove));
+    simulation.Step();
+    const std::int32_t deployedTravel =
+        simulation.FindEntity(bulwark)->position.x.Raw() - deployedStartX;
+    REQUIRE(deployedTravel == std::max(
+        1,
+        baseMovement *
+            simulation.Config().rules.bulwarkDeployment.deployedMovementPercent /
+            100));
+
+    Command undeploy = MakeCommand(
+        simulation.CurrentTick(), 0, 3, CommandType::ToggleDeploy, bulwark);
+    REQUIRE(simulation.QueueCommand(undeploy));
+    const std::int32_t undeployedStartX =
+        simulation.FindEntity(bulwark)->position.x.Raw();
+    simulation.Step();
+    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
+    REQUIRE(simulation.FindEntity(bulwark)->position.x.Raw() - undeployedStartX ==
+            baseMovement);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    std::optional<Simulation> replayed = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    Simulation flank({24, 24, 20, 7});
+    AddTwoPlayers(flank, {0, 0}, {0, 0});
+    const EntityId flankBulwark = flank.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    const EntityId flankLancer = flank.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
+                      10 * kFixedScale));
+    const EntityId flankAttacker = flank.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
+                      11 * kFixedScale));
+    Command faceEast =
+        MakeCommand(0, 0, 1, CommandType::ToggleDeploy, flankBulwark);
+    faceEast.position = Vec2::FromTiles(12, 10);
+    Command flankAttack =
+        MakeCommand(0, 1, 1, CommandType::Attack, flankAttacker);
+    flankAttack.target = flankLancer;
+    REQUIRE(flank.QueueCommand(faceEast));
+    REQUIRE(flank.QueueCommand(flankAttack));
+    const std::int32_t flankHealth = flank.FindEntity(flankLancer)->hitPoints;
+    flank.Step();
+    REQUIRE(flank.FindEntity(flankLancer)->hitPoints ==
+            flankHealth - attackDamage);
+
+    const EntityId cairnback = flank.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(15, 15));
+    Command invalidFactionDeploy = MakeCommand(
+        flank.CurrentTick(), 1, 2, CommandType::ToggleDeploy, cairnback);
+    invalidFactionDeploy.position = Vec2::FromTiles(16, 15);
+    REQUIRE(flank.QueueCommand(invalidFactionDeploy));
+    flank.Step();
+    REQUIRE(!flank.FindEntity(cairnback)->deployed);
+}
+
 }  // namespace
 
 int main() {
@@ -1374,6 +1511,8 @@ int main() {
          TestAuthoredRulesDriveSimulationAndPersist},
         {"complete roster entity types and production",
          TestCompleteRosterEntityTypesAndProduction},
+        {"Bulwark directional cover deployment",
+         TestBulwarkDirectionalCoverDeployment},
     };
 
     std::size_t passed = 0;

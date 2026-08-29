@@ -30,6 +30,10 @@ struct FEchoesUnitContent final
     int32 AttackDamage = 0;
     int32 AttackRangeCentimeters = 0;
     int32 AttackCooldownTicks = 0;
+    int32 DeploymentCoverDepthCentimeters = 0;
+    int32 DeploymentCoverHalfWidthCentimeters = 0;
+    int32 DeploymentDamageReductionPercent = 0;
+    int32 DeploymentMoveSpeedPercent = 0;
 };
 
 struct FEchoesBuildingContent final

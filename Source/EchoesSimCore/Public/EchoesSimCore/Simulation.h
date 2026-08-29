@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 11;
-inline constexpr std::uint32_t kReplayVersion = 11;
+inline constexpr std::uint32_t kSnapshotVersion = 12;
+inline constexpr std::uint32_t kReplayVersion = 12;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -166,6 +166,7 @@ enum class CommandType : std::uint8_t {
     Hold = 9,
     Guard = 10,
     Patrol = 11,
+    ToggleDeploy = 12,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -252,6 +253,17 @@ struct FutureWellRules final {
                            const FutureWellRules&) = default;
 };
 
+/** Authored Meridian Bulwark directional-cover behavior. */
+struct BulwarkDeploymentRules final {
+    std::int32_t coverDepthRaw = 3 * kFixedScale;
+    std::int32_t coverHalfWidthRaw = 2 * kFixedScale;
+    std::int32_t damageReductionPercent = 40;
+    std::int32_t deployedMovementPercent = 35;
+
+    friend bool operator==(const BulwarkDeploymentRules&,
+                           const BulwarkDeploymentRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -261,6 +273,7 @@ struct SimulationRules final {
                kFactionCount>
         archetypes{};
     FutureWellRules futureWell{};
+    BulwarkDeploymentRules bulwarkDeployment{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -314,6 +327,8 @@ struct Entity final {
     EntityType productionType = EntityType::Worker;
     std::int32_t productionProgress = 0;
     std::int32_t productionRequired = 0;
+    bool deployed = false;
+    Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -489,6 +504,12 @@ private:
         std::uint64_t state = 1;
     };
 
+    struct PendingDamage final {
+        EntityId target = 0;
+        EntityId source = 0;
+        std::int32_t damage = 0;
+    };
+
     [[nodiscard]] bool IsInsideMap(Vec2 position,
                                    std::int32_t halfExtentRaw = 0) const;
     [[nodiscard]] PlayerState* MutablePlayer(PlayerId player);
@@ -516,6 +537,10 @@ private:
         Vec2 from,
         Vec2 destination) const;
     [[nodiscard]] bool MoveTowards(Entity& entity, Vec2 destination);
+    [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
+        const Entity& attacker,
+        const Entity& target,
+        std::int32_t damage) const;
     [[nodiscard]] EntityId FindNearestOwnedDropoff(PlayerId player,
                                                    Vec2 from) const;
     [[nodiscard]] EntityId FindNearestVisibleEnemy(PlayerId player,
@@ -540,19 +565,19 @@ private:
     void ProcessDeliver(Entity& worker);
     void ProcessBuild(Entity& worker);
     void ProcessAttack(Entity& attacker,
-                       std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+                       std::vector<PendingDamage>& pendingDamage);
     void ProcessAttackMove(
         Entity& attacker,
-        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+        std::vector<PendingDamage>& pendingDamage);
     void ProcessHold(
         Entity& attacker,
-        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+        std::vector<PendingDamage>& pendingDamage);
     void ProcessGuard(
         Entity& attacker,
-        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+        std::vector<PendingDamage>& pendingDamage);
     void ProcessPatrol(
         Entity& attacker,
-        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+        std::vector<PendingDamage>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
     void ProcessProduction();
     void ApplyPreserveIncome();

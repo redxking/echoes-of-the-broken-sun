@@ -97,6 +97,15 @@ AEchoesEntityView::AEchoesEntityView()
     OwnerMarker->SetReceivesDecals(false);
     OwnerMarker->SetVisibility(false);
 
+    DeploymentCover = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("DeploymentCover"));
+    DeploymentCover->SetupAttachment(SceneRoot);
+    DeploymentCover->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    DeploymentCover->SetGenerateOverlapEvents(false);
+    DeploymentCover->SetCastShadow(false);
+    DeploymentCover->SetReceivesDecals(false);
+    DeploymentCover->SetVisibility(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -118,6 +127,7 @@ AEchoesEntityView::AEchoesEntityView()
     SelectionRing->SetStaticMesh(CylinderMesh);
     HealthBarBackground->SetStaticMesh(CubeMesh);
     HealthBarFill->SetStaticMesh(CubeMesh);
+    DeploymentCover->SetStaticMesh(CubeMesh);
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -173,12 +183,16 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     const bool bNeedsAppearance = EntityId == 0 || EntityType != State.type ||
                                   OwnerPlayerId != State.owner ||
                                   EntityFaction != State.faction ||
-                                  WellChoice != State.wellChoice;
+                                  WellChoice != State.wellChoice ||
+                                  bDeployed != State.deployed ||
+                                  DeploymentFacing != State.deploymentFacing;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
     EntityType = State.type;
     WellChoice = State.wellChoice;
+    bDeployed = State.deployed;
+    DeploymentFacing = State.deploymentFacing;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -330,6 +344,27 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SelectionRing->SetRelativeScale3D(
         FVector(SelectionRadius, SelectionRadius, 0.025f));
 
+    const bool bShowDeploymentCover =
+        State.deployed &&
+        State.faction == echoes::sim::Faction::MeridianCompact &&
+        State.type == echoes::sim::EntityType::HeavyUnit;
+    if (bShowDeploymentCover)
+    {
+        const bool bFacesAlongX = State.deploymentFacing.x.Raw() != 0;
+        const float Sign = bFacesAlongX
+                               ? (State.deploymentFacing.x.Raw() > 0 ? 1.0f : -1.0f)
+                               : (State.deploymentFacing.y.Raw() > 0 ? 1.0f : -1.0f);
+        DeploymentCover->SetRelativeLocation(
+            bFacesAlongX
+                ? FVector(58.0f * Sign, 0.0f, 58.0f)
+                : FVector(0.0f, 58.0f * Sign, 58.0f));
+        DeploymentCover->SetRelativeScale3D(
+            bFacesAlongX
+                ? FVector(0.10f, 1.45f, 0.58f)
+                : FVector(1.45f, 0.10f, 0.58f));
+    }
+    DeploymentCover->SetVisibility(bShowDeploymentCover, true);
+
     UStaticMesh* MarkerMesh = nullptr;
     switch (State.owner)
     {
@@ -395,6 +430,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             OwnerMarkerMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
             OwnerMarker->SetMaterial(0, OwnerMarkerMaterial);
         }
+        if (DeploymentCoverMaterial == nullptr)
+        {
+            DeploymentCoverMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            DeploymentCoverMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.10f, 0.88f, 0.92f));
+            DeploymentCover->SetMaterial(0, DeploymentCoverMaterial);
+        }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
@@ -402,6 +446,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             EntityColorParameterName,
             TeamColor);
     }
+}
+
+bool AEchoesEntityView::IsDeploymentCoverVisible() const
+{
+    return DeploymentCover != nullptr && DeploymentCover->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)

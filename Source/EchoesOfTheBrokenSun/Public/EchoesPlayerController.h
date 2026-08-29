@@ -89,6 +89,7 @@ private:
     void HoldSelectedUnits();
     void GuardAtCursor();
     void StopSelectedUnits();
+    void ToggleBulwarkDeploymentAtCursor();
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

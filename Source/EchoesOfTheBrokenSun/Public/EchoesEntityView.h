@@ -37,6 +37,7 @@ public:
     }
     [[nodiscard]] bool IsHealthBarVisible() const;
     [[nodiscard]] bool IsOwnerMarkerVisible() const;
+    [[nodiscard]] bool IsDeploymentCoverVisible() const;
     [[nodiscard]] bool IsDamagePulseActive() const
     {
         return DamagePulseRemainingSeconds > 0.0f;
@@ -66,6 +67,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> OwnerMarker;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> DeploymentCover;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
@@ -97,6 +101,9 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> OwnerMarkerMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> DeploymentCoverMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -113,4 +120,7 @@ private:
     float DamagePulseRemainingSeconds = 0.0f;
     bool bHasAuthoritativeLocation = false;
     bool bSelected = false;
+    bool bDeployed = false;
+    echoes::sim::Vec2 DeploymentFacing =
+        echoes::sim::Vec2::FromRaw(echoes::sim::kFixedScale, 0);
 };

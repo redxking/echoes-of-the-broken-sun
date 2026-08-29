@@ -194,7 +194,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [B/N/M] Build  [Q/E/;/'] Produce"),
+        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [B/N/M] Build  [Q/E/;/'] Produce"),
         SecondaryColor,
         TextX,
         HudY(113.0f),

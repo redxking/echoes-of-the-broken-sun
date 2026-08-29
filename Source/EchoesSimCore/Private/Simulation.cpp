@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 122;
+constexpr std::size_t kSerializedEntityBytes = 131;
 constexpr std::size_t kSerializedCommandBytes = 36;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -111,7 +111,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::Patrol;
+    return type >= CommandType::Stop && type <= CommandType::ToggleDeploy;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -263,6 +263,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
         }
     }
     const FutureWellRules& well = rules.futureWell;
+    const BulwarkDeploymentRules& bulwark = rules.bulwarkDeployment;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -273,7 +274,15 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            well.reshapeDurationMinimumTicks <= well.reshapeDurationMaximumTicks &&
            well.reshapeDurationMaximumTicks <=
                std::numeric_limits<std::uint32_t>::max() &&
-           well.reshapeDurationMaximumTicks <= kMaximumSupportedTick;
+           well.reshapeDurationMaximumTicks <= kMaximumSupportedTick &&
+           bulwark.coverDepthRaw > 0 &&
+           bulwark.coverDepthRaw <= 16 * kFixedScale &&
+           bulwark.coverHalfWidthRaw > 0 &&
+           bulwark.coverHalfWidthRaw <= 16 * kFixedScale &&
+           bulwark.damageReductionPercent > 0 &&
+           bulwark.damageReductionPercent < 100 &&
+           bulwark.deployedMovementPercent > 0 &&
+           bulwark.deployedMovementPercent < 100;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -581,7 +590,7 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::Patrol) ||
+    if (type > static_cast<std::uint8_t>(CommandType::ToggleDeploy) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -1363,8 +1372,18 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     if (distance == 0) {
         return entity.position == destination;
     }
+    std::int32_t movementPerTick = entity.movementPerTickRaw;
+    if (entity.deployed &&
+        entity.faction == Faction::MeridianCompact &&
+        entity.type == EntityType::HeavyUnit) {
+        movementPerTick = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(movementPerTick) *
+                config_.rules.bulwarkDeployment.deployedMovementPercent / 100));
+    }
     const std::int64_t travel =
-        std::min<std::int64_t>(entity.movementPerTickRaw, distance);
+        std::min<std::int64_t>(movementPerTick, distance);
     std::int64_t stepX = travel * Abs64(deltaX) / distance;
     std::int64_t stepY = travel - stepX;
     stepX = deltaX < 0 ? -stepX : stepX;
@@ -1377,6 +1396,64 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     }
     entity.position = candidate;
     return entity.position == destination;
+}
+
+std::int32_t Simulation::DamageAfterDirectionalCover(
+    const Entity& attacker,
+    const Entity& target,
+    std::int32_t damage) const {
+    if (damage <= 0 || target.owner == kNeutralPlayer ||
+        attacker.owner == target.owner) {
+        return damage;
+    }
+    const BulwarkDeploymentRules& rules = config_.rules.bulwarkDeployment;
+    for (const Entity& bulwark : entities_) {
+        if (!bulwark.deployed || !bulwark.completed || bulwark.hitPoints <= 0 ||
+            bulwark.owner != target.owner ||
+            bulwark.faction != Faction::MeridianCompact ||
+            bulwark.type != EntityType::HeavyUnit) {
+            continue;
+        }
+
+        const std::int64_t attackerDeltaX =
+            static_cast<std::int64_t>(attacker.position.x.Raw()) -
+            bulwark.position.x.Raw();
+        const std::int64_t attackerDeltaY =
+            static_cast<std::int64_t>(attacker.position.y.Raw()) -
+            bulwark.position.y.Raw();
+        const std::int64_t targetDeltaX =
+            static_cast<std::int64_t>(target.position.x.Raw()) -
+            bulwark.position.x.Raw();
+        const std::int64_t targetDeltaY =
+            static_cast<std::int64_t>(target.position.y.Raw()) -
+            bulwark.position.y.Raw();
+
+        std::int64_t attackerForward = 0;
+        std::int64_t targetBehind = 0;
+        std::int64_t targetLateral = 0;
+        if (bulwark.deploymentFacing.x.Raw() != 0) {
+            const std::int32_t sign = bulwark.deploymentFacing.x.Raw() > 0 ? 1 : -1;
+            attackerForward = attackerDeltaX * sign;
+            targetBehind = -targetDeltaX * sign;
+            targetLateral = Abs64(targetDeltaY);
+        } else {
+            const std::int32_t sign = bulwark.deploymentFacing.y.Raw() > 0 ? 1 : -1;
+            attackerForward = attackerDeltaY * sign;
+            targetBehind = -targetDeltaY * sign;
+            targetLateral = Abs64(targetDeltaX);
+        }
+        if (attackerForward <= 0 || targetBehind < 0 ||
+            targetBehind > rules.coverDepthRaw ||
+            targetLateral > rules.coverHalfWidthRaw) {
+            continue;
+        }
+        return std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(damage) *
+                (100 - rules.damageReductionPercent) / 100));
+    }
+    return damage;
 }
 
 EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
@@ -1703,6 +1780,36 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.destination = command.position;
             }
             return;
+        case CommandType::ToggleDeploy: {
+            if (actor->faction != Faction::MeridianCompact ||
+                actor->type != EntityType::HeavyUnit) {
+                return;
+            }
+            if (actor->deployed) {
+                actor->deployed = false;
+                return;
+            }
+            const std::int64_t deltaX =
+                static_cast<std::int64_t>(command.position.x.Raw()) -
+                actor->position.x.Raw();
+            const std::int64_t deltaY =
+                static_cast<std::int64_t>(command.position.y.Raw()) -
+                actor->position.y.Raw();
+            if (deltaX == 0 && deltaY == 0) {
+                return;
+            }
+            if (Abs64(deltaX) >= Abs64(deltaY)) {
+                actor->deploymentFacing = Vec2::FromRaw(
+                    deltaX >= 0 ? kFixedScale : -kFixedScale,
+                    0);
+            } else {
+                actor->deploymentFacing = Vec2::FromRaw(
+                    0,
+                    deltaY >= 0 ? kFixedScale : -kFixedScale);
+            }
+            actor->deployed = true;
+            return;
+        }
     }
 }
 
@@ -1777,7 +1884,7 @@ void Simulation::ProcessBuild(Entity& worker) {
 
 void Simulation::ProcessAttack(
     Entity& attacker,
-    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    std::vector<PendingDamage>& pendingDamage) {
     Entity* target = MutableEntity(attacker.order.target);
     if (target == nullptr || target->owner == kNeutralPlayer ||
         target->owner == attacker.owner ||
@@ -1790,14 +1897,14 @@ void Simulation::ProcessAttack(
         return;
     }
     if (attacker.attackCooldownTicks == 0) {
-        pendingDamage.emplace_back(target->id, attacker.attackDamage);
+        pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
         attacker.attackCooldownTicks = attacker.attackPeriodTicks;
     }
 }
 
 void Simulation::ProcessAttackMove(
     Entity& attacker,
-    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    std::vector<PendingDamage>& pendingDamage) {
     if (attacker.attackDamage <= 0 || attacker.movementPerTickRaw <= 0) {
         attacker.order = {};
         return;
@@ -1827,7 +1934,7 @@ void Simulation::ProcessAttackMove(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.emplace_back(target->id, attacker.attackDamage);
+            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -1839,7 +1946,7 @@ void Simulation::ProcessAttackMove(
 
 void Simulation::ProcessHold(
     Entity& attacker,
-    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    std::vector<PendingDamage>& pendingDamage) {
     if (attacker.attackDamage <= 0) {
         attacker.order = {};
         return;
@@ -1862,14 +1969,14 @@ void Simulation::ProcessHold(
                      : nullptr;
     }
     if (target != nullptr && attacker.attackCooldownTicks == 0) {
-        pendingDamage.emplace_back(target->id, attacker.attackDamage);
+        pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
         attacker.attackCooldownTicks = attacker.attackPeriodTicks;
     }
 }
 
 void Simulation::ProcessGuard(
     Entity& attacker,
-    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    std::vector<PendingDamage>& pendingDamage) {
     Entity* guarded = MutableEntity(attacker.order.target);
     if (attacker.attackDamage <= 0 || guarded == nullptr ||
         guarded->owner != attacker.owner || guarded->id == attacker.id) {
@@ -1897,7 +2004,7 @@ void Simulation::ProcessGuard(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.emplace_back(enemy->id, attacker.attackDamage);
+            pendingDamage.push_back({enemy->id, attacker.id, attacker.attackDamage});
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -1913,7 +2020,7 @@ void Simulation::ProcessGuard(
 
 void Simulation::ProcessPatrol(
     Entity& attacker,
-    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    std::vector<PendingDamage>& pendingDamage) {
     if (attacker.attackDamage <= 0 || attacker.movementPerTickRaw <= 0) {
         attacker.order = {};
         return;
@@ -1941,7 +2048,7 @@ void Simulation::ProcessPatrol(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.emplace_back(target->id, attacker.attackDamage);
+            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -2073,7 +2180,7 @@ void Simulation::ProcessProduction() {
 }
 
 void Simulation::ProcessEntityOrders() {
-    std::vector<std::pair<EntityId, std::int32_t>> pendingDamage{};
+    std::vector<PendingDamage> pendingDamage{};
     for (Entity& entity : entities_) {
         if (entity.hitPoints <= 0 || !entity.completed) {
             continue;
@@ -2118,17 +2225,32 @@ void Simulation::ProcessEntityOrders() {
                 break;
         }
     }
-    std::sort(pendingDamage.begin(), pendingDamage.end());
+    std::sort(
+        pendingDamage.begin(),
+        pendingDamage.end(),
+        [](const PendingDamage& lhs, const PendingDamage& rhs) {
+            return std::tie(lhs.target, lhs.source, lhs.damage) <
+                   std::tie(rhs.target, rhs.source, rhs.damage);
+        });
     std::size_t index = 0;
     while (index < pendingDamage.size()) {
-        const EntityId targetId = pendingDamage[index].first;
+        const EntityId targetId = pendingDamage[index].target;
         std::int64_t totalDamage = 0;
-        while (index < pendingDamage.size() && pendingDamage[index].first == targetId) {
-            totalDamage += pendingDamage[index].second;
+        const Entity* target = FindEntity(targetId);
+        while (index < pendingDamage.size() &&
+               pendingDamage[index].target == targetId) {
+            const Entity* attacker = FindEntity(pendingDamage[index].source);
+            totalDamage += attacker != nullptr && target != nullptr
+                               ? DamageAfterDirectionalCover(
+                                     *attacker,
+                                     *target,
+                                     pendingDamage[index].damage)
+                               : pendingDamage[index].damage;
             ++index;
         }
-        if (Entity* target = MutableEntity(targetId); target != nullptr) {
-            target->hitPoints -= static_cast<std::int32_t>(std::min<std::int64_t>(
+        if (Entity* mutableTarget = MutableEntity(targetId);
+            mutableTarget != nullptr) {
+            mutableTarget->hitPoints -= static_cast<std::int32_t>(std::min<std::int64_t>(
                 totalDamage, std::numeric_limits<std::int32_t>::max()));
         }
     }
@@ -2892,6 +3014,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.futureWell.reshapeDawnCost);
     writer.U64(config_.rules.futureWell.reshapeDurationMinimumTicks);
     writer.U64(config_.rules.futureWell.reshapeDurationMaximumTicks);
+    writer.I32(config_.rules.bulwarkDeployment.coverDepthRaw);
+    writer.I32(config_.rules.bulwarkDeployment.coverHalfWidthRaw);
+    writer.I32(config_.rules.bulwarkDeployment.damageReductionPercent);
+    writer.I32(config_.rules.bulwarkDeployment.deployedMovementPercent);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -2951,6 +3077,9 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(entity.productionType));
         writer.I32(entity.productionProgress);
         writer.I32(entity.productionRequired);
+        writer.U8(entity.deployed ? 1 : 0);
+        writer.I32(entity.deploymentFacing.x.Raw());
+        writer.I32(entity.deploymentFacing.y.Raw());
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3054,7 +3183,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.futureWell.preserveVisionTiles) ||
         !reader.I32(config.rules.futureWell.reshapeDawnCost) ||
         !reader.U64(config.rules.futureWell.reshapeDurationMinimumTicks) ||
-        !reader.U64(config.rules.futureWell.reshapeDurationMaximumTicks)) {
+        !reader.U64(config.rules.futureWell.reshapeDurationMaximumTicks) ||
+        !reader.I32(config.rules.bulwarkDeployment.coverDepthRaw) ||
+        !reader.I32(config.rules.bulwarkDeployment.coverHalfWidthRaw) ||
+        !reader.I32(config.rules.bulwarkDeployment.damageReductionPercent) ||
+        !reader.I32(config.rules.bulwarkDeployment.deployedMovementPercent)) {
         SetError(error, "snapshot Future Well rules are truncated");
         return std::nullopt;
     }
@@ -3163,12 +3296,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t orderWellChoice = 0;
         std::uint8_t wellChoice = 0;
         std::uint8_t productionType = 0;
+        std::uint8_t deployed = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
         std::int32_t orderAnchorRawY = 0;
         std::int32_t orderRawX = 0;
         std::int32_t orderRawY = 0;
+        std::int32_t deploymentFacingRawX = 0;
+        std::int32_t deploymentFacingRawY = 0;
         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
             !reader.U8(faction) || !reader.U8(type) || !reader.I32(rawX) ||
             !reader.I32(rawY) || !reader.I32(entity.hitPoints) ||
@@ -3191,7 +3327,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U64(entity.reshapeUntilTick) ||
             !reader.U8(entity.reshapeVariant) || !reader.U8(productionType) ||
             !reader.I32(entity.productionProgress) ||
-            !reader.I32(entity.productionRequired)) {
+            !reader.I32(entity.productionRequired) || !reader.U8(deployed) ||
+            !reader.I32(deploymentFacingRawX) ||
+            !reader.I32(deploymentFacingRawY)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -3207,6 +3345,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             entity.reshapeVariant > 3 ||
             productionType >
                 static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
+            deployed > 1 ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3238,7 +3377,14 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              entity.reshapeUntilTick != 0) ||
             (wellChoice == static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
              entity.reshapeUntilTick != 0 &&
-             entity.reshapeUntilTick <= simulation.currentTick_)) {
+             entity.reshapeUntilTick <= simulation.currentTick_) ||
+            (deployed != 0 &&
+             (faction != static_cast<std::uint8_t>(Faction::MeridianCompact) ||
+              type != static_cast<std::uint8_t>(EntityType::HeavyUnit))) ||
+            !((deploymentFacingRawX == kFixedScale && deploymentFacingRawY == 0) ||
+              (deploymentFacingRawX == -kFixedScale && deploymentFacingRawY == 0) ||
+              (deploymentFacingRawX == 0 && deploymentFacingRawY == kFixedScale) ||
+              (deploymentFacingRawX == 0 && deploymentFacingRawY == -kFixedScale))) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -3254,6 +3400,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.order.wellChoice = static_cast<FutureWellChoice>(orderWellChoice);
         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
         entity.productionType = static_cast<EntityType>(productionType);
+        entity.deployed = deployed != 0;
+        entity.deploymentFacing =
+            Vec2::FromRaw(deploymentFacingRawX, deploymentFacingRawY);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;

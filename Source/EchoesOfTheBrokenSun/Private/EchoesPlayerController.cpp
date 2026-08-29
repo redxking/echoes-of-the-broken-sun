@@ -333,6 +333,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::StopSelectedUnits);
     InputComponent->BindAction(
+        TEXT("ToggleBulwarkDeployment"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor);
+    InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
@@ -1190,6 +1195,90 @@ void AEchoesPlayerController::StopSelectedUnits()
                   : LastRejection);
 }
 
+void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Bulwark deployment is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point toward the threat before deploying."));
+        return;
+    }
+
+    int32 DeployedCount = 0;
+    int32 PackedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr ||
+            Entity->faction != echoes::sim::Faction::MeridianCompact ||
+            Entity->type != echoes::sim::EntityType::HeavyUnit)
+        {
+            ++RejectedCount;
+            continue;
+        }
+        const bool bWasDeployed = Entity->deployed;
+        FString Feedback;
+        if (Bridge->IssueCommand(
+                echoes::sim::CommandType::ToggleDeploy,
+                EntityId,
+                0,
+                HitResult.Location,
+                FutureWellChoice,
+                Feedback))
+        {
+            if (bWasDeployed)
+            {
+                ++PackedCount;
+            }
+            else
+            {
+                ++DeployedCount;
+            }
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    if (DeployedCount + PackedCount > 0)
+    {
+        SetStatusMessage(FString::Printf(
+            TEXT("BULWARK: %d deploying toward cursor, %d packing, %d rejected."),
+            DeployedCount,
+            PackedCount,
+            RejectedCount));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastRejection.IsEmpty()
+                ? TEXT("[BULWARK_REQUIRED] Select a Meridian Bulwark Team.")
+                : LastRejection);
+    }
+}
+
 void AEchoesPlayerController::HoldSelectedUnits()
 {
     if (IsModalOverlayVisible())
@@ -1821,6 +1910,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("GUARD");
         case echoes::sim::CommandType::Patrol:
             return TEXT("PATROL");
+        case echoes::sim::CommandType::ToggleDeploy:
+            return TEXT("TOGGLE BULWARK DEPLOYMENT");
     }
     return TEXT("ORDER");
 }

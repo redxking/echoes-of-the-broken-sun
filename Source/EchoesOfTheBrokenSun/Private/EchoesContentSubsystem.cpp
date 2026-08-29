@@ -348,6 +348,30 @@ bool FEchoesContentCatalog::BuildSimulationRules(
             OutError = FString::Printf(TEXT("SIM_RULES_UNIT_MOVEMENT_INVALID:%s"), Binding.Id);
             return false;
         }
+        if (Binding.Faction == echoes::sim::Faction::MeridianCompact &&
+            Binding.Type == echoes::sim::EntityType::HeavyUnit)
+        {
+            if (Unit->DeploymentCoverDepthCentimeters <= 0 ||
+                Unit->DeploymentCoverHalfWidthCentimeters <= 0 ||
+                Unit->DeploymentDamageReductionPercent <= 0 ||
+                Unit->DeploymentDamageReductionPercent >= 100 ||
+                Unit->DeploymentMoveSpeedPercent <= 0 ||
+                Unit->DeploymentMoveSpeedPercent >= 100)
+            {
+                OutError = TEXT("SIM_RULES_BULWARK_DEPLOYMENT_INVALID");
+                return false;
+            }
+            OutRules.bulwarkDeployment.coverDepthRaw = static_cast<int32>(
+                static_cast<int64>(Unit->DeploymentCoverDepthCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.bulwarkDeployment.coverHalfWidthRaw = static_cast<int32>(
+                static_cast<int64>(Unit->DeploymentCoverHalfWidthCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.bulwarkDeployment.damageReductionPercent =
+                Unit->DeploymentDamageReductionPercent;
+            OutRules.bulwarkDeployment.deployedMovementPercent =
+                Unit->DeploymentMoveSpeedPercent;
+        }
     }
 
     struct FBuildingBinding final
@@ -539,6 +563,18 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
             if (!ReadRequiredInteger(*Attack, TEXT("damage"), Unit.AttackDamage, Path + TEXT(".attack"), OutError, 1) ||
                 !ReadRequiredInteger(*Attack, TEXT("range_cm"), Unit.AttackRangeCentimeters, Path + TEXT(".attack"), OutError) ||
                 !ReadRequiredInteger(*Attack, TEXT("cooldown_ticks"), Unit.AttackCooldownTicks, Path + TEXT(".attack"), OutError, 1))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* Deployment = nullptr;
+        if (Object->TryGetObjectField(TEXT("deployment"), Deployment) &&
+            Deployment != nullptr && Deployment->IsValid())
+        {
+            if (!ReadRequiredInteger(*Deployment, TEXT("cover_depth_cm"), Unit.DeploymentCoverDepthCentimeters, Path + TEXT(".deployment"), OutError, 1) ||
+                !ReadRequiredInteger(*Deployment, TEXT("cover_half_width_cm"), Unit.DeploymentCoverHalfWidthCentimeters, Path + TEXT(".deployment"), OutError, 1) ||
+                !ReadRequiredInteger(*Deployment, TEXT("damage_reduction_percent"), Unit.DeploymentDamageReductionPercent, Path + TEXT(".deployment"), OutError, 1) ||
+                !ReadRequiredInteger(*Deployment, TEXT("move_speed_percent"), Unit.DeploymentMoveSpeedPercent, Path + TEXT(".deployment"), OutError, 1))
             {
                 return false;
             }

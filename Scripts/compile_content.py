@@ -178,7 +178,7 @@ def validate_units(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm", "population_cost", "production_ticks"},
-            {"work_rate", "cargo_capacity", "attack"},
+            {"work_rate", "cargo_capacity", "attack", "deployment"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -207,6 +207,25 @@ def validate_units(
             fail(f"{path}.cargo_capacity", "workers require positive cargo capacity and work rate")
         if role != "worker" and attack is None:
             fail(f"{path}.attack", "non-worker slice units require an attack definition")
+        deployment: dict[str, int] | None = None
+        if "deployment" in record:
+            raw_deployment = require_object(record["deployment"], f"{path}.deployment")
+            require_exact_keys(
+                raw_deployment,
+                {"cover_depth_cm", "cover_half_width_cm", "damage_reduction_percent", "move_speed_percent"},
+                set(),
+                f"{path}.deployment",
+            )
+            if faction != "meridian_compact" or role != "heavy_screen":
+                fail(f"{path}.deployment", "schema 1 deployment is reserved for the Meridian heavy screen")
+            deployment = {
+                "cover_depth_cm": require_int(raw_deployment["cover_depth_cm"], f"{path}.deployment.cover_depth_cm", 100, 1600),
+                "cover_half_width_cm": require_int(raw_deployment["cover_half_width_cm"], f"{path}.deployment.cover_half_width_cm", 100, 1600),
+                "damage_reduction_percent": require_int(raw_deployment["damage_reduction_percent"], f"{path}.deployment.damage_reduction_percent", 1, 99),
+                "move_speed_percent": require_int(raw_deployment["move_speed_percent"], f"{path}.deployment.move_speed_percent", 1, 99),
+            }
+        if faction == "meridian_compact" and role == "heavy_screen" and deployment is None:
+            fail(f"{path}.deployment", "the Meridian heavy screen requires authored deployment rules")
         output.append(
             {
                 "id": identifier,
@@ -222,6 +241,7 @@ def validate_units(
                 "work_rate": work_rate,
                 "cargo_capacity": cargo,
                 "attack": attack,
+                "deployment": deployment,
             }
         )
     for faction in sorted(playable):

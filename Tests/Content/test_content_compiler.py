@@ -59,6 +59,8 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual(first_digest, second_digest)
         self.assertEqual(first_pack["pack_format"], "echoes-content-pack")
         self.assertEqual([item["id"] for item in first_pack["units"]], sorted(item["id"] for item in first_pack["units"]))
+        bulwark = next(item for item in first_pack["units"] if item["id"] == "mc_bulwark_team")
+        self.assertEqual(bulwark["deployment"]["damage_reduction_percent"], 40)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -107,6 +109,21 @@ class ContentCompilerTests(unittest.TestCase):
     def test_malformed_json_is_rejected(self) -> None:
         (self.source / "factions.json").write_text("{not-json", encoding="utf-8")
         self.assert_invalid("invalid JSON")
+
+    def test_missing_bulwark_deployment_rules_are_rejected(self) -> None:
+        units = self.load("units.json")
+        bulwark = next(item for item in units["units"] if item["id"] == "mc_bulwark_team")
+        del bulwark["deployment"]
+        self.write("units.json", units)
+        self.assert_invalid("requires authored deployment rules")
+
+    def test_deployment_rules_on_other_units_are_rejected(self) -> None:
+        units = self.load("units.json")
+        bulwark = next(item for item in units["units"] if item["id"] == "mc_bulwark_team")
+        lancer = next(item for item in units["units"] if item["id"] == "mc_lancer")
+        lancer["deployment"] = copy.deepcopy(bulwark["deployment"])
+        self.write("units.json", units)
+        self.assert_invalid("reserved for the Meridian heavy screen")
 
 
 if __name__ == "__main__":
