@@ -695,6 +695,84 @@ void TestFogAndNonCheatingAi() {
         return command.target == hiddenEnemy;
     }));
 
+    Simulation expansion({32, 32, 20, 0x455850414e444149ULL});
+    REQUIRE(expansion.AddPlayer(
+        0, Faction::KharuunAssemblies, ResourcePool{500, 60}));
+    const EntityId expansionCore = expansion.SpawnEntity(
+        0, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId expansionWorker = expansion.SpawnEntity(
+        0, Faction::KharuunAssemblies, EntityType::Worker,
+        Vec2::FromTiles(7, 5));
+    REQUIRE(expansionCore != 0 && expansionWorker != 0);
+    const std::vector<Command> expansionCommands =
+        expansion.GenerateAiCommands(0, AiPersonality::Expansionist);
+    const auto expansionDecision = std::find_if(
+        expansionCommands.begin(), expansionCommands.end(),
+        [expansionWorker](const Command& command) {
+            return command.actor == expansionWorker;
+        });
+    REQUIRE(expansionDecision != expansionCommands.end());
+    REQUIRE(expansionDecision->type == CommandType::Build);
+    REQUIRE(expansionDecision->buildType == EntityType::Barracks);
+    REQUIRE(expansion.VisibilityAt(0, expansionDecision->position) ==
+            Visibility::Visible);
+    REQUIRE(expansion.ValidatePlacement(
+                0, expansionDecision->buildType, expansionDecision->position) ==
+            PlacementResult::Valid);
+    REQUIRE(expansion.QueueCommand(*expansionDecision));
+    expansion.Step();
+    REQUIRE(std::any_of(
+        expansion.Entities().begin(), expansion.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 && entity.type == EntityType::Barracks &&
+                   !entity.completed;
+        }));
+
+    Simulation retreat({32, 32, 20, 0x5245545245415441ULL});
+    AddTwoPlayers(retreat, {0, 0}, {0, 0});
+    REQUIRE(retreat.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::CommandCore,
+                Vec2::FromTiles(3, 3)) != 0);
+    const EntityId retreatCore = retreat.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(26, 26));
+    const EntityId retreatSoldier = retreat.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(18, 18));
+    const EntityId pursuingSoldier = retreat.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(19, 18));
+    REQUIRE(retreatCore != 0 && retreatSoldier != 0 && pursuingSoldier != 0);
+    Command damage =
+        MakeCommand(0, 0, 1, CommandType::Attack, pursuingSoldier);
+    damage.target = retreatSoldier;
+    REQUIRE(retreat.QueueCommand(damage));
+    retreat.Step(49);
+    const Entity* damagedSoldier = retreat.FindEntity(retreatSoldier);
+    REQUIRE(damagedSoldier != nullptr);
+    REQUIRE(damagedSoldier->hitPoints > 0);
+    REQUIRE(damagedSoldier->hitPoints * 100 <= damagedSoldier->maxHitPoints * 35);
+    const std::vector<Command> retreatCommands =
+        retreat.GenerateAiCommands(1, AiPersonality::Adaptive);
+    const auto retreatDecision = std::find_if(
+        retreatCommands.begin(), retreatCommands.end(),
+        [retreatSoldier](const Command& command) {
+            return command.actor == retreatSoldier;
+        });
+    REQUIRE(retreatDecision != retreatCommands.end());
+    REQUIRE(retreatDecision->type == CommandType::Move);
+    REQUIRE(retreatDecision->target == 0);
+    REQUIRE(retreatDecision->position != damagedSoldier->position);
+    REQUIRE(std::none_of(
+        retreatCommands.begin(), retreatCommands.end(),
+        [retreatSoldier, pursuingSoldier](const Command& command) {
+            return command.actor == retreatSoldier &&
+                   command.target == pursuingSoldier;
+        }));
+    REQUIRE(retreat.GenerateAiCommands(
+                1, static_cast<AiPersonality>(255)).empty());
+
     Simulation exploredSimulation({32, 32, 20, 5});
     REQUIRE(exploredSimulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     const EntityId scout = exploredSimulation.SpawnEntity(

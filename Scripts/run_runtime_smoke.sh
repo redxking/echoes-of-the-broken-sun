@@ -24,6 +24,7 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
+   ! /usr/bin/grep -Eq '\[ECHOES_AI_EXPANSION\] personality=adaptive actor=[1-9][0-9]* buildType=[1-9][0-9]* tile=\(-?[0-9]+,-?[0-9]+\) visibilityBounded=true' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_BOOT_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_FIRST_TICK\]' "$log"; then
   print -u2 "Runtime smoke markers were incomplete. Inspect: $log"
@@ -35,5 +36,5 @@ if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[
   exit 4
 fi
 
-print "Runtime bootstrap passed: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, 20 Hz simulation, and first fixed tick initialized."
+print "Runtime bootstrap passed: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, adaptive visible-terrain AI expansion, 20 Hz simulation, and first fixed tick initialized."
 print "Evidence log: $log"

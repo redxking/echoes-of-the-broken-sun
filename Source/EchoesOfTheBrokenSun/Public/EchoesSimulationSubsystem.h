@@ -141,6 +141,8 @@ private:
     bool bWarnedAboutTimeClamp = false;
     bool bLoggedFirstTick = false;
     bool bLoggedStressCombat = false;
+    bool bLoggedAiExpansion = false;
+    bool bLoggedAiRetreat = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

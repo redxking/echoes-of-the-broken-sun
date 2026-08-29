@@ -363,18 +363,21 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(TEXT("SINGLE-PLAYER  //  MERIDIAN COMPACT  //  FUTURE WELL CONTEST"),
              Muted, Left + 48.0f, Top + 246.0f * ContentScale,
              SmallFont, 0.86f * TextScale, false);
+    DrawText(TEXT("OPPOSITION: ADAPTIVE KHARUUN  //  STANDARD  //  FAIR VISION AND ECONOMY"),
+             Accent, Left + 48.0f, Top + 272.0f * ContentScale,
+             SmallFont, 0.80f * TextScale, false);
     DrawText(TEXT("Cross the shattered approaches, choose what the Well becomes,"),
-             Body, Left + 48.0f, Top + 294.0f * ContentScale,
+             Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
     DrawText(TEXT("and break the Kharuun Command Core before your own line collapses."),
-             Body, Left + 48.0f, Top + 322.0f * ContentScale,
+             Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
 
     DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent,
-             Left + 48.0f, Top + 390.0f * ContentScale,
+             Left + 48.0f, Top + 404.0f * ContentScale,
              SmallFont, 0.90f * TextScale, false);
     DrawText(AccessLine, Body,
-             Left + 48.0f, Top + 424.0f * ContentScale,
+             Left + 48.0f, Top + 438.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
 
     DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,

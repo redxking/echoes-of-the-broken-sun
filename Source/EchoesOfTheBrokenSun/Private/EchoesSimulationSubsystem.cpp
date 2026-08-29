@@ -64,6 +64,8 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
+    bLoggedAiExpansion = false;
+    bLoggedAiRetreat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -304,6 +306,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     NextPlayerCommandSequence = 1;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
+    bLoggedAiExpansion = false;
+    bLoggedAiRetreat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -366,6 +370,8 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
+    bLoggedAiExpansion = false;
+    bLoggedAiRetreat = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -792,11 +798,52 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
     const std::vector<echoes::sim::Command> Commands =
         Simulation->GenerateAiCommands(
             OpponentPlayerId,
-            echoes::sim::AiPersonality::Raider);
+            echoes::sim::AiPersonality::Adaptive);
     for (const echoes::sim::Command& Command : Commands)
     {
         std::string Rejection;
-        if (!Simulation->QueueCommand(Command, &Rejection))
+        if (Simulation->QueueCommand(Command, &Rejection))
+        {
+            if (!bLoggedAiExpansion &&
+                Command.type == echoes::sim::CommandType::Build)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_AI_EXPANSION] personality=adaptive actor=%u buildType=%u tile=(%d,%d) visibilityBounded=true"),
+                    Command.actor,
+                    static_cast<uint8>(Command.buildType),
+                    Command.position.x.FloorToInt(),
+                    Command.position.y.FloorToInt());
+                bLoggedAiExpansion = true;
+            }
+            if (!bLoggedAiRetreat &&
+                (Command.type == echoes::sim::CommandType::Move ||
+                 Command.type == echoes::sim::CommandType::Hold))
+            {
+                const echoes::sim::Entity* Actor =
+                    Simulation->FindEntity(Command.actor);
+                if (Actor != nullptr &&
+                    Actor->type == echoes::sim::EntityType::Soldier &&
+                    Actor->maxHitPoints > 0 &&
+                    static_cast<int64>(Actor->hitPoints) * 100 <=
+                        static_cast<int64>(Actor->maxHitPoints) * 35)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_AI_RETREAT] personality=adaptive actor=%u health=%d/%d action=%s visibilityBounded=true"),
+                        Command.actor,
+                        Actor->hitPoints,
+                        Actor->maxHitPoints,
+                        Command.type == echoes::sim::CommandType::Hold
+                            ? TEXT("hold-near-core")
+                            : TEXT("withdraw-to-core"));
+                    bLoggedAiRetreat = true;
+                }
+            }
+        }
+        else
         {
             UE_LOG(
                 LogEchoes,

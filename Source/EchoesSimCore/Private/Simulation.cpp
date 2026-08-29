@@ -98,7 +98,7 @@ void SetError(std::string* destination, const std::string& message) {
 
 [[nodiscard]] bool IsValidAiPersonality(AiPersonality personality) {
     return personality >= AiPersonality::Balanced &&
-           personality <= AiPersonality::Economic;
+           personality <= AiPersonality::Adaptive;
 }
 
 [[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs) {
@@ -2043,9 +2043,132 @@ std::uint64_t Simulation::StatelessAiValue(PlayerId player,
 std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
                                                     AiPersonality personality) const {
     std::vector<Command> commands{};
-    if (FindPlayer(player) == nullptr || !IsValidAiPersonality(personality)) {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr || !IsValidAiPersonality(personality)) {
         return commands;
     }
+
+    const Entity* commandCore = nullptr;
+    std::int32_t barracksCount = 0;
+    std::int32_t dropoffCount = 0;
+    std::int32_t committedPopulation = PopulationUsed(player);
+    for (const Entity& entity : entities_) {
+        if (entity.owner != player || entity.hitPoints <= 0) {
+            continue;
+        }
+        if (entity.type == EntityType::CommandCore && entity.completed &&
+            (commandCore == nullptr || entity.id < commandCore->id)) {
+            commandCore = &entity;
+        }
+        if (entity.type == EntityType::Barracks) {
+            ++barracksCount;
+        } else if (entity.type == EntityType::Dropoff) {
+            ++dropoffCount;
+        }
+        if (entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation,
+                PopulationCost(entity.productionType));
+        }
+    }
+
+    EntityType expansionType = EntityType::Worker;
+    const std::int32_t capacityHeadroom =
+        PopulationCapacity(player) - committedPopulation;
+    std::int32_t expansionHeadroom = 2;
+    switch (personality) {
+        case AiPersonality::Economic:
+            expansionHeadroom = 4;
+            break;
+        case AiPersonality::Expansionist:
+            expansionHeadroom = 6;
+            break;
+        case AiPersonality::Adaptive:
+            expansionHeadroom = 3;
+            break;
+        case AiPersonality::Balanced:
+        case AiPersonality::Defensive:
+            expansionHeadroom = 2;
+            break;
+        case AiPersonality::Raider:
+            expansionHeadroom = 0;
+            break;
+    }
+    if (barracksCount == 0) {
+        expansionType = EntityType::Barracks;
+    } else if (dropoffCount == 0 && capacityHeadroom <= expansionHeadroom) {
+        expansionType = EntityType::Dropoff;
+    }
+
+    EntityId expansionBuilder = 0;
+    Vec2 expansionPosition{};
+    if (expansionType != EntityType::Worker && commandCore != nullptr &&
+        ResourceCovers(playerState->resources,
+                       BuildCost(playerState->faction, expansionType))) {
+        for (const Entity& candidate : entities_) {
+            if (candidate.owner == player && candidate.completed &&
+                candidate.hitPoints > 0 && candidate.type == EntityType::Worker &&
+                candidate.order.type != OrderType::Build &&
+                (expansionBuilder == 0 || candidate.id < expansionBuilder)) {
+                expansionBuilder = candidate.id;
+            }
+        }
+        if (expansionBuilder != 0) {
+            const std::int32_t baseX = commandCore->position.x.FloorToInt();
+            const std::int32_t baseY = commandCore->position.y.FloorToInt();
+            bool foundPlacement = false;
+            for (std::int32_t radius = 4; radius <= 10 && !foundPlacement;
+                 ++radius) {
+                for (std::int32_t offsetY = -radius;
+                     offsetY <= radius && !foundPlacement;
+                     ++offsetY) {
+                    for (std::int32_t offsetX = -radius;
+                         offsetX <= radius;
+                         ++offsetX) {
+                        if (Abs64(offsetX) != radius && Abs64(offsetY) != radius) {
+                            continue;
+                        }
+                        const Vec2 candidate =
+                            Vec2::FromTiles(baseX + offsetX, baseY + offsetY);
+                        if (VisibilityAt(player, candidate) != Visibility::Visible ||
+                            ValidatePlacement(player, expansionType, candidate) !=
+                                PlacementResult::Valid) {
+                            continue;
+                        }
+                        expansionPosition = candidate;
+                        foundPlacement = true;
+                        break;
+                    }
+                }
+            }
+            if (!foundPlacement) {
+                expansionBuilder = 0;
+            }
+        }
+    }
+
+    std::int32_t retreatHealthPercent = 30;
+    switch (personality) {
+        case AiPersonality::Defensive:
+            retreatHealthPercent = 50;
+            break;
+        case AiPersonality::Economic:
+            retreatHealthPercent = 45;
+            break;
+        case AiPersonality::Adaptive:
+            retreatHealthPercent = 35;
+            break;
+        case AiPersonality::Balanced:
+            retreatHealthPercent = 30;
+            break;
+        case AiPersonality::Expansionist:
+            retreatHealthPercent = 25;
+            break;
+        case AiPersonality::Raider:
+            retreatHealthPercent = 20;
+            break;
+    }
+
     for (const Entity& actor : entities_) {
         if (actor.owner != player || !actor.completed) {
             continue;
@@ -2055,6 +2178,13 @@ std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
         command.player = player;
         command.sequence = (currentTick_ << 32U) | actor.id;
         command.actor = actor.id;
+        if (actor.id == expansionBuilder) {
+            command.type = CommandType::Build;
+            command.buildType = expansionType;
+            command.position = expansionPosition;
+            commands.push_back(command);
+            continue;
+        }
         if (actor.type == EntityType::CommandCore ||
             actor.type == EntityType::Barracks) {
             command.type = CommandType::Produce;
@@ -2133,6 +2263,46 @@ std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
                 continue;
             }
         } else {
+            const bool shouldRetreat =
+                commandCore != nullptr && actor.maxHitPoints > 0 &&
+                static_cast<std::int64_t>(actor.hitPoints) * 100 <=
+                    static_cast<std::int64_t>(actor.maxHitPoints) *
+                        retreatHealthPercent;
+            if (shouldRetreat) {
+                const std::uint64_t distanceToCore =
+                    DistanceSquaredRaw(actor.position, commandCore->position);
+                const std::uint64_t holdDistance =
+                    static_cast<std::uint64_t>(3 * kFixedScale) *
+                    (3 * kFixedScale);
+                if (distanceToCore <= holdDistance) {
+                    command.type = CommandType::Hold;
+                } else {
+                    constexpr std::array<std::pair<std::int32_t, std::int32_t>, 8>
+                        rallyOffsets{{
+                            {-3, 0}, {0, -3}, {3, 0}, {0, 3},
+                            {-3, -3}, {3, -3}, {3, 3}, {-3, 3},
+                        }};
+                    const std::size_t firstOffset =
+                        static_cast<std::size_t>(actor.id) % rallyOffsets.size();
+                    command.type = CommandType::Move;
+                    command.position = commandCore->position;
+                    for (std::size_t offsetIndex = 0;
+                         offsetIndex < rallyOffsets.size();
+                         ++offsetIndex) {
+                        const auto& offset = rallyOffsets[
+                            (firstOffset + offsetIndex) % rallyOffsets.size()];
+                        const Vec2 candidate = Vec2::FromTiles(
+                            commandCore->position.x.FloorToInt() + offset.first,
+                            commandCore->position.y.FloorToInt() + offset.second);
+                        if (IsPositionPassable(candidate)) {
+                            command.position = candidate;
+                            break;
+                        }
+                    }
+                }
+                commands.push_back(command);
+                continue;
+            }
             const Entity* nearestEnemy = nullptr;
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {

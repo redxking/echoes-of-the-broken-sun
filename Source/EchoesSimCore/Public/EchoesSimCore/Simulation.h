@@ -200,6 +200,8 @@ enum class AiPersonality : std::uint8_t {
     Defensive = 1,
     Raider = 2,
     Economic = 3,
+    Expansionist = 4,
+    Adaptive = 5,
 };
 
 struct ResourcePool final {
