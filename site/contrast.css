@@ -1,6 +1,13 @@
-/* Readability pass: darker small text on light surfaces and brighter labels on dark surfaces. */
-.light label,.light .section-kicker{color:#52635f}
-.light blockquote small,.well-number,.wells b,.timeline b{color:#5b6862}
-.resource-strip small,.quiet-link,.archive-link{color:#4f635f}
-.dark label,.story label{color:#98c2c1}
-footer span{color:#a3b0b4}
+/* Accessibility safety layer: explicit text colors avoid inherited opacity. */
+.light .section-kicker,
+.content-band .section-kicker,
+.tint-band .section-kicker,
+.page-hero .section-kicker { color: #286b61; }
+
+.dark .section-kicker,
+.dark-band .section-kicker,
+.story-feature .section-kicker { color: #9ce9dd; }
+
+.light p, .content-band p, .tint-band p, .page-hero p { color: #344349; }
+.dark p, .dark-band p, .story-feature p { color: #cbd5d7; }
+.site-footer span { color: #bac6c9; }
