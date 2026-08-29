@@ -23,7 +23,7 @@ mkdir -p "${log:h}"
   -EchoesStress400 \
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
-for marker in ECHOES_ENV_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY \
+for marker in ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY \
   ECHOES_SIM_READY ECHOES_STRESS_ORDERS_READY ECHOES_STRESS_READY \
   ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK ECHOES_STRESS_COMBAT_ACTIVE; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then

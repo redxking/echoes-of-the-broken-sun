@@ -35,7 +35,7 @@ mkdir -p "${log:h}"
   -stdout -FullStdOutLogOutput \
   -benchmark -fps=20 -benchmarkseconds=3 > "$log" 2>&1
 
-for marker in ECHOES_ENV_READY ECHOES_SIM_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
+for marker in ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_SIM_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then
     print -u2 "Packaged runtime marker $marker was absent. Inspect: $log"
     exit 5
@@ -62,5 +62,5 @@ if /usr/bin/grep -Eq 'EnhancedInput user settings|\[ECHOES_BOOT_INCOMPLETE\]|\[E
   exit 9
 fi
 
-print "Packaged runtime passed: cooked content, Glass Scar terrain, fog/shroud, simulation bootstrap, and first fixed tick initialized."
+print "Packaged runtime passed: cooked content, reduced-motion-aware Glass Scar atmosphere, terrain, fog/shroud, simulation bootstrap, and first fixed tick initialized."
 print "Evidence log: $log"

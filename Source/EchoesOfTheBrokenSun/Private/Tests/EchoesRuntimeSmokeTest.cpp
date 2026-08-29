@@ -12,9 +12,11 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTerrainView.h"
+#include "EchoesWeatherView.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerInput.h"
 #include "InputCoreTypes.h"
+#include "Tests/AutomationCommon.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesRuntimeSmokeTest,
@@ -34,6 +36,7 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Echoes user settings are registered"), UEchoesGameUserSettings::StaticClass());
     TestNotNull(TEXT("Echoes fog view is registered"), AEchoesFogView::StaticClass());
     TestNotNull(TEXT("Echoes terrain view is registered"), AEchoesTerrainView::StaticClass());
+    TestNotNull(TEXT("Echoes weather view is registered"), AEchoesWeatherView::StaticClass());
     TestNotNull(TEXT("Echoes simulation subsystem is registered"), UEchoesSimulationSubsystem::StaticClass());
 
     const UInputSettings* InputSettings = GetDefault<UInputSettings>();
@@ -142,7 +145,44 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Portable simulation advances one deterministic tick"), Simulation.CurrentTick() == 1);
     TestTrue(TEXT("Portable simulation exposes a nonzero state checksum"), Simulation.StateChecksum() != 0);
 
-    return true;
+    FTestWorldWrapper WeatherWorld;
+    if (WeatherWorld.CreateTestWorld(EWorldType::Game))
+    {
+        AEchoesWeatherView* Weather =
+            WeatherWorld.GetTestWorld()->SpawnActor<AEchoesWeatherView>();
+        if (TestNotNull(TEXT("Glass Scar atmosphere can be instantiated"), Weather))
+        {
+            UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+            const bool bPreviousReducedMotion =
+                Settings != nullptr && Settings->IsReducedMotionEnabled();
+            if (Settings != nullptr)
+            {
+                Settings->SetReducedMotionEnabled(true);
+                Weather->Tick(7.0f);
+                const float ReducedMotionDensity = Weather->GetCurrentFogDensity();
+                Weather->Tick(7.0f);
+                TestEqual(
+                    TEXT("Reduced motion holds the atmospheric density steady"),
+                    Weather->GetCurrentFogDensity(),
+                    ReducedMotionDensity);
+                Settings->SetReducedMotionEnabled(false);
+                Weather->Tick(7.0f);
+                TestNotEqual(
+                    TEXT("Standard presentation advances the atmospheric drift"),
+                    Weather->GetCurrentFogDensity(),
+                    ReducedMotionDensity);
+                Settings->SetReducedMotionEnabled(bPreviousReducedMotion);
+            }
+        }
+        WeatherWorld.ForwardErrorMessages(this);
+    }
+    else
+    {
+        WeatherWorld.ForwardErrorMessages(this);
+        AddError(TEXT("Could not create the atmospheric test world."));
+    }
+
+    return !HasAnyErrors();
 }
 
 #endif

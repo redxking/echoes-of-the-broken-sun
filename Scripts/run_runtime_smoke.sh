@@ -20,6 +20,7 @@ mkdir -p "$project_root/BuildArtifacts"
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
@@ -34,5 +35,5 @@ if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[
   exit 4
 fi
 
-print "Runtime bootstrap passed: environment, Glass Scar terrain, 4,096-tile fog/shroud, 20 Hz simulation, and first fixed tick initialized."
+print "Runtime bootstrap passed: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, 20 Hz simulation, and first fixed tick initialized."
 print "Evidence log: $log"

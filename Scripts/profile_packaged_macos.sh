@@ -146,20 +146,24 @@ if /usr/bin/grep -Eq 'Fatal error:|Assertion failed:|GPU Crashed|Capture Stop re
   print -u2 "The packaged profile log contains a rejected runtime failure. Inspect: $raw_log"
   exit 9
 fi
+if ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$raw_log"; then
+  print -u2 "The packaged profile did not initialize the accepted Glass Scar atmosphere. Inspect: $raw_log"
+  exit 10
+fi
 if [[ "$stress400" == "1" ]] &&
    ! /usr/bin/grep -q '\[ECHOES_STRESS_READY\] units=400 teams=4 entities=401 visibleViews=401' "$raw_log"; then
   print -u2 "The packaged profile did not reach the accepted four-team scale boundary. Inspect: $raw_log"
-  exit 10
+  exit 11
 fi
 if [[ "$stress400" == "1" ]] &&
    ! /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\] attackMove=396 teams=4 executeTick=1' "$raw_log"; then
   print -u2 "The packaged profile did not queue the accepted four-team broad-order fixture. Inspect: $raw_log"
-  exit 11
+  exit 12
 fi
 if [[ "$stress400" == "1" ]] &&
    ! /usr/bin/grep -q '\[ECHOES_STRESS_COMBAT_ACTIVE\]' "$raw_log"; then
   print -u2 "The packaged profile did not observe active four-team combat. Inspect: $raw_log"
-  exit 12
+  exit 13
 fi
 
 package_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
@@ -333,8 +337,9 @@ result = {
         "visibility-scoped scale scenario. All 400 units are visible to the local "
         "presentation and begin with 396 deterministic attack-move orders split "
         "evenly across four teams. Damage drives placeholder health bars and a "
-        "reduced-flashing-aware combat pulse. The fixture does not include authored "
-        "weather, final effects, or formations. It is "
+        "reduced-flashing-aware combat pulse. A lightweight, reduced-motion-aware "
+        "procedural Glass Scar atmosphere is active. The fixture does not include "
+        "final effects or formations. It is "
         "not a soak test, clean-machine result, or release qualification."
         if stress400 else
         "Local packaged Mac Development measurement of the current 25-entity "

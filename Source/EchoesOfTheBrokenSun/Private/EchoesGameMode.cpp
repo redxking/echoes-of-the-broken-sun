@@ -8,6 +8,7 @@
 #include "EchoesPlayerController.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesWeatherView.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/SkyLight.h"
@@ -225,6 +226,16 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         FVector(-4400.0f, -4400.0f, 2.0f),
         FLinearColor(0.02f, 0.24f, 0.31f));
 
+    AEchoesWeatherView* Weather = World->SpawnActor<AEchoesWeatherView>(
+        FVector::ZeroVector,
+        FRotator::ZeroRotator,
+        SpawnParameters);
+    if (Weather == nullptr)
+    {
+        UE_LOG(LogEchoes, Error, TEXT("[ECHOES_WEATHER_SPAWN_FAILED]"));
+        return false;
+    }
+
     ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(
         FVector(0.0f, 0.0f, 1800.0f),
         FRotator(-55.0f, -35.0f, 0.0f),
@@ -278,6 +289,10 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         LogEchoes,
         Display,
         TEXT("[ECHOES_ENV_READY] Engine basic shapes and runtime lighting loaded; all visuals are placeholders."));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_WEATHER_READY] glassScarDrift=active reducedMotionAware=true finalArt=false"));
     return true;
 }
 
