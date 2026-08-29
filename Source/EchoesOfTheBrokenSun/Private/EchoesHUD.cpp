@@ -257,7 +257,7 @@ void AEchoesHUD::DrawHUD()
         Bridge != nullptr &&
                 Bridge->GetLocalFaction() ==
                     echoes::sim::Faction::KharuunAssemblies
-            ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [-] Waystone  Shift+[ / ] warform  Shift+; cover")
+            ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
             : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
     DrawText(
         FactionControlLine,
@@ -1134,7 +1134,7 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
-        ? TEXT("Kharuun systems: [-] Waystone  |  Shift+[ / ] warform  |  Shift+; Cairnback cover")
+        ? TEXT("Kharuun systems: [F3] Waystone  |  [F4/F5] warform  |  [F6] Cairnback cover")
         : TEXT("Meridian systems: [Backslash] Bulwark deployment  |  [=] Relay supply");
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f), 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);

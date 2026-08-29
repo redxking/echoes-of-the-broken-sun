@@ -147,6 +147,14 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("TechnologyFocusPrevious"), EKeys::Up));
         TestTrue(TEXT("Technology archive next-tier input is mapped"),
                  HasAction(TEXT("TechnologyFocusNext"), EKeys::Down));
+        TestTrue(TEXT("Discoverable Waystone input is mapped"),
+                 HasAction(TEXT("ToggleWaystoneRoot"), EKeys::F3));
+        TestTrue(TEXT("Discoverable carapace adaptation input is mapped"),
+                 HasAction(TEXT("AdaptWarformCarapace"), EKeys::F4));
+        TestTrue(TEXT("Discoverable striker adaptation input is mapped"),
+                 HasAction(TEXT("AdaptWarformStriker"), EKeys::F5));
+        TestTrue(TEXT("Discoverable Cairnback cover input is mapped"),
+                 HasAction(TEXT("RaiseMineralCover"), EKeys::F6));
     }
 
     echoes::sim::SimulationConfig Config;
