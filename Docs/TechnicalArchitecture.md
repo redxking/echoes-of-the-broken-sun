@@ -148,6 +148,8 @@ The authority rejects a duplicate `(PlayerId, Sequence)`. Accepted commands are 
 
 Validation occurs twice: structural validation on receipt and gameplay validation at execution. Ownership, visibility rules, resource balance, cooldown, placement, capacity, target state, command rate, and tick window are rechecked at execution. A local offline player and the listen-server's local player traverse the same validator as a remote player.
 
+The current patrol order stores two authoritative fixed-point endpoints. On arrival it swaps them and continues indefinitely. Enemy acquisition is limited to legitimate owner visibility and to the axis-aligned route bounds expanded by six tiles on each side. A tracked enemy is dropped immediately when it leaves that bounded envelope or visibility. The envelope is intentionally integer-only: it is somewhat broader than a geometric capsule for diagonal routes, but remains deterministic, serializable, platform-independent, and incapable of unbounded chase. A future formation/pathing upgrade may narrow that envelope only with a simulation-rules and replay-schema change.
+
 Rejections use stable identifiers such as `CMD_NOT_OWNER`, `CMD_TARGET_NOT_VISIBLE`, `CMD_INSUFFICIENT_MATTER`, `CMD_PLACEMENT_OCCUPIED`, and `CMD_TOO_LATE`. Human-readable text is localized in Unreal. Logs, tests, replays, and UI automation assert the stable identifier, not prose.
 
 ### Tick phase order

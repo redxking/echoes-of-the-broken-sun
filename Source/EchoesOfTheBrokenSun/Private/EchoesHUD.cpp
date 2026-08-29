@@ -125,7 +125,7 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[F] Attack-move  [H] Hold  [J] Guard  [X] Stop  [B] Barracks  [N] Drop-off  [Q] Worker  [E] Soldier"),
+        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [B] Barracks  [N] Drop-off  [Q] Worker  [E] Soldier"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         131.0f,

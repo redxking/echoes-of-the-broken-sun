@@ -27,8 +27,8 @@ using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 6;
-inline constexpr std::uint32_t kReplayVersion = 6;
+inline constexpr std::uint32_t kSnapshotVersion = 7;
+inline constexpr std::uint32_t kReplayVersion = 7;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -144,6 +144,7 @@ enum class OrderType : std::uint8_t {
     AttackMove = 7,
     Hold = 8,
     Guard = 9,
+    Patrol = 10,
 };
 
 enum class CommandType : std::uint8_t {
@@ -158,6 +159,7 @@ enum class CommandType : std::uint8_t {
     AttackMove = 8,
     Hold = 9,
     Guard = 10,
+    Patrol = 11,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -212,6 +214,7 @@ struct PlayerState final {
 struct Order final {
     OrderType type = OrderType::None;
     EntityId target = 0;
+    Vec2 anchor{};
     Vec2 destination{};
     EntityType buildType = EntityType::Barracks;
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
@@ -387,6 +390,11 @@ private:
                                                    std::int32_t radiusRaw) const;
     [[nodiscard]] EntityId FindNearestVisibleEnemyInRange(
         const Entity& attacker) const;
+    [[nodiscard]] EntityId FindNearestVisiblePatrolEnemy(
+        const Entity& attacker) const;
+    [[nodiscard]] bool IsInsidePatrolEnvelope(
+        const Order& order,
+        Vec2 position) const;
     [[nodiscard]] std::uint64_t DistanceSquaredRaw(Vec2 first, Vec2 second) const;
     [[nodiscard]] bool TryAllocateEntityId(EntityId& id);
 
@@ -407,6 +415,9 @@ private:
         Entity& attacker,
         std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessGuard(
+        Entity& attacker,
+        std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
+    void ProcessPatrol(
         Entity& attacker,
         std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage);
     void ProcessFutureWell(Entity& worker);

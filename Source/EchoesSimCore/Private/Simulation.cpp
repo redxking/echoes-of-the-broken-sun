@@ -17,11 +17,12 @@ constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
 constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
 constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
 constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
+constexpr std::int32_t kPatrolLeashRaw = 6 * kFixedScale;
 constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 114;
+constexpr std::size_t kSerializedEntityBytes = 122;
 constexpr std::size_t kSerializedCommandBytes = 36;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 80;
 constexpr std::int32_t kMaximumMapDimension =
@@ -87,7 +88,7 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::Guard;
+    return type >= CommandType::Stop && type <= CommandType::Patrol;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -213,7 +214,7 @@ void WriteCommand(BinaryWriter& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::Guard) ||
+    if (type > static_cast<std::uint8_t>(CommandType::Patrol) ||
         buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -987,6 +988,56 @@ EntityId Simulation::FindNearestVisibleEnemyInRange(
     return nearest;
 }
 
+bool Simulation::IsInsidePatrolEnvelope(
+    const Order& order,
+    Vec2 position) const {
+    const std::int64_t minimumX = std::min<std::int64_t>(
+        order.anchor.x.Raw(), order.destination.x.Raw());
+    const std::int64_t maximumX = std::max<std::int64_t>(
+        order.anchor.x.Raw(), order.destination.x.Raw());
+    const std::int64_t minimumY = std::min<std::int64_t>(
+        order.anchor.y.Raw(), order.destination.y.Raw());
+    const std::int64_t maximumY = std::max<std::int64_t>(
+        order.anchor.y.Raw(), order.destination.y.Raw());
+    return static_cast<std::int64_t>(position.x.Raw()) >=
+               minimumX - kPatrolLeashRaw &&
+           static_cast<std::int64_t>(position.x.Raw()) <=
+               maximumX + kPatrolLeashRaw &&
+           static_cast<std::int64_t>(position.y.Raw()) >=
+               minimumY - kPatrolLeashRaw &&
+           static_cast<std::int64_t>(position.y.Raw()) <=
+               maximumY + kPatrolLeashRaw;
+}
+
+EntityId Simulation::FindNearestVisiblePatrolEnemy(
+    const Entity& attacker) const {
+    EntityId nearest = 0;
+    std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+    const std::int32_t visionRaw = attacker.visionTiles * kFixedScale;
+    const std::uint64_t visionSquared =
+        static_cast<std::uint64_t>(visionRaw) * visionRaw;
+    for (const Entity& entity : entities_) {
+        if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
+            entity.hitPoints <= 0 ||
+            !IsEntityVisibleTo(attacker.owner, entity.id) ||
+            !IsInsidePatrolEnvelope(attacker.order, entity.position)) {
+            continue;
+        }
+        const std::uint64_t distance =
+            DistanceSquaredRaw(attacker.position, entity.position);
+        if (distance > visionSquared) {
+            continue;
+        }
+        if (distance < nearestDistance ||
+            (distance == nearestDistance &&
+             (nearest == 0 || entity.id < nearest))) {
+            nearest = entity.id;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
 std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     const Entity& producer) const {
     const std::int32_t centerX = producer.position.x.FloorToInt();
@@ -1183,6 +1234,16 @@ void Simulation::ApplyCommand(const Command& command) {
             }
             return;
         }
+        case CommandType::Patrol:
+            if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
+                IsPositionPassable(command.position) &&
+                command.position != actor->position) {
+                actor->order.type = OrderType::Patrol;
+                actor->order.target = 0;
+                actor->order.anchor = actor->position;
+                actor->order.destination = command.position;
+            }
+            return;
     }
 }
 
@@ -1391,6 +1452,47 @@ void Simulation::ProcessGuard(
     }
 }
 
+void Simulation::ProcessPatrol(
+    Entity& attacker,
+    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    if (attacker.attackDamage <= 0 || attacker.movementPerTickRaw <= 0) {
+        attacker.order = {};
+        return;
+    }
+
+    Entity* target = attacker.order.target != 0
+                         ? MutableEntity(attacker.order.target)
+                         : nullptr;
+    if (target == nullptr || target->owner == kNeutralPlayer ||
+        target->owner == attacker.owner ||
+        !IsEntityVisibleTo(attacker.owner, target->id) ||
+        !IsInsidePatrolEnvelope(attacker.order, target->position)) {
+        attacker.order.target = 0;
+        target = nullptr;
+    }
+    if (target == nullptr) {
+        attacker.order.target = FindNearestVisiblePatrolEnemy(attacker);
+        target = attacker.order.target != 0
+                     ? MutableEntity(attacker.order.target)
+                     : nullptr;
+    }
+    if (target != nullptr) {
+        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+            (void)MoveTowards(attacker, target->position);
+            return;
+        }
+        if (attacker.attackCooldownTicks == 0) {
+            pendingDamage.emplace_back(target->id, attacker.attackDamage);
+            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+        }
+        return;
+    }
+
+    if (MoveTowards(attacker, attacker.order.destination)) {
+        std::swap(attacker.order.anchor, attacker.order.destination);
+    }
+}
+
 void Simulation::ProcessFutureWell(Entity& worker) {
     Entity* well = MutableEntity(worker.order.target);
     if (well == nullptr || well->type != EntityType::FutureWell ||
@@ -1539,6 +1641,9 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::Guard:
                 ProcessGuard(entity, pendingDamage);
                 break;
+            case OrderType::Patrol:
+                ProcessPatrol(entity, pendingDamage);
+                break;
         }
     }
     std::sort(pendingDamage.begin(), pendingDamage.end());
@@ -1607,6 +1712,12 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::Guard:
                 if (FindEntity(entity.order.target) == nullptr) {
                     entity.order = {};
+                }
+                break;
+            case OrderType::Patrol:
+                if (entity.order.target != 0 &&
+                    FindEntity(entity.order.target) == nullptr) {
+                    entity.order.target = 0;
                 }
                 break;
             case OrderType::None:
@@ -2001,6 +2112,8 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
         writer.I32(entity.constructionRequired);
         writer.U8(static_cast<std::uint8_t>(entity.order.type));
         writer.U32(entity.order.target);
+        writer.I32(entity.order.anchor.x.Raw());
+        writer.I32(entity.order.anchor.y.Raw());
         writer.I32(entity.order.destination.x.Raw());
         writer.I32(entity.order.destination.y.Raw());
         writer.U8(static_cast<std::uint8_t>(entity.order.buildType));
@@ -2178,6 +2291,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t productionType = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
+        std::int32_t orderAnchorRawX = 0;
+        std::int32_t orderAnchorRawY = 0;
         std::int32_t orderRawX = 0;
         std::int32_t orderRawY = 0;
         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
@@ -2195,7 +2310,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(entity.resourceRemaining) || !reader.U8(completed) ||
             !reader.I32(entity.constructionProgress) ||
             !reader.I32(entity.constructionRequired) || !reader.U8(orderType) ||
-            !reader.U32(entity.order.target) || !reader.I32(orderRawX) ||
+            !reader.U32(entity.order.target) || !reader.I32(orderAnchorRawX) ||
+            !reader.I32(orderAnchorRawY) || !reader.I32(orderRawX) ||
             !reader.I32(orderRawY) || !reader.U8(orderBuildType) ||
             !reader.U8(orderWellChoice) || !reader.U8(wellChoice) ||
             !reader.U64(entity.reshapeUntilTick) ||
@@ -2209,7 +2325,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             completed > 1 ||
-            orderType > static_cast<std::uint8_t>(OrderType::Guard) ||
+            orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
             orderBuildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
@@ -2253,6 +2369,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.position = Vec2::FromRaw(rawX, rawY);
         entity.completed = completed != 0;
         entity.order.type = static_cast<OrderType>(orderType);
+        entity.order.anchor =
+            Vec2::FromRaw(orderAnchorRawX, orderAnchorRawY);
         entity.order.destination = Vec2::FromRaw(orderRawX, orderRawY);
         entity.order.buildType = static_cast<EntityType>(orderBuildType);
         entity.order.wellChoice = static_cast<FutureWellChoice>(orderWellChoice);
@@ -2260,6 +2378,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.productionType = static_cast<EntityType>(productionType);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
+            return std::nullopt;
+        }
+        if (entity.order.type == OrderType::Patrol &&
+            (!simulation.IsPositionPassable(entity.order.anchor) ||
+             !simulation.IsPositionPassable(entity.order.destination))) {
+            SetError(error, "snapshot patrol route is invalid");
             return std::nullopt;
         }
         simulation.entities_.push_back(entity);

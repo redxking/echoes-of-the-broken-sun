@@ -798,6 +798,23 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 return false;
             }
             return true;
+        case CommandType::Patrol:
+            if (Actor.movementPerTickRaw <= 0 || Actor.attackDamage <= 0)
+            {
+                OutFeedback = TEXT("[PATROL_REQUIRES_COMBAT_UNIT] Select a mobile combat unit.");
+                return false;
+            }
+            if (!Simulation->IsPositionPassable(Position))
+            {
+                OutFeedback = TEXT("[INVALID_DESTINATION] The patrol endpoint is outside or blocked.");
+                return false;
+            }
+            if (Position == Actor.position)
+            {
+                OutFeedback = TEXT("[PATROL_ENDPOINT_UNCHANGED] Choose a different patrol endpoint.");
+                return false;
+            }
+            return true;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)
             {

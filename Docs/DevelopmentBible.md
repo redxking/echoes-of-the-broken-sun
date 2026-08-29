@@ -131,11 +131,11 @@ The command set is move, context action, attack-move, attack, gather, repair, bu
 | Left click / drag | Select one unit or box-select visible units |
 | Shift + select | Add or remove from selection |
 | Right click | Context move, attack, gather, repair, deliver, or interact |
-| A then click | Attack-move |
-| S / H | Stop / hold position |
-| P / G | Patrol / guard |
-| 1–9 | Recall control group |
-| Control + 1–9 | Assign control group |
+| F at cursor | Attack-move |
+| X / H | Stop / hold position |
+| T / J at cursor | Patrol / guard |
+| 1–0 | Recall control group |
+| G then 1–0 | Assign control group |
 | Double click | Select matching visible units |
 | Tab / Shift + Tab | Cycle subgroups |
 | WASD / edge pan / middle drag | Move camera |

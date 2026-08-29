@@ -73,7 +73,7 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v6 fixed header/player/sequence fields plus terrain and two fog grids.
+    // Snapshot v7 fixed header/player/sequence fields plus terrain and two fog grids.
     return 100 + 3 * mapTileCount;
 }
 
@@ -428,6 +428,77 @@ void TestGuardDefendsAndFollowsOwnedTarget() {
     REQUIRE(simulation.QueueCommand(stop));
     simulation.Step();
     REQUIRE(simulation.FindEntity(guard)->order.type == OrderType::None);
+}
+
+void TestPatrolReversesPersistsAndBoundsEngagements() {
+    Simulation simulation({36, 20, 20, 0x504154524f4c4f52ULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const Vec2 origin = Vec2::FromTiles(4, 4);
+    const Vec2 endpoint = Vec2::FromTiles(10, 4);
+    const EntityId patrol = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, origin);
+    const EntityId routeEnemy = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(9, 4));
+    const EntityId distantEnemy = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(25, 4));
+    REQUIRE(patrol != 0 && routeEnemy != 0 && distantEnemy != 0);
+
+    Command patrolOrder = MakeCommand(0, 0, 1, CommandType::Patrol, patrol);
+    patrolOrder.position = endpoint;
+    REQUIRE(simulation.QueueCommand(patrolOrder));
+    simulation.Step();
+    const Entity* patrolling = simulation.FindEntity(patrol);
+    REQUIRE(patrolling != nullptr);
+    REQUIRE(patrolling->order.type == OrderType::Patrol);
+    REQUIRE(patrolling->order.anchor == origin);
+    REQUIRE(patrolling->order.destination == endpoint);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    const Entity* restoredPatrol = restored->FindEntity(patrol);
+    REQUIRE(restoredPatrol != nullptr);
+    REQUIRE(restoredPatrol->order.type == OrderType::Patrol);
+    REQUIRE(restoredPatrol->order.anchor == origin);
+    REQUIRE(restoredPatrol->order.destination == endpoint);
+
+    bool sawReturnLeg = false;
+    bool completedRoundTrip = false;
+    for (int tick = 0; tick < 600 && !completedRoundTrip; ++tick) {
+        simulation.Step();
+        patrolling = simulation.FindEntity(patrol);
+        REQUIRE(patrolling != nullptr);
+        REQUIRE(patrolling->order.type == OrderType::Patrol);
+        if (patrolling->order.anchor == endpoint &&
+            patrolling->order.destination == origin) {
+            sawReturnLeg = true;
+        }
+        if (sawReturnLeg && patrolling->order.anchor == origin &&
+            patrolling->order.destination == endpoint) {
+            completedRoundTrip = true;
+        }
+    }
+    REQUIRE(sawReturnLeg);
+    REQUIRE(completedRoundTrip);
+    REQUIRE(simulation.FindEntity(routeEnemy) == nullptr);
+    const Entity* untouched = simulation.FindEntity(distantEnemy);
+    REQUIRE(untouched != nullptr);
+    REQUIRE(untouched->hitPoints == untouched->maxHitPoints);
+
+    const Vec2 stoppedPosition = simulation.FindEntity(patrol)->position;
+    Command stop = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Stop, patrol);
+    REQUIRE(simulation.QueueCommand(stop));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(patrol)->order.type == OrderType::None);
+    REQUIRE(simulation.FindEntity(patrol)->position == stoppedPosition);
+    simulation.Step(40);
+    REQUIRE(simulation.FindEntity(patrol)->position == stoppedPosition);
 }
 
 void TestDeterministicObstaclePathing() {
@@ -893,6 +964,8 @@ int main() {
          TestHoldPositionDefendsWithoutChasing},
         {"guard defends and follows owned target",
          TestGuardDefendsAndFollowsOwnedTarget},
+        {"patrol reverses persists and bounds engagements",
+         TestPatrolReversesPersistsAndBoundsEngagements},
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},

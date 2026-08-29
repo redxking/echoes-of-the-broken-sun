@@ -170,6 +170,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::AttackMoveAtCursor);
     InputComponent->BindAction(
+        TEXT("PatrolAtCursor"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::PatrolAtCursor);
+    InputComponent->BindAction(
         TEXT("HoldSelected"),
         IE_Pressed,
         this,
@@ -849,6 +854,93 @@ void AEchoesPlayerController::AttackMoveAtCursor()
     }
 }
 
+void AEchoesPlayerController::PatrolAtCursor()
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Patrol is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian combat units first."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the patrol endpoint."));
+        return;
+    }
+
+    const int32 UnitCount = SelectedEntityIds.Num();
+    const int32 FormationWidth = FMath::Max(
+        1,
+        FMath::CeilToInt(FMath::Sqrt(static_cast<float>(UnitCount))));
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (int32 Index = 0; Index < UnitCount; ++Index)
+    {
+        const int32 Row = Index / FormationWidth;
+        const int32 Column = Index % FormationWidth;
+        FVector UnitDestination = HitResult.Location;
+        UnitDestination.X +=
+            (static_cast<float>(Column) -
+             static_cast<float>(FormationWidth - 1) * 0.5f) *
+            FormationSpacingWorldUnits;
+        UnitDestination.Y +=
+            (static_cast<float>(Row) -
+             static_cast<float>(FormationWidth - 1) * 0.5f) *
+            FormationSpacingWorldUnits;
+        FString Feedback;
+        if (Bridge->IssueCommand(
+                echoes::sim::CommandType::Patrol,
+                SelectedEntityIds[Index],
+                0,
+                UnitDestination,
+                FutureWellChoice,
+                Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    if (AcceptedCount > 0)
+    {
+        const FString RejectionSuffix =
+            RejectedCount > 0
+                ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
+                : TEXT(".");
+        SetStatusMessage(FString::Printf(
+            TEXT("PATROL: %d route%s assigned%s"),
+            AcceptedCount,
+            AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+            *RejectionSuffix));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastRejection.IsEmpty()
+                ? TEXT("[PATROL_REJECTED] No selected entity can patrol.")
+                : LastRejection);
+    }
+}
+
 void AEchoesPlayerController::StopSelectedUnits()
 {
     PruneSelection();
@@ -1331,6 +1423,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("HOLD POSITION");
         case echoes::sim::CommandType::Guard:
             return TEXT("GUARD");
+        case echoes::sim::CommandType::Patrol:
+            return TEXT("PATROL");
     }
     return TEXT("ORDER");
 }

@@ -50,6 +50,7 @@ private:
     void ProduceWorker();
     void ProduceSoldier();
     void AttackMoveAtCursor();
+    void PatrolAtCursor();
     void HoldSelectedUnits();
     void GuardAtCursor();
     void StopSelectedUnits();
