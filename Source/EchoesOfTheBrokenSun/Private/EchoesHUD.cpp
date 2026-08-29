@@ -20,7 +20,7 @@ void AEchoesHUD::DrawHUD()
     const echoes::sim::Simulation* Sim =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
 
-    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 204.0f);
+    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 227.0f);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
         FLinearColor(0.15f, 0.88f, 1.0f),
@@ -133,7 +133,7 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[1] Harvest    [2] Preserve    [3] Reshape    [P] Pause    [R] Restart    Cyan: Meridian    Red: Kharuun"),
+        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [P] Pause    [R] Restart"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         154.0f,
@@ -141,10 +141,18 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[K] Checkpoint    [L] Load Checkpoint    Validated with one backup"),
+        TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Cyan: Meridian    Red: Kharuun"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         177.0f,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f,
+        false);
+    DrawText(
+        TEXT("[K] Checkpoint    [L] Load Checkpoint    Validated with one backup"),
+        FLinearColor(0.73f, 0.76f, 0.82f),
+        34.0f,
+        200.0f,
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f,
         false);

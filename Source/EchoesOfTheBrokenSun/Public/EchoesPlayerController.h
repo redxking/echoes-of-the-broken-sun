@@ -29,6 +29,11 @@ public:
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellChoice() const;
     [[nodiscard]] FString GetFutureWellChoiceLabel() const;
     [[nodiscard]] FString GetStatusMessage() const;
+    bool SetControlGroup(
+        int32 GroupIndex,
+        const TArray<uint32>& EntityIds,
+        FString& OutFeedback);
+    [[nodiscard]] TArray<uint32> GetValidControlGroup(int32 GroupIndex) const;
     void NotifyRuntimeReady();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
@@ -50,12 +55,27 @@ private:
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();
+    void ArmControlGroupAssignment();
+    void RecallControlGroup1();
+    void RecallControlGroup2();
+    void RecallControlGroup3();
+    void RecallControlGroup4();
+    void RecallControlGroup5();
+    void RecallControlGroup6();
+    void RecallControlGroup7();
+    void RecallControlGroup8();
+    void RecallControlGroup9();
+    void RecallControlGroup0();
 
     void SelectAtCursor(bool bAdditive);
     void SelectInScreenRectangle(bool bAdditive);
     void SetEntitySelected(uint32 EntityId, bool bSelected);
     void ClearSelection();
     void PruneSelection();
+    [[nodiscard]] static int32 ControlGroupDisplayNumber(int32 GroupIndex);
+    void AssignControlGroupFromSelection(int32 GroupIndex);
+    void RecallControlGroup(int32 GroupIndex);
+    void ClearControlGroups();
     bool TraceCursor(FHitResult& OutHitResult);
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
@@ -64,12 +84,15 @@ private:
     FString CommandLabel(echoes::sim::CommandType CommandType) const;
 
     TArray<uint32> SelectedEntityIds;
+    TArray<uint32> ControlGroups[10];
     FVector2D SelectionStartScreenPosition = FVector2D::ZeroVector;
     FVector2D SelectionCurrentScreenPosition = FVector2D::ZeroVector;
     echoes::sim::FutureWellChoice FutureWellChoice =
         echoes::sim::FutureWellChoice::Harvest;
     FString StatusMessage;
     double StatusMessageExpiresAt = 0.0;
+    double ControlGroupAssignmentExpiresAt = 0.0;
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
+    bool bControlGroupAssignmentArmed = false;
 };

@@ -49,13 +49,14 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
         const auto HasAction = [&ActionMappings](
                                    FName Action,
                                    const FKey& Key,
-                                   bool bControl = false)
+                                   bool bControl = false,
+                                   bool bShift = false)
         {
             return ActionMappings.ContainsByPredicate(
-                [Action, Key, bControl](const FInputActionKeyMapping& Mapping)
+                [Action, Key, bControl, bShift](const FInputActionKeyMapping& Mapping)
                 {
                     return Mapping.ActionName == Action && Mapping.Key == Key &&
-                           Mapping.bCtrl == bControl;
+                           Mapping.bCtrl == bControl && Mapping.bShift == bShift;
                 });
         };
         TestTrue(TEXT("Barracks construction input is mapped"),
@@ -78,6 +79,18 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("QuickSaveScenario"), EKeys::K));
         TestTrue(TEXT("Quick-load input is mapped"),
                  HasAction(TEXT("QuickLoadScenario"), EKeys::L));
+        TestTrue(TEXT("Future Well harvest input is remapped"),
+                 HasAction(TEXT("ChooseHarvest"), EKeys::Z));
+        TestTrue(TEXT("Future Well preserve input is remapped"),
+                 HasAction(TEXT("ChoosePreserve"), EKeys::C));
+        TestTrue(TEXT("Future Well reshape input is remapped"),
+                 HasAction(TEXT("ChooseReshape"), EKeys::V));
+        TestTrue(TEXT("Control-group recall input is mapped"),
+                 HasAction(TEXT("RecallControlGroup1"), EKeys::One));
+        TestTrue(TEXT("Control-group assignment input is mapped"),
+                 HasAction(TEXT("ArmControlGroupAssignment"), EKeys::G));
+        TestTrue(TEXT("Control-group zero recall input is mapped"),
+                 HasAction(TEXT("RecallControlGroup0"), EKeys::Zero));
     }
 
     echoes::sim::SimulationConfig Config;

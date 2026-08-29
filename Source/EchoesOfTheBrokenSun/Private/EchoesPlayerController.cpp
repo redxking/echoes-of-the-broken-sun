@@ -11,6 +11,7 @@ namespace
 {
 constexpr float DragSelectionThresholdPixels = 8.0f;
 constexpr float FormationSpacingWorldUnits = 150.0f;
+constexpr int32 ControlGroupCount = 10;
 }
 
 AEchoesPlayerController::AEchoesPlayerController()
@@ -71,6 +72,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     echoes::sim::MatchOutcome Outcome)
 {
     ClearSelection();
+    bControlGroupAssignmentArmed = false;
     FString Message =
         TEXT("DRAW — both Command Cores fell in the same deterministic tick. Press R to restart.");
     if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
@@ -99,6 +101,12 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
         }
     }
     PruneSelection();
+    if (bControlGroupAssignmentArmed &&
+        GetWorld() != nullptr &&
+        GetWorld()->GetTimeSeconds() > ControlGroupAssignmentExpiresAt)
+    {
+        bControlGroupAssignmentArmed = false;
+    }
 }
 
 void AEchoesPlayerController::SetupInputComponent()
@@ -186,6 +194,25 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::QuickLoadScenario);
+    const auto BindPressed = [this](
+                                 const FName ActionName,
+                                 void (AEchoesPlayerController::*Handler)())
+    {
+        InputComponent->BindAction(ActionName, IE_Pressed, this, Handler);
+    };
+    BindPressed(
+        TEXT("ArmControlGroupAssignment"),
+        &AEchoesPlayerController::ArmControlGroupAssignment);
+    BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
+    BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
+    BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
+    BindPressed(TEXT("RecallControlGroup4"), &AEchoesPlayerController::RecallControlGroup4);
+    BindPressed(TEXT("RecallControlGroup5"), &AEchoesPlayerController::RecallControlGroup5);
+    BindPressed(TEXT("RecallControlGroup6"), &AEchoesPlayerController::RecallControlGroup6);
+    BindPressed(TEXT("RecallControlGroup7"), &AEchoesPlayerController::RecallControlGroup7);
+    BindPressed(TEXT("RecallControlGroup8"), &AEchoesPlayerController::RecallControlGroup8);
+    BindPressed(TEXT("RecallControlGroup9"), &AEchoesPlayerController::RecallControlGroup9);
+    BindPressed(TEXT("RecallControlGroup0"), &AEchoesPlayerController::RecallControlGroup0);
 }
 
 void AEchoesPlayerController::SelectionPressed()
@@ -509,6 +536,162 @@ void AEchoesPlayerController::ClearSelection()
     SelectedEntityIds.Reset();
 }
 
+bool AEchoesPlayerController::SetControlGroup(
+    int32 GroupIndex,
+    const TArray<uint32>& EntityIds,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (GroupIndex < 0 || GroupIndex >= ControlGroupCount)
+    {
+        OutFeedback = TEXT("[GROUP_INDEX_INVALID] Control group must be between 0 and 9.");
+        return false;
+    }
+    if (EntityIds.IsEmpty())
+    {
+        ControlGroups[GroupIndex].Reset();
+        OutFeedback = FString::Printf(
+            TEXT("CONTROL GROUP %d CLEARED."),
+            ControlGroupDisplayNumber(GroupIndex));
+        return true;
+    }
+
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    TArray<uint32> ValidIds;
+    for (const uint32 EntityId : EntityIds)
+    {
+        const echoes::sim::Entity* Entity =
+            Bridge != nullptr ? Bridge->FindEntity(EntityId) : nullptr;
+        if (Entity != nullptr &&
+            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            ValidIds.AddUnique(EntityId);
+        }
+    }
+    if (ValidIds.IsEmpty())
+    {
+        OutFeedback = TEXT("[GROUP_NO_VALID_ENTITIES] No live local entities were assigned.");
+        return false;
+    }
+    ValidIds.Sort();
+    ControlGroups[GroupIndex] = MoveTemp(ValidIds);
+    OutFeedback = FString::Printf(
+        TEXT("CONTROL GROUP %d: %d entit%s assigned."),
+        ControlGroupDisplayNumber(GroupIndex),
+        ControlGroups[GroupIndex].Num(),
+        ControlGroups[GroupIndex].Num() == 1 ? TEXT("y") : TEXT("ies"));
+    return true;
+}
+
+TArray<uint32> AEchoesPlayerController::GetValidControlGroup(
+    int32 GroupIndex) const
+{
+    TArray<uint32> ValidIds;
+    if (GroupIndex < 0 || GroupIndex >= ControlGroupCount)
+    {
+        return ValidIds;
+    }
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    for (const uint32 EntityId : ControlGroups[GroupIndex])
+    {
+        const echoes::sim::Entity* Entity =
+            Bridge != nullptr ? Bridge->FindEntity(EntityId) : nullptr;
+        if (Entity != nullptr &&
+            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            ValidIds.Add(EntityId);
+        }
+    }
+    return ValidIds;
+}
+
+int32 AEchoesPlayerController::ControlGroupDisplayNumber(int32 GroupIndex)
+{
+    return GroupIndex == ControlGroupCount - 1 ? 0 : GroupIndex + 1;
+}
+
+void AEchoesPlayerController::ClearControlGroups()
+{
+    for (TArray<uint32>& Group : ControlGroups)
+    {
+        Group.Reset();
+    }
+}
+
+void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
+{
+    PruneSelection();
+    FString Feedback;
+    SetControlGroup(GroupIndex, SelectedEntityIds, Feedback);
+    SetStatusMessage(Feedback);
+}
+
+void AEchoesPlayerController::ArmControlGroupAssignment()
+{
+    bControlGroupAssignmentArmed = true;
+    ControlGroupAssignmentExpiresAt =
+        GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() + 5.0 : 5.0;
+    SetStatusMessage(
+        TEXT("GROUP ASSIGNMENT ARMED — press 1-0 within five seconds."),
+        5.0f);
+}
+
+void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
+{
+    if (bControlGroupAssignmentArmed)
+    {
+        bControlGroupAssignmentArmed = false;
+        AssignControlGroupFromSelection(GroupIndex);
+        return;
+    }
+    TArray<uint32> ValidIds = GetValidControlGroup(GroupIndex);
+    if (ValidIds.IsEmpty())
+    {
+        ControlGroups[GroupIndex].Reset();
+        SetStatusMessage(FString::Printf(
+            TEXT("[GROUP_EMPTY] Control group %d has no live entities."),
+            ControlGroupDisplayNumber(GroupIndex)));
+        return;
+    }
+    ControlGroups[GroupIndex] = ValidIds;
+    ClearSelection();
+    for (const uint32 EntityId : ValidIds)
+    {
+        SelectedEntityIds.Add(EntityId);
+        SetEntitySelected(EntityId, true);
+    }
+    SetStatusMessage(FString::Printf(
+        TEXT("CONTROL GROUP %d: %d entit%s selected."),
+        ControlGroupDisplayNumber(GroupIndex),
+        ValidIds.Num(),
+        ValidIds.Num() == 1 ? TEXT("y") : TEXT("ies")));
+}
+
+#define DEFINE_CONTROL_GROUP_HANDLER(DisplayNumber, GroupIndex)              \
+    void AEchoesPlayerController::RecallControlGroup##DisplayNumber()         \
+    {                                                                         \
+        RecallControlGroup(GroupIndex);                                        \
+    }
+
+DEFINE_CONTROL_GROUP_HANDLER(1, 0)
+DEFINE_CONTROL_GROUP_HANDLER(2, 1)
+DEFINE_CONTROL_GROUP_HANDLER(3, 2)
+DEFINE_CONTROL_GROUP_HANDLER(4, 3)
+DEFINE_CONTROL_GROUP_HANDLER(5, 4)
+DEFINE_CONTROL_GROUP_HANDLER(6, 5)
+DEFINE_CONTROL_GROUP_HANDLER(7, 6)
+DEFINE_CONTROL_GROUP_HANDLER(8, 7)
+DEFINE_CONTROL_GROUP_HANDLER(9, 8)
+DEFINE_CONTROL_GROUP_HANDLER(0, 9)
+
+#undef DEFINE_CONTROL_GROUP_HANDLER
+
 void AEchoesPlayerController::PruneSelection()
 {
     const UEchoesSimulationSubsystem* Bridge =
@@ -736,6 +919,7 @@ void AEchoesPlayerController::QuickLoadScenario()
     else if (Bridge->QuickLoadScenario(Feedback))
     {
         ClearSelection();
+        bControlGroupAssignmentArmed = false;
     }
     SetStatusMessage(Feedback, 7.0f);
 }
@@ -881,6 +1065,8 @@ void AEchoesPlayerController::RestartScenario()
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
     ClearSelection();
+    ClearControlGroups();
+    bControlGroupAssignmentArmed = false;
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         bRuntimeStateKnown = true;
