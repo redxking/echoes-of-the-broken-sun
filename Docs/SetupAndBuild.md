@@ -120,6 +120,8 @@ Run the alternate local-faction bootstrap gate with `ECHOES_LOCAL_FACTION=Kharuu
 
 `run_kharuun_systems_smoke.sh` is a Development-only Kharuun presentation fixture. It queues ordinary Waystone migration, Warform adaptation, Cairnback mineral-cover, and hidden-hostile movement commands, then requires all four states, one anonymous vibration contact, no source disclosure, and automatic pause. It is integration evidence, not ordinary player execution, balance, or release behavior.
 
+The Future Well has a separate non-shipping visual-review path. Add `-EchoesFutureWellArtReview -EchoesFutureWellPreview=Dormant|Harvest|Preserve|Reshape` to an editor game session to isolate the authored four-part landmark on a neutral studio field. `-EchoesArtReviewHideUI` suppresses UI in the capture, and `-EchoesArtReviewOutput=<absolute path>` requests a screenshot after the review camera settles. The preview selector changes presentation only: the log records both the requested visual state and the untouched authoritative simulation choice. These flags qualify visual integration and state readability; they are not gameplay commands, balance evidence, or Shipping behavior.
+
 `build_editor.sh` and `package_macos.sh` default to four concurrent Unreal build actions because the engine-selected ten-action default caused severe memory and swap contention on this 16 GB host. Set `ECHOES_MAX_PARALLEL_ACTIONS` to another positive integer only for an intentional host-specific experiment; both wrappers reject invalid values.
 
 The next paragraph preserves the complete 0.45.0 matrix as historical evidence; later paragraphs record the focused 0.46.0 through 0.56.0 checkpoints and the current 0.57.0 source/campaign/presentation checkpoint.
