@@ -135,6 +135,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("IncreaseCameraZoomSpeed"), EKeys::Period));
         TestTrue(TEXT("Primary modal confirmation input is mapped"),
                  HasAction(TEXT("ConfirmPrimaryAction"), EKeys::Enter));
+        TestTrue(TEXT("Playable-faction cycle input is mapped"),
+                 HasAction(TEXT("CyclePlayableFaction"), EKeys::Tab));
     }
 
     echoes::sim::SimulationConfig Config;

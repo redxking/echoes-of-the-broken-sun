@@ -8,7 +8,7 @@
 class AEchoesEntityView;
 class UEchoesSimulationSubsystem;
 
-/** RTS selection and context-order input for the local Meridian player. */
+/** RTS selection, faction choice, and context-order input for the local player. */
 UCLASS(NotBlueprintable)
 class ECHOESOFTHEBROKENSUN_API AEchoesPlayerController final
     : public APlayerController
@@ -42,7 +42,10 @@ public:
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
+    void CyclePlayableFaction();
     void TogglePauseMenu();
+    [[nodiscard]] FString GetLocalFactionLabel() const;
+    [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
     {
         return bMissionBriefingVisible;

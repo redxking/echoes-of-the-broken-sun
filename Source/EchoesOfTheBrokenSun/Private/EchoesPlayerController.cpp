@@ -13,6 +13,13 @@ namespace
 constexpr float DragSelectionThresholdPixels = 8.0f;
 constexpr float FormationSpacingWorldUnits = 150.0f;
 constexpr int32 ControlGroupCount = 10;
+
+[[nodiscard]] FString FactionDisplayName(echoes::sim::Faction Faction)
+{
+    return Faction == echoes::sim::Faction::KharuunAssemblies
+               ? TEXT("KHARUUN ASSEMBLIES")
+               : TEXT("MERIDIAN COMPACT");
+}
 }
 
 AEchoesPlayerController::AEchoesPlayerController()
@@ -55,8 +62,34 @@ void AEchoesPlayerController::NotifyRuntimeReady()
 {
     bRuntimeStateKnown = true;
     SetStatusMessage(
-        TEXT("Runtime prototype ready. Select Meridian units, then right-click a destination or target."),
+        FString::Printf(
+            TEXT("Runtime prototype ready. Select owned %s units, then right-click a destination or target."),
+            *GetLocalFactionLabel()),
         7.0f);
+}
+
+FString AEchoesPlayerController::GetLocalFactionLabel() const
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return FactionDisplayName(
+        Bridge != nullptr
+            ? Bridge->GetLocalFaction()
+            : echoes::sim::Faction::MeridianCompact);
+}
+
+FString AEchoesPlayerController::GetOpponentFactionLabel() const
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return FactionDisplayName(
+        Bridge != nullptr
+            ? Bridge->GetOpponentFaction()
+            : echoes::sim::Faction::KharuunAssemblies);
 }
 
 void AEchoesPlayerController::PresentTitleScreen()
@@ -81,12 +114,12 @@ void AEchoesPlayerController::PresentTitleScreen()
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
-    SetStatusMessage(TEXT("ECHOES OF THE BROKEN SUN — press Enter to open the Glass Scar brief."),
+    SetStatusMessage(TEXT("ECHOES OF THE BROKEN SUN — Tab changes faction; Enter opens the Glass Scar brief."),
                      3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_TITLE_READY] operation=GlassScar unavailableModesHidden=true keyboardStart=true"));
+        TEXT("[ECHOES_TITLE_READY] operation=GlassScar unavailableModesHidden=true keyboardStart=true factionChoice=true"));
 }
 
 void AEchoesPlayerController::ConfirmTitleScreen()
@@ -122,8 +155,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
-    SetStatusMessage(TEXT("GLASS SCAR OPERATIONS BRIEF — press Enter to deploy."), 3600.0f);
-    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_READY] paused=true keyboardStart=true"));
+    SetStatusMessage(TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."), 3600.0f);
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_READY] paused=true keyboardStart=true factionChoice=true"));
 }
 
 void AEchoesPlayerController::ConfirmMissionBriefing()
@@ -146,9 +179,49 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
     SetStatusMessage(
-        TEXT("DEPLOYED — secure the Future Well or destroy the Kharuun Command Core."),
+        FString::Printf(
+            TEXT("DEPLOYED — secure the Future Well or destroy the %s Command Core."),
+            *GetOpponentFactionLabel()),
         8.0f);
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
+}
+
+void AEchoesPlayerController::CyclePlayableFaction()
+{
+    if (!bTitleScreenVisible && !bMissionBriefingVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[FACTION_SIM_NOT_READY] Faction choice is unavailable."));
+        return;
+    }
+    const echoes::sim::Faction NewFaction =
+        Bridge->GetLocalFaction() == echoes::sim::Faction::MeridianCompact
+            ? echoes::sim::Faction::KharuunAssemblies
+            : echoes::sim::Faction::MeridianCompact;
+    FString Feedback;
+    if (!Bridge->SelectLocalFaction(NewFaction, Feedback))
+    {
+        SetStatusMessage(Feedback);
+        return;
+    }
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    Bridge->SetScenarioPaused(true);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("FACTION SELECTED: %s — opposition: %s. Press Enter when ready."),
+            *GetLocalFactionLabel(),
+            *GetOpponentFactionLabel()),
+        3600.0f);
 }
 
 void AEchoesPlayerController::ConfirmPrimaryAction()
@@ -401,6 +474,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
+    BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -503,7 +577,7 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
 
     SetStatusMessage(
         FString::Printf(
-            TEXT("Selected %d Meridian entit%s."),
+            TEXT("Selected %d owned entit%s."),
             SelectedEntityIds.Num(),
             SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
         2.0f);
@@ -569,7 +643,7 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 
     SetStatusMessage(
         FString::Printf(
-            TEXT("Drag-selected %d Meridian entit%s."),
+            TEXT("Drag-selected %d owned entit%s."),
             SelectedEntityIds.Num(),
             SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
         2.0f);
@@ -584,7 +658,7 @@ void AEchoesPlayerController::ContextOrderPressed()
     PruneSelection();
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian units first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned units first."));
         return;
     }
 
@@ -1010,7 +1084,7 @@ void AEchoesPlayerController::AttackMoveAtCursor()
     }
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian combat units first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned combat units first."));
         return;
     }
     FHitResult HitResult;
@@ -1100,7 +1174,7 @@ void AEchoesPlayerController::PatrolAtCursor()
     }
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian combat units first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned combat units first."));
         return;
     }
     FHitResult HitResult;
@@ -1186,7 +1260,7 @@ void AEchoesPlayerController::StopSelectedUnits()
     }
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian units first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned units first."));
         return;
     }
     int32 AcceptedCount = 0;
@@ -1620,7 +1694,7 @@ void AEchoesPlayerController::HoldSelectedUnits()
     }
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian defenders first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned defenders first."));
         return;
     }
 
@@ -1686,13 +1760,13 @@ void AEchoesPlayerController::GuardAtCursor()
     }
     if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian defenders first."));
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned defenders first."));
         return;
     }
     FHitResult HitResult;
     if (!TraceCursor(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the Meridian entity to guard."));
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the owned entity to guard."));
         return;
     }
     const AEchoesEntityView* TargetView =
@@ -1704,7 +1778,7 @@ void AEchoesPlayerController::GuardAtCursor()
     if (Target == nullptr ||
         Target->owner != UEchoesSimulationSubsystem::LocalPlayerId)
     {
-        SetStatusMessage(TEXT("[GUARD_TARGET_INVALID] Point at a live Meridian entity."));
+        SetStatusMessage(TEXT("[GUARD_TARGET_INVALID] Point at a live owned entity."));
         return;
     }
 

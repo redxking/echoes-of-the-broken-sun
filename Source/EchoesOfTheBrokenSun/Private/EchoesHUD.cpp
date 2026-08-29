@@ -196,8 +196,14 @@ void AEchoesHUD::DrawHUD()
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);
+    const FString FactionControlLine =
+        Bridge != nullptr &&
+                Bridge->GetLocalFaction() ==
+                    echoes::sim::Faction::KharuunAssemblies
+            ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [-] Waystone  Shift+[ / ] warform  Shift+; cover")
+            : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
     DrawText(
-        TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build  [Q/E/;/'] Produce"),
+        FactionControlLine,
         SecondaryColor,
         TextX,
         HudY(113.0f),
@@ -213,7 +219,11 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Cyan: Meridian    Red: Kharuun"),
+        FString::Printf(
+            TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Local: %s"),
+            EchoesController != nullptr
+                ? *EchoesController->GetLocalFactionLabel()
+                : TEXT("MERIDIAN COMPACT")),
         SecondaryColor,
         TextX,
         HudY(159.0f),
@@ -376,6 +386,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("ON") : TEXT("OFF"),
         Settings != nullptr && Settings->IsReducedFlashingEnabled()
             ? TEXT("ON") : TEXT("OFF"));
+    const FString LocalFaction = EchoesController->GetLocalFactionLabel();
+    const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -397,16 +409,20 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
-    DrawText(TEXT("SINGLE-PLAYER  //  MERIDIAN COMPACT  //  FUTURE WELL CONTEST"),
+    DrawText(FString::Printf(
+                 TEXT("SINGLE-PLAYER  //  %s  //  FUTURE WELL CONTEST"),
+                 *LocalFaction),
              Muted, Left + 48.0f, Top + 246.0f * ContentScale,
              SmallFont, 0.86f * TextScale, false);
-    DrawText(TEXT("OPPOSITION: ADAPTIVE KHARUUN  //  STANDARD  //  FAIR VISION AND ECONOMY"),
+    DrawText(FString::Printf(
+                 TEXT("[TAB] CHANGE FACTION  //  OPPOSITION: ADAPTIVE %s  //  STANDARD"),
+                 *OpponentFaction),
              Accent, Left + 48.0f, Top + 272.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
     DrawText(TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
-    DrawText(TEXT("and break the Kharuun Command Core before your own line collapses."),
+    DrawText(TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
 
@@ -525,7 +541,14 @@ void AEchoesHUD::DrawObjectiveTracker(
     DrawText(FString::Printf(TEXT("02  COMMAND CORE    %s"), *LocalCoreState),
              Objective.bLocalCoreIntact ? Active : Failed,
              Left + 18.0f, Top + 89.0f, SmallFont, 0.82f * TextScale, false);
-    DrawText(FString::Printf(TEXT("03  KHARUUN CORE    %s"), *HostileCoreState),
+    const FString OpponentShortName =
+        Bridge->GetOpponentFaction() == echoes::sim::Faction::KharuunAssemblies
+            ? TEXT("KHARUUN")
+            : TEXT("MERIDIAN");
+    DrawText(FString::Printf(
+                 TEXT("03  %s CORE    %s"),
+                 *OpponentShortName,
+                 *HostileCoreState),
              HostileCoreColor,
              Left + 18.0f, Top + 126.0f, SmallFont, 0.82f * TextScale, false);
 
@@ -573,14 +596,20 @@ void AEchoesHUD::DrawMatchResult(
     const bool bVictory = Outcome == echoes::sim::MatchOutcome::Player0Victory;
     const bool bDraw = Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bVictory ? TEXT("VICTORY") : bDraw ? TEXT("DRAW") : TEXT("DEFEAT");
+    const FString LocalFaction = EchoesController->GetLocalFactionLabel();
+    const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bVictory
         ? TEXT("THE GLASS SCAR HOLDS")
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
-                : TEXT("THE MERIDIAN LINE BROKE");
+                : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bVictory
-        ? TEXT("The Kharuun Command Core is silent. The Future Well remains a consequence, not a prize.")
+        ? FString::Printf(
+              TEXT("The %s Command Core is silent. The Future Well remains a consequence, not a prize."),
+              *OpponentFaction)
         : bDraw ? TEXT("Both command structures fell in the same deterministic tick. Neither force controls the crossing.")
-                : TEXT("Your Command Core has fallen. The Kharuun retain the eastern approach and the initiative.");
+                : FString::Printf(
+                      TEXT("Your Command Core has fallen. The %s retain the eastern approach and the initiative."),
+                      *OpponentFaction);
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
                       : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
@@ -774,6 +803,13 @@ void AEchoesHUD::DrawMissionBriefing(
         bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
                       : FLinearColor(0.55f, 0.64f, 0.72f);
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const FString LocalFaction = EchoesController->GetLocalFactionLabel();
+    const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
+    const bool bLocalKharuun =
+        LocalFaction == TEXT("KHARUUN ASSEMBLIES");
+    const FString FactionSystems = bLocalKharuun
+        ? TEXT("Kharuun systems: [-] Waystone  |  Shift+[ / ] warform  |  Shift+; Cairnback cover")
+        : TEXT("Meridian systems: [Backslash] Bulwark deployment  |  [=] Relay supply");
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f), 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
     DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
@@ -782,28 +818,34 @@ void AEchoesHUD::DrawMissionBriefing(
 
     DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f * ContentScale,
              SmallFont, 1.55f * TextScale, false);
-    DrawText(TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  MERIDIAN COMPACT"),
+    DrawText(FString::Printf(
+                 TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
+                 *LocalFaction),
              Muted, TextLeft, Top + 72.0f * ContentScale, SmallFont, 0.90f * TextScale, false);
 
     DrawText(TEXT("SITUATION"), Accent, TextLeft, Top + 122.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
-    DrawText(TEXT("Kharuun forces hold the eastern approach. Every protocol changes what survives."),
+    DrawText(FString::Printf(
+                 TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
+                 *OpponentFaction),
              Body, TextLeft, Top + 172.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
     DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
-    DrawText(TEXT("02  Destroy the Kharuun Command Core without losing your own."),
+    DrawText(FString::Printf(
+                 TEXT("02  Destroy the %s Command Core without losing your own."),
+                 *OpponentFaction),
              Body, TextLeft, Top + 273.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
     DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
-    DrawText(TEXT("Select with LMB or drag. Issue context orders with RMB. WASD and screen edge move the camera."),
+    DrawText(FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
     DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f * ContentScale,
@@ -813,9 +855,9 @@ void AEchoesHUD::DrawMissionBriefing(
 
     DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
              PanelWidth - 84.0f, 42.0f);
-    DrawText(TEXT("PRESS ENTER TO DEPLOY"),
+    DrawText(TEXT("TAB CHANGES FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
-             Left + PanelWidth * 0.5f - 105.0f * TextScale,
+             Left + PanelWidth * 0.5f - 180.0f * TextScale,
              Top + PanelHeight - 64.0f,
              SmallFont,
              1.05f * TextScale,

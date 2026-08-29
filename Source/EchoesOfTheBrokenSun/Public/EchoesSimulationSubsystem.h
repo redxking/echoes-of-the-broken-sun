@@ -58,6 +58,11 @@ public:
     /** Recreates the bounded match from its deterministic initial state. */
     bool RestartPrototypeScenario();
 
+    /** Rebuilds the undeployed operation for one of the two playable factions. */
+    bool SelectLocalFaction(
+        echoes::sim::Faction NewFaction,
+        FString& OutFeedback);
+
     /** Atomically writes a validated deterministic snapshot and retains one backup. */
     bool QuickSaveScenario(FString& OutFeedback) const;
 
@@ -111,6 +116,18 @@ public:
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
     [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
+    [[nodiscard]] echoes::sim::Faction GetLocalFaction() const
+    {
+        return bStressScenario
+                   ? echoes::sim::Faction::MeridianCompact
+                   : LocalFaction;
+    }
+    [[nodiscard]] echoes::sim::Faction GetOpponentFaction() const
+    {
+        return GetLocalFaction() == echoes::sim::Faction::MeridianCompact
+                   ? echoes::sim::Faction::KharuunAssemblies
+                   : echoes::sim::Faction::MeridianCompact;
+    }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;
 
@@ -161,4 +178,6 @@ private:
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
+    echoes::sim::Faction LocalFaction =
+        echoes::sim::Faction::MeridianCompact;
 };

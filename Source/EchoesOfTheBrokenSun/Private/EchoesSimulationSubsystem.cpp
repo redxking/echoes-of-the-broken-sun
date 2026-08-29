@@ -30,6 +30,13 @@ using echoes::sim::ResourcePool;
 using echoes::sim::Terrain;
 using echoes::sim::Vec2;
 
+[[nodiscard]] const TCHAR* FactionStableName(Faction Value)
+{
+    return Value == Faction::KharuunAssemblies
+               ? TEXT("KharuunAssemblies")
+               : TEXT("MeridianCompact");
+}
+
 [[nodiscard]] bool IsGlassScarCrossing(int32 TileX)
 {
     const bool bWesternCavern = TileX >= 12 && TileX <= 15;
@@ -76,6 +83,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiVibrationResponse = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
+    LocalFaction = Faction::MeridianCompact;
     FogView.Reset();
     TerrainView.Reset();
 }
@@ -181,13 +189,19 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    const Faction ScenarioLocalFaction =
+        bUseStressScenario ? Faction::MeridianCompact : LocalFaction;
+    const Faction ScenarioOpponentFaction =
+        ScenarioLocalFaction == Faction::MeridianCompact
+            ? Faction::KharuunAssemblies
+            : Faction::MeridianCompact;
     if (!Simulation->AddPlayer(
             LocalPlayerId,
-            Faction::MeridianCompact,
+            ScenarioLocalFaction,
             ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
-            Faction::KharuunAssemblies,
+            ScenarioOpponentFaction,
             ResourcePool{500, 30}) ||
         (bUseStressScenario &&
          (!Simulation->AddPlayer(
@@ -265,32 +279,41 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
     else
     {
-        // Meridian Compact: the player-controlled force in the southwest.
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::CommandCore, 10, 10);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Barracks, 14, 10);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Dropoff, 6, 17);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 8, 13);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 11, 14);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Worker, 14, 12);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 8, 8);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 12, 7);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::Soldier, 16, 10);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::HeavyUnit, 7, 6);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::ScoutUnit, 15, 6);
-        SpawnUnit(LocalPlayerId, Faction::MeridianCompact, EntityType::UtilityStructure, 6, 11);
-
-        // Kharuun Assemblies: deterministic prototype opposition in the northeast.
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Barracks, 50, 54);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Dropoff, 58, 48);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 51, 53);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 54, 50);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 50, 57);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Soldier, 54, 58);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::HeavyUnit, 57, 58);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::ScoutUnit, 49, 58);
-        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::UtilityStructure, 58, 53);
+        const auto SpawnForce = [&SpawnUnit](
+                                    uint8 Owner,
+                                    Faction ForceFaction,
+                                    bool bSouthwest)
+        {
+            if (bSouthwest)
+            {
+                SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 10, 10);
+                SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 14, 10);
+                SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 6, 17);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 13);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 14);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 12);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 8, 8);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 12, 7);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 16, 10);
+                SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 7, 6);
+                SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 15, 6);
+                SpawnUnit(Owner, ForceFaction, EntityType::UtilityStructure, 6, 11);
+                return;
+            }
+            SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 54, 54);
+            SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 50, 54);
+            SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 58, 48);
+            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 51, 53);
+            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 54, 50);
+            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 57, 52);
+            SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 50, 57);
+            SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 54, 58);
+            SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 57, 58);
+            SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 49, 58);
+            SpawnUnit(Owner, ForceFaction, EntityType::UtilityStructure, 58, 53);
+        };
+        SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
+        SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
 
         const TArray<FIntPoint> MatterNodeTiles = {
             {16, 16}, {21, 13}, {25, 28}, {33, 22},
@@ -411,6 +434,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         static_cast<unsigned long long>(Simulation->Config().randomSeed));
     if (!bStressScenario)
     {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_FACTION_SCENARIO_READY] local=%s opposition=%s selectable=true"),
+            FactionStableName(ScenarioLocalFaction),
+            FactionStableName(ScenarioOpponentFaction));
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -482,6 +511,72 @@ bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_MATCH_RESTART_FAILED]"));
     }
     return bRestarted;
+}
+
+bool UEchoesSimulationSubsystem::SelectLocalFaction(
+    echoes::sim::Faction NewFaction,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (NewFaction != Faction::MeridianCompact &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_INVALID] That force is not playable in Glass Scar.");
+        return false;
+    }
+    if (bStressScenario)
+    {
+        OutFeedback = TEXT("[FACTION_STRESS_LOCKED] The scale fixture has fixed teams.");
+        return false;
+    }
+    if (NewFaction == LocalFaction)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("FACTION: %s already selected."),
+            FactionStableName(LocalFaction));
+        return true;
+    }
+
+    const Faction PreviousFaction = LocalFaction;
+    const bool bHadScenario = bScenarioReady && Simulation.IsValid();
+    const bool bWasPaused = bSimulationPaused;
+    if (!bHadScenario)
+    {
+        LocalFaction = NewFaction;
+        OutFeedback = FString::Printf(
+            TEXT("FACTION SELECTED: %s."),
+            FactionStableName(LocalFaction));
+        return true;
+    }
+
+    StopPrototypeScenario();
+    LocalFaction = NewFaction;
+    if (StartScenario(false))
+    {
+        SetScenarioPaused(bWasPaused);
+        OutFeedback = FString::Printf(
+            TEXT("FACTION SELECTED: %s. Glass Scar reset for deployment."),
+            FactionStableName(LocalFaction));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_FACTION_SELECTED] local=%s scenarioReset=true paused=%s"),
+            FactionStableName(LocalFaction),
+            bWasPaused ? TEXT("true") : TEXT("false"));
+        return true;
+    }
+
+    StopPrototypeScenario();
+    LocalFaction = PreviousFaction;
+    const bool bRollbackSucceeded = StartScenario(false);
+    if (bRollbackSucceeded)
+    {
+        SetScenarioPaused(bWasPaused);
+    }
+    OutFeedback = bRollbackSucceeded
+                      ? TEXT("[FACTION_REBUILD_FAILED] The prior faction was restored.")
+                      : TEXT("[FACTION_ROLLBACK_FAILED] The operation could not be restored.");
+    return false;
 }
 
 FString UEchoesSimulationSubsystem::GetQuickSavePath()
@@ -597,7 +692,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
     FString SelectedPath;
     FString PrimaryFailure;
-    const auto TryLoad = [&LoadedSimulation](
+    const auto TryLoad = [this, &LoadedSimulation](
                              const FString& CandidatePath,
                              FString& OutFailure)
     {
@@ -624,7 +719,9 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
             Config.randomSeed != PrototypeSeed ||
-            !Candidate->NextCommandSequence(LocalPlayerId).has_value())
+            !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
+            Candidate->FindPlayer(LocalPlayerId) == nullptr ||
+            Candidate->FindPlayer(LocalPlayerId)->faction != LocalFaction)
         {
             OutFailure = TEXT("snapshot is not a compatible Glass Scar scenario");
             return false;
@@ -1188,7 +1285,7 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     }
     if (Actor->owner != LocalPlayerId)
     {
-        OutFeedback = TEXT("[ACTOR_NOT_OWNED] Only Meridian units accept player orders.");
+        OutFeedback = TEXT("[ACTOR_NOT_OWNED] Only locally owned units accept player orders.");
         return false;
     }
 
@@ -1419,7 +1516,7 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             if (Target == nullptr || Target->owner != LocalPlayerId ||
                 Target->id == Actor.id)
             {
-                OutFeedback = TEXT("[GUARD_TARGET_INVALID] Guard requires a different live Meridian entity.");
+                OutFeedback = TEXT("[GUARD_TARGET_INVALID] Guard requires a different live owned entity.");
                 return false;
             }
             return true;

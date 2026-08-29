@@ -90,6 +90,57 @@ void AEchoesGameMode::BeginPlay()
 
     const bool bStressScenario =
         FParse::Param(FCommandLine::Get(), TEXT("EchoesStress400"));
+    FString RequestedFaction;
+    if (!bStressScenario &&
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesFaction="),
+            RequestedFaction))
+    {
+        echoes::sim::Faction Requested =
+            echoes::sim::Faction::MeridianCompact;
+        if (RequestedFaction.Equals(
+                TEXT("Kharuun"),
+                ESearchCase::IgnoreCase) ||
+            RequestedFaction.Equals(
+                TEXT("KharuunAssemblies"),
+                ESearchCase::IgnoreCase))
+        {
+            Requested = echoes::sim::Faction::KharuunAssemblies;
+        }
+        else if (!RequestedFaction.Equals(
+                     TEXT("Meridian"),
+                     ESearchCase::IgnoreCase) &&
+                 !RequestedFaction.Equals(
+                     TEXT("MeridianCompact"),
+                     ESearchCase::IgnoreCase))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_FACTION_REQUEST_REJECTED] value=%s"),
+                *RequestedFaction);
+            CleanupPrototypeEnvironment();
+            return;
+        }
+        FString FactionFeedback;
+        if (!Bridge->SelectLocalFaction(Requested, FactionFeedback))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_FACTION_REQUEST_REJECTED] value=%s detail=%s"),
+                *RequestedFaction,
+                *FactionFeedback);
+            CleanupPrototypeEnvironment();
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_FACTION_REQUESTED] value=%s accepted=true"),
+            *RequestedFaction);
+    }
     const bool bSimulationReady = bStressScenario
                                       ? Bridge->StartStressScenario()
                                       : Bridge->StartPrototypeScenario();

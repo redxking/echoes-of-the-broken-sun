@@ -5,7 +5,22 @@ project_root="${0:A:h:h}"
 ue_root="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 editor="$ue_root/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
 project="$project_root/EchoesOfTheBrokenSun.uproject"
-log="$project_root/BuildArtifacts/RuntimeSmoke.log"
+local_faction="${ECHOES_LOCAL_FACTION:-Meridian}"
+case "$local_faction" in
+  Meridian|MeridianCompact)
+    faction_args=()
+    expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=MeridianCompact opposition=KharuunAssemblies selectable=true'
+    ;;
+  Kharuun|KharuunAssemblies)
+    faction_args=(-EchoesFaction=Kharuun)
+    expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=KharuunAssemblies opposition=MeridianCompact selectable=true'
+    ;;
+  *)
+    print -u2 "Unsupported ECHOES_LOCAL_FACTION: $local_faction"
+    exit 2
+    ;;
+esac
+log="${ECHOES_RUNTIME_LOG:-$project_root/BuildArtifacts/RuntimeSmoke.log}"
 
 if [[ ! -x "$editor" ]]; then
   print -u2 "Unreal Editor is not available at: $editor"
@@ -17,6 +32,7 @@ mkdir -p "$project_root/BuildArtifacts"
 
 "$editor" "$project" /Engine/Maps/Entry \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
+  "${faction_args[@]}" \
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
@@ -24,6 +40,7 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=e34fbbcac7c9de29a8a587ee09f39f99c55f3c7cf1379abcaafaa663b9d04aa4 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
+   ! /usr/bin/grep -q "$expected_faction_marker" "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_POWERED_AEGIS_READY\] powered=1 publicState=true networkCounterplay=true' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
@@ -40,5 +57,5 @@ if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[
   exit 4
 fi
 
-print "Runtime bootstrap passed: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, adaptive visible-terrain AI expansion, 20 Hz simulation, and first fixed tick initialized."
+print "Runtime bootstrap passed for $local_faction: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, adaptive visible-terrain AI expansion, 20 Hz simulation, and first fixed tick initialized."
 print "Evidence log: $log"
