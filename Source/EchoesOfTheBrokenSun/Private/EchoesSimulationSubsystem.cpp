@@ -4,6 +4,7 @@
 #include "EchoesFogView.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesTerrainView.h"
 #include "Engine/World.h"
 
 namespace
@@ -19,7 +20,36 @@ using echoes::sim::EntityType;
 using echoes::sim::Faction;
 using echoes::sim::FutureWellChoice;
 using echoes::sim::ResourcePool;
+using echoes::sim::Terrain;
 using echoes::sim::Vec2;
+
+[[nodiscard]] bool IsGlassScarCrossing(int32 TileX)
+{
+    const bool bWesternCavern = TileX >= 12 && TileX <= 15;
+    const bool bFutureWellSpan = TileX >= 29 && TileX <= 35;
+    const bool bEasternCavern = TileX >= 48 && TileX <= 51;
+    return bWesternCavern || bFutureWellSpan || bEasternCavern;
+}
+
+[[nodiscard]] int32 ConfigureGlassScar(echoes::sim::Simulation& Simulation)
+{
+    int32 BlockedTiles = 0;
+    for (int32 TileY = 30; TileY <= 34; ++TileY)
+    {
+        for (int32 TileX = 8; TileX <= 55; ++TileX)
+        {
+            if (IsGlassScarCrossing(TileX))
+            {
+                continue;
+            }
+            if (Simulation.SetTerrainTile(TileX, TileY, Terrain::Blocked))
+            {
+                ++BlockedTiles;
+            }
+        }
+    }
+    return BlockedTiles;
+}
 }
 
 void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -33,6 +63,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
+    TerrainView.Reset();
 }
 
 void UEchoesSimulationSubsystem::Deinitialize()
@@ -73,6 +104,17 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
     Config.randomSeed = PrototypeSeed;
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
+    const int32 GlassScarBlockedTiles = ConfigureGlassScar(*Simulation);
+    if (GlassScarBlockedTiles != 165)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_GLASS_SCAR_INIT_FAILED] blocked=%d expected=165"),
+            GlassScarBlockedTiles);
+        Simulation.Reset();
+        return false;
+    }
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             Faction::MeridianCompact,
@@ -154,7 +196,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
     bLoggedFirstTick = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
-    if (!SpawnFogView() || !SyncEntityViews(true))
+    if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
             LogEchoes,
@@ -162,11 +204,18 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
             TEXT("[ECHOES_SIM_VIEW_INIT_FAILED] Initial visible entity views could not be created."));
         DestroyEntityViews();
         DestroyFogView();
+        DestroyTerrainView();
         Simulation.Reset();
         bScenarioReady = false;
         return false;
     }
     bScenarioReady = true;
+
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_GLASS_SCAR_READY] blocked=%d crossings=3 centralWell=(32,32)"),
+        GlassScarBlockedTiles);
 
     UE_LOG(
         LogEchoes,
@@ -183,6 +232,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
 {
     DestroyEntityViews();
     DestroyFogView();
+    DestroyTerrainView();
     Simulation.Reset();
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
@@ -267,7 +317,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
     if (TicksThisFrame > 0)
     {
-        if (!SyncEntityViews(false) || !SyncFogView())
+        if (!SyncEntityViews(false) || !SyncTerrainView() || !SyncFogView())
         {
             UE_LOG(
                 LogEchoes,
@@ -757,6 +807,51 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
     return true;
 }
 
+bool UEchoesSimulationSubsystem::SpawnTerrainView()
+{
+    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    {
+        return false;
+    }
+    DestroyTerrainView();
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesTerrainView* NewTerrainView = GetWorld()->SpawnActor<AEchoesTerrainView>(
+        AEchoesTerrainView::StaticClass(),
+        FVector::ZeroVector,
+        FRotator::ZeroRotator,
+        SpawnParameters);
+    if (NewTerrainView == nullptr ||
+        !NewTerrainView->InitializeTerrain(*Simulation, TileWorldSize))
+    {
+        if (NewTerrainView != nullptr)
+        {
+            NewTerrainView->Destroy();
+        }
+        UE_LOG(LogEchoes, Error, TEXT("[ECHOES_TERRAIN_VIEW_INIT_FAILED]"));
+        return false;
+    }
+    TerrainView = NewTerrainView;
+    return true;
+}
+
+bool UEchoesSimulationSubsystem::SyncTerrainView()
+{
+    AEchoesTerrainView* View = TerrainView.Get();
+    return Simulation.IsValid() && View != nullptr &&
+           View->SyncTerrain(*Simulation);
+}
+
+void UEchoesSimulationSubsystem::DestroyTerrainView()
+{
+    if (AEchoesTerrainView* View = TerrainView.Get())
+    {
+        View->Destroy();
+    }
+    TerrainView.Reset();
+}
+
 bool UEchoesSimulationSubsystem::SyncFogView()
 {
     AEchoesFogView* View = FogView.Get();
@@ -804,6 +899,11 @@ AEchoesEntityView* UEchoesSimulationSubsystem::FindEntityView(uint32 EntityId) c
 AEchoesFogView* UEchoesSimulationSubsystem::GetFogView() const
 {
     return FogView.Get();
+}
+
+AEchoesTerrainView* UEchoesSimulationSubsystem::GetTerrainView() const
+{
+    return TerrainView.Get();
 }
 
 FVector UEchoesSimulationSubsystem::SimToWorld(const echoes::sim::Vec2& Position) const

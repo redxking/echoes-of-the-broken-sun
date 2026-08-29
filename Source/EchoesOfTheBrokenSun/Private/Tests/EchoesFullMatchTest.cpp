@@ -254,6 +254,8 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             StrikeForce.Add(Entity.id);
         }
     }
+    const echoes::sim::Vec2 RallyPoint =
+        echoes::sim::Vec2::FromTiles(27, 27);
     for (const echoes::sim::EntityId Soldier : StrikeForce)
     {
         if (!QueueCommand(
@@ -261,7 +263,7 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
                 echoes::sim::CommandType::Move,
                 Soldier,
                 0,
-                echoes::sim::Vec2::FromTiles(32, 32),
+                RallyPoint,
                 echoes::sim::FutureWellChoice::Dormant))
         {
             Bridge->StopPrototypeScenario();
@@ -270,13 +272,13 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         }
     }
     const bool bStrikeForceRallied = TickUntil(
-        [Bridge, &StrikeForce]()
+        [Bridge, &StrikeForce, RallyPoint]()
         {
             for (const echoes::sim::EntityId Soldier : StrikeForce)
             {
                 const echoes::sim::Entity* Entity = Bridge->FindEntity(Soldier);
                 if (Entity == nullptr ||
-                    Entity->position != echoes::sim::Vec2::FromTiles(32, 32))
+                    Entity->position != RallyPoint)
                 {
                     return false;
                 }
@@ -288,13 +290,28 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             TEXT("The seven-soldier strike force rallies before entering hostile territory"),
             bStrikeForceRallied))
     {
+        for (const echoes::sim::EntityId Soldier : StrikeForce)
+        {
+            const echoes::sim::Entity* Unit = Bridge->FindEntity(Soldier);
+            AddInfo(Unit != nullptr
+                        ? FString::Printf(
+                              TEXT("Unrallied unit %u: tile=(%d,%d) raw=(%d,%d) hp=%d order=%u"),
+                              Unit->id,
+                              Unit->position.x.FloorToInt(),
+                              Unit->position.y.FloorToInt(),
+                              Unit->position.x.Raw(),
+                              Unit->position.y.Raw(),
+                              Unit->hitPoints,
+                              static_cast<uint8>(Unit->order.type))
+                        : FString::Printf(TEXT("Unrallied unit %u was destroyed"), Soldier));
+        }
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
 
     const echoes::sim::Vec2 EnemyApproach =
-        echoes::sim::Vec2::FromTiles(50, 50);
+        echoes::sim::Vec2::FromTiles(52, 52);
     bool bCommandQueueFailed = false;
     for (const echoes::sim::EntityId Soldier : StrikeForce)
     {

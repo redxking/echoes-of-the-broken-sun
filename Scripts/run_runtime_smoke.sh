@@ -21,6 +21,7 @@ mkdir -p "$project_root/BuildArtifacts"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_BOOT_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_FIRST_TICK\]' "$log"; then
@@ -28,10 +29,10 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
   exit 3
 fi
 
-if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|\[ECHOES_FOG_INIT_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
+if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|\[ECHOES_FOG_INIT_FAILED\]|\[ECHOES_TERRAIN_VIEW_INIT_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
   print -u2 "Runtime smoke reported a boot or fatal failure. Inspect: $log"
   exit 4
 fi
 
-print "Runtime bootstrap passed: environment, 4,096-tile fog/shroud, 20 Hz simulation, and first fixed tick initialized."
+print "Runtime bootstrap passed: environment, Glass Scar terrain, 4,096-tile fog/shroud, 20 Hz simulation, and first fixed tick initialized."
 print "Evidence log: $log"

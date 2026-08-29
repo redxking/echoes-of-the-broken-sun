@@ -10,6 +10,7 @@
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTerrainView.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerInput.h"
 #include "InputCoreTypes.h"
@@ -30,6 +31,7 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Echoes camera pawn is registered"), AEchoesRTSCameraPawn::StaticClass());
     TestNotNull(TEXT("Echoes HUD is registered"), AEchoesHUD::StaticClass());
     TestNotNull(TEXT("Echoes fog view is registered"), AEchoesFogView::StaticClass());
+    TestNotNull(TEXT("Echoes terrain view is registered"), AEchoesTerrainView::StaticClass());
     TestNotNull(TEXT("Echoes simulation subsystem is registered"), UEchoesSimulationSubsystem::StaticClass());
 
     const UInputSettings* InputSettings = GetDefault<UInputSettings>();
