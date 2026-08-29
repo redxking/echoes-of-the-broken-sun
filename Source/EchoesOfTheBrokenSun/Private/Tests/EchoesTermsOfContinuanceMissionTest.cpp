@@ -8,6 +8,7 @@
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
@@ -110,6 +111,31 @@ FEchoesCampaignDecisionRecord MakeContinuanceRecord(
     }
     return Record;
 }
+
+FString ContinuanceQuickSavePath(
+    const FEchoesCampaignProgress& Progress)
+{
+    TArray<uint8> LedgerBytes;
+    FString Error;
+    if (!FEchoesCampaignProgressStore::Encode(
+            Progress,
+            LedgerBytes,
+            Error) ||
+        LedgerBytes.IsEmpty())
+    {
+        return {};
+    }
+    const uint32 LedgerFingerprint =
+        FCrc::MemCrc32(
+            LedgerBytes.GetData(),
+            LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
+    return FPaths::Combine(
+        FPaths::ProjectSavedDir(),
+        TEXT("SaveGames"),
+        FString::Printf(
+            TEXT("EchoesQuickSaveTermsOfContinuance-%08X.bin"),
+            LedgerFingerprint));
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -182,21 +208,22 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     TestTrue(TEXT("Destroying the opposing Core cannot substitute for continuance"),
              FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts) ==
                  EEchoesTermsOfContinuancePhase::Failed);
+    Facts.bSkirmishStillOngoing = true;
+    Facts.bContinuanceWindowCompromised = true;
+    TestTrue(TEXT("A broken synchronized window fails the accord"),
+             FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts) ==
+                 EEchoesTermsOfContinuancePhase::Failed);
+    Facts.bContinuanceWindowCompromised = false;
+    Facts.bWitnessExtractionStartedEarly = true;
+    TestTrue(TEXT("Starting extraction before the window closes fails the accord"),
+             FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts) ==
+                 EEchoesTermsOfContinuancePhase::Failed);
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
-    const FString QuickSavePath = FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
-        TEXT("EchoesQuickSaveTermsOfContinuance.bin"));
     FPreservedContinuanceFile PreservedPrimary(CampaignPath);
     FPreservedContinuanceFile PreservedBackup(CampaignPath + TEXT(".bak"));
     FPreservedContinuanceFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
-    FPreservedContinuanceFile PreservedQuickSave(QuickSavePath);
-    FPreservedContinuanceFile PreservedQuickSaveBackup(
-        QuickSavePath + TEXT(".bak"));
-    FPreservedContinuanceFile PreservedQuickSaveTemporary(
-        QuickSavePath + TEXT(".tmp"));
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
@@ -282,11 +309,262 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                      EEchoesCampaignMissionId::TheUnburiedRoad,
                      echoes::sim::FutureWellChoice::Preserve),
                  Feedback) == EEchoesCampaignCommitStatus::Added);
+
+    FEchoesCampaignProgress AlternateProgress;
+    for (const EEchoesCampaignMissionId Mission : {
+             EEchoesCampaignMissionId::WhatTheLedgerKeeps,
+             EEchoesCampaignMissionId::SevenAccountsOfRain,
+             EEchoesCampaignMissionId::ACityOnReserve,
+             EEchoesCampaignMissionId::TheUnburiedRoad})
+    {
+        TestTrue(TEXT("The alternate fixture accepts a consistent Harvest record"),
+                 AlternateProgress.AppendDecision(
+                     MakeContinuanceRecord(
+                         Mission,
+                         echoes::sim::FutureWellChoice::Harvest),
+                     Feedback) == EEchoesCampaignCommitStatus::Added);
+    }
+    const FString QuickSavePath =
+        ContinuanceQuickSavePath(SeedProgress);
+    const FString AlternateQuickSavePath =
+        ContinuanceQuickSavePath(AlternateProgress);
+    TestTrue(TEXT("Mission-five save namespaces bind to the exact prerequisite ledger"),
+             !QuickSavePath.IsEmpty() &&
+                 !AlternateQuickSavePath.IsEmpty() &&
+                 QuickSavePath != AlternateQuickSavePath);
+    FPreservedContinuanceFile PreservedQuickSave(QuickSavePath);
+    FPreservedContinuanceFile PreservedQuickSaveBackup(
+        QuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedQuickSaveTemporary(
+        QuickSavePath + TEXT(".tmp"));
+    FPreservedContinuanceFile PreservedAlternateQuickSave(
+        AlternateQuickSavePath);
+    FPreservedContinuanceFile PreservedAlternateQuickSaveBackup(
+        AlternateQuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedAlternateQuickSaveTemporary(
+        AlternateQuickSavePath + TEXT(".tmp"));
+    for (const FString& Path : {
+             QuickSavePath,
+             QuickSavePath + TEXT(".bak"),
+             QuickSavePath + TEXT(".tmp"),
+             AlternateQuickSavePath,
+             AlternateQuickSavePath + TEXT(".bak"),
+             AlternateQuickSavePath + TEXT(".tmp")})
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+    }
     TestTrue(TEXT("The four-record ledger is stored"),
              FEchoesCampaignProgressStore::SaveAtomic(
                  CampaignPath,
                  SeedProgress,
                  Feedback));
+
+    {
+        FTestWorldWrapper DeadlineWorld;
+        if (!DeadlineWorld.CreateTestWorld(EWorldType::Game))
+        {
+            DeadlineWorld.ForwardErrorMessages(this);
+            AddError(TEXT("Could not create the synchronization-deadline world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* DeadlineBridge =
+            DeadlineWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(TEXT("The deadline world owns a simulation subsystem"),
+                         DeadlineBridge) ||
+            !TestTrue(TEXT("The deadline world selects mission five"),
+                      DeadlineBridge->SelectOperationMode(
+                          EEchoesOperationMode::CampaignTermsOfContinuance,
+                          Feedback)) ||
+            !TestTrue(TEXT("The deadline world starts mission five"),
+                      DeadlineBridge->StartPrototypeScenario()))
+        {
+            DeadlineWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        DeadlineBridge->SetScenarioPaused(false);
+        for (int32 TickIndex = 0;
+             TickIndex < 360 &&
+             DeadlineBridge->GetTermsOfContinuancePhase() !=
+                 EEchoesTermsOfContinuancePhase::Failed;
+             ++TickIndex)
+        {
+            DeadlineBridge->Tick(0.05f);
+        }
+        TestTrue(TEXT("Missing the synchronization deadline fails instead of skipping the hold"),
+                 DeadlineBridge->GetSimulation()->CurrentTick() >=
+                         PreservePlan.ContinuanceWindowStartTick &&
+                     DeadlineBridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::Failed);
+        DeadlineBridge->StopPrototypeScenario();
+        DeadlineWorld.ForwardErrorMessages(this);
+    }
+
+    {
+        FTestWorldWrapper EarlyExtractionWorld;
+        if (!EarlyExtractionWorld.CreateTestWorld(EWorldType::Game))
+        {
+            EarlyExtractionWorld.ForwardErrorMessages(this);
+            AddError(TEXT("Could not create the early-extraction world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* EarlyBridge =
+            EarlyExtractionWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(TEXT("The early-extraction world owns a simulation subsystem"),
+                         EarlyBridge) ||
+            !TestTrue(TEXT("The early-extraction world selects mission five"),
+                      EarlyBridge->SelectOperationMode(
+                          EEchoesOperationMode::CampaignTermsOfContinuance,
+                          Feedback)) ||
+            !TestTrue(TEXT("The early-extraction world starts mission five"),
+                      EarlyBridge->StartPrototypeScenario()))
+        {
+            EarlyExtractionWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const FEchoesObjectiveSnapshot EarlySnapshot =
+            EarlyBridge->GetLocalObjectiveSnapshot();
+        TestTrue(TEXT("An early witness accepts the attempted extraction order"),
+                 EarlyBridge->IssueCommand(
+                     echoes::sim::CommandType::Move,
+                     EarlySnapshot.MeridianContinuanceWitnessId,
+                     0,
+                     EarlyBridge->SimToWorld(
+                         PreservePlan.WitnessExtractionSite),
+                     echoes::sim::FutureWellChoice::Dormant,
+                     Feedback));
+        EarlyBridge->SetScenarioPaused(false);
+        for (int32 TickIndex = 0;
+             TickIndex < 20 &&
+             EarlyBridge->GetTermsOfContinuancePhase() !=
+                 EEchoesTermsOfContinuancePhase::Failed;
+             ++TickIndex)
+        {
+            EarlyBridge->Tick(0.05f);
+        }
+        TestTrue(TEXT("Extraction ordered before the fixed window closes fails immediately"),
+                 EarlyBridge->GetSimulation()->CurrentTick() <
+                         PreservePlan.ContinuanceWindowEndTick &&
+                     EarlyBridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::Failed);
+        EarlyBridge->StopPrototypeScenario();
+        EarlyExtractionWorld.ForwardErrorMessages(this);
+    }
+
+    {
+        FTestWorldWrapper InterruptedWorld;
+        if (!InterruptedWorld.CreateTestWorld(EWorldType::Game))
+        {
+            InterruptedWorld.ForwardErrorMessages(this);
+            AddError(TEXT("Could not create the interrupted-window world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* InterruptedBridge =
+            InterruptedWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(TEXT("The interrupted-window world owns a simulation subsystem"),
+                         InterruptedBridge) ||
+            !TestTrue(TEXT("The interrupted-window world selects mission five"),
+                      InterruptedBridge->SelectOperationMode(
+                          EEchoesOperationMode::CampaignTermsOfContinuance,
+                          Feedback)) ||
+            !TestTrue(TEXT("The interrupted-window world starts mission five"),
+                      InterruptedBridge->StartPrototypeScenario()))
+        {
+            InterruptedWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        echoes::sim::EntityId InterruptedWorkerId = 0;
+        for (const echoes::sim::Entity& Entity :
+             InterruptedBridge->GetSimulation()->Entities())
+        {
+            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.type == echoes::sim::EntityType::Worker)
+            {
+                InterruptedWorkerId = Entity.id;
+                break;
+            }
+        }
+        InterruptedBridge->SetScenarioPaused(false);
+        InterruptedBridge->Tick(0.05f);
+        TestTrue(TEXT("The interrupted-window worker accepts the missing link"),
+                 InterruptedWorkerId != 0 &&
+                     InterruptedBridge->IssueBuildCommand(
+                         InterruptedWorkerId,
+                         echoes::sim::EntityType::Dropoff,
+                         InterruptedBridge->SimToWorld(
+                             echoes::sim::Vec2::FromTiles(29, 28)),
+                         Feedback));
+        for (int32 TickIndex = 0;
+             TickIndex < 700 &&
+             (InterruptedBridge->GetTermsOfContinuancePhase() !=
+                  EEchoesTermsOfContinuancePhase::HoldContinuanceWindow ||
+              InterruptedBridge->GetSimulation()->CurrentTick() <
+                  PreservePlan.ContinuanceWindowStartTick + 20);
+             ++TickIndex)
+        {
+            InterruptedBridge->Tick(0.05f);
+        }
+        TestTrue(TEXT("The interrupted fixture reaches the active synchronized window"),
+                 InterruptedBridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::HoldContinuanceWindow &&
+                     InterruptedBridge->GetSimulation()->CurrentTick() >=
+                         PreservePlan.ContinuanceWindowStartTick + 20);
+        echoes::sim::Simulation* InterruptedSimulation =
+            const_cast<echoes::sim::Simulation*>(
+                InterruptedBridge->GetSimulation());
+        const FEchoesObjectiveSnapshot InterruptedSnapshot =
+            InterruptedBridge->GetLocalObjectiveSnapshot();
+        uint64 OpponentSequence =
+            InterruptedSimulation->NextCommandSequence(
+                UEchoesSimulationSubsystem::OpponentPlayerId)
+                .value_or(0);
+        int32 QueuedAttackers = 0;
+        for (int32 Index = 0; Index < 20; ++Index)
+        {
+            const echoes::sim::EntityId AttackerId =
+                InterruptedSimulation->SpawnEntity(
+                    UEchoesSimulationSubsystem::OpponentPlayerId,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    echoes::sim::EntityType::HeavyUnit,
+                    echoes::sim::Vec2::FromTiles(
+                        35 + Index % 5,
+                        36 + Index / 5));
+            if (AttackerId == 0)
+            {
+                continue;
+            }
+            echoes::sim::Command Attack;
+            Attack.executeTick = InterruptedSimulation->CurrentTick() + 1;
+            Attack.player = UEchoesSimulationSubsystem::OpponentPlayerId;
+            Attack.sequence = OpponentSequence++;
+            Attack.type = echoes::sim::CommandType::Attack;
+            Attack.actor = AttackerId;
+            Attack.target = InterruptedSnapshot.KharuunContinuanceSpineId;
+            if (InterruptedSimulation->QueueCommand(Attack))
+            {
+                ++QueuedAttackers;
+            }
+        }
+        TestTrue(TEXT("The interrupted fixture queues bounded hostile pressure"),
+                 QueuedAttackers > 0);
+        for (int32 TickIndex = 0;
+             TickIndex < 500 &&
+             InterruptedBridge->GetTermsOfContinuancePhase() !=
+                 EEchoesTermsOfContinuancePhase::Failed;
+             ++TickIndex)
+        {
+            InterruptedSimulation->Step();
+        }
+        TestTrue(TEXT("Losing synchronization during the fixed window fails before extraction"),
+                 InterruptedBridge->GetSimulation()->CurrentTick() <
+                         PreservePlan.ContinuanceWindowEndTick &&
+                     InterruptedBridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::Failed);
+        InterruptedBridge->StopPrototypeScenario();
+        InterruptedWorld.ForwardErrorMessages(this);
+    }
 
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
@@ -331,6 +609,24 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  Snapshot.KharuunContinuanceSpineId != 0 &&
                  Snapshot.MeridianContinuanceWitnessId != 0 &&
                  Snapshot.KharuunContinuanceWitnessId != 0);
+    bool bAllTreatyEntitiesAreMeridianProxies = true;
+    for (const echoes::sim::EntityId TreatyEntityId : {
+             Snapshot.MeridianContinuanceRelayId,
+             Snapshot.KharuunContinuanceSpineId,
+             Snapshot.MeridianContinuanceWitnessId,
+             Snapshot.KharuunContinuanceWitnessId})
+    {
+        const echoes::sim::Entity* TreatyEntity =
+            Bridge->FindEntity(TreatyEntityId);
+        bAllTreatyEntitiesAreMeridianProxies &=
+            TreatyEntity != nullptr &&
+            TreatyEntity->owner ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            TreatyEntity->faction ==
+                echoes::sim::Faction::MeridianCompact;
+    }
+    TestTrue(TEXT("Treaty entities are explicit Meridian-authoritative proxies"),
+             bAllTreatyEntitiesAreMeridianProxies);
     TestTrue(TEXT("The live operation begins by synchronizing both networks"),
              Bridge->GetTermsOfContinuancePhase() ==
                  EEchoesTermsOfContinuancePhase::SynchronizeNetworks);
@@ -341,6 +637,57 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
              Bridge->QuickLoadScenario(Feedback) &&
                  Bridge->GetTermsOfContinuancePhase() ==
                      EEchoesTermsOfContinuancePhase::SynchronizeNetworks);
+    TestTrue(TEXT("The alternate campaign ledger is stored for save isolation"),
+             FEchoesCampaignProgressStore::SaveAtomic(
+                 CampaignPath,
+                 AlternateProgress,
+                 Feedback));
+    TArray<uint8> PreserveCheckpointBytes;
+    TestTrue(TEXT("The Preserve checkpoint can seed a hostile cross-ledger probe"),
+             FFileHelper::LoadFileToArray(
+                 PreserveCheckpointBytes,
+                 *QuickSavePath) &&
+                 FFileHelper::SaveArrayToFile(
+                     PreserveCheckpointBytes,
+                     *AlternateQuickSavePath) &&
+                 FFileHelper::SaveArrayToFile(
+                     PreserveCheckpointBytes,
+                     *(AlternateQuickSavePath + TEXT(".bak"))));
+    {
+        FTestWorldWrapper AlternateWorld;
+        if (!AlternateWorld.CreateTestWorld(EWorldType::Game))
+        {
+            AlternateWorld.ForwardErrorMessages(this);
+            AddError(TEXT("Could not create the alternate mission-five world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* AlternateBridge =
+            AlternateWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(TEXT("The alternate world owns a simulation subsystem"),
+                         AlternateBridge) ||
+            !TestTrue(TEXT("The alternate campaign can select mission five"),
+                      AlternateBridge->SelectOperationMode(
+                          EEchoesOperationMode::CampaignTermsOfContinuance,
+                          Feedback)) ||
+            !TestTrue(TEXT("The alternate campaign can start mission five"),
+                      AlternateBridge->StartPrototypeScenario()))
+        {
+            AlternateWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        TestFalse(TEXT("A Preserve checkpoint cannot load into a Harvest ledger"),
+                  AlternateBridge->QuickLoadScenario(Feedback));
+        TestTrue(TEXT("Cross-ledger loading fails closed without a matching namespace"),
+                 Feedback.Contains(TEXT("LOAD_NO_VALID_CHECKPOINT")));
+        AlternateBridge->StopPrototypeScenario();
+        AlternateWorld.ForwardErrorMessages(this);
+    }
+    TestTrue(TEXT("The Preserve campaign ledger is restored after isolation testing"),
+             FEchoesCampaignProgressStore::SaveAtomic(
+                 CampaignPath,
+                 SeedProgress,
+                 Feedback));
 
     echoes::sim::EntityId WorkerId = 0;
     for (const echoes::sim::Entity& Entity :

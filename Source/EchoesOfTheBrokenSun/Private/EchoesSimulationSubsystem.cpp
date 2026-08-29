@@ -10,6 +10,7 @@
 #include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
+#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -1318,7 +1319,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_READY] branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u relay=(%d,%d) spine=(%d,%d) extraction=(%d,%d) holdUntil=%llu apparentAttackers=2 terrainDelta=%d blocked=%d inheritedRecords=4"),
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_READY] branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u relay=(%d,%d) spine=(%d,%d) extraction=(%d,%d) window=(%llu,%llu) pressureProxies=2 proxyAuthority=MeridianCompact pressureFaction=KharuunAssemblies pressureBehavior=genericAdaptive terrainDelta=%d blocked=%d inheritedRecords=4"),
                 Plan.StableName,
                 MeridianContinuanceRelayId,
                 KharuunContinuanceSpineId,
@@ -1330,6 +1331,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Plan.KharuunSpineSite.y.FloorToInt(),
                 Plan.WitnessExtractionSite.x.FloorToInt(),
                 Plan.WitnessExtractionSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    Plan.ContinuanceWindowStartTick),
                 static_cast<unsigned long long>(
                     Plan.ContinuanceWindowEndTick),
                 UnburiedRoadTerrainDelta,
@@ -1506,7 +1509,7 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
             EEchoesOperationMode::CampaignTermsOfContinuance &&
         NewFaction != Faction::MeridianCompact)
     {
-        OutFeedback = TEXT("[FACTION_TERMS_OF_CONTINUANCE_LOCKED] The joint witness detachment deploys under Meridian command authority.");
+        OutFeedback = TEXT("[FACTION_TERMS_OF_CONTINUANCE_LOCKED] Meridian-authoritative treaty proxies are fixed for this prototype mission.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -1649,7 +1652,7 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT(" — Oruun's Kharuun road force is locked for this mission.")
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignTermsOfContinuance
-                ? TEXT(" — the joint Meridian-Kharuun witness detachment is locked for this mission.")
+                ? TEXT(" — Meridian-authoritative treaty proxies are locked for this prototype mission.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1789,10 +1792,29 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
     if (SelectedOperation ==
         EEchoesOperationMode::CampaignTermsOfContinuance)
     {
+        TArray<uint8> LedgerBytes;
+        FString LedgerError;
+        if (FEchoesCampaignProgressStore::Encode(
+                CampaignProgress,
+                LedgerBytes,
+                LedgerError) &&
+            !LedgerBytes.IsEmpty())
+        {
+            const uint32 LedgerFingerprint =
+                FCrc::MemCrc32(
+                    LedgerBytes.GetData(),
+                    LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
+            return FPaths::Combine(
+                FPaths::ProjectSavedDir(),
+                TEXT("SaveGames"),
+                FString::Printf(
+                    TEXT("EchoesQuickSaveTermsOfContinuance-%08X.bin"),
+                    LedgerFingerprint));
+        }
         return FPaths::Combine(
             FPaths::ProjectSavedDir(),
             TEXT("SaveGames"),
-            TEXT("EchoesQuickSaveTermsOfContinuance.bin"));
+            TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -2405,6 +2427,48 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             OutFailure = TEXT("snapshot is not a compatible Glass Scar scenario");
             return false;
         }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance)
+        {
+            const FEchoesTermsOfContinuancePlan Plan =
+                GetTermsOfContinuancePlan();
+            const echoes::sim::Entity* MeridianRelay =
+                Candidate->FindEntity(MeridianContinuanceRelayId);
+            const echoes::sim::Entity* KharuunSpine =
+                Candidate->FindEntity(KharuunContinuanceSpineId);
+            const echoes::sim::Entity* MeridianWitness =
+                Candidate->FindEntity(MeridianContinuanceWitnessId);
+            const echoes::sim::Entity* KharuunWitness =
+                Candidate->FindEntity(KharuunContinuanceWitnessId);
+            const auto IsMeridianProxy = [](const echoes::sim::Entity* Entity,
+                                            echoes::sim::EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction ==
+                           echoes::sim::Faction::MeridianCompact &&
+                       Entity->type == Type;
+            };
+            if (!IsMeridianProxy(
+                    MeridianRelay,
+                    echoes::sim::EntityType::UtilityStructure) ||
+                !IsMeridianProxy(
+                    KharuunSpine,
+                    echoes::sim::EntityType::UtilityStructure) ||
+                !IsMeridianProxy(
+                    MeridianWitness,
+                    echoes::sim::EntityType::ScoutUnit) ||
+                !IsMeridianProxy(
+                    KharuunWitness,
+                    echoes::sim::EntityType::ScoutUnit) ||
+                MeridianRelay->position != Plan.MeridianRelaySite ||
+                KharuunSpine->position != Plan.KharuunSpineSite)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active Terms of Continuance ledger branch");
+                return false;
+            }
+        }
         LoadedSimulation =
             MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
         return true;
@@ -2824,20 +2888,44 @@ UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
         Facts.bMeridianRelayIntact && MeridianRelay->aegisPowered;
     Facts.bKharuunSpineSynchronized =
         Facts.bKharuunSpineIntact && KharuunSpine->aegisPowered;
+    const uint64 CurrentTick = Simulation->CurrentTick();
     Facts.bContinuanceWindowHeld =
-        Simulation->CurrentTick() >= Plan.ContinuanceWindowEndTick;
-    Facts.bMeridianWitnessExtracted =
+        CurrentTick >= Plan.ContinuanceWindowEndTick;
+    Facts.bContinuanceWindowCompromised =
+        CurrentTick >= Plan.ContinuanceWindowStartTick &&
+        (!Facts.bMeridianRelaySynchronized ||
+         !Facts.bKharuunSpineSynchronized);
+    const bool bMeridianWitnessAtExtraction =
         Facts.bMeridianWitnessIntact &&
         IsWithinTiles(
             MeridianWitness->position,
             Plan.WitnessExtractionSite,
             TermsOfContinuanceSiteRadiusTiles);
-    Facts.bKharuunWitnessExtracted =
+    const bool bKharuunWitnessAtExtraction =
         Facts.bKharuunWitnessIntact &&
         IsWithinTiles(
             KharuunWitness->position,
             Plan.WitnessExtractionSite,
             TermsOfContinuanceSiteRadiusTiles);
+    const auto IsEarlyExtractionOrder = [&Plan](
+                                            const echoes::sim::Entity* Witness)
+    {
+        return Witness != nullptr &&
+               Witness->order.type == echoes::sim::OrderType::Move &&
+               IsWithinTiles(
+                   Witness->order.destination,
+                   Plan.WitnessExtractionSite,
+                   TermsOfContinuanceSiteRadiusTiles);
+    };
+    Facts.bWitnessExtractionStartedEarly =
+        CurrentTick < Plan.ContinuanceWindowEndTick &&
+        (bMeridianWitnessAtExtraction || bKharuunWitnessAtExtraction ||
+         IsEarlyExtractionOrder(MeridianWitness) ||
+         IsEarlyExtractionOrder(KharuunWitness));
+    Facts.bMeridianWitnessExtracted =
+        Facts.bContinuanceWindowHeld && bMeridianWitnessAtExtraction;
+    Facts.bKharuunWitnessExtracted =
+        Facts.bContinuanceWindowHeld && bKharuunWitnessAtExtraction;
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
     for (const echoes::sim::Entity& Entity : Simulation->Entities())

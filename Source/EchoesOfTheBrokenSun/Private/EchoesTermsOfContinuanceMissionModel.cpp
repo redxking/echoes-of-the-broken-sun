@@ -10,7 +10,9 @@ FEchoesTermsOfContinuanceMissionModel::DeterminePhase(
     }
     if (!Facts.bLocalCoreIntact || !Facts.bMeridianRelayIntact ||
         !Facts.bKharuunSpineIntact || !Facts.bMeridianWitnessIntact ||
-        !Facts.bKharuunWitnessIntact || !Facts.bSkirmishStillOngoing)
+        !Facts.bKharuunWitnessIntact || !Facts.bSkirmishStillOngoing ||
+        Facts.bContinuanceWindowCompromised ||
+        Facts.bWitnessExtractionStartedEarly)
     {
         return EEchoesTermsOfContinuancePhase::Failed;
     }
@@ -66,6 +68,7 @@ FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
                 Vec2::FromTiles(14, 27),
                 Vec2::FromTiles(14, 39),
                 Vec2::FromTiles(20, 47),
+                300,
                 900,
                 TEXT("iron_clause"),
                 TEXT("IRON CLAUSE")};
@@ -75,6 +78,7 @@ FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
                 Vec2::FromTiles(32, 27),
                 Vec2::FromTiles(32, 39),
                 Vec2::FromTiles(32, 47),
+                300,
                 900,
                 TEXT("witness_clause"),
                 TEXT("WITNESS CLAUSE")};
@@ -84,6 +88,7 @@ FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
                 Vec2::FromTiles(50, 27),
                 Vec2::FromTiles(50, 39),
                 Vec2::FromTiles(44, 47),
+                300,
                 900,
                 TEXT("folded_clause"),
                 TEXT("FOLDED CLAUSE")};

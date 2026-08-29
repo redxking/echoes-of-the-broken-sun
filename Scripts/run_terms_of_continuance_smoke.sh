@@ -32,7 +32,7 @@ required_markers=(
   '\[ECHOES_CAMPAIGN_LEDGER_LOAD\] available=true records=4'
   '\[ECHOES_OPERATION_REQUESTED\] operation=TermsOfContinuance accepted=true'
   '\[ECHOES_FACTION_SCENARIO_READY\] local=MeridianCompact opposition=KharuunAssemblies selectable=true'
-  '\[ECHOES_TERMS_OF_CONTINUANCE_READY\] branch=witness_clause meridianRelay=[1-9][0-9]* kharuunSpine=[1-9][0-9]* meridianWitness=[1-9][0-9]* kharuunWitness=[1-9][0-9]* relay=\(32,27\) spine=\(32,39\) extraction=\(32,47\) holdUntil=900 apparentAttackers=2 terrainDelta=40 blocked=205 inheritedRecords=4'
+  '\[ECHOES_TERMS_OF_CONTINUANCE_READY\] branch=witness_clause meridianRelay=[1-9][0-9]* kharuunSpine=[1-9][0-9]* meridianWitness=[1-9][0-9]* kharuunWitness=[1-9][0-9]* relay=\(32,27\) spine=\(32,39\) extraction=\(32,47\) window=\(300,900\) pressureProxies=2 proxyAuthority=MeridianCompact pressureFaction=KharuunAssemblies pressureBehavior=genericAdaptive terrainDelta=40 blocked=205 inheritedRecords=4'
   '\[ECHOES_BOOT_READY\]'
   '\[ECHOES_SIM_FIRST_TICK\]'
 )
@@ -49,5 +49,5 @@ if /usr/bin/grep -Eq '\[ECHOES_OPERATION_REQUEST_REJECTED\]|\[ECHOES_TERMS_OF_CO
   exit 4
 fi
 
-print "Terms of Continuance runtime passed: four-record Preserve ledger, joint witness detachment, inherited witness clause, apparent attackers, and first fixed tick initialized."
+print "Terms of Continuance runtime passed: four-record Preserve ledger, Meridian-authoritative treaty proxies, inherited witness clause, generic unresolved pressure proxies, and first fixed tick initialized."
 print "Evidence log: $log"

@@ -26,6 +26,8 @@ struct FEchoesTermsOfContinuanceMissionFacts final
     bool bContinuanceWindowHeld = false;
     bool bMeridianWitnessExtracted = false;
     bool bKharuunWitnessExtracted = false;
+    bool bContinuanceWindowCompromised = false;
+    bool bWitnessExtractionStartedEarly = false;
     bool bSkirmishStillOngoing = true;
 };
 
@@ -36,6 +38,7 @@ struct FEchoesTermsOfContinuancePlan final
     echoes::sim::Vec2 MeridianRelaySite;
     echoes::sim::Vec2 KharuunSpineSite;
     echoes::sim::Vec2 WitnessExtractionSite;
+    uint64 ContinuanceWindowStartTick = 300;
     uint64 ContinuanceWindowEndTick = 900;
     const TCHAR* StableName = TEXT("unavailable");
     const TCHAR* DisplayName = TEXT("UNAVAILABLE ACCORD");

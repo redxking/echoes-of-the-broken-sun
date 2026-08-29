@@ -1094,7 +1094,7 @@ void AEchoesHUD::DrawTitleScreen(
                   TEXT("CAMPAIGN MISSION 04  //  %s  //  ORUUN"),
                   *LocalFaction)
         : bTermsOfContinuance
-            ? TEXT("CAMPAIGN MISSION 05  //  JOINT WITNESS DETACHMENT")
+            ? TEXT("CAMPAIGN MISSION 05  //  MERIDIAN TREATY PROXIES")
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1110,7 +1110,7 @@ void AEchoesHUD::DrawTitleScreen(
     : bUnburiedRoad
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 04")
     : bTermsOfContinuance
-        ? TEXT("[F9] CHANGE OPERATION  //  JOINT AUTHORITY  //  MISSION 05")
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN PROXY AUTHORITY  //  MISSION 05")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1134,7 +1134,7 @@ void AEchoesHUD::DrawTitleScreen(
         : bUnburiedRoad
             ? TEXT("A route absent from every current map carries the echo of a missing memory shard.")
         : bTermsOfContinuance
-            ? TEXT("A ceasefire channel opens. Apparent apparitions strike both network interfaces.")
+            ? TEXT("A ceasefire channel opens under Meridian authority as generic unresolved pressure enters the operation.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1150,7 +1150,7 @@ void AEchoesHUD::DrawTitleScreen(
         : bUnburiedRoad
             ? TEXT("Root the Waystone, raise a Listening Spine beyond the crossing, and recover the shard.")
         : bTermsOfContinuance
-            ? TEXT("Synchronize both interfaces, hold the continuance window, and extract both witnesses.")
+            ? TEXT("Synchronize both treaty proxies by tick 300, hold through tick 900, then extract both witness proxies.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1539,7 +1539,7 @@ void AEchoesHUD::DrawObjectiveTracker(
             Left + 18.0f, Top + 89.0f, SmallFont,
             0.80f * TextScale, false);
         DrawText(
-            FString::Printf(TEXT("03  JOINT WITNESSES     %s"), *WitnessState),
+            FString::Printf(TEXT("03  WITNESS PROXIES     %s"), *WitnessState),
             bFailed ? Failed : bWitnessesExtracted ? Complete : Active,
             Left + 18.0f, Top + 126.0f, SmallFont,
             0.80f * TextScale, false);
@@ -1708,10 +1708,10 @@ void AEchoesHUD::DrawMatchResult(
         ? bTermsOfContinuanceResult
             ? bVictory
                 ? FString::Printf(
-                      TEXT("Both network interfaces held, both witnesses extracted, and the apparent attacks remain unresolved under the inherited %s accord."),
+                      TEXT("Both treaty proxies held, both witness proxies extracted, and the generic hostile pressure remains unresolved under the inherited %s accord."),
                       WellChoiceDisplayName(
                           EchoesController->GetCampaignConsequence()))
-                : TEXT("A witness, network interface, local Core, or the continuance window was lost before joint extraction.")
+                : TEXT("A witness proxy, treaty interface, local Core, or the continuance window was lost before paired extraction.")
         : bUnburiedRoadResult
             ? bVictory
                 ? FString::Printf(
@@ -2079,7 +2079,7 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("THE UNBURIED ROAD  //  MISSION 04  //  %s"),
                   *LocalFaction)
         : bTermsOfContinuance
-            ? TEXT("TERMS OF CONTINUANCE  //  MISSION 05  //  JOINT WITNESSES")
+            ? TEXT("TERMS OF CONTINUANCE  //  MISSION 05  //  MERIDIAN-AUTHORITATIVE PROXIES")
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -2123,7 +2123,7 @@ void AEchoesHUD::DrawMissionBriefing(
         : bUnburiedRoad
             ? TEXT("Oruun hears a removed memory shard beyond shifting terrain. The Waystone and a Listening Spine must make it recoverable.")
         : bTermsOfContinuance
-            ? TEXT("Apparent apparitions attack both interfaces. Their identity is unresolved; preserve evidence and both witnesses.")
+            ? TEXT("Generic unresolved pressure threatens the operation. Both treaty witnesses use Meridian scout proxies in this prototype.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2182,7 +2182,9 @@ void AEchoesHUD::DrawMissionBriefing(
                   UnburiedRoadRoute.MemoryShardSite.y.FloorToInt())
         : bTermsOfContinuance
             ? FString::Printf(
-                  TEXT("02  Hold through tick %llu, then extract both witnesses at %d,%d."),
+                  TEXT("02  Synchronize by tick %llu, hold through tick %llu, then extract both witness proxies at %d,%d."),
+                  static_cast<unsigned long long>(
+                      ContinuancePlan.ContinuanceWindowStartTick),
                   static_cast<unsigned long long>(
                       ContinuancePlan.ContinuanceWindowEndTick),
                   ContinuancePlan.WitnessExtractionSite.x.FloorToInt(),
@@ -2214,7 +2216,7 @@ void AEchoesHUD::DrawMissionBriefing(
         : bUnburiedRoad
             ? TEXT("Victory is infrastructure-backed recovery. Destroying the opposing Core does not recover the missing shard.")
         : bTermsOfContinuance
-            ? TEXT("Victory is synchronized survival and joint extraction. Destroying the opposing Core invalidates the ceasefire evidence.")
+            ? TEXT("Victory is synchronized survival and paired proxy extraction. Destroying the opposing Core invalidates the ceasefire evidence.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -2235,7 +2237,7 @@ void AEchoesHUD::DrawMissionBriefing(
         : bUnburiedRoad
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
         : bTermsOfContinuance
-            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS JOINT WITNESSES")
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MERIDIAN TREATY PROXIES")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,

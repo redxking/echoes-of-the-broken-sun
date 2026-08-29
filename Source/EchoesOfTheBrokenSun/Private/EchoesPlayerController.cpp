@@ -142,7 +142,7 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignUnburiedRoad
                 ? TEXT("Oruun deployed; ")
-                : TEXT("joint witnesses deployed; ")),
+                : TEXT("Meridian treaty proxies deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -231,7 +231,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bUnburiedRoad
             ? TEXT("THE UNBURIED ROAD — root the Waystone, raise a Listening Spine, and recover the missing shard. Enter deploys Oruun.")
         : bTermsOfContinuance
-            ? TEXT("TERMS OF CONTINUANCE — synchronize both networks, hold the ceasefire window, and extract both witnesses. Enter deploys the joint detachment.")
+            ? TEXT("TERMS OF CONTINUANCE — synchronize both treaty proxies, hold the fixed window, then extract both witness proxies. Enter deploys Meridian authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -323,11 +323,13 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
             Bridge->GetTermsOfContinuancePlan();
         SetStatusMessage(
             FString::Printf(
-                TEXT("DEPLOYED — power the Meridian relay at %d,%d and the Kharuun treaty interface at %d,%d; hold through tick %llu; extract both witnesses at %d,%d."),
+                TEXT("DEPLOYED — sync Meridian proxies %d,%d + %d,%d by T%llu; hold to T%llu; extract witnesses at %d,%d."),
                 Plan.MeridianRelaySite.x.FloorToInt(),
                 Plan.MeridianRelaySite.y.FloorToInt(),
                 Plan.KharuunSpineSite.x.FloorToInt(),
                 Plan.KharuunSpineSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    Plan.ContinuanceWindowStartTick),
                 static_cast<unsigned long long>(
                     Plan.ContinuanceWindowEndTick),
                 Plan.WitnessExtractionSite.x.FloorToInt(),
@@ -387,7 +389,7 @@ void AEchoesPlayerController::CyclePlayableFaction()
     if (Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignTermsOfContinuance)
     {
-        SetStatusMessage(TEXT("FACTION LOCKED: Terms of Continuance follows a joint Meridian-Kharuun witness detachment."));
+        SetStatusMessage(TEXT("FACTION LOCKED: Terms of Continuance uses Meridian-authoritative treaty and witness proxies; mixed-faction command is not implemented."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -1183,7 +1185,7 @@ void AEchoesPlayerController::NotifyTermsOfContinuanceFinished(
     if (bSuccess)
     {
         ResultMessage = FString::Printf(
-            TEXT("MISSION COMPLETE — both witnesses survived the apparent attacks and extracted under the inherited %s accord."),
+            TEXT("MISSION COMPLETE — both witness proxies survived generic unresolved pressure and extracted under the inherited %s accord."),
             *GetFutureWellChoiceLabel());
         if (CommitStatus == EEchoesCampaignCommitStatus::Added)
         {
@@ -3631,7 +3633,7 @@ void AEchoesPlayerController::RestartScenario()
                 ? TEXT("MISSION RESTARTED — Oruun's road recovery returns to its deterministic initial state.")
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignTermsOfContinuance
-                ? TEXT("MISSION RESTARTED — the joint witness accord returns to its deterministic initial state.")
+                ? TEXT("MISSION RESTARTED — the Meridian-authoritative treaty proxy scenario returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
