@@ -114,59 +114,126 @@ void SetError(std::string* destination, const std::string& message) {
     return type == EntityType::CommandCore || type == EntityType::Dropoff;
 }
 
-[[nodiscard]] std::int32_t FootprintHalfExtentFor(EntityType type) {
+[[nodiscard]] const EntityArchetypeRules& ArchetypeFor(
+    const SimulationRules& rules,
+    Faction faction,
+    EntityType type) {
+    return rules.archetypes[static_cast<std::size_t>(faction)]
+                           [static_cast<std::size_t>(type)];
+}
+
+[[nodiscard]] std::int32_t FootprintHalfExtentFor(
+    const SimulationRules& rules,
+    Faction faction,
+    EntityType type) {
     switch (type) {
+        case EntityType::Worker:
+        case EntityType::Soldier:
         case EntityType::CommandCore:
-        case EntityType::Barracks:
-            return kFixedScale;
         case EntityType::Dropoff:
-            return 3 * kFixedScale / 4;
+        case EntityType::Barracks:
+            return ArchetypeFor(rules, faction, type).footprintHalfExtentRaw;
         case EntityType::FutureWell:
             return kFixedScale / 2;
         case EntityType::ResourceNode:
             return kFixedScale / 3;
-        case EntityType::Worker:
-        case EntityType::Soldier:
-            return kFixedScale / 8;
     }
     return kFixedScale;
 }
 
-[[nodiscard]] ResourcePool BuildCostFor(Faction faction, EntityType type) {
-    const bool meridian = faction == Faction::MeridianCompact;
+[[nodiscard]] ResourcePool BuildCostFor(const SimulationRules& rules,
+                                        Faction faction,
+                                        EntityType type) {
     switch (type) {
         case EntityType::CommandCore:
-            return {meridian ? 420 : 380, meridian ? 40 : 60};
         case EntityType::Dropoff:
-            return {meridian ? 110 : 95, 0};
         case EntityType::Barracks:
-            return {meridian ? 170 : 150, meridian ? 20 : 30};
+            return ArchetypeFor(rules, faction, type).cost;
         default:
             return {};
     }
 }
 
-[[nodiscard]] ResourcePool ProductionCostFor(Faction faction, EntityType type) {
-    const bool meridian = faction == Faction::MeridianCompact;
+[[nodiscard]] ResourcePool ProductionCostFor(const SimulationRules& rules,
+                                             Faction faction,
+                                             EntityType type) {
     switch (type) {
         case EntityType::Worker:
-            return {50, 0};
         case EntityType::Soldier:
-            return {meridian ? 85 : 75, meridian ? 20 : 30};
+            return ArchetypeFor(rules, faction, type).cost;
         default:
             return {};
     }
 }
 
-[[nodiscard]] std::int32_t PopulationCostFor(EntityType type) {
+[[nodiscard]] std::int32_t PopulationCostFor(const SimulationRules& rules,
+                                             Faction faction,
+                                             EntityType type) {
     switch (type) {
         case EntityType::Worker:
-            return 1;
         case EntityType::Soldier:
-            return 2;
+            return ArchetypeFor(rules, faction, type).populationCost;
         default:
             return 0;
     }
+}
+
+[[nodiscard]] bool IsValidSimulationRules(const SimulationRules& rules) {
+    if (rules.version != 1) {
+        return false;
+    }
+    for (std::size_t faction = 0; faction < kFactionCount; ++faction) {
+        for (std::size_t type = 0; type < kConfigurableEntityTypeCount; ++type) {
+            const EntityArchetypeRules& archetype =
+                rules.archetypes[faction][type];
+            if (archetype.cost.material < 0 || archetype.cost.dawnshards < 0 ||
+                archetype.maxHitPoints <= 0 ||
+                archetype.movementPerTickRaw < 0 ||
+                archetype.visionTiles < 0 ||
+                archetype.visionTiles > kMaximumVisionTiles ||
+                archetype.attackRangeRaw < 0 || archetype.attackDamage < 0 ||
+                archetype.attackPeriodTicks > kMaximumSupportedTick ||
+                archetype.workRate < 0 || archetype.cargoCapacity < 0 ||
+                archetype.constructionRequired < 0 ||
+                archetype.populationCost < 0 ||
+                archetype.populationCapacity < 0 ||
+                archetype.productionTicks < 0 ||
+                archetype.productionTicks > kMaximumProductionTicks ||
+                archetype.footprintHalfExtentRaw <= 0 ||
+                archetype.footprintHalfExtentRaw > 16 * kFixedScale) {
+                return false;
+            }
+        }
+        const auto& worker =
+            rules.archetypes[faction][static_cast<std::size_t>(EntityType::Worker)];
+        const auto& soldier =
+            rules.archetypes[faction][static_cast<std::size_t>(EntityType::Soldier)];
+        if (worker.populationCost <= 0 || worker.productionTicks <= 0 ||
+            worker.workRate <= 0 || worker.cargoCapacity <= 0 ||
+            soldier.populationCost <= 0 || soldier.productionTicks <= 0) {
+            return false;
+        }
+        for (const EntityType type : {EntityType::CommandCore,
+                                     EntityType::Dropoff,
+                                     EntityType::Barracks}) {
+            if (rules.archetypes[faction][static_cast<std::size_t>(type)]
+                    .constructionRequired <= 0) {
+                return false;
+            }
+        }
+    }
+    const FutureWellRules& well = rules.futureWell;
+    return well.harvestImmediateDawn >= 0 &&
+           well.preserveDawnPerInterval >= 0 &&
+           well.preserveIntervalTicks > 0 &&
+           well.preserveIntervalTicks <= kMaximumSupportedTick &&
+           well.preserveVisionTiles >= 0 &&
+           well.preserveVisionTiles <= kMaximumVisionTiles &&
+           well.reshapeDawnCost >= 0 && well.reshapeDurationMinimumTicks > 0 &&
+           well.reshapeDurationMinimumTicks <= well.reshapeDurationMaximumTicks &&
+           well.reshapeDurationMaximumTicks <=
+               std::numeric_limits<std::uint32_t>::max() &&
+           well.reshapeDurationMaximumTicks <= kMaximumSupportedTick;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -219,7 +286,8 @@ void SetError(std::string* destination, const std::string& message) {
     if (!IsBuildingType(buildingType)) {
         return PlacementResult::InvalidBuildingType;
     }
-    const std::int32_t halfExtent = FootprintHalfExtentFor(buildingType);
+    const std::int32_t halfExtent = FootprintHalfExtentFor(
+        view.Config().rules, view.Player().faction, buildingType);
     if (!ViewIsInsideMap(view, position, halfExtent)) {
         return PlacementResult::OutsideMap;
     }
@@ -242,7 +310,8 @@ void SetError(std::string* destination, const std::string& message) {
     }
     for (const Entity& entity : view.Entities()) {
         const std::int32_t combinedExtent =
-            halfExtent + FootprintHalfExtentFor(entity.type);
+            halfExtent + FootprintHalfExtentFor(
+                             view.Config().rules, entity.faction, entity.type);
         if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
                   entity.position.x.Raw()) < combinedExtent &&
             Abs64(static_cast<std::int64_t>(position.y.Raw()) -
@@ -278,7 +347,8 @@ void SetError(std::string* destination, const std::string& message) {
     }
     if (!ResourceCovers(
             view.Player().resources,
-            ProductionCostFor(view.Player().faction, unitType))) {
+            ProductionCostFor(
+                view.Config().rules, view.Player().faction, unitType))) {
         return ProductionResult::InsufficientResources;
     }
     std::int32_t committedPopulation = view.PopulationUsed();
@@ -286,10 +356,14 @@ void SetError(std::string* destination, const std::string& message) {
         if (entity.owner == view.Player().id && entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
                 committedPopulation,
-                PopulationCostFor(entity.productionType));
+                PopulationCostFor(
+                    view.Config().rules, entity.faction, entity.productionType));
         }
     }
-    if (SaturatingAdd(committedPopulation, PopulationCostFor(unitType)) >
+    if (SaturatingAdd(
+            committedPopulation,
+            PopulationCostFor(
+                view.Config().rules, view.Player().faction, unitType)) >
         view.PopulationCapacity()) {
         return ProductionResult::CapacityReached;
     }
@@ -487,6 +561,49 @@ void WriteCommand(Writer& writer, const Command& command) {
 
 }  // namespace
 
+SimulationRules DefaultSimulationRules() {
+    SimulationRules rules{};
+    const auto set = [&rules](Faction faction,
+                              EntityType type,
+                              EntityArchetypeRules value) {
+        rules.archetypes[static_cast<std::size_t>(faction)]
+                        [static_cast<std::size_t>(type)] = value;
+    };
+
+    set(Faction::MeridianCompact, EntityType::Worker,
+        {{50, 0}, 80, 128, 5, kFixedScale, 4, 20, 10, 100, 0, 1, 0,
+         60, kFixedScale / 8});
+    set(Faction::MeridianCompact, EntityType::Soldier,
+        {{85, 20}, 120, 112, 6, 4 * kFixedScale, 18, 12, 0, 0, 0, 2,
+         0, 100, kFixedScale / 8});
+    set(Faction::MeridianCompact, EntityType::CommandCore,
+        {{420, 40}, 1000, 0, 8, 0, 0, 0, 0, 0, 400, 0, 12, 0,
+         kFixedScale});
+    set(Faction::MeridianCompact, EntityType::Dropoff,
+        {{110, 0}, 500, 0, 5, 0, 0, 0, 0, 0, 100, 0, 6, 0,
+         3 * kFixedScale / 4});
+    set(Faction::MeridianCompact, EntityType::Barracks,
+        {{170, 20}, 650, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
+         kFixedScale});
+
+    set(Faction::KharuunAssemblies, EntityType::Worker,
+        {{50, 0}, 70, 160, 6, kFixedScale, 5, 16, 9, 90, 0, 1, 0,
+         60, kFixedScale / 8});
+    set(Faction::KharuunAssemblies, EntityType::Soldier,
+        {{75, 30}, 105, 176, 7, Fixed::FromRatio(3, 2).Raw(), 25, 10,
+         0, 0, 0, 2, 0, 100, kFixedScale / 8});
+    set(Faction::KharuunAssemblies, EntityType::CommandCore,
+        {{380, 60}, 850, 0, 8, 0, 0, 0, 0, 0, 400, 0, 12, 0,
+         kFixedScale});
+    set(Faction::KharuunAssemblies, EntityType::Dropoff,
+        {{95, 0}, 420, 0, 5, 0, 0, 0, 0, 0, 100, 0, 5, 0,
+         3 * kFixedScale / 4});
+    set(Faction::KharuunAssemblies, EntityType::Barracks,
+        {{150, 30}, 540, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
+         kFixedScale});
+    return rules;
+}
+
 std::uint32_t Simulation::DeterministicRng::NextU32() {
     state += 0x9e3779b97f4a7c15ULL;
     std::uint64_t value = state;
@@ -520,7 +637,7 @@ Simulation::Simulation(SimulationConfig config)
         config_.mapHeightTiles > kMaximumMapDimension ||
         config_.ticksPerSecond == 0 ||
         config_.ticksPerSecond > kMaximumTicksPerSecond || tileCount <= 0 ||
-        tileCount > kMaximumMapTiles) {
+        tileCount > kMaximumMapTiles || !IsValidSimulationRules(config_.rules)) {
         throw std::invalid_argument("invalid deterministic simulation configuration");
     }
     terrain_.assign(static_cast<std::size_t>(tileCount), Terrain::Open);
@@ -581,46 +698,27 @@ Entity Simulation::MakeEntity(PlayerId owner,
     entity.faction = faction;
     entity.type = type;
     entity.position = position;
+    if (type >= EntityType::Worker && type <= EntityType::Barracks) {
+        const EntityArchetypeRules& archetype =
+            ArchetypeFor(config_.rules, faction, type);
+        entity.maxHitPoints = archetype.maxHitPoints;
+        entity.movementPerTickRaw = archetype.movementPerTickRaw;
+        entity.visionTiles = archetype.visionTiles;
+        entity.attackRangeRaw = archetype.attackRangeRaw;
+        entity.attackDamage = archetype.attackDamage;
+        entity.attackPeriodTicks = archetype.attackPeriodTicks;
+        entity.workRate = archetype.workRate;
+        entity.cargoCapacity = archetype.cargoCapacity;
+        entity.constructionRequired = archetype.constructionRequired;
+        entity.hitPoints = entity.maxHitPoints;
+        return entity;
+    }
     switch (type) {
         case EntityType::Worker:
-            entity.maxHitPoints = faction == Faction::MeridianCompact ? 80 : 70;
-            entity.movementPerTickRaw =
-                faction == Faction::MeridianCompact ? 128 : 160;
-            entity.visionTiles = faction == Faction::MeridianCompact ? 5 : 6;
-            entity.attackRangeRaw = kFixedScale;
-            entity.attackDamage = faction == Faction::MeridianCompact ? 4 : 5;
-            entity.attackPeriodTicks =
-                faction == Faction::MeridianCompact ? 20 : 16;
-            entity.workRate = faction == Faction::MeridianCompact ? 10 : 9;
-            entity.cargoCapacity = faction == Faction::MeridianCompact ? 100 : 90;
-            break;
         case EntityType::Soldier:
-            entity.maxHitPoints = faction == Faction::MeridianCompact ? 120 : 105;
-            entity.movementPerTickRaw =
-                faction == Faction::MeridianCompact ? 112 : 176;
-            entity.visionTiles = faction == Faction::MeridianCompact ? 6 : 7;
-            entity.attackRangeRaw = faction == Faction::MeridianCompact
-                                        ? 4 * kFixedScale
-                                        : Fixed::FromRatio(3, 2).Raw();
-            entity.attackDamage = faction == Faction::MeridianCompact ? 18 : 25;
-            entity.attackPeriodTicks =
-                faction == Faction::MeridianCompact ? 12 : 10;
-            break;
         case EntityType::CommandCore:
-            entity.maxHitPoints =
-                faction == Faction::MeridianCompact ? 1000 : 850;
-            entity.visionTiles = 8;
-            entity.constructionRequired = 400;
-            break;
         case EntityType::Dropoff:
-            entity.maxHitPoints = faction == Faction::MeridianCompact ? 500 : 420;
-            entity.visionTiles = 5;
-            entity.constructionRequired = 100;
-            break;
         case EntityType::Barracks:
-            entity.maxHitPoints = faction == Faction::MeridianCompact ? 650 : 540;
-            entity.visionTiles = 5;
-            entity.constructionRequired = 160;
             break;
         case EntityType::ResourceNode:
             entity.maxHitPoints = 1;
@@ -774,31 +872,29 @@ bool Simulation::IsDropoff(EntityType type) const {
     return IsDropoffType(type);
 }
 
-std::int32_t Simulation::FootprintHalfExtentRaw(EntityType type) const {
-    return FootprintHalfExtentFor(type);
+std::int32_t Simulation::FootprintHalfExtentRaw(Faction faction,
+                                                EntityType type) const {
+    return FootprintHalfExtentFor(config_.rules, faction, type);
 }
 
 ResourcePool Simulation::BuildCost(Faction faction, EntityType type) const {
-    return BuildCostFor(faction, type);
+    return BuildCostFor(config_.rules, faction, type);
 }
 
 ResourcePool Simulation::ProductionCost(Faction faction, EntityType type) const {
-    return ProductionCostFor(faction, type);
+    return ProductionCostFor(config_.rules, faction, type);
 }
 
-std::int32_t Simulation::ProductionTicks(EntityType type) const {
-    switch (type) {
-        case EntityType::Worker:
-            return static_cast<std::int32_t>(config_.ticksPerSecond * 3U);
-        case EntityType::Soldier:
-            return static_cast<std::int32_t>(config_.ticksPerSecond * 5U);
-        default:
-            return 0;
-    }
+std::int32_t Simulation::ProductionTicks(Faction faction,
+                                         EntityType type) const {
+    return type == EntityType::Worker || type == EntityType::Soldier
+               ? ArchetypeFor(config_.rules, faction, type).productionTicks
+               : 0;
 }
 
-std::int32_t Simulation::PopulationCost(EntityType type) const {
-    return PopulationCostFor(type);
+std::int32_t Simulation::PopulationCost(Faction faction,
+                                        EntityType type) const {
+    return PopulationCostFor(config_.rules, faction, type);
 }
 
 std::int32_t Simulation::PopulationUsed(PlayerId player) const {
@@ -808,7 +904,9 @@ std::int32_t Simulation::PopulationUsed(PlayerId player) const {
     std::int32_t used = 0;
     for (const Entity& entity : entities_) {
         if (entity.owner == player && entity.hitPoints > 0 && entity.completed) {
-            used = SaturatingAdd(used, PopulationCost(entity.type));
+            used = SaturatingAdd(
+                used,
+                PopulationCostFor(config_.rules, entity.faction, entity.type));
         }
     }
     return used;
@@ -823,12 +921,12 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
         if (entity.owner != player || entity.hitPoints <= 0 || !entity.completed) {
             continue;
         }
-        if (entity.type == EntityType::CommandCore) {
-            capacity = SaturatingAdd(capacity, 12);
-        } else if (entity.type == EntityType::Dropoff) {
+        if (entity.type == EntityType::CommandCore ||
+            entity.type == EntityType::Dropoff) {
             capacity = SaturatingAdd(
                 capacity,
-                entity.faction == Faction::MeridianCompact ? 6 : 5);
+                ArchetypeFor(config_.rules, entity.faction, entity.type)
+                    .populationCapacity);
         }
     }
     return capacity;
@@ -869,10 +967,11 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         if (entity.owner == player && entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
                 committedPopulation,
-                PopulationCost(entity.productionType));
+                PopulationCost(entity.faction, entity.productionType));
         }
     }
-    if (SaturatingAdd(committedPopulation, PopulationCost(unitType)) >
+    if (SaturatingAdd(
+            committedPopulation, PopulationCost(playerState->faction, unitType)) >
         PopulationCapacity(player)) {
         return ProductionResult::CapacityReached;
     }
@@ -934,7 +1033,9 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
     if (!IsBuilding(buildingType)) {
         return PlacementResult::InvalidBuildingType;
     }
-    const std::int32_t halfExtent = FootprintHalfExtentRaw(buildingType);
+    const Faction faction = players_[player].faction;
+    const std::int32_t halfExtent =
+        FootprintHalfExtentRaw(faction, buildingType);
     if (!IsInsideMap(position, halfExtent)) {
         return PlacementResult::OutsideMap;
     }
@@ -953,7 +1054,7 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
     }
     for (const Entity& entity : entities_) {
         const std::int32_t combinedExtent =
-            halfExtent + FootprintHalfExtentRaw(entity.type);
+            halfExtent + FootprintHalfExtentRaw(entity.faction, entity.type);
         if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
                   entity.position.x.Raw()) < combinedExtent &&
             Abs64(static_cast<std::int64_t>(position.y.Raw()) -
@@ -1033,8 +1134,8 @@ bool Simulation::InInteractionRange(const Entity& first,
                                     const Entity& second,
                                     std::int32_t extraRangeRaw) const {
     const std::int64_t range = static_cast<std::int64_t>(extraRangeRaw) +
-                               FootprintHalfExtentRaw(first.type) +
-                               FootprintHalfExtentRaw(second.type);
+                               FootprintHalfExtentRaw(first.faction, first.type) +
+                               FootprintHalfExtentRaw(second.faction, second.type);
     return DistanceSquaredRaw(first.position, second.position) <=
            static_cast<std::uint64_t>(range * range);
 }
@@ -1354,7 +1455,8 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
                         continue;
                     }
                     const std::int32_t combinedExtent =
-                        FootprintHalfExtentRaw(entity.type) + kFixedScale / 8;
+                        FootprintHalfExtentRaw(entity.faction, entity.type) +
+                        kFixedScale / 8;
                     if (Abs64(static_cast<std::int64_t>(candidate.x.Raw()) -
                               entity.position.x.Raw()) < combinedExtent &&
                         Abs64(static_cast<std::int64_t>(candidate.y.Raw()) -
@@ -1501,7 +1603,8 @@ void Simulation::ApplyCommand(const Command& command) {
             player->resources.dawnshards -= cost.dawnshards;
             actor->productionType = command.buildType;
             actor->productionProgress = 0;
-            actor->productionRequired = ProductionTicks(command.buildType);
+            actor->productionRequired =
+                ProductionTicks(player->faction, command.buildType);
             return;
         }
         case CommandType::AttackMove:
@@ -1807,7 +1910,8 @@ void Simulation::ProcessFutureWell(Entity& worker) {
     switch (worker.order.wellChoice) {
         case FutureWellChoice::Harvest: {
             player->resources.dawnshards =
-                SaturatingAdd(player->resources.dawnshards, 300);
+                SaturatingAdd(player->resources.dawnshards,
+                              config_.rules.futureWell.harvestImmediateDawn);
             well->owner = worker.owner;
             well->faction = worker.faction;
             well->wellChoice = FutureWellChoice::Harvest;
@@ -1830,16 +1934,27 @@ void Simulation::ProcessFutureWell(Entity& worker) {
             well->wellChoice = FutureWellChoice::Preserve;
             break;
         case FutureWellChoice::Reshape:
-            if (player->resources.dawnshards < 100) {
+            if (player->resources.dawnshards <
+                config_.rules.futureWell.reshapeDawnCost) {
                 worker.order = {};
                 return;
             }
-            player->resources.dawnshards -= 100;
+            player->resources.dawnshards -=
+                config_.rules.futureWell.reshapeDawnCost;
             well->owner = worker.owner;
             well->faction = worker.faction;
             well->wellChoice = FutureWellChoice::Reshape;
             well->reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
-            well->reshapeUntilTick = currentTick_ + 40 + rng_.Uniform(21);
+            {
+                const Tick minimum =
+                    config_.rules.futureWell.reshapeDurationMinimumTicks;
+                const Tick maximum =
+                    config_.rules.futureWell.reshapeDurationMaximumTicks;
+                const Tick span = maximum - minimum + 1;
+                well->reshapeUntilTick =
+                    currentTick_ + minimum + rng_.Uniform(
+                        static_cast<std::uint32_t>(span));
+            }
             pathFieldCache_.clear();
             break;
         case FutureWellChoice::Dormant:
@@ -1959,7 +2074,9 @@ void Simulation::ProcessEntityOrders() {
 }
 
 void Simulation::ApplyPreserveIncome() {
-    if ((currentTick_ + 1) % 10 != 0) {
+    if ((currentTick_ + 1) %
+            config_.rules.futureWell.preserveIntervalTicks !=
+        0) {
         return;
     }
     for (const Entity& entity : entities_) {
@@ -1967,7 +2084,9 @@ void Simulation::ApplyPreserveIncome() {
             entity.wellChoice == FutureWellChoice::Preserve) {
             if (PlayerState* player = MutablePlayer(entity.owner); player != nullptr) {
                 player->resources.dawnshards =
-                    SaturatingAdd(player->resources.dawnshards, 3);
+                    SaturatingAdd(
+                        player->resources.dawnshards,
+                        config_.rules.futureWell.preserveDawnPerInterval);
             }
         }
     }
@@ -2164,7 +2283,8 @@ void Simulation::UpdateVisibility() {
             markVisible(entity.owner, entity.position, entity.visionTiles);
             if (entity.type == EntityType::FutureWell &&
                 entity.wellChoice == FutureWellChoice::Preserve) {
-                markVisible(entity.owner, entity.position, 8);
+                markVisible(entity.owner, entity.position,
+                            config_.rules.futureWell.preserveVisionTiles);
             }
         }
     }
@@ -2329,10 +2449,10 @@ std::vector<Command> Simulation::GenerateAiCommands(
         return view.PopulationCapacity();
     };
     const auto PopulationCost = [&](EntityType type) {
-        return PopulationCostFor(type);
+        return PopulationCostFor(config_.rules, playerState->faction, type);
     };
     const auto BuildCost = [&](Faction faction, EntityType type) {
-        return BuildCostFor(faction, type);
+        return BuildCostFor(config_.rules, faction, type);
     };
     const auto ValidatePlacement = [&](PlayerId,
                                        EntityType type,
@@ -2683,6 +2803,34 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.mapHeightTiles);
     writer.U32(config_.ticksPerSecond);
     writer.U64(config_.randomSeed);
+    writer.U32(config_.rules.version);
+    writer.Bytes(config_.rules.contentSha256);
+    for (const auto& faction : config_.rules.archetypes) {
+        for (const EntityArchetypeRules& archetype : faction) {
+            writer.I32(archetype.cost.material);
+            writer.I32(archetype.cost.dawnshards);
+            writer.I32(archetype.maxHitPoints);
+            writer.I32(archetype.movementPerTickRaw);
+            writer.I32(archetype.visionTiles);
+            writer.I32(archetype.attackRangeRaw);
+            writer.I32(archetype.attackDamage);
+            writer.U64(archetype.attackPeriodTicks);
+            writer.I32(archetype.workRate);
+            writer.I32(archetype.cargoCapacity);
+            writer.I32(archetype.constructionRequired);
+            writer.I32(archetype.populationCost);
+            writer.I32(archetype.populationCapacity);
+            writer.I32(archetype.productionTicks);
+            writer.I32(archetype.footprintHalfExtentRaw);
+        }
+    }
+    writer.I32(config_.rules.futureWell.harvestImmediateDawn);
+    writer.I32(config_.rules.futureWell.preserveDawnPerInterval);
+    writer.U64(config_.rules.futureWell.preserveIntervalTicks);
+    writer.I32(config_.rules.futureWell.preserveVisionTiles);
+    writer.I32(config_.rules.futureWell.reshapeDawnCost);
+    writer.U64(config_.rules.futureWell.reshapeDurationMinimumTicks);
+    writer.U64(config_.rules.futureWell.reshapeDurationMaximumTicks);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -2754,7 +2902,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     BinaryWriter writer{};
     writer.Reserve(
-        160U + terrain_.size() * (1U + explored_.size()) +
+        876U + terrain_.size() * (1U + explored_.size()) +
         entities_.size() * kSerializedEntityBytes +
         pendingCommands_.size() * kSerializedCommandBytes);
     WriteSnapshotPayload(writer);
@@ -2812,6 +2960,43 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
+    if (!reader.U32(config.rules.version) ||
+        !reader.Bytes(config.rules.contentSha256)) {
+        SetError(error, "snapshot rules header is truncated");
+        return std::nullopt;
+    }
+    for (auto& faction : config.rules.archetypes) {
+        for (EntityArchetypeRules& archetype : faction) {
+            if (!reader.I32(archetype.cost.material) ||
+                !reader.I32(archetype.cost.dawnshards) ||
+                !reader.I32(archetype.maxHitPoints) ||
+                !reader.I32(archetype.movementPerTickRaw) ||
+                !reader.I32(archetype.visionTiles) ||
+                !reader.I32(archetype.attackRangeRaw) ||
+                !reader.I32(archetype.attackDamage) ||
+                !reader.U64(archetype.attackPeriodTicks) ||
+                !reader.I32(archetype.workRate) ||
+                !reader.I32(archetype.cargoCapacity) ||
+                !reader.I32(archetype.constructionRequired) ||
+                !reader.I32(archetype.populationCost) ||
+                !reader.I32(archetype.populationCapacity) ||
+                !reader.I32(archetype.productionTicks) ||
+                !reader.I32(archetype.footprintHalfExtentRaw)) {
+                SetError(error, "snapshot archetype rules are truncated");
+                return std::nullopt;
+            }
+        }
+    }
+    if (!reader.I32(config.rules.futureWell.harvestImmediateDawn) ||
+        !reader.I32(config.rules.futureWell.preserveDawnPerInterval) ||
+        !reader.U64(config.rules.futureWell.preserveIntervalTicks) ||
+        !reader.I32(config.rules.futureWell.preserveVisionTiles) ||
+        !reader.I32(config.rules.futureWell.reshapeDawnCost) ||
+        !reader.U64(config.rules.futureWell.reshapeDurationMinimumTicks) ||
+        !reader.U64(config.rules.futureWell.reshapeDurationMaximumTicks)) {
+        SetError(error, "snapshot Future Well rules are truncated");
+        return std::nullopt;
+    }
     const std::int64_t tileCount =
         static_cast<std::int64_t>(config.mapWidthTiles) * config.mapHeightTiles;
     if (config.mapWidthTiles <= 0 || config.mapHeightTiles <= 0 ||
@@ -2819,7 +3004,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         config.mapHeightTiles > kMaximumMapDimension ||
         config.ticksPerSecond == 0 ||
         config.ticksPerSecond > kMaximumTicksPerSecond || tileCount <= 0 ||
-        tileCount > kMaximumMapTiles) {
+        tileCount > kMaximumMapTiles || !IsValidSimulationRules(config.rules)) {
         SetError(error, "snapshot map configuration is invalid");
         return std::nullopt;
     }

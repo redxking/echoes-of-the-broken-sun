@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 9;
-inline constexpr std::uint32_t kReplayVersion = 9;
+inline constexpr std::uint32_t kSnapshotVersion = 10;
+inline constexpr std::uint32_t kReplayVersion = 10;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -211,6 +211,60 @@ struct ResourcePool final {
     friend bool operator==(const ResourcePool&, const ResourcePool&) = default;
 };
 
+inline constexpr std::size_t kFactionCount = 2;
+inline constexpr std::size_t kConfigurableEntityTypeCount = 5;
+
+/** Deterministic values for one foundational simulation archetype. */
+struct EntityArchetypeRules final {
+    ResourcePool cost{};
+    std::int32_t maxHitPoints = 1;
+    std::int32_t movementPerTickRaw = 0;
+    std::int32_t visionTiles = 0;
+    std::int32_t attackRangeRaw = 0;
+    std::int32_t attackDamage = 0;
+    Tick attackPeriodTicks = 0;
+    std::int32_t workRate = 0;
+    std::int32_t cargoCapacity = 0;
+    std::int32_t constructionRequired = 0;
+    std::int32_t populationCost = 0;
+    std::int32_t populationCapacity = 0;
+    std::int32_t productionTicks = 0;
+    std::int32_t footprintHalfExtentRaw = kFixedScale / 8;
+
+    friend bool operator==(const EntityArchetypeRules&,
+                           const EntityArchetypeRules&) = default;
+};
+
+/** Deterministic Future Well economy and active-duration rules. */
+struct FutureWellRules final {
+    std::int32_t harvestImmediateDawn = 300;
+    std::int32_t preserveDawnPerInterval = 3;
+    Tick preserveIntervalTicks = 10;
+    std::int32_t preserveVisionTiles = 8;
+    std::int32_t reshapeDawnCost = 100;
+    Tick reshapeDurationMinimumTicks = 40;
+    Tick reshapeDurationMaximumTicks = 60;
+
+    friend bool operator==(const FutureWellRules&,
+                           const FutureWellRules&) = default;
+};
+
+/** Versioned authoritative rules copied into saves, replays, and checksums. */
+struct SimulationRules final {
+    std::uint32_t version = 1;
+    std::array<std::uint8_t, 32> contentSha256{};
+    std::array<std::array<EntityArchetypeRules,
+                          kConfigurableEntityTypeCount>,
+               kFactionCount>
+        archetypes{};
+    FutureWellRules futureWell{};
+
+    friend bool operator==(const SimulationRules&,
+                           const SimulationRules&) = default;
+};
+
+[[nodiscard]] ECHOESSIMCORE_API SimulationRules DefaultSimulationRules();
+
 struct PlayerState final {
     PlayerId id = 0;
     Faction faction = Faction::MeridianCompact;
@@ -280,6 +334,10 @@ struct SimulationConfig final {
     std::int32_t mapHeightTiles = 64;
     std::uint32_t ticksPerSecond = 20;
     std::uint64_t randomSeed = 1;
+    SimulationRules rules = DefaultSimulationRules();
+
+    friend bool operator==(const SimulationConfig&,
+                           const SimulationConfig&) = default;
 };
 
 struct PlayerViewTile final {
@@ -434,13 +492,16 @@ private:
     [[nodiscard]] Entity* MutableEntity(EntityId id);
     [[nodiscard]] bool IsBuilding(EntityType type) const;
     [[nodiscard]] bool IsDropoff(EntityType type) const;
-    [[nodiscard]] std::int32_t FootprintHalfExtentRaw(EntityType type) const;
+    [[nodiscard]] std::int32_t FootprintHalfExtentRaw(Faction faction,
+                                                      EntityType type) const;
     [[nodiscard]] Entity MakeEntity(PlayerId owner,
                                     Faction faction,
                                     EntityType type,
                                     Vec2 position) const;
-    [[nodiscard]] std::int32_t ProductionTicks(EntityType type) const;
-    [[nodiscard]] std::int32_t PopulationCost(EntityType type) const;
+    [[nodiscard]] std::int32_t ProductionTicks(Faction faction,
+                                               EntityType type) const;
+    [[nodiscard]] std::int32_t PopulationCost(Faction faction,
+                                              EntityType type) const;
     [[nodiscard]] std::optional<Vec2> FindProductionSpawnPosition(
         const Entity& producer) const;
     [[nodiscard]] bool IsReshapedOpen(std::int32_t tileX,

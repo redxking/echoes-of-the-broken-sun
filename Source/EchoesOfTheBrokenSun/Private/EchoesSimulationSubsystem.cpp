@@ -142,6 +142,27 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     Config.mapHeightTiles = PrototypeMapHeightTiles;
     Config.ticksPerSecond = PrototypeTicksPerSecond;
     Config.randomSeed = PrototypeSeed;
+    FString RulesError;
+    if (!Content->GetCatalog().BuildSimulationRules(
+            Config.ticksPerSecond,
+            Config.rules,
+            RulesError))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SIM_CONTENT_REJECTED] reason=%s"),
+            *RulesError);
+        return false;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s foundationalArchetypes=10 catalogUnits=%d catalogBuildings=%d futureWell=authored"),
+        Config.rules.version,
+        *Content->GetCatalog().Sha256,
+        Content->GetCatalog().Units.Num(),
+        Content->GetCatalog().Buildings.Num());
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
     const int32 GlassScarBlockedTiles = ConfigureGlassScar(*Simulation);

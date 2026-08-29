@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "buildings": [
-    {"id":"mc_anchor","display_name":"Anchor","faction":"meridian_compact","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1400,"logistics_capacity":12,"footprint_cells":[5,5]},
-    {"id":"mc_power_link","display_name":"Power Link","faction":"meridian_compact","role":"supply_node","cost":{"matter":90,"dawn":10},"max_health":450,"logistics_capacity":6,"footprint_cells":[2,2]},
-    {"id":"mc_array_foundry","display_name":"Array Foundry","faction":"meridian_compact","role":"production","cost":{"matter":180,"dawn":30},"max_health":760,"logistics_capacity":0,"footprint_cells":[4,4]},
-    {"id":"mc_aegis_post","display_name":"Aegis Post","faction":"meridian_compact","role":"defense","cost":{"matter":130,"dawn":30},"max_health":520,"logistics_capacity":0,"footprint_cells":[2,2]},
-    {"id":"ka_memory_hearth","display_name":"Memory Hearth","faction":"kharuun_assemblies","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1300,"logistics_capacity":12,"footprint_cells":[5,5]},
-    {"id":"ka_waystone","display_name":"Waystone","faction":"kharuun_assemblies","role":"mobile_supply_node","cost":{"matter":80,"dawn":20},"max_health":390,"logistics_capacity":5,"footprint_cells":[2,2]},
-    {"id":"ka_growth_basin","display_name":"Growth Basin","faction":"kharuun_assemblies","role":"production","cost":{"matter":165,"dawn":35},"max_health":700,"logistics_capacity":0,"footprint_cells":[4,4]},
-    {"id":"ka_listening_spine","display_name":"Listening Spine","faction":"kharuun_assemblies","role":"detection","cost":{"matter":115,"dawn":25},"max_health":440,"logistics_capacity":0,"footprint_cells":[2,2]}
+    {"id":"mc_anchor","display_name":"Anchor","faction":"meridian_compact","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1400,"sight_cm":800,"construction_ticks":400,"logistics_capacity":12,"footprint_cells":[5,5]},
+    {"id":"mc_power_link","display_name":"Power Link","faction":"meridian_compact","role":"supply_node","cost":{"matter":90,"dawn":10},"max_health":450,"sight_cm":500,"construction_ticks":100,"logistics_capacity":6,"footprint_cells":[2,2]},
+    {"id":"mc_array_foundry","display_name":"Array Foundry","faction":"meridian_compact","role":"production","cost":{"matter":180,"dawn":30},"max_health":760,"sight_cm":500,"construction_ticks":160,"logistics_capacity":0,"footprint_cells":[4,4]},
+    {"id":"mc_aegis_post","display_name":"Aegis Post","faction":"meridian_compact","role":"defense","cost":{"matter":130,"dawn":30},"max_health":520,"sight_cm":700,"construction_ticks":120,"logistics_capacity":0,"footprint_cells":[2,2]},
+    {"id":"ka_memory_hearth","display_name":"Memory Hearth","faction":"kharuun_assemblies","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1300,"sight_cm":800,"construction_ticks":400,"logistics_capacity":12,"footprint_cells":[5,5]},
+    {"id":"ka_waystone","display_name":"Waystone","faction":"kharuun_assemblies","role":"mobile_supply_node","cost":{"matter":80,"dawn":20},"max_health":390,"sight_cm":500,"construction_ticks":100,"logistics_capacity":5,"footprint_cells":[2,2]},
+    {"id":"ka_growth_basin","display_name":"Growth Basin","faction":"kharuun_assemblies","role":"production","cost":{"matter":165,"dawn":35},"max_health":700,"sight_cm":500,"construction_ticks":160,"logistics_capacity":0,"footprint_cells":[4,4]},
+    {"id":"ka_listening_spine","display_name":"Listening Spine","faction":"kharuun_assemblies","role":"detection","cost":{"matter":115,"dawn":25},"max_health":440,"sight_cm":900,"construction_ticks":120,"logistics_capacity":0,"footprint_cells":[2,2]}
   ]
 }

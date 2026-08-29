@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v9 fixed header/player/sequence fields plus terrain and four fog grids.
-    return 148 + 5 * mapTileCount;
+    // Snapshot v10 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 864 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 28, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 744, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 36, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 752, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1187,6 +1187,89 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(exhausted->Entities().size() == entityCount);
     REQUIRE(exhausted->FindPlayer(0)->resources.material == material);
     REQUIRE(Simulation::LoadSnapshot(exhausted->SaveSnapshot(), &error).has_value());
+}
+
+void TestAuthoredRulesDriveSimulationAndPersist() {
+    SimulationConfig config{20, 20, 20, 0x415554484f524544ULL};
+    config.rules.contentSha256[0] = 0x46;
+    EntityArchetypeRules& workerRules =
+        config.rules.archetypes[0][static_cast<std::size_t>(EntityType::Worker)];
+    workerRules.cost = {17, 3};
+    workerRules.maxHitPoints = 137;
+    workerRules.movementPerTickRaw = 205;
+    workerRules.visionTiles = 9;
+    workerRules.workRate = 7;
+    workerRules.cargoCapacity = 13;
+    workerRules.populationCost = 2;
+    workerRules.productionTicks = 7;
+    config.rules.futureWell.harvestImmediateDawn = 77;
+    config.rules.futureWell.preserveDawnPerInterval = 5;
+    config.rules.futureWell.preserveIntervalTicks = 4;
+    config.rules.futureWell.preserveVisionTiles = 11;
+    config.rules.futureWell.reshapeDawnCost = 31;
+    config.rules.futureWell.reshapeDurationMinimumTicks = 12;
+    config.rules.futureWell.reshapeDurationMaximumTicks = 12;
+
+    Simulation simulation(config);
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {100, 40}));
+    const EntityId core = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(8, 8));
+    REQUIRE(core != 0 && worker != 0);
+    const Entity* workerState = simulation.FindEntity(worker);
+    REQUIRE(workerState != nullptr);
+    REQUIRE(workerState->maxHitPoints == 137);
+    REQUIRE(workerState->movementPerTickRaw == 205);
+    REQUIRE(workerState->visionTiles == 9);
+    REQUIRE(workerState->workRate == 7);
+    REQUIRE(workerState->cargoCapacity == 13);
+    REQUIRE(simulation.PopulationUsed(0) == 2);
+
+    Command production = MakeCommand(0, 0, 1, CommandType::Produce, core);
+    production.buildType = EntityType::Worker;
+    REQUIRE(simulation.QueueCommand(production));
+    simulation.Step();
+    REQUIRE(simulation.FindPlayer(0)->resources.material == 83);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 37);
+    REQUIRE(simulation.FindEntity(core)->productionRequired == 7);
+
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->Config() == config);
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+
+    Simulation wellSimulation(config);
+    REQUIRE(wellSimulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId wellWorker = wellSimulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(5, 6));
+    const EntityId well =
+        wellSimulation.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    Command harvest =
+        MakeCommand(0, 0, 1, CommandType::FutureWell, wellWorker);
+    harvest.target = well;
+    harvest.wellChoice = FutureWellChoice::Harvest;
+    REQUIRE(wellSimulation.QueueCommand(harvest));
+    wellSimulation.Step();
+    REQUIRE(wellSimulation.FindPlayer(0)->resources.dawnshards == 77);
+
+    SimulationConfig invalid = config;
+    invalid.rules.version = 2;
+    bool rejected = false;
+    try {
+        Simulation invalidSimulation(invalid);
+        (void)invalidSimulation;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    REQUIRE(rejected);
 }
 
 }  // namespace
@@ -1216,6 +1299,8 @@ int main() {
         {"sequence and build hardening", TestSequenceAndBuildHardening},
         {"snapshot adversarial bounds and id exhaustion",
          TestSnapshotAdversarialBoundsAndIdExhaustion},
+        {"authored rules drive simulation and persist",
+         TestAuthoredRulesDriveSimulationAndPersist},
     };
 
     std::size_t passed = 0;

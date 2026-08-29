@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesSimCore/Simulation.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "EchoesContentSubsystem.generated.h"
 
@@ -22,6 +23,9 @@ struct FEchoesUnitContent final
     int32 MaxHealth = 0;
     int32 MoveSpeedCentimetersPerSecond = 0;
     int32 SightCentimeters = 0;
+    int32 PopulationCost = 0;
+    int32 ProductionTicks = 0;
+    int32 WorkRate = 0;
     int32 CargoCapacity = 0;
     int32 AttackDamage = 0;
     int32 AttackRangeCentimeters = 0;
@@ -37,6 +41,8 @@ struct FEchoesBuildingContent final
     int32 MatterCost = 0;
     int32 DawnCost = 0;
     int32 MaxHealth = 0;
+    int32 SightCentimeters = 0;
+    int32 ConstructionTicks = 0;
     int32 LogisticsCapacity = 0;
     FIntPoint FootprintCells = FIntPoint::ZeroValue;
 };
@@ -69,6 +75,10 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesContentCatalog final
     [[nodiscard]] int32 PlayableFactionCount() const;
     [[nodiscard]] const FEchoesUnitContent* FindUnit(const FString& Id) const;
     [[nodiscard]] const FEchoesBuildingContent* FindBuilding(const FString& Id) const;
+    [[nodiscard]] bool BuildSimulationRules(
+        uint32 TicksPerSecond,
+        echoes::sim::SimulationRules& OutRules,
+        FString& OutError) const;
 
     static bool LoadCanonicalPack(
         const FString& PackPath,

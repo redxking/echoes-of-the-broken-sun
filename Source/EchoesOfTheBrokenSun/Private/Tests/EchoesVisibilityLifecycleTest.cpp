@@ -123,7 +123,8 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
                  ScoutView->IsHealthBarVisible());
         TestEqual(TEXT("Damaged scout health fraction mirrors authoritative hit points"),
                   ScoutView->GetDisplayedHealthFraction(),
-                  0.25f);
+                  static_cast<float>(DamagedScout.hitPoints) /
+                      static_cast<float>(DamagedScout.maxHitPoints));
         TestTrue(TEXT("Damage starts a readable presentation pulse"),
                  ScoutView->IsDamagePulseActive());
         if (Settings != nullptr)

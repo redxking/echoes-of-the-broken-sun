@@ -243,6 +243,162 @@ const FEchoesBuildingContent* FEchoesContentCatalog::FindBuilding(const FString&
         });
 }
 
+bool FEchoesContentCatalog::BuildSimulationRules(
+    const uint32 TicksPerSecond,
+    echoes::sim::SimulationRules& OutRules,
+    FString& OutError) const
+{
+    OutRules = {};
+    OutError.Reset();
+    if (TicksPerSecond == 0 || Sha256.Len() != 64)
+    {
+        OutError = TEXT("SIM_RULES_HEADER_INVALID");
+        return false;
+    }
+
+    const auto HexNibble = [](const TCHAR Character) -> int32
+    {
+        if (Character >= TEXT('0') && Character <= TEXT('9'))
+        {
+            return Character - TEXT('0');
+        }
+        if (Character >= TEXT('a') && Character <= TEXT('f'))
+        {
+            return Character - TEXT('a') + 10;
+        }
+        if (Character >= TEXT('A') && Character <= TEXT('F'))
+        {
+            return Character - TEXT('A') + 10;
+        }
+        return -1;
+    };
+    for (int32 Index = 0; Index < 32; ++Index)
+    {
+        const int32 High = HexNibble(Sha256[Index * 2]);
+        const int32 Low = HexNibble(Sha256[Index * 2 + 1]);
+        if (High < 0 || Low < 0)
+        {
+            OutError = TEXT("SIM_RULES_DIGEST_INVALID");
+            return false;
+        }
+        OutRules.contentSha256[static_cast<std::size_t>(Index)] =
+            static_cast<uint8>((High << 4) | Low);
+    }
+
+    struct FUnitBinding final
+    {
+        const TCHAR* Id;
+        const TCHAR* FactionId;
+        const TCHAR* Role;
+        echoes::sim::Faction Faction;
+        echoes::sim::EntityType Type;
+    };
+    constexpr FUnitBinding UnitBindings[] = {
+        {TEXT("mc_surveyor"), TEXT("meridian_compact"), TEXT("worker"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Worker},
+        {TEXT("mc_lancer"), TEXT("meridian_compact"), TEXT("ranged_line"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Soldier},
+        {TEXT("ka_tender"), TEXT("kharuun_assemblies"), TEXT("worker"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Worker},
+        {TEXT("ka_riftstalker"), TEXT("kharuun_assemblies"), TEXT("mobile_skirmisher"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Soldier},
+    };
+    for (const FUnitBinding& Binding : UnitBindings)
+    {
+        const FEchoesUnitContent* Unit = FindUnit(Binding.Id);
+        if (Unit == nullptr || Unit->FactionId != Binding.FactionId ||
+            Unit->Role != Binding.Role)
+        {
+            OutError = FString::Printf(TEXT("SIM_RULES_UNIT_BINDING_INVALID:%s"), Binding.Id);
+            return false;
+        }
+        echoes::sim::EntityArchetypeRules& Rules =
+            OutRules.archetypes[static_cast<std::size_t>(Binding.Faction)]
+                               [static_cast<std::size_t>(Binding.Type)];
+        Rules.cost = {Unit->MatterCost, Unit->DawnCost};
+        Rules.maxHitPoints = Unit->MaxHealth;
+        const int64 MovementNumerator =
+            static_cast<int64>(Unit->MoveSpeedCentimetersPerSecond) *
+            echoes::sim::kFixedScale;
+        const int64 MovementDenominator =
+            static_cast<int64>(TicksPerSecond) * 100;
+        Rules.movementPerTickRaw = static_cast<int32>(
+            MovementNumerator / MovementDenominator);
+        Rules.visionTiles = FMath::DivideAndRoundUp(Unit->SightCentimeters, 100);
+        Rules.attackRangeRaw = static_cast<int32>(
+            static_cast<int64>(Unit->AttackRangeCentimeters) *
+            echoes::sim::kFixedScale / 100);
+        Rules.attackDamage = Unit->AttackDamage;
+        Rules.attackPeriodTicks = Unit->AttackCooldownTicks;
+        Rules.workRate = Unit->WorkRate;
+        Rules.cargoCapacity = Unit->CargoCapacity;
+        Rules.populationCost = Unit->PopulationCost;
+        Rules.productionTicks = Unit->ProductionTicks;
+        Rules.footprintHalfExtentRaw = echoes::sim::kFixedScale / 8;
+        if (Rules.movementPerTickRaw <= 0)
+        {
+            OutError = FString::Printf(TEXT("SIM_RULES_UNIT_MOVEMENT_INVALID:%s"), Binding.Id);
+            return false;
+        }
+    }
+
+    struct FBuildingBinding final
+    {
+        const TCHAR* Id;
+        const TCHAR* FactionId;
+        const TCHAR* Role;
+        echoes::sim::Faction Faction;
+        echoes::sim::EntityType Type;
+    };
+    constexpr FBuildingBinding BuildingBindings[] = {
+        {TEXT("mc_anchor"), TEXT("meridian_compact"), TEXT("headquarters_dropoff"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::CommandCore},
+        {TEXT("mc_power_link"), TEXT("meridian_compact"), TEXT("supply_node"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Dropoff},
+        {TEXT("mc_array_foundry"), TEXT("meridian_compact"), TEXT("production"),
+         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Barracks},
+        {TEXT("ka_memory_hearth"), TEXT("kharuun_assemblies"), TEXT("headquarters_dropoff"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::CommandCore},
+        {TEXT("ka_waystone"), TEXT("kharuun_assemblies"), TEXT("mobile_supply_node"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Dropoff},
+        {TEXT("ka_growth_basin"), TEXT("kharuun_assemblies"), TEXT("production"),
+         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks},
+    };
+    for (const FBuildingBinding& Binding : BuildingBindings)
+    {
+        const FEchoesBuildingContent* Building = FindBuilding(Binding.Id);
+        if (Building == nullptr || Building->FactionId != Binding.FactionId ||
+            Building->Role != Binding.Role)
+        {
+            OutError = FString::Printf(TEXT("SIM_RULES_BUILDING_BINDING_INVALID:%s"), Binding.Id);
+            return false;
+        }
+        echoes::sim::EntityArchetypeRules& Rules =
+            OutRules.archetypes[static_cast<std::size_t>(Binding.Faction)]
+                               [static_cast<std::size_t>(Binding.Type)];
+        Rules.cost = {Building->MatterCost, Building->DawnCost};
+        Rules.maxHitPoints = Building->MaxHealth;
+        Rules.visionTiles = FMath::DivideAndRoundUp(Building->SightCentimeters, 100);
+        Rules.constructionRequired = Building->ConstructionTicks;
+        Rules.populationCapacity = Building->LogisticsCapacity;
+        Rules.footprintHalfExtentRaw =
+            FMath::Max(Building->FootprintCells.X, Building->FootprintCells.Y) *
+            echoes::sim::kFixedScale / 2;
+    }
+
+    OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
+    OutRules.futureWell.preserveDawnPerInterval = FutureWell.PreserveDawnPerInterval;
+    OutRules.futureWell.preserveIntervalTicks = FutureWell.PreserveIntervalTicks;
+    OutRules.futureWell.preserveVisionTiles =
+        FMath::DivideAndRoundUp(FutureWell.PreserveVisionRadiusCentimeters, 100);
+    OutRules.futureWell.reshapeDawnCost = FutureWell.ReshapeDawnCost;
+    OutRules.futureWell.reshapeDurationMinimumTicks =
+        FutureWell.ReshapeManifestDurationTicks;
+    OutRules.futureWell.reshapeDurationMaximumTicks =
+        FutureWell.ReshapeManifestDurationTicks;
+    return true;
+}
+
 bool FEchoesContentCatalog::LoadCanonicalPack(
     const FString& PackPath,
     const FString& DigestPath,
@@ -354,6 +510,9 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
             !ReadRequiredInteger(Object, TEXT("max_health"), Unit.MaxHealth, Path, OutError, 1) ||
             !ReadRequiredInteger(Object, TEXT("move_speed_cm_s"), Unit.MoveSpeedCentimetersPerSecond, Path, OutError, 1) ||
             !ReadRequiredInteger(Object, TEXT("sight_cm"), Unit.SightCentimeters, Path, OutError, 1) ||
+            !ReadRequiredInteger(Object, TEXT("population_cost"), Unit.PopulationCost, Path, OutError, 1) ||
+            !ReadRequiredInteger(Object, TEXT("production_ticks"), Unit.ProductionTicks, Path, OutError, 1) ||
+            !ReadRequiredInteger(Object, TEXT("work_rate"), Unit.WorkRate, Path, OutError) ||
             !ReadRequiredInteger(Object, TEXT("cargo_capacity"), Unit.CargoCapacity, Path, OutError))
         {
             if (OutError.IsEmpty())
@@ -389,6 +548,8 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
             !ValidateUniqueId(Building.Id, BuildingIds, Path, OutError) ||
             !ReadCost(Object, Building.MatterCost, Building.DawnCost, Path, OutError) ||
             !ReadRequiredInteger(Object, TEXT("max_health"), Building.MaxHealth, Path, OutError, 1) ||
+            !ReadRequiredInteger(Object, TEXT("sight_cm"), Building.SightCentimeters, Path, OutError, 1) ||
+            !ReadRequiredInteger(Object, TEXT("construction_ticks"), Building.ConstructionTicks, Path, OutError, 1) ||
             !ReadRequiredInteger(Object, TEXT("logistics_capacity"), Building.LogisticsCapacity, Path, OutError))
         {
             if (OutError.IsEmpty())

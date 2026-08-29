@@ -177,8 +177,8 @@ def validate_units(
         record = require_object(raw, path)
         require_exact_keys(
             record,
-            {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm"},
-            {"cargo_capacity", "attack"},
+            {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm", "population_cost", "production_ticks"},
+            {"work_rate", "cargo_capacity", "attack"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -193,6 +193,7 @@ def validate_units(
         role = require_id(record["role"], f"{path}.role")
         roles_by_faction[faction].add(role)
         cargo = require_int(record.get("cargo_capacity", 0), f"{path}.cargo_capacity", 0, 100_000)
+        work_rate = require_int(record.get("work_rate", 0), f"{path}.work_rate", 0, 100_000)
         attack: dict[str, int] | None = None
         if "attack" in record:
             raw_attack = require_object(record["attack"], f"{path}.attack")
@@ -202,8 +203,8 @@ def validate_units(
                 "range_cm": require_int(raw_attack["range_cm"], f"{path}.attack.range_cm", 0, 100_000),
                 "cooldown_ticks": require_int(raw_attack["cooldown_ticks"], f"{path}.attack.cooldown_ticks", 1, 100_000),
             }
-        if role == "worker" and cargo == 0:
-            fail(f"{path}.cargo_capacity", "workers require positive cargo capacity")
+        if role == "worker" and (cargo == 0 or work_rate == 0):
+            fail(f"{path}.cargo_capacity", "workers require positive cargo capacity and work rate")
         if role != "worker" and attack is None:
             fail(f"{path}.attack", "non-worker slice units require an attack definition")
         output.append(
@@ -216,6 +217,9 @@ def validate_units(
                 "max_health": require_int(record["max_health"], f"{path}.max_health", 1, 1_000_000),
                 "move_speed_cm_s": require_int(record["move_speed_cm_s"], f"{path}.move_speed_cm_s", 1, 100_000),
                 "sight_cm": require_int(record["sight_cm"], f"{path}.sight_cm", 100, 100_000),
+                "population_cost": require_int(record["population_cost"], f"{path}.population_cost", 1, 1_000),
+                "production_ticks": require_int(record["production_ticks"], f"{path}.production_ticks", 1, 1_000_000),
+                "work_rate": work_rate,
                 "cargo_capacity": cargo,
                 "attack": attack,
             }
@@ -239,7 +243,7 @@ def validate_buildings(
         record = require_object(raw, path)
         require_exact_keys(
             record,
-            {"id", "display_name", "faction", "role", "cost", "max_health", "logistics_capacity", "footprint_cells"},
+            {"id", "display_name", "faction", "role", "cost", "max_health", "sight_cm", "construction_ticks", "logistics_capacity", "footprint_cells"},
             set(),
             path,
         )
@@ -265,6 +269,8 @@ def validate_buildings(
                 "role": role,
                 "cost": require_cost(record["cost"], f"{path}.cost"),
                 "max_health": require_int(record["max_health"], f"{path}.max_health", 1, 10_000_000),
+                "sight_cm": require_int(record["sight_cm"], f"{path}.sight_cm", 100, 100_000),
+                "construction_ticks": require_int(record["construction_ticks"], f"{path}.construction_ticks", 1, 1_000_000),
                 "logistics_capacity": require_int(record["logistics_capacity"], f"{path}.logistics_capacity", 0, 100_000),
                 "footprint_cells": [
                     require_int(footprint[0], f"{path}.footprint_cells[0]", 1, 64),

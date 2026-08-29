@@ -40,7 +40,22 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("edfd061c610e096f8df16a4fd8e4dfa2ca67af8d4d77aee414e792003c683d05")));
+        FString(TEXT("46bc07c2f792417f880c988b053c2ac825013b695787b0e49da95ebddf92e949")));
+
+    echoes::sim::SimulationRules Rules;
+    FString RulesError;
+    TestTrue(
+        *FString::Printf(TEXT("Canonical data maps to deterministic rules: %s"), *RulesError),
+        Catalog.BuildSimulationRules(20, Rules, RulesError));
+    TestEqual(TEXT("Meridian Lancer health enters simulation rules"),
+              Rules.archetypes[0][1].maxHitPoints, 145);
+    TestEqual(TEXT("Kharuun Riftstalker range enters fixed-point rules"),
+              Rules.archetypes[1][1].attackRangeRaw, 5120);
+    TestEqual(TEXT("Meridian Anchor footprint enters simulation rules"),
+              Rules.archetypes[0][2].footprintHalfExtentRaw, 2560);
+    TestEqual(TEXT("Authored Future Well duration enters simulation rules"),
+              Rules.futureWell.reshapeDurationMinimumTicks,
+              static_cast<echoes::sim::Tick>(1800));
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
