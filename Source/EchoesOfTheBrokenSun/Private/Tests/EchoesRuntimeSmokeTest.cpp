@@ -139,6 +139,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("CyclePlayableFaction"), EKeys::Tab));
         TestTrue(TEXT("Faction research input is mapped"),
                  HasAction(TEXT("ResearchNext"), EKeys::R, false, true));
+        TestTrue(TEXT("Technology archive input is mapped"),
+                 HasAction(TEXT("ToggleTechnologyPanel"), EKeys::F2));
     }
 
     echoes::sim::SimulationConfig Config;

@@ -1,12 +1,15 @@
 #include "EchoesHUD.h"
 
+#include "EchoesContentSubsystem.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTechnologyPanelLayout.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
 #include <algorithm>
@@ -252,7 +255,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [P] Pause    [R] Restart    [Shift+R] Research"),
+        TEXT("[1-0] Recall group    [G then 1-0] Assign group    [F2] Technologies    [P] Pause    [R] Restart"),
         SecondaryColor,
         TextX,
         HudY(136.0f),
@@ -371,7 +374,11 @@ void AEchoesHUD::DrawHUD()
         Settings,
         PlayerView.has_value() ? &*PlayerView : nullptr);
     DrawSelectionRectangle();
-    if (EchoesController != nullptr && EchoesController->IsPauseMenuVisible())
+    if (EchoesController != nullptr && EchoesController->IsTechnologyPanelVisible())
+    {
+        DrawTechnologyPanel(EchoesController, Bridge, Settings);
+    }
+    else if (EchoesController != nullptr && EchoesController->IsPauseMenuVisible())
     {
         DrawPauseMenu(EchoesController, Settings);
     }
@@ -379,6 +386,251 @@ void AEchoesHUD::DrawHUD()
     {
         DrawMatchResult(EchoesController, Bridge, Settings);
     }
+}
+
+void AEchoesHUD::DrawTechnologyPanel(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesSimulationSubsystem* Bridge,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr || Bridge == nullptr ||
+        !EchoesController->IsTechnologyPanelVisible())
+    {
+        return;
+    }
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    const echoes::sim::PlayerState* Player =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    if (Simulation == nullptr || Player == nullptr)
+    {
+        return;
+    }
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float Scale = FMath::Clamp(HudScale, 0.75f, 1.35f);
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesTechnologyPanelLayout Layout =
+        FEchoesTechnologyPanelLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
+    const FLinearColor PanelColor =
+        bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.99f)
+            : FLinearColor(0.008f, 0.018f, 0.035f, 0.97f);
+    const FLinearColor AccentColor =
+        bHighContrast
+            ? FLinearColor(1.0f, 0.9f, 0.1f)
+            : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor MutedColor =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.68f, 0.73f, 0.82f);
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.58f), 0.0f, 0.0f,
+             Canvas->ClipX, Canvas->ClipY);
+    DrawRect(PanelColor, Layout.Origin.X, Layout.Origin.Y,
+             Layout.Size.X, Layout.Size.Y);
+    DrawRect(AccentColor, Layout.Origin.X, Layout.Origin.Y,
+             Layout.Size.X, 3.0f * Scale);
+
+    const float TextX = Layout.Origin.X + 34.0f * Scale;
+    DrawText(
+        FString::Printf(
+            TEXT("%s  //  TECHNOLOGY ARCHIVE"),
+            *EchoesController->GetLocalFactionLabel()),
+        AccentColor,
+        TextX,
+        Layout.Origin.Y + 25.0f * Scale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        1.12f * Scale,
+        false);
+    DrawText(
+        TEXT("Research occupies the selected production structure. Destruction interrupts the project without refund."),
+        MutedColor,
+        TextX,
+        Layout.Origin.Y + 58.0f * Scale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f * Scale,
+        false);
+
+    const FBox2D& Close = Layout.CloseButton;
+    DrawRect(
+        FLinearColor(AccentColor.R, AccentColor.G, AccentColor.B, 0.18f),
+        Close.Min.X, Close.Min.Y, Close.GetSize().X, Close.GetSize().Y);
+    DrawText(
+        TEXT("CLOSE"), AccentColor,
+        Close.Min.X + 8.0f * Scale,
+        Close.Min.Y + 8.0f * Scale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.76f * Scale,
+        false);
+
+    bool bSelectedProducer = false;
+    for (const uint32 EntityId : EchoesController->GetSelectedEntityIds())
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity != nullptr &&
+            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity->type == echoes::sim::EntityType::Barracks)
+        {
+            bSelectedProducer = true;
+            break;
+        }
+    }
+
+    const bool bMeridian =
+        Player->faction == echoes::sim::Faction::MeridianCompact;
+    const echoes::sim::ResearchType Technologies[2] = {
+        bMeridian
+            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+            : echoes::sim::ResearchType::KharuunEchoCartography,
+        bMeridian
+            ? echoes::sim::ResearchType::MeridianHorizonLattice
+            : echoes::sim::ResearchType::KharuunAncestralEdge,
+    };
+    const TCHAR* StableIds[2] = {
+        bMeridian ? TEXT("mc_prismatic_targeting")
+                  : TEXT("ka_echo_cartography"),
+        bMeridian ? TEXT("mc_horizon_lattice")
+                  : TEXT("ka_ancestral_edge"),
+    };
+    const UEchoesContentSubsystem* Content =
+        GetWorld() != nullptr && GetWorld()->GetGameInstance() != nullptr
+            ? GetWorld()->GetGameInstance()->GetSubsystem<UEchoesContentSubsystem>()
+            : nullptr;
+
+    for (int32 TierIndex = 0; TierIndex < 2; ++TierIndex)
+    {
+        const echoes::sim::ResearchType Technology = Technologies[TierIndex];
+        const echoes::sim::ResearchRules* Rules =
+            Simulation->ResearchDefinition(Technology);
+        const FEchoesTechnologyContent* Definition =
+            Content != nullptr && Content->IsReady()
+                ? Content->GetCatalog().FindTechnology(StableIds[TierIndex])
+                : nullptr;
+        const FString Name =
+            Definition != nullptr
+                ? Definition->DisplayName
+                : FString::Printf(TEXT("Tier %d technology"), TierIndex + 1);
+        const FBox2D& Row = Layout.TechnologyRows[TierIndex];
+        const bool bComplete = Player->HasCompletedResearch(Technology);
+        const bool bActive = Player->activeResearch == Technology;
+        const bool bPrerequisiteMet =
+            Rules != nullptr &&
+            (Rules->prerequisite == echoes::sim::ResearchType::None ||
+             Player->HasCompletedResearch(Rules->prerequisite));
+        const bool bFunded =
+            Rules != nullptr &&
+            Player->resources.material >= Rules->cost.material &&
+            Player->resources.dawnshards >= Rules->cost.dawnshards;
+        FString Status;
+        FLinearColor StatusColor = AccentColor;
+        if (bComplete)
+        {
+            Status = TEXT("COMPLETE");
+            StatusColor = FLinearColor(0.25f, 1.0f, 0.66f);
+        }
+        else if (bActive)
+        {
+            const int32 Percent = FMath::Clamp(
+                Player->researchProgress * 100 /
+                    FMath::Max(1, Player->researchRequired),
+                0, 100);
+            Status = FString::Printf(TEXT("RESEARCHING  %d%%"), Percent);
+        }
+        else if (Player->activeResearch != echoes::sim::ResearchType::None)
+        {
+            Status = TEXT("BUSY — another project is active");
+            StatusColor = MutedColor;
+        }
+        else if (!bPrerequisiteMet)
+        {
+            Status = TEXT("LOCKED — complete Tier 1 first");
+            StatusColor = MutedColor;
+        }
+        else if (!bFunded)
+        {
+            Status = TEXT("INSUFFICIENT RESOURCES");
+            StatusColor = FLinearColor(1.0f, 0.55f, 0.2f);
+        }
+        else if (!bSelectedProducer)
+        {
+            Status = TEXT("READY — select a production structure");
+            StatusColor = FLinearColor(1.0f, 0.78f, 0.25f);
+        }
+        else
+        {
+            Status = TEXT("READY — click to research");
+        }
+
+        const FLinearColor RowColor =
+            bComplete
+                ? FLinearColor(0.05f, 0.18f, 0.15f, 0.94f)
+                : bActive
+                      ? FLinearColor(0.04f, 0.18f, 0.25f, 0.96f)
+                      : FLinearColor(0.025f, 0.055f, 0.09f, 0.94f);
+        DrawRect(RowColor, Row.Min.X, Row.Min.Y,
+                 Row.GetSize().X, Row.GetSize().Y);
+        DrawRect(
+            FLinearColor(AccentColor.R, AccentColor.G, AccentColor.B, 0.7f),
+            Row.Min.X, Row.Min.Y, 4.0f * Scale, Row.GetSize().Y);
+        DrawText(
+            FString::Printf(TEXT("TIER %d  //  %s"), TierIndex + 1, *Name),
+            FLinearColor::White,
+            Row.Min.X + 20.0f * Scale,
+            Row.Min.Y + 16.0f * Scale,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            1.0f * Scale,
+            false);
+        if (Rules != nullptr)
+        {
+            DrawText(
+                FString::Printf(
+                    TEXT("Matter %d    Dawn %d    Duration %.1fs"),
+                    Rules->cost.material,
+                    Rules->cost.dawnshards,
+                    static_cast<double>(Rules->researchTicks) /
+                        FMath::Max(1U, Simulation->Config().ticksPerSecond)),
+                MutedColor,
+                Row.Min.X + 20.0f * Scale,
+                Row.Min.Y + 47.0f * Scale,
+                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                0.83f * Scale,
+                false);
+            const FString Effect =
+                Rules->combatDamagePercent > 100
+                    ? FString::Printf(
+                          TEXT("Effect: +%d%% combat damage"),
+                          Rules->combatDamagePercent - 100)
+                    : FString::Printf(
+                          TEXT("Effect: +%d%% combat vision"),
+                          Rules->combatVisionPercent - 100);
+            DrawText(
+                Effect,
+                MutedColor,
+                Row.Min.X + 20.0f * Scale,
+                Row.Min.Y + 72.0f * Scale,
+                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                0.83f * Scale,
+                false);
+        }
+        DrawText(
+            Status,
+            StatusColor,
+            Row.Max.X - 286.0f * Scale,
+            Row.Min.Y + 18.0f * Scale,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.82f * Scale,
+            false);
+    }
+
+    DrawText(
+        TEXT("LMB: choose tier    Enter / Shift+R: next available    F2 / Escape / P: close"),
+        AccentColor,
+        TextX,
+        Layout.Origin.Y + Layout.Size.Y - 38.0f * Scale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f * Scale,
+        false);
 }
 
 void AEchoesHUD::DrawTitleScreen(

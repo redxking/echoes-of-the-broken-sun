@@ -43,7 +43,9 @@ public:
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
+    void ToggleTechnologyPanel();
     void TogglePauseMenu();
+    bool HandleTechnologyPanelPointer(const FVector2D& ScreenPosition);
     [[nodiscard]] FString GetLocalFactionLabel() const;
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
@@ -62,10 +64,14 @@ public:
     {
         return bPauseMenuVisible;
     }
+    [[nodiscard]] bool IsTechnologyPanelVisible() const
+    {
+        return bTechnologyPanelVisible;
+    }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
         return bTitleScreenVisible || bMissionBriefingVisible ||
-               bPauseMenuVisible ||
+               bPauseMenuVisible || bTechnologyPanelVisible ||
                bMatchResultVisible;
     }
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
@@ -88,6 +94,8 @@ private:
     void ProduceHeavy();
     void ProduceScout();
     void ResearchNextTechnology();
+    void ResearchTechnologyByTier(int32 TierIndex);
+    void ResearchTechnology(echoes::sim::ResearchType Research);
     void AttackMoveAtCursor();
     void PatrolAtCursor();
     void HoldSelectedUnits();
@@ -157,6 +165,8 @@ private:
     bool bTitleScreenVisible = false;
     bool bMissionBriefingVisible = false;
     bool bPauseMenuVisible = false;
+    bool bTechnologyPanelVisible = false;
+    bool bTechnologyPanelWasScenarioPaused = false;
     bool bMatchResultVisible = false;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;

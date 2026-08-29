@@ -34,6 +34,10 @@ private:
     void DrawPauseMenu(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    void DrawTechnologyPanel(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesSimulationSubsystem* Bridge,
+        const UEchoesGameUserSettings* Settings);
     void DrawMatchResult(
         const AEchoesPlayerController* EchoesController,
         const UEchoesSimulationSubsystem* Bridge,

@@ -4,6 +4,7 @@
 
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTechnologyPanelLayout.h"
 #include "Engine/World.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Tests/AutomationCommon.h"
@@ -142,6 +143,30 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
                        Mapping.Contains(TEXT("bShift=True")) &&
                        Mapping.Contains(TEXT("Key=R"));
             }));
+    TestTrue(
+        TEXT("F2 technology archive mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"ToggleTechnologyPanel\"")) &&
+                       Mapping.Contains(TEXT("Key=F2"));
+            }));
+
+    const FEchoesTechnologyPanelLayout PanelLayout =
+        FEchoesTechnologyPanelLayout::Build(FVector2D(1600.0f, 900.0f), 1.0f);
+    TestTrue(TEXT("Technology panel remains inside the accepted viewport"),
+             PanelLayout.Origin.X >= 0.0f && PanelLayout.Origin.Y >= 0.0f &&
+                 PanelLayout.Origin.X + PanelLayout.Size.X <= 1600.0f &&
+                 PanelLayout.Origin.Y + PanelLayout.Size.Y <= 900.0f);
+    TestFalse(TEXT("Technology tier pointer targets do not overlap"),
+              PanelLayout.TechnologyRows[0].Intersect(
+                  PanelLayout.TechnologyRows[1]));
+    TestTrue(TEXT("Technology close target is distinct from both tiers"),
+             !PanelLayout.CloseButton.Intersect(
+                  PanelLayout.TechnologyRows[0]) &&
+                 !PanelLayout.CloseButton.Intersect(
+                  PanelLayout.TechnologyRows[1]));
 
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

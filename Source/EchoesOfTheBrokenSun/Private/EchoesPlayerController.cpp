@@ -4,6 +4,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTechnologyPanelLayout.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "InputCoreTypes.h"
@@ -109,6 +110,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     bTitleScreenVisible = true;
     bMissionBriefingVisible = false;
     bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     Bridge->SetScenarioPaused(true);
@@ -149,6 +151,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
     bControlGroupAssignmentArmed = false;
     bTitleScreenVisible = false;
     bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
@@ -238,6 +241,10 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     {
         RestartScenario();
     }
+    else if (bTechnologyPanelVisible)
+    {
+        ResearchNextTechnology();
+    }
     else if (bPauseMenuVisible)
     {
         TogglePauseMenu();
@@ -263,6 +270,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bTitleScreenVisible = false;
     bMissionBriefingVisible = false;
     bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
     bMatchResultVisible = true;
     PresentedMatchOutcome = Outcome;
     SetIgnoreMoveInput(true);
@@ -386,6 +394,11 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::ResearchNextTechnology);
     InputComponent->BindAction(
+        TEXT("ToggleTechnologyPanel"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ToggleTechnologyPanel);
+    InputComponent->BindAction(
         TEXT("AttackMoveAtCursor"),
         IE_Pressed,
         this,
@@ -494,6 +507,16 @@ void AEchoesPlayerController::SetupInputComponent()
 
 void AEchoesPlayerController::SelectionPressed()
 {
+    if (bTechnologyPanelVisible)
+    {
+        float MouseX = 0.0f;
+        float MouseY = 0.0f;
+        if (GetMousePosition(MouseX, MouseY))
+        {
+            (void)HandleTechnologyPanelPointer(FVector2D(MouseX, MouseY));
+        }
+        return;
+    }
     if (IsModalOverlayVisible())
     {
         return;
@@ -1068,7 +1091,79 @@ void AEchoesPlayerController::ProduceScout()
 
 void AEchoesPlayerController::ResearchNextTechnology()
 {
-    if (IsModalOverlayVisible())
+    if (IsModalOverlayVisible() && !bTechnologyPanelVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const echoes::sim::PlayerState* Player =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || Player == nullptr)
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Research is unavailable."));
+        return;
+    }
+    const echoes::sim::ResearchType Candidates[] = {
+        Player->faction == echoes::sim::Faction::MeridianCompact
+            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+            : echoes::sim::ResearchType::KharuunEchoCartography,
+        Player->faction == echoes::sim::Faction::MeridianCompact
+            ? echoes::sim::ResearchType::MeridianHorizonLattice
+            : echoes::sim::ResearchType::KharuunAncestralEdge,
+    };
+    for (const echoes::sim::ResearchType Research : Candidates)
+    {
+        if (Player->HasCompletedResearch(Research))
+        {
+            continue;
+        }
+        ResearchTechnology(Research);
+        return;
+    }
+    SetStatusMessage(TEXT("RESEARCH COMPLETE: both faction technologies are operational."));
+}
+
+void AEchoesPlayerController::ResearchTechnologyByTier(int32 TierIndex)
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const echoes::sim::PlayerState* Player =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    if (Player == nullptr || TierIndex < 0 || TierIndex > 1)
+    {
+        SetStatusMessage(TEXT("[RESEARCH_TECHNOLOGY_INVALID] Technology selection is unavailable."));
+        return;
+    }
+    const bool bMeridian =
+        Player->faction == echoes::sim::Faction::MeridianCompact;
+    const echoes::sim::ResearchType Research =
+        TierIndex == 0
+            ? (bMeridian
+                   ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+                   : echoes::sim::ResearchType::KharuunEchoCartography)
+            : (bMeridian
+                   ? echoes::sim::ResearchType::MeridianHorizonLattice
+                   : echoes::sim::ResearchType::KharuunAncestralEdge);
+    ResearchTechnology(Research);
+}
+
+void AEchoesPlayerController::ResearchTechnology(
+    echoes::sim::ResearchType Research)
+{
+    if (IsModalOverlayVisible() && !bTechnologyPanelVisible)
     {
         return;
     }
@@ -1107,42 +1202,24 @@ void AEchoesPlayerController::ResearchNextTechnology()
     }
     if (ProducerId == 0)
     {
-        SetStatusMessage(TEXT("[RESEARCH_PRODUCER_INVALID] Select a production structure, then press Shift+R."));
+        SetStatusMessage(TEXT("[RESEARCH_PRODUCER_INVALID] Select a production structure before choosing a technology."));
         return;
     }
-    const echoes::sim::ResearchType Candidates[] = {
-        Player->faction == echoes::sim::Faction::MeridianCompact
-            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-            : echoes::sim::ResearchType::KharuunEchoCartography,
-        Player->faction == echoes::sim::Faction::MeridianCompact
-            ? echoes::sim::ResearchType::MeridianHorizonLattice
-            : echoes::sim::ResearchType::KharuunAncestralEdge,
-    };
-    for (const echoes::sim::ResearchType Research : Candidates)
+    FString Feedback;
+    if (!Bridge->IssueResearchCommand(ProducerId, Research, Feedback))
     {
-        if (Player->HasCompletedResearch(Research))
-        {
-            continue;
-        }
-        FString Feedback;
-        if (Bridge->IssueResearchCommand(ProducerId, Research, Feedback))
-        {
-            const TCHAR* Label =
-                Research == echoes::sim::ResearchType::MeridianPrismaticTargeting
-                    ? TEXT("PRISMATIC TARGETING")
-                    : Research == echoes::sim::ResearchType::MeridianHorizonLattice
-                          ? TEXT("HORIZON LATTICE")
-                          : Research == echoes::sim::ResearchType::KharuunEchoCartography
-                                ? TEXT("ECHO CARTOGRAPHY")
-                                : TEXT("ANCESTRAL EDGE");
-            SetStatusMessage(FString::Printf(
-                TEXT("%s: research queued."), Label));
-            return;
-        }
         SetStatusMessage(Feedback);
         return;
     }
-    SetStatusMessage(TEXT("RESEARCH COMPLETE: both faction technologies are operational."));
+    const TCHAR* Label =
+        Research == echoes::sim::ResearchType::MeridianPrismaticTargeting
+            ? TEXT("PRISMATIC TARGETING")
+            : Research == echoes::sim::ResearchType::MeridianHorizonLattice
+                  ? TEXT("HORIZON LATTICE")
+                  : Research == echoes::sim::ResearchType::KharuunEchoCartography
+                        ? TEXT("ECHO CARTOGRAPHY")
+                        : TEXT("ANCESTRAL EDGE");
+    SetStatusMessage(FString::Printf(TEXT("%s: research queued."), Label));
 }
 
 void AEchoesPlayerController::AttackMoveAtCursor()
@@ -2216,8 +2293,99 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
     }
 }
 
+void AEchoesPlayerController::ToggleTechnologyPanel()
+{
+    if (bTitleScreenVisible || bMissionBriefingVisible ||
+        bPauseMenuVisible || bMatchResultVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Technologies are unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+
+    if (bTechnologyPanelVisible)
+    {
+        bTechnologyPanelVisible = false;
+        Bridge->SetScenarioPaused(bTechnologyPanelWasScenarioPaused);
+        SetIgnoreMoveInput(bTechnologyPanelWasScenarioPaused);
+        SetIgnoreLookInput(bTechnologyPanelWasScenarioPaused);
+        SetStatusMessage(TEXT("TECHNOLOGY ARCHIVE CLOSED."));
+    }
+    else
+    {
+        bTechnologyPanelWasScenarioPaused = Bridge->IsScenarioPaused();
+        bTechnologyPanelVisible = true;
+        bSelectionButtonDown = false;
+        Bridge->SetScenarioPaused(true);
+        SetIgnoreMoveInput(true);
+        SetIgnoreLookInput(true);
+        SetStatusMessage(
+            TEXT("TECHNOLOGY ARCHIVE — click a tier or press Enter for the next available project; F2, Escape, or P closes."),
+            3600.0f);
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_TECHNOLOGY_PANEL] visible=%s paused=%s pointerRows=true keyboardConfirm=true"),
+        bTechnologyPanelVisible ? TEXT("true") : TEXT("false"),
+        Bridge->IsScenarioPaused() ? TEXT("true") : TEXT("false"));
+}
+
+bool AEchoesPlayerController::HandleTechnologyPanelPointer(
+    const FVector2D& ScreenPosition)
+{
+    if (!bTechnologyPanelVisible)
+    {
+        return false;
+    }
+    int32 ViewportX = 0;
+    int32 ViewportY = 0;
+    GetViewportSize(ViewportX, ViewportY);
+    if (ViewportX <= 0 || ViewportY <= 0)
+    {
+        SetStatusMessage(TEXT("[VIEWPORT_UNAVAILABLE] Technology selection could not resolve the screen."));
+        return true;
+    }
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const FEchoesTechnologyPanelLayout Layout =
+        FEchoesTechnologyPanelLayout::Build(
+            FVector2D(ViewportX, ViewportY),
+            Settings != nullptr ? Settings->GetHudScale() : 1.0f);
+    if (Layout.CloseButton.IsInsideOrOn(ScreenPosition))
+    {
+        ToggleTechnologyPanel();
+        return true;
+    }
+    for (int32 TierIndex = 0; TierIndex < 2; ++TierIndex)
+    {
+        if (Layout.TechnologyRows[TierIndex].IsInsideOrOn(ScreenPosition))
+        {
+            ResearchTechnologyByTier(TierIndex);
+            return true;
+        }
+    }
+    return true;
+}
+
 void AEchoesPlayerController::TogglePauseMenu()
 {
+    if (bTechnologyPanelVisible)
+    {
+        ToggleTechnologyPanel();
+        return;
+    }
     if (bTitleScreenVisible || bMissionBriefingVisible || bMatchResultVisible)
     {
         return;
@@ -2271,6 +2439,7 @@ void AEchoesPlayerController::RestartScenario()
         bRuntimeStateKnown = true;
         bTitleScreenVisible = false;
         bPauseMenuVisible = false;
+        bTechnologyPanelVisible = false;
         bMatchResultVisible = false;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
         SetIgnoreMoveInput(false);

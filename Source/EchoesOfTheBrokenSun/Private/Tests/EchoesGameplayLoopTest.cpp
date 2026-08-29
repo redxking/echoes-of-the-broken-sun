@@ -151,6 +151,28 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
                   BriefingController->IsMissionBriefingVisible());
         TestFalse(TEXT("Deployment resumes the deterministic scenario"),
                   Bridge->IsScenarioPaused());
+        const echoes::sim::Tick TechnologyPausedTick =
+            Bridge->GetSimulation()->CurrentTick();
+        BriefingController->ToggleTechnologyPanel();
+        TestTrue(TEXT("Technology archive becomes visible"),
+                 BriefingController->IsTechnologyPanelVisible());
+        TestTrue(TEXT("Technology archive pauses the deterministic scenario"),
+                 Bridge->IsScenarioPaused());
+        TestTrue(TEXT("Technology archive is a modal input boundary"),
+                 BriefingController->IsModalOverlayVisible());
+        Bridge->Tick(0.5f);
+        TestEqual(TEXT("Technology archive prevents simulation advancement"),
+                  Bridge->GetSimulation()->CurrentTick(),
+                  TechnologyPausedTick);
+        BriefingController->ConfirmPrimaryAction();
+        TestTrue(TEXT("Enter uses the archive research action"),
+                 BriefingController->GetStatusMessage().Contains(
+                     TEXT("RESEARCH_PRODUCER_INVALID")));
+        BriefingController->TogglePauseMenu();
+        TestFalse(TEXT("Escape/P route closes the technology archive"),
+                  BriefingController->IsTechnologyPanelVisible());
+        TestFalse(TEXT("Closing the technology archive resumes the operation"),
+                  Bridge->IsScenarioPaused());
         const echoes::sim::Tick MenuPausedTick =
             Bridge->GetSimulation()->CurrentTick();
         BriefingController->TogglePauseMenu();
