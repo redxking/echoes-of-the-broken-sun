@@ -140,7 +140,7 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Reverse keyboard-selection cycle input is mapped"),
                  HasAction(TEXT("CycleOwnedEntityPrevious"), EKeys::BackSpace));
         TestTrue(TEXT("Keyboard target-mode input is mapped"),
-                 HasAction(TEXT("ToggleKeyboardTargeting"), EKeys::F1));
+                 HasAction(TEXT("ToggleKeyboardTargeting"), EKeys::Home));
         TestTrue(TEXT("Keyboard center-context input is mapped"),
                  HasAction(TEXT("KeyboardContextOrder"), EKeys::SpaceBar));
         TestTrue(TEXT("Faction research input is mapped"),

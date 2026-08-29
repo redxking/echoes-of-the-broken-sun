@@ -266,7 +266,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     DrawText(
-        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [F1] Center target  [Space] Center order"),
+        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Center target  [Space] Center order"),
         SecondaryColor,
         TextX,
         HudY(90.0f),

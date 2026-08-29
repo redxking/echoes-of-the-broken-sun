@@ -274,10 +274,10 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Keyboard center targeting defaults off"),
               Controller->IsKeyboardTargetingEnabled());
     Controller->ToggleKeyboardTargeting();
-    TestTrue(TEXT("F1 path enables fair view-center targeting"),
+    TestTrue(TEXT("Home path enables fair view-center targeting"),
              Controller->IsKeyboardTargetingEnabled());
     Controller->ToggleKeyboardTargeting();
-    TestFalse(TEXT("F1 path restores pointer targeting"),
+    TestFalse(TEXT("Home path restores pointer targeting"),
               Controller->IsKeyboardTargetingEnabled());
 
     TArray<FString> InputMappings;
@@ -305,13 +305,13 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                        Mapping.Contains(TEXT("Key=BackSpace"));
             }));
     TestTrue(
-        TEXT("F1 center-target mapping is present"),
+        TEXT("Home center-target mapping is present"),
         InputMappings.ContainsByPredicate(
             [](const FString& Mapping)
             {
                 return Mapping.Contains(
                            TEXT("ActionName=\"ToggleKeyboardTargeting\"")) &&
-                       Mapping.Contains(TEXT("Key=F1"));
+                       Mapping.Contains(TEXT("Key=Home"));
             }));
     TestTrue(
         TEXT("Space center-order mapping is present"),
