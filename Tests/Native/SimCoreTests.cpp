@@ -261,6 +261,38 @@ void TestCombatResolvesDeterministically() {
             simulation.FindEntity(kharuun)->maxHitPoints);
 }
 
+void TestDeterministicObstaclePathing() {
+    Simulation first({12, 12, 20, 0x50415448});
+    REQUIRE(first.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    for (std::int32_t tileY = 0; tileY < 11; ++tileY) {
+        REQUIRE(first.SetTerrainTile(5, tileY, Terrain::Blocked));
+    }
+    const EntityId scout = first.SpawnEntity(
+        0,
+        Faction::MeridianCompact,
+        EntityType::Soldier,
+        Vec2::FromTiles(2, 2));
+    REQUIRE(scout != 0);
+    Command move = MakeCommand(0, 0, 1, CommandType::Move, scout);
+    move.position = Vec2::FromTiles(8, 2);
+    REQUIRE(first.QueueCommand(move));
+
+    Simulation second = first;
+    for (std::int32_t tick = 0; tick < 240; ++tick) {
+        first.Step();
+        second.Step();
+        const Entity* moving = first.FindEntity(scout);
+        REQUIRE(moving != nullptr);
+        REQUIRE(first.TerrainAt(
+                    moving->position.x.FloorToInt(),
+                    moving->position.y.FloorToInt()) != Terrain::Blocked);
+    }
+    REQUIRE(first.FindEntity(scout)->position == Vec2::FromTiles(8, 2));
+    REQUIRE(first.FindEntity(scout)->order.type == OrderType::None);
+    REQUIRE(first.StateChecksum() == second.StateChecksum());
+}
+
 void TestProductionPopulationAndVictory() {
     Simulation production({32, 32, 20, 0x51});
     AddTwoPlayers(production, {1000, 200}, {1000, 200});
@@ -678,6 +710,7 @@ int main() {
         {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
         {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},
         {"combat", TestCombatResolvesDeterministically},
+        {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"Future Well choices", TestFutureWellChoices},

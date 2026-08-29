@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesFogView.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -47,6 +48,23 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+
+    AEchoesFogView* FogView = Bridge->GetFogView();
+    if (!TestNotNull(TEXT("Local fog/shroud presentation is available"), FogView))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestEqual(
+        TEXT("Fog presentation accounts for every map tile"),
+        FogView->GetUnexploredTileCount() + FogView->GetExploredTileCount() +
+            FogView->GetVisibleTileCount(),
+        64 * 64);
+    TestTrue(
+        TEXT("The initial map contains both visible and unexplored tiles"),
+        FogView->GetVisibleTileCount() > 0 &&
+            FogView->GetUnexploredTileCount() > 0);
+    const int32 InitialKnownTiles = FogView->GetKnownTileCount();
 
     const echoes::sim::Vec2 ScoutStart = echoes::sim::Vec2::FromTiles(16, 10);
     const echoes::sim::Vec2 RevealPoint = echoes::sim::Vec2::FromTiles(21, 24);
@@ -142,6 +160,9 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
     AEchoesEntityView* FirstView = Bridge->FindEntityView(TargetId);
     TWeakObjectPtr<AEchoesEntityView> FirstViewWeak = FirstView;
     TestNotNull(TEXT("First visible presentation actor is available"), FirstView);
+    TestTrue(
+        TEXT("Scouting expands the persistent explored map"),
+        FogView->GetKnownTileCount() > InitialKnownTiles);
 
     if (!IssueMove(TEXT("Could not queue the retreat movement"), ScoutStart))
     {
@@ -161,6 +182,11 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("The presentation actor is removed when the resource leaves visibility"),
         TickUntil(IsTargetHidden, 32));
+    TestTrue(
+        TEXT("A previously seen target tile becomes explored shroud"),
+        Bridge->GetSimulation()->VisibilityAt(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            TargetPosition) == echoes::sim::Visibility::Explored);
     TestFalse(
         TEXT("The removed presentation actor is no longer a valid object"),
         FirstViewWeak.IsValid());

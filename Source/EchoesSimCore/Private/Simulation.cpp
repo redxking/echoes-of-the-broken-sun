@@ -785,17 +785,105 @@ bool Simulation::InInteractionRange(const Entity& first,
            static_cast<std::uint64_t>(range * range);
 }
 
+std::optional<Vec2> Simulation::FindNextPathWaypoint(
+    Vec2 from,
+    Vec2 destination) const {
+    const std::int32_t startX = from.x.FloorToInt();
+    const std::int32_t startY = from.y.FloorToInt();
+    const std::int32_t goalX = destination.x.FloorToInt();
+    const std::int32_t goalY = destination.y.FloorToInt();
+    if (startX == goalX && startY == goalY) {
+        return destination;
+    }
+    const Vec2 goalTile = Vec2::FromTiles(goalX, goalY);
+    if (!IsPositionPassable(goalTile)) {
+        return std::nullopt;
+    }
+
+    const std::size_t width =
+        static_cast<std::size_t>(config_.mapWidthTiles);
+    const std::size_t tileCount =
+        width * static_cast<std::size_t>(config_.mapHeightTiles);
+    const auto tileIndex = [width](std::int32_t tileX,
+                                   std::int32_t tileY) {
+        return static_cast<std::size_t>(tileY) * width +
+               static_cast<std::size_t>(tileX);
+    };
+    const std::size_t start = tileIndex(startX, startY);
+    const std::size_t goal = tileIndex(goalX, goalY);
+    constexpr std::size_t kUnvisited = std::numeric_limits<std::size_t>::max();
+    std::vector<std::size_t> parent(tileCount, kUnvisited);
+    std::vector<std::size_t> frontier{};
+    frontier.reserve(std::min<std::size_t>(tileCount, 4096));
+    parent[start] = start;
+    frontier.push_back(start);
+
+    // Fixed direction order is part of deterministic equal-cost path selection.
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}},
+        {{1, 0}},
+        {{0, 1}},
+        {{-1, 0}},
+    }};
+    std::size_t head = 0;
+    while (head < frontier.size() && parent[goal] == kUnvisited) {
+        const std::size_t current = frontier[head++];
+        const std::int32_t currentX =
+            static_cast<std::int32_t>(current % width);
+        const std::int32_t currentY =
+            static_cast<std::int32_t>(current / width);
+        for (const auto& direction : directions) {
+            const std::int32_t nextX = currentX + direction[0];
+            const std::int32_t nextY = currentY + direction[1];
+            if (nextX < 0 || nextY < 0 ||
+                nextX >= config_.mapWidthTiles ||
+                nextY >= config_.mapHeightTiles) {
+                continue;
+            }
+            const std::size_t next = tileIndex(nextX, nextY);
+            if (parent[next] != kUnvisited ||
+                !IsPositionPassable(Vec2::FromTiles(nextX, nextY))) {
+                continue;
+            }
+            parent[next] = current;
+            frontier.push_back(next);
+        }
+    }
+    if (parent[goal] == kUnvisited) {
+        return std::nullopt;
+    }
+
+    std::size_t next = goal;
+    while (parent[next] != start) {
+        next = parent[next];
+    }
+    const std::int32_t nextX = static_cast<std::int32_t>(next % width);
+    const std::int32_t nextY = static_cast<std::int32_t>(next / width);
+    return Vec2::FromTiles(nextX, nextY);
+}
+
 bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     if (entity.movementPerTickRaw <= 0) {
         return false;
     }
+    if (entity.position == destination) {
+        return true;
+    }
+    const std::optional<Vec2> waypoint =
+        FindNextPathWaypoint(entity.position, destination);
+    if (!waypoint.has_value()) {
+        return false;
+    }
+    const Vec2 movementTarget = *waypoint;
     const std::int64_t deltaX =
-        static_cast<std::int64_t>(destination.x.Raw()) - entity.position.x.Raw();
+        static_cast<std::int64_t>(movementTarget.x.Raw()) -
+        entity.position.x.Raw();
     const std::int64_t deltaY =
-        static_cast<std::int64_t>(destination.y.Raw()) - entity.position.y.Raw();
+        static_cast<std::int64_t>(movementTarget.y.Raw()) -
+        entity.position.y.Raw();
     const std::int64_t distance = Abs64(deltaX) + Abs64(deltaY);
     if (distance == 0) {
-        return true;
+        return entity.position == destination;
     }
     const std::int64_t travel =
         std::min<std::int64_t>(entity.movementPerTickRaw, distance);
@@ -806,23 +894,10 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     const Vec2 candidate = Vec2::FromRaw(
         static_cast<std::int32_t>(entity.position.x.Raw() + stepX),
         static_cast<std::int32_t>(entity.position.y.Raw() + stepY));
-    if (IsPositionPassable(candidate)) {
-        entity.position = candidate;
-    } else {
-        const Vec2 xOnly = Vec2::FromRaw(
-            static_cast<std::int32_t>(entity.position.x.Raw() + stepX),
-            entity.position.y.Raw());
-        const Vec2 yOnly = Vec2::FromRaw(
-            entity.position.x.Raw(),
-            static_cast<std::int32_t>(entity.position.y.Raw() + stepY));
-        if (stepX != 0 && IsPositionPassable(xOnly)) {
-            entity.position = xOnly;
-        } else if (stepY != 0 && IsPositionPassable(yOnly)) {
-            entity.position = yOnly;
-        } else {
-            return false;
-        }
+    if (!IsPositionPassable(candidate)) {
+        return false;
     }
+    entity.position = candidate;
     return entity.position == destination;
 }
 

@@ -368,6 +368,9 @@ private:
     [[nodiscard]] bool InInteractionRange(const Entity& first,
                                           const Entity& second,
                                           std::int32_t extraRangeRaw) const;
+    [[nodiscard]] std::optional<Vec2> FindNextPathWaypoint(
+        Vec2 from,
+        Vec2 destination) const;
     [[nodiscard]] bool MoveTowards(Entity& entity, Vec2 destination);
     [[nodiscard]] EntityId FindNearestOwnedDropoff(PlayerId player,
                                                    Vec2 from) const;

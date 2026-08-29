@@ -1,7 +1,7 @@
 # Echoes of the Broken Sun
 
 **Author and creator:** Angelis Pseftis  
-**Current state:** This is a verified Unreal playable-systems prototype, not a completed game. UE 5.8.2 is installed; the native simulation passes 11/11 hardened suites in optimized, debug, and sanitizer configurations; the arm64 Development Editor target builds; Unreal automation passes 3/3, covering bootstrap, visible-hidden-visible actor lifecycle, timed production, logistics, pause, and deterministic restart; and the current null-RHI runtime boots a 25-entity scenario with 10 initially visible views at 20 Hz. The rendered current build exposes construction and production controls, and pause plus restart were observed in the Unreal window. A self-contained 0.2.0 Mac Development package is traceable to clean source commit `21469a4` and passed structural, signature-seal, manifest, and packaged-startup checks. Complete pointer interaction, player-visible fog/shroud, pathing, gameplay-loop qualification, performance, clean-machine use, Developer ID signing, notarization, and release qualification remain open.
+**Current state:** This is a verified Unreal playable-systems prototype, not a completed game. UE 5.8.2 is installed; the native simulation passes 12/12 hardened suites in optimized, debug, and sanitizer configurations; the arm64 Development Editor target builds; Unreal automation passes 3/3, covering bootstrap, timed production, logistics, pause/restart, obstacle routing, and visible-hidden-visible entity plus fog/shroud lifecycle; and the current null-RHI runtime boots a 25-entity scenario with 10 initially visible views and a 4,096-tile visibility surface at 20 Hz. The rendered current build exposes the authoritative fog boundary, construction and production controls, and pause/restart feedback. The retained 0.2.0 Mac package predates this navigation/fog slice; a current-source package is the next gate. Complete pointer interaction, a qualified end-to-end match, navigation-scale performance, clean-machine use, Developer ID signing, notarization, and release qualification remain open.
 
 *Echoes of the Broken Sun* is an original science-fantasy real-time strategy game for macOS. Its central strategic resource, the Future Well, forces a player to choose between immediate power, sustained possibility, and temporary transformation of the battlefield.
 
@@ -15,7 +15,7 @@ The current Unreal integration gate is:
 
 1. Stop prototype builds below 40 GiB free, restore at least 60 GiB before large imports or release packaging, and target 100 GiB for sustained production. These are project engineering thresholds, not Epic-published minimums.
 2. Keep full Xcode selected. Xcode 26.6 has passed project generation, arm64 editor compilation, three Unreal automation tests, null-RHI and rendered startup, and local Development cooking/packaging; Epic still recommends 26.1.1, and clean-machine use plus representative performance workloads remain unverified.
-3. Implement deterministic pathing and the true fog/shroud surface, complete pointer-driven construction/production/combat validation, and profile the target scene before content expansion.
+3. Complete pointer-driven construction/production/combat validation as a full match, then profile obstacle routing and fog/shroud at the target unit and map scale before content expansion.
 4. Follow [Docs/SetupAndBuild.md](Docs/SetupAndBuild.md) and record every accepted result in the ledger.
 
 ## Repository map

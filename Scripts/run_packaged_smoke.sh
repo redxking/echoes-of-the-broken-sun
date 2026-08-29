@@ -35,7 +35,7 @@ mkdir -p "${log:h}"
   -stdout -FullStdOutLogOutput \
   -benchmark -fps=20 -benchmarkseconds=3 > "$log" 2>&1
 
-for marker in ECHOES_ENV_READY ECHOES_SIM_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
+for marker in ECHOES_ENV_READY ECHOES_SIM_READY ECHOES_FOG_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then
     print -u2 "Packaged runtime marker $marker was absent. Inspect: $log"
     exit 5
@@ -47,10 +47,15 @@ if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*25 entities, 10 visible views, 20 
   exit 6
 fi
 
-if /usr/bin/grep -Eq 'EnhancedInput user settings|\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
-  print -u2 "Packaged runtime reported a rejected warning or failure. Inspect: $log"
+if ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log"; then
+  print -u2 "The packaged fog/shroud surface did not report the accepted initial state. Inspect: $log"
   exit 7
 fi
 
-print "Packaged runtime passed: cooked content, simulation bootstrap, and first fixed tick initialized."
+if /usr/bin/grep -Eq 'EnhancedInput user settings|\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|\[ECHOES_FOG_INIT_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
+  print -u2 "Packaged runtime reported a rejected warning or failure. Inspect: $log"
+  exit 8
+fi
+
+print "Packaged runtime passed: cooked content, fog/shroud, simulation bootstrap, and first fixed tick initialized."
 print "Evidence log: $log"

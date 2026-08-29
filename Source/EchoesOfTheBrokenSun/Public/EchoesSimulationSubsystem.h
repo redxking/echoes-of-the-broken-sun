@@ -6,6 +6,7 @@
 #include "EchoesSimulationSubsystem.generated.h"
 
 class AEchoesEntityView;
+class AEchoesFogView;
 
 /**
  * Owns the deterministic simulation for the current game world.
@@ -66,6 +67,7 @@ public:
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
     [[nodiscard]] AEchoesEntityView* FindEntityView(uint32 EntityId) const;
+    [[nodiscard]] AEchoesFogView* GetFogView() const;
     [[nodiscard]] FVector SimToWorld(const echoes::sim::Vec2& Position) const;
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
@@ -91,10 +93,14 @@ private:
         FString& OutFeedback);
     void QueueOpponentCommands();
     bool SyncEntityViews(bool bTeleportNewViews);
+    bool SpawnFogView();
+    bool SyncFogView();
     void DestroyEntityViews();
+    void DestroyFogView();
 
     TUniquePtr<echoes::sim::Simulation> Simulation;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> EntityViews;
+    TWeakObjectPtr<AEchoesFogView> FogView;
     double FixedTimeAccumulator = 0.0;
     uint64 NextPlayerCommandSequence = 1;
     bool bScenarioReady = false;

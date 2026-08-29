@@ -4,6 +4,7 @@
 
 #include "Components/InputComponent.h"
 #include "EchoesGameMode.h"
+#include "EchoesFogView.h"
 #include "EchoesHUD.h"
 #include "EchoesPlayerController.h"
 #include "EchoesRTSCameraPawn.h"
@@ -28,6 +29,7 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Echoes player controller is registered"), AEchoesPlayerController::StaticClass());
     TestNotNull(TEXT("Echoes camera pawn is registered"), AEchoesRTSCameraPawn::StaticClass());
     TestNotNull(TEXT("Echoes HUD is registered"), AEchoesHUD::StaticClass());
+    TestNotNull(TEXT("Echoes fog view is registered"), AEchoesFogView::StaticClass());
     TestNotNull(TEXT("Echoes simulation subsystem is registered"), UEchoesSimulationSubsystem::StaticClass());
 
     const UInputSettings* InputSettings = GetDefault<UInputSettings>();

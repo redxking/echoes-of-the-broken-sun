@@ -1,6 +1,7 @@
 #include "EchoesSimulationSubsystem.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesFogView.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "Engine/World.h"
@@ -31,6 +32,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedFirstTick = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
+    FogView.Reset();
 }
 
 void UEchoesSimulationSubsystem::Deinitialize()
@@ -152,13 +154,14 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
     bLoggedFirstTick = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
-    if (!SyncEntityViews(true))
+    if (!SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
             LogEchoes,
             Error,
             TEXT("[ECHOES_SIM_VIEW_INIT_FAILED] Initial visible entity views could not be created."));
         DestroyEntityViews();
+        DestroyFogView();
         Simulation.Reset();
         bScenarioReady = false;
         return false;
@@ -179,6 +182,7 @@ bool UEchoesSimulationSubsystem::StartPrototypeScenario()
 void UEchoesSimulationSubsystem::StopPrototypeScenario()
 {
     DestroyEntityViews();
+    DestroyFogView();
     Simulation.Reset();
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
@@ -263,7 +267,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
     if (TicksThisFrame > 0)
     {
-        if (!SyncEntityViews(false))
+        if (!SyncEntityViews(false) || !SyncFogView())
         {
             UE_LOG(
                 LogEchoes,
@@ -699,6 +703,64 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
     return bAllVisibleViewsReady;
 }
 
+bool UEchoesSimulationSubsystem::SpawnFogView()
+{
+    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    {
+        return false;
+    }
+    DestroyFogView();
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesFogView* NewFogView = GetWorld()->SpawnActor<AEchoesFogView>(
+        AEchoesFogView::StaticClass(),
+        FVector::ZeroVector,
+        FRotator::ZeroRotator,
+        SpawnParameters);
+    if (NewFogView == nullptr ||
+        !NewFogView->InitializeFog(
+            *Simulation,
+            LocalPlayerId,
+            TileWorldSize))
+    {
+        if (NewFogView != nullptr)
+        {
+            NewFogView->Destroy();
+        }
+        UE_LOG(LogEchoes, Error, TEXT("[ECHOES_FOG_INIT_FAILED]"));
+        return false;
+    }
+    FogView = NewFogView;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_FOG_READY] tiles=%d visible=%d explored=%d unexplored=%d"),
+        NewFogView->GetVisibleTileCount() +
+            NewFogView->GetExploredTileCount() +
+            NewFogView->GetUnexploredTileCount(),
+        NewFogView->GetVisibleTileCount(),
+        NewFogView->GetExploredTileCount(),
+        NewFogView->GetUnexploredTileCount());
+    return true;
+}
+
+bool UEchoesSimulationSubsystem::SyncFogView()
+{
+    AEchoesFogView* View = FogView.Get();
+    return Simulation.IsValid() && View != nullptr &&
+           View->SyncVisibility(*Simulation);
+}
+
+void UEchoesSimulationSubsystem::DestroyFogView()
+{
+    if (AEchoesFogView* View = FogView.Get())
+    {
+        View->Destroy();
+    }
+    FogView.Reset();
+}
+
 void UEchoesSimulationSubsystem::DestroyEntityViews()
 {
     for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair : EntityViews)
@@ -725,6 +787,11 @@ AEchoesEntityView* UEchoesSimulationSubsystem::FindEntityView(uint32 EntityId) c
 {
     const TWeakObjectPtr<AEchoesEntityView>* View = EntityViews.Find(EntityId);
     return View != nullptr ? View->Get() : nullptr;
+}
+
+AEchoesFogView* UEchoesSimulationSubsystem::GetFogView() const
+{
+    return FogView.Get();
 }
 
 FVector UEchoesSimulationSubsystem::SimToWorld(const echoes::sim::Vec2& Position) const
