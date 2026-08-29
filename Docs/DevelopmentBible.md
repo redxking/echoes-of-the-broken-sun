@@ -167,7 +167,7 @@ The target campaign is 15 missions; the outline is not evidence that content exi
 2. **Seven Accounts of Rain:** Oruun defends a migration route while inherited memories disagree about terrain.
 3. **A City on Reserve:** Mara stabilizes an ark-city grid through distributed objectives.
 4. **The Unburied Road:** Oruun uses mobile infrastructure to recover a missing memory shard.
-5. **Terms of Continuance:** A joint ceasefire fails when apparent apparitions attack both networks.
+5. **Terms of Continuance:** Target narrative: a joint ceasefire fails under pressure that later proves broader than the two-sided war. The current prototype uses Meridian-authoritative treaty and witness proxies plus generic Kharuun-owned Adaptive-AI pressure; it does not implement mixed-faction command, prove pressure against both networks, or identify the Choir.
 
 ### Act II — The Cost of One Future
 
