@@ -25,7 +25,7 @@ constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::size_t kSerializedEntityBytes = 122;
 constexpr std::size_t kSerializedCommandBytes = 36;
-constexpr std::size_t kSnapshotFixedBytesAfterConfig = 80;
+constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 
@@ -709,24 +709,39 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
 }
 
 MatchOutcome Simulation::Outcome() const {
-    if (!players_[0].active || !players_[1].active) {
+    const std::size_t activePlayerCount = std::count_if(
+        players_.begin(), players_.end(),
+        [](const PlayerState& player) { return player.active; });
+    if (activePlayerCount < 2) {
         return MatchOutcome::Ongoing;
     }
-    std::array<bool, 2> hasCommandCore{};
+    std::array<bool, kMaximumPlayers> hasCommandCore{};
     for (const Entity& entity : entities_) {
-        if (entity.owner < hasCommandCore.size() && entity.hitPoints > 0 &&
+        if (entity.owner < hasCommandCore.size() &&
+            players_[entity.owner].active && entity.hitPoints > 0 &&
             entity.type == EntityType::CommandCore) {
             hasCommandCore[entity.owner] = true;
         }
     }
-    if (hasCommandCore[0] && hasCommandCore[1]) {
+    std::size_t survivingPlayerCount = 0;
+    PlayerId survivor = kNeutralPlayer;
+    for (PlayerId player = 0; player < players_.size(); ++player) {
+        if (players_[player].active && hasCommandCore[player]) {
+            ++survivingPlayerCount;
+            survivor = player;
+        }
+    }
+    if (survivingPlayerCount > 1) {
         return MatchOutcome::Ongoing;
     }
-    if (hasCommandCore[0]) {
-        return MatchOutcome::Player0Victory;
-    }
-    if (hasCommandCore[1]) {
-        return MatchOutcome::Player1Victory;
+    if (survivingPlayerCount == 1) {
+        constexpr std::array<MatchOutcome, kMaximumPlayers> outcomes{
+            MatchOutcome::Player0Victory,
+            MatchOutcome::Player1Victory,
+            MatchOutcome::Player2Victory,
+            MatchOutcome::Player3Victory,
+        };
+        return outcomes[survivor];
     }
     return MatchOutcome::Draw;
 }
@@ -2253,7 +2268,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     BinaryWriter writer{};
     writer.Reserve(
-        128U + terrain_.size() * 3U +
+        160U + terrain_.size() * (1U + explored_.size()) +
         entities_.size() * kSerializedEntityBytes +
         pendingCommands_.size() * kSerializedCommandBytes);
     WriteSnapshotPayload(writer);
@@ -2324,7 +2339,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     const std::size_t minimumRemaining =
         kSnapshotFixedBytesAfterConfig +
-        static_cast<std::size_t>(tileCount) * 3U;
+        static_cast<std::size_t>(tileCount) * (1U + kMaximumPlayers);
     if (reader.Remaining() < minimumRemaining) {
         SetError(error, "snapshot payload is too short for its declared map");
         return std::nullopt;
@@ -2542,9 +2557,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     std::sort(simulation.pendingCommands_.begin(),
               simulation.pendingCommands_.end(), CommandLess);
-    std::array<bool, 2> sawPendingSequence{};
-    std::array<Tick, 2> lastPendingTick{};
-    std::array<std::uint64_t, 2> lastPendingSequence{};
+    std::array<bool, kMaximumPlayers> sawPendingSequence{};
+    std::array<Tick, kMaximumPlayers> lastPendingTick{};
+    std::array<std::uint64_t, kMaximumPlayers> lastPendingSequence{};
     for (const Command& command : simulation.pendingCommands_) {
         const PlayerId player = command.player;
         if ((simulation.hasExecutedSequence_[player] &&

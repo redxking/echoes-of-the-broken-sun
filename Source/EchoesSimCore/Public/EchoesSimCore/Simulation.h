@@ -7,6 +7,7 @@
 #endif
 
 #include <array>
+#include <cstddef>
 #include <compare>
 #include <cstdint>
 #include <limits>
@@ -27,9 +28,10 @@ using EntityId = std::uint32_t;
 using PlayerId = std::uint8_t;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
+inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 8;
-inline constexpr std::uint32_t kReplayVersion = 8;
+inline constexpr std::uint32_t kSnapshotVersion = 9;
+inline constexpr std::uint32_t kReplayVersion = 9;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -189,6 +191,8 @@ enum class MatchOutcome : std::uint8_t {
     Player0Victory = 1,
     Player1Victory = 2,
     Draw = 3,
+    Player2Victory = 4,
+    Player3Victory = 5,
 };
 
 enum class AiPersonality : std::uint8_t {
@@ -449,16 +453,16 @@ private:
     Tick currentTick_ = 0;
     EntityId nextEntityId_ = 1;
     DeterministicRng rng_{};
-    std::array<PlayerState, 2> players_{};
+    std::array<PlayerState, kMaximumPlayers> players_{};
     std::vector<Terrain> terrain_{};
-    std::array<std::vector<std::uint8_t>, 2> explored_{};
-    std::array<std::vector<std::uint8_t>, 2> visible_{};
+    std::array<std::vector<std::uint8_t>, kMaximumPlayers> explored_{};
+    std::array<std::vector<std::uint8_t>, kMaximumPlayers> visible_{};
     std::vector<Entity> entities_{};
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
-    std::array<std::uint64_t, 2> lastExecutedSequence_{};
-    std::array<bool, 2> hasExecutedSequence_{};
+    std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
+    std::array<bool, kMaximumPlayers> hasExecutedSequence_{};
     mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};
 };
 

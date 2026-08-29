@@ -54,35 +54,49 @@ struct ScaleFixture final {
     if (!fixture.simulation.AddPlayer(
             0, Faction::MeridianCompact, {0, 0}) ||
         !fixture.simulation.AddPlayer(
-            1, Faction::KharuunAssemblies, {0, 0})) {
+            1, Faction::KharuunAssemblies, {0, 0}) ||
+        !fixture.simulation.AddPlayer(
+            2, Faction::KharuunAssemblies, {0, 0}) ||
+        !fixture.simulation.AddPlayer(
+            3, Faction::MeridianCompact, {0, 0})) {
         throw std::runtime_error("profile players could not be created");
     }
 
     std::size_t spawned = 0;
-    for (std::int32_t tileY = 2; tileY <= 28 && spawned < 200; tileY += 2) {
-        for (std::int32_t tileX = 2; tileX <= 61 && spawned < 200; tileX += 2) {
-            const EntityId id = fixture.simulation.SpawnEntity(
-                0, Faction::MeridianCompact, EntityType::Soldier,
-                Vec2::FromTiles(tileX, tileY));
-            if (id == 0) {
-                throw std::runtime_error("Meridian profile unit spawn failed");
+    const auto spawnTeam = [&](PlayerId player,
+                               Faction faction,
+                               std::int32_t minimumX,
+                               std::int32_t maximumX,
+                               std::int32_t minimumY,
+                               std::int32_t maximumY,
+                               bool collectForMovement) {
+        std::size_t teamSpawned = 0;
+        for (std::int32_t tileY = minimumY;
+             tileY <= maximumY && teamSpawned < 100; tileY += 2) {
+            for (std::int32_t tileX = minimumX;
+                 tileX <= maximumX && teamSpawned < 100; tileX += 2) {
+                const EntityId id = fixture.simulation.SpawnEntity(
+                    player, faction, EntityType::Soldier,
+                    Vec2::FromTiles(tileX, tileY));
+                if (id == 0) {
+                    throw std::runtime_error("four-team profile unit spawn failed");
+                }
+                if (collectForMovement) {
+                    fixture.southernMeridian.push_back(id);
+                }
+                ++teamSpawned;
+                ++spawned;
             }
-            fixture.southernMeridian.push_back(id);
-            ++spawned;
         }
-    }
-    for (std::int32_t tileY = 36; tileY <= 62 && spawned < 400; tileY += 2) {
-        for (std::int32_t tileX = 2; tileX <= 61 && spawned < 400; tileX += 2) {
-            const EntityId id = fixture.simulation.SpawnEntity(
-                1, Faction::KharuunAssemblies, EntityType::Soldier,
-                Vec2::FromTiles(tileX, tileY));
-            if (id == 0) {
-                throw std::runtime_error("Kharuun profile unit spawn failed");
-            }
-            ++spawned;
+        if (teamSpawned != 100) {
+            throw std::runtime_error("four-team profile quadrant is undersized");
         }
-    }
-    if (spawned != 400 || fixture.southernMeridian.size() != 200) {
+    };
+    spawnTeam(0, Faction::MeridianCompact, 2, 30, 2, 28, true);
+    spawnTeam(2, Faction::KharuunAssemblies, 34, 62, 2, 28, false);
+    spawnTeam(3, Faction::MeridianCompact, 2, 30, 36, 62, false);
+    spawnTeam(1, Faction::KharuunAssemblies, 34, 62, 36, 62, false);
+    if (spawned != 400 || fixture.southernMeridian.size() != 100) {
         throw std::runtime_error("profile fixture did not reach 400 units");
     }
     return fixture;
@@ -216,9 +230,9 @@ int main() {
 
         std::cout << std::fixed << std::setprecision(6);
         std::cout << "{\n";
-        std::cout << "  \"profile\": \"native-glass-scar-scale-v1\",\n";
+        std::cout << "  \"profile\": \"native-glass-scar-scale-v2\",\n";
         std::cout << "  \"boundary\": {\"map_tiles\": \"64x64\", "
-                     "\"units\": 400, \"teams\": 2, "
+                     "\"units\": 400, \"teams\": 4, "
                      "\"sim_hz\": 20, \"path_requests\": 100, "
                      "\"checksum_batch_size\": 31},\n";
         std::cout << "  \"measurements\": {\n";
@@ -234,9 +248,8 @@ int main() {
                      "\"simulation_tick\": 4.0, "
                      "\"state_checksum\": 0.25},\n";
         std::cout << "  \"budget_results\": {\n";
-        std::cout << "    \"visibility_two_team_provisional_pass\": "
+        std::cout << "    \"visibility_four_team_pass\": "
                   << (visibility.p95Ms <= 1.5 ? "true" : "false") << ",\n";
-        std::cout << "    \"visibility_four_team_qualified\": false,\n";
         std::cout << "    \"path_burst_cold_pass\": "
                   << (coldPathBurst.p95Ms <= 6.0 ? "true" : "false") << ",\n";
         std::cout << "    \"simulation_tick_pass\": "
@@ -246,7 +259,7 @@ int main() {
         std::cout << "  },\n";
         std::cout << "  \"qualification\": "
                      "\"local optimized native measurement; not Unreal frame, "
-                     "GPU, four-team fog, or release qualification\",\n";
+                     "GPU, rendered-unit, networked-multiplayer, or release qualification\",\n";
         std::cout << "  \"checksum_sink\": " << checksumSink << "\n";
         std::cout << "}\n";
         return 0;

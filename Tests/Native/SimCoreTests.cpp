@@ -73,8 +73,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v7 fixed header/player/sequence fields plus terrain and two fog grids.
-    return 100 + 3 * mapTileCount;
+    // Snapshot v9 fixed header/player/sequence fields plus terrain and four fog grids.
+    return 148 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -707,6 +707,84 @@ void TestFogAndNonCheatingAi() {
             Visibility::Explored);
 }
 
+void TestFourPlayerVisibilitySnapshotAndOutcome() {
+    Simulation simulation({64, 64, 20, 0x464f5552504c4159ULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {100, 10}));
+    REQUIRE(simulation.AddPlayer(1, Faction::KharuunAssemblies, {200, 20}));
+    REQUIRE(simulation.AddPlayer(2, Faction::KharuunAssemblies, {300, 30}));
+    REQUIRE(simulation.AddPlayer(3, Faction::MeridianCompact, {400, 40}));
+    REQUIRE(!simulation.AddPlayer(4, Faction::MeridianCompact, {0, 0}));
+
+    constexpr std::array<Vec2, kMaximumPlayers> positions{
+        Vec2::FromTiles(4, 4),
+        Vec2::FromTiles(59, 59),
+        Vec2::FromTiles(59, 4),
+        Vec2::FromTiles(4, 59),
+    };
+    constexpr std::array<Faction, kMaximumPlayers> factions{
+        Faction::MeridianCompact,
+        Faction::KharuunAssemblies,
+        Faction::KharuunAssemblies,
+        Faction::MeridianCompact,
+    };
+    std::array<EntityId, kMaximumPlayers> scouts{};
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        scouts[player] = simulation.SpawnEntity(
+            player, factions[player], EntityType::Soldier, positions[player]);
+        REQUIRE(scouts[player] != 0);
+    }
+    for (PlayerId viewer = 0; viewer < kMaximumPlayers; ++viewer) {
+        REQUIRE(simulation.VisibilityAt(viewer, positions[viewer]) ==
+                Visibility::Visible);
+        REQUIRE(simulation.IsEntityVisibleTo(viewer, scouts[viewer]));
+        for (PlayerId target = 0; target < kMaximumPlayers; ++target) {
+            if (target == viewer) {
+                continue;
+            }
+            REQUIRE(simulation.VisibilityAt(viewer, positions[target]) ==
+                    Visibility::Unexplored);
+            REQUIRE(!simulation.IsEntityVisibleTo(viewer, scouts[target]));
+        }
+    }
+
+    Command move = MakeCommand(0, 2, 1, CommandType::Move, scouts[2]);
+    move.position = Vec2::FromTiles(50, 4);
+    REQUIRE(simulation.QueueCommand(move));
+    simulation.Step(8);
+    std::string error;
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        REQUIRE(restored->FindPlayer(player) != nullptr);
+        REQUIRE(restored->FindPlayer(player)->resources ==
+                simulation.FindPlayer(player)->resources);
+        REQUIRE(restored->VisibilityAt(player, positions[player]) ==
+                simulation.VisibilityAt(player, positions[player]));
+    }
+
+    Simulation playerTwoWins({24, 24, 20, 0x503257494eULL});
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        REQUIRE(playerTwoWins.AddPlayer(player, factions[player], {0, 0}));
+    }
+    REQUIRE(playerTwoWins.SpawnEntity(
+                2, factions[2], EntityType::CommandCore,
+                Vec2::FromTiles(12, 12)) != 0);
+    REQUIRE(playerTwoWins.Outcome() == MatchOutcome::Player2Victory);
+
+    Simulation playerThreeWins({24, 24, 20, 0x503357494eULL});
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        REQUIRE(playerThreeWins.AddPlayer(player, factions[player], {0, 0}));
+    }
+    REQUIRE(playerThreeWins.SpawnEntity(
+                3, factions[3], EntityType::CommandCore,
+                Vec2::FromTiles(12, 12)) != 0);
+    REQUIRE(playerThreeWins.Outcome() == MatchOutcome::Player3Victory);
+}
+
 void TestFutureWellChoices() {
     {
         Simulation harvest({20, 20, 20, 11});
@@ -1020,6 +1098,8 @@ int main() {
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
+        {"four-player visibility snapshot and outcome",
+         TestFourPlayerVisibilitySnapshotAndOutcome},
         {"Future Well choices", TestFutureWellChoices},
         {"snapshot and replay", TestSnapshotAndReplay},
         {"numeric and public input hardening", TestNumericAndPublicInputHardening},

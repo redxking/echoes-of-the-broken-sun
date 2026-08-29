@@ -45,7 +45,9 @@ void AEchoesHUD::DrawHUD()
             {
                 MatchState = TEXT("VICTORY");
             }
-            else if (Outcome == echoes::sim::MatchOutcome::Player1Victory)
+            else if (Outcome == echoes::sim::MatchOutcome::Player1Victory ||
+                     Outcome == echoes::sim::MatchOutcome::Player2Victory ||
+                     Outcome == echoes::sim::MatchOutcome::Player3Victory)
             {
                 MatchState = TEXT("DEFEAT");
             }
