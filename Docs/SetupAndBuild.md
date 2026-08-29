@@ -103,10 +103,10 @@ An explicit new archive path may be supplied as the first argument. Existing tar
 
 ```sh
 ./Scripts/run_packaged_smoke.sh \
-  BuildArtifacts/Packages/Mac-Development-v0.2.0-playable-systems/EchoesOfTheBrokenSun.app
+  BuildArtifacts/Packages/Mac-Development-v0.3.0-navigation-fog/EchoesOfTheBrokenSun.app
 ```
 
-The current observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.2.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase seals the app before the final PAK update, so the wrapper reseals the completed archive with the checked-in development entitlements and verifies it afterward. The exact archive passed strict deep-signature verification and emitted all four startup markers when its packaged executable was launched. Its adjacent manifest records clean source commit `21469a4f702ff284c85104c97aa9b85f63fc2b6e`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `482b0e7e5db955675d07c9edd82da12114076c057250c243744432a095c49269`.
+The current observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.3.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase seals the app before the final PAK update, so the wrapper reseals the completed archive with the checked-in development entitlements and verifies it afterward. The exact archive passed strict deep-signature verification and emitted the environment, 4,096-tile fog, simulation, boot-ready, and first-tick markers when its packaged executable was launched. Its adjacent manifest records clean source commit `08f1babd45fea9168ba237deed965fb4f3215594`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `b44eb98f61ec86142ffba88912c90df1eea830b34039c5a47145dc56cdbed47b`.
 
 ## Distribution boundary
 
