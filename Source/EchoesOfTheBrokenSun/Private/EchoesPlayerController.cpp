@@ -238,6 +238,64 @@ void AEchoesPlayerController::CycleOwnedEntityPrevious()
     CycleOwnedEntity(-1);
 }
 
+void AEchoesPlayerController::SelectCombatForce()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Combat-force selection is unavailable."));
+        return;
+    }
+
+    TArray<uint32> CombatIds;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        const bool bCombatUnit =
+            Entity.type == echoes::sim::EntityType::Soldier ||
+            Entity.type == echoes::sim::EntityType::HeavyUnit ||
+            Entity.type == echoes::sim::EntityType::ScoutUnit;
+        if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity.hitPoints > 0 && bCombatUnit &&
+            !Entity.temporaryMineralCover &&
+            Bridge->FindEntityView(Entity.id) != nullptr)
+        {
+            CombatIds.Add(Entity.id);
+        }
+    }
+    CombatIds.Sort();
+    if (CombatIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_COMBAT_FORCE] No live owned combat unit is visible."));
+        return;
+    }
+
+    ClearSelection();
+    for (const uint32 EntityId : CombatIds)
+    {
+        SelectedEntityIds.Add(EntityId);
+        SetEntitySelected(EntityId, true);
+    }
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("COMBAT FORCE: %d visible owned units selected // End centers force"),
+            CombatIds.Num()),
+        5.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_KEYBOARD_FORCE_SELECT] count=%d source=owned_presentation_views hiddenStateRead=false"),
+        CombatIds.Num());
+}
+
 void AEchoesPlayerController::ToggleKeyboardTargeting()
 {
     if (IsModalOverlayVisible())
@@ -314,37 +372,59 @@ void AEchoesPlayerController::SnapKeyboardTargetToSelection()
         return;
     }
     PruneSelection();
-    if (SelectedEntityIds.Num() != 1)
+    if (SelectedEntityIds.IsEmpty())
     {
-        SetStatusMessage(TEXT("[SNAP_REQUIRES_ONE_SELECTION] Select one visible owned entity first."));
+        SetStatusMessage(TEXT("[SNAP_REQUIRES_SELECTION] Select one or more visible owned entities first."));
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    const AEchoesEntityView* View =
-        Bridge != nullptr ? Bridge->FindEntityView(SelectedEntityIds[0]) : nullptr;
     APawn* CameraPawn = GetPawn();
-    if (View == nullptr || CameraPawn == nullptr)
+    if (Bridge == nullptr || CameraPawn == nullptr)
     {
-        SetStatusMessage(TEXT("[SELECTED_VIEW_UNAVAILABLE] The selected presentation view is unavailable."));
+        SetStatusMessage(TEXT("[SELECTED_VIEW_UNAVAILABLE] The selected presentation views are unavailable."));
         return;
     }
+
+    FVector Centroid = FVector::ZeroVector;
+    int32 VisibleSelectionCount = 0;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        const AEchoesEntityView* View = Bridge->FindEntityView(EntityId);
+        if (Entity == nullptr ||
+            Entity->owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+            Entity->hitPoints <= 0 || View == nullptr)
+        {
+            continue;
+        }
+        Centroid += View->GetActorLocation();
+        ++VisibleSelectionCount;
+    }
+    if (VisibleSelectionCount == 0)
+    {
+        SetStatusMessage(TEXT("[SELECTED_VIEW_UNAVAILABLE] No selected owned presentation view is available."));
+        return;
+    }
+    Centroid /= static_cast<float>(VisibleSelectionCount);
     FVector CameraLocation = CameraPawn->GetActorLocation();
-    CameraLocation.X = View->GetActorLocation().X;
-    CameraLocation.Y = View->GetActorLocation().Y;
+    CameraLocation.X = Centroid.X;
+    CameraLocation.Y = Centroid.Y;
     CameraPawn->SetActorLocation(CameraLocation);
     KeyboardTargetOffset = FVector2D::ZeroVector;
     bKeyboardTargetingEnabled = true;
     SetStatusMessage(
-        TEXT("KEYBOARD TARGET: camera and reticle centered on selected visible entity // use one arrow step for nearby placement."),
+        TEXT("KEYBOARD TARGET: camera and reticle centered on selected visible force // arrows choose a visible destination."),
         4.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_KEYBOARD_TARGET_SNAP] entity=%u offsetPx=(0,0) cameraCentered=true source=selected_owned_view hiddenStateRead=false"),
-        SelectedEntityIds[0]);
+        TEXT("[ECHOES_KEYBOARD_TARGET_SNAP] count=%d centroid=(%.1f,%.1f) offsetPx=(0,0) cameraCentered=true source=selected_owned_views hiddenStateRead=false"),
+        VisibleSelectionCount,
+        Centroid.X,
+        Centroid.Y);
 }
 
 void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
@@ -692,6 +772,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
+    BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
     BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
     BindPressed(TEXT("KeyboardTargetLeft"), &AEchoesPlayerController::NudgeKeyboardTargetLeft);

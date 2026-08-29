@@ -271,6 +271,22 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                      ? 0u
                      : Controller->GetSelectedEntityIds()[0],
                  FirstKeyboardSelection);
+    Controller->SelectCombatForce();
+    TestEqual(TEXT("F7 selects the complete visible local combat force"),
+              Controller->GetSelectedEntityIds().Num(), 5);
+    for (const uint32 EntityId : Controller->GetSelectedEntityIds())
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        TestTrue(
+            FString::Printf(TEXT("Combat-force entity %u is an owned live combat presentation"), EntityId),
+            Entity != nullptr &&
+                Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity->hitPoints > 0 &&
+                (Entity->type == echoes::sim::EntityType::Soldier ||
+                 Entity->type == echoes::sim::EntityType::HeavyUnit ||
+                 Entity->type == echoes::sim::EntityType::ScoutUnit) &&
+                Bridge->FindEntityView(EntityId) != nullptr);
+    }
     TestFalse(TEXT("Keyboard center targeting defaults off"),
               Controller->IsKeyboardTargetingEnabled());
     Controller->ToggleKeyboardTargeting();
@@ -350,6 +366,15 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"SnapKeyboardTargetToSelection\"")) &&
                        Mapping.Contains(TEXT("Key=End"));
+            }));
+    TestTrue(
+        TEXT("F7 combat-force selection mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"SelectCombatForce\"")) &&
+                       Mapping.Contains(TEXT("Key=F7"));
             }));
 
     Controller->Destroy();

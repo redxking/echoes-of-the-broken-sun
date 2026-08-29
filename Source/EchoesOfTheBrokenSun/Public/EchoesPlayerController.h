@@ -44,6 +44,7 @@ public:
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
     void CycleOwnedEntityPrevious();
+    void SelectCombatForce();
     void ToggleKeyboardTargeting();
     void ToggleTechnologyPanel();
     void FocusPreviousTechnologyTier();

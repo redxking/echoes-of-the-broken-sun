@@ -309,7 +309,7 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[Tab] Next owned    [Backspace] Previous    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
+        TEXT("[Tab] Next owned    [Backspace] Previous    [F7] Combat force    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
         SecondaryColor,
         TextX,
         HudY(136.0f),
