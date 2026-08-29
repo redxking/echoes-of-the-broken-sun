@@ -272,9 +272,10 @@ void AEchoesHUD::DrawHUD()
             }
         }
         SelectionLine = FString::Printf(
-            TEXT("Selected  %d%s     Future Well protocol  %s"),
+            TEXT("Selected  %d%s     Formation  %s     Future Well protocol  %s"),
             SelectedIds.Num(),
             *SelectedType,
+            *EchoesController->GetFormationLabel(),
             *EchoesController->GetFutureWellChoiceLabel());
     }
     DrawText(
@@ -309,7 +310,11 @@ void AEchoesHUD::DrawHUD()
         0.86f * HudScale,
         false);
     DrawText(
-        TEXT("[Tab] Next owned    [Backspace] Previous    [F7] Combat force    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
+        FString::Printf(
+            TEXT("[Tab] Next owned    [Backspace] Previous    [F7] Combat force    [F8] Formation %s    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
+            EchoesController != nullptr
+                ? *EchoesController->GetFormationLabel()
+                : TEXT("BOX")),
         SecondaryColor,
         TextX,
         HudY(136.0f),

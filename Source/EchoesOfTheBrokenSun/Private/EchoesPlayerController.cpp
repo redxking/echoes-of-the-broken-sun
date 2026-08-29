@@ -297,6 +297,35 @@ void AEchoesPlayerController::SelectCombatForce()
         CombatIds.Num());
 }
 
+void AEchoesPlayerController::CycleFormation()
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    switch (CurrentFormation)
+    {
+        case EEchoesFormationType::Box:
+            CurrentFormation = EEchoesFormationType::Line;
+            break;
+        case EEchoesFormationType::Line:
+            CurrentFormation = EEchoesFormationType::Wedge;
+            break;
+        case EEchoesFormationType::Wedge:
+            CurrentFormation = EEchoesFormationType::Box;
+            break;
+    }
+    SetStatusMessage(FString::Printf(
+        TEXT("FORMATION: %s — Move, Attack-move, and Patrol will align to the destination."),
+        *GetFormationLabel()),
+        5.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_FORMATION_SELECTED] type=%s commandAuthority=destinations_only replaySafe=true"),
+        *GetFormationLabel());
+}
+
 void AEchoesPlayerController::ToggleKeyboardTargeting()
 {
     if (IsModalOverlayVisible())
@@ -774,6 +803,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
+    BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);
     BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
     BindPressed(TEXT("KeyboardTargetLeft"), &AEchoesPlayerController::NudgeKeyboardTargetLeft);
@@ -1092,7 +1122,8 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
     }
 
     const int32 UnitCount = SelectedEntityIds.Num();
-    const int32 FormationWidth = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(static_cast<float>(UnitCount))));
+    const TArray<FVector> FormationDestinations =
+        BuildSelectedFormationDestinations(Destination, UnitCount);
     int32 AcceptedCount = 0;
     int32 RejectedCount = 0;
     FString LastRejection;
@@ -1114,16 +1145,7 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
         FVector UnitDestination = Destination;
         if (ActorCommandType == echoes::sim::CommandType::Move)
         {
-            const int32 Row = Index / FormationWidth;
-            const int32 Column = Index % FormationWidth;
-            UnitDestination.X +=
-                (static_cast<float>(Column) -
-                 static_cast<float>(FormationWidth - 1) * 0.5f) *
-                FormationSpacingWorldUnits;
-            UnitDestination.Y +=
-                (static_cast<float>(Row) -
-                 static_cast<float>(FormationWidth - 1) * 0.5f) *
-                FormationSpacingWorldUnits;
+            UnitDestination = FormationDestinations[Index];
         }
 
         FString Feedback;
@@ -1149,7 +1171,11 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
         const FString OrderLabel =
             CommandType == echoes::sim::CommandType::Deliver
                 ? TEXT("CONTEXT MOVE / DELIVER")
-                : CommandLabel(CommandType);
+                : CommandType == echoes::sim::CommandType::Move
+                      ? FString::Printf(
+                            TEXT("MOVE / %s"),
+                            *GetFormationLabel())
+                      : CommandLabel(CommandType);
         const FString RejectionSuffix =
             RejectedCount > 0
                 ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
@@ -1414,6 +1440,46 @@ bool AEchoesPlayerController::TraceCommandTarget(FHitResult& OutHitResult)
         : TraceCursor(OutHitResult);
 }
 
+TArray<FVector> AEchoesPlayerController::BuildSelectedFormationDestinations(
+    const FVector& Anchor,
+    int32 UnitCount)
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    FVector Centroid = FVector::ZeroVector;
+    int32 PositionCount = 0;
+    if (Bridge != nullptr)
+    {
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+            if (Entity != nullptr)
+            {
+                Centroid += Bridge->SimToWorld(Entity->position);
+                ++PositionCount;
+            }
+        }
+    }
+    if (PositionCount > 0)
+    {
+        Centroid /= static_cast<float>(PositionCount);
+        FVector NewForward = Anchor - Centroid;
+        NewForward.Z = 0.0f;
+        if (NewForward.SizeSquared() > 1.0f)
+        {
+            LastFormationForward = NewForward.GetSafeNormal();
+        }
+    }
+    return FEchoesFormationLayout::BuildDestinations(
+        Anchor,
+        LastFormationForward,
+        UnitCount,
+        CurrentFormation,
+        FormationSpacingWorldUnits);
+}
+
 void AEchoesPlayerController::ChooseHarvest()
 {
     SetFutureWellChoice(echoes::sim::FutureWellChoice::Harvest);
@@ -1631,25 +1697,14 @@ void AEchoesPlayerController::AttackMoveAtCursor()
     }
 
     const int32 UnitCount = SelectedEntityIds.Num();
-    const int32 FormationWidth = FMath::Max(
-        1,
-        FMath::CeilToInt(FMath::Sqrt(static_cast<float>(UnitCount))));
+    const TArray<FVector> FormationDestinations =
+        BuildSelectedFormationDestinations(HitResult.Location, UnitCount);
     int32 AcceptedCount = 0;
     int32 RejectedCount = 0;
     FString LastRejection;
     for (int32 Index = 0; Index < UnitCount; ++Index)
     {
-        const int32 Row = Index / FormationWidth;
-        const int32 Column = Index % FormationWidth;
-        FVector UnitDestination = HitResult.Location;
-        UnitDestination.X +=
-            (static_cast<float>(Column) -
-             static_cast<float>(FormationWidth - 1) * 0.5f) *
-            FormationSpacingWorldUnits;
-        UnitDestination.Y +=
-            (static_cast<float>(Row) -
-             static_cast<float>(FormationWidth - 1) * 0.5f) *
-            FormationSpacingWorldUnits;
+        const FVector UnitDestination = FormationDestinations[Index];
         FString Feedback;
         if (Bridge->IssueCommand(
                 echoes::sim::CommandType::AttackMove,
@@ -1674,7 +1729,8 @@ void AEchoesPlayerController::AttackMoveAtCursor()
                 ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
                 : TEXT(".");
         SetStatusMessage(FString::Printf(
-            TEXT("ATTACK-MOVE: %d queued%s"),
+            TEXT("ATTACK-MOVE / %s: %d queued%s"),
+            *GetFormationLabel(),
             AcceptedCount,
             *RejectionSuffix));
         ShowAcceptedCommandMarker(
@@ -1725,25 +1781,14 @@ void AEchoesPlayerController::PatrolAtCursor()
     }
 
     const int32 UnitCount = SelectedEntityIds.Num();
-    const int32 FormationWidth = FMath::Max(
-        1,
-        FMath::CeilToInt(FMath::Sqrt(static_cast<float>(UnitCount))));
+    const TArray<FVector> FormationDestinations =
+        BuildSelectedFormationDestinations(HitResult.Location, UnitCount);
     int32 AcceptedCount = 0;
     int32 RejectedCount = 0;
     FString LastRejection;
     for (int32 Index = 0; Index < UnitCount; ++Index)
     {
-        const int32 Row = Index / FormationWidth;
-        const int32 Column = Index % FormationWidth;
-        FVector UnitDestination = HitResult.Location;
-        UnitDestination.X +=
-            (static_cast<float>(Column) -
-             static_cast<float>(FormationWidth - 1) * 0.5f) *
-            FormationSpacingWorldUnits;
-        UnitDestination.Y +=
-            (static_cast<float>(Row) -
-             static_cast<float>(FormationWidth - 1) * 0.5f) *
-            FormationSpacingWorldUnits;
+        const FVector UnitDestination = FormationDestinations[Index];
         FString Feedback;
         if (Bridge->IssueCommand(
                 echoes::sim::CommandType::Patrol,
@@ -1768,7 +1813,8 @@ void AEchoesPlayerController::PatrolAtCursor()
                 ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
                 : TEXT(".");
         SetStatusMessage(FString::Printf(
-            TEXT("PATROL: %d route%s assigned%s"),
+            TEXT("PATROL / %s: %d route%s assigned%s"),
+            *GetFormationLabel(),
             AcceptedCount,
             AcceptedCount == 1 ? TEXT("") : TEXT("s"),
             *RejectionSuffix));
@@ -2675,9 +2721,10 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d collision=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
+        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d formation=%s collision=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
         MarkerLabel,
         AcceptedCount,
+        *GetFormationLabel(),
         bReducedMotion ? TEXT("true") : TEXT("false"),
         bReducedFlashing ? TEXT("true") : TEXT("false"));
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesFormationLayout.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesPlayerController.generated.h"
@@ -30,6 +31,14 @@ public:
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellChoice() const;
     [[nodiscard]] FString GetFutureWellChoiceLabel() const;
     [[nodiscard]] FString GetStatusMessage() const;
+    [[nodiscard]] FString GetFormationLabel() const
+    {
+        return FEchoesFormationLayout::DisplayName(CurrentFormation);
+    }
+    [[nodiscard]] EEchoesFormationType GetFormationType() const
+    {
+        return CurrentFormation;
+    }
     bool SetControlGroup(
         int32 GroupIndex,
         const TArray<uint32>& EntityIds,
@@ -46,6 +55,7 @@ public:
     void CyclePlayableFaction();
     void CycleOwnedEntityPrevious();
     void SelectCombatForce();
+    void CycleFormation();
     void ToggleKeyboardTargeting();
     void ToggleTechnologyPanel();
     void FocusPreviousTechnologyTier();
@@ -156,6 +166,9 @@ private:
     void RecallControlGroup9();
     void RecallControlGroup0();
     void CycleOwnedEntity(int32 Direction);
+    TArray<FVector> BuildSelectedFormationDestinations(
+        const FVector& Anchor,
+        int32 UnitCount);
 
     void SelectAtCursor(bool bAdditive);
     void SelectInScreenRectangle(bool bAdditive);
@@ -187,6 +200,8 @@ private:
     FVector2D SelectionCurrentScreenPosition = FVector2D::ZeroVector;
     echoes::sim::FutureWellChoice FutureWellChoice =
         echoes::sim::FutureWellChoice::Harvest;
+    EEchoesFormationType CurrentFormation = EEchoesFormationType::Box;
+    FVector LastFormationForward = FVector(1.0f, 0.0f, 0.0f);
     FString StatusMessage;
     FVector2D KeyboardTargetOffset = FVector2D::ZeroVector;
     double StatusMessageExpiresAt = 0.0;
