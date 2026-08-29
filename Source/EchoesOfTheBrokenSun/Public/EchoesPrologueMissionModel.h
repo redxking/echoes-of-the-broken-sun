@@ -11,7 +11,8 @@ enum class EEchoesOperationMode : uint8
     CampaignCityReserve,
     CampaignUnburiedRoad,
     CampaignTermsOfContinuance,
-    CampaignNamesWithoutBirths
+    CampaignNamesWithoutBirths,
+    CampaignShapeOfSilence
 };
 
 /** Reconstructable objective state for What the Ledger Keeps. */

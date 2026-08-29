@@ -175,13 +175,19 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignNamesWithoutBirths"));
+    const bool bCampaignShapeOfSilence =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignShapeOfSilence"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
         (bCampaignCityReserve ? 1 : 0) +
         (bCampaignUnburiedRoad ? 1 : 0) +
         (bCampaignTermsOfContinuance ? 1 : 0) +
-        (bCampaignNamesWithoutBirths ? 1 : 0);
+        (bCampaignNamesWithoutBirths ? 1 : 0) +
+        (bCampaignShapeOfSilence ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -194,7 +200,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignNamesWithoutBirths
+            bCampaignShapeOfSilence
+                ? EEchoesOperationMode::CampaignShapeOfSilence
+            : bCampaignNamesWithoutBirths
                 ? EEchoesOperationMode::CampaignNamesWithoutBirths
             : bCampaignTermsOfContinuance
                 ? EEchoesOperationMode::CampaignTermsOfContinuance
@@ -214,7 +222,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignNamesWithoutBirths
+                bCampaignShapeOfSilence
+                    ? TEXT("TheShapeOfSilence")
+                : bCampaignNamesWithoutBirths
                     ? TEXT("NamesWithoutBirths")
                 : bCampaignUnburiedRoad
                     ? TEXT("TheUnburiedRoad")
@@ -233,7 +243,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignNamesWithoutBirths
+            bCampaignShapeOfSilence
+                ? TEXT("TheShapeOfSilence")
+            : bCampaignNamesWithoutBirths
                 ? TEXT("NamesWithoutBirths")
             : bCampaignUnburiedRoad
                 ? TEXT("TheUnburiedRoad")

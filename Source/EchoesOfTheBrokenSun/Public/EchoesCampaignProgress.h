@@ -10,7 +10,8 @@ enum class EEchoesCampaignMissionId : uint8
     ACityOnReserve = 3,
     TheUnburiedRoad = 4,
     TermsOfContinuance = 5,
-    NamesWithoutBirths = 6
+    NamesWithoutBirths = 6,
+    TheShapeOfSilence = 7
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -63,6 +64,16 @@ enum class EEchoesNamesWithoutBirthsCompletionFact : uint8
     ArchivePowered = 1 << 1,
     BothCiviliansSheltered = 1 << 2,
     EvidenceExtracted = 1 << 3,
+    LocalCoreSurvived = 1 << 4,
+    PriorLedgerConsumed = 1 << 5
+};
+
+enum class EEchoesShapeOfSilenceCompletionFact : uint8
+{
+    WaystoneRootedAtListeningAnchor = 1 << 0,
+    ListeningSpineRaised = 1 << 1,
+    BothMemoryWitnessesPositioned = 1 << 2,
+    OruunReachedConfluence = 1 << 3,
     LocalCoreSurvived = 1 << 4,
     PriorLedgerConsumed = 1 << 5
 };

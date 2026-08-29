@@ -51,7 +51,7 @@ uint8 ChoiceMask(echoes::sim::FutureWellChoice Choice)
     }
 }
 
-FEchoesCampaignDecisionRecord MakePriorRecord(
+FEchoesCampaignDecisionRecord MakeUnburiedRoadPriorRecord(
     EEchoesCampaignMissionId Mission,
     echoes::sim::FutureWellChoice Choice)
 {
@@ -183,7 +183,7 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
     {
         TestTrue(TEXT("The locked fixture accepts a consistent prior record"),
                  LockedProgress.AppendDecision(
-                     MakePriorRecord(
+                     MakeUnburiedRoadPriorRecord(
                          Mission,
                          echoes::sim::FutureWellChoice::Preserve),
                      Feedback) == EEchoesCampaignCommitStatus::Added);
@@ -217,7 +217,7 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
     FEchoesCampaignProgress MismatchProgress = LockedProgress;
     TestTrue(TEXT("The mismatch fixture accepts an individually valid mission-three record"),
              MismatchProgress.AppendDecision(
-                 MakePriorRecord(
+                 MakeUnburiedRoadPriorRecord(
                      EEchoesCampaignMissionId::ACityOnReserve,
                      echoes::sim::FutureWellChoice::Harvest),
                  Feedback) == EEchoesCampaignCommitStatus::Added);
@@ -251,7 +251,7 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
     FEchoesCampaignProgress SeedProgress = LockedProgress;
     TestTrue(TEXT("The fixture accepts the consistent mission-three record"),
              SeedProgress.AppendDecision(
-                 MakePriorRecord(
+                 MakeUnburiedRoadPriorRecord(
                      EEchoesCampaignMissionId::ACityOnReserve,
                      echoes::sim::FutureWellChoice::Preserve),
                  Feedback) == EEchoesCampaignCommitStatus::Added);

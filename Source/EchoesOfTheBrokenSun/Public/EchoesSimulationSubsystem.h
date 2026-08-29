@@ -7,6 +7,7 @@
 #include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
+#include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
@@ -91,6 +92,18 @@ struct FEchoesObjectiveSnapshot final
     bool bFirstCivilianSheltered = false;
     bool bSecondCivilianSheltered = false;
     bool bTalarAtEvidenceExtraction = false;
+    EEchoesShapeOfSilencePhase ShapeOfSilencePhase =
+        EEchoesShapeOfSilencePhase::Inactive;
+    echoes::sim::FutureWellChoice ShapeOfSilenceBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId OruunId = 0;
+    echoes::sim::EntityId FirstMemoryWitnessId = 0;
+    echoes::sim::EntityId SecondMemoryWitnessId = 0;
+    bool bShapeWaystoneRooted = false;
+    bool bShapeListeningSpineRaised = false;
+    bool bFirstMemoryWitnessPositioned = false;
+    bool bSecondMemoryWitnessPositioned = false;
+    bool bOruunAtConfluence = false;
 };
 
 /**
@@ -217,6 +230,9 @@ public:
     [[nodiscard]] EEchoesNamesWithoutBirthsPhase
     GetNamesWithoutBirthsPhase() const;
     [[nodiscard]] bool IsNamesWithoutBirthsUnlocked() const;
+    [[nodiscard]] EEchoesShapeOfSilencePhase
+    GetShapeOfSilencePhase() const;
+    [[nodiscard]] bool IsShapeOfSilenceUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -225,6 +241,8 @@ public:
     GetTermsOfContinuancePlan() const;
     [[nodiscard]] FEchoesNamesWithoutBirthsPlan
     GetNamesWithoutBirthsPlan() const;
+    [[nodiscard]] FEchoesShapeOfSilencePlan
+    GetShapeOfSilencePlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -286,6 +304,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitNamesWithoutBirthsCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitShapeOfSilenceCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -363,6 +384,9 @@ private:
     echoes::sim::EntityId CensusArchiveId = 0;
     echoes::sim::EntityId FirstCivilianId = 0;
     echoes::sim::EntityId SecondCivilianId = 0;
+    echoes::sim::EntityId OruunId = 0;
+    echoes::sim::EntityId FirstMemoryWitnessId = 0;
+    echoes::sim::EntityId SecondMemoryWitnessId = 0;
     FEchoesCampaignProgress CampaignProgress;
     bool bCampaignProgressAvailable = false;
     FString CampaignProgressPath;

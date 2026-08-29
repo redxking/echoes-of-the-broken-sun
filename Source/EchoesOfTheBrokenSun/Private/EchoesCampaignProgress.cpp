@@ -49,6 +49,13 @@ constexpr uint8 NamesWithoutBirthsCompletionFacts =
     static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::EvidenceExtracted) |
     static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesNamesWithoutBirthsCompletionFact::PriorLedgerConsumed);
+constexpr uint8 ShapeOfSilenceCompletionFacts =
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::WaystoneRootedAtListeningAnchor) |
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::ListeningSpineRaised) |
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::BothMemoryWitnessesPositioned) |
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::OruunReachedConfluence) |
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -151,7 +158,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::ACityOnReserve &&
         Record.Mission != EEchoesCampaignMissionId::TheUnburiedRoad &&
         Record.Mission != EEchoesCampaignMissionId::TermsOfContinuance &&
-        Record.Mission != EEchoesCampaignMissionId::NamesWithoutBirths)
+        Record.Mission != EEchoesCampaignMissionId::NamesWithoutBirths &&
+        Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -175,7 +183,9 @@ bool ValidateRecord(
             ? UnburiedRoadCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::TermsOfContinuance
             ? TermsOfContinuanceCompletionFacts
-            : NamesWithoutBirthsCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::NamesWithoutBirths
+            ? NamesWithoutBirthsCompletionFacts
+            : ShapeOfSilenceCompletionFacts;
     if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
         (Record.VerifiedFacts & ~RequiredFacts) != 0)
     {

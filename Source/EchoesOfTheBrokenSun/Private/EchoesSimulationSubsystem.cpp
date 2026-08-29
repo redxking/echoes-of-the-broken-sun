@@ -29,6 +29,7 @@ constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
 constexpr int32 TermsOfContinuanceSiteRadiusTiles = 3;
 constexpr int32 NamesWithoutBirthsSiteRadiusTiles = 3;
+constexpr int32 ShapeOfSilenceSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -210,6 +211,17 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     LifeSupportDistrictId = 0;
     TransitDistrictId = 0;
     ArchiveDistrictId = 0;
+    MeridianContinuanceRelayId = 0;
+    KharuunContinuanceSpineId = 0;
+    MeridianContinuanceWitnessId = 0;
+    KharuunContinuanceWitnessId = 0;
+    TalarId = 0;
+    CensusArchiveId = 0;
+    FirstCivilianId = 0;
+    SecondCivilianId = 0;
+    OruunId = 0;
+    FirstMemoryWitnessId = 0;
+    SecondMemoryWitnessId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignProgressPath = FEchoesCampaignProgressStore::GetDefaultPath();
 #if !UE_BUILD_SHIPPING
@@ -309,6 +321,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("TERMS OF CONTINUANCE");
         case EEchoesOperationMode::CampaignNamesWithoutBirths:
             return TEXT("NAMES WITHOUT BIRTHS");
+        case EEchoesOperationMode::CampaignShapeOfSilence:
+            return TEXT("THE SHAPE OF SILENCE");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -370,6 +384,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_NAMES_WITHOUT_BIRTHS_LOCKED] reason=five consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        !IsShapeOfSilenceUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SHAPE_OF_SILENCE_LOCKED] reason=six consistent prior mission records required"));
         return false;
     }
 
@@ -496,7 +520,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
          SelectedOperation ==
              EEchoesOperationMode::CampaignTermsOfContinuance ||
          SelectedOperation ==
-             EEchoesOperationMode::CampaignNamesWithoutBirths)
+             EEchoesOperationMode::CampaignNamesWithoutBirths ||
+         SelectedOperation ==
+             EEchoesOperationMode::CampaignShapeOfSilence)
             ? ApplyUnburiedRoadTerrain(*Simulation, SevenAccountsBranch)
             : 0;
     const int32 GlassScarBlockedTiles =
@@ -518,6 +544,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignNamesWithoutBirths
             ? Faction::MeridianCompact
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignShapeOfSilence
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -544,7 +573,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignTermsOfContinuance ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignNamesWithoutBirths
+                        EEchoesOperationMode::CampaignNamesWithoutBirths ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignShapeOfSilence
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -590,6 +621,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     CensusArchiveId = 0;
     FirstCivilianId = 0;
     SecondCivilianId = 0;
+    OruunId = 0;
+    FirstMemoryWitnessId = 0;
+    SecondMemoryWitnessId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -609,7 +643,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ArchiveCarrierId = Spawned;
         }
         if ((SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts ||
-             SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad) &&
+             SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad ||
+             SelectedOperation == EEchoesOperationMode::CampaignShapeOfSilence) &&
             Owner == LocalPlayerId)
         {
             if (Type == EntityType::ScoutUnit)
@@ -871,6 +906,37 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 SecondCivilianId,
                 Plan.PowerLinkSite.x.FloorToInt(),
                 Plan.PowerLinkSite.y.FloorToInt(),
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
+        }
+
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence)
+        {
+            const FEchoesShapeOfSilencePlan Plan =
+                GetShapeOfSilencePlan();
+            OruunId = MemoryBearerId;
+            FirstMemoryWitnessId = SpawnUnit(
+                LocalPlayerId,
+                Faction::KharuunAssemblies,
+                EntityType::ScoutUnit,
+                20,
+                24);
+            SecondMemoryWitnessId = SpawnUnit(
+                LocalPlayerId,
+                Faction::KharuunAssemblies,
+                EntityType::ScoutUnit,
+                23,
+                24);
+            MemoryBearerId = OruunId;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SHAPE_OF_SILENCE_SPAWN] branch=%s oruun=%u witnessA=%u witnessB=%u waystone=%u success=%s"),
+                Plan.StableName,
+                OruunId,
+                FirstMemoryWitnessId,
+                SecondMemoryWitnessId,
+                MigrationWaystoneId,
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
@@ -1324,6 +1390,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        (OruunId == 0 || FirstMemoryWitnessId == 0 ||
+         SecondMemoryWitnessId == 0 || MigrationWaystoneId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SHAPE_OF_SILENCE_INIT_FAILED] reason=mission entities unavailable oruun=%u witnessA=%u witnessB=%u waystone=%u"),
+            OruunId,
+            FirstMemoryWitnessId,
+            SecondMemoryWitnessId,
+            MigrationWaystoneId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1474,6 +1556,33 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Plan.EvidenceExtractionSite.x.FloorToInt(),
                 Plan.EvidenceExtractionSite.y.FloorToInt());
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignShapeOfSilence)
+        {
+            const FEchoesShapeOfSilencePlan Plan =
+                GetShapeOfSilencePlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SHAPE_OF_SILENCE_READY] branch=%s oruun=%u witnessA=%u witnessB=%u waystone=%u anchor=(%d,%d) spine=(%d,%d) witnessSites=(%d,%d):(%d,%d) confluence=(%d,%d) observedCorrespondenceOnly=true hiddenAttribution=false inheritedRecords=6 terrainDelta=%d blocked=%d"),
+                Plan.StableName,
+                OruunId,
+                FirstMemoryWitnessId,
+                SecondMemoryWitnessId,
+                MigrationWaystoneId,
+                Plan.WaystoneAnchor.x.FloorToInt(),
+                Plan.WaystoneAnchor.y.FloorToInt(),
+                Plan.ListeningSpineSite.x.FloorToInt(),
+                Plan.ListeningSpineSite.y.FloorToInt(),
+                Plan.FirstWitnessSite.x.FloorToInt(),
+                Plan.FirstWitnessSite.y.FloorToInt(),
+                Plan.SecondWitnessSite.x.FloorToInt(),
+                Plan.SecondWitnessSite.y.FloorToInt(),
+                Plan.ConfluenceSite.x.FloorToInt(),
+                Plan.ConfluenceSite.y.FloorToInt(),
+                UnburiedRoadTerrainDelta,
+                GlassScarBlockedTiles);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -1592,6 +1701,9 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     CensusArchiveId = 0;
     FirstCivilianId = 0;
     SecondCivilianId = 0;
+    OruunId = 0;
+    FirstMemoryWitnessId = 0;
+    SecondMemoryWitnessId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -1657,6 +1769,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::MeridianCompact)
     {
         OutFeedback = TEXT("[FACTION_NAMES_WITHOUT_BIRTHS_LOCKED] Talar's protected archive convoy deploys under Meridian command authority.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_SHAPE_OF_SILENCE_LOCKED] Oruun and both memory witnesses deploy under Kharuun authority.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -1751,6 +1870,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Terms of Continuance with a consistent ledger before Names Without Births.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        !IsShapeOfSilenceUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Names Without Births with a consistent ledger before The Shape of Silence.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1792,6 +1918,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::MeridianCompact;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignShapeOfSilence)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1815,6 +1946,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignNamesWithoutBirths
                 ? TEXT(" — Talar and the civilian archive convoy are locked under Meridian authority.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignShapeOfSilence
+                ? TEXT(" — Oruun and both memory witnesses are locked under Kharuun authority.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1834,6 +1968,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignNamesWithoutBirths
                 ? TEXT("NamesWithoutBirths")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignShapeOfSilence
+                ? TEXT("TheShapeOfSilence")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1957,7 +2094,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
     if (SelectedOperation ==
             EEchoesOperationMode::CampaignTermsOfContinuance ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignNamesWithoutBirths)
+            EEchoesOperationMode::CampaignNamesWithoutBirths ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -1971,17 +2110,18 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 FCrc::MemCrc32(
                     LedgerBytes.GetData(),
                     LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
+            const TCHAR* Prefix =
+                SelectedOperation ==
+                        EEchoesOperationMode::CampaignTermsOfContinuance
+                    ? TEXT("EchoesQuickSaveTermsOfContinuance")
+                : SelectedOperation ==
+                        EEchoesOperationMode::CampaignNamesWithoutBirths
+                    ? TEXT("EchoesQuickSaveNamesWithoutBirths")
+                    : TEXT("EchoesQuickSaveTheShapeOfSilence");
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
-                SelectedOperation ==
-                        EEchoesOperationMode::CampaignTermsOfContinuance
-                    ? FString::Printf(
-                          TEXT("EchoesQuickSaveTermsOfContinuance-%08X.bin"),
-                          LedgerFingerprint)
-                    : FString::Printf(
-                          TEXT("EchoesQuickSaveNamesWithoutBirths-%08X.bin"),
-                          LedgerFingerprint));
+                FString::Printf(TEXT("%s-%08X.bin"), Prefix, LedgerFingerprint));
         }
         return FPaths::Combine(
             FPaths::ProjectSavedDir(),
@@ -1989,7 +2129,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             SelectedOperation ==
                     EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin")
-                : TEXT("EchoesQuickSaveNamesWithoutBirths-InvalidLedger.bin"));
+            : SelectedOperation ==
+                    EEchoesOperationMode::CampaignNamesWithoutBirths
+                ? TEXT("EchoesQuickSaveNamesWithoutBirths-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveTheShapeOfSilence-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -2387,6 +2530,72 @@ UEchoesSimulationSubsystem::CommitNamesWithoutBirthsCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitShapeOfSilenceCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignShapeOfSilence ||
+        GetShapeOfSilencePhase() !=
+            EEchoesShapeOfSilencePhase::Complete ||
+        !IsShapeOfSilenceUnlocked() ||
+        Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative The Shape of Silence operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::TheShapeOfSilence;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::WaystoneRootedAtListeningAnchor) |
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::ListeningSpineRaised) |
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::BothMemoryWitnessesPositioned) |
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::OruunReachedConfluence) |
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -2742,6 +2951,38 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 return false;
             }
         }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence)
+        {
+            const echoes::sim::Entity* Waystone =
+                Candidate->FindEntity(MigrationWaystoneId);
+            const echoes::sim::Entity* Oruun =
+                Candidate->FindEntity(OruunId);
+            const echoes::sim::Entity* FirstWitness =
+                Candidate->FindEntity(FirstMemoryWitnessId);
+            const echoes::sim::Entity* SecondWitness =
+                Candidate->FindEntity(SecondMemoryWitnessId);
+            const auto IsKharuunProxy = [](const echoes::sim::Entity* Entity,
+                                           EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::KharuunAssemblies &&
+                       Entity->type == Type;
+            };
+            if (!IsKharuunProxy(Waystone, EntityType::Dropoff) ||
+                !IsKharuunProxy(Oruun, EntityType::ScoutUnit) ||
+                !IsKharuunProxy(FirstWitness, EntityType::ScoutUnit) ||
+                !IsKharuunProxy(SecondWitness, EntityType::ScoutUnit) ||
+                OruunId == FirstMemoryWitnessId ||
+                OruunId == SecondMemoryWitnessId ||
+                FirstMemoryWitnessId == SecondMemoryWitnessId)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active The Shape of Silence ledger branch");
+                return false;
+            }
+        }
         LoadedSimulation =
             MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
         return true;
@@ -2949,6 +3190,22 @@ bool UEchoesSimulationSubsystem::IsNamesWithoutBirthsUnlocked() const
            Prologue->WellChoice == Continuance->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsShapeOfSilenceUnlocked() const
+{
+    if (!IsNamesWithoutBirthsUnlocked())
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Names =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::NamesWithoutBirths);
+    return Prologue != nullptr && Names != nullptr &&
+           Prologue->WellChoice == Names->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -2988,6 +3245,13 @@ FEchoesNamesWithoutBirthsPlan
 UEchoesSimulationSubsystem::GetNamesWithoutBirthsPlan() const
 {
     return FEchoesNamesWithoutBirthsMissionModel::PlanForChoice(
+        GetRecordedPrologueChoice());
+}
+
+FEchoesShapeOfSilencePlan
+UEchoesSimulationSubsystem::GetShapeOfSilencePlan() const
+{
+    return FEchoesShapeOfSilenceMissionModel::PlanForChoice(
         GetRecordedPrologueChoice());
 }
 
@@ -3306,6 +3570,81 @@ UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
     return FEchoesNamesWithoutBirthsMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesShapeOfSilencePhase
+UEchoesSimulationSubsystem::GetShapeOfSilencePhase() const
+{
+    FEchoesShapeOfSilenceMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesShapeOfSilencePhase::Inactive;
+    }
+
+    const FEchoesShapeOfSilencePlan Plan = GetShapeOfSilencePlan();
+    const echoes::sim::Entity* Waystone =
+        Simulation->FindEntity(MigrationWaystoneId);
+    const echoes::sim::Entity* Oruun = Simulation->FindEntity(OruunId);
+    const echoes::sim::Entity* FirstWitness =
+        Simulation->FindEntity(FirstMemoryWitnessId);
+    const echoes::sim::Entity* SecondWitness =
+        Simulation->FindEntity(SecondMemoryWitnessId);
+    Facts.bWaystoneIntact = Waystone != nullptr && Waystone->hitPoints > 0;
+    Facts.bOruunIntact = Oruun != nullptr && Oruun->hitPoints > 0;
+    Facts.bFirstWitnessIntact =
+        FirstWitness != nullptr && FirstWitness->hitPoints > 0;
+    Facts.bSecondWitnessIntact =
+        SecondWitness != nullptr && SecondWitness->hitPoints > 0;
+    Facts.bWaystoneRootedAtAnchor =
+        Facts.bWaystoneIntact &&
+        Waystone->waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+        IsWithinTiles(
+            Waystone->position,
+            Plan.WaystoneAnchor,
+            ShapeOfSilenceSiteRadiusTiles);
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                Plan.ListeningSpineSite,
+                ShapeOfSilenceSiteRadiusTiles))
+        {
+            Facts.bListeningSpineRaised = true;
+        }
+    }
+    Facts.bFirstWitnessPositioned =
+        Facts.bFirstWitnessIntact &&
+        IsWithinTiles(
+            FirstWitness->position,
+            Plan.FirstWitnessSite,
+            ShapeOfSilenceSiteRadiusTiles);
+    Facts.bSecondWitnessPositioned =
+        Facts.bSecondWitnessIntact &&
+        IsWithinTiles(
+            SecondWitness->position,
+            Plan.SecondWitnessSite,
+            ShapeOfSilenceSiteRadiusTiles);
+    Facts.bOruunAtConfluence =
+        Facts.bOruunIntact && Facts.bFirstWitnessPositioned &&
+        Facts.bSecondWitnessPositioned &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.ConfluenceSite,
+            ShapeOfSilenceSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    return FEchoesShapeOfSilenceMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -3329,6 +3668,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.TermsOfContinuanceBranch = GetRecordedPrologueChoice();
     Snapshot.NamesWithoutBirthsPhase = GetNamesWithoutBirthsPhase();
     Snapshot.NamesWithoutBirthsBranch = GetRecordedPrologueChoice();
+    Snapshot.ShapeOfSilencePhase = GetShapeOfSilencePhase();
+    Snapshot.ShapeOfSilenceBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -3343,6 +3684,9 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.CensusArchiveId = CensusArchiveId;
     Snapshot.FirstCivilianId = FirstCivilianId;
     Snapshot.SecondCivilianId = SecondCivilianId;
+    Snapshot.OruunId = OruunId;
+    Snapshot.FirstMemoryWitnessId = FirstMemoryWitnessId;
+    Snapshot.SecondMemoryWitnessId = SecondMemoryWitnessId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
@@ -3351,6 +3695,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetTermsOfContinuancePlan();
     const FEchoesNamesWithoutBirthsPlan NamesPlan =
         GetNamesWithoutBirthsPlan();
+    const FEchoesShapeOfSilencePlan ShapePlan =
+        GetShapeOfSilencePlan();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.id == ArchiveCarrierId)
@@ -3391,6 +3737,13 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     Entity.position,
                     UnburiedRoadRoute.Roadhead,
                     UnburiedRoadSiteRadiusTiles);
+            Snapshot.bShapeWaystoneRooted =
+                Snapshot.bWaystoneIntact &&
+                Entity.waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+                IsWithinTiles(
+                    Entity.position,
+                    ShapePlan.WaystoneAnchor,
+                    ShapeOfSilenceSiteRadiusTiles);
         }
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
             Entity.completed && Entity.type == EntityType::UtilityStructure &&
@@ -3400,6 +3753,15 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 UnburiedRoadSiteRadiusTiles))
         {
             Snapshot.bListeningSpineComplete = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                ShapePlan.ListeningSpineSite,
+                ShapeOfSilenceSiteRadiusTiles))
+        {
+            Snapshot.bShapeListeningSpineRaised = true;
         }
         if (Entity.id == LifeSupportDistrictId)
         {
@@ -3477,6 +3839,24 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     NamesPlan.CivilianShelterSite,
                     NamesWithoutBirthsSiteRadiusTiles);
         }
+        if (Entity.id == FirstMemoryWitnessId)
+        {
+            Snapshot.bFirstMemoryWitnessPositioned =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    ShapePlan.FirstWitnessSite,
+                    ShapeOfSilenceSiteRadiusTiles);
+        }
+        if (Entity.id == SecondMemoryWitnessId)
+        {
+            Snapshot.bSecondMemoryWitnessPositioned =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    ShapePlan.SecondWitnessSite,
+                    ShapeOfSilenceSiteRadiusTiles);
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -3525,6 +3905,15 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             Talar->position,
             NamesPlan.EvidenceExtractionSite,
             NamesWithoutBirthsSiteRadiusTiles);
+    const echoes::sim::Entity* Oruun = Simulation->FindEntity(OruunId);
+    Snapshot.bOruunAtConfluence =
+        Oruun != nullptr && Oruun->hitPoints > 0 &&
+        Snapshot.bFirstMemoryWitnessPositioned &&
+        Snapshot.bSecondMemoryWitnessPositioned &&
+        IsWithinTiles(
+            Oruun->position,
+            ShapePlan.ConfluenceSite,
+            ShapeOfSilenceSiteRadiusTiles);
     return Snapshot;
 }
 
@@ -3920,6 +4309,58 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : TEXT("failure"),
                         FEchoesNamesWithoutBirthsMissionModel::StableName(
                             NamesPhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignShapeOfSilence &&
+                     !bMatchResultReported)
+            {
+                const EEchoesShapeOfSilencePhase ShapePhase =
+                    GetShapeOfSilencePhase();
+                const bool bShapeFinished =
+                    ShapePhase == EEchoesShapeOfSilencePhase::Complete ||
+                    ShapePhase == EEchoesShapeOfSilencePhase::Failed;
+                if (bShapeFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        ShapePhase == EEchoesShapeOfSilencePhase::Complete
+                            ? CommitShapeOfSilenceCompletion(
+                                  RecordedConsequence, CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyShapeOfSilenceFinished(
+                            ShapePhase ==
+                                EEchoesShapeOfSilencePhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_SHAPE_OF_SILENCE_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        ShapePhase == EEchoesShapeOfSilencePhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesShapeOfSilenceMissionModel::StableName(
+                            ShapePhase),
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(CampaignStatus),
