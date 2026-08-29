@@ -62,6 +62,21 @@ AEchoesEntityView::AEchoesEntityView()
     SelectionRing->SetCastShadow(false);
     SelectionRing->SetVisibility(false);
 
+    HealthBarBackground = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("HealthBarBackground"));
+    HealthBarBackground->SetupAttachment(SceneRoot);
+    HealthBarFill = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("HealthBarFill"));
+    HealthBarFill->SetupAttachment(SceneRoot);
+    for (UStaticMeshComponent* Bar : {HealthBarBackground, HealthBarFill})
+    {
+        Bar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Bar->SetGenerateOverlapEvents(false);
+        Bar->SetCastShadow(false);
+        Bar->SetReceivesDecals(false);
+        Bar->SetVisibility(false);
+    }
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -81,6 +96,8 @@ AEchoesEntityView::AEchoesEntityView()
 
     BodyMesh->SetStaticMesh(CylinderMesh);
     SelectionRing->SetStaticMesh(CylinderMesh);
+    HealthBarBackground->SetStaticMesh(CubeMesh);
+    HealthBarFill->SetStaticMesh(CubeMesh);
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -147,14 +164,15 @@ void AEchoesEntityView::ApplyAuthoritativeState(
         ConfigureAppearance(State);
     }
 
-    const float HealthFraction = MaxHitPoints > 0
-                                     ? FMath::Clamp(
-                                           static_cast<float>(HitPoints) /
-                                               static_cast<float>(MaxHitPoints),
-                                           0.0f,
-                                           1.0f)
-                                     : 0.0f;
-    BodyMesh->SetCustomPrimitiveDataFloat(0, HealthFraction);
+    DisplayedHealthFraction = MaxHitPoints > 0
+                                  ? FMath::Clamp(
+                                        static_cast<float>(HitPoints) /
+                                            static_cast<float>(MaxHitPoints),
+                                        0.0f,
+                                        1.0f)
+                                  : 0.0f;
+    BodyMesh->SetCustomPrimitiveDataFloat(0, DisplayedHealthFraction);
+    UpdateHealthBar();
 }
 
 void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
@@ -163,6 +181,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     FVector BodyScale(0.48f, 0.48f, 0.70f);
     FVector BodyOffset(0.0f, 0.0f, 35.0f);
     float SelectionRadius = 0.74f;
+    HealthBarWidthScale = 0.9f;
+    HealthBarHeight = 92.0f;
 
     switch (State.type)
     {
@@ -174,36 +194,48 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             BodyScale = FVector(0.58f, 0.58f, 0.90f);
             BodyOffset.Z = 45.0f;
             SelectionRadius = 0.84f;
+            HealthBarWidthScale = 1.05f;
+            HealthBarHeight = 112.0f;
             break;
         case echoes::sim::EntityType::CommandCore:
             DesiredMesh = CubeMesh;
             BodyScale = FVector(2.0f, 2.0f, 1.25f);
             BodyOffset.Z = 62.5f;
             SelectionRadius = 2.35f;
+            HealthBarWidthScale = 2.2f;
+            HealthBarHeight = 158.0f;
             break;
         case echoes::sim::EntityType::Dropoff:
             DesiredMesh = CubeMesh;
             BodyScale = FVector(1.35f, 1.35f, 0.85f);
             BodyOffset.Z = 42.5f;
             SelectionRadius = 1.65f;
+            HealthBarWidthScale = 1.55f;
+            HealthBarHeight = 112.0f;
             break;
         case echoes::sim::EntityType::Barracks:
             DesiredMesh = CubeMesh;
             BodyScale = FVector(1.8f, 1.4f, 0.9f);
             BodyOffset.Z = 45.0f;
             SelectionRadius = 2.15f;
+            HealthBarWidthScale = 1.95f;
+            HealthBarHeight = 120.0f;
             break;
         case echoes::sim::EntityType::ResourceNode:
             DesiredMesh = SphereMesh;
             BodyScale = FVector(0.74f, 0.74f, 0.74f);
             BodyOffset.Z = 37.0f;
             SelectionRadius = 0.95f;
+            HealthBarWidthScale = 1.05f;
+            HealthBarHeight = 92.0f;
             break;
         case echoes::sim::EntityType::FutureWell:
             DesiredMesh = CylinderMesh;
             BodyScale = FVector(1.35f, 1.35f, 0.18f);
             BodyOffset.Z = 9.0f;
             SelectionRadius = 1.6f;
+            HealthBarWidthScale = 1.5f;
+            HealthBarHeight = 42.0f;
             break;
     }
 
@@ -228,6 +260,21 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.08f, 1.0f, 0.68f));
             SelectionRing->SetMaterial(0, RingMaterial);
         }
+        if (HealthBarBackgroundMaterial == nullptr)
+        {
+            HealthBarBackgroundMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            HealthBarBackgroundMaterial->SetVectorParameterValue(
+                ColorParameterName,
+                FLinearColor(0.008f, 0.012f, 0.018f));
+            HealthBarBackground->SetMaterial(0, HealthBarBackgroundMaterial);
+        }
+        if (HealthBarFillMaterial == nullptr)
+        {
+            HealthBarFillMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            HealthBarFill->SetMaterial(0, HealthBarFillMaterial);
+        }
         SetBodyColor(ColorForState(State));
     }
 }
@@ -246,6 +293,48 @@ void AEchoesEntityView::SetSelected(bool bInSelected)
     SelectionRing->SetVisibility(bSelected, true);
     BodyMesh->SetRenderCustomDepth(bSelected);
     BodyMesh->SetCustomDepthStencilValue(bSelected ? 1 : 0);
+    UpdateHealthBar();
+}
+
+void AEchoesEntityView::UpdateHealthBar()
+{
+    if (HealthBarBackground == nullptr || HealthBarFill == nullptr)
+    {
+        return;
+    }
+    const bool bShowHealth = bSelected || DisplayedHealthFraction < 0.999f;
+    HealthBarBackground->SetVisibility(bShowHealth, true);
+    HealthBarFill->SetVisibility(bShowHealth && DisplayedHealthFraction > 0.0f, true);
+    HealthBarBackground->SetRelativeLocation(
+        FVector(0.0f, 0.0f, HealthBarHeight));
+    HealthBarBackground->SetRelativeScale3D(
+        FVector(HealthBarWidthScale, 0.10f, 0.045f));
+
+    const float FillWidth = HealthBarWidthScale * DisplayedHealthFraction;
+    const float FillOffsetX =
+        -50.0f * HealthBarWidthScale * (1.0f - DisplayedHealthFraction);
+    HealthBarFill->SetRelativeLocation(
+        FVector(FillOffsetX, 0.0f, HealthBarHeight + 1.0f));
+    HealthBarFill->SetRelativeScale3D(
+        FVector(FillWidth, 0.075f, 0.030f));
+    if (HealthBarFillMaterial != nullptr)
+    {
+        const FLinearColor HealthColor =
+            DisplayedHealthFraction > 0.60f
+                ? FLinearColor(0.10f, 0.92f, 0.35f)
+                : DisplayedHealthFraction > 0.30f
+                      ? FLinearColor(1.0f, 0.62f, 0.08f)
+                      : FLinearColor(1.0f, 0.10f, 0.08f);
+        HealthBarFillMaterial->SetVectorParameterValue(
+            ColorParameterName,
+            HealthColor);
+    }
+}
+
+bool AEchoesEntityView::IsHealthBarVisible() const
+{
+    return HealthBarBackground != nullptr &&
+           HealthBarBackground->IsVisible();
 }
 
 FString AEchoesEntityView::GetDisplayName() const

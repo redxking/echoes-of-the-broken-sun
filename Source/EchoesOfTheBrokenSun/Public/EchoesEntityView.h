@@ -31,11 +31,17 @@ public:
     [[nodiscard]] uint8 GetOwnerPlayerId() const { return OwnerPlayerId; }
     [[nodiscard]] echoes::sim::EntityType GetEntityType() const { return EntityType; }
     [[nodiscard]] bool IsSelected() const { return bSelected; }
+    [[nodiscard]] float GetDisplayedHealthFraction() const
+    {
+        return DisplayedHealthFraction;
+    }
+    [[nodiscard]] bool IsHealthBarVisible() const;
     [[nodiscard]] FString GetDisplayName() const;
 
 private:
     void ConfigureAppearance(const echoes::sim::Entity& State);
     void SetBodyColor(const FLinearColor& Color);
+    void UpdateHealthBar();
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -45,6 +51,12 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> SelectionRing;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> HealthBarBackground;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> HealthBarFill;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
@@ -67,6 +79,12 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> RingMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> HealthBarBackgroundMaterial;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> HealthBarFillMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -75,6 +93,9 @@ private:
         echoes::sim::FutureWellChoice::Dormant;
     int32 HitPoints = 1;
     int32 MaxHitPoints = 1;
+    float DisplayedHealthFraction = 1.0f;
+    float HealthBarWidthScale = 0.9f;
+    float HealthBarHeight = 92.0f;
     bool bHasAuthoritativeLocation = false;
     bool bSelected = false;
 };

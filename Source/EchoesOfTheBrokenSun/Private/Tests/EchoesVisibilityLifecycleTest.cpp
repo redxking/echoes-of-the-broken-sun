@@ -93,6 +93,36 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    AEchoesEntityView* ScoutView = Bridge->FindEntityView(ScoutId);
+    if (TestNotNull(TEXT("Visible local scout has a presentation actor"), ScoutView))
+    {
+        TestFalse(TEXT("Full-health scout health bar starts hidden"),
+                  ScoutView->IsHealthBarVisible());
+        ScoutView->SetSelected(true);
+        TestTrue(TEXT("Selecting a scout exposes its health bar"),
+                 ScoutView->IsHealthBarVisible());
+        TestEqual(TEXT("Full-health scout reports a complete health fraction"),
+                  ScoutView->GetDisplayedHealthFraction(),
+                  1.0f);
+        ScoutView->SetSelected(false);
+        TestFalse(TEXT("Deselection hides a full-health scout health bar"),
+                  ScoutView->IsHealthBarVisible());
+        echoes::sim::Entity DamagedScout =
+            *InitialSimulation->FindEntity(ScoutId);
+        DamagedScout.hitPoints = DamagedScout.maxHitPoints / 4;
+        ScoutView->ApplyAuthoritativeState(DamagedScout, true);
+        TestTrue(TEXT("A damaged scout exposes its health bar without selection"),
+                 ScoutView->IsHealthBarVisible());
+        TestEqual(TEXT("Damaged scout health fraction mirrors authoritative hit points"),
+                  ScoutView->GetDisplayedHealthFraction(),
+                  0.25f);
+        ScoutView->ApplyAuthoritativeState(
+            *InitialSimulation->FindEntity(ScoutId),
+            true);
+        TestFalse(TEXT("Restored full health hides the unselected health bar"),
+                  ScoutView->IsHealthBarVisible());
+    }
+
     TestFalse(
         TEXT("Distant resource starts outside local simulation visibility"),
         InitialSimulation->IsEntityVisibleTo(
