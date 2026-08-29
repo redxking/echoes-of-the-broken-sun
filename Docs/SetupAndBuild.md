@@ -88,6 +88,14 @@ ECHOES_PROFILE_STRESS400=1 ./Scripts/profile_packaged_macos.sh
 
 The wrapper validates the manifested, signed package; requests native 2560×1440 exclusive fullscreen; applies medium scalability groups, native resolution quality, and TAA; enables Unreal CSV GPU statistics; captures 600 frames; discards the first 120 as warm-up; samples process RSS independently; and writes the raw Unreal CSV, runtime log, RSS samples, and machine-readable summary beneath `BuildArtifacts/Performance/Packaged/<UTC timestamp>`. Exclusive fullscreen is intentional: the installed UE 5.8 Metal implementation forces display synchronization for windowed games, which makes raw frame/GPU counters include the 60 Hz presentation wait even when `r.VSync=0`. The normal run covers the 25-entity playable placeholder; `ECHOES_PROFILE_STRESS400=1` requires the exact 400-unit/four-team/401-view readiness marker and records that fixture separately. The latter proves visible-proxy and four-team fog scale at its named boundary, not authored weather/effects, formations, representative broad combat orders, soak stability, or release qualification.
 
+The durability gate runs the exact manifested scale package for 60 minutes in a 1280×720 windowed Metal process, samples RSS and CPU every five seconds, discards the first 120 seconds for steady-state memory analysis, requires the exact scale marker, rejects fatal/GPU/out-of-memory logs, and writes its evidence beneath `BuildArtifacts/Performance/Soak/<UTC timestamp>`:
+
+```sh
+./Scripts/soak_packaged_macos.sh
+```
+
+The enforced local bounds are survival for the requested duration, peak process RSS no greater than 10 GiB, no more than 64 MiB growth between the first and final steady-state windows, and a fitted steady-state growth rate no greater than 128 MiB/hour. These are project gates for detecting substantial retention on this fixture, not proof of leak freedom or release stability.
+
 ## Generate and build the Unreal project
 
 Define the installed engine and full Xcode, then use the repository wrappers:
