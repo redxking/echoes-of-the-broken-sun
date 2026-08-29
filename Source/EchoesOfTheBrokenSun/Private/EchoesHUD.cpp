@@ -44,7 +44,7 @@ void AEchoesHUD::DrawHUD()
     const FLinearColor SecondaryColor =
         bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
 
-    DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 253.0f * HudScale);
+    DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 276.0f * HudScale);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
         AccentColor,
@@ -194,6 +194,21 @@ void AEchoesHUD::DrawHUD()
         AccentColor,
         TextX,
         HudY(205.0f),
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f * HudScale,
+        false);
+
+    const FString CameraSettingsLine = FString::Printf(
+        TEXT("[Left/Right bracket] Pan speed %d%%    [Semicolon/Apostrophe] Zoom step %d%%"),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f) * 100.0f),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f) * 100.0f));
+    DrawText(
+        CameraSettingsLine,
+        SecondaryColor,
+        TextX,
+        HudY(228.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);

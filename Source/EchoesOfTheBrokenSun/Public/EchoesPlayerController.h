@@ -62,6 +62,12 @@ private:
     void ToggleHighContrast();
     void ToggleReducedMotion();
     void ToggleEdgePan();
+    void DecreaseCameraPanSpeed();
+    void IncreaseCameraPanSpeed();
+    void DecreaseCameraZoomSpeed();
+    void IncreaseCameraZoomSpeed();
+    void AdjustCameraPanSpeed(float Delta);
+    void AdjustCameraZoomSpeed(float Delta);
     void ArmControlGroupAssignment();
     void RecallControlGroup1();
     void RecallControlGroup2();

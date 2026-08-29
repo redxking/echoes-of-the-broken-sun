@@ -225,6 +225,10 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ToggleHighContrast"), &AEchoesPlayerController::ToggleHighContrast);
     BindPressed(TEXT("ToggleReducedMotion"), &AEchoesPlayerController::ToggleReducedMotion);
     BindPressed(TEXT("ToggleEdgePan"), &AEchoesPlayerController::ToggleEdgePan);
+    BindPressed(TEXT("DecreaseCameraPanSpeed"), &AEchoesPlayerController::DecreaseCameraPanSpeed);
+    BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
+    BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);
+    BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -1242,6 +1246,56 @@ void AEchoesPlayerController::ToggleEdgePan()
     SetStatusMessage(FString::Printf(
         TEXT("CONTROLS: screen-edge camera pan %s."),
         bEnabled ? TEXT("enabled") : TEXT("disabled")));
+}
+
+void AEchoesPlayerController::AdjustCameraPanSpeed(float Delta)
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Camera pan speed could not be changed."));
+        return;
+    }
+    Settings->SetCameraPanSpeedScale(Settings->GetCameraPanSpeedScale() + Delta);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("CONTROLS: camera pan speed set to %d%%."),
+        FMath::RoundToInt(Settings->GetCameraPanSpeedScale() * 100.0f)));
+}
+
+void AEchoesPlayerController::AdjustCameraZoomSpeed(float Delta)
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Camera zoom speed could not be changed."));
+        return;
+    }
+    Settings->SetCameraZoomScale(Settings->GetCameraZoomScale() + Delta);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("CONTROLS: camera zoom step set to %d%%."),
+        FMath::RoundToInt(Settings->GetCameraZoomScale() * 100.0f)));
+}
+
+void AEchoesPlayerController::DecreaseCameraPanSpeed()
+{
+    AdjustCameraPanSpeed(-0.25f);
+}
+
+void AEchoesPlayerController::IncreaseCameraPanSpeed()
+{
+    AdjustCameraPanSpeed(0.25f);
+}
+
+void AEchoesPlayerController::DecreaseCameraZoomSpeed()
+{
+    AdjustCameraZoomSpeed(-0.25f);
+}
+
+void AEchoesPlayerController::IncreaseCameraZoomSpeed()
+{
+    AdjustCameraZoomSpeed(0.25f);
 }
 
 void AEchoesPlayerController::BuildAtCursor(
