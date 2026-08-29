@@ -177,7 +177,7 @@ def validate_units(
         record = require_object(raw, path)
         require_exact_keys(
             record,
-            {"id", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm"},
+            {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm"},
             {"cargo_capacity", "attack"},
             path,
         )
@@ -209,6 +209,7 @@ def validate_units(
         output.append(
             {
                 "id": identifier,
+                "display_name": require_text(record["display_name"], f"{path}.display_name"),
                 "faction": faction,
                 "role": role,
                 "cost": require_cost(record["cost"], f"{path}.cost"),
@@ -221,8 +222,8 @@ def validate_units(
         )
     for faction in sorted(playable):
         roles = roles_by_faction[faction]
-        if "worker" not in roles or len(roles - {"worker"}) < 1:
-            fail("units.json.units", f"playable faction '{faction}' requires a worker and combat unit")
+        if "worker" not in roles or len(roles - {"worker"}) < 3:
+            fail("units.json.units", f"playable faction '{faction}' requires a worker and three distinct combat/support roles")
     return sorted(output, key=lambda item: item["id"])
 
 
@@ -238,7 +239,7 @@ def validate_buildings(
         record = require_object(raw, path)
         require_exact_keys(
             record,
-            {"id", "faction", "role", "cost", "max_health", "logistics_capacity", "footprint_cells"},
+            {"id", "display_name", "faction", "role", "cost", "max_health", "logistics_capacity", "footprint_cells"},
             set(),
             path,
         )
@@ -259,6 +260,7 @@ def validate_buildings(
         output.append(
             {
                 "id": identifier,
+                "display_name": require_text(record["display_name"], f"{path}.display_name"),
                 "faction": faction,
                 "role": role,
                 "cost": require_cost(record["cost"], f"{path}.cost"),
@@ -276,6 +278,10 @@ def validate_buildings(
             fail("buildings.json.buildings", f"playable faction '{faction}' requires headquarters_dropoff")
         if not ({"supply_node", "mobile_supply_node"} & roles):
             fail("buildings.json.buildings", f"playable faction '{faction}' requires a logistics structure")
+        if "production" not in roles:
+            fail("buildings.json.buildings", f"playable faction '{faction}' requires a production structure")
+        if len(roles) < 4:
+            fail("buildings.json.buildings", f"playable faction '{faction}' requires four distinct structure roles")
     return sorted(output, key=lambda item: item["id"])
 
 

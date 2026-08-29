@@ -80,9 +80,23 @@ class ContentCompilerTests(unittest.TestCase):
 
     def test_missing_playable_roster_role_is_rejected(self) -> None:
         units = self.load("units.json")
-        units["units"] = [item for item in units["units"] if item["id"] != "ka_riftstalker"]
+        units["units"] = [
+            item
+            for item in units["units"]
+            if item["faction"] != "kharuun_assemblies" or item["role"] == "worker"
+        ]
         self.write("units.json", units)
-        self.assert_invalid("requires a worker and combat unit")
+        self.assert_invalid("requires a worker and three distinct combat/support roles")
+
+    def test_missing_production_structure_is_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        buildings["buildings"] = [
+            item
+            for item in buildings["buildings"]
+            if item["faction"] != "meridian_compact" or item["role"] != "production"
+        ]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("requires a production structure")
 
     def test_invalid_numeric_range_is_rejected(self) -> None:
         wells = self.load("future_wells.json")

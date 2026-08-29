@@ -33,7 +33,7 @@ for marker in ECHOES_CONTENT_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_
 done
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=4 buildings=4 sha256=c83daba6a8743c1077e8c86553b7734c083210d304f65e9aa979e57861bdf1d9 source=canonical' \
+  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=edfd061c610e096f8df16a4fd8e4dfa2ca67af8d4d77aee414e792003c683d05 source=canonical' \
   "$log"; then
   print -u2 "Stress runtime did not load the reviewed canonical content digest. Inspect: $log"
   exit 4

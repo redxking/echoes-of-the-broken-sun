@@ -35,26 +35,41 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Canonical content schema is one"), Catalog.SchemaVersion, 1);
     TestEqual(TEXT("Three authored factions are present"), Catalog.Factions.Num(), 3);
     TestEqual(TEXT("Two factions are slice-playable"), Catalog.PlayableFactionCount(), 2);
-    TestEqual(TEXT("Four authored units are present"), Catalog.Units.Num(), 4);
-    TestEqual(TEXT("Four authored buildings are present"), Catalog.Buildings.Num(), 4);
+    TestEqual(TEXT("Eight authored units are present"), Catalog.Units.Num(), 8);
+    TestEqual(TEXT("Eight authored buildings are present"), Catalog.Buildings.Num(), 8);
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("c83daba6a8743c1077e8c86553b7734c083210d304f65e9aa979e57861bdf1d9")));
+        FString(TEXT("edfd061c610e096f8df16a4fd8e4dfa2ca67af8d4d77aee414e792003c683d05")));
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
     {
+        TestEqual(TEXT("Lancer display name is authored"), Lancer->DisplayName, FString(TEXT("Lancer")));
         TestEqual(TEXT("Lancer health comes from authored data"), Lancer->MaxHealth, 145);
         TestEqual(TEXT("Lancer attack damage comes from authored data"), Lancer->AttackDamage, 18);
         TestEqual(TEXT("Lancer cooldown comes from authored data"), Lancer->AttackCooldownTicks, 30);
+    }
+    const FEchoesUnitContent* Resonant = Catalog.FindUnit(TEXT("ka_resonant"));
+    if (TestNotNull(TEXT("Kharuun Resonant completes the slice roster"), Resonant))
+    {
+        TestEqual(TEXT("Resonant role is authored"), Resonant->Role, FString(TEXT("scout_counter_scout")));
+        TestEqual(TEXT("Resonant sight comes from authored data"), Resonant->SightCentimeters, 1550);
     }
     const FEchoesBuildingContent* Hearth =
         Catalog.FindBuilding(TEXT("ka_memory_hearth"));
     if (TestNotNull(TEXT("Kharuun Memory Hearth is addressable by stable ID"), Hearth))
     {
+        TestEqual(TEXT("Memory Hearth display name is authored"), Hearth->DisplayName, FString(TEXT("Memory Hearth")));
         TestEqual(TEXT("Memory Hearth health comes from authored data"), Hearth->MaxHealth, 1300);
         TestEqual(TEXT("Memory Hearth logistics come from authored data"), Hearth->LogisticsCapacity, 12);
+    }
+    const FEchoesBuildingContent* Foundry =
+        Catalog.FindBuilding(TEXT("mc_array_foundry"));
+    if (TestNotNull(TEXT("Meridian Array Foundry completes the slice roster"), Foundry))
+    {
+        TestEqual(TEXT("Array Foundry is a production structure"), Foundry->Role, FString(TEXT("production")));
+        TestEqual(TEXT("Array Foundry footprint is authored"), Foundry->FootprintCells, FIntPoint(4, 4));
     }
     TestEqual(
         TEXT("Reshape duration comes from authored data"),

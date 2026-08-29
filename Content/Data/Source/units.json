@@ -1,10 +1,13 @@
 {
   "schema_version": 1,
   "units": [
-    {"id":"mc_surveyor","faction":"meridian_compact","role":"worker","cost":{"matter":50,"dawn":0},"max_health":90,"move_speed_cm_s":360,"sight_cm":900,"cargo_capacity":10},
-    {"id":"mc_lancer","faction":"meridian_compact","role":"ranged_line","cost":{"matter":85,"dawn":20},"max_health":145,"move_speed_cm_s":320,"sight_cm":1100,"attack":{"damage":18,"range_cm":650,"cooldown_ticks":30}},
-    {"id":"ka_tender","faction":"kharuun_assemblies","role":"worker","cost":{"matter":50,"dawn":0},"max_health":100,"move_speed_cm_s":390,"sight_cm":920,"cargo_capacity":10},
-    {"id":"ka_riftstalker","faction":"kharuun_assemblies","role":"mobile_skirmisher","cost":{"matter":75,"dawn":30},"max_health":125,"move_speed_cm_s":410,"sight_cm":1050,"attack":{"damage":14,"range_cm":500,"cooldown_ticks":22}}
+    {"id":"mc_surveyor","display_name":"Surveyor","faction":"meridian_compact","role":"worker","cost":{"matter":50,"dawn":0},"max_health":90,"move_speed_cm_s":360,"sight_cm":900,"cargo_capacity":10},
+    {"id":"mc_lancer","display_name":"Lancer","faction":"meridian_compact","role":"ranged_line","cost":{"matter":85,"dawn":20},"max_health":145,"move_speed_cm_s":320,"sight_cm":1100,"attack":{"damage":18,"range_cm":650,"cooldown_ticks":30}},
+    {"id":"mc_bulwark_team","display_name":"Bulwark Team","faction":"meridian_compact","role":"heavy_screen","cost":{"matter":130,"dawn":25},"max_health":260,"move_speed_cm_s":230,"sight_cm":850,"attack":{"damage":10,"range_cm":300,"cooldown_ticks":24}},
+    {"id":"mc_relay_skiff","display_name":"Relay Skiff","faction":"meridian_compact","role":"scout_support","cost":{"matter":70,"dawn":20},"max_health":75,"move_speed_cm_s":500,"sight_cm":1500,"attack":{"damage":6,"range_cm":400,"cooldown_ticks":24}},
+    {"id":"ka_tender","display_name":"Tender","faction":"kharuun_assemblies","role":"worker","cost":{"matter":50,"dawn":0},"max_health":100,"move_speed_cm_s":390,"sight_cm":920,"cargo_capacity":10},
+    {"id":"ka_riftstalker","display_name":"Riftstalker","faction":"kharuun_assemblies","role":"mobile_skirmisher","cost":{"matter":75,"dawn":30},"max_health":125,"move_speed_cm_s":410,"sight_cm":1050,"attack":{"damage":14,"range_cm":500,"cooldown_ticks":22}},
+    {"id":"ka_cairnback","display_name":"Cairnback","faction":"kharuun_assemblies","role":"assault_screen","cost":{"matter":120,"dawn":30},"max_health":245,"move_speed_cm_s":270,"sight_cm":800,"attack":{"damage":16,"range_cm":200,"cooldown_ticks":28}},
+    {"id":"ka_resonant","display_name":"Resonant","faction":"kharuun_assemblies","role":"scout_counter_scout","cost":{"matter":80,"dawn":25},"max_health":85,"move_speed_cm_s":470,"sight_cm":1550,"attack":{"damage":8,"range_cm":380,"cooldown_ticks":20}}
   ]
 }
-

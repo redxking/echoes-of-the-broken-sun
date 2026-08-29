@@ -345,6 +345,7 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         const TSharedPtr<FJsonObject> Object = (*UnitValues)[Index]->AsObject();
         FEchoesUnitContent Unit;
         if (!ReadRequiredString(Object, TEXT("id"), Unit.Id, Path, OutError) ||
+            !ReadRequiredString(Object, TEXT("display_name"), Unit.DisplayName, Path, OutError) ||
             !ReadRequiredString(Object, TEXT("faction"), Unit.FactionId, Path, OutError) ||
             !ReadRequiredString(Object, TEXT("role"), Unit.Role, Path, OutError) ||
             !FactionIds.Contains(Unit.FactionId) ||
@@ -381,6 +382,7 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         const TSharedPtr<FJsonObject> Object = (*BuildingValues)[Index]->AsObject();
         FEchoesBuildingContent Building;
         if (!ReadRequiredString(Object, TEXT("id"), Building.Id, Path, OutError) ||
+            !ReadRequiredString(Object, TEXT("display_name"), Building.DisplayName, Path, OutError) ||
             !ReadRequiredString(Object, TEXT("faction"), Building.FactionId, Path, OutError) ||
             !ReadRequiredString(Object, TEXT("role"), Building.Role, Path, OutError) ||
             !FactionIds.Contains(Building.FactionId) ||
@@ -450,6 +452,52 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         OutError = TEXT("CONTENT_PLAYABLE_FACTIONS_INSUFFICIENT");
         OutCatalog = {};
         return false;
+    }
+    for (const FEchoesFactionContent& Faction : OutCatalog.Factions)
+    {
+        if (!Faction.bVerticalSlicePlayable)
+        {
+            continue;
+        }
+        int32 UnitCount = 0;
+        int32 BuildingCount = 0;
+        bool bHasWorker = false;
+        bool bHasHeadquarters = false;
+        bool bHasLogistics = false;
+        bool bHasProduction = false;
+        TSet<FString> UnitRoles;
+        TSet<FString> BuildingRoles;
+        for (const FEchoesUnitContent& Unit : OutCatalog.Units)
+        {
+            if (Unit.FactionId == Faction.Id)
+            {
+                ++UnitCount;
+                UnitRoles.Add(Unit.Role);
+                bHasWorker |= Unit.Role == TEXT("worker");
+            }
+        }
+        for (const FEchoesBuildingContent& Building : OutCatalog.Buildings)
+        {
+            if (Building.FactionId == Faction.Id)
+            {
+                ++BuildingCount;
+                BuildingRoles.Add(Building.Role);
+                bHasHeadquarters |= Building.Role == TEXT("headquarters_dropoff");
+                bHasLogistics |= Building.Role == TEXT("supply_node") ||
+                    Building.Role == TEXT("mobile_supply_node");
+                bHasProduction |= Building.Role == TEXT("production");
+            }
+        }
+        if (UnitCount < 4 || UnitRoles.Num() < 4 || !bHasWorker ||
+            BuildingCount < 4 || BuildingRoles.Num() < 4 ||
+            !bHasHeadquarters || !bHasLogistics || !bHasProduction)
+        {
+            OutError = FString::Printf(
+                TEXT("CONTENT_PLAYABLE_ROSTER_INCOMPLETE:%s"),
+                *Faction.Id);
+            OutCatalog = {};
+            return false;
+        }
     }
     return true;
 }

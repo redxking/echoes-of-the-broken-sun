@@ -14,6 +14,7 @@ struct FEchoesFactionContent final
 struct FEchoesUnitContent final
 {
     FString Id;
+    FString DisplayName;
     FString FactionId;
     FString Role;
     int32 MatterCost = 0;
@@ -30,6 +31,7 @@ struct FEchoesUnitContent final
 struct FEchoesBuildingContent final
 {
     FString Id;
+    FString DisplayName;
     FString FactionId;
     FString Role;
     int32 MatterCost = 0;

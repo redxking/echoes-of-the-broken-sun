@@ -20,7 +20,7 @@ mkdir -p "$project_root/BuildArtifacts"
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=4 buildings=4 sha256=c83daba6a8743c1077e8c86553b7734c083210d304f65e9aa979e57861bdf1d9 source=canonical' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=edfd061c610e096f8df16a4fd8e4dfa2ca67af8d4d77aee414e792003c683d05 source=canonical' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
