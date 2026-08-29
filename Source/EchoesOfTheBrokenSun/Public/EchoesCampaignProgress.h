@@ -7,7 +7,8 @@ enum class EEchoesCampaignMissionId : uint8
 {
     WhatTheLedgerKeeps = 1,
     SevenAccountsOfRain = 2,
-    ACityOnReserve = 3
+    ACityOnReserve = 3,
+    TheUnburiedRoad = 4
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -31,6 +32,15 @@ enum class EEchoesCityReserveCompletionFact : uint8
     LifeSupportPowered = 1 << 0,
     TransitPowered = 1 << 1,
     ArchivePowered = 1 << 2,
+    LocalCoreSurvived = 1 << 3,
+    PriorLedgerConsumed = 1 << 4
+};
+
+enum class EEchoesUnburiedRoadCompletionFact : uint8
+{
+    WaystoneRootedAtRoadhead = 1 << 0,
+    ListeningSpineRaised = 1 << 1,
+    MemoryShardRecovered = 1 << 2,
     LocalCoreSurvived = 1 << 3,
     PriorLedgerConsumed = 1 << 4
 };

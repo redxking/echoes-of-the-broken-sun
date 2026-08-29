@@ -156,10 +156,16 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignCityReserve"));
+    const bool bCampaignUnburiedRoad =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignUnburiedRoad"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
-        (bCampaignCityReserve ? 1 : 0);
+        (bCampaignCityReserve ? 1 : 0) +
+        (bCampaignUnburiedRoad ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -172,7 +178,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignCityReserve
+            bCampaignUnburiedRoad
+                ? EEchoesOperationMode::CampaignUnburiedRoad
+            : bCampaignCityReserve
                 ? EEchoesOperationMode::CampaignCityReserve
             : bCampaignSevenAccounts
                 ? EEchoesOperationMode::CampaignSevenAccounts
@@ -186,7 +194,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignCityReserve
+                bCampaignUnburiedRoad
+                    ? TEXT("TheUnburiedRoad")
+                : bCampaignCityReserve
                     ? TEXT("ACityOnReserve")
                 : bCampaignSevenAccounts
                     ? TEXT("SevenAccountsOfRain")
@@ -199,7 +209,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignCityReserve
+            bCampaignUnburiedRoad
+                ? TEXT("TheUnburiedRoad")
+            : bCampaignCityReserve
                 ? TEXT("ACityOnReserve")
             : bCampaignSevenAccounts
                 ? TEXT("SevenAccountsOfRain")

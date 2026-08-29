@@ -29,6 +29,12 @@ constexpr uint8 CityReserveCompletionFacts =
     static_cast<uint8>(EEchoesCityReserveCompletionFact::ArchivePowered) |
     static_cast<uint8>(EEchoesCityReserveCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesCityReserveCompletionFact::PriorLedgerConsumed);
+constexpr uint8 UnburiedRoadCompletionFacts =
+    static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::WaystoneRootedAtRoadhead) |
+    static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::ListeningSpineRaised) |
+    static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::MemoryShardRecovered) |
+    static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -128,7 +134,8 @@ bool ValidateRecord(
 {
     if (Record.Mission != EEchoesCampaignMissionId::WhatTheLedgerKeeps &&
         Record.Mission != EEchoesCampaignMissionId::SevenAccountsOfRain &&
-        Record.Mission != EEchoesCampaignMissionId::ACityOnReserve)
+        Record.Mission != EEchoesCampaignMissionId::ACityOnReserve &&
+        Record.Mission != EEchoesCampaignMissionId::TheUnburiedRoad)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -146,7 +153,9 @@ bool ValidateRecord(
             ? PrologueCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::SevenAccountsOfRain
             ? SevenAccountsCompletionFacts
-            : CityReserveCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::ACityOnReserve
+            ? CityReserveCompletionFacts
+            : UnburiedRoadCompletionFacts;
     if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
         (Record.VerifiedFacts & ~RequiredFacts) != 0)
     {

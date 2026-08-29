@@ -6,6 +6,7 @@
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
+#include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
@@ -55,6 +56,13 @@ struct FEchoesObjectiveSnapshot final
     bool bLifeSupportPowered = false;
     bool bTransitPowered = false;
     bool bArchivePowered = false;
+    EEchoesUnburiedRoadPhase UnburiedRoadPhase =
+        EEchoesUnburiedRoadPhase::Inactive;
+    echoes::sim::FutureWellChoice UnburiedRoadBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    bool bWaystoneRootedAtRoadhead = false;
+    bool bListeningSpineComplete = false;
+    bool bMemoryBearerAtShard = false;
 };
 
 /**
@@ -173,9 +181,12 @@ public:
     [[nodiscard]] bool IsSevenAccountsUnlocked() const;
     [[nodiscard]] EEchoesCityReservePhase GetCityReservePhase() const;
     [[nodiscard]] bool IsCityReserveUnlocked() const;
+    [[nodiscard]] EEchoesUnburiedRoadPhase GetUnburiedRoadPhase() const;
+    [[nodiscard]] bool IsUnburiedRoadUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
+    [[nodiscard]] FEchoesUnburiedRoadRoute GetUnburiedRoadRoute() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -228,6 +239,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitCityReserveCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitUnburiedRoadCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();

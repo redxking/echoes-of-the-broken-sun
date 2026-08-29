@@ -64,6 +64,11 @@ public:
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
         EEchoesCampaignCommitStatus CommitStatus);
+    void NotifyUnburiedRoadFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();

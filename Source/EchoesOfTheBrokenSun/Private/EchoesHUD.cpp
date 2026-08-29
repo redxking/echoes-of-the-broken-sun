@@ -336,6 +336,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignUnburiedRoad)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Unburied route  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1019,6 +1030,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bCityReserve = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignCityReserve;
+    const bool bUnburiedRoad = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignUnburiedRoad;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bNewCampaignArmed =
@@ -1044,6 +1058,7 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(bPrologue ? TEXT("WHAT THE LEDGER KEEPS")
              : bSevenAccounts ? TEXT("SEVEN ACCOUNTS OF RAIN")
              : bCityReserve ? TEXT("A CITY ON RESERVE")
+             : bUnburiedRoad ? TEXT("THE UNBURIED ROAD")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1059,6 +1074,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 03  //  %s  //  MARA VEY"),
                   *LocalFaction)
+        : bUnburiedRoad
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 04  //  %s  //  ORUUN"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1071,6 +1090,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 02")
     : bCityReserve
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 03")
+    : bUnburiedRoad
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 04")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1091,6 +1112,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Carry the inherited account into terrain changed by the prior decision.")
         : bCityReserve
             ? TEXT("Lume Reach is running on reserve. Three districts are outside the stable grid.")
+        : bUnburiedRoad
+            ? TEXT("A route absent from every current map carries the echo of a missing memory shard.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1103,6 +1126,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Re-root the Waystone, then bring Oruun to the matching memory site.")
         : bCityReserve
             ? TEXT("Extend Power Links and energize every district in the inherited priority order.")
+        : bUnburiedRoad
+            ? TEXT("Root the Waystone, raise a Listening Spine beyond the crossing, and recover the shard.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 338.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1356,6 +1381,80 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        const FEchoesUnburiedRoadRoute Route =
+            Bridge->GetUnburiedRoadRoute();
+        const bool bFailed =
+            Objective.UnburiedRoadPhase == EEchoesUnburiedRoadPhase::Failed;
+        const FString WaystoneState = bFailed
+            ? TEXT("ROADHEAD LOST")
+            : Objective.bWaystoneRootedAtRoadhead
+                ? TEXT("ROOTED")
+                : FString::Printf(
+                      TEXT("MOVE TO %d,%d"),
+                      Route.Roadhead.x.FloorToInt(),
+                      Route.Roadhead.y.FloorToInt());
+        const FString SpineState = bFailed
+            ? TEXT("SPINE LOST")
+            : Objective.bListeningSpineComplete
+                ? TEXT("LISTENING")
+                : Objective.bWaystoneRootedAtRoadhead
+                    ? FString::Printf(
+                          TEXT("BUILD AT %d,%d"),
+                          Route.ListeningSpineSite.x.FloorToInt(),
+                          Route.ListeningSpineSite.y.FloorToInt())
+                    : TEXT("WAITING — ROOT WAYSTONE");
+        const FString ShardState = bFailed
+            ? TEXT("SHARD LOST")
+            : Objective.bMemoryBearerAtShard
+                ? TEXT("RECOVERED")
+                : Objective.bListeningSpineComplete
+                    ? FString::Printf(
+                          TEXT("ORUUN TO %d,%d"),
+                          Route.MemoryShardSite.x.FloorToInt(),
+                          Route.MemoryShardSite.y.FloorToInt())
+                    : TEXT("WAITING — RAISE SPINE");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("THE UNBURIED ROAD  //  MISSION 04"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  WAYSTONE ROADHEAD  %s"), *WaystoneState),
+            bFailed ? Failed
+                    : Objective.bWaystoneRootedAtRoadhead ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  LISTENING SPINE    %s"), *SpineState),
+            bFailed ? Failed
+                    : Objective.bListeningSpineComplete ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  MEMORY SHARD       %s"), *ShardState),
+            bFailed ? Failed
+                    : Objective.bMemoryBearerAtShard ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_UNBURIED_ROAD_OBJECTIVES_READY] phase=%s branch=%s bearer=%u waystone=%u reconstructable=true"),
+                FEchoesUnburiedRoadMissionModel::StableName(
+                    Objective.UnburiedRoadPhase),
+                Route.StableName,
+                Objective.MemoryBearerId,
+                Objective.MigrationWaystoneId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -1465,6 +1564,9 @@ void AEchoesHUD::DrawMatchResult(
     const bool bCityReserveResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignCityReserve;
+    const bool bUnburiedRoadResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignUnburiedRoad;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : Outcome == echoes::sim::MatchOutcome::Player0Victory;
@@ -1476,7 +1578,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bCityReserveResult
+        ? bUnburiedRoadResult
+            ? bVictory ? TEXT("THE MISSING ROAD REMEMBERS")
+                       : TEXT("THE ROAD CLOSES OVER THE SHARD")
+        : bCityReserveResult
             ? bVictory ? TEXT("LUME REACH HOLDS ITS RESERVE")
                        : TEXT("THE CITY GRID FALLS BELOW MARGIN")
         : bSevenAccountsResult
@@ -1488,7 +1593,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bCityReserveResult
+        ? bUnburiedRoadResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The Waystone holds the %s roadhead, the Listening Spine resolves the echo, and Oruun carries the missing shard."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the Waystone, the Listening Spine, the local Core, or the unburied route was lost before recovery.")
+        : bCityReserveResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("Life support, transit, and archive continuity are powered under the inherited %s reserve plan."),
@@ -1524,7 +1636,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bCityReserveResult
+                CampaignPersistenceLine = bUnburiedRoadResult
+                    ? FString::Printf(
+                          TEXT("MISSION 04 RECORDED // %s road shard recovered."),
+                          RecordedChoice)
+                : bCityReserveResult
                     ? FString::Printf(
                           TEXT("MISSION 03 RECORDED // %s reserve grid stabilized."),
                           RecordedChoice)
@@ -1581,7 +1697,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bCityReserveResult
+        ? bUnburiedRoadResult
+            ? FString::Printf(
+                  TEXT("MISSION 04 — THE UNBURIED ROAD  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bCityReserveResult
             ? FString::Printf(
                   TEXT("MISSION 03 — A CITY ON RESERVE  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -1780,6 +1900,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bCityReserve = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignCityReserve;
+    const bool bUnburiedRoad = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignUnburiedRoad;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -1788,6 +1911,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetCityReserveGrid()
             : FEchoesCityReserveGrid{};
+    const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetUnburiedRoadRoute()
+            : FEchoesUnburiedRoadRoute{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -1813,6 +1940,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("A CITY ON RESERVE  //  MISSION 03  //  %s"),
                   *LocalFaction)
+        : bUnburiedRoad
+            ? FString::Printf(
+                  TEXT("THE UNBURIED ROAD  //  MISSION 04  //  %s"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -1832,6 +1963,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Lume Reach is below reserve margin. The inherited %s decision fixes which district receives power first."),
                   WellChoiceDisplayName(CityReserveGrid.PriorChoice))
+        : bUnburiedRoad
+            ? FString::Printf(
+                  TEXT("Three consistent records point to the %s, a road absent from every current map."),
+                  UnburiedRoadRoute.DisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -1845,6 +1980,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Mara Vey is operating under the %s. Three district Aegis posts are intact but disconnected."),
                   CityReserveGrid.DisplayName)
+        : bUnburiedRoad
+            ? TEXT("Oruun hears a removed memory shard beyond shifting terrain. The Waystone and a Listening Spine must make it recoverable.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -1865,6 +2002,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("01  Use workers and [N] Power Links to energize %s first."),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       CityReserveGrid.Priority))
+        : bUnburiedRoad
+            ? FString::Printf(
+                  TEXT("01  Uproot, move, and re-root the Waystone at the roadhead at tile %d,%d."),
+                  UnburiedRoadRoute.Roadhead.x.FloorToInt(),
+                  UnburiedRoadRoute.Roadhead.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -1882,6 +2024,13 @@ void AEchoesHUD::DrawMissionBriefing(
                       CityReserveGrid.Secondary),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       CityReserveGrid.Final))
+        : bUnburiedRoad
+            ? FString::Printf(
+                  TEXT("02  Build a Listening Spine at %d,%d, then bring Oruun to the shard at %d,%d."),
+                  UnburiedRoadRoute.ListeningSpineSite.x.FloorToInt(),
+                  UnburiedRoadRoute.ListeningSpineSite.y.FloorToInt(),
+                  UnburiedRoadRoute.MemoryShardSite.x.FloorToInt(),
+                  UnburiedRoadRoute.MemoryShardSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -1893,6 +2042,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The route is inherited. Mission 01's choice cannot be changed here.")
              : bCityReserve
                  ? TEXT("The reserve priority is inherited from both prior records and cannot be changed here.")
+             : bUnburiedRoad
+                 ? TEXT("The road is derived from all three prior records and cannot be selected or rewritten here.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -1902,6 +2053,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is migration and recall. Destroying the opposing Core does not replace either objective.")
         : bCityReserve
             ? TEXT("Victory is three powered districts. Destroying the opposing Core does not stabilize Lume Reach.")
+        : bUnburiedRoad
+            ? TEXT("Victory is infrastructure-backed recovery. Destroying the opposing Core does not recover the missing shard.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -1919,6 +2072,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
         : bCityReserve
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
+        : bUnburiedRoad
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -2126,7 +2281,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSevenAccounts ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignCityReserve)
+            EEchoesOperationMode::CampaignCityReserve ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignUnburiedRoad)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -2196,7 +2353,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                     ? Border
                     : FLinearColor(0.48f, 0.55f, 0.62f));
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignCityReserve)
         {
             DrawMissionSite(
                 FEchoesCityReserveMissionModel::SiteForDistrict(
@@ -2220,6 +2378,33 @@ void AEchoesHUD::DrawTacticalMinimap(
                     ? FLinearColor(0.25f, 1.0f, 0.66f)
                     : Border);
         }
+        else
+        {
+            const FEchoesUnburiedRoadRoute Route =
+                Bridge->GetUnburiedRoadRoute();
+            DrawMissionSite(
+                Route.Roadhead,
+                TEXT("W"),
+                Objective.bWaystoneRootedAtRoadhead
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Route.ListeningSpineSite,
+                TEXT("L"),
+                Objective.bListeningSpineComplete
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bWaystoneRootedAtRoadhead
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Route.MemoryShardSite,
+                TEXT("S"),
+                Objective.bMemoryBearerAtShard
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bListeningSpineComplete
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -2235,6 +2420,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignCityReserve
             ? TEXT("MISSION NAV  |  LIFE + TRANSIT + ARCHIVE")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignUnburiedRoad
+            ? TEXT("MISSION NAV  |  WAYSTONE + SPINE + SHARD")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

@@ -25,6 +25,7 @@ constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
 constexpr int32 MaximumCatchUpTicksPerFrame = 8;
 constexpr int32 PrologueSiteRadiusTiles = 3;
 constexpr int32 SevenAccountsSiteRadiusTiles = 3;
+constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -115,6 +116,32 @@ using echoes::sim::Vec2;
                 {
                     --Delta;
                 }
+            }
+        }
+    }
+    return Delta;
+}
+
+[[nodiscard]] int32 ApplyUnburiedRoadTerrain(
+    echoes::sim::Simulation& Simulation,
+    FutureWellChoice Branch)
+{
+    int32 Delta = 0;
+    for (int32 TileY = 30; TileY <= 34; ++TileY)
+    {
+        for (int32 TileX = 8; TileX <= 55; ++TileX)
+        {
+            const bool bWestern = TileX >= 12 && TileX <= 15;
+            const bool bCentral = TileX >= 29 && TileX <= 35;
+            const bool bEastern = TileX >= 48 && TileX <= 51;
+            const bool bSelected =
+                (Branch == FutureWellChoice::Harvest && bWestern) ||
+                (Branch == FutureWellChoice::Preserve && bCentral) ||
+                (Branch == FutureWellChoice::Reshape && bEastern);
+            if ((bWestern || bCentral || bEastern) && !bSelected &&
+                Simulation.SetTerrainTile(TileX, TileY, Terrain::Blocked))
+            {
+                ++Delta;
             }
         }
     }
@@ -273,6 +300,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("SEVEN ACCOUNTS OF RAIN");
         case EEchoesOperationMode::CampaignCityReserve:
             return TEXT("A CITY ON RESERVE");
+        case EEchoesOperationMode::CampaignUnburiedRoad:
+            return TEXT("THE UNBURIED ROAD");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -305,6 +334,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_CITY_RESERVE_LOCKED] reason=two consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
+        !IsUnburiedRoadUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_UNBURIED_ROAD_LOCKED] reason=three consistent prior mission records required"));
         return false;
     }
 
@@ -426,8 +464,13 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
             ? ApplySevenAccountsTerrain(*Simulation, SevenAccountsBranch)
             : 0;
+    const int32 UnburiedRoadTerrainDelta =
+        SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
+            ? ApplyUnburiedRoadTerrain(*Simulation, SevenAccountsBranch)
+            : 0;
     const int32 GlassScarBlockedTiles =
-        BaseGlassScarBlockedTiles + SevenAccountsTerrainDelta;
+        BaseGlassScarBlockedTiles + SevenAccountsTerrainDelta +
+        UnburiedRoadTerrainDelta;
     const Faction ScenarioLocalFaction =
         bUseStressScenario ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignPrologue
@@ -436,6 +479,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? Faction::KharuunAssemblies
         : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
             ? Faction::MeridianCompact
+        : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -456,7 +501,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ScenarioLocalFaction,
             bUseAnyControlledPresentation ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignCityReserve
+                        EEchoesOperationMode::CampaignCityReserve ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignUnburiedRoad
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -512,7 +559,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         {
             ArchiveCarrierId = Spawned;
         }
-        if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
+        if ((SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts ||
+             SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad) &&
             Owner == LocalPlayerId)
         {
             if (Type == EntityType::ScoutUnit)
@@ -1027,6 +1075,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
+        (MemoryBearerId == 0 || MigrationWaystoneId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_UNBURIED_ROAD_INIT_FAILED] reason=mission entities unavailable bearer=%u waystone=%u"),
+            MemoryBearerId,
+            MigrationWaystoneId);
+        Simulation.Reset();
+        return false;
+    }
     if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve &&
         (LifeSupportDistrictId == 0 || TransitDistrictId == 0 ||
          ArchiveDistrictId == 0))
@@ -1122,6 +1182,26 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 LifeSupportDistrictId,
                 TransitDistrictId,
                 ArchiveDistrictId);
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignUnburiedRoad)
+        {
+            const FEchoesUnburiedRoadRoute Route = GetUnburiedRoadRoute();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_UNBURIED_ROAD_READY] branch=%s waystone=%u bearer=%u roadhead=(%d,%d) listeningSpine=(%d,%d) shard=(%d,%d) terrainDelta=%d blocked=%d inheritedRecords=3"),
+                Route.StableName,
+                MigrationWaystoneId,
+                MemoryBearerId,
+                Route.Roadhead.x.FloorToInt(),
+                Route.Roadhead.y.FloorToInt(),
+                Route.ListeningSpineSite.x.FloorToInt(),
+                Route.ListeningSpineSite.y.FloorToInt(),
+                Route.MemoryShardSite.x.FloorToInt(),
+                Route.MemoryShardSite.y.FloorToInt(),
+                UnburiedRoadTerrainDelta,
+                GlassScarBlockedTiles);
         }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
@@ -1280,6 +1360,12 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         OutFeedback = TEXT("[FACTION_SEVEN_ACCOUNTS_LOCKED] Oruun deploys with the Kharuun Assemblies.");
         return false;
     }
+    if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_UNBURIED_ROAD_LOCKED] Oruun deploys with the Kharuun Assemblies.");
+        return false;
+    }
     if (NewFaction == LocalFaction)
     {
         OutFeedback = FString::Printf(
@@ -1352,6 +1438,12 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Seven Accounts of Rain with a consistent ledger before A City on Reserve.");
         return false;
     }
+    if (NewOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
+        !IsUnburiedRoadUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete A City on Reserve with a consistent ledger before The Unburied Road.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -1379,6 +1471,10 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::MeridianCompact;
     }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -1394,6 +1490,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT(" — Oruun's Kharuun migration force is locked for this mission.")
             : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
                 ? TEXT(" — Mara Vey's Meridian grid force is locked for this mission.")
+            : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
+                ? TEXT(" — Oruun's Kharuun road force is locked for this mission.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -1405,6 +1503,8 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
                 ? TEXT("SevenAccountsOfRain")
             : SelectedOperation == EEchoesOperationMode::CampaignCityReserve
                 ? TEXT("ACityOnReserve")
+            : SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad
+                ? TEXT("TheUnburiedRoad")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -1517,6 +1617,13 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             FPaths::ProjectSavedDir(),
             TEXT("SaveGames"),
             TEXT("EchoesQuickSaveACityOnReserve.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
     }
     return GetQuickSavePath();
 }
@@ -1679,6 +1786,71 @@ UEchoesSimulationSubsystem::CommitCityReserveCompletion(
         static_cast<uint8>(EEchoesCityReserveCompletionFact::ArchivePowered) |
         static_cast<uint8>(EEchoesCityReserveCompletionFact::LocalCoreSurvived) |
         static_cast<uint8>(EEchoesCityReserveCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitUnburiedRoadCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    const FutureWellChoice Branch = GetRecordedPrologueChoice();
+    OutRecordedChoice = Branch;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation != EEchoesOperationMode::CampaignUnburiedRoad ||
+        GetUnburiedRoadPhase() != EEchoesUnburiedRoadPhase::Complete ||
+        !IsUnburiedRoadUnlocked() || Branch == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative Unburied Road operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::TheUnburiedRoad;
+    Record.WellChoice = Branch;
+    Record.AvailableWellChoices = WellChoiceMask(Branch);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::WaystoneRootedAtRoadhead) |
+        static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::ListeningSpineRaised) |
+        static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::MemoryShardRecovered) |
+        static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesUnburiedRoadCompletionFact::PriorLedgerConsumed);
     Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
     Record.CompletionTick = Simulation->CurrentTick();
     Record.FinalStateChecksum = Simulation->StateChecksum();
@@ -2154,6 +2326,22 @@ bool UEchoesSimulationSubsystem::IsCityReserveUnlocked() const
            Prologue->WellChoice == SevenAccounts->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsUnburiedRoadUnlocked() const
+{
+    if (!IsCityReserveUnlocked())
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* CityReserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ACityOnReserve);
+    return Prologue != nullptr && CityReserve != nullptr &&
+           Prologue->WellChoice == CityReserve->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -2172,6 +2360,13 @@ UEchoesSimulationSubsystem::GetSevenAccountsRoute() const
 FEchoesCityReserveGrid UEchoesSimulationSubsystem::GetCityReserveGrid() const
 {
     return FEchoesCityReserveMissionModel::GridForChoice(
+        GetRecordedPrologueChoice());
+}
+
+FEchoesUnburiedRoadRoute
+UEchoesSimulationSubsystem::GetUnburiedRoadRoute() const
+{
+    return FEchoesUnburiedRoadMissionModel::RouteForChoice(
         GetRecordedPrologueChoice());
 }
 
@@ -2279,6 +2474,60 @@ EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
         GetCityReserveGrid());
 }
 
+EEchoesUnburiedRoadPhase
+UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
+{
+    FEchoesUnburiedRoadMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesUnburiedRoadPhase::Inactive;
+    }
+
+    const FEchoesUnburiedRoadRoute Route = GetUnburiedRoadRoute();
+    const echoes::sim::Entity* Bearer =
+        Simulation->FindEntity(MemoryBearerId);
+    const echoes::sim::Entity* Waystone =
+        Simulation->FindEntity(MigrationWaystoneId);
+    Facts.bMemoryBearerIntact = Bearer != nullptr && Bearer->hitPoints > 0;
+    Facts.bWaystoneIntact = Waystone != nullptr && Waystone->hitPoints > 0;
+    Facts.bMemoryBearerAtShard =
+        Facts.bMemoryBearerIntact &&
+        IsWithinTiles(
+            Bearer->position,
+            Route.MemoryShardSite,
+            UnburiedRoadSiteRadiusTiles);
+    Facts.bWaystoneRootedAtRoadhead =
+        Facts.bWaystoneIntact &&
+        Waystone->waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+        IsWithinTiles(
+            Waystone->position,
+            Route.Roadhead,
+            UnburiedRoadSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                Route.ListeningSpineSite,
+                UnburiedRoadSiteRadiusTiles))
+        {
+            Facts.bListeningSpineComplete = true;
+        }
+    }
+    return FEchoesUnburiedRoadMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -2296,6 +2545,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.SevenAccountsBranch = GetRecordedPrologueChoice();
     Snapshot.CityReservePhase = GetCityReservePhase();
     Snapshot.CityReserveBranch = GetRecordedPrologueChoice();
+    Snapshot.UnburiedRoadPhase = GetUnburiedRoadPhase();
+    Snapshot.UnburiedRoadBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -2304,6 +2555,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ArchiveDistrictId = ArchiveDistrictId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
+    const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
+        GetUnburiedRoadRoute();
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.id == ArchiveCarrierId)
@@ -2320,6 +2573,12 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     Entity.position,
                     SevenAccountsRoute.MemoryAccountSite,
                     SevenAccountsSiteRadiusTiles);
+            Snapshot.bMemoryBearerAtShard =
+                Snapshot.bMemoryBearerIntact &&
+                IsWithinTiles(
+                    Entity.position,
+                    UnburiedRoadRoute.MemoryShardSite,
+                    UnburiedRoadSiteRadiusTiles);
         }
         if (Entity.id == MigrationWaystoneId)
         {
@@ -2331,6 +2590,22 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     Entity.position,
                     SevenAccountsRoute.WaystoneAnchor,
                     SevenAccountsSiteRadiusTiles);
+            Snapshot.bWaystoneRootedAtRoadhead =
+                Snapshot.bWaystoneIntact &&
+                Entity.waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+                IsWithinTiles(
+                    Entity.position,
+                    UnburiedRoadRoute.Roadhead,
+                    UnburiedRoadSiteRadiusTiles);
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                UnburiedRoadRoute.ListeningSpineSite,
+                UnburiedRoadSiteRadiusTiles))
+        {
+            Snapshot.bListeningSpineComplete = true;
         }
         if (Entity.id == LifeSupportDistrictId)
         {
@@ -2611,6 +2886,61 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : TEXT("failure"),
                         FEchoesCityReserveMissionModel::StableName(
                             CityReservePhase),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignUnburiedRoad &&
+                     !bMatchResultReported)
+            {
+                const EEchoesUnburiedRoadPhase UnburiedRoadPhase =
+                    GetUnburiedRoadPhase();
+                const bool bUnburiedRoadFinished =
+                    UnburiedRoadPhase == EEchoesUnburiedRoadPhase::Complete ||
+                    UnburiedRoadPhase == EEchoesUnburiedRoadPhase::Failed;
+                if (bUnburiedRoadFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FutureWellChoice Consequence =
+                        GetRecordedPrologueChoice();
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        UnburiedRoadPhase ==
+                                EEchoesUnburiedRoadPhase::Complete
+                            ? CommitUnburiedRoadCompletion(
+                                  RecordedConsequence,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyUnburiedRoadFinished(
+                            UnburiedRoadPhase ==
+                                EEchoesUnburiedRoadPhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_UNBURIED_ROAD_FINISHED] result=%s phase=%s branch=%u recordedBranch=%u campaignStatus=%u tick=%llu detail=%s"),
+                        UnburiedRoadPhase ==
+                                EEchoesUnburiedRoadPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesUnburiedRoadMissionModel::StableName(
+                            UnburiedRoadPhase),
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(CampaignStatus),

@@ -136,7 +136,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT("Oruun deployed; ")
-                : TEXT("Mara Vey deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignCityReserve
+                ? TEXT("Mara Vey deployed; ")
+                : TEXT("Oruun deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -150,6 +153,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignCityReserve
             ? TEXT("ACityOnReserve")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignUnburiedRoad
+            ? TEXT("TheUnburiedRoad")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -203,6 +209,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bCityReserve =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignCityReserve;
+    const bool bUnburiedRoad =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignUnburiedRoad;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -210,6 +219,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("SEVEN ACCOUNTS OF RAIN — migrate the Waystone, then bring Oruun to the inherited account. Enter deploys.")
         : bCityReserve
             ? TEXT("A CITY ON RESERVE — reconnect three ark-city districts in the inherited priority order. Enter deploys Mara Vey.")
+        : bUnburiedRoad
+            ? TEXT("THE UNBURIED ROAD — root the Waystone, raise a Listening Spine, and recover the missing shard. Enter deploys Oruun.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -218,8 +229,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
         TEXT("[ECHOES_BRIEFING_READY] operation=%s paused=true keyboardStart=true factionChoice=%s"),
         bPrologue ? TEXT("WhatTheLedgerKeeps")
         : bSevenAccounts ? TEXT("SevenAccountsOfRain")
-        : bCityReserve ? TEXT("ACityOnReserve") : TEXT("GlassScar"),
-        (bPrologue || bSevenAccounts || bCityReserve)
+        : bCityReserve ? TEXT("ACityOnReserve")
+        : bUnburiedRoad ? TEXT("TheUnburiedRoad") : TEXT("GlassScar"),
+        (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -275,6 +287,21 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                     Grid.Final)),
             12.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        const FEchoesUnburiedRoadRoute Route = Bridge->GetUnburiedRoadRoute();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — root the Waystone at %d,%d; build a Listening Spine at %d,%d; bring Oruun to the shard at %d,%d."),
+                Route.Roadhead.x.FloorToInt(),
+                Route.Roadhead.y.FloorToInt(),
+                Route.ListeningSpineSite.x.FloorToInt(),
+                Route.ListeningSpineSite.y.FloorToInt(),
+                Route.MemoryShardSite.x.FloorToInt(),
+                Route.MemoryShardSite.y.FloorToInt()),
+            14.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -317,6 +344,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignCityReserve)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: A City on Reserve follows Mara Vey and the Meridian Compact."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: The Unburied Road follows Oruun and the Kharuun Assemblies."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -375,6 +408,12 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsCityReserveUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignCityReserve;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignCityReserve &&
+             Bridge->IsUnburiedRoadUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignUnburiedRoad;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -1003,6 +1042,64 @@ void AEchoesPlayerController::NotifyCityReserveFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=ACityOnReserve success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyUnburiedRoadFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignUnburiedRoad;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Oruun, the Waystone, the Listening Spine, the local Core, or the unburied route was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — Oruun recovered the missing shard beyond the inherited %s route."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this recovery. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheUnburiedRoad success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -3425,6 +3522,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignCityReserve
                 ? TEXT("MISSION RESTARTED — Mara Vey's reserve grid returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignUnburiedRoad
+                ? TEXT("MISSION RESTARTED — Oruun's road recovery returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
