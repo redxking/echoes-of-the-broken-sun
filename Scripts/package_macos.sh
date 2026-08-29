@@ -10,6 +10,7 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 archive_dir="${1:-$project_root/BuildArtifacts/Packages/Mac-Development-$timestamp}"
 source_commit="$(git -C "$project_root" rev-parse HEAD 2>/dev/null || print unknown)"
 source_state=clean
+max_parallel_actions="${ECHOES_MAX_PARALLEL_ACTIONS:-4}"
 if [[ -n "$(git -C "$project_root" status --porcelain --untracked-files=normal 2>/dev/null)" ]]; then
   source_state=dirty
 fi
@@ -26,6 +27,11 @@ fi
 
 if [[ -z "$expected_version" ]]; then
   print -u2 "ProjectVersion is missing from Config/DefaultGame.ini."
+  exit 2
+fi
+
+if [[ "$max_parallel_actions" != <-> || "$max_parallel_actions" -lt 1 ]]; then
+  print -u2 "ECHOES_MAX_PARALLEL_ACTIONS must be a positive integer."
   exit 2
 fi
 
@@ -55,6 +61,7 @@ mkdir -p "${archive_dir:h}"
   -platform=Mac \
   -target=EchoesOfTheBrokenSun \
   -clientconfig=Development \
+  -ubtargs="-MaxParallelActions=$max_parallel_actions" \
   -build -cook -stage -pak -package -archive \
   -archivedirectory="$archive_dir" \
   -utf8output
