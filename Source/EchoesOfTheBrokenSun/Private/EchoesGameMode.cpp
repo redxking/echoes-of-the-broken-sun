@@ -22,7 +22,7 @@
 
 namespace
 {
-const FName ColorParameterName(TEXT("Color"));
+const FName EnvironmentColorParameterName(TEXT("Color"));
 }
 
 AEchoesGameMode::AEchoesGameMode()
@@ -182,7 +182,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     if (FloorMaterial != nullptr)
     {
         FloorMaterial->SetVectorParameterValue(
-            ColorParameterName,
+            EnvironmentColorParameterName,
             FLinearColor(0.025f, 0.045f, 0.065f));
         FloorMesh->SetMaterial(0, FloorMaterial);
     }
@@ -215,7 +215,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             UMaterialInstanceDynamic::Create(BasicMaterial, Pad);
         if (Material != nullptr)
         {
-            Material->SetVectorParameterValue(ColorParameterName, Color);
+            Material->SetVectorParameterValue(EnvironmentColorParameterName, Color);
             Mesh->SetMaterial(0, Material);
         }
         return true;

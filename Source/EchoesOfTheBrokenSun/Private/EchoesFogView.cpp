@@ -8,7 +8,7 @@
 
 namespace
 {
-const FName ColorParameterName(TEXT("Color"));
+const FName FogColorParameterName(TEXT("Color"));
 }
 
 AEchoesFogView::AEchoesFogView()
@@ -94,10 +94,10 @@ bool AEchoesFogView::InitializeFog(
         return false;
     }
     UnexploredMaterial->SetVectorParameterValue(
-        ColorParameterName,
+        FogColorParameterName,
         FLinearColor(0.001f, 0.003f, 0.008f));
     ExploredMaterial->SetVectorParameterValue(
-        ColorParameterName,
+        FogColorParameterName,
         FLinearColor(0.018f, 0.032f, 0.052f));
     UnexploredTiles->SetMaterial(0, UnexploredMaterial);
     ExploredTiles->SetMaterial(0, ExploredMaterial);

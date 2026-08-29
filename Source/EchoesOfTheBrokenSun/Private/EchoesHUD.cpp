@@ -1,6 +1,7 @@
 #include "EchoesHUD.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/Canvas.h"
@@ -20,14 +21,37 @@ void AEchoesHUD::DrawHUD()
     const echoes::sim::Simulation* Sim =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
 
-    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 227.0f);
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float TextX = 34.0f;
+    const auto HudY = [HudScale](float Offset)
+    {
+        return 18.0f + Offset * HudScale;
+    };
+    const float MaximumPanelWidth =
+        Canvas != nullptr ? FMath::Max(320.0f, Canvas->ClipX - 36.0f) : 920.0f;
+    const float PanelWidth = FMath::Min(920.0f * HudScale, MaximumPanelWidth);
+    const FLinearColor PanelColor =
+        bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+            : FLinearColor(0.008f, 0.018f, 0.035f, 0.88f);
+    const FLinearColor AccentColor =
+        bHighContrast
+            ? FLinearColor(1.0f, 0.9f, 0.1f)
+            : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor SecondaryColor =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
+
+    DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 253.0f * HudScale);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
-        FLinearColor(0.15f, 0.88f, 1.0f),
-        34.0f,
-        31.0f,
+        AccentColor,
+        TextX,
+        HudY(13.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        1.08f,
+        1.08f * HudScale,
         false);
 
     FString ResourceLine = TEXT("Simulation unavailable");
@@ -69,10 +93,10 @@ void AEchoesHUD::DrawHUD()
     DrawText(
         ResourceLine,
         FLinearColor::White,
-        34.0f,
-        58.0f,
+        TextX,
+        HudY(40.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        1.0f,
+        1.0f * HudScale,
         false);
 
     FString SelectionLine = TEXT("Selected  0");
@@ -112,51 +136,66 @@ void AEchoesHUD::DrawHUD()
     DrawText(
         SelectionLine,
         FLinearColor(0.76f, 0.92f, 1.0f),
-        34.0f,
-        82.0f,
+        TextX,
+        HudY(64.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        1.0f,
+        1.0f * HudScale,
         false);
 
     DrawText(
         TEXT("WASD / screen edge: pan    Wheel: zoom    LMB / drag: select    Shift: add/remove    RMB: context order"),
-        FLinearColor(0.73f, 0.76f, 0.82f),
-        34.0f,
-        108.0f,
+        SecondaryColor,
+        TextX,
+        HudY(90.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        0.86f,
+        0.86f * HudScale,
         false);
     DrawText(
         TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [B] Barracks  [N] Drop-off  [Q] Worker  [E] Soldier"),
-        FLinearColor(0.73f, 0.76f, 0.82f),
-        34.0f,
-        131.0f,
+        SecondaryColor,
+        TextX,
+        HudY(113.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        0.86f,
+        0.86f * HudScale,
         false);
     DrawText(
         TEXT("[1-0] Recall group    [G then 1-0] Assign group    [P] Pause    [R] Restart"),
-        FLinearColor(0.73f, 0.76f, 0.82f),
-        34.0f,
-        154.0f,
+        SecondaryColor,
+        TextX,
+        HudY(136.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        0.86f,
+        0.86f * HudScale,
         false);
     DrawText(
         TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Cyan: Meridian    Red: Kharuun"),
-        FLinearColor(0.73f, 0.76f, 0.82f),
-        34.0f,
-        177.0f,
+        SecondaryColor,
+        TextX,
+        HudY(159.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        0.86f,
+        0.86f * HudScale,
         false);
     DrawText(
         TEXT("[K] Checkpoint    [L] Load Checkpoint    Validated with one backup"),
-        FLinearColor(0.73f, 0.76f, 0.82f),
-        34.0f,
-        200.0f,
+        SecondaryColor,
+        TextX,
+        HudY(182.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-        0.86f,
+        0.86f * HudScale,
+        false);
+
+    const FString SettingsLine = FString::Printf(
+        TEXT("[U] UI %d%%  [I] High contrast %s  [O] Reduced motion %s  [Y] Edge pan %s"),
+        FMath::RoundToInt(HudScale * 100.0f),
+        bHighContrast ? TEXT("ON") : TEXT("OFF"),
+        Settings != nullptr && Settings->IsReducedMotionEnabled() ? TEXT("ON") : TEXT("OFF"),
+        Settings == nullptr || Settings->IsEdgePanEnabled() ? TEXT("ON") : TEXT("OFF"));
+    DrawText(
+        SettingsLine,
+        AccentColor,
+        TextX,
+        HudY(205.0f),
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f * HudScale,
         false);
 
     if (EchoesController != nullptr)
@@ -168,7 +207,7 @@ void AEchoesHUD::DrawHUD()
                 920.0f,
                 Canvas != nullptr ? Canvas->ClipX - 36.0f : 920.0f);
             DrawRect(
-                FLinearColor(0.008f, 0.018f, 0.035f, 0.88f),
+                PanelColor,
                 18.0f,
                 Canvas != nullptr ? Canvas->ClipY - 72.0f : 700.0f,
                 FeedbackWidth,
@@ -178,10 +217,10 @@ void AEchoesHUD::DrawHUD()
                 Feedback.StartsWith(TEXT("["))
                     ? FLinearColor(1.0f, 0.48f, 0.18f)
                     : FLinearColor(0.25f, 1.0f, 0.66f),
-                34.0f,
+                TextX,
                 Canvas != nullptr ? Canvas->ClipY - 58.0f : 714.0f,
                 GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-                0.95f,
+                0.95f * HudScale,
                 false);
         }
     }
@@ -204,9 +243,22 @@ void AEchoesHUD::DrawSelectionRectangle()
     const float MaxX = FMath::Max(Start.X, Current.X);
     const float MinY = FMath::Min(Start.Y, Current.Y);
     const float MaxY = FMath::Max(Start.Y, Current.Y);
-    const FLinearColor BorderColor(0.12f, 0.92f, 1.0f, 0.95f);
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FLinearColor BorderColor =
+        bHighContrast
+            ? FLinearColor(1.0f, 0.9f, 0.1f, 1.0f)
+            : FLinearColor(0.12f, 0.92f, 1.0f, 0.95f);
 
-    DrawRect(FLinearColor(0.12f, 0.75f, 1.0f, 0.10f), MinX, MinY, MaxX - MinX, MaxY - MinY);
+    DrawRect(
+        bHighContrast
+            ? FLinearColor(1.0f, 0.9f, 0.1f, 0.18f)
+            : FLinearColor(0.12f, 0.75f, 1.0f, 0.10f),
+        MinX,
+        MinY,
+        MaxX - MinX,
+        MaxY - MinY);
     DrawLine(MinX, MinY, MaxX, MinY, BorderColor, 1.5f);
     DrawLine(MaxX, MinY, MaxX, MaxY, BorderColor, 1.5f);
     DrawLine(MaxX, MaxY, MinX, MaxY, BorderColor, 1.5f);

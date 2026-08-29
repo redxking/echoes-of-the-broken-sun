@@ -1,6 +1,7 @@
 #include "EchoesPlayerController.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/EngineTypes.h"
@@ -220,6 +221,10 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(
         TEXT("ArmControlGroupAssignment"),
         &AEchoesPlayerController::ArmControlGroupAssignment);
+    BindPressed(TEXT("CycleHudScale"), &AEchoesPlayerController::CycleHudScale);
+    BindPressed(TEXT("ToggleHighContrast"), &AEchoesPlayerController::ToggleHighContrast);
+    BindPressed(TEXT("ToggleReducedMotion"), &AEchoesPlayerController::ToggleReducedMotion);
+    BindPressed(TEXT("ToggleEdgePan"), &AEchoesPlayerController::ToggleEdgePan);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -1168,6 +1173,75 @@ void AEchoesPlayerController::QuickLoadScenario()
         bControlGroupAssignmentArmed = false;
     }
     SetStatusMessage(Feedback, 7.0f);
+}
+
+void AEchoesPlayerController::CycleHudScale()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] UI scale could not be changed."));
+        return;
+    }
+    const float CurrentScale = Settings->GetHudScale();
+    const float NewScale =
+        CurrentScale < 0.99f ? 1.0f
+        : CurrentScale < 1.14f ? 1.15f
+        : CurrentScale < 1.34f ? 1.35f
+                               : 0.85f;
+    Settings->SetHudScale(NewScale);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("ACCESSIBILITY: UI scale set to %d%%."),
+        FMath::RoundToInt(NewScale * 100.0f)));
+}
+
+void AEchoesPlayerController::ToggleHighContrast()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] High contrast could not be changed."));
+        return;
+    }
+    const bool bEnabled = !Settings->IsHighContrastHudEnabled();
+    Settings->SetHighContrastHudEnabled(bEnabled);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("ACCESSIBILITY: high-contrast HUD %s."),
+        bEnabled ? TEXT("enabled") : TEXT("disabled")));
+}
+
+void AEchoesPlayerController::ToggleReducedMotion()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Reduced motion could not be changed."));
+        return;
+    }
+    const bool bEnabled = !Settings->IsReducedMotionEnabled();
+    Settings->SetReducedMotionEnabled(bEnabled);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("ACCESSIBILITY: reduced camera motion %s."),
+        bEnabled ? TEXT("enabled") : TEXT("disabled")));
+}
+
+void AEchoesPlayerController::ToggleEdgePan()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Edge pan could not be changed."));
+        return;
+    }
+    const bool bEnabled = !Settings->IsEdgePanEnabled();
+    Settings->SetEdgePanEnabled(bEnabled);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("CONTROLS: screen-edge camera pan %s."),
+        bEnabled ? TEXT("enabled") : TEXT("disabled")));
 }
 
 void AEchoesPlayerController::BuildAtCursor(

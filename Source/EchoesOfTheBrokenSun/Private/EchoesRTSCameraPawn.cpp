@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -67,11 +68,18 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const bool bEdgePanEnabled = Settings == nullptr || Settings->IsEdgePanEnabled();
+    const float PanSpeedScale =
+        Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f;
+    SpringArm->bEnableCameraLag =
+        Settings == nullptr || !Settings->IsReducedMotionEnabled();
+
     FVector2D EdgeInput = FVector2D::ZeroVector;
     APlayerController* Controller = Cast<APlayerController>(GetController());
     const AEchoesPlayerController* EchoesController =
         Cast<AEchoesPlayerController>(Controller);
-    if (Controller != nullptr &&
+    if (bEdgePanEnabled && Controller != nullptr &&
         (EchoesController == nullptr || !EchoesController->IsDraggingSelection()))
     {
         int32 ViewportWidth = 0;
@@ -125,7 +133,7 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     const FVector ViewRight = FRotationMatrix(HorizontalViewRotation).GetUnitAxis(EAxis::Y);
     const FVector PanDelta =
         (ViewForward * AppliedForward + ViewRight * AppliedRight) *
-        PanSpeed * DeltaSeconds;
+        PanSpeed * PanSpeedScale * DeltaSeconds;
     AddActorWorldOffset(PanDelta, false, nullptr, ETeleportType::None);
     ClampToBattlefield();
 }
@@ -152,8 +160,11 @@ void AEchoesRTSCameraPawn::ZoomOut()
 
 void AEchoesRTSCameraPawn::ApplyZoom(float Direction)
 {
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const float ZoomScale =
+        Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f;
     SpringArm->TargetArmLength = FMath::Clamp(
-        SpringArm->TargetArmLength + ZoomStep * Direction,
+        SpringArm->TargetArmLength + ZoomStep * ZoomScale * Direction,
         MinimumZoom,
         MaximumZoom);
 }

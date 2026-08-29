@@ -58,6 +58,10 @@ private:
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();
+    void CycleHudScale();
+    void ToggleHighContrast();
+    void ToggleReducedMotion();
+    void ToggleEdgePan();
     void ArmControlGroupAssignment();
     void RecallControlGroup1();
     void RecallControlGroup2();

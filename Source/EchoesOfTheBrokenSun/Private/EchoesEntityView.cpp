@@ -11,7 +11,7 @@
 
 namespace
 {
-const FName ColorParameterName(TEXT("Color"));
+const FName EntityColorParameterName(TEXT("Color"));
 
 FLinearColor ColorForState(const echoes::sim::Entity& State)
 {
@@ -256,7 +256,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         {
             RingMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
             RingMaterial->SetVectorParameterValue(
-                ColorParameterName,
+                EntityColorParameterName,
                 FLinearColor(0.08f, 1.0f, 0.68f));
             SelectionRing->SetMaterial(0, RingMaterial);
         }
@@ -265,7 +265,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             HealthBarBackgroundMaterial =
                 UMaterialInstanceDynamic::Create(BasicMaterial, this);
             HealthBarBackgroundMaterial->SetVectorParameterValue(
-                ColorParameterName,
+                EntityColorParameterName,
                 FLinearColor(0.008f, 0.012f, 0.018f));
             HealthBarBackground->SetMaterial(0, HealthBarBackgroundMaterial);
         }
@@ -283,7 +283,7 @@ void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
 {
     if (BodyMaterial != nullptr)
     {
-        BodyMaterial->SetVectorParameterValue(ColorParameterName, Color);
+        BodyMaterial->SetVectorParameterValue(EntityColorParameterName, Color);
     }
 }
 
@@ -326,7 +326,7 @@ void AEchoesEntityView::UpdateHealthBar()
                       ? FLinearColor(1.0f, 0.62f, 0.08f)
                       : FLinearColor(1.0f, 0.10f, 0.08f);
         HealthBarFillMaterial->SetVectorParameterValue(
-            ColorParameterName,
+            EntityColorParameterName,
             HealthColor);
     }
 }

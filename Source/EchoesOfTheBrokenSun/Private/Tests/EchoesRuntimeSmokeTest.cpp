@@ -5,6 +5,7 @@
 #include "Components/InputComponent.h"
 #include "EchoesGameMode.h"
 #include "EchoesFogView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesHUD.h"
 #include "EchoesPlayerController.h"
 #include "EchoesRTSCameraPawn.h"
@@ -30,6 +31,7 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Echoes player controller is registered"), AEchoesPlayerController::StaticClass());
     TestNotNull(TEXT("Echoes camera pawn is registered"), AEchoesRTSCameraPawn::StaticClass());
     TestNotNull(TEXT("Echoes HUD is registered"), AEchoesHUD::StaticClass());
+    TestNotNull(TEXT("Echoes user settings are registered"), UEchoesGameUserSettings::StaticClass());
     TestNotNull(TEXT("Echoes fog view is registered"), AEchoesFogView::StaticClass());
     TestNotNull(TEXT("Echoes terrain view is registered"), AEchoesTerrainView::StaticClass());
     TestNotNull(TEXT("Echoes simulation subsystem is registered"), UEchoesSimulationSubsystem::StaticClass());
@@ -97,6 +99,14 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ArmControlGroupAssignment"), EKeys::G));
         TestTrue(TEXT("Control-group zero recall input is mapped"),
                  HasAction(TEXT("RecallControlGroup0"), EKeys::Zero));
+        TestTrue(TEXT("HUD-scale accessibility input is mapped"),
+                 HasAction(TEXT("CycleHudScale"), EKeys::U));
+        TestTrue(TEXT("High-contrast accessibility input is mapped"),
+                 HasAction(TEXT("ToggleHighContrast"), EKeys::I));
+        TestTrue(TEXT("Reduced-motion accessibility input is mapped"),
+                 HasAction(TEXT("ToggleReducedMotion"), EKeys::O));
+        TestTrue(TEXT("Edge-pan preference input is mapped"),
+                 HasAction(TEXT("ToggleEdgePan"), EKeys::Y));
     }
 
     echoes::sim::SimulationConfig Config;

@@ -8,7 +8,7 @@
 
 namespace
 {
-const FName ColorParameterName(TEXT("Color"));
+const FName TerrainColorParameterName(TEXT("Color"));
 }
 
 AEchoesTerrainView::AEchoesTerrainView()
@@ -96,10 +96,10 @@ bool AEchoesTerrainView::InitializeTerrain(
         return false;
     }
     BlockedMaterial->SetVectorParameterValue(
-        ColorParameterName,
+        TerrainColorParameterName,
         FLinearColor(0.12f, 0.055f, 0.045f));
     ScarredMaterial->SetVectorParameterValue(
-        ColorParameterName,
+        TerrainColorParameterName,
         FLinearColor(0.16f, 0.075f, 0.025f));
     BlockedTiles->SetMaterial(0, BlockedMaterial);
     ScarredTiles->SetMaterial(0, ScarredMaterial);
