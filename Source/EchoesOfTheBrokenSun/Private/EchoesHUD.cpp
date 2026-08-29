@@ -20,7 +20,7 @@ void AEchoesHUD::DrawHUD()
     const echoes::sim::Simulation* Sim =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
 
-    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 180.0f);
+    DrawRect(FLinearColor(0.008f, 0.018f, 0.035f, 0.88f), 18.0f, 18.0f, 920.0f, 204.0f);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
         FLinearColor(0.15f, 0.88f, 1.0f),
@@ -137,6 +137,14 @@ void AEchoesHUD::DrawHUD()
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         154.0f,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f,
+        false);
+    DrawText(
+        TEXT("[K] Checkpoint    [L] Load Checkpoint    Validated with one backup"),
+        FLinearColor(0.73f, 0.76f, 0.82f),
+        34.0f,
+        177.0f,
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f,
         false);

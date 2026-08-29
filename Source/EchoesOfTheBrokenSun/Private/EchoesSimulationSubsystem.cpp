@@ -6,6 +6,9 @@
 #include "EchoesPlayerController.h"
 #include "EchoesTerrainView.h"
 #include "Engine/World.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 namespace
 {
@@ -256,6 +259,221 @@ bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_MATCH_RESTART_FAILED]"));
     }
     return bRestarted;
+}
+
+FString UEchoesSimulationSubsystem::GetQuickSavePath()
+{
+    return FPaths::Combine(
+        FPaths::ProjectSavedDir(),
+        TEXT("SaveGames"),
+        TEXT("EchoesQuickSave.bin"));
+}
+
+bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
+{
+    OutFeedback.Reset();
+    if (!bScenarioReady || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[SAVE_SIM_NOT_READY] No active scenario can be saved.");
+        return false;
+    }
+
+    const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
+    if (Snapshot.empty() || Snapshot.size() > MAX_int32)
+    {
+        OutFeedback = TEXT("[SAVE_SNAPSHOT_INVALID] The deterministic snapshot could not be created.");
+        return false;
+    }
+    TArray<uint8> SnapshotBytes;
+    SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
+
+    const FString SavePath = GetQuickSavePath();
+    const FString SaveDirectory = FPaths::GetPath(SavePath);
+    const FString TemporaryPath = SavePath + TEXT(".tmp");
+    const FString BackupPath = SavePath + TEXT(".bak");
+    IFileManager& Files = IFileManager::Get();
+    if (!Files.MakeDirectory(*SaveDirectory, true))
+    {
+        OutFeedback = TEXT("[SAVE_DIRECTORY_FAILED] The save directory could not be created.");
+        return false;
+    }
+    Files.Delete(*TemporaryPath, false, true, true);
+    if (!FFileHelper::SaveArrayToFile(SnapshotBytes, *TemporaryPath))
+    {
+        OutFeedback = TEXT("[SAVE_WRITE_FAILED] The temporary checkpoint could not be written.");
+        return false;
+    }
+
+    TArray<uint8> VerificationBytes;
+    std::string VerificationError;
+    const bool bTemporaryValid =
+        FFileHelper::LoadFileToArray(VerificationBytes, *TemporaryPath) &&
+        echoes::sim::Simulation::LoadSnapshot(
+            std::span<const uint8>(
+                VerificationBytes.GetData(),
+                static_cast<size_t>(VerificationBytes.Num())),
+            &VerificationError)
+            .has_value();
+    if (!bTemporaryValid)
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = FString::Printf(
+            TEXT("[SAVE_VALIDATION_FAILED] %s"),
+            VerificationError.empty()
+                ? TEXT("The temporary checkpoint could not be reopened.")
+                : UTF8_TO_TCHAR(VerificationError.c_str()));
+        return false;
+    }
+
+    const bool bHadPriorSave = Files.FileExists(*SavePath);
+    if (bHadPriorSave)
+    {
+        Files.Delete(*BackupPath, false, true, true);
+        if (!Files.Move(*BackupPath, *SavePath, true, true, true, true))
+        {
+            Files.Delete(*TemporaryPath, false, true, true);
+            OutFeedback = TEXT("[SAVE_BACKUP_FAILED] The prior checkpoint could not be retained.");
+            return false;
+        }
+    }
+    if (!Files.Move(*SavePath, *TemporaryPath, true, true, true, true))
+    {
+        if (bHadPriorSave && Files.FileExists(*BackupPath))
+        {
+            Files.Move(*SavePath, *BackupPath, true, true, true, true);
+        }
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed.");
+        return false;
+    }
+
+    OutFeedback = FString::Printf(
+        TEXT("QUICK SAVE: tick %llu committed."),
+        static_cast<unsigned long long>(Simulation->CurrentTick()));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_QUICK_SAVE] tick=%llu bytes=%d backup=%s"),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        SnapshotBytes.Num(),
+        bHadPriorSave ? TEXT("retained") : TEXT("none"));
+    return true;
+}
+
+bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!bScenarioReady || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[LOAD_SIM_NOT_READY] Start a scenario before loading.");
+        return false;
+    }
+
+    const FString SavePath = GetQuickSavePath();
+    const FString BackupPath = SavePath + TEXT(".bak");
+    TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
+    FString SelectedPath;
+    FString PrimaryFailure;
+    const auto TryLoad = [&LoadedSimulation](
+                             const FString& CandidatePath,
+                             FString& OutFailure)
+    {
+        TArray<uint8> Bytes;
+        if (!FFileHelper::LoadFileToArray(Bytes, *CandidatePath))
+        {
+            OutFailure = TEXT("file unavailable");
+            return false;
+        }
+        std::string Error;
+        std::optional<echoes::sim::Simulation> Candidate =
+            echoes::sim::Simulation::LoadSnapshot(
+                std::span<const uint8>(
+                    Bytes.GetData(),
+                    static_cast<size_t>(Bytes.Num())),
+                &Error);
+        if (!Candidate.has_value())
+        {
+            OutFailure = UTF8_TO_TCHAR(Error.c_str());
+            return false;
+        }
+        const echoes::sim::SimulationConfig& Config = Candidate->Config();
+        if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
+            Config.mapHeightTiles != PrototypeMapHeightTiles ||
+            Config.ticksPerSecond != PrototypeTicksPerSecond ||
+            Config.randomSeed != PrototypeSeed ||
+            !Candidate->NextCommandSequence(LocalPlayerId).has_value())
+        {
+            OutFailure = TEXT("snapshot is not a compatible Glass Scar scenario");
+            return false;
+        }
+        LoadedSimulation =
+            MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
+        return true;
+    };
+
+    if (TryLoad(SavePath, PrimaryFailure))
+    {
+        SelectedPath = SavePath;
+    }
+    else
+    {
+        FString BackupFailure;
+        if (!TryLoad(BackupPath, BackupFailure))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[LOAD_NO_VALID_CHECKPOINT] primary=%s; backup=%s"),
+                *PrimaryFailure,
+                *BackupFailure);
+            return false;
+        }
+        SelectedPath = BackupPath;
+    }
+
+    TUniquePtr<echoes::sim::Simulation> PreviousSimulation =
+        MoveTemp(Simulation);
+    DestroyEntityViews();
+    DestroyFogView();
+    DestroyTerrainView();
+    Simulation = MoveTemp(LoadedSimulation);
+    bScenarioReady = false;
+    const bool bViewsRestored =
+        SpawnTerrainView() && SpawnFogView() && SyncEntityViews(true);
+    if (!bViewsRestored)
+    {
+        DestroyEntityViews();
+        DestroyFogView();
+        DestroyTerrainView();
+        Simulation = MoveTemp(PreviousSimulation);
+        const bool bRollbackViews =
+            SpawnTerrainView() && SpawnFogView() && SyncEntityViews(true);
+        bScenarioReady = bRollbackViews;
+        OutFeedback = bRollbackViews
+                          ? TEXT("[LOAD_VIEW_RESTORE_FAILED] The prior live match was restored.")
+                          : TEXT("[LOAD_ROLLBACK_FAILED] Presentation recovery failed.");
+        return false;
+    }
+
+    FixedTimeAccumulator = 0.0;
+    NextPlayerCommandSequence =
+        *Simulation->NextCommandSequence(LocalPlayerId);
+    bScenarioReady = true;
+    bWarnedAboutTimeClamp = false;
+    bLoggedFirstTick = true;
+    bSimulationPaused = false;
+    bMatchResultReported =
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing;
+    const bool bUsedBackup = SelectedPath == BackupPath;
+    OutFeedback = FString::Printf(
+        TEXT("QUICK LOAD: tick %llu restored%s."),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        bUsedBackup ? TEXT(" from prior-generation backup") : TEXT(""));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s"),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        bUsedBackup ? TEXT("backup") : TEXT("primary"));
+    return true;
 }
 
 void UEchoesSimulationSubsystem::SetScenarioPaused(bool bPaused)

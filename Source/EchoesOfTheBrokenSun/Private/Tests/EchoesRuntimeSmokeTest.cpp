@@ -46,12 +46,16 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
             InputSettings->GetDefaultInputComponentClass() == UInputComponent::StaticClass());
         const TArray<FInputActionKeyMapping>& ActionMappings =
             InputSettings->GetActionMappings();
-        const auto HasAction = [&ActionMappings](FName Action, const FKey& Key)
+        const auto HasAction = [&ActionMappings](
+                                   FName Action,
+                                   const FKey& Key,
+                                   bool bControl = false)
         {
             return ActionMappings.ContainsByPredicate(
-                [Action, Key](const FInputActionKeyMapping& Mapping)
+                [Action, Key, bControl](const FInputActionKeyMapping& Mapping)
                 {
-                    return Mapping.ActionName == Action && Mapping.Key == Key;
+                    return Mapping.ActionName == Action && Mapping.Key == Key &&
+                           Mapping.bCtrl == bControl;
                 });
         };
         TestTrue(TEXT("Barracks construction input is mapped"),
@@ -70,6 +74,10 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("PauseScenario"), EKeys::P));
         TestTrue(TEXT("Restart input is mapped"),
                  HasAction(TEXT("RestartScenario"), EKeys::R));
+        TestTrue(TEXT("Quick-save input is mapped"),
+                 HasAction(TEXT("QuickSaveScenario"), EKeys::K));
+        TestTrue(TEXT("Quick-load input is mapped"),
+                 HasAction(TEXT("QuickLoadScenario"), EKeys::L));
     }
 
     echoes::sim::SimulationConfig Config;

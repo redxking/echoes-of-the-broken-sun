@@ -176,6 +176,16 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::RestartScenario);
+    InputComponent->BindAction(
+        TEXT("QuickSaveScenario"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::QuickSaveScenario);
+    InputComponent->BindAction(
+        TEXT("QuickLoadScenario"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::QuickLoadScenario);
 }
 
 void AEchoesPlayerController::SelectionPressed()
@@ -692,6 +702,42 @@ void AEchoesPlayerController::StopSelectedUnits()
             : LastRejection.IsEmpty()
                   ? TEXT("[STOP_REJECTED] No selected entity accepted the order.")
                   : LastRejection);
+}
+
+void AEchoesPlayerController::QuickSaveScenario()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    FString Feedback;
+    if (Bridge == nullptr)
+    {
+        Feedback = TEXT("[SAVE_SIM_NOT_READY] No active scenario can be saved.");
+    }
+    else
+    {
+        Bridge->QuickSaveScenario(Feedback);
+    }
+    SetStatusMessage(Feedback, 6.0f);
+}
+
+void AEchoesPlayerController::QuickLoadScenario()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    FString Feedback;
+    if (Bridge == nullptr)
+    {
+        Feedback = TEXT("[LOAD_SIM_NOT_READY] Start a scenario before loading.");
+    }
+    else if (Bridge->QuickLoadScenario(Feedback))
+    {
+        ClearSelection();
+    }
+    SetStatusMessage(Feedback, 7.0f);
 }
 
 void AEchoesPlayerController::BuildAtCursor(

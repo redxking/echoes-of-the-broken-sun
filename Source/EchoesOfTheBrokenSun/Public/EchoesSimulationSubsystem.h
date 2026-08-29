@@ -41,6 +41,14 @@ public:
     /** Recreates the bounded match from its deterministic initial state. */
     bool RestartPrototypeScenario();
 
+    /** Atomically writes a validated deterministic snapshot and retains one backup. */
+    bool QuickSaveScenario(FString& OutFeedback) const;
+
+    /** Restores the newest valid quick save, falling back to its prior generation. */
+    bool QuickLoadScenario(FString& OutFeedback);
+
+    [[nodiscard]] static FString GetQuickSavePath();
+
     /** Queues one player command for the next deterministic simulation tick. */
     bool IssueCommand(
         echoes::sim::CommandType CommandType,

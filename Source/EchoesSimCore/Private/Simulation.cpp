@@ -293,6 +293,24 @@ const PlayerState* Simulation::FindPlayer(PlayerId player) const {
                                                                : nullptr;
 }
 
+std::optional<std::uint64_t> Simulation::NextCommandSequence(
+    PlayerId player) const {
+    if (player >= players_.size() || !players_[player].active) {
+        return std::nullopt;
+    }
+    std::uint64_t maximumSequence =
+        hasExecutedSequence_[player] ? lastExecutedSequence_[player] : 0;
+    for (const Command& command : pendingCommands_) {
+        if (command.player == player) {
+            maximumSequence = std::max(maximumSequence, command.sequence);
+        }
+    }
+    if (maximumSequence == std::numeric_limits<std::uint64_t>::max()) {
+        return std::nullopt;
+    }
+    return maximumSequence + 1;
+}
+
 PlayerState* Simulation::MutablePlayer(PlayerId player) {
     return player < players_.size() && players_[player].active ? &players_[player]
                                                                : nullptr;

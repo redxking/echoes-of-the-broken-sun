@@ -48,6 +48,8 @@ private:
     void StopSelectedUnits();
     void TogglePause();
     void RestartScenario();
+    void QuickSaveScenario();
+    void QuickLoadScenario();
 
     void SelectAtCursor(bool bAdditive);
     void SelectInScreenRectangle(bool bAdditive);

@@ -286,6 +286,8 @@ public:
     [[nodiscard]] const std::vector<Command>& CommandLog() const {
         return commandLog_;
     }
+    [[nodiscard]] std::optional<std::uint64_t> NextCommandSequence(
+        PlayerId player) const;
 
     bool AddPlayer(PlayerId player, Faction faction, ResourcePool startingResources);
     [[nodiscard]] const PlayerState* FindPlayer(PlayerId player) const;

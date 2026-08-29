@@ -645,7 +645,10 @@ void TestNumericAndPublicInputHardening() {
 
 void TestSequenceAndBuildHardening() {
     Simulation sequences({12, 12, 20, 1});
+    REQUIRE(!sequences.NextCommandSequence(0).has_value());
     REQUIRE(sequences.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(sequences.NextCommandSequence(0) == 1);
+    REQUIRE(!sequences.NextCommandSequence(1).has_value());
     const EntityId worker = sequences.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(2, 2));
     Command first = MakeCommand(0, 0, 10, CommandType::Stop, worker);
@@ -654,21 +657,26 @@ void TestSequenceAndBuildHardening() {
     Command regressed = MakeCommand(1, 0, 9, CommandType::Stop, worker);
     Command next = MakeCommand(1, 0, 11, CommandType::Stop, worker);
     REQUIRE(sequences.QueueCommand(first));
+    REQUIRE(sequences.NextCommandSequence(0) == 11);
     REQUIRE(!sequences.QueueCommand(duplicateAcrossTick));
     REQUIRE(!sequences.QueueCommand(regressed));
     REQUIRE(sequences.QueueCommand(next));
+    REQUIRE(sequences.NextCommandSequence(0) == 12);
     sequences.Step();
+    REQUIRE(sequences.NextCommandSequence(0) == 12);
 
     std::string error;
     std::optional<Simulation> loaded =
         Simulation::LoadSnapshot(sequences.SaveSnapshot(), &error);
     REQUIRE(loaded.has_value());
+    REQUIRE(loaded->NextCommandSequence(0) == 12);
     Command stale = MakeCommand(loaded->CurrentTick(), 0, 10,
                                 CommandType::Stop, worker);
     Command newer = MakeCommand(loaded->CurrentTick(), 0, 12,
                                 CommandType::Stop, worker);
     REQUIRE(!loaded->QueueCommand(stale));
     REQUIRE(loaded->QueueCommand(newer));
+    REQUIRE(loaded->NextCommandSequence(0) == 13);
 
     Simulation build({24, 24, 20, 1});
     REQUIRE(build.AddPlayer(0, Faction::MeridianCompact, {1000, 500}));
