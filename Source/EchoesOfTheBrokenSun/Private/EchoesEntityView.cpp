@@ -33,9 +33,19 @@ FLinearColor ColorForState(const echoes::sim::Entity& State)
     {
         return FLinearColor(0.95f, 0.56f, 0.08f);
     }
-    return State.owner == UEchoesSimulationSubsystem::LocalPlayerId
-               ? FLinearColor(0.04f, 0.72f, 0.88f)
-               : FLinearColor(0.84f, 0.08f, 0.16f);
+    switch (State.owner)
+    {
+        case 0:
+            return FLinearColor(0.04f, 0.72f, 0.88f);
+        case 1:
+            return FLinearColor(0.92f, 0.30f, 0.05f);
+        case 2:
+            return FLinearColor(0.95f, 0.74f, 0.08f);
+        case 3:
+            return FLinearColor(0.62f, 0.30f, 0.95f);
+        default:
+            return FLinearColor(0.72f, 0.72f, 0.72f);
+    }
 }
 }
 
@@ -76,6 +86,14 @@ AEchoesEntityView::AEchoesEntityView()
         Bar->SetReceivesDecals(false);
         Bar->SetVisibility(false);
     }
+
+    OwnerMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("OwnerMarker"));
+    OwnerMarker->SetupAttachment(SceneRoot);
+    OwnerMarker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    OwnerMarker->SetGenerateOverlapEvents(false);
+    OwnerMarker->SetCastShadow(false);
+    OwnerMarker->SetReceivesDecals(false);
+    OwnerMarker->SetVisibility(false);
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -245,6 +263,36 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SelectionRing->SetRelativeScale3D(
         FVector(SelectionRadius, SelectionRadius, 0.025f));
 
+    UStaticMesh* MarkerMesh = nullptr;
+    switch (State.owner)
+    {
+        case 0:
+            MarkerMesh = CubeMesh;
+            break;
+        case 1:
+            MarkerMesh = ConeMesh;
+            break;
+        case 2:
+            MarkerMesh = SphereMesh;
+            break;
+        case 3:
+            MarkerMesh = CylinderMesh;
+            break;
+        default:
+            break;
+    }
+    OwnerMarker->SetStaticMesh(MarkerMesh);
+    OwnerMarker->SetRelativeLocation(FVector(0.0f, 0.0f, HealthBarHeight + 28.0f));
+    OwnerMarker->SetRelativeScale3D(
+        State.owner == 1
+            ? FVector(0.20f, 0.20f, 0.28f)
+            : State.owner == 2
+                  ? FVector(0.18f, 0.18f, 0.18f)
+                  : State.owner == 3
+                        ? FVector(0.18f, 0.18f, 0.08f)
+                        : FVector(0.18f, 0.18f, 0.12f));
+    OwnerMarker->SetVisibility(MarkerMesh != nullptr, true);
+
     if (BasicMaterial != nullptr)
     {
         if (BodyMaterial == nullptr)
@@ -275,7 +323,16 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 UMaterialInstanceDynamic::Create(BasicMaterial, this);
             HealthBarFill->SetMaterial(0, HealthBarFillMaterial);
         }
-        SetBodyColor(ColorForState(State));
+        if (OwnerMarkerMaterial == nullptr)
+        {
+            OwnerMarkerMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            OwnerMarker->SetMaterial(0, OwnerMarkerMaterial);
+        }
+        const FLinearColor TeamColor = ColorForState(State);
+        SetBodyColor(TeamColor);
+        OwnerMarkerMaterial->SetVectorParameterValue(
+            EntityColorParameterName,
+            TeamColor);
     }
 }
 
@@ -335,6 +392,18 @@ bool AEchoesEntityView::IsHealthBarVisible() const
 {
     return HealthBarBackground != nullptr &&
            HealthBarBackground->IsVisible();
+}
+
+bool AEchoesEntityView::IsOwnerMarkerVisible() const
+{
+    return OwnerMarker != nullptr && OwnerMarker->IsVisible();
+}
+
+uint8 AEchoesEntityView::GetOwnerMarkerVariant() const
+{
+    return OwnerPlayerId < echoes::sim::kMaximumPlayers
+               ? OwnerPlayerId
+               : echoes::sim::kNeutralPlayer;
 }
 
 FString AEchoesEntityView::GetDisplayName() const

@@ -36,6 +36,8 @@ public:
         return DisplayedHealthFraction;
     }
     [[nodiscard]] bool IsHealthBarVisible() const;
+    [[nodiscard]] bool IsOwnerMarkerVisible() const;
+    [[nodiscard]] uint8 GetOwnerMarkerVariant() const;
     [[nodiscard]] FString GetDisplayName() const;
 
 private:
@@ -57,6 +59,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> HealthBarFill;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> OwnerMarker;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
@@ -84,6 +89,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> HealthBarFillMaterial;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> OwnerMarkerMaterial;
 
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;

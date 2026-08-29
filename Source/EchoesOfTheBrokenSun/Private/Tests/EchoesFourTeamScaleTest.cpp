@@ -90,13 +90,29 @@ bool FEchoesFourTeamScaleTest::RunTest(const FString& Parameters)
               static_cast<uint8>(echoes::sim::MatchOutcome::Ongoing));
 
     int32 VisibleViewCount = 0;
+    std::array<int32, echoes::sim::kMaximumPlayers> MarkerCounts{};
     for (TActorIterator<AEchoesEntityView> It(World); It; ++It)
     {
         ++VisibleViewCount;
+        if (It->GetOwnerMarkerVariant() < MarkerCounts.size())
+        {
+            TestTrue(TEXT("Owned scale view exposes a non-color marker"),
+                     It->IsOwnerMarkerVisible());
+            ++MarkerCounts[It->GetOwnerMarkerVariant()];
+        }
     }
     TestEqual(TEXT("Real visibility exposes every scale entity to presentation"),
               VisibleViewCount,
               401);
+    for (echoes::sim::PlayerId Player = 0;
+         Player < echoes::sim::kMaximumPlayers;
+         ++Player)
+    {
+        TestEqual(
+            *FString::Printf(TEXT("Player %u has 100 geometric ownership markers"), Player),
+            MarkerCounts[Player],
+            100);
+    }
 
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
