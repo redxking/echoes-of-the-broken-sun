@@ -103,10 +103,10 @@ An explicit new archive path may be supplied as the first argument. Existing tar
 
 ```sh
 ./Scripts/run_packaged_smoke.sh \
-  BuildArtifacts/Packages/Mac-Development-v0.8.0-control-groups/EchoesOfTheBrokenSun.app
+  BuildArtifacts/Packages/Mac-Development-v0.11.0-tactical-controls/EchoesOfTheBrokenSun.app
 ```
 
-The current observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.8.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase seals the app before the final PAK update, so the wrapper reseals the completed archive with the checked-in development entitlements and verifies it afterward. The exact archive passed strict deep-signature verification and emitted the environment, Glass Scar, 4,096-tile fog, simulation, boot-ready, and first-tick markers when its packaged executable was launched. Its adjacent manifest records clean source commit `958e1b781f1a1e10472cf912e66d3f3aca5675ab`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `7a99f845207becdbc65ed4614ee4262d69a5be6b270feb1a4dc534e914826544`.
+The current observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.11.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase seals the app before the final PAK update, so the wrapper reseals the completed archive with the checked-in development entitlements and verifies it afterward. The exact archive passed strict deep-signature verification and emitted the environment, Glass Scar, 4,096-tile fog, simulation, boot-ready, and first-tick markers when its packaged executable was launched. Its adjacent manifest records clean source commit `d0dd3bc4ecb679c9c70ba69cb12ce3e0b2c333be`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `e393d1eee8aa0ac8d818e07a77079f7f845e68b7499389130482fccf4dc1a68b`. Rendered packaged inspection also confirmed the unclipped `[T] Patrol` HUD entry and its reason-coded empty-selection feedback; selected-unit endpoint delivery remains automation-covered rather than manually accepted.
 
 ## Distribution boundary
 
