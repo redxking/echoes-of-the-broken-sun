@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Authoritative
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 workflow: Edited in place as the single authoritative technical architecture document.
 ---
 
@@ -217,7 +217,7 @@ Hot reload of authoritative content is disabled during a match. An editor change
 
 The authoritative navigation cell is the one-meter simulation tile. Sub-tile position remains Q22.10. A map pack supplies passability, integer base cost, height band, movement-class mask, transformation membership, and region ID per cell.
 
-The current schema-8 technical spike uses a shared reverse breadth-first distance field keyed by destination cell. A field stores shortest cardinal distance for every reachable tile; each unit then selects its next tile in the original north, east, south, west order, preserving prior equal-cost route semantics. Up to 128 derived fields are retained. Eviction is deterministic by `(LastUsedTick, DestinationCell)`, and any authoritative terrain change clears the cache. Active Reshape openings are included when a field is constructed. The cache is derived acceleration state: it is neither serialized nor checksummed, and loading or replaying reconstructs the same field from authoritative terrain and entities.
+The current schema-9 technical spike uses a shared reverse breadth-first distance field keyed by destination cell. A field stores shortest cardinal distance for every reachable tile; each unit then selects its next tile in the original north, east, south, west order, preserving prior equal-cost route semantics. Up to 128 derived fields are retained. Eviction is deterministic by `(LastUsedTick, DestinationCell)`, and any authoritative terrain change clears the cache. Active Reshape openings are included when a field is constructed. The cache is derived acceleration state: it is neither serialized nor checksummed, and loading or replaying reconstructs the same field from authoritative terrain and entities.
 
 The production design extends routing to two levels:
 
@@ -394,7 +394,7 @@ The core writes canonical uncompressed bytes. Unreal performs bounded file I/O a
 
 Integers use fixed-width little-endian encoding. Booleans and enums occupy declared byte widths. Vectors write a count followed by canonically ordered elements. Strings are UTF-8 with byte limits and are never used as runtime identity. Padding, native struct dumps, RTTI names, pointers, UObject paths, locale formatting, and compiler-dependent container layout are forbidden.
 
-Schema 8 traverses the same canonical state fields used by snapshot serialization through a non-allocating versioned 64-bit hash writer. This checksum is a fast replay/desync signal, not a security primitive, and the algorithm change intentionally broke prior development-schema compatibility. Snapshot bytes retain their independently verified appended FNV-1a integrity field. The production container still requires SHA-256 over the canonical uncompressed payload; authenticity, when required for official or competitive records, depends on an authenticated server or signed manifest rather than a bare hash.
+Schema 9 traverses the same canonical state fields used by snapshot serialization through a non-allocating versioned 64-bit hash writer. The fixed player capacity is four; snapshots serialize each slot's active state, faction, resources, executed-command sequence state, and explored grid. Visible grids remain derived and are recomputed after load. Schema 8 development snapshots/replays are intentionally rejected because their two-slot layout is not silently compatible. This checksum is a fast replay/desync signal, not a security primitive. Snapshot bytes retain their independently verified appended FNV-1a integrity field. The production container still requires SHA-256 over the canonical uncompressed payload; authenticity, when required for official or competitive records, depends on an authenticated server or signed manifest rather than a bare hash.
 
 Offline save content includes the complete core snapshot, pending commands, AI memory, scenario objectives, campaign fact ledger, and presentation-independent checkpoint metadata. Online clients do not save authoritative matches; the server retains reconnect state and replay. Unreal writes a temporary file, flushes it, validates it by reopening, then atomically replaces the target while retaining the prior autosave generation. A corrupt newest autosave falls back only after the user is told which generation failed.
 
@@ -419,7 +419,7 @@ Network encryption and account authentication are delegated to the selected supp
 
 ## Performance, profiling, and Apple Silicon
 
-The Project Ledger is the authority for budgets and measured results. The architecture is designed around its 20 Hz, 400-unit slice budget: 4.0 ms p95 game-thread simulation, 1.5 ms p95 fog, 6.0 ms path burst, a checksum every 20 ticks within 0.25 ms p95, and 60 FPS at 2560×1440 medium on the inspected M1 Pro. PERF-001 is the native observation: in an isolated optimized two-team harness, visibility refresh measured 0.553708 ms p95, 100 cold path requests 3.492334 ms p95, simulation ticks with 100 moving units 1.267833 ms p95, and state checksum 0.195075 ms p95. PERF-002 is separate packaged presentation evidence: the 25-entity placeholder scene at native 2560×1440 exclusive fullscreen, medium groups, and TAA measured 10.458 ms frame, 10.457 ms render-thread, 9.9477 ms GPU, and 0.895 ms game-thread p95 across 480 post-warm-up frames, with 610.859 MiB peak sampled process RSS. Those results pass the thresholds only at their named boundaries. Four-team fog, representative 400-unit combat/weather rendering, and soak stability remain unqualified.
+The Project Ledger is the authority for budgets and measured results. The architecture is designed around its 20 Hz, 400-unit slice budget: 4.0 ms p95 game-thread simulation, 1.5 ms p95 fog, 6.0 ms path burst, a checksum every 20 ticks within 0.25 ms p95, and 60 FPS at 2560×1440 medium on the inspected M1 Pro. PERF-003 is the current native observation: in an isolated optimized four-team harness with 100 units per team, visibility refresh measured 0.088500 ms p95, 100 cold path requests 0.411375 ms p95, simulation ticks with 100 moving units 0.133583 ms p95, and schema-9 state checksum 0.034102 ms p95. PERF-004 is separate packaged presentation evidence: the exact 0.14.0 package's 25-entity placeholder scene at native 2560×1440 exclusive fullscreen, medium groups, and TAA measured 10.4694 ms frame, 10.4574 ms render-thread, 9.9293 ms GPU, and 0.8992 ms game-thread p95 across 480 post-warm-up frames, with 612.312 MiB peak sampled process RSS. Those results pass the thresholds only at their named boundaries. Representative 400-unit combat/weather rendering and soak stability remain unqualified.
 
 The measurement scene must record map, rules/map hashes, active and visible unit counts, team count, path requests, sight sources, effects, weather, resolution, preset, build configuration, hardware, macOS, engine hotfix, and sample duration. Required tools are Unreal Insights, `stat unit`, `stat game`, `stat gpu`, `stat rhi`, memory reports, Xcode Instruments Time Profiler/Allocations/Leaks, and Metal capture where useful. Measurements from the editor are recorded separately from native packaged development builds.
 
@@ -519,7 +519,7 @@ No later step weakens an earlier gate. In particular, presentation quality canno
 
 ## Current evidence boundary
 
-As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter generates a placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, deterministic attack-move and stop, construction placement commands, timed one-slot production, logistics capacity, pause/restart, derived Command-Core victory, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded playable-systems prototype, not a vertical slice or completed game. The Project Ledger remains authoritative as test evidence changes.
+As recorded on 2026-08-29, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested four-player-capable engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter currently generates a two-player placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, deterministic attack-move and stop, construction placement commands, timed one-slot production, logistics capacity, pause/restart, derived Command-Core victory, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded playable-systems prototype, not networked multiplayer, a vertical slice, or a completed game. The Project Ledger remains authoritative as test evidence changes.
 
 This architecture does not establish that:
 
@@ -527,6 +527,6 @@ This architecture does not establish that:
 - the current native core satisfies every numeric, RNG, production-navigation, four-team visibility, AI, serialization, replay, or security rule in this document;
 - a complete playable map, representative-slice or release Unreal performance qualification, manually accepted end-to-end construction/production/combat match, final fog art, audio, save UI, accessibility behavior, or final asset exists;
 - host-authoritative transport, reconnect, spectators, desync recovery, separate-process play, or dedicated-server operation exists;
-- any unrecorded frame-time, GPU, memory, four-team fog, traffic, save, replay-seek, compatibility, signing, notarization, distribution, or commercial-readiness target has been measured or met.
+- any unrecorded frame-time, GPU, memory, rendered four-team behavior, traffic, save, replay-seek, compatibility, signing, notarization, distribution, or commercial-readiness target has been measured or met.
 
 Evidence is promoted only by updating the Project Ledger with the exact build, scenario, toolchain, hardware, command, result, and remaining claim limit.
