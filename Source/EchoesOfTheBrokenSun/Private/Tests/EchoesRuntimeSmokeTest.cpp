@@ -49,6 +49,17 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
         TestTrue(
             TEXT("Legacy InputComponent is explicitly selected"),
             InputSettings->GetDefaultInputComponentClass() == UInputComponent::StaticClass());
+        TestFalse(
+            TEXT("RTS pointer is not captured on launch"),
+            InputSettings->bCaptureMouseOnLaunch);
+        TestEqual(
+            TEXT("RTS pointer remains uncaptured during clicks"),
+            InputSettings->DefaultViewportMouseCaptureMode,
+            EMouseCaptureMode::NoCapture);
+        TestEqual(
+            TEXT("RTS pointer is not locked to the viewport"),
+            InputSettings->DefaultViewportMouseLockMode,
+            EMouseLockMode::DoNotLock);
         const TArray<FInputActionKeyMapping>& ActionMappings =
             InputSettings->GetActionMappings();
         const auto HasAction = [&ActionMappings](
