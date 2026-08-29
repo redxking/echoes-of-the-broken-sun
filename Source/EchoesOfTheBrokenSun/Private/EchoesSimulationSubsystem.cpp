@@ -251,6 +251,54 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
 
     Simulation->CaptureReplayBaseline();
+    int32 StressAttackMoveCommands = 0;
+    if (bUseStressScenario)
+    {
+        constexpr Vec2 TeamDestinations[4] = {
+            Vec2::FromTiles(46, 46),
+            Vec2::FromTiles(18, 46),
+            Vec2::FromTiles(46, 18),
+            Vec2::FromTiles(18, 18)};
+        uint64 TeamSequences[4] = {1, 1, 1, 1};
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner >= 4 || Entity.type != EntityType::Soldier)
+            {
+                continue;
+            }
+            echoes::sim::Command Command;
+            Command.executeTick = Simulation->CurrentTick() + 1;
+            Command.player = Entity.owner;
+            Command.sequence = TeamSequences[Entity.owner]++;
+            Command.type = echoes::sim::CommandType::AttackMove;
+            Command.actor = Entity.id;
+            Command.position = TeamDestinations[Entity.owner];
+            std::string Rejection;
+            if (!Simulation->QueueCommand(Command, &Rejection))
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Error,
+                    TEXT("[ECHOES_STRESS_ORDER_FAILED] actor=%u owner=%u reason=%s"),
+                    Entity.id,
+                    Entity.owner,
+                    UTF8_TO_TCHAR(Rejection.c_str()));
+                Simulation.Reset();
+                return false;
+            }
+            ++StressAttackMoveCommands;
+        }
+        if (StressAttackMoveCommands != 396)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_STRESS_ORDER_COUNT_FAILED] attackMove=%d expected=396"),
+                StressAttackMoveCommands);
+            Simulation.Reset();
+            return false;
+        }
+    }
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
     bLoggedFirstTick = false;
@@ -289,6 +337,11 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         static_cast<unsigned long long>(Simulation->Config().randomSeed));
     if (bStressScenario)
     {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_ORDERS_READY] attackMove=%d teams=4 executeTick=1"),
+            StressAttackMoveCommands);
         UE_LOG(
             LogEchoes,
             Display,

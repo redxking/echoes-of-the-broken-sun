@@ -103,9 +103,14 @@ if ! /usr/bin/grep -q '\[ECHOES_STRESS_READY\] units=400 teams=4 entities=401 vi
   print -u2 "The soak did not reach the accepted four-team scale boundary. Inspect: $raw_log"
   exit 7
 fi
+if /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\]' "$raw_log" &&
+   ! /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\] attackMove=396 teams=4 executeTick=1' "$raw_log"; then
+  print -u2 "The soak reported an unexpected four-team broad-order fixture. Inspect: $raw_log"
+  exit 8
+fi
 if /usr/bin/grep -Eq 'Fatal error:|Assertion failed:|GPU Crashed|Out of memory|Ran out of memory' "$raw_log"; then
   print -u2 "The soak log contains a rejected runtime failure. Inspect: $raw_log"
-  exit 8
+  exit 9
 fi
 
 package_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"

@@ -89,6 +89,31 @@ bool FEchoesFourTeamScaleTest::RunTest(const FString& Parameters)
               static_cast<uint8>(Simulation->Outcome()),
               static_cast<uint8>(echoes::sim::MatchOutcome::Ongoing));
 
+    std::array<int32, echoes::sim::kMaximumPlayers> AttackMoveCounts{};
+    for (const echoes::sim::Command& Command : Simulation->CommandLog())
+    {
+        if (Command.player < AttackMoveCounts.size() &&
+            Command.type == echoes::sim::CommandType::AttackMove)
+        {
+            ++AttackMoveCounts[Command.player];
+            TestEqual(TEXT("Scale attack-move executes on the first fixed tick"),
+                      Command.executeTick,
+                      static_cast<echoes::sim::Tick>(1));
+        }
+    }
+    TestEqual(TEXT("Scale scenario queues 396 broad attack-move orders"),
+              static_cast<int32>(Simulation->CommandLog().size()),
+              396);
+    for (echoes::sim::PlayerId Player = 0;
+         Player < echoes::sim::kMaximumPlayers;
+         ++Player)
+    {
+        TestEqual(
+            *FString::Printf(TEXT("Player %u queues 99 attack-move orders"), Player),
+            AttackMoveCounts[Player],
+            99);
+    }
+
     int32 VisibleViewCount = 0;
     std::array<int32, echoes::sim::kMaximumPlayers> MarkerCounts{};
     for (TActorIterator<AEchoesEntityView> It(World); It; ++It)
