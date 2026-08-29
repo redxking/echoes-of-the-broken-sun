@@ -274,8 +274,10 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Keyboard center targeting defaults off"),
               Controller->IsKeyboardTargetingEnabled());
     Controller->ToggleKeyboardTargeting();
-    TestTrue(TEXT("Home path enables fair view-center targeting"),
+    TestTrue(TEXT("Home path enables fair screen-reticle targeting"),
              Controller->IsKeyboardTargetingEnabled());
+    TestEqual(TEXT("Home centers the keyboard target"),
+              Controller->GetKeyboardTargetOffset(), FVector2D::ZeroVector);
     Controller->ToggleKeyboardTargeting();
     TestFalse(TEXT("Home path restores pointer targeting"),
               Controller->IsKeyboardTargetingEnabled());
@@ -321,6 +323,24 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"KeyboardContextOrder\"")) &&
                        Mapping.Contains(TEXT("Key=SpaceBar"));
+            }));
+    TestTrue(
+        TEXT("Left keyboard-target mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"KeyboardTargetLeft\"")) &&
+                       Mapping.Contains(TEXT("Key=Left"));
+            }));
+    TestTrue(
+        TEXT("Right keyboard-target mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"KeyboardTargetRight\"")) &&
+                       Mapping.Contains(TEXT("Key=Right"));
             }));
 
     Controller->Destroy();

@@ -80,6 +80,10 @@ public:
     {
         return bKeyboardTargetingEnabled;
     }
+    [[nodiscard]] FVector2D GetKeyboardTargetOffset() const
+    {
+        return KeyboardTargetOffset;
+    }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
         return bTitleScreenVisible || bMissionBriefingVisible ||
@@ -96,6 +100,8 @@ private:
     void SelectionReleased();
     void ContextOrderPressed();
     void KeyboardContextOrderPressed();
+    void NudgeKeyboardTargetLeft();
+    void NudgeKeyboardTargetRight();
     void ChooseHarvest();
     void ChoosePreserve();
     void ChooseReshape();
@@ -158,8 +164,9 @@ private:
     void RecallControlGroup(int32 GroupIndex);
     void ClearControlGroups();
     bool TraceCursor(FHitResult& OutHitResult);
-    bool TraceViewportCenter(FHitResult& OutHitResult);
+    bool TraceKeyboardTarget(FHitResult& OutHitResult);
     bool TraceCommandTarget(FHitResult& OutHitResult);
+    void NudgeKeyboardTarget(const FVector2D& Direction);
     void IssueContextOrder(const FHitResult& HitResult);
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
@@ -174,6 +181,7 @@ private:
     echoes::sim::FutureWellChoice FutureWellChoice =
         echoes::sim::FutureWellChoice::Harvest;
     FString StatusMessage;
+    FVector2D KeyboardTargetOffset = FVector2D::ZeroVector;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
     int32 TechnologyPanelFocusedTier = 0;

@@ -110,14 +110,15 @@ void AEchoesHUD::DrawHUD()
         EchoesController->IsKeyboardTargetingEnabled() &&
         !EchoesController->IsModalOverlayVisible())
     {
-        const float CenterX = Canvas->ClipX * 0.5f;
-        const float CenterY = Canvas->ClipY * 0.5f;
+        const FVector2D TargetOffset = EchoesController->GetKeyboardTargetOffset();
+        const float CenterX = Canvas->ClipX * 0.5f + TargetOffset.X;
+        const float CenterY = Canvas->ClipY * 0.5f + TargetOffset.Y;
         DrawLine(CenterX - 16.0f, CenterY, CenterX - 5.0f, CenterY, AccentColor, 2.0f);
         DrawLine(CenterX + 5.0f, CenterY, CenterX + 16.0f, CenterY, AccentColor, 2.0f);
         DrawLine(CenterX, CenterY - 16.0f, CenterX, CenterY - 5.0f, AccentColor, 2.0f);
         DrawLine(CenterX, CenterY + 5.0f, CenterX, CenterY + 16.0f, AccentColor, 2.0f);
         DrawText(
-            TEXT("CENTER TARGET"),
+            TEXT("KEYBOARD TARGET"),
             AccentColor,
             CenterX + 20.0f,
             CenterY + 10.0f,
@@ -266,7 +267,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     DrawText(
-        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Center target  [Space] Center order"),
+        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [Arrows] Move  [Space] Order"),
         SecondaryColor,
         TextX,
         HudY(90.0f),

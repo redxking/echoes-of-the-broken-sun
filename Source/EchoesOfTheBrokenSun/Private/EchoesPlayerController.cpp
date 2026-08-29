@@ -245,16 +245,66 @@ void AEchoesPlayerController::ToggleKeyboardTargeting()
         return;
     }
     bKeyboardTargetingEnabled = !bKeyboardTargetingEnabled;
+    KeyboardTargetOffset = FVector2D::ZeroVector;
     SetStatusMessage(
         bKeyboardTargetingEnabled
-            ? TEXT("KEYBOARD TARGET: VIEW CENTER // WASD pans // Space issues context order // F/B/N/M/F6 use reticle")
+            ? TEXT("KEYBOARD TARGET: arrows move reticle // Space orders // F/B/N/M/F6 use reticle // Home exits")
             : TEXT("POINTER TARGET: cursor-directed orders restored."),
         6.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=%s source=view_center hiddenStateRead=false"),
+        TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=%s source=screen_reticle offsetPx=(0,0) hiddenStateRead=false"),
         bKeyboardTargetingEnabled ? TEXT("true") : TEXT("false"));
+}
+
+void AEchoesPlayerController::NudgeKeyboardTarget(const FVector2D& Direction)
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    int32 ViewportWidth = 0;
+    int32 ViewportHeight = 0;
+    GetViewportSize(ViewportWidth, ViewportHeight);
+    if (ViewportWidth <= 0 || ViewportHeight <= 0)
+    {
+        return;
+    }
+    bKeyboardTargetingEnabled = true;
+    constexpr float StepPixels = 64.0f;
+    constexpr float EdgeMarginPixels = 32.0f;
+    KeyboardTargetOffset += Direction * StepPixels;
+    KeyboardTargetOffset.X = FMath::Clamp(
+        KeyboardTargetOffset.X,
+        -(static_cast<float>(ViewportWidth) * 0.5f - EdgeMarginPixels),
+        static_cast<float>(ViewportWidth) * 0.5f - EdgeMarginPixels);
+    KeyboardTargetOffset.Y = FMath::Clamp(
+        KeyboardTargetOffset.Y,
+        -(static_cast<float>(ViewportHeight) * 0.5f - EdgeMarginPixels),
+        static_cast<float>(ViewportHeight) * 0.5f - EdgeMarginPixels);
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("KEYBOARD TARGET: offset (%+.0f, %+.0f) px // Space orders // Home resets/exits"),
+            KeyboardTargetOffset.X,
+            KeyboardTargetOffset.Y),
+        2.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_KEYBOARD_TARGET_NUDGE] offsetPx=(%.0f,%.0f) source=screen_reticle hiddenStateRead=false"),
+        KeyboardTargetOffset.X,
+        KeyboardTargetOffset.Y);
+}
+
+void AEchoesPlayerController::NudgeKeyboardTargetLeft()
+{
+    NudgeKeyboardTarget(FVector2D(-1.0f, 0.0f));
+}
+
+void AEchoesPlayerController::NudgeKeyboardTargetRight()
+{
+    NudgeKeyboardTarget(FVector2D(1.0f, 0.0f));
 }
 
 void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
@@ -604,6 +654,8 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
+    BindPressed(TEXT("KeyboardTargetLeft"), &AEchoesPlayerController::NudgeKeyboardTargetLeft);
+    BindPressed(TEXT("KeyboardTargetRight"), &AEchoesPlayerController::NudgeKeyboardTargetRight);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -853,9 +905,9 @@ void AEchoesPlayerController::KeyboardContextOrderPressed()
         return;
     }
     FHitResult HitResult;
-    if (!TraceViewportCenter(HitResult))
+    if (!TraceKeyboardTarget(HitResult))
     {
-        SetStatusMessage(TEXT("[NO_CENTER_TARGET] Pan until the center reticle crosses the battlefield or an entity."));
+        SetStatusMessage(TEXT("[NO_KEYBOARD_TARGET] Move the reticle until it crosses the battlefield or an entity."));
         return;
     }
     if (!bKeyboardTargetingEnabled)
@@ -864,7 +916,7 @@ void AEchoesPlayerController::KeyboardContextOrderPressed()
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=true source=view_center hiddenStateRead=false implicit=space"));
+            TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=true source=screen_reticle hiddenStateRead=false implicit=space"));
     }
     IssueContextOrder(HitResult);
 }
@@ -1208,7 +1260,7 @@ bool AEchoesPlayerController::TraceCursor(FHitResult& OutHitResult)
         OutHitResult);
 }
 
-bool AEchoesPlayerController::TraceViewportCenter(FHitResult& OutHitResult)
+bool AEchoesPlayerController::TraceKeyboardTarget(FHitResult& OutHitResult)
 {
     int32 ViewportWidth = 0;
     int32 ViewportHeight = 0;
@@ -1220,7 +1272,7 @@ bool AEchoesPlayerController::TraceViewportCenter(FHitResult& OutHitResult)
     return GetHitResultAtScreenPosition(
         FVector2D(
             static_cast<float>(ViewportWidth) * 0.5f,
-            static_cast<float>(ViewportHeight) * 0.5f),
+            static_cast<float>(ViewportHeight) * 0.5f) + KeyboardTargetOffset,
         ECC_Visibility,
         true,
         OutHitResult);
@@ -1229,7 +1281,7 @@ bool AEchoesPlayerController::TraceViewportCenter(FHitResult& OutHitResult)
 bool AEchoesPlayerController::TraceCommandTarget(FHitResult& OutHitResult)
 {
     return bKeyboardTargetingEnabled
-        ? TraceViewportCenter(OutHitResult)
+        ? TraceKeyboardTarget(OutHitResult)
         : TraceCursor(OutHitResult);
 }
 
@@ -2556,6 +2608,7 @@ void AEchoesPlayerController::FocusPreviousTechnologyTier()
 {
     if (!bTechnologyPanelVisible)
     {
+        NudgeKeyboardTarget(FVector2D(0.0f, -1.0f));
         return;
     }
     TechnologyPanelFocusedTier =
@@ -2571,6 +2624,7 @@ void AEchoesPlayerController::FocusNextTechnologyTier()
 {
     if (!bTechnologyPanelVisible)
     {
+        NudgeKeyboardTarget(FVector2D(0.0f, 1.0f));
         return;
     }
     TechnologyPanelFocusedTier =
