@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Development Updates | Echoes of the Broken Sun</title>
   <meta name="description" content="An honest development status for Echoes of the Broken Sun, including what exists, what is still placeholder, and what comes next.">
-  <link rel="stylesheet" href="styles.css?v=20260829c">
-  <link rel="stylesheet" href="pages.css?v=20260829c">
-  <link rel="stylesheet" href="contrast.css?v=20260829c">
+  <link rel="stylesheet" href="styles.css?v=20260829f">
+  <link rel="stylesheet" href="pages.css?v=20260829f">
+  <link rel="stylesheet" href="contrast.css?v=20260829f">
 </head>
 <body class="detail-page">
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -28,7 +28,7 @@
       <span class="section-kicker">Development archive / Updated August 29, 2026</span>
       <h1>Building the<br><em>first future carefully.</em></h1>
       <p class="lead">This page separates the game that is being designed from the software and presentation that exist today. The foundation is real development work. It is not yet a finished game or a public release.</p>
-      <div class="status-note"><strong>Plain answer:</strong> You cannot download and play a polished version of <i>Echoes of the Broken Sun</i> today. Current builds use labeled squares, circles, engine primitives, and other temporary geometry. Final character art, unit models, terrain, animation, effects, and audio have not been produced.</div>
+      <div class="status-note"><strong>Plain answer:</strong> You cannot download and play a polished version of <i>Echoes of the Broken Sun</i> today. The current Unreal build now uses an original first-pass static mesh for every Meridian and Kharuun unit and structure instead of baseline cubes and circles. Those meshes are vertical-slice art candidates, not finished production models; character art, terrain, animation, detailed textures, destruction, effects, and audio remain incomplete.</div>
     </header>
 
     <section class="content-band">
@@ -47,6 +47,10 @@
         <div><h3>Two playable faction foundations</h3><p>Meridian and Kharuun each have a worker, line or skirmish unit, heavy screen, scout, headquarters, supply structure, production structure, utility or defense structure, and a two-step research path.</p></div>
       </div>
       <div class="update">
+        <div><span class="status-pill">Art candidate</span></div>
+        <div><h3>Sixteen authored roster meshes</h3><p>Every current unit and structure now loads a distinct original static mesh in Unreal. Each asset includes two LODs, four faction-aware material zones, and visibility selection collision. The public Arsenal pairs the live-build captures with polished concept targets while keeping the two states clearly labeled.</p></div>
+      </div>
+      <div class="update">
         <div><span class="status-pill">Implemented prototype</span></div>
         <div><h3>A Future Well decision with memory</h3><p>The first successful prologue choice—Harvest, Preserve, or Reshape—can be written as a durable campaign consequence. Same-choice replay is idempotent, while a different replay cannot silently rewrite the first recorded result.</p></div>
       </div>
@@ -59,7 +63,7 @@
     <section class="tint-band">
       <span class="section-kicker">What is not here yet</span>
       <div class="detail-grid">
-        <article class="detail-card"><small>Presentation</small><h3>Finished game graphics</h3><p>Not yet. Existing geometry is functional and labeled for development. It should not be mistaken for the intended final visual quality.</p></article>
+        <article class="detail-card"><small>Presentation</small><h3>Finished game graphics</h3><p>Not yet. The first original roster meshes are functional and visible in-engine, but they are static vertical-slice candidates without final textures, animation, destruction, effects, or lighting qualification.</p></article>
         <article class="detail-card"><small>Availability</small><h3>Public playable release</h3><p>Not yet. The GitHub Pages site explains the concept and progress; it does not provide a release build or promise a launch date.</p></article>
         <article class="detail-card"><small>Campaign</small><h3>Missions 2–15</h3><p>Planned in the authoritative campaign outline, but not implemented as playable operations. Broad choice persistence and final dialogue or cinematics remain ahead.</p></article>
         <article class="detail-card"><small>Faction</small><h3>Playable Hollow Choir</h3><p>The culture, rules, and narrative role are designed. A complete unit catalog and playable implementation have not been delivered.</p></article>
@@ -75,7 +79,7 @@
         <p>The immediate creative goal is not more placeholder spectacle. It is a coherent vertical slice in which players can recognize faction, role, threat, terrain, orders, and Well transformation at combat speed.</p>
       </div>
       <div class="detail-grid">
-        <article class="detail-card"><small>Visual identity</small><h3>Production silhouettes</h3><p>Develop final unit and structure forms that communicate ownership and tactical role without relying on color alone.</p></article>
+        <article class="detail-card"><small>Visual identity</small><h3>Production silhouettes</h3><p>Refine the new authored mesh set through camera-distance recognition tests, skeletal articulation, damage states, texture detail, and non-color faction cues.</p></article>
         <article class="detail-card"><small>World building</small><h3>The complete Glass Scar</h3><p>Build final terrain direction, readable routes, Future Well transformations, ecology, atmosphere, and destruction that communicates functional loss.</p></article>
         <article class="detail-card"><small>Player experience</small><h3>Polished prologue flow</h3><p>Turn the bounded first-operation route into a coherent experience with final writing, presentation, accessibility work, sound, and broad usability testing.</p></article>
         <article class="detail-card"><small>Longer arc</small><h3>Campaign systems</h3><p>Expand one durable decision into campaign slots, branching consequences, later-mission consumption, relationships, civilian state, and multiple endings.</p></article>

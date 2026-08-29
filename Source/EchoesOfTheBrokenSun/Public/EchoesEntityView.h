@@ -62,6 +62,10 @@ public:
     {
         return DamagePulseRemainingSeconds > 0.0f;
     }
+    [[nodiscard]] bool IsUsingAuthoredRosterMesh() const
+    {
+        return bUsingAuthoredRosterMesh;
+    }
     [[nodiscard]] bool IsSilhouetteAccentVisible() const;
     [[nodiscard]] uint8 GetOwnerMarkerVariant() const;
     [[nodiscard]] FString GetDisplayName() const;
@@ -122,8 +126,14 @@ private:
     UPROPERTY()
     TObjectPtr<UMaterialInterface> BasicMaterial;
 
+    UPROPERTY()
+    TObjectPtr<UMaterialInterface> AuthoredSurfaceMaterial;
+
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> SilhouetteAccentMaterial;
@@ -183,4 +193,5 @@ private:
         echoes::sim::WarformAdaptation::None;
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
+    bool bUsingAuthoredRosterMesh = false;
 };

@@ -41,6 +41,9 @@ private:
     float ForwardInput = 0.0f;
     float RightInput = 0.0f;
     bool bEdgePanArmed = false;
+    bool bArtReviewMode = false;
+    bool bArtReviewScreenshotRequested = false;
+    float ArtReviewElapsedSeconds = 0.0f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
     float PanSpeed = 2400.0f;

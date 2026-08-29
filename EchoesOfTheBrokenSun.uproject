@@ -11,7 +11,10 @@
     {"Name": "AndroidFileServer", "Enabled": false},
     {"Name": "CameraShakePreviewer", "Enabled": false},
     {"Name": "EnhancedInput", "Enabled": false},
-    {"Name": "GameplayCameras", "Enabled": false}
+    {"Name": "GameplayCameras", "Enabled": false},
+    {"Name": "GeometryScripting", "Enabled": true},
+    {"Name": "ModelingToolsEditorMode", "Enabled": true, "TargetAllowList": ["Editor"]},
+    {"Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": ["Editor"]}
   ],
   "TargetPlatforms": ["Mac"]
 }

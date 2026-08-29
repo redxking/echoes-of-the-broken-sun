@@ -5,6 +5,7 @@
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesSimulationSubsystem.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -13,7 +14,57 @@
 namespace
 {
 const FName EntityColorParameterName(TEXT("Color"));
+const FName MetallicParameterName(TEXT("Metallic"));
+const FName RoughnessParameterName(TEXT("Roughness"));
+const FName EmissiveStrengthParameterName(TEXT("EmissiveStrength"));
 constexpr float DamagePulseDurationSeconds = 0.18f;
+
+const TCHAR* AuthoredRosterMeshPath(
+    echoes::sim::Faction Faction,
+    echoes::sim::EntityType Type)
+{
+    const bool bKharuun =
+        Faction == echoes::sim::Faction::KharuunAssemblies;
+    switch (Type)
+    {
+        case echoes::sim::EntityType::Worker:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Tender.SM_Kharuun_Tender")
+                       : TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Surveyor.SM_Meridian_Surveyor");
+        case echoes::sim::EntityType::Soldier:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Riftstalker.SM_Kharuun_Riftstalker")
+                       : TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Lancer.SM_Meridian_Lancer");
+        case echoes::sim::EntityType::HeavyUnit:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Cairnback.SM_Kharuun_Cairnback")
+                       : TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Bulwark.SM_Meridian_Bulwark");
+        case echoes::sim::EntityType::ScoutUnit:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Resonant.SM_Kharuun_Resonant")
+                       : TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_RelaySkiff.SM_Meridian_RelaySkiff");
+        case echoes::sim::EntityType::CommandCore:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_MemoryHearth.SM_Kharuun_MemoryHearth")
+                       : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_Anchor.SM_Meridian_Anchor");
+        case echoes::sim::EntityType::Dropoff:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_Waystone.SM_Kharuun_Waystone")
+                       : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_PowerLink.SM_Meridian_PowerLink");
+        case echoes::sim::EntityType::Barracks:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_GrowthBasin.SM_Kharuun_GrowthBasin")
+                       : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_ArrayFoundry.SM_Meridian_ArrayFoundry");
+        case echoes::sim::EntityType::UtilityStructure:
+            return bKharuun
+                       ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")
+                       : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.SM_Meridian_AegisPost");
+        case echoes::sim::EntityType::ResourceNode:
+        case echoes::sim::EntityType::FutureWell:
+            return nullptr;
+    }
+    return nullptr;
+}
 
 FLinearColor ColorForState(const echoes::sim::Entity& State)
 {
@@ -165,12 +216,17 @@ AEchoesEntityView::AEchoesEntityView()
         TEXT("/Engine/BasicShapes/Cone.Cone"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialFinder(
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> ArtMaterialFinder(
+        TEXT("/Game/Art/Generated/Materials/M_EchoesSurface.M_EchoesSurface"));
 
     CubeMesh = CubeFinder.Object;
     SphereMesh = SphereFinder.Object;
     CylinderMesh = CylinderFinder.Object;
     ConeMesh = ConeFinder.Object;
     BasicMaterial = MaterialFinder.Object;
+    AuthoredSurfaceMaterial = ArtMaterialFinder.Succeeded()
+                                  ? ArtMaterialFinder.Object
+                                  : BasicMaterial;
 
     BodyMesh->SetStaticMesh(CylinderMesh);
     SilhouetteAccent->SetStaticMesh(CubeMesh);
@@ -326,6 +382,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
 
 void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 {
+    const bool bKharuun =
+        State.faction == echoes::sim::Faction::KharuunAssemblies;
     UStaticMesh* DesiredMesh = CylinderMesh;
     FVector BodyScale(0.48f, 0.48f, 0.70f);
     FVector BodyOffset(0.0f, 0.0f, 35.0f);
@@ -424,6 +482,71 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
 
+    bUsingAuthoredRosterMesh = false;
+    if (!State.temporaryMineralCover)
+    {
+        const TCHAR* AuthoredPath =
+            AuthoredRosterMeshPath(State.faction, State.type);
+        if (AuthoredPath != nullptr)
+        {
+            if (UStaticMesh* AuthoredMesh =
+                    LoadObject<UStaticMesh>(nullptr, AuthoredPath))
+            {
+                DesiredMesh = AuthoredMesh;
+                BodyScale = FVector::OneVector;
+                BodyOffset = FVector::ZeroVector;
+                bUsingAuthoredRosterMesh = true;
+
+                switch (State.type)
+                {
+                    case echoes::sim::EntityType::Worker:
+                        SelectionRadius = bKharuun ? 1.35f : 1.45f;
+                        HealthBarWidthScale = 1.20f;
+                        HealthBarHeight = bKharuun ? 148.0f : 194.0f;
+                        break;
+                    case echoes::sim::EntityType::Soldier:
+                        SelectionRadius = bKharuun ? 1.55f : 1.25f;
+                        HealthBarWidthScale = 1.35f;
+                        HealthBarHeight = bKharuun ? 146.0f : 166.0f;
+                        break;
+                    case echoes::sim::EntityType::HeavyUnit:
+                        SelectionRadius = bKharuun ? 1.95f : 1.70f;
+                        HealthBarWidthScale = 1.65f;
+                        HealthBarHeight = bKharuun ? 158.0f : 132.0f;
+                        break;
+                    case echoes::sim::EntityType::ScoutUnit:
+                        SelectionRadius = bKharuun ? 1.55f : 1.85f;
+                        HealthBarWidthScale = 1.40f;
+                        HealthBarHeight = bKharuun ? 216.0f : 126.0f;
+                        break;
+                    case echoes::sim::EntityType::CommandCore:
+                        SelectionRadius = 3.95f;
+                        HealthBarWidthScale = 3.10f;
+                        HealthBarHeight = bKharuun ? 214.0f : 286.0f;
+                        break;
+                    case echoes::sim::EntityType::Dropoff:
+                        SelectionRadius = bKharuun ? 2.55f : 3.10f;
+                        HealthBarWidthScale = 2.35f;
+                        HealthBarHeight = bKharuun ? 232.0f : 302.0f;
+                        break;
+                    case echoes::sim::EntityType::Barracks:
+                        SelectionRadius = 3.55f;
+                        HealthBarWidthScale = 3.00f;
+                        HealthBarHeight = bKharuun ? 146.0f : 182.0f;
+                        break;
+                    case echoes::sim::EntityType::UtilityStructure:
+                        SelectionRadius = bKharuun ? 2.65f : 2.90f;
+                        HealthBarWidthScale = 2.25f;
+                        HealthBarHeight = bKharuun ? 332.0f : 232.0f;
+                        break;
+                    case echoes::sim::EntityType::ResourceNode:
+                    case echoes::sim::EntityType::FutureWell:
+                        break;
+                }
+            }
+        }
+    }
+
     BodyMesh->SetStaticMesh(DesiredMesh);
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
@@ -432,8 +555,6 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     FVector AccentOffset(0.0f, 0.0f, HealthBarHeight - 28.0f);
     FRotator AccentRotation = FRotator::ZeroRotator;
     bool bShowSilhouetteAccent = !State.temporaryMineralCover;
-    const bool bKharuun =
-        State.faction == echoes::sim::Faction::KharuunAssemblies;
     switch (State.type)
     {
         case echoes::sim::EntityType::Worker:
@@ -509,7 +630,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
-    SilhouetteAccent->SetVisibility(bShowSilhouetteAccent, true);
+    SilhouetteAccent->SetVisibility(
+        bShowSilhouetteAccent && !bUsingAuthoredRosterMesh,
+        true);
     SelectionRing->SetRelativeScale3D(
         FVector(SelectionRadius, SelectionRadius, 0.025f));
 
@@ -628,10 +751,26 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 
     if (BasicMaterial != nullptr)
     {
-        if (BodyMaterial == nullptr)
+        BodyMaterials.Reset();
+        BodyMaterial = nullptr;
+        const int32 BodyMaterialCount =
+            bUsingAuthoredRosterMesh ? 4 : 1;
+        UMaterialInterface* BodyParent =
+            bUsingAuthoredRosterMesh && AuthoredSurfaceMaterial != nullptr
+                ? AuthoredSurfaceMaterial
+                : BasicMaterial;
+        for (int32 MaterialIndex = 0;
+             MaterialIndex < BodyMaterialCount;
+             ++MaterialIndex)
         {
-            BodyMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            BodyMesh->SetMaterial(0, BodyMaterial);
+            UMaterialInstanceDynamic* Material =
+                UMaterialInstanceDynamic::Create(BodyParent, this);
+            BodyMaterials.Add(Material);
+            BodyMesh->SetMaterial(MaterialIndex, Material);
+        }
+        if (!BodyMaterials.IsEmpty())
+        {
+            BodyMaterial = BodyMaterials[0];
         }
         if (SilhouetteAccentMaterial == nullptr)
         {
@@ -715,6 +854,46 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
+        if (bUsingAuthoredRosterMesh && BodyMaterials.Num() >= 4)
+        {
+            const FLinearColor DarkColor =
+                bKharuun
+                    ? FLinearColor(0.022f, 0.016f, 0.020f)
+                    : FLinearColor(0.018f, 0.028f, 0.042f);
+            const FLinearColor LightColor =
+                bKharuun
+                    ? FLinearColor(0.30f, 0.21f, 0.12f)
+                    : FLinearColor(0.38f, 0.31f, 0.20f);
+            const FLinearColor GlowColor =
+                bKharuun
+                    ? FLinearColor(1.0f, 0.26f, 0.015f)
+                    : FLinearColor(0.018f, 0.82f, 1.0f);
+            const FLinearColor SlotColors[] = {
+                TeamColor,
+                DarkColor,
+                LightColor,
+                GlowColor};
+            const float MetallicValues[] = {0.30f, 0.48f, 0.08f, 0.22f};
+            const float RoughnessValues[] = {0.34f, 0.28f, 0.52f, 0.20f};
+            const float EmissiveValues[] = {0.0f, 0.0f, 0.0f, 1.8f};
+            for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+            {
+                UMaterialInstanceDynamic* Material =
+                    BodyMaterials[MaterialIndex];
+                Material->SetVectorParameterValue(
+                    EntityColorParameterName,
+                    SlotColors[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    MetallicParameterName,
+                    MetallicValues[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    RoughnessParameterName,
+                    RoughnessValues[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    EmissiveStrengthParameterName,
+                    EmissiveValues[MaterialIndex]);
+            }
+        }
         SilhouetteAccentMaterial->SetVectorParameterValue(
             EntityColorParameterName,
             bKharuun

@@ -60,6 +60,7 @@ a:focus-visible, button:focus-visible {
   left: 12px;
   transform: translateY(-160%);
   padding: 10px 14px;
+  min-height: 44px;
   background: var(--paper);
   color: var(--ink);
   border: 2px solid var(--ink);
@@ -97,7 +98,10 @@ a:focus-visible, button:focus-visible {
 }
 
 .site-nav .nav-links a {
-  padding: 10px 0 8px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0;
   border-bottom: 2px solid transparent;
 }
 
@@ -116,6 +120,9 @@ a:focus-visible, button:focus-visible {
 
 .brand {
   flex: 0 0 auto;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   font: 600 15px/1.2 'Space Grotesk', sans-serif;
   letter-spacing: -.025em;
   text-decoration: none;
@@ -246,6 +253,8 @@ h1 em, h2 em { color: var(--gold-dark); font-style: normal; }
 
 .quiet-link, .archive-link, .text-link {
   display: inline-block;
+  min-height: 44px;
+  padding: 9px 0;
   color: #205f56;
   font-weight: 700;
   text-underline-offset: 4px;

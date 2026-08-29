@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Units and Buildings | Echoes of the Broken Sun</title>
   <meta name="description" content="Explore every current Meridian and Kharuun unit, building, role, prototype cost, and technology in Echoes of the Broken Sun.">
-  <link rel="stylesheet" href="styles.css?v=20260829c">
-  <link rel="stylesheet" href="pages.css?v=20260829c">
-  <link rel="stylesheet" href="contrast.css?v=20260829c">
+  <link rel="stylesheet" href="styles.css?v=20260829f">
+  <link rel="stylesheet" href="pages.css?v=20260829f">
+  <link rel="stylesheet" href="contrast.css?v=20260829f">
 </head>
 <body class="detail-page">
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -28,8 +28,26 @@
       <span class="section-kicker">Field archive / Units and structures</span>
       <h1>Know the role.<br><em>Read the battlefield.</em></h1>
       <p class="lead">Every current unit has a job players should understand at a glance. The Compact wins by maintaining a network. The Assemblies win by moving, adapting, and changing the shape of a fight.</p>
-      <div class="status-note"><strong>Visual and balance status:</strong> These units and buildings currently appear through labeled prototype geometry rather than finished art. Costs and numerical values below come from the current authored data and may change through balance testing.</div>
+      <div class="status-note"><strong>Visual and balance status:</strong> All 16 current roster roles now have original concept direction and authored Unreal static meshes with two LODs, four material zones, and selection collision. The concept renders below are visual targets; the simpler live-build meshes are the first vertical-slice art candidates, not final production models. Animation, detailed textures, damage states, effects, sound, and broad readability testing remain in development. Costs and numerical values come from the current authored data and may change through balance testing.</div>
     </header>
+
+    <section class="tint-band art-proof">
+      <span class="section-kicker">Live implementation / Unreal Engine 5.8</span>
+      <div class="section-head">
+        <h2>Designed as a world.<br><em>Built into the match.</em></h2>
+        <p>These are direct Metal captures from the current playable systems build. Team color remains consistent for quick ownership reading; faction identity comes from silhouette and a second material language—cyan engineering bands for Meridian, amber resonant seams for Kharuun.</p>
+      </div>
+      <div class="engine-proof-grid">
+        <figure>
+          <img src="assets/engine/meridian-roster-in-engine.png" alt="Current Unreal match showing the Meridian Anchor and nearby authored Meridian units and structures from the RTS camera.">
+          <figcaption><b>Meridian Compact</b><span>Current in-engine static-mesh pass · Metal capture</span></figcaption>
+        </figure>
+        <figure>
+          <img src="assets/engine/kharuun-roster-in-engine.png" alt="Current Unreal match showing the Kharuun Memory Hearth and nearby authored Kharuun warforms and structures from the RTS camera.">
+          <figcaption><b>Kharuun Assemblies</b><span>Current in-engine static-mesh pass · Metal capture</span></figcaption>
+        </figure>
+      </div>
+    </section>
 
     <section class="content-band">
       <div class="faction-banner">
@@ -38,21 +56,25 @@
       </div>
       <div class="codex-grid">
         <article class="codex-card">
+          <div class="asset-portrait meridian-units quadrant-tl" role="img" aria-label="Visual target for the Meridian Surveyor engineering exoframe."></div>
           <small>Worker / Engineer</small><h3>Surveyor</h3><div class="card-role">Gathers · Builds · Repairs · Reconnects</div>
           <p>The Surveyor turns a landing point into a functioning network. It gathers Matter, constructs the base, repairs damage, and restores severed Power Links. Losing Surveyors can leave a powerful army unable to replace what it spends.</p>
           <div class="unit-facts"><div>Cost<b>50 Matter</b></div><div>Health<b>90</b></div><div>Logistics<b>1</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait meridian-units quadrant-tr" role="img" aria-label="Visual target for the Meridian Lancer line operator and prismatic rifle."></div>
           <small>Ranged line unit</small><h3>Lancer</h3><div class="card-role">Sustained fire · Formation core</div>
           <p>Lancers deliver precise, steady ranged fire. They are dependable behind vision and cover, but a flank or forced close engagement exposes what their disciplined firing line cannot solve.</p>
           <div class="unit-facts"><div>Cost<b>85 M / 20 D</b></div><div>Health<b>145</b></div><div>Range<b>650 cm</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait meridian-units quadrant-bl" role="img" aria-label="Visual target for the Meridian Bulwark Team and directional shield projector."></div>
           <small>Heavy screen</small><h3>Bulwark Team</h3><div class="card-role">Directional cover · Slow advance</div>
           <p>A Bulwark Team deploys cover toward a chosen direction, reducing incoming damage for the position it protects. Deployment trades speed for safety, so facing and timing matter as much as raw toughness.</p>
           <div class="unit-facts"><div>Cost<b>130 M / 25 D</b></div><div>Health<b>260</b></div><div>Logistics<b>3</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait meridian-units quadrant-br" role="img" aria-label="Visual target for the Meridian Relay Skiff reconnaissance craft."></div>
           <small>Scout / Support</small><h3>Relay Skiff</h3><div class="card-role">Vision · Temporary supply · Archive carrier</div>
           <p>The fastest Compact unit sees far and can extend logistics for a limited time. It is fragile, so a careless scout can cut off both information and support. Mara’s Skiff carries the recovered archive in the prologue.</p>
           <div class="unit-facts"><div>Cost<b>70 M / 20 D</b></div><div>Health<b>75</b></div><div>Sight<b>1,500 cm</b></div></div>
@@ -67,21 +89,25 @@
       </div>
       <div class="codex-grid">
         <article class="codex-card structure">
+          <div class="asset-portrait meridian-structures quadrant-tl" role="img" aria-label="Visual target for the Meridian Anchor headquarters."></div>
           <small>Headquarters / Drop-off</small><h3>Anchor</h3><div class="card-role">Network root · Worker production · Logistics</div>
           <p>The Anchor is the root of a Compact position and the destination for gathered resources. Its name reflects a promise: systems attached here should remain dependable under pressure.</p>
           <div class="unit-facts"><div>Baseline cost<b>0</b></div><div>Health<b>1,400</b></div><div>Capacity<b>12</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait meridian-structures quadrant-tr" role="img" aria-label="Visual target for the Meridian Power Link network pylon."></div>
           <small>Supply node</small><h3>Power Link</h3><div class="card-role">Powered area · Logistics chain</div>
           <p>Power Links extend the build network and capacity. They are cheap enough to encourage expansion and important enough to become high-value targets.</p>
           <div class="unit-facts"><div>Cost<b>90 M / 10 D</b></div><div>Health<b>450</b></div><div>Capacity<b>6</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait meridian-structures quadrant-bl" role="img" aria-label="Visual target for the Meridian Array Foundry production hall."></div>
           <small>Production</small><h3>Array Foundry</h3><div class="card-role">Line units · Support units · Research</div>
           <p>The Foundry builds the Compact’s combat force and hosts its current technology path. Destroying it can interrupt research without refund, turning production security into a strategic choice.</p>
           <div class="unit-facts"><div>Cost<b>180 M / 30 D</b></div><div>Health<b>760</b></div><div>Footprint<b>4 × 4</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait meridian-structures quadrant-br" role="img" aria-label="Visual target for the Meridian Aegis Post defensive turret."></div>
           <small>Powered defense</small><h3>Aegis Post</h3><div class="card-role">Long-range denial · Network dependent</div>
           <p>The Aegis Post gains its intended combat reach only while supplied through the Anchor-and-Link graph. Sever the chain, and the defense shuts down instead of receiving free power.</p>
           <div class="unit-facts"><div>Cost<b>130 M / 30 D</b></div><div>Health<b>520</b></div><div>Range<b>900 cm</b></div></div>
@@ -96,21 +122,25 @@
       </div>
       <div class="codex-grid">
         <article class="codex-card">
+          <div class="asset-portrait kharuun-units quadrant-tl" role="img" aria-label="Visual target for the Kharuun Tender civic cultivator."></div>
           <small>Worker / Cultivator</small><h3>Tender</h3><div class="card-role">Gathers · Grows · Stabilizes</div>
           <p>Tenders gather Matter, grow structures, and stabilize damaged terrain. Their work makes clear that Kharuun infrastructure is carefully maintained rather than wild growth.</p>
           <div class="unit-facts"><div>Cost<b>50 Matter</b></div><div>Health<b>100</b></div><div>Logistics<b>1</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait kharuun-units quadrant-tr" role="img" aria-label="Visual target for the Kharuun Riftstalker mobile skirmisher."></div>
           <small>Mobile skirmisher</small><h3>Riftstalker</h3><div class="card-role">Harassment · Repositioning fire</div>
           <p>Riftstalkers keep firing as they reposition. They excel at attacking exposed routes and leaving poor fights, but prolonged frontal combat strips away their mobility advantage.</p>
           <div class="unit-facts"><div>Cost<b>75 M / 30 D</b></div><div>Health<b>125</b></div><div>Range<b>500 cm</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait kharuun-units quadrant-bl" role="img" aria-label="Visual target for the Kharuun Cairnback assault screen."></div>
           <small>Assault screen</small><h3>Cairnback</h3><div class="card-role">Absorbs fire · Raises mineral cover</div>
           <p>Cairnbacks lead an advance and can create a temporary mineral barrier. The ability costs Dawn and has a clear lifetime, so cover is an authored tactical resource, not permanent terrain spam.</p>
           <div class="unit-facts"><div>Cost<b>120 M / 30 D</b></div><div>Health<b>245</b></div><div>Logistics<b>3</b></div></div>
         </article>
         <article class="codex-card">
+          <div class="asset-portrait kharuun-units quadrant-br" role="img" aria-label="Visual target for the Kharuun Resonant vibration scout."></div>
           <small>Scout / Counter-scout</small><h3>Resonant</h3><div class="card-role">Long sight · Vibration contact</div>
           <p>Resonants read movement through the ground. Their information is intentionally approximate: a warning about motion, not a free unit identity or directly targetable enemy.</p>
           <div class="unit-facts"><div>Cost<b>80 M / 25 D</b></div><div>Health<b>85</b></div><div>Sight<b>1,550 cm</b></div></div>
@@ -125,21 +155,25 @@
       </div>
       <div class="codex-grid">
         <article class="codex-card structure">
+          <div class="asset-portrait kharuun-structures quadrant-tl" role="img" aria-label="Visual target for the Kharuun Memory Hearth headquarters."></div>
           <small>Headquarters / Drop-off</small><h3>Memory Hearth</h3><div class="card-role">Assembly root · Worker growth · Logistics</div>
           <p>The Hearth anchors resource delivery and new Tenders while connecting the force to its adaptation root. It is a maintained civic place as much as a command structure.</p>
           <div class="unit-facts"><div>Baseline cost<b>0</b></div><div>Health<b>1,300</b></div><div>Capacity<b>12</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait kharuun-structures quadrant-tr" role="img" aria-label="Visual target for the Kharuun mobile Waystone."></div>
           <small>Mobile supply node</small><h3>Waystone</h3><div class="card-role">Roots for capacity · Uproots to migrate</div>
           <p>A Waystone lets the Assemblies move infrastructure with the front. Uprooting takes time, movement is slow, and the exposed form receives additional damage.</p>
           <div class="unit-facts"><div>Cost<b>80 M / 20 D</b></div><div>Health<b>390</b></div><div>Capacity<b>5</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait kharuun-structures quadrant-bl" role="img" aria-label="Visual target for the Kharuun Growth Basin production nursery."></div>
           <small>Production / Adaptation</small><h3>Growth Basin</h3><div class="card-role">Grows warforms · Hosts visible molting</div>
           <p>The Basin produces combat forms and presents bounded adaptations. Carapace favors survival; Striker favors damage and tempo. Molting is visible and dangerous.</p>
           <div class="unit-facts"><div>Cost<b>165 M / 35 D</b></div><div>Health<b>700</b></div><div>Footprint<b>4 × 4</b></div></div>
         </article>
         <article class="codex-card structure">
+          <div class="asset-portrait kharuun-structures quadrant-br" role="img" aria-label="Visual target for the Kharuun Listening Spine detection structure."></div>
           <small>Detection</small><h3>Listening Spine</h3><div class="card-role">Movement signatures · No free identity</div>
           <p>The Spine extends vibration sensing over a wide area. It reports approximate anonymous movement so the Kharuun can prepare without turning hidden enemies into exact targets.</p>
           <div class="unit-facts"><div>Cost<b>115 M / 25 D</b></div><div>Health<b>440</b></div><div>Detects<b>2,600 cm</b></div></div>
@@ -159,7 +193,7 @@
         <article class="detail-card"><small>Kharuun / Tier 1</small><h3>Echo Cartography</h3><p>Improves combat vision by 20%. Current cost: 100 Matter and 45 Dawn.</p></article>
         <article class="detail-card"><small>Kharuun / Tier 2</small><h3>Ancestral Edge</h3><p>After Echo Cartography, improves combat-unit damage by 15%. Current cost: 110 Matter and 50 Dawn.</p></article>
       </div>
-      <p class="prototype-data">Numbers describe the current deterministic prototype catalog, not final balance. Finished meshes, materials, animation, effects, sound, and broad player-readability testing remain open.</p>
+      <p class="prototype-data">Numbers describe the current deterministic prototype catalog, not final balance. The first authored static-mesh and material pass is integrated; skeletal animation, production texture detail, destruction, effects, sound, and broad player-readability testing remain open.</p>
       <a class="back" href="campaign.html">See how these forces enter the campaign →</a>
     </section>
   </main>

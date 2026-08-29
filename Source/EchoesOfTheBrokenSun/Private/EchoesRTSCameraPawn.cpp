@@ -4,11 +4,15 @@
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "UnrealClient.h"
 
 AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
 {
@@ -35,6 +39,20 @@ void AEchoesRTSCameraPawn::BeginPlay()
 {
     Super::BeginPlay();
     bEdgePanArmed = false;
+#if !UE_BUILD_SHIPPING
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
+    {
+        bArtReviewMode = true;
+        SetActorLocation(FVector(-4400.0f, -4400.0f, 100.0f));
+        SpringArm->TargetArmLength = 1900.0f;
+        SpringArm->bEnableCameraLag = false;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ART_REVIEW_CAMERA] localBaseCentered=true zoom=1900 editorOnly=true"));
+        return;
+    }
+#endif
     SetActorLocation(FVector(-3000.0f, -3000.0f, 100.0f));
 }
 
@@ -67,6 +85,22 @@ void AEchoesRTSCameraPawn::SetupPlayerInputComponent(
 void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+
+#if !UE_BUILD_SHIPPING
+    if (bArtReviewMode && !bArtReviewScreenshotRequested)
+    {
+        ArtReviewElapsedSeconds += DeltaSeconds;
+        if (ArtReviewElapsedSeconds >= 1.5f)
+        {
+            FScreenshotRequest::RequestScreenshot(true, true);
+            bArtReviewScreenshotRequested = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=true delay=1.5"));
+        }
+    }
+#endif
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const bool bEdgePanEnabled = Settings == nullptr || Settings->IsEdgePanEnabled();

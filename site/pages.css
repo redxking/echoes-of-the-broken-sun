@@ -106,6 +106,82 @@
   background: var(--paper-card);
 }
 
+.codex-card { overflow: hidden; }
+
+.asset-portrait {
+  position: relative;
+  aspect-ratio: 1 / .78;
+  margin: -28px -28px 26px;
+  border-bottom: 1px solid var(--line);
+  background-color: #15191d;
+  background-repeat: no-repeat;
+  background-size: 200% 256.5%;
+}
+
+.dark-band .asset-portrait { border-bottom-color: var(--night-line); }
+
+.asset-portrait::after {
+  content: 'VISUAL TARGET';
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, .42);
+  background: rgba(8, 12, 15, .86);
+  color: #f5f7f7;
+  font: 600 10px/1 'DM Mono', monospace;
+  letter-spacing: .08em;
+}
+
+.meridian-units { background-image: url('assets/concepts/meridian-units.png'); }
+.meridian-structures { background-image: url('assets/concepts/meridian-structures.png'); }
+.kharuun-units { background-image: url('assets/concepts/kharuun-units.png'); }
+.kharuun-structures { background-image: url('assets/concepts/kharuun-structures.png'); }
+.quadrant-tl { background-position: left top; }
+.quadrant-tr { background-position: right top; }
+.quadrant-bl { background-position: left bottom; }
+.quadrant-br { background-position: right bottom; }
+
+.engine-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.engine-proof-grid figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #a8b2b0;
+  background: #10171c;
+}
+
+.engine-proof-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.engine-proof-grid figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  color: #e7edec;
+}
+
+.engine-proof-grid figcaption b {
+  color: #ffffff;
+  font: 600 15px/1.3 'Space Grotesk', sans-serif;
+}
+
+.engine-proof-grid figcaption span {
+  color: #c9d3d1;
+  font: 500 11px/1.4 'DM Mono', monospace;
+  text-align: right;
+  text-transform: uppercase;
+}
+
 .dark-band .detail-card,
 .dark-band .codex-card,
 .dark-band .character-card,
@@ -401,6 +477,8 @@
 .back {
   display: inline-block;
   margin-top: 44px;
+  min-height: 44px;
+  padding: 14px 0;
   color: #205f56;
   font: 600 11px/1.5 'DM Mono', monospace;
   text-transform: uppercase;
@@ -435,6 +513,15 @@
 
   .detail-grid, .codex-grid, .character-grid,
   .choice-grid, .ending-list { grid-template-columns: 1fr; }
+
+  .engine-proof-grid { grid-template-columns: 1fr; }
+
+  .engine-proof-grid figcaption {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .engine-proof-grid figcaption span { text-align: left; }
 
   .unit-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .act-header { grid-template-columns: 1fr; gap: 8px; }

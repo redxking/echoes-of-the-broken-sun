@@ -6,6 +6,7 @@
 #include "EchoesPlayerController.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Tests/AutomationCommon.h"
@@ -289,8 +290,44 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                  Entity->type == echoes::sim::EntityType::ScoutUnit) &&
                 EntityView != nullptr);
         TestTrue(
-            FString::Printf(TEXT("Combat-force entity %u exposes its faction silhouette accent"), EntityId),
-            EntityView != nullptr && EntityView->IsSilhouetteAccentVisible());
+            FString::Printf(TEXT("Combat-force entity %u exposes authored faction geometry or its fallback silhouette accent"), EntityId),
+            EntityView != nullptr &&
+                (EntityView->IsUsingAuthoredRosterMesh() ||
+                 EntityView->IsSilhouetteAccentVisible()));
+    }
+
+    const TCHAR* AuthoredRosterMeshes[] = {
+        TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Surveyor.SM_Meridian_Surveyor"),
+        TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Lancer.SM_Meridian_Lancer"),
+        TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_Bulwark.SM_Meridian_Bulwark"),
+        TEXT("/Game/Art/Generated/Meridian/Units/SM_Meridian_RelaySkiff.SM_Meridian_RelaySkiff"),
+        TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_Anchor.SM_Meridian_Anchor"),
+        TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_PowerLink.SM_Meridian_PowerLink"),
+        TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_ArrayFoundry.SM_Meridian_ArrayFoundry"),
+        TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.SM_Meridian_AegisPost"),
+        TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Tender.SM_Kharuun_Tender"),
+        TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Riftstalker.SM_Kharuun_Riftstalker"),
+        TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Cairnback.SM_Kharuun_Cairnback"),
+        TEXT("/Game/Art/Generated/Kharuun/Units/SM_Kharuun_Resonant.SM_Kharuun_Resonant"),
+        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_MemoryHearth.SM_Kharuun_MemoryHearth"),
+        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_Waystone.SM_Kharuun_Waystone"),
+        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_GrowthBasin.SM_Kharuun_GrowthBasin"),
+        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")};
+    for (const TCHAR* MeshPath : AuthoredRosterMeshes)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, MeshPath);
+        TestNotNull(
+            FString::Printf(TEXT("Authored roster mesh loads: %s"), MeshPath),
+            Mesh);
+        if (Mesh != nullptr)
+        {
+            TestTrue(
+                FString::Printf(TEXT("Authored roster mesh has two LODs: %s"), MeshPath),
+                Mesh->GetNumLODs() >= 2);
+            TestTrue(
+                FString::Printf(TEXT("Authored roster mesh has four material zones: %s"), MeshPath),
+                Mesh->GetStaticMaterials().Num() >= 4);
+        }
     }
     TestFalse(TEXT("Keyboard center targeting defaults off"),
               Controller->IsKeyboardTargetingEnabled());
