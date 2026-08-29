@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v19 header/rules/research/player/sequence fields plus terrain and four fog grids.
-    return 1858 + 5 * mapTileCount;
+    // Snapshot v20 header/rules/research/player/sequence fields plus terrain and four fog grids.
+    return 1862 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -2528,10 +2528,37 @@ void TestFactionResearchProgressionAndPersistence() {
     REQUIRE(interruptedPlayer->researchProducer == 0);
     REQUIRE(interruptedPlayer->researchProgress == 0);
     REQUIRE(interruptedPlayer->researchRequired == 0);
+    REQUIRE(interruptedPlayer->lastInterruptedResearch ==
+            ResearchType::KharuunEchoCartography);
     REQUIRE(interruptedPlayer->resources.material == 900);
     REQUIRE(interruptedPlayer->resources.dawnshards == 455);
     REQUIRE(!interruptedPlayer->HasCompletedResearch(
         ResearchType::KharuunEchoCartography));
+    const std::optional<PlayerView> interruptedView =
+        interrupted.CreatePlayerView(1);
+    REQUIRE(interruptedView.has_value());
+    REQUIRE(interruptedView->Player().lastInterruptedResearch ==
+            ResearchType::KharuunEchoCartography);
+    const std::vector<std::uint8_t> interruptedSnapshot =
+        interrupted.SaveSnapshot();
+    const std::optional<Simulation> interruptedLoaded =
+        Simulation::LoadSnapshot(interruptedSnapshot, &error);
+    REQUIRE(interruptedLoaded.has_value());
+    REQUIRE(interruptedLoaded->StateChecksum() ==
+            interrupted.StateChecksum());
+
+    const EntityId replacementBasin = interrupted.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(14, 14));
+    REQUIRE(replacementBasin != 0);
+    Command replacementResearch = MakeCommand(
+        interrupted.CurrentTick(), 1, 2, CommandType::Research,
+        replacementBasin);
+    replacementResearch.researchType = ResearchType::KharuunEchoCartography;
+    REQUIRE(interrupted.QueueCommand(replacementResearch));
+    interrupted.Step();
+    REQUIRE(interrupted.FindPlayer(1)->lastInterruptedResearch ==
+            ResearchType::None);
 }
 
 }  // namespace

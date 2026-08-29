@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 19;
-inline constexpr std::uint32_t kReplayVersion = 19;
+inline constexpr std::uint32_t kSnapshotVersion = 20;
+inline constexpr std::uint32_t kReplayVersion = 20;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -463,6 +463,7 @@ struct PlayerState final {
     EntityId researchProducer = 0;
     std::int32_t researchProgress = 0;
     std::int32_t researchRequired = 0;
+    ResearchType lastInterruptedResearch = ResearchType::None;
 
     [[nodiscard]] bool HasCompletedResearch(ResearchType type) const {
         const std::uint8_t value = static_cast<std::uint8_t>(type);

@@ -39,6 +39,23 @@ FLinearColor MinimapOwnerColor(uint8 Owner, bool bHighContrast)
         default: return FLinearColor(0.72f, 0.72f, 0.72f);
     }
 }
+
+const TCHAR* ResearchDisplayName(echoes::sim::ResearchType Technology)
+{
+    switch (Technology)
+    {
+        case echoes::sim::ResearchType::MeridianPrismaticTargeting:
+            return TEXT("Prismatic Targeting");
+        case echoes::sim::ResearchType::MeridianHorizonLattice:
+            return TEXT("Horizon Lattice");
+        case echoes::sim::ResearchType::KharuunEchoCartography:
+            return TEXT("Echo Cartography");
+        case echoes::sim::ResearchType::KharuunAncestralEdge:
+            return TEXT("Ancestral Edge");
+        default:
+            return TEXT("Unknown Technology");
+    }
+}
 }
 
 void AEchoesHUD::DrawHUD()
@@ -149,21 +166,17 @@ void AEchoesHUD::DrawHUD()
                         FMath::Max(1, Player->researchRequired),
                     0,
                     100);
-                const TCHAR* Name =
-                    Player->activeResearch ==
-                            echoes::sim::ResearchType::MeridianPrismaticTargeting
-                        ? TEXT("Prismatic Targeting")
-                        : Player->activeResearch ==
-                                  echoes::sim::ResearchType::MeridianHorizonLattice
-                              ? TEXT("Horizon Lattice")
-                              : Player->activeResearch ==
-                                        echoes::sim::ResearchType::KharuunEchoCartography
-                                    ? TEXT("Echo Cartography")
-                                    : TEXT("Ancestral Edge");
                 ResearchLine = FString::Printf(
                     TEXT("RESEARCH  %s  %d%%     production suspended"),
-                    Name,
+                    ResearchDisplayName(Player->activeResearch),
                     Percent);
+            }
+            else if (Player->lastInterruptedResearch !=
+                     echoes::sim::ResearchType::None)
+            {
+                ResearchLine = FString::Printf(
+                    TEXT("RESEARCH INTERRUPTED  %s     NO REFUND"),
+                    ResearchDisplayName(Player->lastInterruptedResearch));
             }
             else
             {
@@ -514,6 +527,8 @@ void AEchoesHUD::DrawTechnologyPanel(
         const FBox2D& Row = Layout.TechnologyRows[TierIndex];
         const bool bComplete = Player->HasCompletedResearch(Technology);
         const bool bActive = Player->activeResearch == Technology;
+        const bool bInterrupted =
+            Player->lastInterruptedResearch == Technology;
         const bool bFocused =
             EchoesController->GetTechnologyPanelFocusedTier() == TierIndex;
         const bool bPrerequisiteMet =
@@ -538,6 +553,11 @@ void AEchoesHUD::DrawTechnologyPanel(
                     FMath::Max(1, Player->researchRequired),
                 0, 100);
             Status = FString::Printf(TEXT("RESEARCHING  %d%%"), Percent);
+        }
+        else if (bInterrupted)
+        {
+            Status = TEXT("INTERRUPTED — producer destroyed; costs lost");
+            StatusColor = FLinearColor(1.0f, 0.38f, 0.22f);
         }
         else if (Player->activeResearch != echoes::sim::ResearchType::None)
         {
@@ -569,7 +589,9 @@ void AEchoesHUD::DrawTechnologyPanel(
                 ? FLinearColor(0.05f, 0.18f, 0.15f, 0.94f)
                 : bActive
                       ? FLinearColor(0.04f, 0.18f, 0.25f, 0.96f)
-                      : FLinearColor(0.025f, 0.055f, 0.09f, 0.94f);
+                      : bInterrupted
+                            ? FLinearColor(0.22f, 0.055f, 0.045f, 0.96f)
+                            : FLinearColor(0.025f, 0.055f, 0.09f, 0.94f);
         DrawRect(RowColor, Row.Min.X, Row.Min.Y,
                  Row.GetSize().X, Row.GetSize().Y);
         if (bFocused)

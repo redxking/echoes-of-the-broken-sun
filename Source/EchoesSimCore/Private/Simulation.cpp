@@ -25,7 +25,7 @@ constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::size_t kSerializedEntityBytes = 202;
 constexpr std::size_t kSerializedCommandBytes = 38;
-constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
+constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 
@@ -2418,6 +2418,7 @@ void Simulation::ApplyCommand(const Command& command) {
             player->researchProgress = 0;
             player->researchRequired = static_cast<std::int32_t>(
                 rules->researchTicks);
+            player->lastInterruptedResearch = ResearchType::None;
             return;
         }
         case CommandType::AttackMove:
@@ -2978,6 +2979,7 @@ void Simulation::ProcessResearch() {
         if (producer == nullptr || producer->owner != player.id ||
             producer->hitPoints <= 0 || !producer->completed ||
             producer->type != EntityType::Barracks) {
+            player.lastInterruptedResearch = player.activeResearch;
             player.activeResearch = ResearchType::None;
             player.researchProducer = 0;
             player.researchProgress = 0;
@@ -3014,6 +3016,7 @@ void Simulation::ProcessResearch() {
         player.researchProducer = 0;
         player.researchProgress = 0;
         player.researchRequired = 0;
+        player.lastInterruptedResearch = ResearchType::None;
     }
 }
 
@@ -4341,6 +4344,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U32(player.researchProducer);
         writer.I32(player.researchProgress);
         writer.I32(player.researchRequired);
+        writer.U8(static_cast<std::uint8_t>(player.lastInterruptedResearch));
     }
     for (PlayerId player = 0; player < players_.size(); ++player) {
         writer.U8(hasExecutedSequence_[player] ? 1 : 0);
@@ -4599,6 +4603,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t id = 0;
         std::uint8_t faction = 0;
         std::uint8_t activeResearch = 0;
+        std::uint8_t lastInterruptedResearch = 0;
         PlayerState player{};
         if (!reader.U8(active) || !reader.U8(id) || !reader.U8(faction) ||
             !reader.I32(player.resources.material) ||
@@ -4606,9 +4611,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U32(player.completedResearchMask) ||
             !reader.U8(activeResearch) || !reader.U32(player.researchProducer) ||
             !reader.I32(player.researchProgress) ||
-            !reader.I32(player.researchRequired) || id != index || active > 1 ||
+            !reader.I32(player.researchRequired) ||
+            !reader.U8(lastInterruptedResearch) || id != index || active > 1 ||
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             activeResearch > static_cast<std::uint8_t>(
+                ResearchType::KharuunAncestralEdge) ||
+            lastInterruptedResearch > static_cast<std::uint8_t>(
                 ResearchType::KharuunAncestralEdge) ||
             (player.completedResearchMask & ~0x1eU) != 0 ||
             player.resources.material < 0 || player.resources.dawnshards < 0 ||
@@ -4617,7 +4625,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             player.researchProgress > player.researchRequired ||
             ((activeResearch == 0) !=
              (player.researchProducer == 0 && player.researchProgress == 0 &&
-              player.researchRequired == 0))) {
+              player.researchRequired == 0)) ||
+            (activeResearch != 0 && lastInterruptedResearch != 0) ||
+            (lastInterruptedResearch != 0 &&
+             ((player.completedResearchMask &
+               (1U << lastInterruptedResearch)) != 0 ||
+              config.rules.research[lastInterruptedResearch].faction !=
+                  static_cast<Faction>(faction)))) {
             SetError(error, "snapshot player state is invalid");
             return std::nullopt;
         }
@@ -4625,6 +4639,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         player.active = active != 0;
         player.faction = static_cast<Faction>(faction);
         player.activeResearch = static_cast<ResearchType>(activeResearch);
+        player.lastInterruptedResearch =
+            static_cast<ResearchType>(lastInterruptedResearch);
         simulation.players_[index] = player;
     }
     for (PlayerId player = 0; player < simulation.players_.size(); ++player) {

@@ -101,8 +101,10 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
     bResearchPresentationScenario = false;
+    bResearchInterruptionPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
+    bLoggedResearchPresentationInterrupted = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     LocalFaction = Faction::MeridianCompact;
@@ -154,11 +156,27 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 
 #if UE_BUILD_SHIPPING
     const bool bUseResearchPresentation = false;
+    const bool bUseResearchInterruptionPresentation = false;
 #else
     const bool bUseResearchPresentation =
         !bUseStressScenario &&
         FParse::Param(FCommandLine::Get(), TEXT("EchoesResearchPresentation"));
+    const bool bUseResearchInterruptionPresentation =
+        !bUseStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesResearchInterruptionPresentation"));
 #endif
+    if (bUseResearchPresentation && bUseResearchInterruptionPresentation)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] reason=conflicting presentation modes"));
+        return false;
+    }
+    const bool bUseAnyResearchPresentation =
+        bUseResearchPresentation || bUseResearchInterruptionPresentation;
 
     const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
@@ -229,13 +247,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
-            bUseResearchPresentation
+            bUseAnyResearchPresentation
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
             ScenarioOpponentFaction,
             ResourcePool{500, 30}) ||
+        (bUseResearchInterruptionPresentation &&
+         !Simulation->AddPlayer(
+             2,
+             ScenarioOpponentFaction,
+             ResourcePool{0, 0})) ||
         (bUseStressScenario &&
          (!Simulation->AddPlayer(
               2,
@@ -348,6 +371,20 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
         SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
 
+        if (bUseResearchInterruptionPresentation)
+        {
+            constexpr int32 InterruptionAttackerCount = 32;
+            for (int32 Index = 0; Index < InterruptionAttackerCount; ++Index)
+            {
+                SpawnUnit(
+                    2,
+                    ScenarioOpponentFaction,
+                    EntityType::Soldier,
+                    17,
+                    10);
+            }
+        }
+
         const TArray<FIntPoint> MatterNodeTiles = {
             {16, 16}, {21, 13}, {25, 28}, {33, 22},
             {31, 43}, {43, 36}, {47, 50}, {52, 45}};
@@ -372,7 +409,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 
     Simulation->CaptureReplayBaseline();
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
-    if (bUseResearchPresentation)
+    if (bUseAnyResearchPresentation)
     {
         uint32 ProducerId = 0;
         for (const echoes::sim::Entity& Entity : Simulation->Entities())
@@ -383,6 +420,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 ProducerId = Entity.id;
                 break;
             }
+        }
+        if (ProducerId == 0)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] producer=0 reason=local production structure unavailable"));
+            Simulation.Reset();
+            return false;
         }
         ResearchPresentationTechnology =
             ScenarioLocalFaction == Faction::MeridianCompact
@@ -396,20 +442,63 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Command.actor = ProducerId;
         Command.researchType = ResearchPresentationTechnology;
         std::string Rejection;
-        if (ProducerId == 0 || !Simulation->QueueCommand(Command, &Rejection))
+        if (!Simulation->QueueCommand(Command, &Rejection))
         {
             UE_LOG(
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] producer=%u reason=%s"),
                 ProducerId,
-                ProducerId == 0
-                    ? TEXT("local production structure unavailable")
-                    : UTF8_TO_TCHAR(Rejection.c_str()));
+                UTF8_TO_TCHAR(Rejection.c_str()));
             Simulation.Reset();
             ResearchPresentationTechnology =
                 echoes::sim::ResearchType::None;
             return false;
+        }
+        if (bUseResearchInterruptionPresentation)
+        {
+            uint64 InterruptionSequence = 1;
+            int32 QueuedAttackers = 0;
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (Entity.owner != 2 || Entity.type != EntityType::Soldier)
+                {
+                    continue;
+                }
+                echoes::sim::Command Attack{};
+                Attack.executeTick = 60;
+                Attack.player = 2;
+                Attack.sequence = InterruptionSequence++;
+                Attack.type = echoes::sim::CommandType::Attack;
+                Attack.actor = Entity.id;
+                Attack.target = ProducerId;
+                if (!Simulation->QueueCommand(Attack, &Rejection))
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Error,
+                        TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] attacker=%u reason=%s"),
+                        Entity.id,
+                        UTF8_TO_TCHAR(Rejection.c_str()));
+                    Simulation.Reset();
+                    ResearchPresentationTechnology =
+                        echoes::sim::ResearchType::None;
+                    return false;
+                }
+                ++QueuedAttackers;
+            }
+            if (QueuedAttackers != 32)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Error,
+                    TEXT("[ECHOES_RESEARCH_PRESENTATION_FAILED] interruptionAttackers=%d expected=32"),
+                    QueuedAttackers);
+                Simulation.Reset();
+                ResearchPresentationTechnology =
+                    echoes::sim::ResearchType::None;
+                return false;
+            }
         }
     }
     int32 StressAttackMoveCommands = 0;
@@ -464,7 +553,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         }
     }
     FixedTimeAccumulator = 0.0;
-    NextPlayerCommandSequence = bUseResearchPresentation ? 2 : 1;
+    NextPlayerCommandSequence = bUseAnyResearchPresentation ? 2 : 1;
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
@@ -474,8 +563,11 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
     bResearchPresentationScenario = bUseResearchPresentation;
+    bResearchInterruptionPresentationScenario =
+        bUseResearchInterruptionPresentation;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
+    bLoggedResearchPresentationInterrupted = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -545,6 +637,14 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Player != nullptr ? Player->resources.material : 0,
                 Player != nullptr ? Player->resources.dawnshards : 0);
         }
+        if (bResearchInterruptionPresentationScenario)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_RESEARCH_INTERRUPTION_PRESENTATION_READY] technology=%s attackers=32 attackTick=60 controlled=true release=false"),
+                ResearchStableName(ResearchPresentationTechnology));
+        }
     }
     if (bStressScenario)
     {
@@ -582,8 +682,10 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
     bResearchPresentationScenario = false;
+    bResearchInterruptionPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
+    bLoggedResearchPresentationInterrupted = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -1035,7 +1137,8 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                     EntityViews.Num());
                 bLoggedFirstTick = true;
             }
-            if (bResearchPresentationScenario)
+            if (bResearchPresentationScenario ||
+                bResearchInterruptionPresentationScenario)
             {
                 const echoes::sim::PlayerState* Player =
                     Simulation->FindPlayer(LocalPlayerId);
@@ -1054,6 +1157,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 }
                 if (Player != nullptr &&
                     !bLoggedResearchPresentationComplete &&
+                    bResearchPresentationScenario &&
                     Player->HasCompletedResearch(
                         ResearchPresentationTechnology))
                 {
@@ -1063,6 +1167,35 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         TEXT("[ECHOES_RESEARCH_PRESENTATION_COMPLETE] technology=%s completed=true controlled=true"),
                         ResearchStableName(ResearchPresentationTechnology));
                     bLoggedResearchPresentationComplete = true;
+                }
+                if (Player != nullptr &&
+                    !bLoggedResearchPresentationInterrupted &&
+                    bResearchInterruptionPresentationScenario &&
+                    Player->lastInterruptedResearch ==
+                        ResearchPresentationTechnology)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_RESEARCH_PRESENTATION_INTERRUPTED] technology=%s producerDestroyed=true costsRefunded=false controlled=true"),
+                        ResearchStableName(ResearchPresentationTechnology));
+                    bLoggedResearchPresentationInterrupted = true;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        if (!Controller->IsTechnologyPanelVisible())
+                        {
+                            Controller->ToggleTechnologyPanel();
+                        }
+                        if (Controller->IsTechnologyPanelVisible())
+                        {
+                            UE_LOG(
+                                LogEchoes,
+                                Display,
+                                TEXT("[ECHOES_RESEARCH_INTERRUPTION_PANEL_READY] visible=true paused=true controlled=true release=false"));
+                        }
+                    }
                 }
             }
             if (bStressScenario && !bLoggedStressCombat &&

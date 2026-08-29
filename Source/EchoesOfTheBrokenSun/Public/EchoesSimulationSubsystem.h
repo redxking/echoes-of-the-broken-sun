@@ -181,8 +181,10 @@ private:
     bool bLoggedAiMineralCover = false;
     bool bLoggedAiVibrationResponse = false;
     bool bResearchPresentationScenario = false;
+    bool bResearchInterruptionPresentationScenario = false;
     bool bLoggedResearchPresentationActive = false;
     bool bLoggedResearchPresentationComplete = false;
+    bool bLoggedResearchPresentationInterrupted = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
