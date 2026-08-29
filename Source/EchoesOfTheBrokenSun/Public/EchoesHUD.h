@@ -18,6 +18,9 @@ public:
     virtual void DrawHUD() override;
 
 private:
+    void DrawMissionBriefing(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawTacticalMinimap(
         const UEchoesSimulationSubsystem* Bridge,
         const AEchoesPlayerController* EchoesController,

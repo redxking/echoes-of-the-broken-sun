@@ -71,6 +71,12 @@ void AEchoesHUD::DrawHUD()
     const FLinearColor SecondaryColor =
         bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
 
+    if (EchoesController != nullptr && EchoesController->IsMissionBriefingVisible())
+    {
+        DrawMissionBriefing(EchoesController, Settings);
+        return;
+    }
+
     DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 276.0f * HudScale);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
@@ -270,6 +276,86 @@ void AEchoesHUD::DrawHUD()
 
     DrawTacticalMinimap(Bridge, EchoesController, Settings);
     DrawSelectionRectangle();
+}
+
+void AEchoesHUD::DrawMissionBriefing(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsMissionBriefingVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float PanelWidth = FMath::Min(920.0f, Canvas->ClipX - 60.0f);
+    const float PanelHeight = FMath::Min(590.0f, Canvas->ClipY - 60.0f);
+    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
+    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
+    const float TextLeft = Left + 42.0f;
+    const float WidthScale = FMath::Clamp(PanelWidth / 920.0f, 0.72f, 1.0f);
+    const float TextScale = HudScale * WidthScale;
+    const FLinearColor Backdrop =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
+    const FLinearColor Accent =
+        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
+                      : FLinearColor(0.12f, 0.92f, 1.0f);
+    const FLinearColor Body =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
+    const FLinearColor Muted =
+        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
+                      : FLinearColor(0.55f, 0.64f, 0.72f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f), 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 3.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight, Accent, 3.0f);
+
+    DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f,
+             SmallFont, 1.55f * TextScale, false);
+    DrawText(TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  MERIDIAN COMPACT"),
+             Muted, TextLeft, Top + 72.0f, SmallFont, 0.90f * TextScale, false);
+
+    DrawText(TEXT("SITUATION"), Accent, TextLeft, Top + 122.0f,
+             SmallFont, 0.95f * TextScale, false);
+    DrawText(TEXT("A dormant Future Well lies inside the shattered crossing."),
+             Body, TextLeft, Top + 148.0f, SmallFont, 1.0f * TextScale, false);
+    DrawText(TEXT("Kharuun forces hold the eastern approach. Every protocol changes what survives."),
+             Body, TextLeft, Top + 172.0f, SmallFont, 1.0f * TextScale, false);
+
+    DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f,
+             SmallFont, 0.95f * TextScale, false);
+    DrawText(TEXT("01  Secure and choose a protocol for the central Future Well."),
+             Body, TextLeft, Top + 247.0f, SmallFont, 1.0f * TextScale, false);
+    DrawText(TEXT("02  Destroy the Kharuun Command Core without losing your own."),
+             Body, TextLeft, Top + 273.0f, SmallFont, 1.0f * TextScale, false);
+
+    DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f,
+             SmallFont, 0.95f * TextScale, false);
+    DrawText(TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
+             Body, TextLeft, Top + 349.0f, SmallFont, 0.92f * TextScale, false);
+    DrawText(TEXT("Select with LMB or drag. Issue context orders with RMB. WASD and screen edge move the camera."),
+             Body, TextLeft, Top + 375.0f, SmallFont, 0.92f * TextScale, false);
+
+    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f,
+             SmallFont, 0.95f * TextScale, false);
+    DrawText(TEXT("[U] UI scale   [I] high contrast   [O] reduced motion   [/] reduced flashing"),
+             Body, TextLeft, Top + 451.0f, SmallFont, 0.92f * TextScale, false);
+
+    DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
+             PanelWidth - 84.0f, 42.0f);
+    DrawText(TEXT("PRESS ENTER TO DEPLOY"),
+             bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
+             Left + PanelWidth * 0.5f - 104.0f,
+             Top + PanelHeight - 64.0f,
+             SmallFont,
+             1.05f * TextScale,
+             false);
 }
 
 void AEchoesHUD::DrawTacticalMinimap(

@@ -37,6 +37,12 @@ public:
     void NotifyRuntimeReady();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
+    void PresentMissionBriefing();
+    void ConfirmMissionBriefing();
+    [[nodiscard]] bool IsMissionBriefingVisible() const
+    {
+        return bMissionBriefingVisible;
+    }
 
 private:
     void SelectionPressed();
@@ -109,4 +115,5 @@ private:
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
+    bool bMissionBriefingVisible = false;
 };

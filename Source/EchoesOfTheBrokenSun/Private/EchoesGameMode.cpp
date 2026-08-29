@@ -18,6 +18,7 @@
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
@@ -119,6 +120,11 @@ void AEchoesGameMode::BeginPlay()
             Cast<AEchoesPlayerController>(GetWorld()->GetFirstPlayerController()))
     {
         Controller->NotifyRuntimeReady();
+        if (!FApp::IsUnattended() &&
+            !FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
+        {
+            Controller->PresentMissionBriefing();
+        }
     }
 
     UE_LOG(

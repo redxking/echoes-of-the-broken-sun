@@ -59,6 +59,53 @@ void AEchoesPlayerController::NotifyRuntimeReady()
         7.0f);
 }
 
+void AEchoesPlayerController::PresentMissionBriefing()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Mission briefing is unavailable."));
+        return;
+    }
+    ClearSelection();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    bMissionBriefingVisible = true;
+    Bridge->SetScenarioPaused(true);
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(TEXT("GLASS SCAR OPERATIONS BRIEF — press Enter to deploy."), 3600.0f);
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_READY] paused=true keyboardStart=true"));
+}
+
+void AEchoesPlayerController::ConfirmMissionBriefing()
+{
+    if (!bMissionBriefingVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Deployment could not begin."));
+        return;
+    }
+    bMissionBriefingVisible = false;
+    Bridge->SetScenarioPaused(false);
+    SetIgnoreMoveInput(false);
+    SetIgnoreLookInput(false);
+    SetStatusMessage(
+        TEXT("DEPLOYED — secure the Future Well or destroy the Kharuun Command Core."),
+        8.0f);
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
+}
+
 void AEchoesPlayerController::NotifyRuntimeFailure(const FString& FailureCode)
 {
     bRuntimeStateKnown = true;
@@ -230,6 +277,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
     BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
+    BindPressed(TEXT("ConfirmMissionBriefing"), &AEchoesPlayerController::ConfirmMissionBriefing);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -244,6 +292,10 @@ void AEchoesPlayerController::SetupInputComponent()
 
 void AEchoesPlayerController::SelectionPressed()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     float MouseX = 0.0f;
     float MouseY = 0.0f;
     if (!GetMousePosition(MouseX, MouseY))
@@ -258,6 +310,11 @@ void AEchoesPlayerController::SelectionPressed()
 
 void AEchoesPlayerController::SelectionReleased()
 {
+    if (bMissionBriefingVisible)
+    {
+        bSelectionButtonDown = false;
+        return;
+    }
     if (!bSelectionButtonDown)
     {
         return;
@@ -397,6 +454,10 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 
 void AEchoesPlayerController::ContextOrderPressed()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     if (SelectedEntityIds.IsEmpty())
     {
@@ -661,6 +722,10 @@ void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
 
 void AEchoesPlayerController::ArmControlGroupAssignment()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     bControlGroupAssignmentArmed = true;
     ControlGroupAssignmentExpiresAt =
         GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() + 5.0 : 5.0;
@@ -671,6 +736,10 @@ void AEchoesPlayerController::ArmControlGroupAssignment()
 
 void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     if (bControlGroupAssignmentArmed)
     {
         bControlGroupAssignmentArmed = false;
@@ -782,6 +851,10 @@ void AEchoesPlayerController::ProduceSoldier()
 
 void AEchoesPlayerController::AttackMoveAtCursor()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -868,6 +941,10 @@ void AEchoesPlayerController::AttackMoveAtCursor()
 
 void AEchoesPlayerController::PatrolAtCursor()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -955,6 +1032,10 @@ void AEchoesPlayerController::PatrolAtCursor()
 
 void AEchoesPlayerController::StopSelectedUnits()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -1003,6 +1084,10 @@ void AEchoesPlayerController::StopSelectedUnits()
 
 void AEchoesPlayerController::HoldSelectedUnits()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -1065,6 +1150,10 @@ void AEchoesPlayerController::HoldSelectedUnits()
 
 void AEchoesPlayerController::GuardAtCursor()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -1145,6 +1234,10 @@ void AEchoesPlayerController::GuardAtCursor()
 
 void AEchoesPlayerController::QuickSaveScenario()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1163,6 +1256,10 @@ void AEchoesPlayerController::QuickSaveScenario()
 
 void AEchoesPlayerController::QuickLoadScenario()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1318,6 +1415,10 @@ void AEchoesPlayerController::IncreaseCameraZoomSpeed()
 void AEchoesPlayerController::BuildAtCursor(
     echoes::sim::EntityType BuildingType)
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -1371,6 +1472,10 @@ void AEchoesPlayerController::BuildAtCursor(
 
 void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     PruneSelection();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -1427,6 +1532,10 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 
 void AEchoesPlayerController::TogglePause()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1451,6 +1560,10 @@ void AEchoesPlayerController::TogglePause()
 
 void AEchoesPlayerController::RestartScenario()
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1472,6 +1585,10 @@ void AEchoesPlayerController::RestartScenario()
 void AEchoesPlayerController::SetFutureWellChoice(
     echoes::sim::FutureWellChoice Choice)
 {
+    if (bMissionBriefingVisible)
+    {
+        return;
+    }
     FutureWellChoice = Choice;
     SetStatusMessage(
         FString::Printf(

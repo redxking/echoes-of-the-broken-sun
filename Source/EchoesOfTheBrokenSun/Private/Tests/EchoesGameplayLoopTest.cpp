@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
@@ -83,6 +84,27 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
               12);
 
     const echoes::sim::Tick PausedTick = Initial->CurrentTick();
+    AEchoesPlayerController* BriefingController =
+        World->SpawnActor<AEchoesPlayerController>();
+    if (TestNotNull(TEXT("Mission briefing controller can be created"), BriefingController))
+    {
+        BriefingController->PresentMissionBriefing();
+        TestTrue(TEXT("Mission briefing is visible before deployment"),
+                 BriefingController->IsMissionBriefingVisible());
+        TestTrue(TEXT("Mission briefing pauses the deterministic scenario"),
+                 Bridge->IsScenarioPaused());
+        Bridge->Tick(0.5f);
+        TestEqual(TEXT("Briefing prevents deterministic simulation advancement"),
+                  Bridge->GetSimulation()->CurrentTick(),
+                  PausedTick);
+        BriefingController->ConfirmMissionBriefing();
+        TestFalse(TEXT("Deployment dismisses the mission briefing"),
+                  BriefingController->IsMissionBriefingVisible());
+        TestFalse(TEXT("Deployment resumes the deterministic scenario"),
+                  Bridge->IsScenarioPaused());
+        BriefingController->Destroy();
+    }
+
     Bridge->SetScenarioPaused(true);
     Bridge->Tick(0.5f);
     TestEqual(TEXT("Pause prevents deterministic simulation advancement"),
