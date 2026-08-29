@@ -66,6 +66,9 @@ class ContentCompilerTests(unittest.TestCase):
         cairnback = next(item for item in first_pack["units"] if item["id"] == "ka_cairnback")
         self.assertEqual(cairnback["mineral_cover"]["duration_ticks"], 300)
         self.assertEqual(cairnback["mineral_cover"]["max_health"], 180)
+        resonant = next(item for item in first_pack["units"] if item["id"] == "ka_resonant")
+        self.assertEqual(resonant["vibration_detection"]["radius_cm"], 2200)
+        self.assertEqual(resonant["vibration_detection"]["contact_resolution_cm"], 200)
         waystone = next(item for item in first_pack["buildings"] if item["id"] == "ka_waystone")
         self.assertEqual(waystone["migration"]["move_speed_cm_s"], 120)
         self.assertEqual(waystone["migration"]["mobile_damage_taken_percent"], 125)
@@ -74,6 +77,9 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual(growth_basin["adaptation"]["molt_damage_taken_percent"], 150)
         self.assertEqual(growth_basin["adaptation"]["carapace_health_percent"], 135)
         self.assertEqual(growth_basin["adaptation"]["striker_damage_percent"], 125)
+        listening_spine = next(item for item in first_pack["buildings"] if item["id"] == "ka_listening_spine")
+        self.assertEqual(listening_spine["vibration_detection"]["radius_cm"], 2600)
+        self.assertEqual(listening_spine["vibration_detection"]["signature_linger_ticks"], 40)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -168,6 +174,21 @@ class ContentCompilerTests(unittest.TestCase):
         self.write("units.json", units)
         self.assert_invalid("reserved for the Kharuun assault screen")
 
+    def test_missing_resonant_vibration_detection_rules_are_rejected(self) -> None:
+        units = self.load("units.json")
+        resonant = next(item for item in units["units"] if item["id"] == "ka_resonant")
+        del resonant["vibration_detection"]
+        self.write("units.json", units)
+        self.assert_invalid("scout/counter-scout requires authored vibration-detection rules")
+
+    def test_unit_vibration_detection_on_other_units_is_rejected(self) -> None:
+        units = self.load("units.json")
+        resonant = next(item for item in units["units"] if item["id"] == "ka_resonant")
+        relay = next(item for item in units["units"] if item["id"] == "mc_relay_skiff")
+        relay["vibration_detection"] = copy.deepcopy(resonant["vibration_detection"])
+        self.write("units.json", units)
+        self.assert_invalid("reserved for the Kharuun scout/counter-scout")
+
     def test_missing_waystone_migration_rules_are_rejected(self) -> None:
         buildings = self.load("buildings.json")
         waystone = next(item for item in buildings["buildings"] if item["id"] == "ka_waystone")
@@ -197,6 +218,21 @@ class ContentCompilerTests(unittest.TestCase):
         foundry["adaptation"] = copy.deepcopy(growth_basin["adaptation"])
         self.write("buildings.json", buildings)
         self.assert_invalid("reserved for the Kharuun production structure")
+
+    def test_missing_listening_spine_vibration_detection_rules_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        spine = next(item for item in buildings["buildings"] if item["id"] == "ka_listening_spine")
+        del spine["vibration_detection"]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("detection structure requires authored vibration-detection rules")
+
+    def test_structure_vibration_detection_on_other_buildings_is_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        spine = next(item for item in buildings["buildings"] if item["id"] == "ka_listening_spine")
+        aegis = next(item for item in buildings["buildings"] if item["id"] == "mc_aegis_post")
+        aegis["vibration_detection"] = copy.deepcopy(spine["vibration_detection"])
+        self.write("buildings.json", buildings)
+        self.assert_invalid("reserved for the Kharuun detection structure")
 
 
 if __name__ == "__main__":

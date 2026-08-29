@@ -44,6 +44,9 @@ struct FEchoesUnitContent final
     int32 MineralCoverDawnCost = 0;
     int32 MineralCoverMaxHealth = 0;
     int32 MineralCoverHalfExtentCentimeters = 0;
+    int32 VibrationDetectionRadiusCentimeters = 0;
+    int32 VibrationSignatureLingerTicks = 0;
+    int32 VibrationContactResolutionCentimeters = 0;
 };
 
 struct FEchoesBuildingContent final
@@ -71,6 +74,9 @@ struct FEchoesBuildingContent final
     int32 AdaptationCarapaceMoveSpeedPercent = 0;
     int32 AdaptationStrikerDamagePercent = 0;
     int32 AdaptationStrikerCooldownPercent = 0;
+    int32 VibrationDetectionRadiusCentimeters = 0;
+    int32 VibrationSignatureLingerTicks = 0;
+    int32 VibrationContactResolutionCentimeters = 0;
 };
 
 struct FEchoesFutureWellContent final

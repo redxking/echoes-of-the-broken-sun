@@ -418,6 +418,28 @@ bool FEchoesContentCatalog::BuildSimulationRules(
                 static_cast<int64>(Unit->MineralCoverHalfExtentCentimeters) *
                 echoes::sim::kFixedScale / 100);
         }
+        if (Binding.Faction == echoes::sim::Faction::KharuunAssemblies &&
+            Binding.Type == echoes::sim::EntityType::ScoutUnit)
+        {
+            if (Unit->VibrationDetectionRadiusCentimeters <= 0 ||
+                Unit->VibrationSignatureLingerTicks <= 0 ||
+                Unit->VibrationContactResolutionCentimeters < 100)
+            {
+                OutError = TEXT("SIM_RULES_RESONANT_DETECTION_INVALID");
+                return false;
+            }
+            OutRules.vibrationDetection.resonantRadiusRaw = static_cast<int32>(
+                static_cast<int64>(Unit->VibrationDetectionRadiusCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.vibrationDetection.signatureLingerTicks =
+                static_cast<echoes::sim::Tick>(
+                    Unit->VibrationSignatureLingerTicks);
+            OutRules.vibrationDetection.contactResolutionRaw =
+                static_cast<int32>(
+                    static_cast<int64>(
+                        Unit->VibrationContactResolutionCentimeters) *
+                    echoes::sim::kFixedScale / 100);
+        }
     }
 
     struct FBuildingBinding final
@@ -525,6 +547,31 @@ bool FEchoesContentCatalog::BuildSimulationRules(
                 Building->AdaptationStrikerDamagePercent;
             OutRules.warformAdaptation.strikerCooldownPercent =
                 Building->AdaptationStrikerCooldownPercent;
+        }
+        if (Binding.Faction == echoes::sim::Faction::KharuunAssemblies &&
+            Binding.Type == echoes::sim::EntityType::UtilityStructure)
+        {
+            const int32 ContactResolutionRaw = static_cast<int32>(
+                static_cast<int64>(
+                    Building->VibrationContactResolutionCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            if (Building->VibrationDetectionRadiusCentimeters <= 0 ||
+                Building->VibrationSignatureLingerTicks <= 0 ||
+                Building->VibrationContactResolutionCentimeters < 100 ||
+                static_cast<echoes::sim::Tick>(
+                    Building->VibrationSignatureLingerTicks) !=
+                    OutRules.vibrationDetection.signatureLingerTicks ||
+                ContactResolutionRaw !=
+                    OutRules.vibrationDetection.contactResolutionRaw)
+            {
+                OutError = TEXT("SIM_RULES_LISTENING_SPINE_DETECTION_INVALID");
+                return false;
+            }
+            OutRules.vibrationDetection.listeningSpineRadiusRaw =
+                static_cast<int32>(
+                    static_cast<int64>(
+                        Building->VibrationDetectionRadiusCentimeters) *
+                    echoes::sim::kFixedScale / 100);
         }
     }
 
@@ -711,6 +758,17 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
                 return false;
             }
         }
+        const TSharedPtr<FJsonObject>* VibrationDetection = nullptr;
+        if (Object->TryGetObjectField(TEXT("vibration_detection"), VibrationDetection) &&
+            VibrationDetection != nullptr && VibrationDetection->IsValid())
+        {
+            if (!ReadRequiredInteger(*VibrationDetection, TEXT("radius_cm"), Unit.VibrationDetectionRadiusCentimeters, Path + TEXT(".vibration_detection"), OutError, 1) ||
+                !ReadRequiredInteger(*VibrationDetection, TEXT("signature_linger_ticks"), Unit.VibrationSignatureLingerTicks, Path + TEXT(".vibration_detection"), OutError, 1) ||
+                !ReadRequiredInteger(*VibrationDetection, TEXT("contact_resolution_cm"), Unit.VibrationContactResolutionCentimeters, Path + TEXT(".vibration_detection"), OutError, 100))
+            {
+                return false;
+            }
+        }
         OutCatalog.Units.Add(MoveTemp(Unit));
     }
 
@@ -777,6 +835,17 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
                 !ReadRequiredInteger(*Adaptation, TEXT("carapace_move_speed_percent"), Building.AdaptationCarapaceMoveSpeedPercent, Path + TEXT(".adaptation"), OutError, 1) ||
                 !ReadRequiredInteger(*Adaptation, TEXT("striker_damage_percent"), Building.AdaptationStrikerDamagePercent, Path + TEXT(".adaptation"), OutError, 101) ||
                 !ReadRequiredInteger(*Adaptation, TEXT("striker_cooldown_percent"), Building.AdaptationStrikerCooldownPercent, Path + TEXT(".adaptation"), OutError, 1))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* VibrationDetection = nullptr;
+        if (Object->TryGetObjectField(TEXT("vibration_detection"), VibrationDetection) &&
+            VibrationDetection != nullptr && VibrationDetection->IsValid())
+        {
+            if (!ReadRequiredInteger(*VibrationDetection, TEXT("radius_cm"), Building.VibrationDetectionRadiusCentimeters, Path + TEXT(".vibration_detection"), OutError, 1) ||
+                !ReadRequiredInteger(*VibrationDetection, TEXT("signature_linger_ticks"), Building.VibrationSignatureLingerTicks, Path + TEXT(".vibration_detection"), OutError, 1) ||
+                !ReadRequiredInteger(*VibrationDetection, TEXT("contact_resolution_cm"), Building.VibrationContactResolutionCentimeters, Path + TEXT(".vibration_detection"), OutError, 100))
             {
                 return false;
             }

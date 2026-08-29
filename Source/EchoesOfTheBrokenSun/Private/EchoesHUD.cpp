@@ -9,6 +9,9 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 
+#include <algorithm>
+#include <optional>
+
 namespace
 {
 FLinearColor MinimapOwnerColor(uint8 Owner, bool bHighContrast)
@@ -284,8 +287,38 @@ void AEchoesHUD::DrawHUD()
         }
     }
 
+    const echoes::sim::Simulation* HudSimulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const bool bHasLocalVibrationDetector =
+        HudSimulation != nullptr &&
+        std::any_of(
+            HudSimulation->Entities().begin(),
+            HudSimulation->Entities().end(),
+            [](const echoes::sim::Entity& Entity)
+            {
+                return Entity.owner ==
+                           UEchoesSimulationSubsystem::LocalPlayerId &&
+                       Entity.faction ==
+                           echoes::sim::Faction::KharuunAssemblies &&
+                       Entity.completed && Entity.hitPoints > 0 &&
+                       !Entity.temporaryMineralCover &&
+                       (Entity.type == echoes::sim::EntityType::ScoutUnit ||
+                        Entity.type ==
+                            echoes::sim::EntityType::UtilityStructure);
+            });
+    const std::optional<echoes::sim::PlayerView> PlayerView =
+        bHasLocalVibrationDetector
+            ? HudSimulation->CreatePlayerView(
+                  UEchoesSimulationSubsystem::LocalPlayerId)
+            : std::nullopt;
     DrawObjectiveTracker(Bridge, Settings);
-    DrawTacticalMinimap(Bridge, EchoesController, Settings);
+    DrawVibrationSignatures(
+        Bridge, Settings, PlayerView.has_value() ? &*PlayerView : nullptr);
+    DrawTacticalMinimap(
+        Bridge,
+        EchoesController,
+        Settings,
+        PlayerView.has_value() ? &*PlayerView : nullptr);
     DrawSelectionRectangle();
     if (EchoesController != nullptr && EchoesController->IsPauseMenuVisible())
     {
@@ -792,7 +825,8 @@ void AEchoesHUD::DrawMissionBriefing(
 void AEchoesHUD::DrawTacticalMinimap(
     const UEchoesSimulationSubsystem* Bridge,
     const AEchoesPlayerController* EchoesController,
-    const UEchoesGameUserSettings* Settings)
+    const UEchoesGameUserSettings* Settings,
+    const echoes::sim::PlayerView* PlayerView)
 {
     if (Canvas == nullptr || Bridge == nullptr || Bridge->GetSimulation() == nullptr)
     {
@@ -917,6 +951,38 @@ void AEchoesHUD::DrawTacticalMinimap(
         }
     }
 
+    int32 VibrationMarkerCount = 0;
+    if (PlayerView != nullptr)
+    {
+        const FLinearColor SignatureColor = bHighContrast
+            ? FLinearColor(1.0f, 0.9f, 0.1f)
+            : FLinearColor(1.0f, 0.48f, 0.12f);
+        for (const echoes::sim::VibrationSignature& Signature :
+             PlayerView->VibrationSignatures())
+        {
+            ++VibrationMarkerCount;
+            const float X = Left +
+                FMath::Clamp(
+                    static_cast<float>(Signature.approximatePosition.x.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale * MapWidth),
+                    0.0f,
+                    1.0f) * Size;
+            const float Y = Top +
+                FMath::Clamp(
+                    static_cast<float>(Signature.approximatePosition.y.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale * MapHeight),
+                    0.0f,
+                    1.0f) * Size;
+            constexpr float Radius = 4.5f;
+            DrawLine(X, Y - Radius, X + Radius, Y, SignatureColor, 1.5f);
+            DrawLine(X + Radius, Y, X, Y + Radius, SignatureColor, 1.5f);
+            DrawLine(X, Y + Radius, X - Radius, Y, SignatureColor, 1.5f);
+            DrawLine(X - Radius, Y, X, Y - Radius, SignatureColor, 1.5f);
+            DrawLine(X - Radius - 2.0f, Y, X + Radius + 2.0f, Y,
+                     SignatureColor, 1.0f);
+        }
+    }
+
     if (const APawn* CameraPawn = GetOwningPawn())
     {
         const echoes::sim::Vec2 CameraPosition =
@@ -956,8 +1022,82 @@ void AEchoesHUD::DrawTacticalMinimap(
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_MINIMAP_READY] fogRespecting=true terrainAware=true nonColorTeams=true visibleMarkers=%d"),
-            VisibleMarkerCount);
+            TEXT("[ECHOES_MINIMAP_READY] fogRespecting=true terrainAware=true nonColorTeams=true visibleMarkers=%d vibrationMarkers=%d"),
+            VisibleMarkerCount,
+            VibrationMarkerCount);
+    }
+}
+
+void AEchoesHUD::DrawVibrationSignatures(
+    const UEchoesSimulationSubsystem* Bridge,
+    const UEchoesGameUserSettings* Settings,
+    const echoes::sim::PlayerView* PlayerView)
+{
+    if (Canvas == nullptr || Bridge == nullptr || PlayerView == nullptr ||
+        PlayerView->VibrationSignatures().empty())
+    {
+        return;
+    }
+    APlayerController* Controller = GetOwningPlayerController();
+    if (Controller == nullptr)
+    {
+        return;
+    }
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const FLinearColor SignatureColor = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(1.0f, 0.48f, 0.12f);
+    int32 Presented = 0;
+    for (const echoes::sim::VibrationSignature& Signature :
+         PlayerView->VibrationSignatures())
+    {
+        FVector WorldPosition = Bridge->SimToWorld(Signature.approximatePosition);
+        WorldPosition.Z = 90.0f;
+        FVector2D ScreenPosition;
+        if (!Controller->ProjectWorldLocationToScreen(
+                WorldPosition, ScreenPosition, true) ||
+            ScreenPosition.X < 16.0f || ScreenPosition.Y < 280.0f ||
+            ScreenPosition.X > Canvas->ClipX - 16.0f ||
+            ScreenPosition.Y > Canvas->ClipY - 90.0f)
+        {
+            continue;
+        }
+        ++Presented;
+        const float Radius = 12.0f * HudScale;
+        DrawLine(ScreenPosition.X, ScreenPosition.Y - Radius,
+                 ScreenPosition.X + Radius, ScreenPosition.Y,
+                 SignatureColor, 2.0f);
+        DrawLine(ScreenPosition.X + Radius, ScreenPosition.Y,
+                 ScreenPosition.X, ScreenPosition.Y + Radius,
+                 SignatureColor, 2.0f);
+        DrawLine(ScreenPosition.X, ScreenPosition.Y + Radius,
+                 ScreenPosition.X - Radius, ScreenPosition.Y,
+                 SignatureColor, 2.0f);
+        DrawLine(ScreenPosition.X - Radius, ScreenPosition.Y,
+                 ScreenPosition.X, ScreenPosition.Y - Radius,
+                 SignatureColor, 2.0f);
+        DrawLine(ScreenPosition.X - Radius * 1.5f, ScreenPosition.Y,
+                 ScreenPosition.X + Radius * 1.5f, ScreenPosition.Y,
+                 SignatureColor, 1.0f);
+        DrawText(
+            TEXT("VIBRATION CONTACT"),
+            SignatureColor,
+            ScreenPosition.X + Radius + 5.0f,
+            ScreenPosition.Y - 8.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.68f * HudScale,
+            false);
+    }
+    if (Presented > 0 && !bLoggedVibrationPresentationReady)
+    {
+        bLoggedVibrationPresentationReady = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_VIBRATION_PRESENTATION_READY] contacts=%d anonymous=true quantized=true nonColor=true"),
+            Presented);
     }
 }
 

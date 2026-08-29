@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("7fd659168e66bebf020e7ffb13f0e0bcbb770f5f67ad5dfa22cd5a471bd84ecd")));
+        FString(TEXT("c5f516ab05fcdcb06716b2d6a6786612ba4cb19267ac7fd3bbd4f206efedd1db")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -113,6 +113,15 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               Rules.mineralCover.maxHitPoints, 180);
     TestEqual(TEXT("Mineral cover footprint enters fixed-point rules"),
               Rules.mineralCover.halfExtentRaw, 768);
+    TestEqual(TEXT("Resonant vibration radius enters fixed-point rules"),
+              Rules.vibrationDetection.resonantRadiusRaw, 22528);
+    TestEqual(TEXT("Listening Spine vibration radius enters fixed-point rules"),
+              Rules.vibrationDetection.listeningSpineRadiusRaw, 26624);
+    TestEqual(TEXT("Vibration signature linger enters simulation rules"),
+              Rules.vibrationDetection.signatureLingerTicks,
+              static_cast<echoes::sim::Tick>(40));
+    TestEqual(TEXT("Vibration contact resolution enters fixed-point rules"),
+              Rules.vibrationDetection.contactResolutionRaw, 2048);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -127,6 +136,10 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Resonant role is authored"), Resonant->Role, FString(TEXT("scout_counter_scout")));
         TestEqual(TEXT("Resonant sight comes from authored data"), Resonant->SightCentimeters, 1550);
+        TestEqual(TEXT("Resonant vibration radius is authored"),
+                  Resonant->VibrationDetectionRadiusCentimeters, 2200);
+        TestEqual(TEXT("Resonant contact resolution is authored"),
+                  Resonant->VibrationContactResolutionCentimeters, 200);
     }
     const FEchoesUnitContent* Relay = Catalog.FindUnit(TEXT("mc_relay_skiff"));
     if (TestNotNull(TEXT("Meridian Relay is addressable by stable ID"), Relay))
@@ -189,6 +202,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Array Foundry is a production structure"), Foundry->Role, FString(TEXT("production")));
         TestEqual(TEXT("Array Foundry footprint is authored"), Foundry->FootprintCells, FIntPoint(4, 4));
+    }
+    const FEchoesBuildingContent* ListeningSpine =
+        Catalog.FindBuilding(TEXT("ka_listening_spine"));
+    if (TestNotNull(TEXT("Kharuun Listening Spine is addressable by stable ID"),
+                    ListeningSpine))
+    {
+        TestEqual(TEXT("Listening Spine vibration radius is authored"),
+                  ListeningSpine->VibrationDetectionRadiusCentimeters, 2600);
+        TestEqual(TEXT("Listening Spine signature linger is authored"),
+                  ListeningSpine->VibrationSignatureLingerTicks, 40);
     }
     const FEchoesBuildingContent* GrowthBasin =
         Catalog.FindBuilding(TEXT("ka_growth_basin"));

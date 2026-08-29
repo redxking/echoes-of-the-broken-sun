@@ -7,6 +7,10 @@
 class AEchoesPlayerController;
 class UEchoesGameUserSettings;
 class UEchoesSimulationSubsystem;
+namespace echoes::sim
+{
+class PlayerView;
+}
 
 /** Code-only tactical HUD for state, controls, feedback, and battlefield overview. */
 UCLASS(NotBlueprintable)
@@ -37,9 +41,15 @@ private:
     void DrawTacticalMinimap(
         const UEchoesSimulationSubsystem* Bridge,
         const AEchoesPlayerController* EchoesController,
-        const UEchoesGameUserSettings* Settings);
+        const UEchoesGameUserSettings* Settings,
+        const echoes::sim::PlayerView* PlayerView);
+    void DrawVibrationSignatures(
+        const UEchoesSimulationSubsystem* Bridge,
+        const UEchoesGameUserSettings* Settings,
+        const echoes::sim::PlayerView* PlayerView);
     void DrawSelectionRectangle();
 
     bool bLoggedTacticalOverviewReady = false;
     bool bLoggedObjectiveTrackerReady = false;
+    bool bLoggedVibrationPresentationReady = false;
 };

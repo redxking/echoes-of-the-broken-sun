@@ -178,7 +178,7 @@ def validate_units(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm", "population_cost", "production_ticks"},
-            {"work_rate", "cargo_capacity", "attack", "deployment", "supply_extension", "mineral_cover"},
+            {"work_rate", "cargo_capacity", "attack", "deployment", "supply_extension", "mineral_cover", "vibration_detection"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -270,6 +270,24 @@ def validate_units(
                 fail(f"{path}.mineral_cover.cooldown_ticks", "must be at least duration_ticks")
         if faction == "kharuun_assemblies" and role == "assault_screen" and mineral_cover is None:
             fail(f"{path}.mineral_cover", "the Kharuun assault screen requires authored mineral-cover rules")
+        vibration_detection: dict[str, int] | None = None
+        if "vibration_detection" in record:
+            raw_detection = require_object(record["vibration_detection"], f"{path}.vibration_detection")
+            require_exact_keys(
+                raw_detection,
+                {"radius_cm", "signature_linger_ticks", "contact_resolution_cm"},
+                set(),
+                f"{path}.vibration_detection",
+            )
+            if faction != "kharuun_assemblies" or role != "scout_counter_scout":
+                fail(f"{path}.vibration_detection", "schema 1 unit vibration detection is reserved for the Kharuun scout/counter-scout")
+            vibration_detection = {
+                "radius_cm": require_int(raw_detection["radius_cm"], f"{path}.vibration_detection.radius_cm", 100, 10_000),
+                "signature_linger_ticks": require_int(raw_detection["signature_linger_ticks"], f"{path}.vibration_detection.signature_linger_ticks", 1, 10_000),
+                "contact_resolution_cm": require_int(raw_detection["contact_resolution_cm"], f"{path}.vibration_detection.contact_resolution_cm", 100, 1600),
+            }
+        if faction == "kharuun_assemblies" and role == "scout_counter_scout" and vibration_detection is None:
+            fail(f"{path}.vibration_detection", "the Kharuun scout/counter-scout requires authored vibration-detection rules")
         output.append(
             {
                 "id": identifier,
@@ -288,6 +306,7 @@ def validate_units(
                 "deployment": deployment,
                 "supply_extension": supply_extension,
                 "mineral_cover": mineral_cover,
+                "vibration_detection": vibration_detection,
             }
         )
     for faction in sorted(playable):
@@ -310,7 +329,7 @@ def validate_buildings(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "sight_cm", "construction_ticks", "logistics_capacity", "footprint_cells"},
-            {"migration", "adaptation"},
+            {"migration", "adaptation", "vibration_detection"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -378,6 +397,24 @@ def validate_buildings(
             }
         if faction == "kharuun_assemblies" and role == "production" and adaptation is None:
             fail(f"{path}.adaptation", "the Kharuun production structure requires authored adaptation rules")
+        vibration_detection: dict[str, int] | None = None
+        if "vibration_detection" in record:
+            raw_detection = require_object(record["vibration_detection"], f"{path}.vibration_detection")
+            require_exact_keys(
+                raw_detection,
+                {"radius_cm", "signature_linger_ticks", "contact_resolution_cm"},
+                set(),
+                f"{path}.vibration_detection",
+            )
+            if faction != "kharuun_assemblies" or role != "detection":
+                fail(f"{path}.vibration_detection", "schema 1 structure vibration detection is reserved for the Kharuun detection structure")
+            vibration_detection = {
+                "radius_cm": require_int(raw_detection["radius_cm"], f"{path}.vibration_detection.radius_cm", 100, 10_000),
+                "signature_linger_ticks": require_int(raw_detection["signature_linger_ticks"], f"{path}.vibration_detection.signature_linger_ticks", 1, 10_000),
+                "contact_resolution_cm": require_int(raw_detection["contact_resolution_cm"], f"{path}.vibration_detection.contact_resolution_cm", 100, 1600),
+            }
+        if faction == "kharuun_assemblies" and role == "detection" and vibration_detection is None:
+            fail(f"{path}.vibration_detection", "the Kharuun detection structure requires authored vibration-detection rules")
         output.append(
             {
                 "id": identifier,
@@ -395,6 +432,7 @@ def validate_buildings(
                 ],
                 "migration": migration,
                 "adaptation": adaptation,
+                "vibration_detection": vibration_detection,
             }
         )
     for faction in sorted(playable):

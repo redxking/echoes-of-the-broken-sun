@@ -71,6 +71,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
+    bLoggedAiVibrationResponse = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -160,7 +161,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -372,6 +373,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
+    bLoggedAiVibrationResponse = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -439,6 +441,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiPlayerView = false;
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
+    bLoggedAiVibrationResponse = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -963,6 +966,19 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                     Command.position.x.FloorToInt(),
                     Command.position.y.FloorToInt());
                 bLoggedAiMineralCover = true;
+            }
+            if (!bLoggedAiVibrationResponse &&
+                Command.type == echoes::sim::CommandType::AttackMove &&
+                !PlayerView->VibrationSignatures().empty())
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_AI_VIBRATION_RESPONSE] personality=adaptive actor=%u tile=(%d,%d) anonymous=true visibilityBounded=true"),
+                    Command.actor,
+                    Command.position.x.FloorToInt(),
+                    Command.position.y.FloorToInt());
+                bLoggedAiVibrationResponse = true;
             }
         }
         else

@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 16;
-inline constexpr std::uint32_t kReplayVersion = 16;
+inline constexpr std::uint32_t kSnapshotVersion = 17;
+inline constexpr std::uint32_t kReplayVersion = 17;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -374,6 +374,17 @@ struct MineralCoverRules final {
                            const MineralCoverRules&) = default;
 };
 
+/** Authored Kharuun Resonant and Listening Spine movement-signature behavior. */
+struct VibrationDetectionRules final {
+    std::int32_t resonantRadiusRaw = 22 * kFixedScale;
+    std::int32_t listeningSpineRadiusRaw = 26 * kFixedScale;
+    Tick signatureLingerTicks = 40;
+    std::int32_t contactResolutionRaw = 2 * kFixedScale;
+
+    friend bool operator==(const VibrationDetectionRules&,
+                           const VibrationDetectionRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -388,6 +399,7 @@ struct SimulationRules final {
     WaystoneMigrationRules waystoneMigration{};
     WarformAdaptationRules warformAdaptation{};
     MineralCoverRules mineralCover{};
+    VibrationDetectionRules vibrationDetection{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -457,6 +469,7 @@ struct Entity final {
     EntityId mineralCoverCreator = 0;
     Tick mineralCoverUntilTick = 0;
     Terrain mineralCoverUnderlyingTerrain = Terrain::Open;
+    Tick vibrationSignatureUntilTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -495,6 +508,14 @@ struct PlayerViewTile final {
     friend bool operator==(const PlayerViewTile&, const PlayerViewTile&) = default;
 };
 
+/** Approximate anonymous contact produced by Kharuun vibration detectors. */
+struct VibrationSignature final {
+    Vec2 approximatePosition{};
+
+    friend bool operator==(const VibrationSignature&,
+                           const VibrationSignature&) = default;
+};
+
 // Materialized, visibility-scoped input for command producers. Construction is
 // restricted to Simulation so AI logic cannot acquire an authoritative-world
 // reference or fabricate information that the player has not observed.
@@ -509,6 +530,9 @@ public:
         return populationCapacity_;
     }
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
+    [[nodiscard]] const std::vector<VibrationSignature>& VibrationSignatures() const {
+        return vibrationSignatures_;
+    }
     [[nodiscard]] Visibility VisibilityAt(Vec2 position) const;
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
@@ -526,6 +550,7 @@ private:
     std::int32_t populationCapacity_ = 0;
     std::vector<PlayerViewTile> tiles_{};
     std::vector<Entity> entities_{};
+    std::vector<VibrationSignature> vibrationSignatures_{};
 };
 
 struct ReplayRecord final {
@@ -686,6 +711,8 @@ private:
     [[nodiscard]] bool IsOperationalDropoff(const Entity& entity) const;
     [[nodiscard]] bool IsWarform(const Entity& entity) const;
     [[nodiscard]] bool IsCairnback(const Entity& entity) const;
+    [[nodiscard]] std::int32_t VibrationDetectionRadiusRaw(
+        const Entity& entity) const;
     [[nodiscard]] EntityId InterceptingMineralCover(
         const Entity& attacker,
         const Entity& target) const;

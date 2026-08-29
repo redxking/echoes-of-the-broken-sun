@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v16 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1636 + 5 * mapTileCount;
+    // Snapshot v17 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1656 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1516, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1536, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1524, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1544, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -2160,6 +2160,116 @@ void TestCairnbackTemporaryMineralCover() {
         }));
 }
 
+void TestVibrationDetectionAndAnonymousSignatures() {
+    SimulationConfig config{64, 64, 20, 0x56494252415445ULL};
+    config.rules.vibrationDetection.signatureLingerTicks = 4;
+    Simulation simulation(config);
+    REQUIRE(simulation.AddPlayer(
+        0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(simulation.AddPlayer(
+        1, Faction::KharuunAssemblies, {0, 0}));
+    const EntityId listeningSpine = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::UtilityStructure,
+        Vec2::FromTiles(20, 20));
+    const EntityId resonant = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        Vec2::FromTiles(20, 22));
+    const EntityId movingLancer = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(38, 20));
+    REQUIRE(listeningSpine != 0 && resonant != 0 && movingLancer != 0);
+    simulation.CaptureReplayBaseline();
+    Command move = MakeCommand(
+        0, 0, 1, CommandType::Move, movingLancer);
+    move.position = Vec2::FromTiles(37, 20);
+    REQUIRE(simulation.QueueCommand(move));
+    simulation.Step();
+
+    const std::optional<PlayerView> detected =
+        simulation.CreatePlayerView(1);
+    REQUIRE(detected.has_value());
+    REQUIRE(std::none_of(
+        detected->Entities().begin(), detected->Entities().end(),
+        [movingLancer](const Entity& entity) {
+            return entity.id == movingLancer;
+        }));
+    REQUIRE(detected->VibrationSignatures().size() == 1);
+    REQUIRE(detected->VibrationSignatures()[0].approximatePosition ==
+            Vec2::FromTiles(37, 21));
+    REQUIRE(simulation.CreatePlayerView(0)->VibrationSignatures().empty());
+
+    const std::vector<Command> commands =
+        Simulation::GenerateAiCommands(*detected, AiPersonality::Adaptive);
+    REQUIRE(std::any_of(
+        commands.begin(), commands.end(),
+        [resonant](const Command& command) {
+            return command.actor == resonant &&
+                   command.type == CommandType::AttackMove &&
+                   command.position == Vec2::FromTiles(37, 21);
+        }));
+
+    std::string error;
+    const std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->Config().rules.vibrationDetection ==
+            simulation.Config().rules.vibrationDetection);
+    REQUIRE(restored->FindEntity(movingLancer)->vibrationSignatureUntilTick ==
+            simulation.FindEntity(movingLancer)->vibrationSignatureUntilTick);
+    REQUIRE(restored->CreatePlayerView(1)->VibrationSignatures() ==
+            detected->VibrationSignatures());
+    const ReplayRecord replay = simulation.ExportReplay();
+    const std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    Command stop = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Stop, movingLancer);
+    REQUIRE(simulation.QueueCommand(stop));
+    simulation.Step(3);
+    REQUIRE(simulation.CurrentTick() == 4);
+    REQUIRE(simulation.CreatePlayerView(1)->VibrationSignatures().empty());
+
+    Simulation visible(config);
+    REQUIRE(visible.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(visible.AddPlayer(1, Faction::KharuunAssemblies, {0, 0}));
+    const EntityId visibleResonant = visible.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        Vec2::FromTiles(20, 20));
+    const EntityId visibleLancer = visible.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(23, 20));
+    REQUIRE(visibleResonant != 0 && visibleLancer != 0);
+    Command visibleMove = MakeCommand(
+        0, 0, 1, CommandType::Move, visibleLancer);
+    visibleMove.position = Vec2::FromTiles(24, 20);
+    REQUIRE(visible.QueueCommand(visibleMove));
+    visible.Step();
+    const std::optional<PlayerView> visibleView = visible.CreatePlayerView(1);
+    REQUIRE(visibleView.has_value());
+    REQUIRE(std::any_of(
+        visibleView->Entities().begin(), visibleView->Entities().end(),
+        [visibleLancer](const Entity& entity) {
+            return entity.id == visibleLancer;
+        }));
+    REQUIRE(visibleView->VibrationSignatures().empty());
+
+    Simulation uncovered(config);
+    REQUIRE(uncovered.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(uncovered.AddPlayer(1, Faction::KharuunAssemblies, {0, 0}));
+    const EntityId uncoveredLancer = uncovered.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(38, 20));
+    REQUIRE(uncoveredLancer != 0);
+    Command uncoveredMove = MakeCommand(
+        0, 0, 1, CommandType::Move, uncoveredLancer);
+    uncoveredMove.position = Vec2::FromTiles(37, 20);
+    REQUIRE(uncovered.QueueCommand(uncoveredMove));
+    uncovered.Step();
+    REQUIRE(uncovered.CreatePlayerView(1)->VibrationSignatures().empty());
+}
+
 }  // namespace
 
 int main() {
@@ -2201,6 +2311,8 @@ int main() {
          TestWarformAdaptationAndMoltCounterplay},
         {"Cairnback temporary mineral cover",
          TestCairnbackTemporaryMineralCover},
+        {"vibration detection and anonymous signatures",
+         TestVibrationDetectionAndAnonymousSignatures},
     };
 
     std::size_t passed = 0;

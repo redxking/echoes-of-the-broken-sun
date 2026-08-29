@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 193;
+constexpr std::size_t kSerializedEntityBytes = 201;
 constexpr std::size_t kSerializedCommandBytes = 37;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -275,6 +275,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const WaystoneMigrationRules& waystone = rules.waystoneMigration;
     const WarformAdaptationRules& adaptation = rules.warformAdaptation;
     const MineralCoverRules& mineralCover = rules.mineralCover;
+    const VibrationDetectionRules& vibration = rules.vibrationDetection;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -335,7 +336,15 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            mineralCover.maxHitPoints > 0 &&
            mineralCover.maxHitPoints <= 1000000 &&
            mineralCover.halfExtentRaw >= kFixedScale / 4 &&
-           mineralCover.halfExtentRaw <= 2 * kFixedScale;
+           mineralCover.halfExtentRaw <= 2 * kFixedScale &&
+           vibration.resonantRadiusRaw > 0 &&
+           vibration.resonantRadiusRaw <= 64 * kFixedScale &&
+           vibration.listeningSpineRadiusRaw > 0 &&
+           vibration.listeningSpineRadiusRaw <= 64 * kFixedScale &&
+           vibration.signatureLingerTicks > 0 &&
+           vibration.signatureLingerTicks <= kMaximumSupportedTick &&
+           vibration.contactResolutionRaw >= kFixedScale &&
+           vibration.contactResolutionRaw <= 16 * kFixedScale;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -1251,6 +1260,22 @@ bool Simulation::IsCairnback(const Entity& entity) const {
            !entity.temporaryMineralCover;
 }
 
+std::int32_t Simulation::VibrationDetectionRadiusRaw(
+    const Entity& entity) const {
+    if (!entity.completed || entity.hitPoints <= 0 ||
+        entity.faction != Faction::KharuunAssemblies ||
+        entity.temporaryMineralCover) {
+        return 0;
+    }
+    if (entity.type == EntityType::ScoutUnit) {
+        return config_.rules.vibrationDetection.resonantRadiusRaw;
+    }
+    if (entity.type == EntityType::UtilityStructure) {
+        return config_.rules.vibrationDetection.listeningSpineRadiusRaw;
+    }
+    return 0;
+}
+
 MineralCoverResult Simulation::ValidateMineralCover(
     PlayerId player,
     EntityId actor,
@@ -1809,7 +1834,12 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     if (!IsPositionPassable(candidate)) {
         return false;
     }
-    entity.position = candidate;
+    if (candidate != entity.position) {
+        entity.position = candidate;
+        entity.vibrationSignatureUntilTick = std::min(
+            kMaximumSupportedTick,
+            currentTick_ + config_.rules.vibrationDetection.signatureLingerTicks);
+    }
     return entity.position == destination;
 }
 
@@ -3277,6 +3307,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.mineralCoverCooldownUntilTick = 0;
                 observed.mineralCoverUntilTick = 0;
                 observed.mineralCoverUnderlyingTerrain = Terrain::Open;
+                observed.vibrationSignatureUntilTick = 0;
                 if (observed.mineralCoverCreator != 0 &&
                     !IsEntityVisibleTo(player,
                                        observed.mineralCoverCreator)) {
@@ -3290,6 +3321,66 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
             view.entities_.push_back(observed);
         }
     }
+    const std::int32_t resolution =
+        config_.rules.vibrationDetection.contactResolutionRaw;
+    for (const Entity& source : entities_) {
+        if (source.owner == kNeutralPlayer || source.owner == player ||
+            source.hitPoints <= 0 || source.movementPerTickRaw <= 0 ||
+            source.vibrationSignatureUntilTick <= currentTick_ ||
+            IsEntityVisibleTo(player, source.id)) {
+            continue;
+        }
+        bool detected = false;
+        for (const Entity& detector : entities_) {
+            if (detector.owner != player) {
+                continue;
+            }
+            const std::int32_t radius =
+                VibrationDetectionRadiusRaw(detector);
+            if (radius <= 0) {
+                continue;
+            }
+            if (DistanceSquaredRaw(detector.position, source.position) <=
+                static_cast<std::uint64_t>(
+                    static_cast<std::int64_t>(radius) * radius)) {
+                detected = true;
+                break;
+            }
+        }
+        if (!detected) {
+            continue;
+        }
+        const auto Quantize = [&](std::int32_t raw, std::int32_t maximumRaw) {
+            const std::int64_t cell = raw / resolution;
+            const std::int64_t centered =
+                cell * resolution + resolution / 2;
+            return static_cast<std::int32_t>(std::clamp<std::int64_t>(
+                centered, 0, maximumRaw - 1));
+        };
+        const Vec2 approximate = Vec2::FromRaw(
+            Quantize(source.position.x.Raw(),
+                     config_.mapWidthTiles * kFixedScale),
+            Quantize(source.position.y.Raw(),
+                     config_.mapHeightTiles * kFixedScale));
+        const auto duplicate = std::find_if(
+            view.vibrationSignatures_.begin(),
+            view.vibrationSignatures_.end(),
+            [&](const VibrationSignature& signature) {
+                return signature.approximatePosition == approximate;
+            });
+        if (duplicate == view.vibrationSignatures_.end()) {
+            view.vibrationSignatures_.push_back({approximate});
+        }
+    }
+    std::sort(
+        view.vibrationSignatures_.begin(),
+        view.vibrationSignatures_.end(),
+        [](const VibrationSignature& lhs, const VibrationSignature& rhs) {
+            return std::tie(lhs.approximatePosition.x,
+                            lhs.approximatePosition.y) <
+                   std::tie(rhs.approximatePosition.x,
+                            rhs.approximatePosition.y);
+        });
     return view;
 }
 
@@ -3774,6 +3865,30 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 commands.push_back(command);
                 continue;
             }
+            const VibrationSignature* nearestSignature = nullptr;
+            std::uint64_t nearestSignatureDistance =
+                std::numeric_limits<std::uint64_t>::max();
+            for (const VibrationSignature& signature :
+                 view.VibrationSignatures()) {
+                const std::uint64_t distance = DistanceSquaredRaw(
+                    actor.position, signature.approximatePosition);
+                if (distance < nearestSignatureDistance ||
+                    (distance == nearestSignatureDistance &&
+                     (nearestSignature == nullptr ||
+                      std::tie(signature.approximatePosition.x,
+                               signature.approximatePosition.y) <
+                          std::tie(nearestSignature->approximatePosition.x,
+                                   nearestSignature->approximatePosition.y)))) {
+                    nearestSignature = &signature;
+                    nearestSignatureDistance = distance;
+                }
+            }
+            if (nearestSignature != nullptr) {
+                command.type = CommandType::AttackMove;
+                command.position = nearestSignature->approximatePosition;
+                commands.push_back(command);
+                continue;
+            }
             if (personality == AiPersonality::Defensive ||
                 personality == AiPersonality::Economic) {
                 const auto base = std::find_if(
@@ -3870,6 +3985,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.mineralCover.dawnCost);
     writer.I32(config_.rules.mineralCover.maxHitPoints);
     writer.I32(config_.rules.mineralCover.halfExtentRaw);
+    writer.I32(config_.rules.vibrationDetection.resonantRadiusRaw);
+    writer.I32(config_.rules.vibrationDetection.listeningSpineRadiusRaw);
+    writer.U64(config_.rules.vibrationDetection.signatureLingerTicks);
+    writer.I32(config_.rules.vibrationDetection.contactResolutionRaw);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -3947,6 +4066,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U64(entity.mineralCoverUntilTick);
         writer.U8(static_cast<std::uint8_t>(
             entity.mineralCoverUnderlyingTerrain));
+        writer.U64(entity.vibrationSignatureUntilTick);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3959,7 +4079,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     BinaryWriter writer{};
     writer.Reserve(
-        1516U + terrain_.size() * (1U + explored_.size()) +
+        1536U + terrain_.size() * (1U + explored_.size()) +
         entities_.size() * kSerializedEntityBytes +
         pendingCommands_.size() * kSerializedCommandBytes);
     WriteSnapshotPayload(writer);
@@ -4076,7 +4196,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.U64(config.rules.mineralCover.cooldownTicks) ||
         !reader.I32(config.rules.mineralCover.dawnCost) ||
         !reader.I32(config.rules.mineralCover.maxHitPoints) ||
-        !reader.I32(config.rules.mineralCover.halfExtentRaw)) {
+        !reader.I32(config.rules.mineralCover.halfExtentRaw) ||
+        !reader.I32(config.rules.vibrationDetection.resonantRadiusRaw) ||
+        !reader.I32(config.rules.vibrationDetection.listeningSpineRadiusRaw) ||
+        !reader.U64(config.rules.vibrationDetection.signatureLingerTicks) ||
+        !reader.I32(config.rules.vibrationDetection.contactResolutionRaw)) {
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
@@ -4238,7 +4362,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U8(temporaryMineralCover) ||
             !reader.U32(entity.mineralCoverCreator) ||
             !reader.U64(entity.mineralCoverUntilTick) ||
-            !reader.U8(mineralCoverUnderlyingTerrain)) {
+            !reader.U8(mineralCoverUnderlyingTerrain) ||
+            !reader.U64(entity.vibrationSignatureUntilTick)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -4345,6 +4470,14 @@ std::optional<Simulation> Simulation::LoadSnapshot(
               entity.moltUntilTick <= simulation.currentTick_ ||
               entity.moltUntilTick > kMaximumSupportedTick)) ||
             entity.mineralCoverCooldownUntilTick > kMaximumSupportedTick ||
+            entity.vibrationSignatureUntilTick > kMaximumSupportedTick ||
+            (entity.vibrationSignatureUntilTick != 0 &&
+             (entity.owner == kNeutralPlayer ||
+              entity.movementPerTickRaw <= 0)) ||
+            (entity.vibrationSignatureUntilTick > simulation.currentTick_ &&
+             entity.vibrationSignatureUntilTick - simulation.currentTick_ >
+                 simulation.config_.rules.vibrationDetection
+                     .signatureLingerTicks) ||
             (entity.mineralCoverCooldownUntilTick != 0 &&
              (faction !=
                   static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||

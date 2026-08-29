@@ -157,6 +157,7 @@ private:
     bool bLoggedAiPlayerView = false;
     bool bLoggedAiAdaptation = false;
     bool bLoggedAiMineralCover = false;
+    bool bLoggedAiVibrationResponse = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
