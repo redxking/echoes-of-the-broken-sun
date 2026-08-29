@@ -1,6 +1,7 @@
 #include "EchoesGameMode.h"
 
 #include "Components/DirectionalLightComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EchoesHUD.h"
@@ -11,6 +12,7 @@
 #include "EchoesWeatherView.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
+#include "Engine/PointLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
@@ -222,10 +224,13 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(
         nullptr,
         TEXT("/Engine/BasicShapes/Cube.Cube"));
+    UStaticMesh* ConeMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Engine/BasicShapes/Cone.Cone"));
     UMaterialInterface* BasicMaterial = LoadObject<UMaterialInterface>(
         nullptr,
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-    if (CubeMesh == nullptr || BasicMaterial == nullptr)
+    if (CubeMesh == nullptr || ConeMesh == nullptr || BasicMaterial == nullptr)
     {
         UE_LOG(
             LogEchoes,
@@ -310,6 +315,198 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         FVector(-4400.0f, -4400.0f, 2.0f),
         FLinearColor(0.02f, 0.24f, 0.31f));
 
+    const auto SpawnScarAccent = [World, BasicMaterial](
+                                     UStaticMesh* MeshAsset,
+                                     const FVector& Location,
+                                     const FRotator& Rotation,
+                                     const FVector& Scale,
+                                     const FLinearColor& Color,
+                                     const FName& DetailTag,
+                                     bool bCastShadow)
+    {
+        FActorSpawnParameters AccentSpawnParameters;
+        AccentSpawnParameters.SpawnCollisionHandlingOverride =
+            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        AStaticMeshActor* Accent = World->SpawnActor<AStaticMeshActor>(
+            Location,
+            Rotation,
+            AccentSpawnParameters);
+        if (Accent == nullptr)
+        {
+            return false;
+        }
+        Accent->Tags.Add(TEXT("EchoesPlaceholder"));
+        Accent->Tags.Add(DetailTag);
+        UStaticMeshComponent* AccentMesh = Accent->GetStaticMeshComponent();
+        AccentMesh->SetMobility(EComponentMobility::Movable);
+        AccentMesh->SetStaticMesh(MeshAsset);
+        AccentMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        AccentMesh->SetGenerateOverlapEvents(false);
+        AccentMesh->SetCastShadow(bCastShadow);
+        AccentMesh->SetReceivesDecals(false);
+        Accent->SetActorScale3D(Scale);
+        UMaterialInstanceDynamic* AccentMaterial =
+            UMaterialInstanceDynamic::Create(BasicMaterial, Accent);
+        if (AccentMaterial == nullptr)
+        {
+            Accent->Destroy();
+            return false;
+        }
+        AccentMaterial->SetVectorParameterValue(
+            EnvironmentColorParameterName,
+            Color);
+        AccentMesh->SetMaterial(0, AccentMaterial);
+        return true;
+    };
+
+    struct FScarBandSpec final
+    {
+        FVector Location;
+        float YawDegrees;
+        FVector Scale;
+        FLinearColor Color;
+    };
+    const FScarBandSpec ScarBands[] = {
+        {FVector(-5450.0f, -90.0f, 1.5f), -7.0f,
+         FVector(18.0f, 1.15f, 0.035f), FLinearColor(0.19f, 0.025f, 0.09f)},
+        {FVector(-3650.0f, 40.0f, 1.6f), 9.0f,
+         FVector(18.5f, 1.35f, 0.038f), FLinearColor(0.24f, 0.055f, 0.035f)},
+        {FVector(-1830.0f, -55.0f, 1.7f), -11.0f,
+         FVector(18.0f, 1.45f, 0.040f), FLinearColor(0.22f, 0.025f, 0.10f)},
+        {FVector(0.0f, 65.0f, 1.8f), 8.0f,
+         FVector(18.5f, 1.55f, 0.042f), FLinearColor(0.27f, 0.07f, 0.025f)},
+        {FVector(1830.0f, -45.0f, 1.7f), -10.0f,
+         FVector(18.0f, 1.40f, 0.040f), FLinearColor(0.22f, 0.025f, 0.10f)},
+        {FVector(3650.0f, 55.0f, 1.6f), 10.0f,
+         FVector(18.5f, 1.30f, 0.038f), FLinearColor(0.24f, 0.055f, 0.035f)},
+        {FVector(5450.0f, -75.0f, 1.5f), -8.0f,
+         FVector(18.0f, 1.10f, 0.035f), FLinearColor(0.19f, 0.025f, 0.09f)},
+    };
+    int32 SpawnedScarBands = 0;
+    for (const FScarBandSpec& Spec : ScarBands)
+    {
+        SpawnedScarBands += SpawnScarAccent(
+                                CubeMesh,
+                                Spec.Location,
+                                FRotator(0.0f, Spec.YawDegrees, 0.0f),
+                                Spec.Scale,
+                                Spec.Color,
+                                TEXT("EchoesScarBand"),
+                                false)
+                                ? 1
+                                : 0;
+    }
+
+    struct FGlassShardSpec final
+    {
+        FVector Location;
+        float YawDegrees;
+        FVector Scale;
+        FLinearColor Color;
+    };
+    const FGlassShardSpec GlassShards[] = {
+        {FVector(-5250.0f, -360.0f, 75.0f), -18.0f,
+         FVector(0.40f, 0.40f, 1.50f), FLinearColor(0.26f, 0.08f, 0.12f)},
+        {FVector(-4700.0f, 330.0f, 52.0f), 21.0f,
+         FVector(0.32f, 0.32f, 1.05f), FLinearColor(0.34f, 0.13f, 0.045f)},
+        {FVector(-3500.0f, -410.0f, 62.0f), 8.0f,
+         FVector(0.36f, 0.36f, 1.25f), FLinearColor(0.29f, 0.055f, 0.13f)},
+        {FVector(-2550.0f, 370.0f, 45.0f), -27.0f,
+         FVector(0.28f, 0.28f, 0.90f), FLinearColor(0.38f, 0.15f, 0.05f)},
+        {FVector(-1400.0f, -390.0f, 70.0f), 14.0f,
+         FVector(0.38f, 0.38f, 1.40f), FLinearColor(0.27f, 0.045f, 0.14f)},
+        {FVector(-520.0f, 420.0f, 48.0f), -11.0f,
+         FVector(0.30f, 0.30f, 0.95f), FLinearColor(0.40f, 0.17f, 0.055f)},
+        {FVector(520.0f, -420.0f, 48.0f), 11.0f,
+         FVector(0.30f, 0.30f, 0.95f), FLinearColor(0.40f, 0.17f, 0.055f)},
+        {FVector(1400.0f, 390.0f, 70.0f), -14.0f,
+         FVector(0.38f, 0.38f, 1.40f), FLinearColor(0.27f, 0.045f, 0.14f)},
+        {FVector(2550.0f, -370.0f, 45.0f), 27.0f,
+         FVector(0.28f, 0.28f, 0.90f), FLinearColor(0.38f, 0.15f, 0.05f)},
+        {FVector(3500.0f, 410.0f, 62.0f), -8.0f,
+         FVector(0.36f, 0.36f, 1.25f), FLinearColor(0.29f, 0.055f, 0.13f)},
+        {FVector(4700.0f, -330.0f, 52.0f), -21.0f,
+         FVector(0.32f, 0.32f, 1.05f), FLinearColor(0.34f, 0.13f, 0.045f)},
+        {FVector(5250.0f, 360.0f, 75.0f), 18.0f,
+         FVector(0.40f, 0.40f, 1.50f), FLinearColor(0.26f, 0.08f, 0.12f)},
+    };
+    int32 SpawnedGlassShards = 0;
+    for (const FGlassShardSpec& Spec : GlassShards)
+    {
+        SpawnedGlassShards += SpawnScarAccent(
+                                  ConeMesh,
+                                  Spec.Location,
+                                  FRotator(0.0f, Spec.YawDegrees, 0.0f),
+                                  Spec.Scale,
+                                  Spec.Color,
+                                  TEXT("EchoesGlassShard"),
+                                  true)
+                                  ? 1
+                                  : 0;
+    }
+    struct FScarGlowSpec final
+    {
+        FVector Location;
+        FLinearColor Color;
+        float Intensity;
+        float AttenuationRadius;
+    };
+    const FScarGlowSpec ScarGlows[] = {
+        {FVector(-4800.0f, -35.0f, 180.0f), FLinearColor(0.72f, 0.06f, 0.22f),
+         2200.0f, 1450.0f},
+        {FVector(-2400.0f, 45.0f, 160.0f), FLinearColor(0.95f, 0.24f, 0.045f),
+         1800.0f, 1350.0f},
+        {FVector(0.0f, 0.0f, 190.0f), FLinearColor(0.76f, 0.08f, 0.30f),
+         2600.0f, 1650.0f},
+        {FVector(2400.0f, -45.0f, 160.0f), FLinearColor(0.95f, 0.24f, 0.045f),
+         1800.0f, 1350.0f},
+        {FVector(4800.0f, 35.0f, 180.0f), FLinearColor(0.72f, 0.06f, 0.22f),
+         2200.0f, 1450.0f},
+    };
+    int32 SpawnedScarGlows = 0;
+    for (const FScarGlowSpec& Spec : ScarGlows)
+    {
+        APointLight* Glow = World->SpawnActor<APointLight>(
+            Spec.Location,
+            FRotator::ZeroRotator,
+            SpawnParameters);
+        if (Glow == nullptr)
+        {
+            continue;
+        }
+        Glow->Tags.Add(TEXT("EchoesPlaceholder"));
+        Glow->Tags.Add(TEXT("EchoesScarGlow"));
+        UPointLightComponent* GlowComponent = Glow->PointLightComponent;
+        if (GlowComponent == nullptr)
+        {
+            Glow->Destroy();
+            continue;
+        }
+        GlowComponent->SetMobility(EComponentMobility::Movable);
+        GlowComponent->SetLightColor(Spec.Color);
+        GlowComponent->SetIntensity(Spec.Intensity);
+        GlowComponent->SetAttenuationRadius(Spec.AttenuationRadius);
+        GlowComponent->SetSourceRadius(110.0f);
+        GlowComponent->SetCastShadows(false);
+        ++SpawnedScarGlows;
+    }
+    if (SpawnedScarBands != UE_ARRAY_COUNT(ScarBands) ||
+        SpawnedGlassShards != UE_ARRAY_COUNT(GlassShards) ||
+        SpawnedScarGlows != UE_ARRAY_COUNT(ScarGlows))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SCAR_COMPOSITION_FAILED] bands=%d/%d shards=%d/%d glows=%d/%d"),
+            SpawnedScarBands,
+            UE_ARRAY_COUNT(ScarBands),
+            SpawnedGlassShards,
+            UE_ARRAY_COUNT(GlassShards),
+            SpawnedScarGlows,
+            UE_ARRAY_COUNT(ScarGlows));
+        return false;
+    }
+
     AEchoesWeatherView* Weather = World->SpawnActor<AEchoesWeatherView>(
         FVector::ZeroVector,
         FRotator::ZeroRotator,
@@ -372,7 +569,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] Engine basic shapes and runtime lighting loaded; all visuals are placeholders."));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v1 bands=7 shards=12 glows=5 collisionAuthority=false shadowCasting=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,
