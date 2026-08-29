@@ -291,13 +291,20 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float PanelWidth = FMath::Min(920.0f, Canvas->ClipX - 60.0f);
-    const float PanelHeight = FMath::Min(590.0f, Canvas->ClipY - 60.0f);
+    const float PanelWidth = FMath::Min(
+        FMath::Max(620.0f, Canvas->ClipX - 60.0f),
+        FMath::Clamp(Canvas->ClipX * 0.62f, 880.0f, 1280.0f));
+    const float PanelHeight = FMath::Min(
+        FMath::Max(500.0f, Canvas->ClipY - 60.0f),
+        FMath::Clamp(Canvas->ClipY * 0.72f, 560.0f, 720.0f));
     const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
     const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
     const float TextLeft = Left + 42.0f;
-    const float WidthScale = FMath::Clamp(PanelWidth / 920.0f, 0.72f, 1.0f);
-    const float TextScale = HudScale * WidthScale;
+    const float ContentScale = FMath::Clamp(
+        FMath::Min(PanelWidth / 920.0f, PanelHeight / 590.0f),
+        0.68f,
+        1.25f);
+    const float TextScale = HudScale * ContentScale;
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
                       : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
@@ -316,42 +323,42 @@ void AEchoesHUD::DrawMissionBriefing(
     DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 3.0f);
     DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight, Accent, 3.0f);
 
-    DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f,
+    DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f * ContentScale,
              SmallFont, 1.55f * TextScale, false);
     DrawText(TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  MERIDIAN COMPACT"),
-             Muted, TextLeft, Top + 72.0f, SmallFont, 0.90f * TextScale, false);
+             Muted, TextLeft, Top + 72.0f * ContentScale, SmallFont, 0.90f * TextScale, false);
 
-    DrawText(TEXT("SITUATION"), Accent, TextLeft, Top + 122.0f,
+    DrawText(TEXT("SITUATION"), Accent, TextLeft, Top + 122.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("A dormant Future Well lies inside the shattered crossing."),
-             Body, TextLeft, Top + 148.0f, SmallFont, 1.0f * TextScale, false);
+             Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(TEXT("Kharuun forces hold the eastern approach. Every protocol changes what survives."),
-             Body, TextLeft, Top + 172.0f, SmallFont, 1.0f * TextScale, false);
+             Body, TextLeft, Top + 172.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
-    DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f,
+    DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("01  Secure and choose a protocol for the central Future Well."),
-             Body, TextLeft, Top + 247.0f, SmallFont, 1.0f * TextScale, false);
+             Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(TEXT("02  Destroy the Kharuun Command Core without losing your own."),
-             Body, TextLeft, Top + 273.0f, SmallFont, 1.0f * TextScale, false);
+             Body, TextLeft, Top + 273.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
 
-    DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f,
+    DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
-             Body, TextLeft, Top + 349.0f, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(TEXT("Select with LMB or drag. Issue context orders with RMB. WASD and screen edge move the camera."),
-             Body, TextLeft, Top + 375.0f, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
-    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f,
+    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("[U] UI scale   [I] high contrast   [O] reduced motion   [/] reduced flashing"),
-             Body, TextLeft, Top + 451.0f, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + 451.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
     DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
              PanelWidth - 84.0f, 42.0f);
     DrawText(TEXT("PRESS ENTER TO DEPLOY"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
-             Left + PanelWidth * 0.5f - 104.0f,
+             Left + PanelWidth * 0.5f - 105.0f * TextScale,
              Top + PanelHeight - 64.0f,
              SmallFont,
              1.05f * TextScale,
