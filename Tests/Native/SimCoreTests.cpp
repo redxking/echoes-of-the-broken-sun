@@ -805,6 +805,44 @@ void TestFogAndNonCheatingAi() {
     REQUIRE(retreat.GenerateAiCommands(
                 1, static_cast<AiPersonality>(255)).empty());
 
+    SimulationConfig openingConfig{64, 64, 20, 0x4f50454e494e4741ULL};
+    openingConfig.rules.vibrationDetection.signatureLingerTicks = 10000;
+    Simulation opening(openingConfig);
+    AddTwoPlayers(opening, {0, 0}, {0, 0});
+    const EntityId openingCore = opening.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(55, 55));
+    const EntityId openingResonant = opening.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        Vec2::FromTiles(50, 55));
+    const EntityId openingMover = opening.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(33, 55));
+    REQUIRE(openingCore != 0 && openingResonant != 0 && openingMover != 0);
+    Command openingMove =
+        MakeCommand(0, 0, 1, CommandType::Move, openingMover);
+    openingMove.position = Vec2::FromTiles(34, 55);
+    REQUIRE(opening.QueueCommand(openingMove));
+    opening.Step();
+    const std::optional<PlayerView> openingView = opening.CreatePlayerView(1);
+    REQUIRE(openingView.has_value());
+    REQUIRE(!openingView->VibrationSignatures().empty());
+    const std::vector<Command> openingCommands =
+        Simulation::GenerateAiCommands(*openingView, AiPersonality::Adaptive);
+    const auto openingDecision = std::find_if(
+        openingCommands.begin(), openingCommands.end(),
+        [openingResonant](const Command& command) {
+            return command.actor == openingResonant;
+        });
+    REQUIRE(openingDecision != openingCommands.end());
+    REQUIRE(openingDecision->type == CommandType::Hold);
+    REQUIRE(std::none_of(
+        openingCommands.begin(), openingCommands.end(),
+        [openingResonant](const Command& command) {
+            return command.actor == openingResonant &&
+                   command.type == CommandType::AttackMove;
+        }));
+
     Simulation exploredSimulation({32, 32, 20, 5});
     REQUIRE(exploredSimulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     const EntityId scout = exploredSimulation.SpawnEntity(

@@ -137,6 +137,11 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            personality <= AiPersonality::Adaptive;
 }
 
+// Standard Adaptive play keeps its combat force in an opening posture for five
+// minutes. It still defends visible threats, builds, gathers, produces, and
+// researches, but does not chase anonymous vibration contacts or roam the map.
+constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
+
 [[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs);
 [[nodiscard]] bool ResourceCovers(const ResourcePool& available,
                                   const ResourcePool& cost);
@@ -4214,9 +4219,26 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     nearestSignatureDistance = distance;
                 }
             }
-            if (nearestSignature != nullptr) {
+            const bool adaptiveOpeningPosture =
+                personality == AiPersonality::Adaptive &&
+                commandCore != nullptr &&
+                currentTick_ < kAdaptiveOpeningPostureTicks;
+            if (nearestSignature != nullptr && !adaptiveOpeningPosture) {
                 command.type = CommandType::AttackMove;
                 command.position = nearestSignature->approximatePosition;
+                commands.push_back(command);
+                continue;
+            }
+            if (adaptiveOpeningPosture) {
+                const std::uint64_t distanceToCore =
+                    DistanceSquaredRaw(actor.position, commandCore->position);
+                const std::uint64_t holdDistance =
+                    static_cast<std::uint64_t>(9 * kFixedScale) *
+                    (9 * kFixedScale);
+                command.type = distanceToCore > holdDistance
+                                   ? CommandType::Move
+                                   : CommandType::Hold;
+                command.position = commandCore->position;
                 commands.push_back(command);
                 continue;
             }

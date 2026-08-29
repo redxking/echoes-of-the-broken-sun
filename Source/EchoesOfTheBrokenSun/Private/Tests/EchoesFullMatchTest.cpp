@@ -250,10 +250,20 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
     for (const echoes::sim::Entity& Entity : Bridge->GetSimulation()->Entities())
     {
         if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-            Entity.type == echoes::sim::EntityType::Soldier)
+            (Entity.type == echoes::sim::EntityType::Soldier ||
+             Entity.type == echoes::sim::EntityType::HeavyUnit ||
+             Entity.type == echoes::sim::EntityType::ScoutUnit))
         {
             StrikeForce.Add(Entity.id);
         }
+    }
+    if (!TestEqual(TEXT("The strike force includes all nine combat units"),
+                   StrikeForce.Num(),
+                   9))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
     }
     const echoes::sim::Vec2 RallyPoint =
         echoes::sim::Vec2::FromTiles(27, 27);
@@ -288,7 +298,7 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         },
         800);
     if (!TestTrue(
-            TEXT("The seven-soldier strike force rallies before entering hostile territory"),
+            TEXT("The mixed nine-unit strike force rallies before entering hostile territory"),
             bStrikeForceRallied))
     {
         for (const echoes::sim::EntityId Soldier : StrikeForce)
