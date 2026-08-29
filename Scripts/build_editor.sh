@@ -18,6 +18,8 @@ if [[ "$max_parallel_actions" != <-> || "$max_parallel_actions" -lt 1 ]]; then
   exit 3
 fi
 
+"$project_root/Scripts/test_content.sh"
+
 "$builder" EchoesOfTheBrokenSunEditor Mac Development "$project" \
   -waitmutex -NoHotReloadFromIDE \
   -MaxParallelActions="$max_parallel_actions"

@@ -41,6 +41,7 @@ if [[ -e "$archive_dir" ]]; then
   exit 3
 fi
 
+"$project_root/Scripts/test_content.sh"
 "$project_root/Scripts/check_environment.sh"
 
 free_kib="$(df -k /System/Volumes/Data 2>/dev/null | awk 'NR==2 {print $4}')"

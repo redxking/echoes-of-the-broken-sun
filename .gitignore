@@ -18,6 +18,9 @@ BuildArtifacts/*
 !BuildArtifacts/.gitkeep
 Build/Mac/FileOpenOrder/
 Build/Mac/*.PackageVersionCounter
+Content/Data/Generated/
+__pycache__/
+*.pyc
 .env
 .env.*
 Config/DefaultEngine.ini.local

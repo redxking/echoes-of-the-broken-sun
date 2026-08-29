@@ -1,11 +1,13 @@
 #include "EchoesSimulationSubsystem.h"
 
+#include "EchoesContentSubsystem.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesTerrainView.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -112,6 +114,27 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Verbose,
             TEXT("[ECHOES_SIM_ALREADY_READY] Prototype simulation start ignored."));
         return true;
+    }
+
+    const UWorld* World = GetWorld();
+    const UGameInstance* GameInstance = World != nullptr
+                                            ? World->GetGameInstance()
+                                            : nullptr;
+    const UEchoesContentSubsystem* Content =
+        GameInstance != nullptr
+            ? GameInstance->GetSubsystem<UEchoesContentSubsystem>()
+            : nullptr;
+    if (Content == nullptr || !Content->IsReady())
+    {
+        const FString Reason = Content != nullptr
+                                   ? Content->GetFailureReason()
+                                   : TEXT("CONTENT_SUBSYSTEM_UNAVAILABLE");
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SIM_CONTENT_REJECTED] reason=%s"),
+            *Reason);
+        return false;
     }
 
     echoes::sim::SimulationConfig Config;
