@@ -73,7 +73,7 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v3 fixed header/player/sequence fields plus terrain and two fog grids.
+    // Snapshot v4 fixed header/player/sequence fields plus terrain and two fog grids.
     return 100 + 3 * mapTileCount;
 }
 
@@ -259,6 +259,52 @@ void TestCombatResolvesDeterministically() {
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints > 0);
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints <
             simulation.FindEntity(kharuun)->maxHitPoints);
+}
+
+void TestAttackMoveAcquiresResumesAndStops() {
+    Simulation simulation({24, 24, 20, 0x41545441434b4d56ULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const EntityId attacker = simulation.SpawnEntity(
+        0,
+        Faction::MeridianCompact,
+        EntityType::Soldier,
+        Vec2::FromTiles(2, 2));
+    const EntityId hiddenDefender = simulation.SpawnEntity(
+        1,
+        Faction::KharuunAssemblies,
+        EntityType::Soldier,
+        Vec2::FromTiles(12, 2));
+    REQUIRE(attacker != 0 && hiddenDefender != 0);
+    REQUIRE(!simulation.IsEntityVisibleTo(0, hiddenDefender));
+
+    Command advance =
+        MakeCommand(0, 0, 1, CommandType::AttackMove, attacker);
+    advance.position = Vec2::FromTiles(18, 2);
+    REQUIRE(simulation.QueueCommand(advance));
+    simulation.Step(320);
+
+    const Entity* advanced = simulation.FindEntity(attacker);
+    REQUIRE(advanced != nullptr);
+    REQUIRE(simulation.FindEntity(hiddenDefender) == nullptr);
+    REQUIRE(advanced->position == Vec2::FromTiles(18, 2));
+    REQUIRE(advanced->order.type == OrderType::None);
+
+    Command secondAdvance = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::AttackMove, attacker);
+    secondAdvance.position = Vec2::FromTiles(18, 18);
+    REQUIRE(simulation.QueueCommand(secondAdvance));
+    simulation.Step(4);
+    const Vec2 stoppedPosition = simulation.FindEntity(attacker)->position;
+    REQUIRE(stoppedPosition != Vec2::FromTiles(18, 18));
+
+    Command stop =
+        MakeCommand(simulation.CurrentTick(), 0, 3, CommandType::Stop, attacker);
+    REQUIRE(simulation.QueueCommand(stop));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(attacker)->order.type == OrderType::None);
+    REQUIRE(simulation.FindEntity(attacker)->position == stoppedPosition);
+    simulation.Step(20);
+    REQUIRE(simulation.FindEntity(attacker)->position == stoppedPosition);
 }
 
 void TestDeterministicObstaclePathing() {
@@ -710,6 +756,8 @@ int main() {
         {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
         {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},
         {"combat", TestCombatResolvesDeterministically},
+        {"attack-move acquisition resume and stop",
+         TestAttackMoveAcquiresResumesAndStops},
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},

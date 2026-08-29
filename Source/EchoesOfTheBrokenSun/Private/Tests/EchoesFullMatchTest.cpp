@@ -293,31 +293,35 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    const echoes::sim::Vec2 EnemyApproach =
+        echoes::sim::Vec2::FromTiles(50, 50);
+    bool bCommandQueueFailed = false;
     for (const echoes::sim::EntityId Soldier : StrikeForce)
     {
-        if (Bridge->FindEntity(Soldier) != nullptr)
+        if (Bridge->FindEntity(Soldier) != nullptr &&
+            !QueueCommand(
+                TEXT("Could not attack-move the strike force"),
+                echoes::sim::CommandType::AttackMove,
+                Soldier,
+                0,
+                EnemyApproach,
+                echoes::sim::FutureWellChoice::Dormant))
         {
-            if (!QueueCommand(
-                    TEXT("Could not dispatch the strike force"),
-                    echoes::sim::CommandType::Move,
-                    Soldier,
-                    0,
-                    echoes::sim::Vec2::FromTiles(50, 50),
-                    echoes::sim::FutureWellChoice::Dormant))
-            {
-                Bridge->StopPrototypeScenario();
-                WorldWrapper.ForwardErrorMessages(this);
-                return false;
-            }
+            bCommandQueueFailed = true;
+            break;
         }
+    }
+    if (!TestFalse(TEXT("Every strike unit accepts the attack-move order"),
+                   bCommandQueueFailed))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
     }
 
     bool bEnemyCoreRevealed = false;
-    bool bCommandQueueFailed = false;
-    const echoes::sim::Vec2 EnemyApproach =
-        echoes::sim::Vec2::FromTiles(50, 50);
     for (int32 BattleTick = 0;
-         BattleTick < 1600 &&
+         BattleTick < 2400 &&
          Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Ongoing;
          ++BattleTick)
     {
@@ -325,87 +329,6 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         bEnemyCoreRevealed |= Current->IsEntityVisibleTo(
             UEchoesSimulationSubsystem::LocalPlayerId,
             EnemyCore);
-
-        echoes::sim::EntityId FocusTarget = 0;
-        if (bEnemyCoreRevealed && Current->FindEntity(EnemyCore) != nullptr &&
-            Current->IsEntityVisibleTo(
-                UEchoesSimulationSubsystem::LocalPlayerId,
-                EnemyCore))
-        {
-            FocusTarget = EnemyCore;
-        }
-        else
-        {
-            std::uint64_t BestDistance =
-                TNumericLimits<std::uint64_t>::Max();
-            for (const echoes::sim::Entity& Candidate : Current->Entities())
-            {
-                if (Candidate.owner !=
-                        UEchoesSimulationSubsystem::OpponentPlayerId ||
-                    !Current->IsEntityVisibleTo(
-                        UEchoesSimulationSubsystem::LocalPlayerId,
-                        Candidate.id))
-                {
-                    continue;
-                }
-                const int64 DeltaX =
-                    static_cast<int64>(Candidate.position.x.Raw()) -
-                    EnemyApproach.x.Raw();
-                const int64 DeltaY =
-                    static_cast<int64>(Candidate.position.y.Raw()) -
-                    EnemyApproach.y.Raw();
-                const std::uint64_t Distance =
-                    static_cast<std::uint64_t>(DeltaX * DeltaX +
-                                               DeltaY * DeltaY);
-                if (Distance < BestDistance ||
-                    (Distance == BestDistance &&
-                     (FocusTarget == 0 || Candidate.id < FocusTarget)))
-                {
-                    FocusTarget = Candidate.id;
-                    BestDistance = Distance;
-                }
-            }
-        }
-
-        for (const echoes::sim::EntityId Soldier : StrikeForce)
-        {
-            const echoes::sim::Entity* Unit = Current->FindEntity(Soldier);
-            if (Unit == nullptr)
-            {
-                continue;
-            }
-            const echoes::sim::CommandType DesiredCommand =
-                FocusTarget != 0 ? echoes::sim::CommandType::Attack
-                                 : echoes::sim::CommandType::Move;
-            const bool bAlreadyFollowingDesiredOrder =
-                (DesiredCommand == echoes::sim::CommandType::Attack &&
-                 Unit->order.type == echoes::sim::OrderType::Attack &&
-                 Unit->order.target == FocusTarget) ||
-                (DesiredCommand == echoes::sim::CommandType::Move &&
-                 Unit->order.type == echoes::sim::OrderType::Move &&
-                 Unit->order.destination == EnemyApproach);
-            if (bAlreadyFollowingDesiredOrder)
-            {
-                continue;
-            }
-            if (!QueueCommand(
-                    FocusTarget != 0
-                        ? TEXT("Could not focus a visible hostile")
-                        : TEXT("Could not continue the strike-force advance"),
-                    DesiredCommand,
-                    Soldier,
-                    FocusTarget,
-                    EnemyApproach,
-                    echoes::sim::FutureWellChoice::Dormant))
-            {
-                bCommandQueueFailed = true;
-                break;
-            }
-        }
-        if (bCommandQueueFailed)
-        {
-            break;
-        }
         TickOnce();
     }
 

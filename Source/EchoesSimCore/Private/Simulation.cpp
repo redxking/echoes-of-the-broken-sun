@@ -85,7 +85,7 @@ void SetError(std::string* destination, const std::string& message) {
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::Produce;
+    return type >= CommandType::Stop && type <= CommandType::AttackMove;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -211,7 +211,7 @@ void WriteCommand(BinaryWriter& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::Produce) ||
+    if (type > static_cast<std::uint8_t>(CommandType::AttackMove) ||
         buildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -918,6 +918,32 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
     return nearest;
 }
 
+EntityId Simulation::FindNearestVisibleEnemy(PlayerId player,
+                                             Vec2 from,
+                                             std::int32_t radiusRaw) const {
+    EntityId nearest = 0;
+    std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+    const std::uint64_t radiusSquared =
+        static_cast<std::uint64_t>(radiusRaw) * radiusRaw;
+    for (const Entity& entity : entities_) {
+        if (entity.owner == kNeutralPlayer || entity.owner == player ||
+            entity.hitPoints <= 0 || !IsEntityVisibleTo(player, entity.id)) {
+            continue;
+        }
+        const std::uint64_t distance = DistanceSquaredRaw(from, entity.position);
+        if (distance > radiusSquared) {
+            continue;
+        }
+        if (distance < nearestDistance ||
+            (distance == nearestDistance &&
+             (nearest == 0 || entity.id < nearest))) {
+            nearest = entity.id;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
 std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     const Entity& producer) const {
     const std::int32_t centerX = producer.position.x.FloorToInt();
@@ -1089,6 +1115,14 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->productionRequired = ProductionTicks(command.buildType);
             return;
         }
+        case CommandType::AttackMove:
+            if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
+                IsPositionPassable(command.position)) {
+                actor->order.type = OrderType::AttackMove;
+                actor->order.target = 0;
+                actor->order.destination = command.position;
+            }
+            return;
     }
 }
 
@@ -1178,6 +1212,48 @@ void Simulation::ProcessAttack(
     if (attacker.attackCooldownTicks == 0) {
         pendingDamage.emplace_back(target->id, attacker.attackDamage);
         attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+    }
+}
+
+void Simulation::ProcessAttackMove(
+    Entity& attacker,
+    std::vector<std::pair<EntityId, std::int32_t>>& pendingDamage) {
+    if (attacker.attackDamage <= 0 || attacker.movementPerTickRaw <= 0) {
+        attacker.order = {};
+        return;
+    }
+
+    Entity* target = attacker.order.target != 0
+                         ? MutableEntity(attacker.order.target)
+                         : nullptr;
+    if (target == nullptr || target->owner == kNeutralPlayer ||
+        target->owner == attacker.owner ||
+        !IsEntityVisibleTo(attacker.owner, target->id)) {
+        attacker.order.target = 0;
+        target = nullptr;
+    }
+    if (target == nullptr) {
+        attacker.order.target = FindNearestVisibleEnemy(
+            attacker.owner,
+            attacker.position,
+            attacker.visionTiles * kFixedScale);
+        target = attacker.order.target != 0
+                     ? MutableEntity(attacker.order.target)
+                     : nullptr;
+    }
+    if (target != nullptr) {
+        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+            (void)MoveTowards(attacker, target->position);
+            return;
+        }
+        if (attacker.attackCooldownTicks == 0) {
+            pendingDamage.emplace_back(target->id, attacker.attackDamage);
+            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+        }
+        return;
+    }
+    if (MoveTowards(attacker, attacker.order.destination)) {
+        attacker.order = {};
     }
 }
 
@@ -1320,6 +1396,9 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::FutureWell:
                 ProcessFutureWell(entity);
                 break;
+            case OrderType::AttackMove:
+                ProcessAttackMove(entity, pendingDamage);
+                break;
         }
     }
     std::sort(pendingDamage.begin(), pendingDamage.end());
@@ -1371,6 +1450,12 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::FutureWell:
                 if (FindEntity(entity.order.target) == nullptr) {
                     entity.order = {};
+                }
+                break;
+            case OrderType::AttackMove:
+                if (entity.order.target != 0 &&
+                    FindEntity(entity.order.target) == nullptr) {
+                    entity.order.target = 0;
                 }
                 break;
             case OrderType::None:
@@ -1973,7 +2058,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             completed > 1 ||
-            orderType > static_cast<std::uint8_t>(OrderType::FutureWell) ||
+            orderType > static_cast<std::uint8_t>(OrderType::AttackMove) ||
             orderBuildType > static_cast<std::uint8_t>(EntityType::FutureWell) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
             wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||

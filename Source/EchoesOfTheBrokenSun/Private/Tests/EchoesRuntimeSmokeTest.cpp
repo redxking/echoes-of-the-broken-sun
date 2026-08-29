@@ -60,6 +60,10 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ProduceWorker"), EKeys::Q));
         TestTrue(TEXT("Soldier production input is mapped"),
                  HasAction(TEXT("ProduceSoldier"), EKeys::E));
+        TestTrue(TEXT("Attack-move input is mapped"),
+                 HasAction(TEXT("AttackMoveAtCursor"), EKeys::F));
+        TestTrue(TEXT("Stop input is mapped"),
+                 HasAction(TEXT("StopSelected"), EKeys::X));
         TestTrue(TEXT("Pause input is mapped"),
                  HasAction(TEXT("PauseScenario"), EKeys::P));
         TestTrue(TEXT("Restart input is mapped"),

@@ -157,6 +157,16 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::ProduceSoldier);
     InputComponent->BindAction(
+        TEXT("AttackMoveAtCursor"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::AttackMoveAtCursor);
+    InputComponent->BindAction(
+        TEXT("StopSelected"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::StopSelectedUnits);
+    InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
@@ -550,6 +560,140 @@ void AEchoesPlayerController::ProduceSoldier()
     ProduceUnit(echoes::sim::EntityType::Soldier);
 }
 
+void AEchoesPlayerController::AttackMoveAtCursor()
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Attack-move is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian combat units first."));
+        return;
+    }
+    FHitResult HitResult;
+    if (!TraceCursor(HitResult))
+    {
+        SetStatusMessage(TEXT("[NO_WORLD_HIT] Point at the attack-move destination."));
+        return;
+    }
+
+    const int32 UnitCount = SelectedEntityIds.Num();
+    const int32 FormationWidth = FMath::Max(
+        1,
+        FMath::CeilToInt(FMath::Sqrt(static_cast<float>(UnitCount))));
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (int32 Index = 0; Index < UnitCount; ++Index)
+    {
+        const int32 Row = Index / FormationWidth;
+        const int32 Column = Index % FormationWidth;
+        FVector UnitDestination = HitResult.Location;
+        UnitDestination.X +=
+            (static_cast<float>(Column) -
+             static_cast<float>(FormationWidth - 1) * 0.5f) *
+            FormationSpacingWorldUnits;
+        UnitDestination.Y +=
+            (static_cast<float>(Row) -
+             static_cast<float>(FormationWidth - 1) * 0.5f) *
+            FormationSpacingWorldUnits;
+        FString Feedback;
+        if (Bridge->IssueCommand(
+                echoes::sim::CommandType::AttackMove,
+                SelectedEntityIds[Index],
+                0,
+                UnitDestination,
+                FutureWellChoice,
+                Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    if (AcceptedCount > 0)
+    {
+        const FString RejectionSuffix =
+            RejectedCount > 0
+                ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
+                : TEXT(".");
+        SetStatusMessage(FString::Printf(
+            TEXT("ATTACK-MOVE: %d queued%s"),
+            AcceptedCount,
+            *RejectionSuffix));
+    }
+    else
+    {
+        SetStatusMessage(
+            LastRejection.IsEmpty()
+                ? TEXT("[ATTACK_MOVE_REJECTED] No selected entity can attack-move.")
+                : LastRejection);
+    }
+}
+
+void AEchoesPlayerController::StopSelectedUnits()
+{
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Stop is unavailable."));
+        return;
+    }
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more Meridian units first."));
+        return;
+    }
+    int32 AcceptedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        FString Feedback;
+        if (Entity != nullptr && Bridge->IssueCommand(
+                echoes::sim::CommandType::Stop,
+                EntityId,
+                0,
+                Bridge->SimToWorld(Entity->position),
+                FutureWellChoice,
+                Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            LastRejection = Feedback;
+        }
+    }
+    SetStatusMessage(
+        AcceptedCount > 0
+            ? FString::Printf(TEXT("STOP: %d unit%s ordered to hold."),
+                              AcceptedCount,
+                              AcceptedCount == 1 ? TEXT("") : TEXT("s"))
+            : LastRejection.IsEmpty()
+                  ? TEXT("[STOP_REJECTED] No selected entity accepted the order.")
+                  : LastRejection);
+}
+
 void AEchoesPlayerController::BuildAtCursor(
     echoes::sim::EntityType BuildingType)
 {
@@ -797,6 +941,8 @@ FString AEchoesPlayerController::CommandLabel(
             return FString::Printf(TEXT("FUTURE WELL: %s"), *GetFutureWellChoiceLabel());
         case echoes::sim::CommandType::Produce:
             return TEXT("PRODUCE");
+        case echoes::sim::CommandType::AttackMove:
+            return TEXT("ATTACK-MOVE");
     }
     return TEXT("ORDER");
 }

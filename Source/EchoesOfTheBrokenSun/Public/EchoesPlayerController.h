@@ -44,6 +44,8 @@ private:
     void BuildDropoff();
     void ProduceWorker();
     void ProduceSoldier();
+    void AttackMoveAtCursor();
+    void StopSelectedUnits();
     void TogglePause();
     void RestartScenario();
 

@@ -125,7 +125,7 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[B] Barracks at pointer    [N] Drop-off at pointer    [Q] Worker    [E] Soldier    [P] Pause    [R] Restart"),
+        TEXT("[F] Attack-move at pointer    [X] Stop    [B] Barracks    [N] Drop-off    [Q] Worker    [E] Soldier"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         131.0f,
@@ -133,7 +133,7 @@ void AEchoesHUD::DrawHUD()
         0.86f,
         false);
     DrawText(
-        TEXT("[1] Harvest    [2] Preserve    [3] Reshape    Cyan: Meridian    Red: Kharuun    Orange: Matter"),
+        TEXT("[1] Harvest    [2] Preserve    [3] Reshape    [P] Pause    [R] Restart    Cyan: Meridian    Red: Kharuun"),
         FLinearColor(0.73f, 0.76f, 0.82f),
         34.0f,
         154.0f,

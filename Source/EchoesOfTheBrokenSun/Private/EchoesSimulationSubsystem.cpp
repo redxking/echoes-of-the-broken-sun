@@ -518,6 +518,18 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 return false;
             }
             return true;
+        case CommandType::AttackMove:
+            if (Actor.movementPerTickRaw <= 0 || Actor.attackDamage <= 0)
+            {
+                OutFeedback = TEXT("[ATTACK_MOVE_REQUIRES_COMBAT_UNIT] Select a mobile combat unit.");
+                return false;
+            }
+            if (!Simulation->IsPositionPassable(Position))
+            {
+                OutFeedback = TEXT("[INVALID_DESTINATION] The attack-move destination is outside or blocked.");
+                return false;
+            }
+            return true;
         case CommandType::Gather:
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::ResourceNode ||

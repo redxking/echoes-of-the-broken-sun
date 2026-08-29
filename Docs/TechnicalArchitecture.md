@@ -515,7 +515,7 @@ No later step weakens an earlier gate. In particular, presentation quality canno
 
 ## Current evidence boundary
 
-As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter generates a placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, construction placement commands, timed one-slot production, logistics capacity, pause/restart, derived Command-Core victory, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded playable-systems prototype, not a vertical slice or completed game. The Project Ledger remains authoritative as test evidence changes.
+As recorded on 2026-08-28, the repository contains a UE 5.8 project, Mac configuration, source JSON, design records, a tested engine-independent simulation, and a runtime Unreal view/controller adapter. The adapter generates a placeholder arena and exposes a camera, visible-entity proxies, selection, context orders, deterministic attack-move and stop, construction placement commands, timed one-slot production, logistics capacity, pause/restart, derived Command-Core victory, a HUD, AI-driven opposition, and Future Well orders. Those artifacts establish a bounded playable-systems prototype, not a vertical slice or completed game. The Project Ledger remains authoritative as test evidence changes.
 
 This architecture does not establish that:
 
