@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v13 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1544 + 5 * mapTileCount;
+    // Snapshot v14 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1568 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1424, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1448, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1432, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1456, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1603,6 +1603,140 @@ void TestRelaySupplyExtensionLifecycle() {
     REQUIRE(severed.PopulationCapacity(0) == 0);
 }
 
+void TestWaystoneMigrationAndRooting() {
+    Simulation simulation({24, 24, 20, 0x57415953544f4e45ULL});
+    AddTwoPlayers(simulation, {0, 0}, {1000, 500});
+    const EntityId memoryHearth = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(3, 3));
+    const EntityId waystone = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Dropoff,
+        Vec2::FromTiles(10, 10));
+    const EntityId attacker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(11, 10));
+    REQUIRE(memoryHearth != 0 && waystone != 0 && attacker != 0);
+    REQUIRE(simulation.FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Rooted);
+    REQUIRE(simulation.PopulationCapacity(1) == 17);
+    REQUIRE(simulation.ValidateWaystoneRoot(1, waystone) ==
+            WaystoneRootResult::Valid);
+    REQUIRE(simulation.ValidateWaystoneRoot(0, attacker) ==
+            WaystoneRootResult::InvalidActor);
+    simulation.CaptureReplayBaseline();
+
+    Command uproot = MakeCommand(
+        0, 1, 1, CommandType::ToggleWaystoneRoot, waystone);
+    REQUIRE(simulation.QueueCommand(uproot));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Uprooting);
+    REQUIRE(simulation.FindEntity(waystone)->waystoneTransitionUntilTick ==
+            simulation.Config().rules.waystoneMigration.uprootTicks);
+    REQUIRE(simulation.PopulationCapacity(1) == 12);
+    REQUIRE(simulation.ValidateWaystoneRoot(1, waystone) ==
+            WaystoneRootResult::TransitionActive);
+
+    Command prematureMove = MakeCommand(
+        simulation.CurrentTick(), 1, 2, CommandType::Move, waystone);
+    prematureMove.position = Vec2::FromTiles(14, 10);
+    REQUIRE(simulation.QueueCommand(prematureMove));
+    const Vec2 rootedPosition = simulation.FindEntity(waystone)->position;
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(waystone)->position == rootedPosition);
+    REQUIRE(simulation.FindEntity(waystone)->order.type == OrderType::None);
+
+    simulation.Step(
+        simulation.Config().rules.waystoneMigration.uprootTicks -
+        simulation.CurrentTick());
+    REQUIRE(simulation.FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Mobile);
+    REQUIRE(simulation.FindEntity(waystone)->waystoneTransitionUntilTick == 0);
+
+    const std::int32_t mobileHealth = simulation.FindEntity(waystone)->hitPoints;
+    Command migrate = MakeCommand(
+        simulation.CurrentTick(), 1, 3, CommandType::Move, waystone);
+    migrate.position = Vec2::FromTiles(14, 10);
+    Command exposeAttack = MakeCommand(
+        simulation.CurrentTick(), 0, 1, CommandType::Attack, attacker);
+    exposeAttack.target = waystone;
+    REQUIRE(simulation.QueueCommand(migrate));
+    REQUIRE(simulation.QueueCommand(exposeAttack));
+    const std::int32_t mobileStartX =
+        simulation.FindEntity(waystone)->position.x.Raw();
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(waystone)->position.x.Raw() - mobileStartX ==
+            simulation.Config().rules.waystoneMigration.movementPerTickRaw);
+    const std::int32_t baseDamage =
+        simulation.Config()
+            .rules.archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
+                             [static_cast<std::size_t>(EntityType::Soldier)]
+            .attackDamage;
+    REQUIRE(simulation.FindEntity(waystone)->hitPoints ==
+            mobileHealth - baseDamage *
+                simulation.Config().rules.waystoneMigration
+                    .mobileDamageTakenPercent /
+                100);
+
+    const Entity* mobileWaystone = simulation.FindEntity(waystone);
+    REQUIRE(simulation.SetTerrainTile(
+        mobileWaystone->position.x.FloorToInt(),
+        mobileWaystone->position.y.FloorToInt(),
+        Terrain::Blocked));
+    REQUIRE(simulation.ValidateWaystoneRoot(1, waystone) ==
+            WaystoneRootResult::RootingBlocked);
+    REQUIRE(simulation.SetTerrainTile(
+        mobileWaystone->position.x.FloorToInt(),
+        mobileWaystone->position.y.FloorToInt(),
+        Terrain::Open));
+
+    Command stopAttack = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Stop, attacker);
+    Command root = MakeCommand(
+        simulation.CurrentTick(), 1, 4, CommandType::ToggleWaystoneRoot,
+        waystone);
+    REQUIRE(simulation.QueueCommand(stopAttack));
+    REQUIRE(simulation.QueueCommand(root));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Rooting);
+    REQUIRE(simulation.PopulationCapacity(1) == 12);
+
+    const std::optional<PlayerView> opponentView = simulation.CreatePlayerView(0);
+    REQUIRE(opponentView.has_value());
+    const auto observedWaystone = std::find_if(
+        opponentView->Entities().begin(), opponentView->Entities().end(),
+        [waystone](const Entity& entity) { return entity.id == waystone; });
+    REQUIRE(observedWaystone != opponentView->Entities().end());
+    REQUIRE(observedWaystone->waystoneMode == WaystoneMode::Rooting);
+    REQUIRE(observedWaystone->waystoneTransitionUntilTick == 0);
+    REQUIRE(observedWaystone->hitPoints == 1);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Rooting);
+    REQUIRE(restored->Config().rules.waystoneMigration ==
+            simulation.Config().rules.waystoneMigration);
+
+    const Tick ticksUntilRooted =
+        simulation.FindEntity(waystone)->waystoneTransitionUntilTick -
+        simulation.CurrentTick();
+    simulation.Step(ticksUntilRooted);
+    REQUIRE(simulation.FindEntity(waystone)->waystoneMode ==
+            WaystoneMode::Rooted);
+    REQUIRE(simulation.FindEntity(waystone)->waystoneTransitionUntilTick == 0);
+    REQUIRE(simulation.FindEntity(waystone)->order.type == OrderType::None);
+    REQUIRE(simulation.PopulationCapacity(1) == 17);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    std::optional<Simulation> replayed = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+}
+
 }  // namespace
 
 int main() {
@@ -1638,6 +1772,8 @@ int main() {
          TestBulwarkDirectionalCoverDeployment},
         {"Relay supply extension lifecycle",
          TestRelaySupplyExtensionLifecycle},
+        {"Waystone migration and rooting",
+         TestWaystoneMigrationAndRooting},
     };
 
     std::size_t passed = 0;

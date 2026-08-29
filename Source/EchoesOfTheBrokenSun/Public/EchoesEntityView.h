@@ -39,6 +39,11 @@ public:
     [[nodiscard]] bool IsOwnerMarkerVisible() const;
     [[nodiscard]] bool IsDeploymentCoverVisible() const;
     [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
+    [[nodiscard]] bool IsWaystoneStateVisible() const;
+    [[nodiscard]] echoes::sim::WaystoneMode GetWaystoneMode() const
+    {
+        return WaystoneMode;
+    }
     [[nodiscard]] bool IsDamagePulseActive() const
     {
         return DamagePulseRemainingSeconds > 0.0f;
@@ -74,6 +79,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> RelaySupplyField;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> WaystoneStateField;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
@@ -111,6 +119,9 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> RelaySupplyFieldMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> WaystoneStateFieldMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -131,4 +142,6 @@ private:
     echoes::sim::Vec2 DeploymentFacing =
         echoes::sim::Vec2::FromRaw(echoes::sim::kFixedScale, 0);
     bool bRelaySupplyActive = false;
+    echoes::sim::WaystoneMode WaystoneMode =
+        echoes::sim::WaystoneMode::NotWaystone;
 };

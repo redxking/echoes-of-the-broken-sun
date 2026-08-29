@@ -286,7 +286,7 @@ def validate_buildings(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "sight_cm", "construction_ticks", "logistics_capacity", "footprint_cells"},
-            set(),
+            {"migration"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -303,6 +303,25 @@ def validate_buildings(
         footprint = require_array(record["footprint_cells"], f"{path}.footprint_cells")
         if len(footprint) != 2:
             fail(f"{path}.footprint_cells", "must contain width and height")
+        migration: dict[str, int] | None = None
+        if "migration" in record:
+            raw_migration = require_object(record["migration"], f"{path}.migration")
+            require_exact_keys(
+                raw_migration,
+                {"move_speed_cm_s", "uproot_ticks", "root_ticks", "mobile_damage_taken_percent"},
+                set(),
+                f"{path}.migration",
+            )
+            if faction != "kharuun_assemblies" or role != "mobile_supply_node":
+                fail(f"{path}.migration", "schema 1 migration is reserved for the Kharuun mobile supply node")
+            migration = {
+                "move_speed_cm_s": require_int(raw_migration["move_speed_cm_s"], f"{path}.migration.move_speed_cm_s", 1, 1000),
+                "uproot_ticks": require_int(raw_migration["uproot_ticks"], f"{path}.migration.uproot_ticks", 1, 100_000),
+                "root_ticks": require_int(raw_migration["root_ticks"], f"{path}.migration.root_ticks", 1, 100_000),
+                "mobile_damage_taken_percent": require_int(raw_migration["mobile_damage_taken_percent"], f"{path}.migration.mobile_damage_taken_percent", 101, 300),
+            }
+        if faction == "kharuun_assemblies" and role == "mobile_supply_node" and migration is None:
+            fail(f"{path}.migration", "the Kharuun mobile supply node requires authored migration rules")
         output.append(
             {
                 "id": identifier,
@@ -318,6 +337,7 @@ def validate_buildings(
                     require_int(footprint[0], f"{path}.footprint_cells[0]", 1, 64),
                     require_int(footprint[1], f"{path}.footprint_cells[1]", 1, 64),
                 ],
+                "migration": migration,
             }
         )
     for faction in sorted(playable):

@@ -115,6 +115,15 @@ AEchoesEntityView::AEchoesEntityView()
     RelaySupplyField->SetReceivesDecals(false);
     RelaySupplyField->SetVisibility(false);
 
+    WaystoneStateField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("WaystoneStateField"));
+    WaystoneStateField->SetupAttachment(SceneRoot);
+    WaystoneStateField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    WaystoneStateField->SetGenerateOverlapEvents(false);
+    WaystoneStateField->SetCastShadow(false);
+    WaystoneStateField->SetReceivesDecals(false);
+    WaystoneStateField->SetVisibility(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -140,6 +149,8 @@ AEchoesEntityView::AEchoesEntityView()
     RelaySupplyField->SetStaticMesh(CylinderMesh);
     RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     RelaySupplyField->SetRelativeScale3D(FVector(1.65f, 1.65f, 0.025f));
+    WaystoneStateField->SetStaticMesh(CylinderMesh);
+    WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -198,7 +209,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   WellChoice != State.wellChoice ||
                                   bDeployed != State.deployed ||
                                   DeploymentFacing != State.deploymentFacing ||
-                                  bRelaySupplyActive != State.relaySupplyActive;
+                                  bRelaySupplyActive != State.relaySupplyActive ||
+                                  WaystoneMode != State.waystoneMode;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -207,6 +219,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     bDeployed = State.deployed;
     DeploymentFacing = State.deploymentFacing;
     bRelaySupplyActive = State.relaySupplyActive;
+    WaystoneMode = State.waystoneMode;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -383,6 +396,29 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             State.faction == echoes::sim::Faction::MeridianCompact &&
             State.type == echoes::sim::EntityType::ScoutUnit,
         true);
+    const bool bIsWaystone =
+        State.faction == echoes::sim::Faction::KharuunAssemblies &&
+        State.type == echoes::sim::EntityType::Dropoff &&
+        State.waystoneMode != echoes::sim::WaystoneMode::NotWaystone;
+    if (bIsWaystone)
+    {
+        switch (State.waystoneMode)
+        {
+            case echoes::sim::WaystoneMode::Rooted:
+                WaystoneStateField->SetRelativeScale3D(FVector(1.65f, 1.65f, 0.035f));
+                break;
+            case echoes::sim::WaystoneMode::Uprooting:
+            case echoes::sim::WaystoneMode::Rooting:
+                WaystoneStateField->SetRelativeScale3D(FVector(1.25f, 1.25f, 0.08f));
+                break;
+            case echoes::sim::WaystoneMode::Mobile:
+                WaystoneStateField->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.10f));
+                break;
+            case echoes::sim::WaystoneMode::NotWaystone:
+                break;
+        }
+    }
+    WaystoneStateField->SetVisibility(bIsWaystone, true);
 
     UStaticMesh* MarkerMesh = nullptr;
     switch (State.owner)
@@ -467,6 +503,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.95f, 0.76f, 0.18f));
             RelaySupplyField->SetMaterial(0, RelaySupplyFieldMaterial);
         }
+        if (WaystoneStateFieldMaterial == nullptr)
+        {
+            WaystoneStateFieldMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            WaystoneStateFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.58f, 0.22f, 0.92f));
+            WaystoneStateField->SetMaterial(0, WaystoneStateFieldMaterial);
+        }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
@@ -484,6 +529,11 @@ bool AEchoesEntityView::IsDeploymentCoverVisible() const
 bool AEchoesEntityView::IsRelaySupplyFieldVisible() const
 {
     return RelaySupplyField != nullptr && RelaySupplyField->IsVisible();
+}
+
+bool AEchoesEntityView::IsWaystoneStateVisible() const
+{
+    return WaystoneStateField != nullptr && WaystoneStateField->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
@@ -577,7 +627,9 @@ FString AEchoesEntityView::GetDisplayName() const
         case echoes::sim::EntityType::CommandCore:
             return TEXT("Command Core");
         case echoes::sim::EntityType::Dropoff:
-            return TEXT("Matter Drop-off");
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Power Link")
+                       : TEXT("Waystone");
         case echoes::sim::EntityType::Barracks:
             return EntityFaction == echoes::sim::Faction::MeridianCompact
                        ? TEXT("Array Foundry")

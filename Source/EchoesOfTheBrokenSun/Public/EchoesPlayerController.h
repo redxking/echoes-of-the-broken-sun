@@ -91,6 +91,7 @@ private:
     void StopSelectedUnits();
     void ToggleBulwarkDeploymentAtCursor();
     void ActivateRelaySupply();
+    void ToggleWaystoneRoot();
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32")));
+        FString(TEXT("13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -80,6 +80,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Relay cooldown enters simulation rules"),
               Rules.relaySupply.cooldownTicks,
               static_cast<echoes::sim::Tick>(800));
+    TestEqual(TEXT("Waystone movement enters fixed-point rules"),
+              Rules.waystoneMigration.movementPerTickRaw, 61);
+    TestEqual(TEXT("Waystone uproot duration enters simulation rules"),
+              Rules.waystoneMigration.uprootTicks,
+              static_cast<echoes::sim::Tick>(40));
+    TestEqual(TEXT("Waystone root duration enters simulation rules"),
+              Rules.waystoneMigration.rootTicks,
+              static_cast<echoes::sim::Tick>(60));
+    TestEqual(TEXT("Waystone exposure enters simulation rules"),
+              Rules.waystoneMigration.mobileDamageTakenPercent, 125);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -124,6 +134,19 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Memory Hearth display name is authored"), Hearth->DisplayName, FString(TEXT("Memory Hearth")));
         TestEqual(TEXT("Memory Hearth health comes from authored data"), Hearth->MaxHealth, 1300);
         TestEqual(TEXT("Memory Hearth logistics come from authored data"), Hearth->LogisticsCapacity, 12);
+    }
+    const FEchoesBuildingContent* Waystone =
+        Catalog.FindBuilding(TEXT("ka_waystone"));
+    if (TestNotNull(TEXT("Kharuun Waystone is addressable by stable ID"), Waystone))
+    {
+        TestEqual(TEXT("Waystone movement is authored"),
+                  Waystone->MigrationMoveSpeedCentimetersPerSecond, 120);
+        TestEqual(TEXT("Waystone uproot timing is authored"),
+                  Waystone->MigrationUprootTicks, 40);
+        TestEqual(TEXT("Waystone root timing is authored"),
+                  Waystone->MigrationRootTicks, 60);
+        TestEqual(TEXT("Waystone mobile vulnerability is authored"),
+                  Waystone->MigrationMobileDamageTakenPercent, 125);
     }
     const FEchoesBuildingContent* Foundry =
         Catalog.FindBuilding(TEXT("mc_array_foundry"));

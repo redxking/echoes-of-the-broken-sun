@@ -158,7 +158,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -277,6 +277,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         // Kharuun Assemblies: deterministic prototype opposition in the northeast.
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::CommandCore, 54, 54);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Barracks, 50, 54);
+        SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Dropoff, 58, 48);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 51, 53);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 54, 50);
         SpawnUnit(OpponentPlayerId, Faction::KharuunAssemblies, EntityType::Worker, 57, 52);
@@ -1111,6 +1112,12 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
         case CommandType::Stop:
             return true;
         case CommandType::Move:
+            if (Actor.waystoneMode != echoes::sim::WaystoneMode::NotWaystone &&
+                Actor.waystoneMode != echoes::sim::WaystoneMode::Mobile)
+            {
+                OutFeedback = TEXT("[WAYSTONE_MUST_BE_MOBILE] Uproot the Waystone before moving it.");
+                return false;
+            }
             if (Actor.movementPerTickRaw <= 0)
             {
                 OutFeedback = TEXT("[IMMOBILE_ACTOR] This entity cannot move.");
@@ -1181,6 +1188,23 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     break;
                 case echoes::sim::RelaySupplyResult::Disconnected:
                     OutFeedback = TEXT("[RELAY_DISCONNECTED] Move within range of an Anchor or Power Link.");
+                    break;
+            }
+            return false;
+        case CommandType::ToggleWaystoneRoot:
+            switch (Simulation->ValidateWaystoneRoot(LocalPlayerId, Actor.id))
+            {
+                case echoes::sim::WaystoneRootResult::Valid:
+                    return true;
+                case echoes::sim::WaystoneRootResult::InvalidPlayer:
+                case echoes::sim::WaystoneRootResult::InvalidActor:
+                    OutFeedback = TEXT("[WAYSTONE_REQUIRED] Select a Kharuun Waystone.");
+                    break;
+                case echoes::sim::WaystoneRootResult::TransitionActive:
+                    OutFeedback = TEXT("[WAYSTONE_TRANSITION_ACTIVE] The Waystone is already changing state.");
+                    break;
+                case echoes::sim::WaystoneRootResult::RootingBlocked:
+                    OutFeedback = TEXT("[WAYSTONE_ROOTING_BLOCKED] Move to a clear, passable footprint.");
                     break;
             }
             return false;

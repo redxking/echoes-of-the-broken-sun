@@ -53,6 +53,10 @@ struct FEchoesBuildingContent final
     int32 ConstructionTicks = 0;
     int32 LogisticsCapacity = 0;
     FIntPoint FootprintCells = FIntPoint::ZeroValue;
+    int32 MigrationMoveSpeedCentimetersPerSecond = 0;
+    int32 MigrationUprootTicks = 0;
+    int32 MigrationRootTicks = 0;
+    int32 MigrationMobileDamageTakenPercent = 0;
 };
 
 struct FEchoesFutureWellContent final

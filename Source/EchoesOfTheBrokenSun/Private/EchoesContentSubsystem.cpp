@@ -434,12 +434,38 @@ bool FEchoesContentCatalog::BuildSimulationRules(
                                [static_cast<std::size_t>(Binding.Type)];
         Rules.cost = {Building->MatterCost, Building->DawnCost};
         Rules.maxHitPoints = Building->MaxHealth;
+        Rules.movementPerTickRaw = Building->MigrationMoveSpeedCentimetersPerSecond > 0
+            ? static_cast<int32>(
+                  static_cast<int64>(Building->MigrationMoveSpeedCentimetersPerSecond) *
+                  echoes::sim::kFixedScale /
+                  (static_cast<int64>(TicksPerSecond) * 100))
+            : 0;
         Rules.visionTiles = FMath::DivideAndRoundUp(Building->SightCentimeters, 100);
         Rules.constructionRequired = Building->ConstructionTicks;
         Rules.populationCapacity = Building->LogisticsCapacity;
         Rules.footprintHalfExtentRaw =
             FMath::Max(Building->FootprintCells.X, Building->FootprintCells.Y) *
             echoes::sim::kFixedScale / 2;
+        if (Binding.Faction == echoes::sim::Faction::KharuunAssemblies &&
+            Binding.Type == echoes::sim::EntityType::Dropoff)
+        {
+            if (Building->MigrationMoveSpeedCentimetersPerSecond <= 0 ||
+                Building->MigrationUprootTicks <= 0 ||
+                Building->MigrationRootTicks <= 0 ||
+                Building->MigrationMobileDamageTakenPercent <= 100)
+            {
+                OutError = TEXT("SIM_RULES_WAYSTONE_MIGRATION_INVALID");
+                return false;
+            }
+            OutRules.waystoneMigration.movementPerTickRaw =
+                Rules.movementPerTickRaw;
+            OutRules.waystoneMigration.uprootTicks =
+                static_cast<echoes::sim::Tick>(Building->MigrationUprootTicks);
+            OutRules.waystoneMigration.rootTicks =
+                static_cast<echoes::sim::Tick>(Building->MigrationRootTicks);
+            OutRules.waystoneMigration.mobileDamageTakenPercent =
+                Building->MigrationMobileDamageTakenPercent;
+        }
     }
 
     OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
@@ -652,6 +678,18 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         {
             OutError = FString::Printf(TEXT("CONTENT_FIELD_INVALID:%s.footprint_cells"), *Path);
             return false;
+        }
+        const TSharedPtr<FJsonObject>* Migration = nullptr;
+        if (Object->TryGetObjectField(TEXT("migration"), Migration) &&
+            Migration != nullptr && Migration->IsValid())
+        {
+            if (!ReadRequiredInteger(*Migration, TEXT("move_speed_cm_s"), Building.MigrationMoveSpeedCentimetersPerSecond, Path + TEXT(".migration"), OutError, 1) ||
+                !ReadRequiredInteger(*Migration, TEXT("uproot_ticks"), Building.MigrationUprootTicks, Path + TEXT(".migration"), OutError, 1) ||
+                !ReadRequiredInteger(*Migration, TEXT("root_ticks"), Building.MigrationRootTicks, Path + TEXT(".migration"), OutError, 1) ||
+                !ReadRequiredInteger(*Migration, TEXT("mobile_damage_taken_percent"), Building.MigrationMobileDamageTakenPercent, Path + TEXT(".migration"), OutError, 101))
+            {
+                return false;
+            }
         }
         OutCatalog.Buildings.Add(MoveTemp(Building));
     }

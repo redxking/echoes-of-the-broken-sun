@@ -238,7 +238,7 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
                   static_cast<echoes::sim::Tick>(0));
         TestEqual(TEXT("Restart restores initial entity count"),
                   static_cast<int32>(Restarted->Entities().size()),
-                  31);
+                  32);
         TestTrue(TEXT("Restart restores an ongoing match"),
                  Restarted->Outcome() == echoes::sim::MatchOutcome::Ongoing);
         const echoes::sim::PlayerState* Player = Restarted->FindPlayer(

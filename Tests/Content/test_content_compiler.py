@@ -63,6 +63,9 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual(bulwark["deployment"]["damage_reduction_percent"], 40)
         relay = next(item for item in first_pack["units"] if item["id"] == "mc_relay_skiff")
         self.assertEqual(relay["supply_extension"]["capacity_bonus"], 4)
+        waystone = next(item for item in first_pack["buildings"] if item["id"] == "ka_waystone")
+        self.assertEqual(waystone["migration"]["move_speed_cm_s"], 120)
+        self.assertEqual(waystone["migration"]["mobile_damage_taken_percent"], 125)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -141,6 +144,21 @@ class ContentCompilerTests(unittest.TestCase):
         resonant["supply_extension"] = copy.deepcopy(relay["supply_extension"])
         self.write("units.json", units)
         self.assert_invalid("reserved for the Meridian scout support")
+
+    def test_missing_waystone_migration_rules_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        waystone = next(item for item in buildings["buildings"] if item["id"] == "ka_waystone")
+        del waystone["migration"]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("requires authored migration rules")
+
+    def test_migration_rules_on_other_buildings_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        waystone = next(item for item in buildings["buildings"] if item["id"] == "ka_waystone")
+        power_link = next(item for item in buildings["buildings"] if item["id"] == "mc_power_link")
+        power_link["migration"] = copy.deepcopy(waystone["migration"])
+        self.write("buildings.json", buildings)
+        self.assert_invalid("reserved for the Kharuun mobile supply node")
 
 
 if __name__ == "__main__":

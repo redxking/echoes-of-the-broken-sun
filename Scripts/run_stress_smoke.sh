@@ -33,14 +33,14 @@ for marker in ECHOES_CONTENT_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_
 done
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32 source=canonical' \
+  '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b source=canonical' \
   "$log"; then
   print -u2 "Stress runtime did not load the reviewed canonical content digest. Inspect: $log"
   exit 4
 fi
 
 if ! /usr/bin/grep -q \
-  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored' \
+  '\[ECHOES_SIM_RULES_READY\] version=1 sha256=13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored' \
   "$log"; then
   print -u2 "Stress runtime did not install the authored deterministic rules. Inspect: $log"
   exit 4

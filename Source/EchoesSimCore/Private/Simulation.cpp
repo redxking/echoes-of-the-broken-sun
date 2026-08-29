@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 148;
+constexpr std::size_t kSerializedEntityBytes = 157;
 constexpr std::size_t kSerializedCommandBytes = 36;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -111,7 +111,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::ActivateRelaySupply;
+    return type >= CommandType::Stop && type <= CommandType::ToggleWaystoneRoot;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -265,6 +265,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const FutureWellRules& well = rules.futureWell;
     const BulwarkDeploymentRules& bulwark = rules.bulwarkDeployment;
     const RelaySupplyRules& relay = rules.relaySupply;
+    const WaystoneMigrationRules& waystone = rules.waystoneMigration;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -289,7 +290,18 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            relay.capacityBonus > 0 && relay.capacityBonus <= 1000 &&
            relay.durationTicks > 0 &&
            relay.durationTicks <= relay.cooldownTicks &&
-           relay.cooldownTicks <= kMaximumSupportedTick;
+           relay.cooldownTicks <= kMaximumSupportedTick &&
+           waystone.movementPerTickRaw > 0 &&
+           waystone.movementPerTickRaw <= kFixedScale &&
+           rules.archetypes[static_cast<std::size_t>(Faction::KharuunAssemblies)]
+                           [static_cast<std::size_t>(EntityType::Dropoff)]
+                   .movementPerTickRaw == waystone.movementPerTickRaw &&
+           waystone.uprootTicks > 0 &&
+           waystone.uprootTicks <= kMaximumSupportedTick &&
+           waystone.rootTicks > 0 &&
+           waystone.rootTicks <= kMaximumSupportedTick &&
+           waystone.mobileDamageTakenPercent > 100 &&
+           waystone.mobileDamageTakenPercent <= 300;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -432,7 +444,10 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
     for (const Entity& entity : view.Entities()) {
         if (entity.owner != view.Player().id || !entity.completed ||
-            !IsDropoffType(entity.type)) {
+            !IsDropoffType(entity.type) ||
+            (entity.faction == Faction::KharuunAssemblies &&
+             entity.type == EntityType::Dropoff &&
+             entity.waystoneMode != WaystoneMode::Rooted)) {
             continue;
         }
         const std::uint64_t distance =
@@ -597,7 +612,7 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::ActivateRelaySupply) ||
+    if (type > static_cast<std::uint8_t>(CommandType::ToggleWaystoneRoot) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -661,7 +676,7 @@ SimulationRules DefaultSimulationRules() {
         {{380, 60}, 850, 0, 8, 0, 0, 0, 0, 0, 400, 0, 12, 0,
          kFixedScale});
     set(Faction::KharuunAssemblies, EntityType::Dropoff,
-        {{95, 0}, 420, 0, 5, 0, 0, 0, 0, 0, 100, 0, 5, 0,
+        {{95, 0}, 420, Fixed::FromRatio(3, 50).Raw(), 5, 0, 0, 0, 0, 0, 100, 0, 5, 0,
          3 * kFixedScale / 4});
     set(Faction::KharuunAssemblies, EntityType::Barracks,
         {{150, 30}, 540, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
@@ -785,6 +800,10 @@ Entity Simulation::MakeEntity(PlayerId owner,
         entity.cargoCapacity = archetype.cargoCapacity;
         entity.constructionRequired = archetype.constructionRequired;
         entity.hitPoints = entity.maxHitPoints;
+        if (faction == Faction::KharuunAssemblies &&
+            type == EntityType::Dropoff) {
+            entity.waystoneMode = WaystoneMode::Rooted;
+        }
         return entity;
     }
     switch (type) {
@@ -999,7 +1018,8 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
             continue;
         }
         if (entity.type == EntityType::CommandCore ||
-            entity.type == EntityType::Dropoff) {
+            (entity.type == EntityType::Dropoff &&
+             IsOperationalDropoff(entity))) {
             capacity = SaturatingAdd(
                 capacity,
                 ArchetypeFor(config_.rules, entity.faction, entity.type)
@@ -1015,6 +1035,82 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
         }
     }
     return capacity;
+}
+
+bool Simulation::IsOperationalDropoff(const Entity& entity) const {
+    return entity.type == EntityType::CommandCore ||
+           (entity.type == EntityType::Dropoff &&
+            (entity.faction != Faction::KharuunAssemblies ||
+             entity.waystoneMode == WaystoneMode::Rooted));
+}
+
+bool Simulation::CanRootWaystone(const Entity& waystone) const {
+    if (waystone.faction != Faction::KharuunAssemblies ||
+        waystone.type != EntityType::Dropoff || !waystone.completed ||
+        waystone.hitPoints <= 0) {
+        return false;
+    }
+    const std::int32_t halfExtent =
+        FootprintHalfExtentRaw(waystone.faction, waystone.type);
+    if (!IsInsideMap(waystone.position, halfExtent)) {
+        return false;
+    }
+    const std::int32_t minimumTileX =
+        (waystone.position.x.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maximumTileX =
+        (waystone.position.x.Raw() + halfExtent) / kFixedScale;
+    const std::int32_t minimumTileY =
+        (waystone.position.y.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maximumTileY =
+        (waystone.position.y.Raw() + halfExtent) / kFixedScale;
+    for (std::int32_t tileY = minimumTileY; tileY <= maximumTileY; ++tileY) {
+        for (std::int32_t tileX = minimumTileX; tileX <= maximumTileX; ++tileX) {
+            if (TerrainAt(tileX, tileY) == Terrain::Blocked &&
+                !IsReshapedOpen(tileX, tileY)) {
+                return false;
+            }
+        }
+    }
+    for (const Entity& candidate : entities_) {
+        if (candidate.id == waystone.id || candidate.hitPoints <= 0 ||
+            !IsBuilding(candidate.type)) {
+            continue;
+        }
+        const std::int32_t combinedExtent =
+            halfExtent + FootprintHalfExtentRaw(candidate.faction, candidate.type);
+        if (Abs64(static_cast<std::int64_t>(waystone.position.x.Raw()) -
+                  candidate.position.x.Raw()) < combinedExtent &&
+            Abs64(static_cast<std::int64_t>(waystone.position.y.Raw()) -
+                  candidate.position.y.Raw()) < combinedExtent) {
+            return false;
+        }
+    }
+    return true;
+}
+
+WaystoneRootResult Simulation::ValidateWaystoneRoot(
+    PlayerId player,
+    EntityId actor) const {
+    if (FindPlayer(player) == nullptr) {
+        return WaystoneRootResult::InvalidPlayer;
+    }
+    const Entity* waystone = FindEntity(actor);
+    if (waystone == nullptr || waystone->owner != player ||
+        !waystone->completed || waystone->hitPoints <= 0 ||
+        waystone->faction != Faction::KharuunAssemblies ||
+        waystone->type != EntityType::Dropoff ||
+        waystone->waystoneMode == WaystoneMode::NotWaystone) {
+        return WaystoneRootResult::InvalidActor;
+    }
+    if (waystone->waystoneMode == WaystoneMode::Uprooting ||
+        waystone->waystoneMode == WaystoneMode::Rooting) {
+        return WaystoneRootResult::TransitionActive;
+    }
+    if (waystone->waystoneMode == WaystoneMode::Mobile &&
+        !CanRootWaystone(*waystone)) {
+        return WaystoneRootResult::RootingBlocked;
+    }
+    return WaystoneRootResult::Valid;
 }
 
 bool Simulation::IsRelayConnected(const Entity& relay) const {
@@ -1521,7 +1617,8 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
     EntityId nearest = 0;
     std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
     for (const Entity& entity : entities_) {
-        if (entity.owner != player || !entity.completed || !IsDropoff(entity.type)) {
+        if (entity.owner != player || !entity.completed ||
+            !IsOperationalDropoff(entity)) {
             continue;
         }
         const std::uint64_t distance = DistanceSquaredRaw(from, entity.position);
@@ -1701,7 +1798,9 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->order = {};
             return;
         case CommandType::Move:
-            if (actor->movementPerTickRaw > 0 && IsInsideMap(command.position)) {
+            if (actor->movementPerTickRaw > 0 && IsInsideMap(command.position) &&
+                (actor->waystoneMode == WaystoneMode::NotWaystone ||
+                 actor->waystoneMode == WaystoneMode::Mobile)) {
                 actor->order.type = OrderType::Move;
                 actor->order.target = 0;
                 actor->order.destination = command.position;
@@ -1723,7 +1822,7 @@ void Simulation::ApplyCommand(const Command& command) {
             const Entity* target = FindEntity(command.target);
             if (actor->type == EntityType::Worker && target != nullptr &&
                 target->owner == command.player && target->completed &&
-                IsDropoff(target->type)) {
+                IsOperationalDropoff(*target)) {
                 actor->order.type = OrderType::Deliver;
                 actor->order.target = target->id;
                 actor->order.destination = target->position;
@@ -1884,6 +1983,24 @@ void Simulation::ApplyCommand(const Command& command) {
                 kMaximumSupportedTick,
                 currentTick_ + config_.rules.relaySupply.cooldownTicks);
             return;
+        case CommandType::ToggleWaystoneRoot:
+            if (ValidateWaystoneRoot(command.player, actor->id) !=
+                WaystoneRootResult::Valid) {
+                return;
+            }
+            actor->order = {};
+            if (actor->waystoneMode == WaystoneMode::Rooted) {
+                actor->waystoneMode = WaystoneMode::Uprooting;
+                actor->waystoneTransitionUntilTick = std::min(
+                    kMaximumSupportedTick,
+                    currentTick_ + config_.rules.waystoneMigration.uprootTicks);
+            } else {
+                actor->waystoneMode = WaystoneMode::Rooting;
+                actor->waystoneTransitionUntilTick = std::min(
+                    kMaximumSupportedTick,
+                    currentTick_ + config_.rules.waystoneMigration.rootTicks);
+            }
+            return;
     }
 }
 
@@ -1913,7 +2030,7 @@ void Simulation::ProcessGather(Entity& worker) {
 void Simulation::ProcessDeliver(Entity& worker) {
     Entity* dropoff = MutableEntity(worker.order.target);
     if (dropoff == nullptr || dropoff->owner != worker.owner || !dropoff->completed ||
-        !IsDropoff(dropoff->type)) {
+        !IsOperationalDropoff(*dropoff)) {
         worker.order = {};
         return;
     }
@@ -2314,12 +2431,25 @@ void Simulation::ProcessEntityOrders() {
         while (index < pendingDamage.size() &&
                pendingDamage[index].target == targetId) {
             const Entity* attacker = FindEntity(pendingDamage[index].source);
-            totalDamage += attacker != nullptr && target != nullptr
-                               ? DamageAfterDirectionalCover(
-                                     *attacker,
-                                     *target,
-                                     pendingDamage[index].damage)
-                               : pendingDamage[index].damage;
+            std::int32_t resolvedDamage =
+                attacker != nullptr && target != nullptr
+                    ? DamageAfterDirectionalCover(
+                          *attacker,
+                          *target,
+                          pendingDamage[index].damage)
+                    : pendingDamage[index].damage;
+            if (target != nullptr &&
+                target->faction == Faction::KharuunAssemblies &&
+                target->type == EntityType::Dropoff &&
+                target->waystoneMode != WaystoneMode::Rooted) {
+                resolvedDamage = std::max(
+                    1,
+                    static_cast<std::int32_t>(
+                        static_cast<std::int64_t>(resolvedDamage) *
+                        config_.rules.waystoneMigration.mobileDamageTakenPercent /
+                        100));
+            }
+            totalDamage += resolvedDamage;
             ++index;
         }
         if (Entity* mutableTarget = MutableEntity(targetId);
@@ -2487,11 +2617,32 @@ void Simulation::ResolveExpiredRelaySupply() {
     }
 }
 
+void Simulation::ResolveWaystoneTransitions() {
+    for (Entity& entity : entities_) {
+        if (entity.waystoneMode == WaystoneMode::Uprooting &&
+            currentTick_ >= entity.waystoneTransitionUntilTick) {
+            entity.waystoneMode = WaystoneMode::Mobile;
+            entity.waystoneTransitionUntilTick = 0;
+        } else if (entity.waystoneMode == WaystoneMode::Rooting &&
+                   currentTick_ >= entity.waystoneTransitionUntilTick) {
+            if (CanRootWaystone(entity)) {
+                entity.waystoneMode = WaystoneMode::Rooted;
+                entity.waystoneTransitionUntilTick = 0;
+                entity.order = {};
+            } else {
+                entity.waystoneMode = WaystoneMode::Mobile;
+                entity.waystoneTransitionUntilTick = 0;
+            }
+        }
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
     }
     ResolveExpiredRelaySupply();
+    ResolveWaystoneTransitions();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -2501,6 +2652,7 @@ void Simulation::Step() {
     ClearInvalidOrders();
     ++currentTick_;
     ResolveExpiredRelaySupply();
+    ResolveWaystoneTransitions();
     ResolveExpiredReshapes();
     UpdateVisibility();
 }
@@ -2689,6 +2841,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.productionRequired = 0;
                 observed.relaySupplyUntilTick = 0;
                 observed.relaySupplyCooldownUntilTick = 0;
+                observed.waystoneTransitionUntilTick = 0;
             }
             view.entities_.push_back(observed);
         }
@@ -2792,7 +2945,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
             expansionHeadroom = 6;
             break;
         case AiPersonality::Adaptive:
-            expansionHeadroom = 3;
+            expansionHeadroom = 6;
             break;
         case AiPersonality::Balanced:
         case AiPersonality::Defensive:
@@ -2804,7 +2957,10 @@ std::vector<Command> Simulation::GenerateAiCommands(
     }
     if (barracksCount == 0) {
         expansionType = EntityType::Barracks;
-    } else if (dropoffCount == 0 && capacityHeadroom <= expansionHeadroom) {
+    } else if (capacityHeadroom <= expansionHeadroom &&
+               (dropoffCount == 0 ||
+                (personality == AiPersonality::Adaptive &&
+                 dropoffCount < 2 && capacityHeadroom <= 6))) {
         expansionType = EntityType::Dropoff;
     }
 
@@ -3111,6 +3267,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.relaySupply.capacityBonus);
     writer.U64(config_.rules.relaySupply.durationTicks);
     writer.U64(config_.rules.relaySupply.cooldownTicks);
+    writer.I32(config_.rules.waystoneMigration.movementPerTickRaw);
+    writer.U64(config_.rules.waystoneMigration.uprootTicks);
+    writer.U64(config_.rules.waystoneMigration.rootTicks);
+    writer.I32(config_.rules.waystoneMigration.mobileDamageTakenPercent);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -3176,6 +3336,8 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(entity.relaySupplyActive ? 1 : 0);
         writer.U64(entity.relaySupplyUntilTick);
         writer.U64(entity.relaySupplyCooldownUntilTick);
+        writer.U8(static_cast<std::uint8_t>(entity.waystoneMode));
+        writer.U64(entity.waystoneTransitionUntilTick);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3287,8 +3449,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.relaySupply.connectionRadiusRaw) ||
         !reader.I32(config.rules.relaySupply.capacityBonus) ||
         !reader.U64(config.rules.relaySupply.durationTicks) ||
-        !reader.U64(config.rules.relaySupply.cooldownTicks)) {
-        SetError(error, "snapshot Future Well rules are truncated");
+        !reader.U64(config.rules.relaySupply.cooldownTicks) ||
+        !reader.I32(config.rules.waystoneMigration.movementPerTickRaw) ||
+        !reader.U64(config.rules.waystoneMigration.uprootTicks) ||
+        !reader.U64(config.rules.waystoneMigration.rootTicks) ||
+        !reader.I32(config.rules.waystoneMigration.mobileDamageTakenPercent)) {
+        SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
     const std::int64_t tileCount =
@@ -3398,6 +3564,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t productionType = 0;
         std::uint8_t deployed = 0;
         std::uint8_t relaySupplyActive = 0;
+        std::uint8_t waystoneMode = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -3433,7 +3600,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(deploymentFacingRawY) ||
             !reader.U8(relaySupplyActive) ||
             !reader.U64(entity.relaySupplyUntilTick) ||
-            !reader.U64(entity.relaySupplyCooldownUntilTick)) {
+            !reader.U64(entity.relaySupplyCooldownUntilTick) ||
+            !reader.U8(waystoneMode) ||
+            !reader.U64(entity.waystoneTransitionUntilTick)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -3451,6 +3620,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             deployed > 1 ||
             relaySupplyActive > 1 ||
+            waystoneMode > static_cast<std::uint8_t>(WaystoneMode::Rooting) ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3497,7 +3667,21 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             (relaySupplyActive == 0 && entity.relaySupplyUntilTick != 0) ||
             entity.relaySupplyUntilTick > kMaximumSupportedTick ||
             entity.relaySupplyCooldownUntilTick > kMaximumSupportedTick ||
-            entity.relaySupplyCooldownUntilTick < entity.relaySupplyUntilTick) {
+            entity.relaySupplyCooldownUntilTick < entity.relaySupplyUntilTick ||
+            (waystoneMode != static_cast<std::uint8_t>(WaystoneMode::NotWaystone) &&
+             (faction != static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+              type != static_cast<std::uint8_t>(EntityType::Dropoff))) ||
+            (faction == static_cast<std::uint8_t>(Faction::KharuunAssemblies) &&
+             type == static_cast<std::uint8_t>(EntityType::Dropoff) &&
+             waystoneMode == static_cast<std::uint8_t>(WaystoneMode::NotWaystone)) ||
+            ((waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Uprooting) ||
+              waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Rooting)) &&
+             (entity.waystoneTransitionUntilTick <= simulation.currentTick_ ||
+              entity.waystoneTransitionUntilTick > kMaximumSupportedTick)) ||
+            ((waystoneMode == static_cast<std::uint8_t>(WaystoneMode::NotWaystone) ||
+              waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Rooted) ||
+              waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Mobile)) &&
+             entity.waystoneTransitionUntilTick != 0)) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -3517,6 +3701,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.deploymentFacing =
             Vec2::FromRaw(deploymentFacingRawX, deploymentFacingRawY);
         entity.relaySupplyActive = relaySupplyActive != 0;
+        entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;

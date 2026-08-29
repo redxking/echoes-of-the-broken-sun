@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 13;
-inline constexpr std::uint32_t kReplayVersion = 13;
+inline constexpr std::uint32_t kSnapshotVersion = 14;
+inline constexpr std::uint32_t kReplayVersion = 14;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -168,6 +168,15 @@ enum class CommandType : std::uint8_t {
     Patrol = 11,
     ToggleDeploy = 12,
     ActivateRelaySupply = 13,
+    ToggleWaystoneRoot = 14,
+};
+
+enum class WaystoneMode : std::uint8_t {
+    NotWaystone = 0,
+    Rooted = 1,
+    Uprooting = 2,
+    Mobile = 3,
+    Rooting = 4,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -198,6 +207,14 @@ enum class RelaySupplyResult : std::uint8_t {
     AlreadyActive = 3,
     CooldownActive = 4,
     Disconnected = 5,
+};
+
+enum class WaystoneRootResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidActor = 2,
+    TransitionActive = 3,
+    RootingBlocked = 4,
 };
 
 enum class MatchOutcome : std::uint8_t {
@@ -285,6 +302,17 @@ struct RelaySupplyRules final {
                            const RelaySupplyRules&) = default;
 };
 
+/** Authored Kharuun Waystone migration and rooting behavior. */
+struct WaystoneMigrationRules final {
+    std::int32_t movementPerTickRaw = Fixed::FromRatio(3, 50).Raw();
+    Tick uprootTicks = 40;
+    Tick rootTicks = 60;
+    std::int32_t mobileDamageTakenPercent = 125;
+
+    friend bool operator==(const WaystoneMigrationRules&,
+                           const WaystoneMigrationRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -296,6 +324,7 @@ struct SimulationRules final {
     FutureWellRules futureWell{};
     BulwarkDeploymentRules bulwarkDeployment{};
     RelaySupplyRules relaySupply{};
+    WaystoneMigrationRules waystoneMigration{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -354,6 +383,8 @@ struct Entity final {
     bool relaySupplyActive = false;
     Tick relaySupplyUntilTick = 0;
     Tick relaySupplyCooldownUntilTick = 0;
+    WaystoneMode waystoneMode = WaystoneMode::NotWaystone;
+    Tick waystoneTransitionUntilTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -471,6 +502,9 @@ public:
     [[nodiscard]] RelaySupplyResult ValidateRelaySupply(
         PlayerId player,
         EntityId actor) const;
+    [[nodiscard]] WaystoneRootResult ValidateWaystoneRoot(
+        PlayerId player,
+        EntityId actor) const;
     [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] ResourcePool ProductionCost(Faction faction,
                                                EntityType type) const;
@@ -566,6 +600,8 @@ private:
         Vec2 destination) const;
     [[nodiscard]] bool MoveTowards(Entity& entity, Vec2 destination);
     [[nodiscard]] bool IsRelayConnected(const Entity& relay) const;
+    [[nodiscard]] bool CanRootWaystone(const Entity& waystone) const;
+    [[nodiscard]] bool IsOperationalDropoff(const Entity& entity) const;
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
         const Entity& attacker,
         const Entity& target,
@@ -588,6 +624,7 @@ private:
     void UpdateVisibility();
     void ResolveExpiredReshapes();
     void ResolveExpiredRelaySupply();
+    void ResolveWaystoneTransitions();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();

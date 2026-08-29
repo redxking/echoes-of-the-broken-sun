@@ -20,8 +20,8 @@ mkdir -p "$project_root/BuildArtifacts"
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32 source=canonical' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 sha256=13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b source=canonical' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
