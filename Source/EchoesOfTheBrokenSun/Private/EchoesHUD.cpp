@@ -2,6 +2,7 @@
 
 #include "EchoesContentSubsystem.h"
 #include "EchoesCommandDeckModel.h"
+#include "EchoesContactIndicatorLayout.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -56,6 +57,36 @@ const TCHAR* ResearchDisplayName(echoes::sim::ResearchType Technology)
         default:
             return TEXT("Unknown Technology");
     }
+}
+
+FVector2D FallbackContactProjection(
+    APlayerController* Controller,
+    const FVector& WorldPosition,
+    const FVector2D& ViewportSize)
+{
+    FVector CameraLocation = FVector::ZeroVector;
+    FRotator CameraRotation = FRotator::ZeroRotator;
+    Controller->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+    FVector GroundDirection = WorldPosition - CameraLocation;
+    GroundDirection.Z = 0.0f;
+    FVector CameraForward = CameraRotation.Vector();
+    CameraForward.Z = 0.0f;
+    if (!CameraForward.Normalize())
+    {
+        CameraForward = FVector::ForwardVector;
+    }
+    const FVector CameraRight =
+        FVector::CrossProduct(FVector::UpVector, CameraForward).GetSafeNormal();
+    FVector2D ScreenDirection(
+        FVector::DotProduct(GroundDirection, CameraRight),
+        -FVector::DotProduct(GroundDirection, CameraForward));
+    if (!ScreenDirection.Normalize())
+    {
+        ScreenDirection = FVector2D(0.0f, -1.0f);
+    }
+    return ViewportSize * 0.5f +
+        ScreenDirection * FMath::Max(ViewportSize.X, ViewportSize.Y) * 2.0f;
 }
 }
 
@@ -1702,6 +1733,8 @@ void AEchoesHUD::DrawVibrationSignatures(
             false);
     }
     int32 Presented = 0;
+    int32 EdgeIndicators = 0;
+    const FVector2D ViewportSize(Canvas->ClipX, Canvas->ClipY);
     for (const echoes::sim::VibrationSignature& Signature :
          PlayerView->VibrationSignatures())
     {
@@ -1709,46 +1742,110 @@ void AEchoesHUD::DrawVibrationSignatures(
         WorldPosition.Z = 90.0f;
         FVector2D ScreenPosition;
         if (!Controller->ProjectWorldLocationToScreen(
-                WorldPosition, ScreenPosition, true) ||
-            ScreenPosition.X < 16.0f || ScreenPosition.Y < 280.0f ||
-            ScreenPosition.X > Canvas->ClipX - 16.0f ||
-            ScreenPosition.Y > Canvas->ClipY - 90.0f)
+                WorldPosition, ScreenPosition, true))
         {
-            continue;
+            ScreenPosition = FallbackContactProjection(
+                Controller, WorldPosition, ViewportSize);
         }
+        const FEchoesContactIndicatorPlacement Placement =
+            FEchoesContactIndicatorLayout::Calculate(
+                ScreenPosition, ViewportSize, HudScale);
         ++Presented;
+        EdgeIndicators += Placement.bClampedToEdge ? 1 : 0;
         const float Radius = 12.0f * HudScale;
-        DrawLine(ScreenPosition.X, ScreenPosition.Y - Radius,
-                 ScreenPosition.X + Radius, ScreenPosition.Y,
+        DrawLine(Placement.MarkerPosition.X, Placement.MarkerPosition.Y - Radius,
+                 Placement.MarkerPosition.X + Radius, Placement.MarkerPosition.Y,
                  SignatureColor, 2.0f);
-        DrawLine(ScreenPosition.X + Radius, ScreenPosition.Y,
-                 ScreenPosition.X, ScreenPosition.Y + Radius,
+        DrawLine(Placement.MarkerPosition.X + Radius, Placement.MarkerPosition.Y,
+                 Placement.MarkerPosition.X, Placement.MarkerPosition.Y + Radius,
                  SignatureColor, 2.0f);
-        DrawLine(ScreenPosition.X, ScreenPosition.Y + Radius,
-                 ScreenPosition.X - Radius, ScreenPosition.Y,
+        DrawLine(Placement.MarkerPosition.X, Placement.MarkerPosition.Y + Radius,
+                 Placement.MarkerPosition.X - Radius, Placement.MarkerPosition.Y,
                  SignatureColor, 2.0f);
-        DrawLine(ScreenPosition.X - Radius, ScreenPosition.Y,
-                 ScreenPosition.X, ScreenPosition.Y - Radius,
+        DrawLine(Placement.MarkerPosition.X - Radius, Placement.MarkerPosition.Y,
+                 Placement.MarkerPosition.X, Placement.MarkerPosition.Y - Radius,
                  SignatureColor, 2.0f);
-        DrawLine(ScreenPosition.X - Radius * 1.5f, ScreenPosition.Y,
-                 ScreenPosition.X + Radius * 1.5f, ScreenPosition.Y,
+        DrawLine(Placement.MarkerPosition.X - Radius * 1.5f,
+                 Placement.MarkerPosition.Y,
+                 Placement.MarkerPosition.X + Radius * 1.5f,
+                 Placement.MarkerPosition.Y,
                  SignatureColor, 1.0f);
-        DrawText(
-            FString::Printf(TEXT("VIBRATION CONTACT %02d"), Presented),
+        if (Placement.bClampedToEdge)
+        {
+            FVector2D EdgeDirection =
+                (ScreenPosition - Placement.MarkerPosition).GetSafeNormal();
+            if (EdgeDirection.IsNearlyZero())
+            {
+                EdgeDirection = FVector2D(0.0f, -1.0f);
+            }
+            const FVector2D Perpendicular(-EdgeDirection.Y, EdgeDirection.X);
+            const FVector2D Tip =
+                Placement.MarkerPosition + EdgeDirection * Radius * 1.65f;
+            const FVector2D LeftTail =
+                Placement.MarkerPosition - Perpendicular * Radius * 0.55f;
+            const FVector2D RightTail =
+                Placement.MarkerPosition + Perpendicular * Radius * 0.55f;
+            DrawLine(
+                LeftTail.X,
+                LeftTail.Y,
+                Tip.X,
+                Tip.Y,
+                SignatureColor,
+                2.0f);
+            DrawLine(
+                RightTail.X,
+                RightTail.Y,
+                Tip.X,
+                Tip.Y,
+                SignatureColor,
+                2.0f);
+        }
+        const FLinearColor LabelBackdrop = bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+            : FLinearColor(0.025f, 0.012f, 0.008f, 0.90f);
+        const float LabelPanelLeft =
+            Placement.LabelPosition.X - 8.0f * HudScale;
+        const float LabelPanelTop =
+            Placement.LabelPosition.Y - 6.0f * HudScale;
+        const float LabelPanelWidth = 270.0f * HudScale;
+        const float LabelPanelHeight = 44.0f * HudScale;
+        DrawRect(
+            LabelBackdrop,
+            LabelPanelLeft,
+            LabelPanelTop,
+            LabelPanelWidth,
+            LabelPanelHeight);
+        DrawLine(
+            LabelPanelLeft,
+            LabelPanelTop,
+            LabelPanelLeft + LabelPanelWidth,
+            LabelPanelTop,
             SignatureColor,
-            ScreenPosition.X + Radius + 5.0f,
-            ScreenPosition.Y - 14.0f,
+            1.5f);
+        DrawLine(
+            LabelPanelLeft,
+            LabelPanelTop,
+            LabelPanelLeft,
+            LabelPanelTop + LabelPanelHeight,
+            SignatureColor,
+            2.0f);
+        DrawText(
+            FEchoesContactIndicatorLayout::BuildPrimaryLabel(
+                Presented, Placement.bClampedToEdge),
+            SignatureColor,
+            Placement.LabelPosition.X,
+            Placement.LabelPosition.Y,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-            0.68f * HudScale,
+            0.74f * HudScale,
             false);
         DrawText(
             TEXT("APPROXIMATE // NO UNIT ID"),
             bHighContrast ? FLinearColor::White
                           : FLinearColor(0.86f, 0.72f, 0.64f),
-            ScreenPosition.X + Radius + 5.0f,
-            ScreenPosition.Y + 3.0f,
+            Placement.LabelPosition.X,
+            Placement.LabelPosition.Y + 17.0f * HudScale,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
-            0.58f * HudScale,
+            0.62f * HudScale,
             false);
     }
     if (Presented > 0 && !bLoggedVibrationPresentationReady)
@@ -1757,8 +1854,9 @@ void AEchoesHUD::DrawVibrationSignatures(
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_VIBRATION_PRESENTATION_READY] contacts=%d anonymous=true quantized=true nonColor=true directTarget=false alertLegend=true"),
-            Presented);
+            TEXT("[ECHOES_VIBRATION_PRESENTATION_READY] contacts=%d edgeIndicators=%d anonymous=true quantized=true nonColor=true directTarget=false alertLegend=true"),
+            Presented,
+            EdgeIndicators);
     }
 }
 
