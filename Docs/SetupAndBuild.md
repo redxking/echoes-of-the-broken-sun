@@ -13,7 +13,7 @@ This is the single authoritative setup and build guide. Edit it in place; do not
 
 ## Verified host state
 
-The initial development host is a MacBook Pro (`MacBookPro18,1`) with an Apple M1 Pro, 10 CPU cores, 16 GPU cores, 16 GB unified memory, Metal 4, and macOS 26.6.2. Xcode 26.6 is installed and `xcode-select -p` currently resolves to `/Applications/Xcode.app/Contents/Developer`. Apple's separately delivered Metal Toolchain build `17F109` is installed and `xcrun metal` resolves. Epic Games Launcher 20.2.4 completed Unreal Engine 5.8.2 after an authorized Docker builder-cache cleanup recovered 39.47 GB of rebuildable space. About 83 GiB remained free after the final Mac Development package, test evidence, and removal of rebuildable Echoes-only Xcode index data at the latest observation.
+The initial development host is a MacBook Pro (`MacBookPro18,1`) with an Apple M1 Pro, 10 CPU cores, 16 GPU cores, 16 GB unified memory, Metal 4, and macOS 26.6.2. Xcode 26.6 is installed and `xcode-select -p` currently resolves to `/Applications/Xcode.app/Contents/Developer`. Apple's separately delivered Metal Toolchain build `17F109` is installed and `xcrun metal` resolves. Epic Games Launcher 20.2.4 completed Unreal Engine 5.8.2 after an authorized Docker builder-cache cleanup recovered 39.47 GB of rebuildable space. About 82 GiB remained free after retaining the current 0.2.0 Mac Development package and removing rebuildable staging and Echoes-only Xcode index data at the latest observation.
 
 The official Epic installer endpoint was downloaded and the disk image verified. The retained file is `~/Downloads/EpicInstaller-20.1.4.dmg`, 114,676,675 bytes, SHA-256 `5c4f204ed623b01890f26cc99d4af657c3fbd6be1d04be7fed176ddbc94b1259`. Because the installed launcher is newer, do not install this backup over it unless repairing the launcher becomes necessary.
 
@@ -103,10 +103,10 @@ An explicit new archive path may be supplied as the first argument. Existing tar
 
 ```sh
 ./Scripts/run_packaged_smoke.sh \
-  BuildArtifacts/Packages/Mac-Development-v0.1.0-final/EchoesOfTheBrokenSun.app
+  BuildArtifacts/Packages/Mac-Development-v0.2.0-playable-systems/EchoesOfTheBrokenSun.app
 ```
 
-The observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.1.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase had sealed the app before the final PAK update, so the archived signature was initially invalid. The wrapper now seals the completed archive with the checked-in development entitlements and verifies it afterward. The exact corrected archive passed strict deep-signature verification and emitted all four startup markers when its packaged executable was launched. Its adjacent manifest records clean source commit `2c8ddba1d74c38d183f0af7df62d3b54fea4e4e2`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `97ba923b912a4d0ad4cb9c9318d0a3f6cbd64daf3b0c69615e258a5458395e9e`.
+The current observed local artifact is a 748 MB self-contained arm64 Development application with bundle identifier `com.angelispseftis.echoesofthebrokensun`, short version `0.2.0`, and five PAK/IoStore container files. Unreal's Xcode packaging phase seals the app before the final PAK update, so the wrapper reseals the completed archive with the checked-in development entitlements and verifies it afterward. The exact archive passed strict deep-signature verification and emitted all four startup markers when its packaged executable was launched. Its adjacent manifest records clean source commit `21469a4f702ff284c85104c97aa9b85f63fc2b6e`, UE 5.8.2, Xcode 26.6, configuration and platform identity, and the SHA-256 of every regular file and symlink in the app. The manifest digest is `482b0e7e5db955675d07c9edd82da12114076c057250c243744432a095c49269`.
 
 ## Distribution boundary
 
