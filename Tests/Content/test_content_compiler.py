@@ -61,6 +61,8 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in first_pack["units"]], sorted(item["id"] for item in first_pack["units"]))
         bulwark = next(item for item in first_pack["units"] if item["id"] == "mc_bulwark_team")
         self.assertEqual(bulwark["deployment"]["damage_reduction_percent"], 40)
+        relay = next(item for item in first_pack["units"] if item["id"] == "mc_relay_skiff")
+        self.assertEqual(relay["supply_extension"]["capacity_bonus"], 4)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -124,6 +126,21 @@ class ContentCompilerTests(unittest.TestCase):
         lancer["deployment"] = copy.deepcopy(bulwark["deployment"])
         self.write("units.json", units)
         self.assert_invalid("reserved for the Meridian heavy screen")
+
+    def test_missing_relay_supply_rules_are_rejected(self) -> None:
+        units = self.load("units.json")
+        relay = next(item for item in units["units"] if item["id"] == "mc_relay_skiff")
+        del relay["supply_extension"]
+        self.write("units.json", units)
+        self.assert_invalid("requires authored supply-extension rules")
+
+    def test_supply_rules_on_other_units_are_rejected(self) -> None:
+        units = self.load("units.json")
+        relay = next(item for item in units["units"] if item["id"] == "mc_relay_skiff")
+        resonant = next(item for item in units["units"] if item["id"] == "ka_resonant")
+        resonant["supply_extension"] = copy.deepcopy(relay["supply_extension"])
+        self.write("units.json", units)
+        self.assert_invalid("reserved for the Meridian scout support")
 
 
 if __name__ == "__main__":

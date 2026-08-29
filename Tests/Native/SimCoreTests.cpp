@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v12 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1520 + 5 * mapTileCount;
+    // Snapshot v13 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1544 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1400, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1424, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1408, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1432, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1480,6 +1480,129 @@ void TestBulwarkDirectionalCoverDeployment() {
     REQUIRE(!flank.FindEntity(cairnback)->deployed);
 }
 
+void TestRelaySupplyExtensionLifecycle() {
+    Simulation simulation({24, 24, 20, 0x52454c4159535550ULL});
+    AddTwoPlayers(simulation, {1000, 500}, {0, 0});
+    const EntityId core = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(4, 4));
+    const EntityId foundry = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(5, 4));
+    const EntityId relay = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(6, 4));
+    const EntityId disconnectedRelay = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(20, 20));
+    for (std::int32_t index = 0; index < 5; ++index) {
+        REQUIRE(simulation.SpawnEntity(
+                    0, Faction::MeridianCompact, EntityType::Soldier,
+                    Vec2::FromTiles(4 + index, 6)) != 0);
+    }
+    const EntityId observer = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        Vec2::FromTiles(8, 4));
+    REQUIRE(core != 0 && foundry != 0 && relay != 0 &&
+            disconnectedRelay != 0 && observer != 0);
+    REQUIRE(simulation.PopulationUsed(0) == 12);
+    REQUIRE(simulation.PopulationCapacity(0) == 12);
+    REQUIRE(simulation.ValidateProduction(0, foundry, EntityType::HeavyUnit) ==
+            ProductionResult::CapacityReached);
+    REQUIRE(simulation.ValidateRelaySupply(0, disconnectedRelay) ==
+            RelaySupplyResult::Disconnected);
+
+    simulation.CaptureReplayBaseline();
+    Command activate =
+        MakeCommand(0, 0, 1, CommandType::ActivateRelaySupply, relay);
+    REQUIRE(simulation.QueueCommand(activate));
+    simulation.Step();
+    const Entity* activeRelay = simulation.FindEntity(relay);
+    REQUIRE(activeRelay != nullptr && activeRelay->relaySupplyActive);
+    REQUIRE(activeRelay->relaySupplyUntilTick ==
+            simulation.Config().rules.relaySupply.durationTicks);
+    REQUIRE(activeRelay->relaySupplyCooldownUntilTick ==
+            simulation.Config().rules.relaySupply.cooldownTicks);
+    REQUIRE(simulation.PopulationCapacity(0) == 16);
+    REQUIRE(simulation.ValidateProduction(0, foundry, EntityType::HeavyUnit) ==
+            ProductionResult::Valid);
+    REQUIRE(simulation.ValidateRelaySupply(0, relay) ==
+            RelaySupplyResult::AlreadyActive);
+
+    const std::optional<PlayerView> opponentView = simulation.CreatePlayerView(1);
+    REQUIRE(opponentView.has_value());
+    const auto observedRelay = std::find_if(
+        opponentView->Entities().begin(),
+        opponentView->Entities().end(),
+        [relay](const Entity& entity) { return entity.id == relay; });
+    REQUIRE(observedRelay != opponentView->Entities().end());
+    REQUIRE(observedRelay->relaySupplyActive);
+    REQUIRE(observedRelay->relaySupplyUntilTick == 0);
+    REQUIRE(observedRelay->relaySupplyCooldownUntilTick == 0);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->FindEntity(relay)->relaySupplyActive);
+    REQUIRE(restored->Config().rules.relaySupply ==
+            simulation.Config().rules.relaySupply);
+
+    simulation.Step(simulation.Config().rules.relaySupply.durationTicks - 1);
+    REQUIRE(simulation.CurrentTick() ==
+            simulation.Config().rules.relaySupply.durationTicks);
+    REQUIRE(!simulation.FindEntity(relay)->relaySupplyActive);
+    REQUIRE(simulation.FindEntity(relay)->relaySupplyUntilTick == 0);
+    REQUIRE(simulation.PopulationCapacity(0) == 12);
+    REQUIRE(simulation.ValidateRelaySupply(0, relay) ==
+            RelaySupplyResult::CooldownActive);
+
+    simulation.Step(
+        simulation.Config().rules.relaySupply.cooldownTicks -
+        simulation.CurrentTick());
+    REQUIRE(simulation.ValidateRelaySupply(0, relay) ==
+            RelaySupplyResult::Valid);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    std::optional<Simulation> replayed = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    REQUIRE(simulation.ValidateRelaySupply(1, observer) ==
+            RelaySupplyResult::InvalidActor);
+
+    SimulationConfig severedConfig{16, 16, 20, 9};
+    severedConfig.rules
+        .archetypes[static_cast<std::size_t>(Faction::KharuunAssemblies)]
+                   [static_cast<std::size_t>(EntityType::Soldier)]
+        .attackDamage = 2000;
+    Simulation severed(severedConfig);
+    AddTwoPlayers(severed, {0, 0}, {0, 0});
+    const EntityId severedCore = severed.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(4, 4));
+    const EntityId severedRelay = severed.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(6, 4));
+    const EntityId coreAttacker = severed.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(5, 4));
+    REQUIRE(severedCore != 0 && severedRelay != 0 && coreAttacker != 0);
+    Command severedActivate = MakeCommand(
+        0, 0, 1, CommandType::ActivateRelaySupply, severedRelay);
+    Command severingAttack = MakeCommand(
+        0, 1, 1, CommandType::Attack, coreAttacker);
+    severingAttack.target = severedCore;
+    REQUIRE(severed.QueueCommand(severedActivate));
+    REQUIRE(severed.QueueCommand(severingAttack));
+    severed.Step();
+    REQUIRE(severed.FindEntity(severedCore) == nullptr);
+    REQUIRE(!severed.FindEntity(severedRelay)->relaySupplyActive);
+    REQUIRE(severed.FindEntity(severedRelay)->relaySupplyCooldownUntilTick >
+            severed.CurrentTick());
+    REQUIRE(severed.PopulationCapacity(0) == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -1513,6 +1636,8 @@ int main() {
          TestCompleteRosterEntityTypesAndProduction},
         {"Bulwark directional cover deployment",
          TestBulwarkDirectionalCoverDeployment},
+        {"Relay supply extension lifecycle",
+         TestRelaySupplyExtensionLifecycle},
     };
 
     std::size_t passed = 0;

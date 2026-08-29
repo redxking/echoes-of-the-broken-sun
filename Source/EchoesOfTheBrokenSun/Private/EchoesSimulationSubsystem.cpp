@@ -158,7 +158,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -1164,6 +1164,26 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 return false;
             }
             return true;
+        case CommandType::ActivateRelaySupply:
+            switch (Simulation->ValidateRelaySupply(LocalPlayerId, Actor.id))
+            {
+                case echoes::sim::RelaySupplyResult::Valid:
+                    return true;
+                case echoes::sim::RelaySupplyResult::InvalidPlayer:
+                case echoes::sim::RelaySupplyResult::InvalidActor:
+                    OutFeedback = TEXT("[RELAY_REQUIRED] Select a Meridian Relay Skiff.");
+                    break;
+                case echoes::sim::RelaySupplyResult::AlreadyActive:
+                    OutFeedback = TEXT("[RELAY_ALREADY_ACTIVE] This Relay is already extending logistics.");
+                    break;
+                case echoes::sim::RelaySupplyResult::CooldownActive:
+                    OutFeedback = TEXT("[RELAY_COOLDOWN] This Relay has not recovered its reserve.");
+                    break;
+                case echoes::sim::RelaySupplyResult::Disconnected:
+                    OutFeedback = TEXT("[RELAY_DISCONNECTED] Move within range of an Anchor or Power Link.");
+                    break;
+            }
+            return false;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)
             {

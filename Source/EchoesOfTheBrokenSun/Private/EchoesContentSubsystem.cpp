@@ -372,6 +372,26 @@ bool FEchoesContentCatalog::BuildSimulationRules(
             OutRules.bulwarkDeployment.deployedMovementPercent =
                 Unit->DeploymentMoveSpeedPercent;
         }
+        if (Binding.Faction == echoes::sim::Faction::MeridianCompact &&
+            Binding.Type == echoes::sim::EntityType::ScoutUnit)
+        {
+            if (Unit->SupplyConnectionRadiusCentimeters <= 0 ||
+                Unit->SupplyCapacityBonus <= 0 ||
+                Unit->SupplyDurationTicks <= 0 ||
+                Unit->SupplyCooldownTicks < Unit->SupplyDurationTicks)
+            {
+                OutError = TEXT("SIM_RULES_RELAY_SUPPLY_INVALID");
+                return false;
+            }
+            OutRules.relaySupply.connectionRadiusRaw = static_cast<int32>(
+                static_cast<int64>(Unit->SupplyConnectionRadiusCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.relaySupply.capacityBonus = Unit->SupplyCapacityBonus;
+            OutRules.relaySupply.durationTicks =
+                static_cast<echoes::sim::Tick>(Unit->SupplyDurationTicks);
+            OutRules.relaySupply.cooldownTicks =
+                static_cast<echoes::sim::Tick>(Unit->SupplyCooldownTicks);
+        }
     }
 
     struct FBuildingBinding final
@@ -575,6 +595,18 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
                 !ReadRequiredInteger(*Deployment, TEXT("cover_half_width_cm"), Unit.DeploymentCoverHalfWidthCentimeters, Path + TEXT(".deployment"), OutError, 1) ||
                 !ReadRequiredInteger(*Deployment, TEXT("damage_reduction_percent"), Unit.DeploymentDamageReductionPercent, Path + TEXT(".deployment"), OutError, 1) ||
                 !ReadRequiredInteger(*Deployment, TEXT("move_speed_percent"), Unit.DeploymentMoveSpeedPercent, Path + TEXT(".deployment"), OutError, 1))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* SupplyExtension = nullptr;
+        if (Object->TryGetObjectField(TEXT("supply_extension"), SupplyExtension) &&
+            SupplyExtension != nullptr && SupplyExtension->IsValid())
+        {
+            if (!ReadRequiredInteger(*SupplyExtension, TEXT("connection_radius_cm"), Unit.SupplyConnectionRadiusCentimeters, Path + TEXT(".supply_extension"), OutError, 1) ||
+                !ReadRequiredInteger(*SupplyExtension, TEXT("capacity_bonus"), Unit.SupplyCapacityBonus, Path + TEXT(".supply_extension"), OutError, 1) ||
+                !ReadRequiredInteger(*SupplyExtension, TEXT("duration_ticks"), Unit.SupplyDurationTicks, Path + TEXT(".supply_extension"), OutError, 1) ||
+                !ReadRequiredInteger(*SupplyExtension, TEXT("cooldown_ticks"), Unit.SupplyCooldownTicks, Path + TEXT(".supply_extension"), OutError, 1))
             {
                 return false;
             }

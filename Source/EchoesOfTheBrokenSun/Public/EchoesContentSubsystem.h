@@ -34,6 +34,10 @@ struct FEchoesUnitContent final
     int32 DeploymentCoverHalfWidthCentimeters = 0;
     int32 DeploymentDamageReductionPercent = 0;
     int32 DeploymentMoveSpeedPercent = 0;
+    int32 SupplyConnectionRadiusCentimeters = 0;
+    int32 SupplyCapacityBonus = 0;
+    int32 SupplyDurationTicks = 0;
+    int32 SupplyCooldownTicks = 0;
 };
 
 struct FEchoesBuildingContent final

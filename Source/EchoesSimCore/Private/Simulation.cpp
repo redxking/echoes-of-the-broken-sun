@@ -23,7 +23,7 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 131;
+constexpr std::size_t kSerializedEntityBytes = 148;
 constexpr std::size_t kSerializedCommandBytes = 36;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
@@ -111,7 +111,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::ToggleDeploy;
+    return type >= CommandType::Stop && type <= CommandType::ActivateRelaySupply;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -264,6 +264,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     }
     const FutureWellRules& well = rules.futureWell;
     const BulwarkDeploymentRules& bulwark = rules.bulwarkDeployment;
+    const RelaySupplyRules& relay = rules.relaySupply;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -282,7 +283,13 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            bulwark.damageReductionPercent > 0 &&
            bulwark.damageReductionPercent < 100 &&
            bulwark.deployedMovementPercent > 0 &&
-           bulwark.deployedMovementPercent < 100;
+           bulwark.deployedMovementPercent < 100 &&
+           relay.connectionRadiusRaw > 0 &&
+           relay.connectionRadiusRaw <= 32 * kFixedScale &&
+           relay.capacityBonus > 0 && relay.capacityBonus <= 1000 &&
+           relay.durationTicks > 0 &&
+           relay.durationTicks <= relay.cooldownTicks &&
+           relay.cooldownTicks <= kMaximumSupportedTick;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -590,7 +597,7 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(wellChoice)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::ToggleDeploy) ||
+    if (type > static_cast<std::uint8_t>(CommandType::ActivateRelaySupply) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
         return false;
@@ -998,8 +1005,62 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
                 ArchetypeFor(config_.rules, entity.faction, entity.type)
                     .populationCapacity);
         }
+        if (entity.relaySupplyActive &&
+            entity.faction == Faction::MeridianCompact &&
+            entity.type == EntityType::ScoutUnit &&
+            IsRelayConnected(entity)) {
+            capacity = SaturatingAdd(
+                capacity,
+                config_.rules.relaySupply.capacityBonus);
+        }
     }
     return capacity;
+}
+
+bool Simulation::IsRelayConnected(const Entity& relay) const {
+    if (relay.owner == kNeutralPlayer || !relay.completed ||
+        relay.hitPoints <= 0 ||
+        relay.faction != Faction::MeridianCompact ||
+        relay.type != EntityType::ScoutUnit) {
+        return false;
+    }
+    const std::uint64_t radiusSquared =
+        static_cast<std::uint64_t>(config_.rules.relaySupply.connectionRadiusRaw) *
+        config_.rules.relaySupply.connectionRadiusRaw;
+    return std::any_of(
+        entities_.begin(),
+        entities_.end(),
+        [&](const Entity& candidate) {
+            return candidate.owner == relay.owner && candidate.completed &&
+                   candidate.hitPoints > 0 &&
+                   (candidate.type == EntityType::CommandCore ||
+                    candidate.type == EntityType::Dropoff) &&
+                   DistanceSquaredRaw(relay.position, candidate.position) <=
+                       radiusSquared;
+        });
+}
+
+RelaySupplyResult Simulation::ValidateRelaySupply(
+    PlayerId player,
+    EntityId actor) const {
+    if (FindPlayer(player) == nullptr) {
+        return RelaySupplyResult::InvalidPlayer;
+    }
+    const Entity* relay = FindEntity(actor);
+    if (relay == nullptr || relay->owner != player || !relay->completed ||
+        relay->hitPoints <= 0 ||
+        relay->faction != Faction::MeridianCompact ||
+        relay->type != EntityType::ScoutUnit) {
+        return RelaySupplyResult::InvalidActor;
+    }
+    if (relay->relaySupplyActive) {
+        return RelaySupplyResult::AlreadyActive;
+    }
+    if (relay->relaySupplyCooldownUntilTick > currentTick_) {
+        return RelaySupplyResult::CooldownActive;
+    }
+    return IsRelayConnected(*relay) ? RelaySupplyResult::Valid
+                                    : RelaySupplyResult::Disconnected;
 }
 
 ProductionResult Simulation::ValidateProduction(PlayerId player,
@@ -1810,6 +1871,19 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->deployed = true;
             return;
         }
+        case CommandType::ActivateRelaySupply:
+            if (ValidateRelaySupply(command.player, actor->id) !=
+                RelaySupplyResult::Valid) {
+                return;
+            }
+            actor->relaySupplyActive = true;
+            actor->relaySupplyUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + config_.rules.relaySupply.durationTicks);
+            actor->relaySupplyCooldownUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + config_.rules.relaySupply.cooldownTicks);
+            return;
     }
 }
 
@@ -2402,10 +2476,22 @@ void Simulation::ResolveExpiredReshapes() {
     }
 }
 
+void Simulation::ResolveExpiredRelaySupply() {
+    for (Entity& entity : entities_) {
+        if (entity.relaySupplyActive &&
+            (currentTick_ >= entity.relaySupplyUntilTick ||
+             !IsRelayConnected(entity))) {
+            entity.relaySupplyActive = false;
+            entity.relaySupplyUntilTick = 0;
+        }
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
     }
+    ResolveExpiredRelaySupply();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -2414,6 +2500,7 @@ void Simulation::Step() {
     RemoveDestroyedEntities();
     ClearInvalidOrders();
     ++currentTick_;
+    ResolveExpiredRelaySupply();
     ResolveExpiredReshapes();
     UpdateVisibility();
 }
@@ -2600,6 +2687,8 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.productionType = EntityType::Worker;
                 observed.productionProgress = 0;
                 observed.productionRequired = 0;
+                observed.relaySupplyUntilTick = 0;
+                observed.relaySupplyCooldownUntilTick = 0;
             }
             view.entities_.push_back(observed);
         }
@@ -3018,6 +3107,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.rules.bulwarkDeployment.coverHalfWidthRaw);
     writer.I32(config_.rules.bulwarkDeployment.damageReductionPercent);
     writer.I32(config_.rules.bulwarkDeployment.deployedMovementPercent);
+    writer.I32(config_.rules.relaySupply.connectionRadiusRaw);
+    writer.I32(config_.rules.relaySupply.capacityBonus);
+    writer.U64(config_.rules.relaySupply.durationTicks);
+    writer.U64(config_.rules.relaySupply.cooldownTicks);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -3080,6 +3173,9 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(entity.deployed ? 1 : 0);
         writer.I32(entity.deploymentFacing.x.Raw());
         writer.I32(entity.deploymentFacing.y.Raw());
+        writer.U8(entity.relaySupplyActive ? 1 : 0);
+        writer.U64(entity.relaySupplyUntilTick);
+        writer.U64(entity.relaySupplyCooldownUntilTick);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3187,7 +3283,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.bulwarkDeployment.coverDepthRaw) ||
         !reader.I32(config.rules.bulwarkDeployment.coverHalfWidthRaw) ||
         !reader.I32(config.rules.bulwarkDeployment.damageReductionPercent) ||
-        !reader.I32(config.rules.bulwarkDeployment.deployedMovementPercent)) {
+        !reader.I32(config.rules.bulwarkDeployment.deployedMovementPercent) ||
+        !reader.I32(config.rules.relaySupply.connectionRadiusRaw) ||
+        !reader.I32(config.rules.relaySupply.capacityBonus) ||
+        !reader.U64(config.rules.relaySupply.durationTicks) ||
+        !reader.U64(config.rules.relaySupply.cooldownTicks)) {
         SetError(error, "snapshot Future Well rules are truncated");
         return std::nullopt;
     }
@@ -3297,6 +3397,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t wellChoice = 0;
         std::uint8_t productionType = 0;
         std::uint8_t deployed = 0;
+        std::uint8_t relaySupplyActive = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -3329,7 +3430,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(entity.productionProgress) ||
             !reader.I32(entity.productionRequired) || !reader.U8(deployed) ||
             !reader.I32(deploymentFacingRawX) ||
-            !reader.I32(deploymentFacingRawY)) {
+            !reader.I32(deploymentFacingRawY) ||
+            !reader.U8(relaySupplyActive) ||
+            !reader.U64(entity.relaySupplyUntilTick) ||
+            !reader.U64(entity.relaySupplyCooldownUntilTick)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -3346,6 +3450,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             productionType >
                 static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             deployed > 1 ||
+            relaySupplyActive > 1 ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3384,7 +3489,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !((deploymentFacingRawX == kFixedScale && deploymentFacingRawY == 0) ||
               (deploymentFacingRawX == -kFixedScale && deploymentFacingRawY == 0) ||
               (deploymentFacingRawX == 0 && deploymentFacingRawY == kFixedScale) ||
-              (deploymentFacingRawX == 0 && deploymentFacingRawY == -kFixedScale))) {
+              (deploymentFacingRawX == 0 && deploymentFacingRawY == -kFixedScale)) ||
+            (relaySupplyActive != 0 &&
+             (faction != static_cast<std::uint8_t>(Faction::MeridianCompact) ||
+              type != static_cast<std::uint8_t>(EntityType::ScoutUnit) ||
+              entity.relaySupplyUntilTick <= simulation.currentTick_)) ||
+            (relaySupplyActive == 0 && entity.relaySupplyUntilTick != 0) ||
+            entity.relaySupplyUntilTick > kMaximumSupportedTick ||
+            entity.relaySupplyCooldownUntilTick > kMaximumSupportedTick ||
+            entity.relaySupplyCooldownUntilTick < entity.relaySupplyUntilTick) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -3403,6 +3516,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.deployed = deployed != 0;
         entity.deploymentFacing =
             Vec2::FromRaw(deploymentFacingRawX, deploymentFacingRawY);
+        entity.relaySupplyActive = relaySupplyActive != 0;
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;

@@ -38,6 +38,7 @@ public:
     [[nodiscard]] bool IsHealthBarVisible() const;
     [[nodiscard]] bool IsOwnerMarkerVisible() const;
     [[nodiscard]] bool IsDeploymentCoverVisible() const;
+    [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
     [[nodiscard]] bool IsDamagePulseActive() const
     {
         return DamagePulseRemainingSeconds > 0.0f;
@@ -70,6 +71,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> DeploymentCover;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> RelaySupplyField;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
@@ -104,6 +108,9 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> DeploymentCoverMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> RelaySupplyFieldMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -123,4 +130,5 @@ private:
     bool bDeployed = false;
     echoes::sim::Vec2 DeploymentFacing =
         echoes::sim::Vec2::FromRaw(echoes::sim::kFixedScale, 0);
+    bool bRelaySupplyActive = false;
 };

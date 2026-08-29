@@ -90,6 +90,7 @@ private:
     void GuardAtCursor();
     void StopSelectedUnits();
     void ToggleBulwarkDeploymentAtCursor();
+    void ActivateRelaySupply();
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

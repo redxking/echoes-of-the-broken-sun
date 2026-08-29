@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 12;
-inline constexpr std::uint32_t kReplayVersion = 12;
+inline constexpr std::uint32_t kSnapshotVersion = 13;
+inline constexpr std::uint32_t kReplayVersion = 13;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -167,6 +167,7 @@ enum class CommandType : std::uint8_t {
     Guard = 10,
     Patrol = 11,
     ToggleDeploy = 12,
+    ActivateRelaySupply = 13,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -188,6 +189,15 @@ enum class ProductionResult : std::uint8_t {
     InsufficientResources = 6,
     CapacityReached = 7,
     EntityCapacityReached = 8,
+};
+
+enum class RelaySupplyResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidActor = 2,
+    AlreadyActive = 3,
+    CooldownActive = 4,
+    Disconnected = 5,
 };
 
 enum class MatchOutcome : std::uint8_t {
@@ -264,6 +274,17 @@ struct BulwarkDeploymentRules final {
                            const BulwarkDeploymentRules&) = default;
 };
 
+/** Authored Meridian Relay Skiff temporary-logistics behavior. */
+struct RelaySupplyRules final {
+    std::int32_t connectionRadiusRaw = 7 * kFixedScale;
+    std::int32_t capacityBonus = 4;
+    Tick durationTicks = 400;
+    Tick cooldownTicks = 800;
+
+    friend bool operator==(const RelaySupplyRules&,
+                           const RelaySupplyRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -274,6 +295,7 @@ struct SimulationRules final {
         archetypes{};
     FutureWellRules futureWell{};
     BulwarkDeploymentRules bulwarkDeployment{};
+    RelaySupplyRules relaySupply{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -329,6 +351,9 @@ struct Entity final {
     std::int32_t productionRequired = 0;
     bool deployed = false;
     Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
+    bool relaySupplyActive = false;
+    Tick relaySupplyUntilTick = 0;
+    Tick relaySupplyCooldownUntilTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -443,6 +468,9 @@ public:
         PlayerId player,
         EntityId producer,
         EntityType unitType) const;
+    [[nodiscard]] RelaySupplyResult ValidateRelaySupply(
+        PlayerId player,
+        EntityId actor) const;
     [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] ResourcePool ProductionCost(Faction faction,
                                                EntityType type) const;
@@ -537,6 +565,7 @@ private:
         Vec2 from,
         Vec2 destination) const;
     [[nodiscard]] bool MoveTowards(Entity& entity, Vec2 destination);
+    [[nodiscard]] bool IsRelayConnected(const Entity& relay) const;
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
         const Entity& attacker,
         const Entity& target,
@@ -558,6 +587,7 @@ private:
 
     void UpdateVisibility();
     void ResolveExpiredReshapes();
+    void ResolveExpiredRelaySupply();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();

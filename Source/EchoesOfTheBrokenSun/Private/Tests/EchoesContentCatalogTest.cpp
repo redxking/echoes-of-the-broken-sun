@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("a5ac74b23b572f2db4baf1236738a7f09b682d0de91580336af1f5a57dbb5586")));
+        FString(TEXT("7fac313d5ba8386fe5377c6b8c17d7c2b0608210fbd182e675f7241006e87f32")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -70,6 +70,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               Rules.bulwarkDeployment.damageReductionPercent, 40);
     TestEqual(TEXT("Bulwark deployed movement enters simulation rules"),
               Rules.bulwarkDeployment.deployedMovementPercent, 35);
+    TestEqual(TEXT("Relay connection radius enters fixed-point rules"),
+              Rules.relaySupply.connectionRadiusRaw, 7168);
+    TestEqual(TEXT("Relay capacity enters simulation rules"),
+              Rules.relaySupply.capacityBonus, 4);
+    TestEqual(TEXT("Relay duration enters simulation rules"),
+              Rules.relaySupply.durationTicks,
+              static_cast<echoes::sim::Tick>(400));
+    TestEqual(TEXT("Relay cooldown enters simulation rules"),
+              Rules.relaySupply.cooldownTicks,
+              static_cast<echoes::sim::Tick>(800));
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -84,6 +94,18 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Resonant role is authored"), Resonant->Role, FString(TEXT("scout_counter_scout")));
         TestEqual(TEXT("Resonant sight comes from authored data"), Resonant->SightCentimeters, 1550);
+    }
+    const FEchoesUnitContent* Relay = Catalog.FindUnit(TEXT("mc_relay_skiff"));
+    if (TestNotNull(TEXT("Meridian Relay is addressable by stable ID"), Relay))
+    {
+        TestEqual(TEXT("Relay connection radius is authored"),
+                  Relay->SupplyConnectionRadiusCentimeters, 700);
+        TestEqual(TEXT("Relay capacity bonus is authored"),
+                  Relay->SupplyCapacityBonus, 4);
+        TestEqual(TEXT("Relay duration is authored"),
+                  Relay->SupplyDurationTicks, 400);
+        TestEqual(TEXT("Relay cooldown is authored"),
+                  Relay->SupplyCooldownTicks, 800);
     }
     const FEchoesUnitContent* Bulwark = Catalog.FindUnit(TEXT("mc_bulwark_team"));
     if (TestNotNull(TEXT("Meridian Bulwark is addressable by stable ID"), Bulwark))

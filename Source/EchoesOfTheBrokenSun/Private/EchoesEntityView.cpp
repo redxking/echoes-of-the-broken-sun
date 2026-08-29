@@ -106,6 +106,15 @@ AEchoesEntityView::AEchoesEntityView()
     DeploymentCover->SetReceivesDecals(false);
     DeploymentCover->SetVisibility(false);
 
+    RelaySupplyField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("RelaySupplyField"));
+    RelaySupplyField->SetupAttachment(SceneRoot);
+    RelaySupplyField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RelaySupplyField->SetGenerateOverlapEvents(false);
+    RelaySupplyField->SetCastShadow(false);
+    RelaySupplyField->SetReceivesDecals(false);
+    RelaySupplyField->SetVisibility(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -128,6 +137,9 @@ AEchoesEntityView::AEchoesEntityView()
     HealthBarBackground->SetStaticMesh(CubeMesh);
     HealthBarFill->SetStaticMesh(CubeMesh);
     DeploymentCover->SetStaticMesh(CubeMesh);
+    RelaySupplyField->SetStaticMesh(CylinderMesh);
+    RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+    RelaySupplyField->SetRelativeScale3D(FVector(1.65f, 1.65f, 0.025f));
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -185,7 +197,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   EntityFaction != State.faction ||
                                   WellChoice != State.wellChoice ||
                                   bDeployed != State.deployed ||
-                                  DeploymentFacing != State.deploymentFacing;
+                                  DeploymentFacing != State.deploymentFacing ||
+                                  bRelaySupplyActive != State.relaySupplyActive;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -193,6 +206,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     WellChoice = State.wellChoice;
     bDeployed = State.deployed;
     DeploymentFacing = State.deploymentFacing;
+    bRelaySupplyActive = State.relaySupplyActive;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -364,6 +378,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 : FVector(1.45f, 0.10f, 0.58f));
     }
     DeploymentCover->SetVisibility(bShowDeploymentCover, true);
+    RelaySupplyField->SetVisibility(
+        State.relaySupplyActive &&
+            State.faction == echoes::sim::Faction::MeridianCompact &&
+            State.type == echoes::sim::EntityType::ScoutUnit,
+        true);
 
     UStaticMesh* MarkerMesh = nullptr;
     switch (State.owner)
@@ -439,6 +458,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.10f, 0.88f, 0.92f));
             DeploymentCover->SetMaterial(0, DeploymentCoverMaterial);
         }
+        if (RelaySupplyFieldMaterial == nullptr)
+        {
+            RelaySupplyFieldMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            RelaySupplyFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.95f, 0.76f, 0.18f));
+            RelaySupplyField->SetMaterial(0, RelaySupplyFieldMaterial);
+        }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
@@ -451,6 +479,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 bool AEchoesEntityView::IsDeploymentCoverVisible() const
 {
     return DeploymentCover != nullptr && DeploymentCover->IsVisible();
+}
+
+bool AEchoesEntityView::IsRelaySupplyFieldVisible() const
+{
+    return RelaySupplyField != nullptr && RelaySupplyField->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)

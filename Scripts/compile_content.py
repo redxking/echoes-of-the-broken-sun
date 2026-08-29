@@ -178,7 +178,7 @@ def validate_units(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "move_speed_cm_s", "sight_cm", "population_cost", "production_ticks"},
-            {"work_rate", "cargo_capacity", "attack", "deployment"},
+            {"work_rate", "cargo_capacity", "attack", "deployment", "supply_extension"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -226,6 +226,27 @@ def validate_units(
             }
         if faction == "meridian_compact" and role == "heavy_screen" and deployment is None:
             fail(f"{path}.deployment", "the Meridian heavy screen requires authored deployment rules")
+        supply_extension: dict[str, int] | None = None
+        if "supply_extension" in record:
+            raw_supply = require_object(record["supply_extension"], f"{path}.supply_extension")
+            require_exact_keys(
+                raw_supply,
+                {"connection_radius_cm", "capacity_bonus", "duration_ticks", "cooldown_ticks"},
+                set(),
+                f"{path}.supply_extension",
+            )
+            if faction != "meridian_compact" or role != "scout_support":
+                fail(f"{path}.supply_extension", "schema 1 supply extension is reserved for the Meridian scout support")
+            supply_extension = {
+                "connection_radius_cm": require_int(raw_supply["connection_radius_cm"], f"{path}.supply_extension.connection_radius_cm", 100, 3200),
+                "capacity_bonus": require_int(raw_supply["capacity_bonus"], f"{path}.supply_extension.capacity_bonus", 1, 1000),
+                "duration_ticks": require_int(raw_supply["duration_ticks"], f"{path}.supply_extension.duration_ticks", 1, 1_000_000),
+                "cooldown_ticks": require_int(raw_supply["cooldown_ticks"], f"{path}.supply_extension.cooldown_ticks", 1, 1_000_000),
+            }
+            if supply_extension["cooldown_ticks"] < supply_extension["duration_ticks"]:
+                fail(f"{path}.supply_extension.cooldown_ticks", "must be at least duration_ticks")
+        if faction == "meridian_compact" and role == "scout_support" and supply_extension is None:
+            fail(f"{path}.supply_extension", "the Meridian scout support requires authored supply-extension rules")
         output.append(
             {
                 "id": identifier,
@@ -242,6 +263,7 @@ def validate_units(
                 "cargo_capacity": cargo,
                 "attack": attack,
                 "deployment": deployment,
+                "supply_extension": supply_extension,
             }
         )
     for faction in sorted(playable):
