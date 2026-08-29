@@ -1005,6 +1005,10 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bSevenAccounts = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSevenAccounts;
+    const bool bCanStartNewCampaign = Bridge != nullptr &&
+        !Bridge->GetCampaignProgress().Decisions.IsEmpty();
+    const bool bNewCampaignArmed =
+        EchoesController->IsNewCampaignConfirmationArmed();
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -1042,18 +1046,25 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(OperationMetadata,
              Muted, Left + 48.0f, Top + 246.0f * ContentScale,
              SmallFont, 0.86f * TextScale, false);
+    FString OperationControlLine = bPrologue
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 01")
+    : bSevenAccounts
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 02")
+        : FString::Printf(
+              TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
+              *OpponentFaction);
+    if (bCanStartNewCampaign)
+    {
+        OperationControlLine += TEXT("  //  [F10] NEW CAMPAIGN");
+    }
     DrawText(
-        bPrologue
-            ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 01")
-        : bSevenAccounts
-            ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 02")
-            : FString::Printf(
-                  TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
-                  *OpponentFaction),
+        OperationControlLine,
              Accent, Left + 48.0f, Top + 272.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
     DrawText(
-        bPrologue
+        bNewCampaignArmed
+            ? TEXT("NEW CAMPAIGN CONFIRMATION ARMED — ACTIVE PROGRESS WILL BE REPLACED.")
+        : bPrologue
             ? TEXT("Recover Talar Venn's displaced archive before the line collapses.")
         : bSevenAccounts
             ? TEXT("Carry the inherited account into terrain changed by the prior decision.")
@@ -1061,7 +1072,9 @@ void AEchoesHUD::DrawTitleScreen(
              Body, Left + 48.0f, Top + 310.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
     DrawText(
-        bPrologue
+        bNewCampaignArmed
+            ? TEXT("PRESS F10 AGAIN WITHIN 10 SECONDS. ONE PRIOR LEDGER GENERATION IS RETAINED.")
+        : bPrologue
             ? TEXT("Commit the Well's consequence, then withdraw to Lume Reach.")
         : bSevenAccounts
             ? TEXT("Re-root the Waystone, then bring Oruun to the matching memory site.")

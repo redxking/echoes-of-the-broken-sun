@@ -91,6 +91,9 @@ public:
         EEchoesOperationMode NewOperation,
         FString& OutFeedback);
 
+    /** Replaces active campaign decisions with an empty ledger and retains one backup. */
+    bool StartNewCampaign(FString& OutFeedback);
+
     /** Atomically writes a validated deterministic snapshot and retains one backup. */
     bool QuickSaveScenario(FString& OutFeedback) const;
 

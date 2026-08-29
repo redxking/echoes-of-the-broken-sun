@@ -117,6 +117,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("RecallControlGroup0"), EKeys::Zero));
         TestTrue(TEXT("Formation cycling input is mapped"),
                  HasAction(TEXT("CycleFormation"), EKeys::F8));
+        TestTrue(TEXT("Recoverable new-campaign input is mapped"),
+                 HasAction(TEXT("RequestNewCampaign"), EKeys::F10));
         TestTrue(TEXT("HUD-scale accessibility input is mapped"),
                  HasAction(TEXT("CycleHudScale"), EKeys::U));
         TestTrue(TEXT("High-contrast accessibility input is mapped"),

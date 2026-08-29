@@ -66,6 +66,7 @@ public:
     void ConfirmPrimaryAction();
     void CyclePlayableFaction();
     void CycleOperation();
+    void RequestNewCampaign();
     void CycleOwnedEntityPrevious();
     void SelectCombatForce();
     void CycleFormation();
@@ -89,6 +90,7 @@ public:
     {
         return bMatchResultVisible;
     }
+    [[nodiscard]] bool IsNewCampaignConfirmationArmed() const;
     [[nodiscard]] bool IsPauseMenuVisible() const
     {
         return bPauseMenuVisible;
@@ -241,6 +243,7 @@ private:
     FVector2D KeyboardTargetOffset = FVector2D::ZeroVector;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
+    double NewCampaignConfirmationExpiresAt = 0.0;
     int32 TechnologyPanelFocusedTier = 0;
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
@@ -252,6 +255,7 @@ private:
     bool bTechnologyPanelWasScenarioPaused = false;
     bool bKeyboardTargetingEnabled = false;
     bool bMatchResultVisible = false;
+    bool bNewCampaignConfirmationArmed = false;
     bool bCampaignResult = false;
     bool bCampaignSuccess = false;
     echoes::sim::FutureWellChoice CampaignConsequence =

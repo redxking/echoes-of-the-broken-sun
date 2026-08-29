@@ -410,6 +410,35 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
                          EEchoesOperationMode::CampaignSevenAccounts &&
                      Bridge->GetSevenAccountsPhase() ==
                          EEchoesSevenAccountsPhase::EstablishWaystone);
+        Controller->PresentTitleScreen();
+        Controller->RequestNewCampaign();
+        TestTrue(TEXT("The first F10 press only arms confirmation"),
+                 Controller->IsNewCampaignConfirmationArmed() &&
+                     Bridge->GetCampaignProgress().Decisions.Num() == 2);
+        Controller->RequestNewCampaign();
+        TestTrue(TEXT("The confirmed new campaign clears active decisions"),
+                 !Controller->IsNewCampaignConfirmationArmed() &&
+                     Bridge->GetCampaignProgress().Decisions.IsEmpty());
+        TestTrue(TEXT("New-campaign authority returns to the default operation"),
+                 Bridge->GetOperationMode() ==
+                         EEchoesOperationMode::Skirmish &&
+                     Bridge->GetLocalFaction() ==
+                         echoes::sim::Faction::MeridianCompact &&
+                     Bridge->IsScenarioPaused());
+        FEchoesCampaignProgress EmptyReload;
+        TestTrue(TEXT("The empty active ledger reloads transactionally"),
+                 FEchoesCampaignProgressStore::LoadWithBackup(
+                     CampaignPath,
+                     EmptyReload,
+                     Feedback) &&
+                     EmptyReload.Decisions.IsEmpty());
+        FEchoesCampaignProgress RetainedPriorGeneration;
+        TestTrue(TEXT("One prior campaign generation remains recoverable"),
+                 FEchoesCampaignProgressStore::LoadWithBackup(
+                     CampaignPath + TEXT(".bak"),
+                     RetainedPriorGeneration,
+                     Feedback) &&
+                     RetainedPriorGeneration.Decisions.Num() == 2);
         Controller->Destroy();
     }
 

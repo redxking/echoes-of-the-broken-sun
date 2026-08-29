@@ -1319,6 +1319,68 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     return false;
 }
 
+bool UEchoesSimulationSubsystem::StartNewCampaign(FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!bCampaignProgressAvailable)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] A new campaign could not be created because campaign storage is unavailable.");
+        return false;
+    }
+    if (CampaignProgress.Decisions.IsEmpty())
+    {
+        OutFeedback = TEXT("NEW CAMPAIGN: the campaign ledger is already empty.");
+        return true;
+    }
+
+    FEchoesCampaignProgress EmptyCampaign;
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            EmptyCampaign,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return false;
+    }
+
+    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
+    const bool bHadScenario = bScenarioReady && Simulation.IsValid();
+    const bool bWasPaused = bSimulationPaused;
+    CampaignProgress = MoveTemp(EmptyCampaign);
+    if (bHadScenario)
+    {
+        StopPrototypeScenario();
+    }
+    SelectedOperation = EEchoesOperationMode::Skirmish;
+    LocalFaction = Faction::MeridianCompact;
+    if (bHadScenario && !StartScenario(false))
+    {
+        OutFeedback = TEXT("[NEW_CAMPAIGN_REBUILD_FAILED] The empty ledger was committed, but the default operation could not be rebuilt.");
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NEW_CAMPAIGN_FAILED] stage=scenario_rebuild replacedRecords=%d backupRetained=true"),
+            ReplacedDecisionCount);
+        return false;
+    }
+    if (bHadScenario)
+    {
+        SetScenarioPaused(bWasPaused);
+    }
+    OutFeedback = FString::Printf(
+        TEXT("NEW CAMPAIGN CREATED: %d prior mission record%s replaced; one prior ledger generation retained as backup."),
+        ReplacedDecisionCount,
+        ReplacedDecisionCount == 1 ? TEXT("") : TEXT("s"));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NEW_CAMPAIGN_CREATED] replacedRecords=%d operation=GlassScar local=MeridianCompact backupRetained=true scenarioReset=%s"),
+        ReplacedDecisionCount,
+        bHadScenario ? TEXT("true") : TEXT("false"));
+    return true;
+}
+
 FString UEchoesSimulationSubsystem::GetQuickSavePath()
 {
     return FPaths::Combine(

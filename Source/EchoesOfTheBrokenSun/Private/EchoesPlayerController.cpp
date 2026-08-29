@@ -113,6 +113,8 @@ void AEchoesPlayerController::PresentTitleScreen()
     bPauseMenuVisible = false;
     bTechnologyPanelVisible = false;
     bMatchResultVisible = false;
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignResult = false;
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
@@ -154,6 +156,8 @@ void AEchoesPlayerController::ConfirmTitleScreen()
     {
         return;
     }
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
     bTitleScreenVisible = false;
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TITLE_CONFIRMED] next=OperationsBrief"));
     PresentMissionBriefing();
@@ -318,6 +322,8 @@ void AEchoesPlayerController::CycleOperation()
         SetStatusMessage(TEXT("[OPERATION_SIM_NOT_READY] Operation choice is unavailable."));
         return;
     }
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
     EEchoesOperationMode NewOperation = EEchoesOperationMode::Skirmish;
     if (Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
     {
@@ -345,6 +351,76 @@ void AEchoesPlayerController::CycleOperation()
             TEXT("%s Press Enter when ready."),
             *Feedback),
         3600.0f);
+}
+
+bool AEchoesPlayerController::IsNewCampaignConfirmationArmed() const
+{
+    return bNewCampaignConfirmationArmed && GetWorld() != nullptr &&
+           GetWorld()->GetTimeSeconds() <=
+               NewCampaignConfirmationExpiresAt;
+}
+
+void AEchoesPlayerController::RequestNewCampaign()
+{
+    if (!bTitleScreenVisible)
+    {
+        SetStatusMessage(TEXT("[NEW_CAMPAIGN_TITLE_REQUIRED] Return to the title screen before replacing campaign progress."));
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[NEW_CAMPAIGN_SIM_NOT_READY] Campaign reset is unavailable."));
+        return;
+    }
+    if (Bridge->GetCampaignProgress().Decisions.IsEmpty())
+    {
+        bNewCampaignConfirmationArmed = false;
+        NewCampaignConfirmationExpiresAt = 0.0;
+        SetStatusMessage(TEXT("NEW CAMPAIGN: the campaign ledger is already empty."));
+        return;
+    }
+    if (!IsNewCampaignConfirmationArmed())
+    {
+        bNewCampaignConfirmationArmed = true;
+        NewCampaignConfirmationExpiresAt =
+            GetWorld()->GetTimeSeconds() + 10.0;
+        SetStatusMessage(
+            TEXT("NEW CAMPAIGN ARMED — press F10 again within 10 seconds to replace active progress. One prior ledger generation will be retained as backup."),
+            10.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NEW_CAMPAIGN_ARMED] records=%d confirmationSeconds=10 backupRetained=true"),
+            Bridge->GetCampaignProgress().Decisions.Num());
+        return;
+    }
+
+    FString Feedback;
+    if (!Bridge->StartNewCampaign(Feedback))
+    {
+        bNewCampaignConfirmationArmed = false;
+        NewCampaignConfirmationExpiresAt = 0.0;
+        SetStatusMessage(Feedback, 12.0f);
+        return;
+    }
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    bCampaignResult = false;
+    bCampaignSuccess = false;
+    CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
+    PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
+    PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+    SetStatusMessage(Feedback, 12.0f);
 }
 
 void AEchoesPlayerController::CycleOwnedEntityPrevious()
@@ -1041,6 +1117,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
+    BindPressed(TEXT("RequestNewCampaign"), &AEchoesPlayerController::RequestNewCampaign);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
     BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);
