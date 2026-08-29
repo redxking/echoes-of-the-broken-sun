@@ -74,8 +74,8 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v14 header/rules/player/sequence fields plus terrain and four fog grids.
-    return 1568 + 5 * mapTileCount;
+    // Snapshot v15 header/rules/player/sequence fields plus terrain and four fog grids.
+    return 1604 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
@@ -1148,7 +1148,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1448, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 1484, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1168,7 +1168,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1456, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 1492, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1737,6 +1737,233 @@ void TestWaystoneMigrationAndRooting() {
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 }
 
+void TestWarformAdaptationAndMoltCounterplay() {
+    Simulation unfunded({16, 16, 20, 0x554e46554e444544ULL});
+    AddTwoPlayers(unfunded, {0, 0}, {0, 24});
+    const EntityId unfundedBasin = unfunded.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(8, 8));
+    const EntityId unfundedWarform = unfunded.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(9, 8));
+    REQUIRE(unfundedBasin != 0 && unfundedWarform != 0);
+    REQUIRE(unfunded.ValidateWarformAdaptation(
+                1, unfundedWarform, unfundedBasin,
+                WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::InsufficientDawn);
+
+    Simulation simulation({24, 24, 20, 0x4d4f4c5453495445ULL});
+    AddTwoPlayers(simulation, {0, 0}, {1000, 500});
+    const EntityId basin = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(10, 10));
+    const EntityId warform = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(11, 10));
+    const EntityId distantWarform = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(20, 20));
+    const EntityId attacker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(12, 10));
+    REQUIRE(basin != 0 && warform != 0 && distantWarform != 0 &&
+            attacker != 0);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, warform, basin, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::Valid);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                3, warform, basin, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::InvalidPlayer);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                0, attacker, basin, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::InvalidActor);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, warform, basin, WarformAdaptation::None) ==
+            WarformAdaptationResult::InvalidAdaptation);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, warform, warform, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::InvalidSite);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, distantWarform, basin, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::OutsideSiteRadius);
+    const std::optional<PlayerView> adaptiveView = simulation.CreatePlayerView(1);
+    REQUIRE(adaptiveView.has_value());
+    const std::vector<Command> adaptiveCommands =
+        Simulation::GenerateAiCommands(*adaptiveView, AiPersonality::Adaptive);
+    REQUIRE(std::any_of(
+        adaptiveCommands.begin(), adaptiveCommands.end(),
+        [warform, basin](const Command& command) {
+            return command.type == CommandType::AdaptWarform &&
+                   command.actor == warform && command.target == basin &&
+                   command.warformAdaptation == WarformAdaptation::Striker;
+        }));
+
+    const Entity* baseline = simulation.FindEntity(warform);
+    REQUIRE(baseline != nullptr);
+    const std::int32_t baseHealth = baseline->maxHitPoints;
+    const std::int32_t baseMovement = baseline->movementPerTickRaw;
+    const std::int32_t baseDamage = baseline->attackDamage;
+    const Tick baseCooldown = baseline->attackPeriodTicks;
+    const std::int32_t startingDawn =
+        simulation.FindPlayer(1)->resources.dawnshards;
+    simulation.CaptureReplayBaseline();
+
+    Command adapt = MakeCommand(
+        0, 1, 1, CommandType::AdaptWarform, warform);
+    adapt.target = basin;
+    adapt.warformAdaptation = WarformAdaptation::Carapace;
+    Command attack = MakeCommand(0, 0, 1, CommandType::Attack, attacker);
+    attack.target = warform;
+    REQUIRE(simulation.QueueCommand(adapt));
+    REQUIRE(simulation.QueueCommand(attack));
+    simulation.Step();
+
+    const Entity* molting = simulation.FindEntity(warform);
+    REQUIRE(molting != nullptr);
+    REQUIRE(molting->warformAdaptation == WarformAdaptation::None);
+    REQUIRE(molting->pendingWarformAdaptation ==
+            WarformAdaptation::Carapace);
+    REQUIRE(molting->moltSite == basin);
+    REQUIRE(molting->moltUntilTick ==
+            simulation.Config().rules.warformAdaptation.moltTicks);
+    REQUIRE(molting->order.type == OrderType::None);
+    REQUIRE(simulation.FindPlayer(1)->resources.dawnshards ==
+            startingDawn - simulation.Config().rules.warformAdaptation.dawnCost);
+    const std::int32_t enemyDamage =
+        simulation.FindEntity(attacker)->attackDamage;
+    REQUIRE(molting->hitPoints ==
+            baseHealth - enemyDamage *
+                simulation.Config().rules.warformAdaptation
+                    .moltDamageTakenPercent /
+                100);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, warform, basin, WarformAdaptation::Striker) ==
+            WarformAdaptationResult::MoltActive);
+
+    const std::optional<PlayerView> opponentView = simulation.CreatePlayerView(0);
+    REQUIRE(opponentView.has_value());
+    const auto observedWarform = std::find_if(
+        opponentView->Entities().begin(), opponentView->Entities().end(),
+        [warform](const Entity& entity) { return entity.id == warform; });
+    REQUIRE(observedWarform != opponentView->Entities().end());
+    REQUIRE(observedWarform->pendingWarformAdaptation ==
+            WarformAdaptation::Carapace);
+    REQUIRE(observedWarform->moltSite == basin);
+    REQUIRE(observedWarform->moltUntilTick == 0);
+    REQUIRE(observedWarform->hitPoints == 1);
+
+    Command blockedMove = MakeCommand(
+        simulation.CurrentTick(), 1, 2, CommandType::Move, warform);
+    blockedMove.position = Vec2::FromTiles(15, 10);
+    Command stopAttack = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Stop, attacker);
+    REQUIRE(simulation.QueueCommand(blockedMove));
+    REQUIRE(simulation.QueueCommand(stopAttack));
+    const Vec2 moltPosition = molting->position;
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(warform)->position == moltPosition);
+    REQUIRE(simulation.FindEntity(warform)->order.type == OrderType::None);
+
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->FindEntity(warform)->pendingWarformAdaptation ==
+            WarformAdaptation::Carapace);
+    REQUIRE(restored->Config().rules.warformAdaptation ==
+            simulation.Config().rules.warformAdaptation);
+
+    simulation.Step(
+        simulation.FindEntity(warform)->moltUntilTick -
+        simulation.CurrentTick());
+    const Entity* carapace = simulation.FindEntity(warform);
+    REQUIRE(carapace != nullptr);
+    REQUIRE(carapace->warformAdaptation == WarformAdaptation::Carapace);
+    REQUIRE(carapace->pendingWarformAdaptation == WarformAdaptation::None);
+    REQUIRE(carapace->moltSite == 0 && carapace->moltUntilTick == 0);
+    REQUIRE(carapace->maxHitPoints ==
+            baseHealth *
+                simulation.Config().rules.warformAdaptation
+                    .carapaceHealthPercent /
+                100);
+    REQUIRE(carapace->movementPerTickRaw ==
+            baseMovement *
+                simulation.Config().rules.warformAdaptation
+                    .carapaceMovementPercent /
+                100);
+    REQUIRE(simulation.ValidateWarformAdaptation(
+                1, warform, basin, WarformAdaptation::Carapace) ==
+            WarformAdaptationResult::AlreadyAdapted);
+
+    Command striker = MakeCommand(
+        simulation.CurrentTick(), 1, 3, CommandType::AdaptWarform, warform);
+    striker.target = basin;
+    striker.warformAdaptation = WarformAdaptation::Striker;
+    REQUIRE(simulation.QueueCommand(striker));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(warform)->maxHitPoints == baseHealth);
+    REQUIRE(simulation.FindEntity(warform)->warformAdaptation ==
+            WarformAdaptation::None);
+    simulation.Step(
+        simulation.FindEntity(warform)->moltUntilTick -
+        simulation.CurrentTick());
+    const Entity* strikerForm = simulation.FindEntity(warform);
+    REQUIRE(strikerForm != nullptr);
+    REQUIRE(strikerForm->warformAdaptation == WarformAdaptation::Striker);
+    REQUIRE(strikerForm->maxHitPoints == baseHealth);
+    REQUIRE(strikerForm->movementPerTickRaw == baseMovement);
+    REQUIRE(strikerForm->attackDamage ==
+            baseDamage *
+                simulation.Config().rules.warformAdaptation
+                    .strikerDamagePercent /
+                100);
+    REQUIRE(strikerForm->attackPeriodTicks ==
+            baseCooldown *
+                simulation.Config().rules.warformAdaptation
+                    .strikerCooldownPercent /
+                100);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    std::optional<Simulation> replayed = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    SimulationConfig cancelConfig{20, 20, 20, 0x43414e43454cULL};
+    cancelConfig.rules
+        .archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
+                   [static_cast<std::size_t>(EntityType::Soldier)]
+        .attackDamage = 2000;
+    Simulation cancelled(cancelConfig);
+    AddTwoPlayers(cancelled, {0, 0}, {0, 100});
+    const EntityId cancelBasin = cancelled.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(10, 10));
+    const EntityId cancelWarform = cancelled.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(9, 10));
+    const EntityId siteAttacker = cancelled.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(11, 10));
+    REQUIRE(cancelBasin != 0 && cancelWarform != 0 && siteAttacker != 0);
+    Command cancelMolt = MakeCommand(
+        0, 1, 1, CommandType::AdaptWarform, cancelWarform);
+    cancelMolt.target = cancelBasin;
+    cancelMolt.warformAdaptation = WarformAdaptation::Carapace;
+    Command destroySite = MakeCommand(
+        0, 0, 1, CommandType::Attack, siteAttacker);
+    destroySite.target = cancelBasin;
+    REQUIRE(cancelled.QueueCommand(cancelMolt));
+    REQUIRE(cancelled.QueueCommand(destroySite));
+    cancelled.Step();
+    REQUIRE(cancelled.FindEntity(cancelBasin) == nullptr);
+    REQUIRE(cancelled.FindEntity(cancelWarform)->warformAdaptation ==
+            WarformAdaptation::None);
+    REQUIRE(cancelled.FindEntity(cancelWarform)->pendingWarformAdaptation ==
+            WarformAdaptation::None);
+    REQUIRE(cancelled.FindEntity(cancelWarform)->moltSite == 0);
+    REQUIRE(cancelled.FindEntity(cancelWarform)->moltUntilTick == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -1774,6 +2001,8 @@ int main() {
          TestRelaySupplyExtensionLifecycle},
         {"Waystone migration and rooting",
          TestWaystoneMigrationAndRooting},
+        {"Warform adaptation and molt counterplay",
+         TestWarformAdaptationAndMoltCounterplay},
     };
 
     std::size_t passed = 0;

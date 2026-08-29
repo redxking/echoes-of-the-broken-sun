@@ -40,9 +40,18 @@ public:
     [[nodiscard]] bool IsDeploymentCoverVisible() const;
     [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
     [[nodiscard]] bool IsWaystoneStateVisible() const;
+    [[nodiscard]] bool IsWarformStateVisible() const;
     [[nodiscard]] echoes::sim::WaystoneMode GetWaystoneMode() const
     {
         return WaystoneMode;
+    }
+    [[nodiscard]] echoes::sim::WarformAdaptation GetWarformAdaptation() const
+    {
+        return WarformAdaptation;
+    }
+    [[nodiscard]] echoes::sim::WarformAdaptation GetPendingWarformAdaptation() const
+    {
+        return PendingWarformAdaptation;
     }
     [[nodiscard]] bool IsDamagePulseActive() const
     {
@@ -83,6 +92,9 @@ private:
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> WaystoneStateField;
 
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> WarformStateField;
+
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
 
@@ -122,6 +134,9 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> WaystoneStateFieldMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> WarformStateFieldMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -144,4 +159,8 @@ private:
     bool bRelaySupplyActive = false;
     echoes::sim::WaystoneMode WaystoneMode =
         echoes::sim::WaystoneMode::NotWaystone;
+    echoes::sim::WarformAdaptation WarformAdaptation =
+        echoes::sim::WarformAdaptation::None;
+    echoes::sim::WarformAdaptation PendingWarformAdaptation =
+        echoes::sim::WarformAdaptation::None;
 };

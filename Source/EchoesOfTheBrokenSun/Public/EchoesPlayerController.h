@@ -92,6 +92,9 @@ private:
     void ToggleBulwarkDeploymentAtCursor();
     void ActivateRelaySupply();
     void ToggleWaystoneRoot();
+    void AdaptSelectedWarformsCarapace();
+    void AdaptSelectedWarformsStriker();
+    void AdaptSelectedWarforms(echoes::sim::WarformAdaptation Adaptation);
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

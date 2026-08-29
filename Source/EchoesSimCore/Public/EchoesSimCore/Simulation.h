@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 14;
-inline constexpr std::uint32_t kReplayVersion = 14;
+inline constexpr std::uint32_t kSnapshotVersion = 15;
+inline constexpr std::uint32_t kReplayVersion = 15;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -169,6 +169,7 @@ enum class CommandType : std::uint8_t {
     ToggleDeploy = 12,
     ActivateRelaySupply = 13,
     ToggleWaystoneRoot = 14,
+    AdaptWarform = 15,
 };
 
 enum class WaystoneMode : std::uint8_t {
@@ -177,6 +178,12 @@ enum class WaystoneMode : std::uint8_t {
     Uprooting = 2,
     Mobile = 3,
     Rooting = 4,
+};
+
+enum class WarformAdaptation : std::uint8_t {
+    None = 0,
+    Carapace = 1,
+    Striker = 2,
 };
 
 enum class PlacementResult : std::uint8_t {
@@ -215,6 +222,18 @@ enum class WaystoneRootResult : std::uint8_t {
     InvalidActor = 2,
     TransitionActive = 3,
     RootingBlocked = 4,
+};
+
+enum class WarformAdaptationResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidActor = 2,
+    InvalidAdaptation = 3,
+    AlreadyAdapted = 4,
+    MoltActive = 5,
+    InvalidSite = 6,
+    OutsideSiteRadius = 7,
+    InsufficientDawn = 8,
 };
 
 enum class MatchOutcome : std::uint8_t {
@@ -313,6 +332,21 @@ struct WaystoneMigrationRules final {
                            const WaystoneMigrationRules&) = default;
 };
 
+/** Authored Kharuun warform adaptation behavior rooted at a Growth Basin. */
+struct WarformAdaptationRules final {
+    std::int32_t siteRadiusRaw = 6 * kFixedScale;
+    Tick moltTicks = 80;
+    std::int32_t dawnCost = 25;
+    std::int32_t moltDamageTakenPercent = 150;
+    std::int32_t carapaceHealthPercent = 135;
+    std::int32_t carapaceMovementPercent = 80;
+    std::int32_t strikerDamagePercent = 125;
+    std::int32_t strikerCooldownPercent = 85;
+
+    friend bool operator==(const WarformAdaptationRules&,
+                           const WarformAdaptationRules&) = default;
+};
+
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
     std::uint32_t version = 1;
@@ -325,6 +359,7 @@ struct SimulationRules final {
     BulwarkDeploymentRules bulwarkDeployment{};
     RelaySupplyRules relaySupply{};
     WaystoneMigrationRules waystoneMigration{};
+    WarformAdaptationRules warformAdaptation{};
 
     friend bool operator==(const SimulationRules&,
                            const SimulationRules&) = default;
@@ -385,6 +420,10 @@ struct Entity final {
     Tick relaySupplyCooldownUntilTick = 0;
     WaystoneMode waystoneMode = WaystoneMode::NotWaystone;
     Tick waystoneTransitionUntilTick = 0;
+    WarformAdaptation warformAdaptation = WarformAdaptation::None;
+    WarformAdaptation pendingWarformAdaptation = WarformAdaptation::None;
+    EntityId moltSite = 0;
+    Tick moltUntilTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -399,6 +438,7 @@ struct Command final {
     Vec2 position{};
     EntityType buildType = EntityType::Barracks;
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
+    WarformAdaptation warformAdaptation = WarformAdaptation::None;
 
     friend bool operator==(const Command&, const Command&) = default;
 };
@@ -505,6 +545,11 @@ public:
     [[nodiscard]] WaystoneRootResult ValidateWaystoneRoot(
         PlayerId player,
         EntityId actor) const;
+    [[nodiscard]] WarformAdaptationResult ValidateWarformAdaptation(
+        PlayerId player,
+        EntityId actor,
+        EntityId site,
+        WarformAdaptation adaptation) const;
     [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] ResourcePool ProductionCost(Faction faction,
                                                EntityType type) const;
@@ -602,6 +647,9 @@ private:
     [[nodiscard]] bool IsRelayConnected(const Entity& relay) const;
     [[nodiscard]] bool CanRootWaystone(const Entity& waystone) const;
     [[nodiscard]] bool IsOperationalDropoff(const Entity& entity) const;
+    [[nodiscard]] bool IsWarform(const Entity& entity) const;
+    void ApplyWarformAdaptation(Entity& entity,
+                                WarformAdaptation adaptation);
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
         const Entity& attacker,
         const Entity& target,
@@ -625,6 +673,7 @@ private:
     void ResolveExpiredReshapes();
     void ResolveExpiredRelaySupply();
     void ResolveWaystoneTransitions();
+    void ResolveWarformMolts();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();

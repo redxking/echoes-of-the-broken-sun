@@ -466,6 +466,40 @@ bool FEchoesContentCatalog::BuildSimulationRules(
             OutRules.waystoneMigration.mobileDamageTakenPercent =
                 Building->MigrationMobileDamageTakenPercent;
         }
+        if (Binding.Faction == echoes::sim::Faction::KharuunAssemblies &&
+            Binding.Type == echoes::sim::EntityType::Barracks)
+        {
+            if (Building->AdaptationSiteRadiusCentimeters <= 0 ||
+                Building->AdaptationMoltTicks <= 0 ||
+                Building->AdaptationDawnCost <= 0 ||
+                Building->AdaptationMoltDamageTakenPercent <= 100 ||
+                Building->AdaptationCarapaceHealthPercent <= 100 ||
+                Building->AdaptationCarapaceMoveSpeedPercent <= 0 ||
+                Building->AdaptationCarapaceMoveSpeedPercent >= 100 ||
+                Building->AdaptationStrikerDamagePercent <= 100 ||
+                Building->AdaptationStrikerCooldownPercent <= 0 ||
+                Building->AdaptationStrikerCooldownPercent >= 100)
+            {
+                OutError = TEXT("SIM_RULES_WARFORM_ADAPTATION_INVALID");
+                return false;
+            }
+            OutRules.warformAdaptation.siteRadiusRaw = static_cast<int32>(
+                static_cast<int64>(Building->AdaptationSiteRadiusCentimeters) *
+                echoes::sim::kFixedScale / 100);
+            OutRules.warformAdaptation.moltTicks =
+                static_cast<echoes::sim::Tick>(Building->AdaptationMoltTicks);
+            OutRules.warformAdaptation.dawnCost = Building->AdaptationDawnCost;
+            OutRules.warformAdaptation.moltDamageTakenPercent =
+                Building->AdaptationMoltDamageTakenPercent;
+            OutRules.warformAdaptation.carapaceHealthPercent =
+                Building->AdaptationCarapaceHealthPercent;
+            OutRules.warformAdaptation.carapaceMovementPercent =
+                Building->AdaptationCarapaceMoveSpeedPercent;
+            OutRules.warformAdaptation.strikerDamagePercent =
+                Building->AdaptationStrikerDamagePercent;
+            OutRules.warformAdaptation.strikerCooldownPercent =
+                Building->AdaptationStrikerCooldownPercent;
+        }
     }
 
     OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
@@ -687,6 +721,22 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
                 !ReadRequiredInteger(*Migration, TEXT("uproot_ticks"), Building.MigrationUprootTicks, Path + TEXT(".migration"), OutError, 1) ||
                 !ReadRequiredInteger(*Migration, TEXT("root_ticks"), Building.MigrationRootTicks, Path + TEXT(".migration"), OutError, 1) ||
                 !ReadRequiredInteger(*Migration, TEXT("mobile_damage_taken_percent"), Building.MigrationMobileDamageTakenPercent, Path + TEXT(".migration"), OutError, 101))
+            {
+                return false;
+            }
+        }
+        const TSharedPtr<FJsonObject>* Adaptation = nullptr;
+        if (Object->TryGetObjectField(TEXT("adaptation"), Adaptation) &&
+            Adaptation != nullptr && Adaptation->IsValid())
+        {
+            if (!ReadRequiredInteger(*Adaptation, TEXT("site_radius_cm"), Building.AdaptationSiteRadiusCentimeters, Path + TEXT(".adaptation"), OutError, 1) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("molt_ticks"), Building.AdaptationMoltTicks, Path + TEXT(".adaptation"), OutError, 1) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("dawn_cost"), Building.AdaptationDawnCost, Path + TEXT(".adaptation"), OutError, 1) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("molt_damage_taken_percent"), Building.AdaptationMoltDamageTakenPercent, Path + TEXT(".adaptation"), OutError, 101) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("carapace_health_percent"), Building.AdaptationCarapaceHealthPercent, Path + TEXT(".adaptation"), OutError, 101) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("carapace_move_speed_percent"), Building.AdaptationCarapaceMoveSpeedPercent, Path + TEXT(".adaptation"), OutError, 1) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("striker_damage_percent"), Building.AdaptationStrikerDamagePercent, Path + TEXT(".adaptation"), OutError, 101) ||
+                !ReadRequiredInteger(*Adaptation, TEXT("striker_cooldown_percent"), Building.AdaptationStrikerCooldownPercent, Path + TEXT(".adaptation"), OutError, 1))
             {
                 return false;
             }

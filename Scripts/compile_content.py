@@ -286,7 +286,7 @@ def validate_buildings(
         require_exact_keys(
             record,
             {"id", "display_name", "faction", "role", "cost", "max_health", "sight_cm", "construction_ticks", "logistics_capacity", "footprint_cells"},
-            {"migration"},
+            {"migration", "adaptation"},
             path,
         )
         identifier = require_id(record["id"], f"{path}.id")
@@ -322,6 +322,38 @@ def validate_buildings(
             }
         if faction == "kharuun_assemblies" and role == "mobile_supply_node" and migration is None:
             fail(f"{path}.migration", "the Kharuun mobile supply node requires authored migration rules")
+        adaptation: dict[str, int] | None = None
+        if "adaptation" in record:
+            raw_adaptation = require_object(record["adaptation"], f"{path}.adaptation")
+            require_exact_keys(
+                raw_adaptation,
+                {
+                    "site_radius_cm",
+                    "molt_ticks",
+                    "dawn_cost",
+                    "molt_damage_taken_percent",
+                    "carapace_health_percent",
+                    "carapace_move_speed_percent",
+                    "striker_damage_percent",
+                    "striker_cooldown_percent",
+                },
+                set(),
+                f"{path}.adaptation",
+            )
+            if faction != "kharuun_assemblies" or role != "production":
+                fail(f"{path}.adaptation", "schema 1 adaptation is reserved for the Kharuun production structure")
+            adaptation = {
+                "site_radius_cm": require_int(raw_adaptation["site_radius_cm"], f"{path}.adaptation.site_radius_cm", 100, 3200),
+                "molt_ticks": require_int(raw_adaptation["molt_ticks"], f"{path}.adaptation.molt_ticks", 1, 100_000),
+                "dawn_cost": require_int(raw_adaptation["dawn_cost"], f"{path}.adaptation.dawn_cost", 1, 100_000),
+                "molt_damage_taken_percent": require_int(raw_adaptation["molt_damage_taken_percent"], f"{path}.adaptation.molt_damage_taken_percent", 101, 300),
+                "carapace_health_percent": require_int(raw_adaptation["carapace_health_percent"], f"{path}.adaptation.carapace_health_percent", 101, 300),
+                "carapace_move_speed_percent": require_int(raw_adaptation["carapace_move_speed_percent"], f"{path}.adaptation.carapace_move_speed_percent", 1, 99),
+                "striker_damage_percent": require_int(raw_adaptation["striker_damage_percent"], f"{path}.adaptation.striker_damage_percent", 101, 300),
+                "striker_cooldown_percent": require_int(raw_adaptation["striker_cooldown_percent"], f"{path}.adaptation.striker_cooldown_percent", 1, 99),
+            }
+        if faction == "kharuun_assemblies" and role == "production" and adaptation is None:
+            fail(f"{path}.adaptation", "the Kharuun production structure requires authored adaptation rules")
         output.append(
             {
                 "id": identifier,
@@ -338,6 +370,7 @@ def validate_buildings(
                     require_int(footprint[1], f"{path}.footprint_cells[1]", 1, 64),
                 ],
                 "migration": migration,
+                "adaptation": adaptation,
             }
         )
     for faction in sorted(playable):

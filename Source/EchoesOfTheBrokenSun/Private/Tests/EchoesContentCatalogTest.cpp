@@ -40,7 +40,7 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("13d939a3f3c720c6c56adaf06c7fef43a31f3c9e1916822660951e51fc71843b")));
+        FString(TEXT("4adb4a203a575ec510158baf57f40cc856e52d94609f41b22dd8474938a2e70a")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -90,6 +90,17 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
               static_cast<echoes::sim::Tick>(60));
     TestEqual(TEXT("Waystone exposure enters simulation rules"),
               Rules.waystoneMigration.mobileDamageTakenPercent, 125);
+    TestEqual(TEXT("Growth Basin adaptation radius enters fixed-point rules"),
+              Rules.warformAdaptation.siteRadiusRaw, 6144);
+    TestEqual(TEXT("Warform molt duration enters simulation rules"),
+              Rules.warformAdaptation.moltTicks,
+              static_cast<echoes::sim::Tick>(80));
+    TestEqual(TEXT("Warform molt exposure enters simulation rules"),
+              Rules.warformAdaptation.moltDamageTakenPercent, 150);
+    TestEqual(TEXT("Carapace health enters simulation rules"),
+              Rules.warformAdaptation.carapaceHealthPercent, 135);
+    TestEqual(TEXT("Striker damage enters simulation rules"),
+              Rules.warformAdaptation.strikerDamagePercent, 125);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -154,6 +165,21 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     {
         TestEqual(TEXT("Array Foundry is a production structure"), Foundry->Role, FString(TEXT("production")));
         TestEqual(TEXT("Array Foundry footprint is authored"), Foundry->FootprintCells, FIntPoint(4, 4));
+    }
+    const FEchoesBuildingContent* GrowthBasin =
+        Catalog.FindBuilding(TEXT("ka_growth_basin"));
+    if (TestNotNull(TEXT("Kharuun Growth Basin is addressable by stable ID"), GrowthBasin))
+    {
+        TestEqual(TEXT("Growth Basin molt radius is authored"),
+                  GrowthBasin->AdaptationSiteRadiusCentimeters, 600);
+        TestEqual(TEXT("Growth Basin molt timing is authored"),
+                  GrowthBasin->AdaptationMoltTicks, 80);
+        TestEqual(TEXT("Growth Basin adaptation cost is authored"),
+                  GrowthBasin->AdaptationDawnCost, 25);
+        TestEqual(TEXT("Growth Basin carapace tradeoff is authored"),
+                  GrowthBasin->AdaptationCarapaceMoveSpeedPercent, 80);
+        TestEqual(TEXT("Growth Basin striker tradeoff is authored"),
+                  GrowthBasin->AdaptationStrikerCooldownPercent, 85);
     }
     TestEqual(
         TEXT("Reshape duration comes from authored data"),

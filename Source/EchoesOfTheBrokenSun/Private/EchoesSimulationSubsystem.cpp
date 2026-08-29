@@ -69,6 +69,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
+    bLoggedAiAdaptation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -158,7 +159,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
@@ -368,6 +369,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
+    bLoggedAiAdaptation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -433,6 +435,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
     bLoggedAiPlayerView = false;
+    bLoggedAiAdaptation = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -934,6 +937,18 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                     bLoggedAiRetreat = true;
                 }
             }
+            if (!bLoggedAiAdaptation &&
+                Command.type == echoes::sim::CommandType::AdaptWarform)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_AI_ADAPTATION] personality=adaptive actor=%u site=%u form=%u compositionVisible=true"),
+                    Command.actor,
+                    Command.target,
+                    static_cast<uint8>(Command.warformAdaptation));
+                bLoggedAiAdaptation = true;
+            }
         }
         else
         {
@@ -997,6 +1012,83 @@ bool UEchoesSimulationSubsystem::IssueProductionCommand(
         echoes::sim::FutureWellChoice::Dormant,
         UnitType,
         OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
+    uint32 ActorId,
+    uint32 SiteId,
+    echoes::sim::WarformAdaptation Adaptation,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!Simulation.IsValid() || !bScenarioReady)
+    {
+        OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
+        return false;
+    }
+    if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        OutFeedback = TEXT("[MATCH_FINISHED] Press R to restart before issuing orders.");
+        return false;
+    }
+    const echoes::sim::Entity* Actor = Simulation->FindEntity(ActorId);
+    if (Actor == nullptr)
+    {
+        OutFeedback = TEXT("[ACTOR_MISSING] The selected entity no longer exists.");
+        return false;
+    }
+    if (Actor->owner != LocalPlayerId)
+    {
+        OutFeedback = TEXT("[ACTOR_NOT_OWNED] Only the local faction accepts player orders.");
+        return false;
+    }
+    switch (Simulation->ValidateWarformAdaptation(
+        LocalPlayerId, ActorId, SiteId, Adaptation))
+    {
+        case echoes::sim::WarformAdaptationResult::Valid:
+            break;
+        case echoes::sim::WarformAdaptationResult::InvalidPlayer:
+        case echoes::sim::WarformAdaptationResult::InvalidActor:
+            OutFeedback = TEXT("[WARFORM_REQUIRED] Select a Kharuun combat warform.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::InvalidAdaptation:
+            OutFeedback = TEXT("[ADAPTATION_INVALID] Choose Carapace or Striker form.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::AlreadyAdapted:
+            OutFeedback = TEXT("[ALREADY_ADAPTED] This warform already has the chosen form.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::MoltActive:
+            OutFeedback = TEXT("[MOLT_ACTIVE] This warform is already molting.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::InvalidSite:
+            OutFeedback = TEXT("[GROWTH_BASIN_REQUIRED] Choose a completed friendly Growth Basin.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::OutsideSiteRadius:
+            OutFeedback = TEXT("[OUTSIDE_MOLT_SITE] Move within the Growth Basin's adaptation field.");
+            return false;
+        case echoes::sim::WarformAdaptationResult::InsufficientDawn:
+            OutFeedback = TEXT("[INSUFFICIENT_DAWN] The adaptation cannot be funded.");
+            return false;
+    }
+
+    echoes::sim::Command Command;
+    Command.executeTick = Simulation->CurrentTick() + 1;
+    Command.player = LocalPlayerId;
+    Command.sequence = NextPlayerCommandSequence++;
+    Command.type = echoes::sim::CommandType::AdaptWarform;
+    Command.actor = ActorId;
+    Command.target = SiteId;
+    Command.position = Actor->position;
+    Command.warformAdaptation = Adaptation;
+    std::string Rejection;
+    if (!Simulation->QueueCommand(Command, &Rejection))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[CORE_REJECTED] %s"), UTF8_TO_TCHAR(Rejection.c_str()));
+        return false;
+    }
+    OutFeedback = TEXT("[QUEUED] Warform molt accepted for the next simulation tick.");
+    return true;
 }
 
 bool UEchoesSimulationSubsystem::QueuePlayerCommand(
@@ -1207,6 +1299,9 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = TEXT("[WAYSTONE_ROOTING_BLOCKED] Move to a clear, passable footprint.");
                     break;
             }
+            return false;
+        case CommandType::AdaptWarform:
+            OutFeedback = TEXT("[ADAPTATION_FORM_REQUIRED] Use a declared warform adaptation command.");
             return false;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)

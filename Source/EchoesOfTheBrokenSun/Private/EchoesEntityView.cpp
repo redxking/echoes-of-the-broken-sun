@@ -124,6 +124,15 @@ AEchoesEntityView::AEchoesEntityView()
     WaystoneStateField->SetReceivesDecals(false);
     WaystoneStateField->SetVisibility(false);
 
+    WarformStateField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("WarformStateField"));
+    WarformStateField->SetupAttachment(SceneRoot);
+    WarformStateField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    WarformStateField->SetGenerateOverlapEvents(false);
+    WarformStateField->SetCastShadow(false);
+    WarformStateField->SetReceivesDecals(false);
+    WarformStateField->SetVisibility(false);
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -151,6 +160,8 @@ AEchoesEntityView::AEchoesEntityView()
     RelaySupplyField->SetRelativeScale3D(FVector(1.65f, 1.65f, 0.025f));
     WaystoneStateField->SetStaticMesh(CylinderMesh);
     WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
+    WarformStateField->SetStaticMesh(CylinderMesh);
+    WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -210,7 +221,10 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   bDeployed != State.deployed ||
                                   DeploymentFacing != State.deploymentFacing ||
                                   bRelaySupplyActive != State.relaySupplyActive ||
-                                  WaystoneMode != State.waystoneMode;
+                                  WaystoneMode != State.waystoneMode ||
+                                  WarformAdaptation != State.warformAdaptation ||
+                                  PendingWarformAdaptation !=
+                                      State.pendingWarformAdaptation;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -220,6 +234,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     DeploymentFacing = State.deploymentFacing;
     bRelaySupplyActive = State.relaySupplyActive;
     WaystoneMode = State.waystoneMode;
+    WarformAdaptation = State.warformAdaptation;
+    PendingWarformAdaptation = State.pendingWarformAdaptation;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -419,6 +435,35 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
     WaystoneStateField->SetVisibility(bIsWaystone, true);
+    const bool bIsPublicWarformState =
+        State.faction == echoes::sim::Faction::KharuunAssemblies &&
+        (State.type == echoes::sim::EntityType::Soldier ||
+         State.type == echoes::sim::EntityType::HeavyUnit ||
+         State.type == echoes::sim::EntityType::ScoutUnit) &&
+        (State.warformAdaptation != echoes::sim::WarformAdaptation::None ||
+         State.pendingWarformAdaptation !=
+             echoes::sim::WarformAdaptation::None);
+    if (bIsPublicWarformState)
+    {
+        if (State.pendingWarformAdaptation !=
+            echoes::sim::WarformAdaptation::None)
+        {
+            WarformStateField->SetStaticMesh(CylinderMesh);
+            WarformStateField->SetRelativeScale3D(FVector(1.15f, 1.15f, 0.08f));
+        }
+        else if (State.warformAdaptation ==
+                 echoes::sim::WarformAdaptation::Carapace)
+        {
+            WarformStateField->SetStaticMesh(CubeMesh);
+            WarformStateField->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.06f));
+        }
+        else
+        {
+            WarformStateField->SetStaticMesh(ConeMesh);
+            WarformStateField->SetRelativeScale3D(FVector(0.34f, 0.34f, 0.18f));
+        }
+    }
+    WarformStateField->SetVisibility(bIsPublicWarformState, true);
 
     UStaticMesh* MarkerMesh = nullptr;
     switch (State.owner)
@@ -512,6 +557,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.58f, 0.22f, 0.92f));
             WaystoneStateField->SetMaterial(0, WaystoneStateFieldMaterial);
         }
+        if (WarformStateFieldMaterial == nullptr)
+        {
+            WarformStateFieldMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            WarformStateFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.88f, 0.56f, 0.14f));
+            WarformStateField->SetMaterial(0, WarformStateFieldMaterial);
+        }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = TeamColor;
         SetBodyColor(BaseBodyColor);
@@ -534,6 +588,11 @@ bool AEchoesEntityView::IsRelaySupplyFieldVisible() const
 bool AEchoesEntityView::IsWaystoneStateVisible() const
 {
     return WaystoneStateField != nullptr && WaystoneStateField->IsVisible();
+}
+
+bool AEchoesEntityView::IsWarformStateVisible() const
+{
+    return WarformStateField != nullptr && WarformStateField->IsVisible();
 }
 
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)

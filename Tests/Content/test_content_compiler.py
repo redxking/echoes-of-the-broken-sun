@@ -66,6 +66,11 @@ class ContentCompilerTests(unittest.TestCase):
         waystone = next(item for item in first_pack["buildings"] if item["id"] == "ka_waystone")
         self.assertEqual(waystone["migration"]["move_speed_cm_s"], 120)
         self.assertEqual(waystone["migration"]["mobile_damage_taken_percent"], 125)
+        growth_basin = next(item for item in first_pack["buildings"] if item["id"] == "ka_growth_basin")
+        self.assertEqual(growth_basin["adaptation"]["molt_ticks"], 80)
+        self.assertEqual(growth_basin["adaptation"]["molt_damage_taken_percent"], 150)
+        self.assertEqual(growth_basin["adaptation"]["carapace_health_percent"], 135)
+        self.assertEqual(growth_basin["adaptation"]["striker_damage_percent"], 125)
 
     def test_unknown_field_fails_closed(self) -> None:
         units = self.load("units.json")
@@ -159,6 +164,21 @@ class ContentCompilerTests(unittest.TestCase):
         power_link["migration"] = copy.deepcopy(waystone["migration"])
         self.write("buildings.json", buildings)
         self.assert_invalid("reserved for the Kharuun mobile supply node")
+
+    def test_missing_growth_basin_adaptation_rules_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        growth_basin = next(item for item in buildings["buildings"] if item["id"] == "ka_growth_basin")
+        del growth_basin["adaptation"]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("requires authored adaptation rules")
+
+    def test_adaptation_rules_on_other_buildings_are_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        growth_basin = next(item for item in buildings["buildings"] if item["id"] == "ka_growth_basin")
+        foundry = next(item for item in buildings["buildings"] if item["id"] == "mc_array_foundry")
+        foundry["adaptation"] = copy.deepcopy(growth_basin["adaptation"])
+        self.write("buildings.json", buildings)
+        self.assert_invalid("reserved for the Kharuun production structure")
 
 
 if __name__ == "__main__":

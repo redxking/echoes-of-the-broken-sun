@@ -348,6 +348,16 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::ToggleWaystoneRoot);
     InputComponent->BindAction(
+        TEXT("AdaptWarformCarapace"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::AdaptSelectedWarformsCarapace);
+    InputComponent->BindAction(
+        TEXT("AdaptWarformStriker"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::AdaptSelectedWarformsStriker);
+    InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
@@ -1417,6 +1427,111 @@ void AEchoesPlayerController::ToggleWaystoneRoot()
                   : LastRejection);
 }
 
+void AEchoesPlayerController::AdaptSelectedWarformsCarapace()
+{
+    AdaptSelectedWarforms(echoes::sim::WarformAdaptation::Carapace);
+}
+
+void AEchoesPlayerController::AdaptSelectedWarformsStriker()
+{
+    AdaptSelectedWarforms(echoes::sim::WarformAdaptation::Striker);
+}
+
+void AEchoesPlayerController::AdaptSelectedWarforms(
+    echoes::sim::WarformAdaptation Adaptation)
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Warform adaptation is unavailable."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr ||
+            Entity->faction != echoes::sim::Faction::KharuunAssemblies ||
+            (Entity->type != echoes::sim::EntityType::Soldier &&
+             Entity->type != echoes::sim::EntityType::HeavyUnit &&
+             Entity->type != echoes::sim::EntityType::ScoutUnit))
+        {
+            ++RejectedCount;
+            continue;
+        }
+        uint32 NearestBasin = 0;
+        uint64 NearestDistance = TNumericLimits<uint64>::Max();
+        for (const echoes::sim::Entity& Candidate : Simulation->Entities())
+        {
+            if (Candidate.owner != Entity->owner || !Candidate.completed ||
+                Candidate.hitPoints <= 0 ||
+                Candidate.faction != echoes::sim::Faction::KharuunAssemblies ||
+                Candidate.type != echoes::sim::EntityType::Barracks)
+            {
+                continue;
+            }
+            const int64 DeltaX = static_cast<int64>(Entity->position.x.Raw()) -
+                                 Candidate.position.x.Raw();
+            const int64 DeltaY = static_cast<int64>(Entity->position.y.Raw()) -
+                                 Candidate.position.y.Raw();
+            const uint64 Distance = static_cast<uint64>(
+                DeltaX * DeltaX + DeltaY * DeltaY);
+            if (Distance < NearestDistance ||
+                (Distance == NearestDistance && Candidate.id < NearestBasin))
+            {
+                NearestDistance = Distance;
+                NearestBasin = Candidate.id;
+            }
+        }
+        FString Feedback;
+        if (NearestBasin != 0 && Bridge->IssueWarformAdaptation(
+                EntityId, NearestBasin, Adaptation, Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = NearestBasin == 0
+                ? TEXT("[GROWTH_BASIN_REQUIRED] No completed friendly Growth Basin is available.")
+                : Feedback;
+        }
+    }
+    const TCHAR* FormName =
+        Adaptation == echoes::sim::WarformAdaptation::Carapace
+            ? TEXT("CARAPACE")
+            : TEXT("STRIKER");
+    SetStatusMessage(
+        AcceptedCount > 0
+            ? FString::Printf(
+                  TEXT("%s MOLT: %d warform%s started, %d rejected."),
+                  FormName,
+                  AcceptedCount,
+                  AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+                  RejectedCount)
+            : LastRejection.IsEmpty()
+                  ? TEXT("[WARFORM_REQUIRED] Select a Kharuun combat warform.")
+                  : LastRejection);
+}
+
 void AEchoesPlayerController::HoldSelectedUnits()
 {
     if (IsModalOverlayVisible())
@@ -2054,6 +2169,8 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("ACTIVATE RELAY SUPPLY");
         case echoes::sim::CommandType::ToggleWaystoneRoot:
             return TEXT("TOGGLE WAYSTONE ROOT");
+        case echoes::sim::CommandType::AdaptWarform:
+            return TEXT("ADAPT WARFORM");
     }
     return TEXT("ORDER");
 }

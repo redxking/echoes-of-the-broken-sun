@@ -23,8 +23,8 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 157;
-constexpr std::size_t kSerializedCommandBytes = 36;
+constexpr std::size_t kSerializedEntityBytes = 171;
+constexpr std::size_t kSerializedCommandBytes = 37;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 128;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
@@ -58,7 +58,8 @@ void SetError(std::string* destination, const std::string& message) {
                     lhs.position.x,
                     lhs.position.y,
                     lhs.buildType,
-                    lhs.wellChoice) <
+                    lhs.wellChoice,
+                    lhs.warformAdaptation) <
            std::tie(rhs.executeTick,
                     rhs.player,
                     rhs.sequence,
@@ -68,7 +69,8 @@ void SetError(std::string* destination, const std::string& message) {
                     rhs.position.x,
                     rhs.position.y,
                     rhs.buildType,
-                    rhs.wellChoice);
+                    rhs.wellChoice,
+                    rhs.warformAdaptation);
 }
 
 [[nodiscard]] bool HasSameCommandKey(const Command& lhs, const Command& rhs) {
@@ -111,11 +113,16 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::ToggleWaystoneRoot;
+    return type >= CommandType::Stop && type <= CommandType::AdaptWarform;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
     return choice >= FutureWellChoice::Dormant && choice <= FutureWellChoice::Reshape;
+}
+
+[[nodiscard]] bool IsValidWarformAdaptation(WarformAdaptation adaptation) {
+    return adaptation >= WarformAdaptation::None &&
+           adaptation <= WarformAdaptation::Striker;
 }
 
 [[nodiscard]] bool IsValidAiPersonality(AiPersonality personality) {
@@ -266,6 +273,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
     const BulwarkDeploymentRules& bulwark = rules.bulwarkDeployment;
     const RelaySupplyRules& relay = rules.relaySupply;
     const WaystoneMigrationRules& waystone = rules.waystoneMigration;
+    const WarformAdaptationRules& adaptation = rules.warformAdaptation;
     return well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
@@ -301,7 +309,22 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            waystone.rootTicks > 0 &&
            waystone.rootTicks <= kMaximumSupportedTick &&
            waystone.mobileDamageTakenPercent > 100 &&
-           waystone.mobileDamageTakenPercent <= 300;
+           waystone.mobileDamageTakenPercent <= 300 &&
+           adaptation.siteRadiusRaw > 0 &&
+           adaptation.siteRadiusRaw <= 32 * kFixedScale &&
+           adaptation.moltTicks > 0 &&
+           adaptation.moltTicks <= kMaximumSupportedTick &&
+           adaptation.dawnCost > 0 && adaptation.dawnCost <= 100000 &&
+           adaptation.moltDamageTakenPercent > 100 &&
+           adaptation.moltDamageTakenPercent <= 300 &&
+           adaptation.carapaceHealthPercent > 100 &&
+           adaptation.carapaceHealthPercent <= 300 &&
+           adaptation.carapaceMovementPercent > 0 &&
+           adaptation.carapaceMovementPercent < 100 &&
+           adaptation.strikerDamagePercent > 100 &&
+           adaptation.strikerDamagePercent <= 300 &&
+           adaptation.strikerCooldownPercent > 0 &&
+           adaptation.strikerCooldownPercent < 100;
 }
 
 [[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
@@ -597,30 +620,36 @@ void WriteCommand(Writer& writer, const Command& command) {
     writer.I32(command.position.y.Raw());
     writer.U8(static_cast<std::uint8_t>(command.buildType));
     writer.U8(static_cast<std::uint8_t>(command.wellChoice));
+    writer.U8(static_cast<std::uint8_t>(command.warformAdaptation));
 }
 
 [[nodiscard]] bool ReadCommand(BinaryReader& reader, Command& command) {
     std::uint8_t type = 0;
     std::uint8_t buildType = 0;
     std::uint8_t wellChoice = 0;
+    std::uint8_t warformAdaptation = 0;
     std::int32_t rawX = 0;
     std::int32_t rawY = 0;
     if (!reader.U64(command.executeTick) || !reader.U8(command.player) ||
         !reader.U64(command.sequence) || !reader.U8(type) ||
         !reader.U32(command.actor) || !reader.U32(command.target) ||
         !reader.I32(rawX) || !reader.I32(rawY) || !reader.U8(buildType) ||
-        !reader.U8(wellChoice)) {
+        !reader.U8(wellChoice) || !reader.U8(warformAdaptation)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::ToggleWaystoneRoot) ||
+    if (type > static_cast<std::uint8_t>(CommandType::AdaptWarform) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
-        wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
+        wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
+        warformAdaptation >
+            static_cast<std::uint8_t>(WarformAdaptation::Striker)) {
         return false;
     }
     command.type = static_cast<CommandType>(type);
     command.position = Vec2::FromRaw(rawX, rawY);
     command.buildType = static_cast<EntityType>(buildType);
     command.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+    command.warformAdaptation =
+        static_cast<WarformAdaptation>(warformAdaptation);
     return true;
 }
 
@@ -1113,6 +1142,98 @@ WaystoneRootResult Simulation::ValidateWaystoneRoot(
     return WaystoneRootResult::Valid;
 }
 
+bool Simulation::IsWarform(const Entity& entity) const {
+    return entity.faction == Faction::KharuunAssemblies &&
+           (entity.type == EntityType::Soldier ||
+            entity.type == EntityType::HeavyUnit ||
+            entity.type == EntityType::ScoutUnit);
+}
+
+WarformAdaptationResult Simulation::ValidateWarformAdaptation(
+    PlayerId player,
+    EntityId actor,
+    EntityId site,
+    WarformAdaptation adaptation) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return WarformAdaptationResult::InvalidPlayer;
+    }
+    const Entity* warform = FindEntity(actor);
+    if (warform == nullptr || warform->owner != player || !warform->completed ||
+        warform->hitPoints <= 0 || !IsWarform(*warform)) {
+        return WarformAdaptationResult::InvalidActor;
+    }
+    if (adaptation != WarformAdaptation::Carapace &&
+        adaptation != WarformAdaptation::Striker) {
+        return WarformAdaptationResult::InvalidAdaptation;
+    }
+    if (warform->pendingWarformAdaptation != WarformAdaptation::None) {
+        return WarformAdaptationResult::MoltActive;
+    }
+    if (warform->warformAdaptation == adaptation) {
+        return WarformAdaptationResult::AlreadyAdapted;
+    }
+    const Entity* basin = FindEntity(site);
+    if (basin == nullptr || basin->owner != player || !basin->completed ||
+        basin->hitPoints <= 0 ||
+        basin->faction != Faction::KharuunAssemblies ||
+        basin->type != EntityType::Barracks) {
+        return WarformAdaptationResult::InvalidSite;
+    }
+    const std::int64_t radius = config_.rules.warformAdaptation.siteRadiusRaw;
+    if (DistanceSquaredRaw(warform->position, basin->position) >
+        static_cast<std::uint64_t>(radius * radius)) {
+        return WarformAdaptationResult::OutsideSiteRadius;
+    }
+    if (playerState->resources.dawnshards <
+        config_.rules.warformAdaptation.dawnCost) {
+        return WarformAdaptationResult::InsufficientDawn;
+    }
+    return WarformAdaptationResult::Valid;
+}
+
+void Simulation::ApplyWarformAdaptation(
+    Entity& entity,
+    WarformAdaptation adaptation) {
+    if (!IsWarform(entity)) {
+        return;
+    }
+    const EntityArchetypeRules& base =
+        ArchetypeFor(config_.rules, entity.faction, entity.type);
+    const std::int32_t missingHitPoints =
+        std::max(0, entity.maxHitPoints - entity.hitPoints);
+    entity.maxHitPoints = base.maxHitPoints;
+    entity.movementPerTickRaw = base.movementPerTickRaw;
+    entity.attackDamage = base.attackDamage;
+    entity.attackPeriodTicks = base.attackPeriodTicks;
+    if (adaptation == WarformAdaptation::Carapace) {
+        entity.maxHitPoints = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(base.maxHitPoints) *
+                config_.rules.warformAdaptation.carapaceHealthPercent / 100));
+        entity.movementPerTickRaw = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(base.movementPerTickRaw) *
+                config_.rules.warformAdaptation.carapaceMovementPercent / 100));
+    } else if (adaptation == WarformAdaptation::Striker) {
+        entity.attackDamage = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(base.attackDamage) *
+                config_.rules.warformAdaptation.strikerDamagePercent / 100));
+        entity.attackPeriodTicks = std::max<Tick>(
+            1,
+            base.attackPeriodTicks *
+                static_cast<Tick>(
+                    config_.rules.warformAdaptation.strikerCooldownPercent) /
+                100);
+    }
+    entity.hitPoints = std::max(1, entity.maxHitPoints - missingHitPoints);
+    entity.warformAdaptation = adaptation;
+}
+
 bool Simulation::IsRelayConnected(const Entity& relay) const {
     if (relay.owner == kNeutralPlayer || !relay.completed ||
         relay.hitPoints <= 0 ||
@@ -1310,7 +1431,9 @@ bool Simulation::QueueCommand(const Command& command, std::string* rejectionReas
     }
     if (!IsValidCommandType(command.type) ||
         !IsValidEntityType(command.buildType) ||
-        !IsValidWellChoice(command.wellChoice) || command.actor == 0) {
+        !IsValidWellChoice(command.wellChoice) ||
+        !IsValidWarformAdaptation(command.warformAdaptation) ||
+        command.actor == 0) {
         SetError(rejectionReason, "command encoding is invalid");
         return false;
     }
@@ -1793,6 +1916,10 @@ void Simulation::ApplyCommand(const Command& command) {
         actor->hitPoints <= 0) {
         return;
     }
+    if (actor->pendingWarformAdaptation != WarformAdaptation::None &&
+        command.type != CommandType::AdaptWarform) {
+        return;
+    }
     switch (command.type) {
         case CommandType::Stop:
             actor->order = {};
@@ -2001,6 +2128,30 @@ void Simulation::ApplyCommand(const Command& command) {
                     currentTick_ + config_.rules.waystoneMigration.rootTicks);
             }
             return;
+        case CommandType::AdaptWarform: {
+            if (ValidateWarformAdaptation(
+                    command.player,
+                    actor->id,
+                    command.target,
+                    command.warformAdaptation) !=
+                WarformAdaptationResult::Valid) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr) {
+                return;
+            }
+            player->resources.dawnshards -=
+                config_.rules.warformAdaptation.dawnCost;
+            ApplyWarformAdaptation(*actor, WarformAdaptation::None);
+            actor->order = {};
+            actor->pendingWarformAdaptation = command.warformAdaptation;
+            actor->moltSite = command.target;
+            actor->moltUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + config_.rules.warformAdaptation.moltTicks);
+            return;
+        }
     }
 }
 
@@ -2449,6 +2600,17 @@ void Simulation::ProcessEntityOrders() {
                         config_.rules.waystoneMigration.mobileDamageTakenPercent /
                         100));
             }
+            if (target != nullptr &&
+                target->pendingWarformAdaptation !=
+                    WarformAdaptation::None) {
+                resolvedDamage = std::max(
+                    1,
+                    static_cast<std::int32_t>(
+                        static_cast<std::int64_t>(resolvedDamage) *
+                        config_.rules.warformAdaptation
+                            .moltDamageTakenPercent /
+                        100));
+            }
             totalDamage += resolvedDamage;
             ++index;
         }
@@ -2637,12 +2799,46 @@ void Simulation::ResolveWaystoneTransitions() {
     }
 }
 
+void Simulation::ResolveWarformMolts() {
+    for (Entity& entity : entities_) {
+        if (entity.pendingWarformAdaptation == WarformAdaptation::None) {
+            continue;
+        }
+        const Entity* site = FindEntity(entity.moltSite);
+        const std::int64_t radius =
+            config_.rules.warformAdaptation.siteRadiusRaw;
+        const bool siteValid =
+            site != nullptr && site->owner == entity.owner && site->completed &&
+            site->hitPoints > 0 &&
+            site->faction == Faction::KharuunAssemblies &&
+            site->type == EntityType::Barracks &&
+            DistanceSquaredRaw(entity.position, site->position) <=
+                static_cast<std::uint64_t>(radius * radius);
+        if (!siteValid) {
+            entity.pendingWarformAdaptation = WarformAdaptation::None;
+            entity.moltSite = 0;
+            entity.moltUntilTick = 0;
+            continue;
+        }
+        if (currentTick_ >= entity.moltUntilTick) {
+            const WarformAdaptation completed =
+                entity.pendingWarformAdaptation;
+            ApplyWarformAdaptation(entity, completed);
+            entity.pendingWarformAdaptation = WarformAdaptation::None;
+            entity.moltSite = 0;
+            entity.moltUntilTick = 0;
+            entity.order = {};
+        }
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
     }
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
+    ResolveWarformMolts();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
@@ -2653,6 +2849,7 @@ void Simulation::Step() {
     ++currentTick_;
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
+    ResolveWarformMolts();
     ResolveExpiredReshapes();
     UpdateVisibility();
 }
@@ -2842,6 +3039,11 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.relaySupplyUntilTick = 0;
                 observed.relaySupplyCooldownUntilTick = 0;
                 observed.waystoneTransitionUntilTick = 0;
+                observed.moltUntilTick = 0;
+                if (observed.moltSite != 0 &&
+                    !IsEntityVisibleTo(player, observed.moltSite)) {
+                    observed.moltSite = 0;
+                }
             }
             view.entities_.push_back(observed);
         }
@@ -2912,8 +3114,19 @@ std::vector<Command> Simulation::GenerateAiCommands(
     const Entity* commandCore = nullptr;
     std::int32_t barracksCount = 0;
     std::int32_t dropoffCount = 0;
+    std::int32_t visibleHeavyThreats = 0;
+    std::int32_t visibleMobileThreats = 0;
     std::int32_t committedPopulation = PopulationUsed(player);
     for (const Entity& entity : entities_) {
+        if (entity.owner != player && entity.owner != kNeutralPlayer) {
+            if (entity.type == EntityType::HeavyUnit ||
+                IsBuildingType(entity.type)) {
+                ++visibleHeavyThreats;
+            } else if (entity.type == EntityType::Soldier ||
+                       entity.type == EntityType::ScoutUnit) {
+                ++visibleMobileThreats;
+            }
+        }
         if (entity.owner != player || entity.hitPoints <= 0) {
             continue;
         }
@@ -3049,6 +3262,9 @@ std::vector<Command> Simulation::GenerateAiCommands(
             commands.push_back(command);
             continue;
         }
+        if (actor.pendingWarformAdaptation != WarformAdaptation::None) {
+            continue;
+        }
         if (actor.type == EntityType::CommandCore ||
             actor.type == EntityType::Barracks) {
             command.type = CommandType::Produce;
@@ -3127,6 +3343,51 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 continue;
             }
         } else {
+            if (personality == AiPersonality::Adaptive &&
+                playerState->faction == Faction::KharuunAssemblies &&
+                actor.pendingWarformAdaptation == WarformAdaptation::None &&
+                visibleHeavyThreats + visibleMobileThreats > 0 &&
+                playerState->resources.dawnshards >=
+                    config_.rules.warformAdaptation.dawnCost) {
+                const WarformAdaptation desired =
+                    visibleHeavyThreats >= visibleMobileThreats
+                        ? WarformAdaptation::Carapace
+                        : WarformAdaptation::Striker;
+                if (actor.warformAdaptation != desired) {
+                    const Entity* nearestBasin = nullptr;
+                    std::uint64_t nearestBasinDistance =
+                        std::numeric_limits<std::uint64_t>::max();
+                    const std::int64_t radius =
+                        config_.rules.warformAdaptation.siteRadiusRaw;
+                    const std::uint64_t radiusSquared =
+                        static_cast<std::uint64_t>(radius * radius);
+                    for (const Entity& candidate : entities_) {
+                        if (candidate.owner != player || !candidate.completed ||
+                            candidate.hitPoints <= 0 ||
+                            candidate.faction != Faction::KharuunAssemblies ||
+                            candidate.type != EntityType::Barracks) {
+                            continue;
+                        }
+                        const std::uint64_t distance =
+                            DistanceSquaredRaw(actor.position, candidate.position);
+                        if (distance <= radiusSquared &&
+                            (distance < nearestBasinDistance ||
+                             (distance == nearestBasinDistance &&
+                              (nearestBasin == nullptr ||
+                               candidate.id < nearestBasin->id)))) {
+                            nearestBasin = &candidate;
+                            nearestBasinDistance = distance;
+                        }
+                    }
+                    if (nearestBasin != nullptr) {
+                        command.type = CommandType::AdaptWarform;
+                        command.target = nearestBasin->id;
+                        command.warformAdaptation = desired;
+                        commands.push_back(command);
+                        continue;
+                    }
+                }
+            }
             const bool shouldRetreat =
                 commandCore != nullptr && actor.maxHitPoints > 0 &&
                 static_cast<std::int64_t>(actor.hitPoints) * 100 <=
@@ -3271,6 +3532,14 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.U64(config_.rules.waystoneMigration.uprootTicks);
     writer.U64(config_.rules.waystoneMigration.rootTicks);
     writer.I32(config_.rules.waystoneMigration.mobileDamageTakenPercent);
+    writer.I32(config_.rules.warformAdaptation.siteRadiusRaw);
+    writer.U64(config_.rules.warformAdaptation.moltTicks);
+    writer.I32(config_.rules.warformAdaptation.dawnCost);
+    writer.I32(config_.rules.warformAdaptation.moltDamageTakenPercent);
+    writer.I32(config_.rules.warformAdaptation.carapaceHealthPercent);
+    writer.I32(config_.rules.warformAdaptation.carapaceMovementPercent);
+    writer.I32(config_.rules.warformAdaptation.strikerDamagePercent);
+    writer.I32(config_.rules.warformAdaptation.strikerCooldownPercent);
     writer.U64(currentTick_);
     writer.U32(nextEntityId_);
     writer.U64(rng_.state);
@@ -3338,6 +3607,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U64(entity.relaySupplyCooldownUntilTick);
         writer.U8(static_cast<std::uint8_t>(entity.waystoneMode));
         writer.U64(entity.waystoneTransitionUntilTick);
+        writer.U8(static_cast<std::uint8_t>(entity.warformAdaptation));
+        writer.U8(static_cast<std::uint8_t>(entity.pendingWarformAdaptation));
+        writer.U32(entity.moltSite);
+        writer.U64(entity.moltUntilTick);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -3453,7 +3726,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         !reader.I32(config.rules.waystoneMigration.movementPerTickRaw) ||
         !reader.U64(config.rules.waystoneMigration.uprootTicks) ||
         !reader.U64(config.rules.waystoneMigration.rootTicks) ||
-        !reader.I32(config.rules.waystoneMigration.mobileDamageTakenPercent)) {
+        !reader.I32(config.rules.waystoneMigration.mobileDamageTakenPercent) ||
+        !reader.I32(config.rules.warformAdaptation.siteRadiusRaw) ||
+        !reader.U64(config.rules.warformAdaptation.moltTicks) ||
+        !reader.I32(config.rules.warformAdaptation.dawnCost) ||
+        !reader.I32(config.rules.warformAdaptation.moltDamageTakenPercent) ||
+        !reader.I32(config.rules.warformAdaptation.carapaceHealthPercent) ||
+        !reader.I32(config.rules.warformAdaptation.carapaceMovementPercent) ||
+        !reader.I32(config.rules.warformAdaptation.strikerDamagePercent) ||
+        !reader.I32(config.rules.warformAdaptation.strikerCooldownPercent)) {
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
@@ -3565,6 +3846,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t deployed = 0;
         std::uint8_t relaySupplyActive = 0;
         std::uint8_t waystoneMode = 0;
+        std::uint8_t warformAdaptation = 0;
+        std::uint8_t pendingWarformAdaptation = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -3602,7 +3885,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U64(entity.relaySupplyUntilTick) ||
             !reader.U64(entity.relaySupplyCooldownUntilTick) ||
             !reader.U8(waystoneMode) ||
-            !reader.U64(entity.waystoneTransitionUntilTick)) {
+            !reader.U64(entity.waystoneTransitionUntilTick) ||
+            !reader.U8(warformAdaptation) ||
+            !reader.U8(pendingWarformAdaptation) ||
+            !reader.U32(entity.moltSite) ||
+            !reader.U64(entity.moltUntilTick)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -3621,6 +3908,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             deployed > 1 ||
             relaySupplyActive > 1 ||
             waystoneMode > static_cast<std::uint8_t>(WaystoneMode::Rooting) ||
+            warformAdaptation >
+                static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
+            pendingWarformAdaptation >
+                static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
@@ -3681,7 +3972,26 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             ((waystoneMode == static_cast<std::uint8_t>(WaystoneMode::NotWaystone) ||
               waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Rooted) ||
               waystoneMode == static_cast<std::uint8_t>(WaystoneMode::Mobile)) &&
-             entity.waystoneTransitionUntilTick != 0)) {
+             entity.waystoneTransitionUntilTick != 0) ||
+            ((warformAdaptation !=
+                  static_cast<std::uint8_t>(WarformAdaptation::None) ||
+              pendingWarformAdaptation !=
+                  static_cast<std::uint8_t>(WarformAdaptation::None)) &&
+             (faction !=
+                  static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+              (type != static_cast<std::uint8_t>(EntityType::Soldier) &&
+               type != static_cast<std::uint8_t>(EntityType::HeavyUnit) &&
+               type != static_cast<std::uint8_t>(EntityType::ScoutUnit)))) ||
+            (pendingWarformAdaptation ==
+                 static_cast<std::uint8_t>(WarformAdaptation::None) &&
+             (entity.moltSite != 0 || entity.moltUntilTick != 0)) ||
+            (pendingWarformAdaptation !=
+                 static_cast<std::uint8_t>(WarformAdaptation::None) &&
+             (warformAdaptation !=
+                  static_cast<std::uint8_t>(WarformAdaptation::None) ||
+              entity.moltSite == 0 ||
+              entity.moltUntilTick <= simulation.currentTick_ ||
+              entity.moltUntilTick > kMaximumSupportedTick))) {
             SetError(error, "snapshot entity state is invalid");
             return std::nullopt;
         }
@@ -3702,6 +4012,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             Vec2::FromRaw(deploymentFacingRawX, deploymentFacingRawY);
         entity.relaySupplyActive = relaySupplyActive != 0;
         entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
+        entity.warformAdaptation =
+            static_cast<WarformAdaptation>(warformAdaptation);
+        entity.pendingWarformAdaptation =
+            static_cast<WarformAdaptation>(pendingWarformAdaptation);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;
@@ -3720,6 +4034,36 @@ std::optional<Simulation> Simulation::LoadSnapshot(
          simulation.nextEntityId_ <= simulation.entities_.back().id)) {
         SetError(error, "snapshot next entity identifier is invalid");
         return std::nullopt;
+    }
+    for (const Entity& entity : simulation.entities_) {
+        if (!simulation.IsWarform(entity)) {
+            continue;
+        }
+        Entity expected = simulation.MakeEntity(
+            entity.owner, entity.faction, entity.type, entity.position);
+        simulation.ApplyWarformAdaptation(
+            expected, entity.warformAdaptation);
+        if (entity.maxHitPoints != expected.maxHitPoints ||
+            entity.movementPerTickRaw != expected.movementPerTickRaw ||
+            entity.attackDamage != expected.attackDamage ||
+            entity.attackPeriodTicks != expected.attackPeriodTicks) {
+            SetError(error, "snapshot warform statistics are invalid");
+            return std::nullopt;
+        }
+        if (entity.pendingWarformAdaptation != WarformAdaptation::None) {
+            const Entity* site = simulation.FindEntity(entity.moltSite);
+            const std::int64_t radius =
+                simulation.config_.rules.warformAdaptation.siteRadiusRaw;
+            if (site == nullptr || site->owner != entity.owner ||
+                !site->completed || site->hitPoints <= 0 ||
+                site->faction != Faction::KharuunAssemblies ||
+                site->type != EntityType::Barracks ||
+                simulation.DistanceSquaredRaw(entity.position, site->position) >
+                    static_cast<std::uint64_t>(radius * radius)) {
+                SetError(error, "snapshot warform molt site is invalid");
+                return std::nullopt;
+            }
+        }
     }
     std::uint32_t commandCount = 0;
     if (!reader.U32(commandCount) || commandCount > kMaximumSerializedCommands ||

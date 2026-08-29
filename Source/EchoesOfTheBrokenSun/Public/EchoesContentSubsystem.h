@@ -57,6 +57,14 @@ struct FEchoesBuildingContent final
     int32 MigrationUprootTicks = 0;
     int32 MigrationRootTicks = 0;
     int32 MigrationMobileDamageTakenPercent = 0;
+    int32 AdaptationSiteRadiusCentimeters = 0;
+    int32 AdaptationMoltTicks = 0;
+    int32 AdaptationDawnCost = 0;
+    int32 AdaptationMoltDamageTakenPercent = 0;
+    int32 AdaptationCarapaceHealthPercent = 0;
+    int32 AdaptationCarapaceMoveSpeedPercent = 0;
+    int32 AdaptationStrikerDamagePercent = 0;
+    int32 AdaptationStrikerCooldownPercent = 0;
 };
 
 struct FEchoesFutureWellContent final

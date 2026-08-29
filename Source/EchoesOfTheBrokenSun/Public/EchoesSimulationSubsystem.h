@@ -86,6 +86,12 @@ public:
         echoes::sim::EntityType UnitType,
         FString& OutFeedback);
 
+    bool IssueWarformAdaptation(
+        uint32 ActorId,
+        uint32 SiteId,
+        echoes::sim::WarformAdaptation Adaptation,
+        FString& OutFeedback);
+
     void SetScenarioPaused(bool bPaused);
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
@@ -144,6 +150,7 @@ private:
     bool bLoggedAiExpansion = false;
     bool bLoggedAiRetreat = false;
     bool bLoggedAiPlayerView = false;
+    bool bLoggedAiAdaptation = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
