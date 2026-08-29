@@ -227,7 +227,7 @@ void AEchoesHUD::DrawHUD()
         false);
 
     const FString CameraSettingsLine = FString::Printf(
-        TEXT("[Left/Right bracket] Pan speed %d%%    [Semicolon/Apostrophe] Zoom step %d%%"),
+        TEXT("[Left/Right bracket] Pan speed %d%%    [Comma/Period] Zoom step %d%%"),
         FMath::RoundToInt(
             (Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f) * 100.0f),
         FMath::RoundToInt(

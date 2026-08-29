@@ -117,9 +117,9 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Camera pan increase input is mapped"),
                  HasAction(TEXT("IncreaseCameraPanSpeed"), EKeys::RightBracket));
         TestTrue(TEXT("Camera zoom decrease input is mapped"),
-                 HasAction(TEXT("DecreaseCameraZoomSpeed"), EKeys::Semicolon));
+                 HasAction(TEXT("DecreaseCameraZoomSpeed"), EKeys::Comma));
         TestTrue(TEXT("Camera zoom increase input is mapped"),
-                 HasAction(TEXT("IncreaseCameraZoomSpeed"), EKeys::Apostrophe));
+                 HasAction(TEXT("IncreaseCameraZoomSpeed"), EKeys::Period));
     }
 
     echoes::sim::SimulationConfig Config;
