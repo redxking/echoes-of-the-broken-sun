@@ -24,6 +24,9 @@ private:
     void DrawObjectiveTracker(
         const UEchoesSimulationSubsystem* Bridge,
         const UEchoesGameUserSettings* Settings);
+    void DrawPauseMenu(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawMatchResult(
         const AEchoesPlayerController* EchoesController,
         const UEchoesSimulationSubsystem* Bridge,

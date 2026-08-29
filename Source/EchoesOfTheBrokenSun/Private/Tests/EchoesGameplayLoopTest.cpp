@@ -140,6 +140,24 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
                   BriefingController->IsMissionBriefingVisible());
         TestFalse(TEXT("Deployment resumes the deterministic scenario"),
                   Bridge->IsScenarioPaused());
+        const echoes::sim::Tick MenuPausedTick =
+            Bridge->GetSimulation()->CurrentTick();
+        BriefingController->TogglePauseMenu();
+        TestTrue(TEXT("Field menu becomes visible"),
+                 BriefingController->IsPauseMenuVisible());
+        TestTrue(TEXT("Field menu pauses the deterministic scenario"),
+                 Bridge->IsScenarioPaused());
+        TestTrue(TEXT("Field menu is a modal input boundary"),
+                 BriefingController->IsModalOverlayVisible());
+        Bridge->Tick(0.5f);
+        TestEqual(TEXT("Field menu prevents simulation advancement"),
+                  Bridge->GetSimulation()->CurrentTick(),
+                  MenuPausedTick);
+        BriefingController->ConfirmPrimaryAction();
+        TestFalse(TEXT("Enter dismisses the field menu"),
+                  BriefingController->IsPauseMenuVisible());
+        TestFalse(TEXT("Enter resumes the field operation"),
+                  Bridge->IsScenarioPaused());
         BriefingController->Destroy();
     }
 

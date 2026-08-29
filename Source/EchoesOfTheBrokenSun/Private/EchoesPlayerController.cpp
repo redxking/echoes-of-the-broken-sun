@@ -73,6 +73,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
+    bPauseMenuVisible = false;
     bMatchResultVisible = false;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
@@ -118,6 +119,10 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     {
         RestartScenario();
     }
+    else if (bPauseMenuVisible)
+    {
+        TogglePauseMenu();
+    }
 }
 
 void AEchoesPlayerController::NotifyRuntimeFailure(const FString& FailureCode)
@@ -137,6 +142,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
     bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
     bMatchResultVisible = true;
     PresentedMatchOutcome = Outcome;
     SetIgnoreMoveInput(true);
@@ -268,7 +274,7 @@ void AEchoesPlayerController::SetupInputComponent()
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
-        &AEchoesPlayerController::TogglePause);
+        &AEchoesPlayerController::TogglePauseMenu);
     InputComponent->BindAction(
         TEXT("RestartScenario"),
         IE_Pressed,
@@ -1555,9 +1561,9 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
     }
 }
 
-void AEchoesPlayerController::TogglePause()
+void AEchoesPlayerController::TogglePauseMenu()
 {
-    if (IsModalOverlayVisible())
+    if (bMissionBriefingVisible || bMatchResultVisible)
     {
         return;
     }
@@ -1575,12 +1581,21 @@ void AEchoesPlayerController::TogglePause()
         SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
         return;
     }
-    const bool bPause = !Bridge->IsScenarioPaused();
-    Bridge->SetScenarioPaused(bPause);
+    bPauseMenuVisible = !bPauseMenuVisible;
+    Bridge->SetScenarioPaused(bPauseMenuVisible);
+    SetIgnoreMoveInput(bPauseMenuVisible);
+    SetIgnoreLookInput(bPauseMenuVisible);
     SetStatusMessage(
-        bPause ? TEXT("MATCH PAUSED — press P to resume.")
-               : TEXT("MATCH RESUMED."),
-        bPause ? 3600.0f : 3.0f);
+        bPauseMenuVisible
+            ? TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts.")
+            : TEXT("MATCH RESUMED."),
+        bPauseMenuVisible ? 3600.0f : 3.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_PAUSE_MENU] visible=%s paused=%s"),
+        bPauseMenuVisible ? TEXT("true") : TEXT("false"),
+        Bridge->IsScenarioPaused() ? TEXT("true") : TEXT("false"));
 }
 
 void AEchoesPlayerController::RestartScenario()
@@ -1599,6 +1614,7 @@ void AEchoesPlayerController::RestartScenario()
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         bRuntimeStateKnown = true;
+        bPauseMenuVisible = false;
         bMatchResultVisible = false;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
         SetIgnoreMoveInput(false);

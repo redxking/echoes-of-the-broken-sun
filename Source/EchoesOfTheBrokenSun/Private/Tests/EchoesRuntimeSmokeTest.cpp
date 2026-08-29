@@ -84,6 +84,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("StopSelected"), EKeys::X));
         TestTrue(TEXT("Pause input is mapped"),
                  HasAction(TEXT("PauseScenario"), EKeys::P));
+        TestTrue(TEXT("Escape field-menu input is mapped"),
+                 HasAction(TEXT("PauseScenario"), EKeys::Escape));
         TestTrue(TEXT("Restart input is mapped"),
                  HasAction(TEXT("RestartScenario"), EKeys::R));
         TestTrue(TEXT("Quick-save input is mapped"),

@@ -277,7 +277,11 @@ void AEchoesHUD::DrawHUD()
     DrawObjectiveTracker(Bridge, Settings);
     DrawTacticalMinimap(Bridge, EchoesController, Settings);
     DrawSelectionRectangle();
-    if (EchoesController != nullptr && EchoesController->IsMatchResultVisible())
+    if (EchoesController != nullptr && EchoesController->IsPauseMenuVisible())
+    {
+        DrawPauseMenu(EchoesController, Settings);
+    }
+    else if (EchoesController != nullptr && EchoesController->IsMatchResultVisible())
     {
         DrawMatchResult(EchoesController, Bridge, Settings);
     }
@@ -481,6 +485,113 @@ void AEchoesHUD::DrawMatchResult(
                                          : FLinearColor(0.0f, 0.08f, 0.05f),
              Left + PanelWidth * 0.5f - 176.0f * TextScale,
              Top + PanelHeight - 69.0f,
+             SmallFont, 0.92f * TextScale, false);
+}
+
+void AEchoesHUD::DrawPauseMenu(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsPauseMenuVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float PanelWidth = FMath::Min(
+        FMath::Max(620.0f, Canvas->ClipX - 60.0f),
+        FMath::Clamp(Canvas->ClipX * 0.50f, 720.0f, 980.0f));
+    const float PanelHeight = FMath::Min(
+        FMath::Max(520.0f, Canvas->ClipY - 60.0f),
+        FMath::Clamp(Canvas->ClipY * 0.64f, 560.0f, 700.0f));
+    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
+    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
+    const float ContentScale = FMath::Clamp(
+        FMath::Min(PanelWidth / 780.0f, PanelHeight / 590.0f),
+        0.76f,
+        1.2f);
+    const float TextScale = HudScale * ContentScale;
+    const FLinearColor Backdrop =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
+    const FLinearColor Accent =
+        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
+                      : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
+    const FLinearColor Muted =
+        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
+                      : FLinearColor(0.56f, 0.65f, 0.74f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const FString SettingsLineA = FString::Printf(
+        TEXT("[U] UI SCALE  %d%%       [I] HIGH CONTRAST  %s"),
+        FMath::RoundToInt(HudScale * 100.0f),
+        bHighContrast ? TEXT("ON") : TEXT("OFF"));
+    const FString SettingsLineB = FString::Printf(
+        TEXT("[O] REDUCED MOTION  %s       [/] REDUCED FLASHING  %s"),
+        Settings != nullptr && Settings->IsReducedMotionEnabled()
+            ? TEXT("ON") : TEXT("OFF"),
+        Settings != nullptr && Settings->IsReducedFlashingEnabled()
+            ? TEXT("ON") : TEXT("OFF"));
+    const FString SettingsLineC = FString::Printf(
+        TEXT("[Y] EDGE PAN  %s       [LEFT/RIGHT BRACKET] PAN SPEED  %d%%"),
+        Settings == nullptr || Settings->IsEdgePanEnabled()
+            ? TEXT("ON") : TEXT("OFF"),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f) *
+            100.0f));
+    const FString SettingsLineD = FString::Printf(
+        TEXT("[COMMA/PERIOD] ZOOM STEP  %d%%"),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f) *
+            100.0f));
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.76f), 0.0f, 0.0f,
+             Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight,
+             Accent, 4.0f);
+    DrawText(TEXT("FIELD MENU"), Accent, Left + 42.0f,
+             Top + 34.0f * ContentScale, SmallFont, 1.65f * TextScale, false);
+    DrawText(TEXT("OPERATION GLASS SCAR  //  DETERMINISTIC MATCH PAUSED"),
+             Muted, Left + 42.0f, Top + 78.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+
+    DrawText(TEXT("MATCH CONTROL"), Accent, Left + 42.0f,
+             Top + 132.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+    DrawText(TEXT("[ENTER / ESCAPE / P]  RESUME OPERATION"), Body,
+             Left + 42.0f, Top + 162.0f * ContentScale,
+             SmallFont, 1.0f * TextScale, false);
+    DrawText(TEXT("[R]  RESTART GLASS SCAR FROM THE DETERMINISTIC BASELINE"), Body,
+             Left + 42.0f, Top + 192.0f * ContentScale,
+             SmallFont, 0.92f * TextScale, false);
+
+    DrawText(TEXT("ACCESSIBILITY & CAMERA"), Accent, Left + 42.0f,
+             Top + 250.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+    DrawText(SettingsLineA, Body, Left + 42.0f, Top + 282.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+    DrawText(SettingsLineB, Body, Left + 42.0f, Top + 316.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+    DrawText(SettingsLineC, Body, Left + 42.0f, Top + 350.0f * ContentScale,
+             SmallFont, 0.82f * TextScale, false);
+    DrawText(SettingsLineD, Body, Left + 42.0f, Top + 384.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+    DrawText(
+        TEXT("Only implemented, behavior-verified options are exposed in this build."),
+        Muted, Left + 42.0f, Top + 430.0f * ContentScale,
+        SmallFont, 0.78f * TextScale, false);
+
+    DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 76.0f,
+             PanelWidth - 84.0f, 42.0f);
+    DrawText(TEXT("PRESS ENTER TO RETURN TO THE SCAR"),
+             bHighContrast ? FLinearColor::Black
+                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Left + PanelWidth * 0.5f - 142.0f * TextScale,
+             Top + PanelHeight - 65.0f,
              SmallFont, 0.92f * TextScale, false);
 }
 

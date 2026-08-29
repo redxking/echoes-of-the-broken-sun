@@ -40,6 +40,7 @@ public:
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
+    void TogglePauseMenu();
     [[nodiscard]] bool IsMissionBriefingVisible() const
     {
         return bMissionBriefingVisible;
@@ -48,9 +49,14 @@ public:
     {
         return bMatchResultVisible;
     }
+    [[nodiscard]] bool IsPauseMenuVisible() const
+    {
+        return bPauseMenuVisible;
+    }
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
-        return bMissionBriefingVisible || bMatchResultVisible;
+        return bMissionBriefingVisible || bPauseMenuVisible ||
+               bMatchResultVisible;
     }
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
     {
@@ -73,7 +79,6 @@ private:
     void HoldSelectedUnits();
     void GuardAtCursor();
     void StopSelectedUnits();
-    void TogglePause();
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();
@@ -129,6 +134,7 @@ private:
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
     bool bMissionBriefingVisible = false;
+    bool bPauseMenuVisible = false;
     bool bMatchResultVisible = false;
     echoes::sim::MatchOutcome PresentedMatchOutcome =
         echoes::sim::MatchOutcome::Ongoing;
