@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Authoritative
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 ---
 
 # Asset and License Register
@@ -29,4 +29,4 @@ This is the single authoritative provenance register and is edited in place. An 
 
 ## Current evidence boundary
 
-No final models, textures, animation, music, voice acting, sound effects, cinematic art, typefaces, or third-party plugins have been added. Visual and audio quality requirements have not been validated.
+No final models, textures, animation, music, voice acting, sound effects, cinematic art, typefaces, or third-party plugins have been added. The procedural atmosphere, damage pulse, health bars, ownership markers, and tactical minimap are project-code presentation layered over registered Unreal Engine placeholders; they are not final assets. Visual and audio quality requirements have not been validated.
