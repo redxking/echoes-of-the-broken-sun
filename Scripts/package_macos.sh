@@ -103,6 +103,8 @@ fi
 
 smoke_log="$project_root/BuildArtifacts/PackagedRuntimeSmoke-$timestamp.log"
 "$project_root/Scripts/run_packaged_smoke.sh" "$app" "$smoke_log"
+stress_smoke_log="$project_root/BuildArtifacts/PackagedStressRuntimeSmoke-$timestamp.log"
+"$project_root/Scripts/run_packaged_stress_smoke.sh" "$app" "$stress_smoke_log"
 
 engine_build_file="$ue_root/Engine/Build/Build.version"
 engine_version="$(/usr/bin/plutil -extract MajorVersion raw "$engine_build_file").$(/usr/bin/plutil -extract MinorVersion raw "$engine_build_file").$(/usr/bin/plutil -extract PatchVersion raw "$engine_build_file")"
