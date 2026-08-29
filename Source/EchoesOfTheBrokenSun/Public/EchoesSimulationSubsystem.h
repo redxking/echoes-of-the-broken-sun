@@ -143,6 +143,7 @@ private:
     bool bLoggedStressCombat = false;
     bool bLoggedAiExpansion = false;
     bool bLoggedAiRetreat = false;
+    bool bLoggedAiPlayerView = false;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

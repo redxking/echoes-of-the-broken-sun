@@ -6,6 +6,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -655,6 +656,7 @@ void TestProductionPopulationAndVictory() {
 }
 
 void TestFogAndNonCheatingAi() {
+    static_assert(!std::is_default_constructible_v<PlayerView>);
     Simulation simulation({32, 32, 20, 5});
     AddTwoPlayers(simulation, {0, 0}, {0, 0});
     const EntityId worker = simulation.SpawnEntity(
@@ -676,9 +678,39 @@ void TestFogAndNonCheatingAi() {
     REQUIRE(simulation.VisibilityAt(0, Vec2::FromTiles(25, 25)) ==
             Visibility::Unexplored);
     REQUIRE(!simulation.IsEntityVisibleTo(0, hiddenEnemy));
+    REQUIRE(!simulation.CreatePlayerView(3).has_value());
+
+    const std::optional<PlayerView> playerView = simulation.CreatePlayerView(0);
+    REQUIRE(playerView.has_value());
+    REQUIRE(playerView->Player().id == 0);
+    REQUIRE(playerView->Config().randomSeed == 0);
+    REQUIRE(playerView->DecisionSeed() == 5);
+    REQUIRE(playerView->VisibilityAt(Vec2::FromTiles(25, 25)) ==
+            Visibility::Unexplored);
+    REQUIRE(playerView->TerrainAt(25, 25) == Terrain::Blocked);
+    REQUIRE(!playerView->IsPositionPassable(Vec2::FromTiles(25, 25)));
+    const auto observedEnemy = std::find_if(
+        playerView->Entities().begin(), playerView->Entities().end(),
+        [visibleEnemy](const Entity& entity) {
+            return entity.id == visibleEnemy;
+        });
+    REQUIRE(observedEnemy != playerView->Entities().end());
+    REQUIRE(observedEnemy->attackDamage == 0);
+    REQUIRE(observedEnemy->attackCooldownTicks == 0);
+    REQUIRE(observedEnemy->order.type == OrderType::None);
+    const auto observedOwnSoldier = std::find_if(
+        playerView->Entities().begin(), playerView->Entities().end(),
+        [soldier](const Entity& entity) { return entity.id == soldier; });
+    REQUIRE(observedOwnSoldier != playerView->Entities().end());
+    REQUIRE(observedOwnSoldier->attackDamage > 0);
+    REQUIRE(std::none_of(
+        playerView->Entities().begin(), playerView->Entities().end(),
+        [hiddenEnemy](const Entity& entity) { return entity.id == hiddenEnemy; }));
 
     const std::vector<Command> ai =
         simulation.GenerateAiCommands(0, AiPersonality::Balanced);
+    REQUIRE(ai == Simulation::GenerateAiCommands(
+                      *playerView, AiPersonality::Balanced));
     const auto workerDecision = std::find_if(
         ai.begin(), ai.end(),
         [worker](const Command& command) { return command.actor == worker; });

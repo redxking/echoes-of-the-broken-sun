@@ -66,6 +66,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
+    bLoggedAiPlayerView = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     FogView.Reset();
@@ -308,6 +309,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
+    bLoggedAiPlayerView = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
@@ -372,6 +374,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
     bLoggedAiRetreat = false;
+    bLoggedAiPlayerView = false;
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
@@ -795,9 +798,36 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
         return;
     }
 
-    const std::vector<echoes::sim::Command> Commands =
-        Simulation->GenerateAiCommands(
+    const std::optional<echoes::sim::PlayerView> PlayerView =
+        Simulation->CreatePlayerView(OpponentPlayerId);
+    if (!PlayerView.has_value())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_AI_PLAYER_VIEW_FAILED] player=%u"),
+            OpponentPlayerId);
+        return;
+    }
+    if (!bLoggedAiPlayerView)
+    {
+        int32 OwnedEntities = 0;
+        for (const echoes::sim::Entity& Entity : PlayerView->Entities())
+        {
+            OwnedEntities += Entity.owner == OpponentPlayerId ? 1 : 0;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_AI_PLAYER_VIEW] player=%u owned=%d observed=%d hiddenEntitiesExcluded=true opponentInternalsRedacted=true authoritativeWorldHandle=false"),
             OpponentPlayerId,
+            OwnedEntities,
+            static_cast<int32>(PlayerView->Entities().size()));
+        bLoggedAiPlayerView = true;
+    }
+    const std::vector<echoes::sim::Command> Commands =
+        echoes::sim::Simulation::GenerateAiCommands(
+            *PlayerView,
             echoes::sim::AiPersonality::Adaptive);
     for (const echoes::sim::Command& Command : Commands)
     {

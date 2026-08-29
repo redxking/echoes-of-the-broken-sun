@@ -101,6 +101,221 @@ void SetError(std::string* destination, const std::string& message) {
            personality <= AiPersonality::Adaptive;
 }
 
+[[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs);
+[[nodiscard]] bool ResourceCovers(const ResourcePool& available,
+                                  const ResourcePool& cost);
+
+[[nodiscard]] bool IsBuildingType(EntityType type) {
+    return type == EntityType::CommandCore || type == EntityType::Dropoff ||
+           type == EntityType::Barracks;
+}
+
+[[nodiscard]] bool IsDropoffType(EntityType type) {
+    return type == EntityType::CommandCore || type == EntityType::Dropoff;
+}
+
+[[nodiscard]] std::int32_t FootprintHalfExtentFor(EntityType type) {
+    switch (type) {
+        case EntityType::CommandCore:
+        case EntityType::Barracks:
+            return kFixedScale;
+        case EntityType::Dropoff:
+            return 3 * kFixedScale / 4;
+        case EntityType::FutureWell:
+            return kFixedScale / 2;
+        case EntityType::ResourceNode:
+            return kFixedScale / 3;
+        case EntityType::Worker:
+        case EntityType::Soldier:
+            return kFixedScale / 8;
+    }
+    return kFixedScale;
+}
+
+[[nodiscard]] ResourcePool BuildCostFor(Faction faction, EntityType type) {
+    const bool meridian = faction == Faction::MeridianCompact;
+    switch (type) {
+        case EntityType::CommandCore:
+            return {meridian ? 420 : 380, meridian ? 40 : 60};
+        case EntityType::Dropoff:
+            return {meridian ? 110 : 95, 0};
+        case EntityType::Barracks:
+            return {meridian ? 170 : 150, meridian ? 20 : 30};
+        default:
+            return {};
+    }
+}
+
+[[nodiscard]] ResourcePool ProductionCostFor(Faction faction, EntityType type) {
+    const bool meridian = faction == Faction::MeridianCompact;
+    switch (type) {
+        case EntityType::Worker:
+            return {50, 0};
+        case EntityType::Soldier:
+            return {meridian ? 85 : 75, meridian ? 20 : 30};
+        default:
+            return {};
+    }
+}
+
+[[nodiscard]] std::int32_t PopulationCostFor(EntityType type) {
+    switch (type) {
+        case EntityType::Worker:
+            return 1;
+        case EntityType::Soldier:
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+[[nodiscard]] std::uint64_t DistanceSquaredRawFor(Vec2 first, Vec2 second) {
+    const std::int64_t deltaX =
+        static_cast<std::int64_t>(first.x.Raw()) - second.x.Raw();
+    const std::int64_t deltaY =
+        static_cast<std::int64_t>(first.y.Raw()) - second.y.Raw();
+    return static_cast<std::uint64_t>(deltaX * deltaX + deltaY * deltaY);
+}
+
+[[nodiscard]] std::uint64_t StatelessAiValueFor(const PlayerView& view,
+                                                EntityId entity,
+                                                std::uint64_t salt) {
+    std::uint64_t value =
+        view.DecisionSeed() ^
+        (view.CurrentTick() * 0x9e3779b97f4a7c15ULL) ^
+        (static_cast<std::uint64_t>(view.Player().id) << 56U) ^
+        (static_cast<std::uint64_t>(entity) << 17U) ^ salt;
+    value = (value ^ (value >> 30U)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27U)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31U);
+}
+
+[[nodiscard]] bool ViewIsInsideMap(const PlayerView& view,
+                                   Vec2 position,
+                                   std::int32_t halfExtentRaw = 0) {
+    const std::int64_t rawX = position.x.Raw();
+    const std::int64_t rawY = position.y.Raw();
+    return rawX - halfExtentRaw >= 0 && rawY - halfExtentRaw >= 0 &&
+           rawX + halfExtentRaw <
+               static_cast<std::int64_t>(view.Config().mapWidthTiles) *
+                   kFixedScale &&
+           rawY + halfExtentRaw <
+               static_cast<std::int64_t>(view.Config().mapHeightTiles) *
+                   kFixedScale;
+}
+
+[[nodiscard]] const Entity* FindViewEntity(const PlayerView& view,
+                                           EntityId id) {
+    const auto found = std::find_if(
+        view.Entities().begin(), view.Entities().end(),
+        [id](const Entity& entity) { return entity.id == id; });
+    return found != view.Entities().end() && found->id == id ? &*found : nullptr;
+}
+
+[[nodiscard]] PlacementResult ValidateViewPlacement(
+    const PlayerView& view,
+    EntityType buildingType,
+    Vec2 position) {
+    if (!IsBuildingType(buildingType)) {
+        return PlacementResult::InvalidBuildingType;
+    }
+    const std::int32_t halfExtent = FootprintHalfExtentFor(buildingType);
+    if (!ViewIsInsideMap(view, position, halfExtent)) {
+        return PlacementResult::OutsideMap;
+    }
+    const std::int32_t minimumTileX =
+        (position.x.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t minimumTileY =
+        (position.y.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maximumTileX =
+        (position.x.Raw() + halfExtent - 1) / kFixedScale;
+    const std::int32_t maximumTileY =
+        (position.y.Raw() + halfExtent - 1) / kFixedScale;
+    for (std::int32_t tileY = minimumTileY; tileY <= maximumTileY; ++tileY) {
+        for (std::int32_t tileX = minimumTileX; tileX <= maximumTileX; ++tileX) {
+            const Vec2 tilePosition = Vec2::FromTiles(tileX, tileY);
+            if (view.VisibilityAt(tilePosition) != Visibility::Visible ||
+                view.TerrainAt(tileX, tileY) != Terrain::Open) {
+                return PlacementResult::TerrainRestricted;
+            }
+        }
+    }
+    for (const Entity& entity : view.Entities()) {
+        const std::int32_t combinedExtent =
+            halfExtent + FootprintHalfExtentFor(entity.type);
+        if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
+                  entity.position.x.Raw()) < combinedExtent &&
+            Abs64(static_cast<std::int64_t>(position.y.Raw()) -
+                  entity.position.y.Raw()) < combinedExtent) {
+            return PlacementResult::Occupied;
+        }
+    }
+    return PlacementResult::Valid;
+}
+
+[[nodiscard]] ProductionResult ValidateViewProduction(
+    const PlayerView& view,
+    EntityId producer,
+    EntityType unitType) {
+    const Entity* building = FindViewEntity(view, producer);
+    if (building == nullptr || building->owner != view.Player().id ||
+        building->hitPoints <= 0) {
+        return ProductionResult::InvalidProducer;
+    }
+    if (!building->completed) {
+        return ProductionResult::ProducerIncomplete;
+    }
+    if (building->productionRequired > 0) {
+        return ProductionResult::ProducerBusy;
+    }
+    const bool supported =
+        (building->type == EntityType::CommandCore &&
+         unitType == EntityType::Worker) ||
+        (building->type == EntityType::Barracks &&
+         unitType == EntityType::Soldier);
+    if (!supported) {
+        return ProductionResult::UnsupportedUnit;
+    }
+    if (!ResourceCovers(
+            view.Player().resources,
+            ProductionCostFor(view.Player().faction, unitType))) {
+        return ProductionResult::InsufficientResources;
+    }
+    std::int32_t committedPopulation = view.PopulationUsed();
+    for (const Entity& entity : view.Entities()) {
+        if (entity.owner == view.Player().id && entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation,
+                PopulationCostFor(entity.productionType));
+        }
+    }
+    if (SaturatingAdd(committedPopulation, PopulationCostFor(unitType)) >
+        view.PopulationCapacity()) {
+        return ProductionResult::CapacityReached;
+    }
+    return ProductionResult::Valid;
+}
+
+[[nodiscard]] EntityId FindViewOwnedDropoff(const PlayerView& view,
+                                            Vec2 from) {
+    EntityId nearest = 0;
+    std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+    for (const Entity& entity : view.Entities()) {
+        if (entity.owner != view.Player().id || !entity.completed ||
+            !IsDropoffType(entity.type)) {
+            continue;
+        }
+        const std::uint64_t distance =
+            DistanceSquaredRawFor(from, entity.position);
+        if (distance < nearestDistance ||
+            (distance == nearestDistance && entity.id < nearest)) {
+            nearest = entity.id;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
 [[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs) {
     const std::int64_t sum = static_cast<std::int64_t>(lhs) + rhs;
     return static_cast<std::int32_t>(std::clamp<std::int64_t>(
@@ -552,56 +767,23 @@ bool Simulation::IsPositionPassable(Vec2 position) const {
 }
 
 bool Simulation::IsBuilding(EntityType type) const {
-    return type == EntityType::CommandCore || type == EntityType::Dropoff ||
-           type == EntityType::Barracks;
+    return IsBuildingType(type);
 }
 
 bool Simulation::IsDropoff(EntityType type) const {
-    return type == EntityType::CommandCore || type == EntityType::Dropoff;
+    return IsDropoffType(type);
 }
 
 std::int32_t Simulation::FootprintHalfExtentRaw(EntityType type) const {
-    switch (type) {
-        case EntityType::CommandCore:
-        case EntityType::Barracks:
-            return kFixedScale;
-        case EntityType::Dropoff:
-            return 3 * kFixedScale / 4;
-        case EntityType::FutureWell:
-            return kFixedScale / 2;
-        case EntityType::ResourceNode:
-            return kFixedScale / 3;
-        case EntityType::Worker:
-        case EntityType::Soldier:
-            return kFixedScale / 8;
-    }
-    return kFixedScale;
+    return FootprintHalfExtentFor(type);
 }
 
 ResourcePool Simulation::BuildCost(Faction faction, EntityType type) const {
-    const bool meridian = faction == Faction::MeridianCompact;
-    switch (type) {
-        case EntityType::CommandCore:
-            return {meridian ? 420 : 380, meridian ? 40 : 60};
-        case EntityType::Dropoff:
-            return {meridian ? 110 : 95, 0};
-        case EntityType::Barracks:
-            return {meridian ? 170 : 150, meridian ? 20 : 30};
-        default:
-            return {};
-    }
+    return BuildCostFor(faction, type);
 }
 
 ResourcePool Simulation::ProductionCost(Faction faction, EntityType type) const {
-    const bool meridian = faction == Faction::MeridianCompact;
-    switch (type) {
-        case EntityType::Worker:
-            return {50, 0};
-        case EntityType::Soldier:
-            return {meridian ? 85 : 75, meridian ? 20 : 30};
-        default:
-            return {};
-    }
+    return ProductionCostFor(faction, type);
 }
 
 std::int32_t Simulation::ProductionTicks(EntityType type) const {
@@ -616,14 +798,7 @@ std::int32_t Simulation::ProductionTicks(EntityType type) const {
 }
 
 std::int32_t Simulation::PopulationCost(EntityType type) const {
-    switch (type) {
-        case EntityType::Worker:
-            return 1;
-        case EntityType::Soldier:
-            return 2;
-        default:
-            return 0;
-    }
+    return PopulationCostFor(type);
 }
 
 std::int32_t Simulation::PopulationUsed(PlayerId player) const {
@@ -2005,6 +2180,37 @@ bool Simulation::ProfilePathRequest(Vec2 from, Vec2 destination) const {
 }
 #endif
 
+Visibility PlayerView::VisibilityAt(Vec2 position) const {
+    if (!ViewIsInsideMap(*this, position)) {
+        return Visibility::Unexplored;
+    }
+    const std::size_t tile = static_cast<std::size_t>(
+        position.y.FloorToInt() * config_.mapWidthTiles +
+        position.x.FloorToInt());
+    return tile < tiles_.size() ? tiles_[tile].visibility
+                                : Visibility::Unexplored;
+}
+
+Terrain PlayerView::TerrainAt(std::int32_t tileX, std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return Terrain::Blocked;
+    }
+    const std::size_t tile =
+        static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX);
+    return tile < tiles_.size() ? tiles_[tile].terrain : Terrain::Blocked;
+}
+
+bool PlayerView::IsPositionPassable(Vec2 position) const {
+    if (!ViewIsInsideMap(*this, position)) {
+        return false;
+    }
+    const std::size_t tile = static_cast<std::size_t>(
+        position.y.FloorToInt() * config_.mapWidthTiles +
+        position.x.FloorToInt());
+    return tile < tiles_.size() && tiles_[tile].passable;
+}
+
 Visibility Simulation::VisibilityAt(PlayerId player, Vec2 position) const {
     if (player >= players_.size() || !players_[player].active ||
         !IsInsideMap(position)) {
@@ -2028,25 +2234,135 @@ bool Simulation::IsEntityVisibleTo(PlayerId player, EntityId entity) const {
            VisibilityAt(player, target->position) == Visibility::Visible;
 }
 
-std::uint64_t Simulation::StatelessAiValue(PlayerId player,
-                                           EntityId entity,
-                                           std::uint64_t salt) const {
-    std::uint64_t value = config_.randomSeed ^
-                          (currentTick_ * 0x9e3779b97f4a7c15ULL) ^
-                          (static_cast<std::uint64_t>(player) << 56U) ^
-                          (static_cast<std::uint64_t>(entity) << 17U) ^ salt;
-    value = (value ^ (value >> 30U)) * 0xbf58476d1ce4e5b9ULL;
-    value = (value ^ (value >> 27U)) * 0x94d049bb133111ebULL;
-    return value ^ (value >> 31U);
+std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return std::nullopt;
+    }
+
+    PlayerView view{};
+    view.config_ = config_;
+    view.config_.randomSeed = 0;
+    view.currentTick_ = currentTick_;
+    view.player_ = *playerState;
+    view.decisionSeed_ = config_.randomSeed;
+    view.populationUsed_ = PopulationUsed(player);
+    view.populationCapacity_ = PopulationCapacity(player);
+    const std::size_t tileCount =
+        static_cast<std::size_t>(config_.mapWidthTiles) *
+        static_cast<std::size_t>(config_.mapHeightTiles);
+    view.tiles_.resize(tileCount);
+    for (std::int32_t tileY = 0; tileY < config_.mapHeightTiles; ++tileY) {
+        for (std::int32_t tileX = 0; tileX < config_.mapWidthTiles; ++tileX) {
+            const Vec2 position = Vec2::FromTiles(tileX, tileY);
+            const Visibility visibility = VisibilityAt(player, position);
+            PlayerViewTile& tile = view.tiles_[static_cast<std::size_t>(
+                tileY * config_.mapWidthTiles + tileX)];
+            tile.visibility = visibility;
+            if (visibility != Visibility::Unexplored) {
+                tile.terrain = TerrainAt(tileX, tileY);
+                tile.passable =
+                    tile.terrain != Terrain::Blocked ||
+                    (visibility == Visibility::Visible &&
+                     IsPositionPassable(position));
+            }
+        }
+    }
+    view.entities_.reserve(entities_.size());
+    for (const Entity& entity : entities_) {
+        if (entity.owner == player || IsEntityVisibleTo(player, entity.id)) {
+            Entity observed = entity;
+            if (entity.owner != player) {
+                observed.hitPoints = 1;
+                observed.maxHitPoints = 1;
+                observed.movementPerTickRaw = 0;
+                observed.visionTiles = 0;
+                observed.attackRangeRaw = 0;
+                observed.attackDamage = 0;
+                observed.attackPeriodTicks = 0;
+                observed.attackCooldownTicks = 0;
+                observed.workRate = 0;
+                observed.cargo = 0;
+                observed.cargoCapacity = 0;
+                observed.resourceRemaining =
+                    entity.type == EntityType::ResourceNode &&
+                            entity.resourceRemaining > 0
+                        ? 1
+                        : 0;
+                observed.constructionProgress = 0;
+                observed.constructionRequired = 0;
+                observed.order = {};
+                observed.reshapeUntilTick = 0;
+                observed.reshapeVariant = 0;
+                observed.productionType = EntityType::Worker;
+                observed.productionProgress = 0;
+                observed.productionRequired = 0;
+            }
+            view.entities_.push_back(observed);
+        }
+    }
+    return view;
 }
 
 std::vector<Command> Simulation::GenerateAiCommands(PlayerId player,
                                                     AiPersonality personality) const {
+    const std::optional<PlayerView> view = CreatePlayerView(player);
+    return view.has_value() ? GenerateAiCommands(*view, personality)
+                            : std::vector<Command>{};
+}
+
+std::vector<Command> Simulation::GenerateAiCommands(
+    const PlayerView& view,
+    AiPersonality personality) {
     std::vector<Command> commands{};
-    const PlayerState* playerState = FindPlayer(player);
-    if (playerState == nullptr || !IsValidAiPersonality(personality)) {
+    if (!IsValidAiPersonality(personality)) {
         return commands;
     }
+
+    const PlayerId player = view.Player().id;
+    const PlayerState* playerState = &view.Player();
+    const Tick currentTick_ = view.CurrentTick();
+    const SimulationConfig& config_ = view.Config();
+    const std::vector<Entity>& entities_ = view.Entities();
+    const auto PopulationUsed = [&](PlayerId) { return view.PopulationUsed(); };
+    const auto PopulationCapacity = [&](PlayerId) {
+        return view.PopulationCapacity();
+    };
+    const auto PopulationCost = [&](EntityType type) {
+        return PopulationCostFor(type);
+    };
+    const auto BuildCost = [&](Faction faction, EntityType type) {
+        return BuildCostFor(faction, type);
+    };
+    const auto ValidatePlacement = [&](PlayerId,
+                                       EntityType type,
+                                       Vec2 position) {
+        return ValidateViewPlacement(view, type, position);
+    };
+    const auto ValidateProduction = [&](PlayerId,
+                                        EntityId producer,
+                                        EntityType type) {
+        return ValidateViewProduction(view, producer, type);
+    };
+    const auto VisibilityAt = [&](PlayerId, Vec2 position) {
+        return view.VisibilityAt(position);
+    };
+    const auto IsEntityVisibleTo = [&](PlayerId, EntityId id) {
+        return FindViewEntity(view, id) != nullptr;
+    };
+    const auto FindNearestOwnedDropoff = [&](PlayerId, Vec2 from) {
+        return FindViewOwnedDropoff(view, from);
+    };
+    const auto DistanceSquaredRaw = [&](Vec2 first, Vec2 second) {
+        return DistanceSquaredRawFor(first, second);
+    };
+    const auto IsPositionPassable = [&](Vec2 position) {
+        return view.IsPositionPassable(position);
+    };
+    const auto StatelessAiValue = [&](PlayerId, EntityId entity,
+                                      std::uint64_t salt) {
+        return StatelessAiValueFor(view, entity, salt);
+    };
 
     const Entity* commandCore = nullptr;
     std::int32_t barracksCount = 0;

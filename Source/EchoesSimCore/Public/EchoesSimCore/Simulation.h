@@ -282,6 +282,47 @@ struct SimulationConfig final {
     std::uint64_t randomSeed = 1;
 };
 
+struct PlayerViewTile final {
+    Visibility visibility = Visibility::Unexplored;
+    Terrain terrain = Terrain::Blocked;
+    bool passable = false;
+
+    friend bool operator==(const PlayerViewTile&, const PlayerViewTile&) = default;
+};
+
+// Materialized, visibility-scoped input for command producers. Construction is
+// restricted to Simulation so AI logic cannot acquire an authoritative-world
+// reference or fabricate information that the player has not observed.
+class ECHOESSIMCORE_API PlayerView final {
+public:
+    [[nodiscard]] const SimulationConfig& Config() const { return config_; }
+    [[nodiscard]] Tick CurrentTick() const { return currentTick_; }
+    [[nodiscard]] const PlayerState& Player() const { return player_; }
+    [[nodiscard]] std::uint64_t DecisionSeed() const { return decisionSeed_; }
+    [[nodiscard]] std::int32_t PopulationUsed() const { return populationUsed_; }
+    [[nodiscard]] std::int32_t PopulationCapacity() const {
+        return populationCapacity_;
+    }
+    [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
+    [[nodiscard]] Visibility VisibilityAt(Vec2 position) const;
+    [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
+                                    std::int32_t tileY) const;
+    [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
+
+private:
+    friend class Simulation;
+    PlayerView() = default;
+
+    SimulationConfig config_{};
+    Tick currentTick_ = 0;
+    PlayerState player_{};
+    std::uint64_t decisionSeed_ = 0;
+    std::int32_t populationUsed_ = 0;
+    std::int32_t populationCapacity_ = 0;
+    std::vector<PlayerViewTile> tiles_{};
+    std::vector<Entity> entities_{};
+};
+
 struct ReplayRecord final {
     std::uint32_t version = kReplayVersion;
     std::vector<std::uint8_t> initialSnapshot{};
@@ -340,10 +381,17 @@ public:
     [[nodiscard]] Visibility VisibilityAt(PlayerId player, Vec2 position) const;
     [[nodiscard]] bool IsEntityVisibleTo(PlayerId player, EntityId entity) const;
 
-    // AI only examines the same visibility state exposed to a human player.
+    // The only supported bridge from authoritative state to an AI/controller.
+    [[nodiscard]] std::optional<PlayerView> CreatePlayerView(PlayerId player) const;
+
+    // Compatibility entry point; immediately materializes a PlayerView.
     [[nodiscard]] std::vector<Command> GenerateAiCommands(
         PlayerId player,
         AiPersonality personality = AiPersonality::Balanced) const;
+    // Pure command producer: has no Simulation reference or hidden-world access.
+    [[nodiscard]] static std::vector<Command> GenerateAiCommands(
+        const PlayerView& view,
+        AiPersonality personality = AiPersonality::Balanced);
 
     [[nodiscard]] std::uint64_t StateChecksum() const;
     [[nodiscard]] std::vector<std::uint8_t> SaveSnapshot() const;
@@ -446,10 +494,6 @@ private:
     void ApplyPreserveIncome();
     void RemoveDestroyedEntities();
     void ClearInvalidOrders();
-
-    [[nodiscard]] std::uint64_t StatelessAiValue(PlayerId player,
-                                                 EntityId entity,
-                                                 std::uint64_t salt) const;
 
     SimulationConfig config_{};
     Tick currentTick_ = 0;
