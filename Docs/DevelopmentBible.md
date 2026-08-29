@@ -213,6 +213,8 @@ The current implementation exposes a deliberately bounded subset: a visible, unc
 
 Stylized realism must preserve tactical silhouettes and material readability. Compact forms communicate load and repair. Kharuun forms communicate grown mineral structure without primitive coding. Choir forms use repeated luminous edges and offset state silhouettes. Terrain contrast is reduced under combat; destruction communicates functional loss first. Nanite and Virtual Shadow Maps remain off on the M1 Pro baseline.
 
+Version 0.51.0 introduces the first implemented composition layer for the Glass Scar: seven authored fracture bands, twelve asymmetrically placed shard silhouettes, and five local magenta/copper lights follow the authoritative broken span. These actors are view-only, non-colliding, cleaned up with the runtime environment, and remain subject to the existing fair fog; the local lights cast no shadows. The layer establishes color rhythm and battlefield identity without changing pathing or disclosure. It still uses Engine primitives and explicitly remains `finalArt=false`; production terrain meshes, materials, effects, and performance qualification remain open.
+
 Compact music uses measured pulse, prepared piano, restrained brass, and mechanical resonance. Kharuun uses interlocking rhythms and resonant stone or ceramic timbres without generic tribal coding. Choir harmony resolves in more than one direction before committing. Combat audio is positional and role-readable; alerts are brief and rate-limited. No audio is approved until registered.
 
 ## Player quick start
