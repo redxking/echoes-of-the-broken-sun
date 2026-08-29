@@ -9,6 +9,20 @@ class AEchoesEntityView;
 class AEchoesFogView;
 class AEchoesTerrainView;
 
+/** Information the local presentation may use without exposing hidden state. */
+struct FEchoesObjectiveSnapshot final
+{
+    bool bScenarioReady = false;
+    bool bLocalCoreIntact = false;
+    int32 LocalCoreHitPoints = 0;
+    int32 LocalCoreMaxHitPoints = 0;
+    bool bFutureWellVisible = false;
+    echoes::sim::FutureWellChoice VisibleFutureWellChoice =
+        echoes::sim::FutureWellChoice::Dormant;
+    bool bHostileCoreVisible = false;
+    echoes::sim::MatchOutcome Outcome = echoes::sim::MatchOutcome::Ongoing;
+};
+
 /**
  * Owns the deterministic simulation for the current game world.
  *
@@ -75,6 +89,7 @@ public:
     void SetScenarioPaused(bool bPaused);
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
+    [[nodiscard]] FEchoesObjectiveSnapshot GetLocalObjectiveSnapshot() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;

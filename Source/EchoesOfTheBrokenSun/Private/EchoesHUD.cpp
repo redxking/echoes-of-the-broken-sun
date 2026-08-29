@@ -274,8 +274,214 @@ void AEchoesHUD::DrawHUD()
         }
     }
 
+    DrawObjectiveTracker(Bridge, Settings);
     DrawTacticalMinimap(Bridge, EchoesController, Settings);
     DrawSelectionRectangle();
+    if (EchoesController != nullptr && EchoesController->IsMatchResultVisible())
+    {
+        DrawMatchResult(EchoesController, Bridge, Settings);
+    }
+}
+
+void AEchoesHUD::DrawObjectiveTracker(
+    const UEchoesSimulationSubsystem* Bridge,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        return;
+    }
+
+    const FEchoesObjectiveSnapshot Objective =
+        Bridge->GetLocalObjectiveSnapshot();
+    if (!Objective.bScenarioReady)
+    {
+        return;
+    }
+
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float PanelWidth = FMath::Clamp(460.0f * HudScale, 390.0f, 560.0f);
+    const float PanelHeight = FMath::Clamp(178.0f * HudScale, 160.0f, 212.0f);
+    float Left = Canvas->ClipX - PanelWidth - 20.0f;
+    float Top = 18.0f;
+    const float MainPanelRight =
+        18.0f + FMath::Min(920.0f * HudScale, FMath::Max(320.0f, Canvas->ClipX - 36.0f));
+    if (Left < MainPanelRight + 20.0f)
+    {
+        Left = 18.0f;
+        Top = 310.0f;
+    }
+    if (Top + PanelHeight > Canvas->ClipY - 24.0f)
+    {
+        return;
+    }
+
+    const FLinearColor Backdrop =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+                      : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
+    const FLinearColor Accent =
+        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
+                      : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Active =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.78f, 0.86f, 0.92f);
+    const FLinearColor Complete = FLinearColor(0.25f, 1.0f, 0.66f);
+    const FLinearColor Failed = FLinearColor(1.0f, 0.35f, 0.18f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const float TextScale = FMath::Clamp(HudScale, 0.82f, 1.2f);
+
+    FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
+    FLinearColor WellColor = Active;
+    if (Objective.bFutureWellVisible)
+    {
+        switch (Objective.VisibleFutureWellChoice)
+        {
+            case echoes::sim::FutureWellChoice::Harvest:
+                WellState = TEXT("PROTOCOL ACTIVE — HARVEST");
+                WellColor = Complete;
+                break;
+            case echoes::sim::FutureWellChoice::Preserve:
+                WellState = TEXT("PROTOCOL ACTIVE — PRESERVE");
+                WellColor = Complete;
+                break;
+            case echoes::sim::FutureWellChoice::Reshape:
+                WellState = TEXT("PROTOCOL ACTIVE — RESHAPE");
+                WellColor = Complete;
+                break;
+            case echoes::sim::FutureWellChoice::Dormant:
+            default:
+                WellState = TEXT("IN SIGHT — AWAITING PROTOCOL");
+                break;
+        }
+    }
+
+    const FString LocalCoreState = Objective.bLocalCoreIntact
+        ? FString::Printf(
+              TEXT("SECURE — %d / %d INTEGRITY"),
+              Objective.LocalCoreHitPoints,
+              Objective.LocalCoreMaxHitPoints)
+        : TEXT("LOST");
+    FString HostileCoreState = Objective.bHostileCoreVisible
+                                   ? TEXT("IN SIGHT — DESTROY")
+                                   : TEXT("UNLOCATED — RECONNOITER");
+    FLinearColor HostileCoreColor = Active;
+    if (Objective.Outcome == echoes::sim::MatchOutcome::Player0Victory)
+    {
+        HostileCoreState = TEXT("ELIMINATED");
+        HostileCoreColor = Complete;
+    }
+
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+    DrawText(TEXT("OPERATION GLASS SCAR  //  OBJECTIVES"), Accent,
+             Left + 18.0f, Top + 15.0f, SmallFont, 0.90f * TextScale, false);
+    DrawText(FString::Printf(TEXT("01  FUTURE WELL     %s"), *WellState), WellColor,
+             Left + 18.0f, Top + 52.0f, SmallFont, 0.82f * TextScale, false);
+    DrawText(FString::Printf(TEXT("02  COMMAND CORE    %s"), *LocalCoreState),
+             Objective.bLocalCoreIntact ? Active : Failed,
+             Left + 18.0f, Top + 89.0f, SmallFont, 0.82f * TextScale, false);
+    DrawText(FString::Printf(TEXT("03  KHARUUN CORE    %s"), *HostileCoreState),
+             HostileCoreColor,
+             Left + 18.0f, Top + 126.0f, SmallFont, 0.82f * TextScale, false);
+
+    if (!bLoggedObjectiveTrackerReady)
+    {
+        bLoggedObjectiveTrackerReady = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_OBJECTIVES_READY] visibilityScoped=true wellVisible=%s hostileCoreVisible=%s"),
+            Objective.bFutureWellVisible ? TEXT("true") : TEXT("false"),
+            Objective.bHostileCoreVisible ? TEXT("true") : TEXT("false"));
+    }
+}
+
+void AEchoesHUD::DrawMatchResult(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesSimulationSubsystem* Bridge,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsMatchResultVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float PanelWidth = FMath::Min(
+        FMath::Max(620.0f, Canvas->ClipX - 60.0f),
+        FMath::Clamp(Canvas->ClipX * 0.54f, 760.0f, 1080.0f));
+    const float PanelHeight = FMath::Min(
+        FMath::Max(390.0f, Canvas->ClipY - 60.0f),
+        FMath::Clamp(Canvas->ClipY * 0.48f, 430.0f, 590.0f));
+    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
+    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
+    const float ContentScale = FMath::Clamp(
+        FMath::Min(PanelWidth / 820.0f, PanelHeight / 460.0f),
+        0.76f,
+        1.25f);
+    const float TextScale = HudScale * ContentScale;
+    const echoes::sim::MatchOutcome Outcome =
+        EchoesController->GetPresentedMatchOutcome();
+    const bool bVictory = Outcome == echoes::sim::MatchOutcome::Player0Victory;
+    const bool bDraw = Outcome == echoes::sim::MatchOutcome::Draw;
+    const FString Result = bVictory ? TEXT("VICTORY") : bDraw ? TEXT("DRAW") : TEXT("DEFEAT");
+    const FString Headline = bVictory
+        ? TEXT("THE GLASS SCAR HOLDS")
+        : bDraw ? TEXT("NO COMMAND CORE REMAINS")
+                : TEXT("THE MERIDIAN LINE BROKE");
+    const FString Summary = bVictory
+        ? TEXT("The Kharuun Command Core is silent. The Future Well remains a consequence, not a prize.")
+        : bDraw ? TEXT("Both command structures fell in the same deterministic tick. Neither force controls the crossing.")
+                : TEXT("Your Command Core has fallen. The Kharuun retain the eastern approach and the initiative.");
+    const FLinearColor Backdrop =
+        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
+    const FLinearColor Accent = bVictory
+        ? FLinearColor(0.25f, 1.0f, 0.66f)
+        : bDraw ? FLinearColor(1.0f, 0.82f, 0.2f)
+                : FLinearColor(1.0f, 0.32f, 0.16f);
+    const FLinearColor Body =
+        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
+    const FLinearColor Muted =
+        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
+                      : FLinearColor(0.56f, 0.65f, 0.74f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const uint64 FinalTick = Bridge != nullptr && Bridge->GetSimulation() != nullptr
+                                 ? Bridge->GetSimulation()->CurrentTick()
+                                 : 0;
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.78f), 0.0f, 0.0f,
+             Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight, Accent, 4.0f);
+    DrawText(Result, Accent, Left + 44.0f, Top + 42.0f * ContentScale,
+             SmallFont, 1.9f * TextScale, false);
+    DrawText(Headline, Body, Left + 44.0f, Top + 96.0f * ContentScale,
+             SmallFont, 1.22f * TextScale, false);
+    DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
+             SmallFont, 0.92f * TextScale, false);
+    DrawText(
+        FString::Printf(TEXT("OPERATION GLASS SCAR  //  FINAL TICK %llu"),
+                        static_cast<unsigned long long>(FinalTick)),
+        Muted, Left + 44.0f, Top + 204.0f * ContentScale,
+        SmallFont, 0.82f * TextScale, false);
+    DrawText(TEXT("The simulation is stopped. Battlefield commands are locked."),
+             Muted, Left + 44.0f, Top + 244.0f * ContentScale,
+             SmallFont, 0.82f * TextScale, false);
+
+    DrawRect(Accent, Left + 44.0f, Top + PanelHeight - 82.0f,
+             PanelWidth - 88.0f, 46.0f);
+    DrawText(TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),
+             bHighContrast || !bVictory ? FLinearColor::Black
+                                         : FLinearColor(0.0f, 0.08f, 0.05f),
+             Left + PanelWidth * 0.5f - 176.0f * TextScale,
+             Top + PanelHeight - 69.0f,
+             SmallFont, 0.92f * TextScale, false);
 }
 
 void AEchoesHUD::DrawMissionBriefing(

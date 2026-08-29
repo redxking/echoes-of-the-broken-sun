@@ -49,10 +49,22 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
 
     echoes::sim::EntityId LocalCore = 0;
     echoes::sim::EntityId LocalBarracks = 0;
+    echoes::sim::EntityId FutureWell = 0;
+    echoes::sim::EntityId HostileCore = 0;
     int32 InitialWorkers = 0;
     int32 InitialSoldiers = 0;
     for (const echoes::sim::Entity& Entity : Initial->Entities())
     {
+        if (Entity.type == echoes::sim::EntityType::FutureWell)
+        {
+            FutureWell = Entity.id;
+        }
+        else if (Entity.owner != echoes::sim::kNeutralPlayer &&
+                 Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId &&
+                 Entity.type == echoes::sim::EntityType::CommandCore)
+        {
+            HostileCore = Entity.id;
+        }
         if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId)
         {
             continue;
@@ -76,12 +88,38 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
     }
     TestTrue(TEXT("Local Command Core is present"), LocalCore != 0);
     TestTrue(TEXT("Local Barracks is present"), LocalBarracks != 0);
+    TestTrue(TEXT("Future Well is present"), FutureWell != 0);
+    TestTrue(TEXT("Hostile Command Core is present"), HostileCore != 0);
     TestEqual(TEXT("Initial local logistics are committed"),
               Initial->PopulationUsed(UEchoesSimulationSubsystem::LocalPlayerId),
               9);
     TestEqual(TEXT("Initial local logistics capacity is available"),
               Initial->PopulationCapacity(UEchoesSimulationSubsystem::LocalPlayerId),
               12);
+
+    const FEchoesObjectiveSnapshot Objectives =
+        Bridge->GetLocalObjectiveSnapshot();
+    TestTrue(TEXT("Objective snapshot identifies a ready scenario"),
+             Objectives.bScenarioReady);
+    TestTrue(TEXT("Objective snapshot reports the owned Command Core"),
+             Objectives.bLocalCoreIntact);
+    TestTrue(TEXT("Owned Command Core integrity is available to its player"),
+             Objectives.LocalCoreHitPoints > 0 &&
+                 Objectives.LocalCoreHitPoints == Objectives.LocalCoreMaxHitPoints);
+    TestEqual(
+        TEXT("Future Well objective follows current local visibility"),
+        Objectives.bFutureWellVisible,
+        Initial->IsEntityVisibleTo(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            FutureWell));
+    TestEqual(
+        TEXT("Hostile Command Core objective does not bypass visibility"),
+        Objectives.bHostileCoreVisible,
+        Initial->IsEntityVisibleTo(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            HostileCore));
+    TestTrue(TEXT("Objective snapshot starts with an ongoing result"),
+             Objectives.Outcome == echoes::sim::MatchOutcome::Ongoing);
 
     const echoes::sim::Tick PausedTick = Initial->CurrentTick();
     AEchoesPlayerController* BriefingController =

@@ -79,6 +79,13 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     APlayerController* Controller = Cast<APlayerController>(GetController());
     const AEchoesPlayerController* EchoesController =
         Cast<AEchoesPlayerController>(Controller);
+    if (EchoesController != nullptr && EchoesController->IsModalOverlayVisible())
+    {
+        ForwardInput = 0.0f;
+        RightInput = 0.0f;
+        bEdgePanArmed = false;
+        return;
+    }
     if (bEdgePanEnabled && Controller != nullptr &&
         (EchoesController == nullptr || !EchoesController->IsDraggingSelection()))
     {
@@ -160,6 +167,12 @@ void AEchoesRTSCameraPawn::ZoomOut()
 
 void AEchoesRTSCameraPawn::ApplyZoom(float Direction)
 {
+    if (const AEchoesPlayerController* EchoesController =
+            Cast<AEchoesPlayerController>(GetController());
+        EchoesController != nullptr && EchoesController->IsModalOverlayVisible())
+    {
+        return;
+    }
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const float ZoomScale =
         Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f;

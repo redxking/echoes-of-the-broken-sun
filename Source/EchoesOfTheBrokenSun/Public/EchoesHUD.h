@@ -21,6 +21,13 @@ private:
     void DrawMissionBriefing(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    void DrawObjectiveTracker(
+        const UEchoesSimulationSubsystem* Bridge,
+        const UEchoesGameUserSettings* Settings);
+    void DrawMatchResult(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesSimulationSubsystem* Bridge,
+        const UEchoesGameUserSettings* Settings);
     void DrawTacticalMinimap(
         const UEchoesSimulationSubsystem* Bridge,
         const AEchoesPlayerController* EchoesController,
@@ -28,4 +35,5 @@ private:
     void DrawSelectionRectangle();
 
     bool bLoggedTacticalOverviewReady = false;
+    bool bLoggedObjectiveTrackerReady = false;
 };

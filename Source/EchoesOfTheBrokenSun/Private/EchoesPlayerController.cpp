@@ -73,6 +73,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
+    bMatchResultVisible = false;
+    PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
@@ -106,6 +108,18 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
 }
 
+void AEchoesPlayerController::ConfirmPrimaryAction()
+{
+    if (bMissionBriefingVisible)
+    {
+        ConfirmMissionBriefing();
+    }
+    else if (bMatchResultVisible)
+    {
+        RestartScenario();
+    }
+}
+
 void AEchoesPlayerController::NotifyRuntimeFailure(const FString& FailureCode)
 {
     bRuntimeStateKnown = true;
@@ -121,6 +135,12 @@ void AEchoesPlayerController::NotifyMatchFinished(
 {
     ClearSelection();
     bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bMissionBriefingVisible = false;
+    bMatchResultVisible = true;
+    PresentedMatchOutcome = Outcome;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
     FString Message =
         TEXT("DRAW — both Command Cores fell in the same deterministic tick. Press R to restart.");
     if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
@@ -136,6 +156,11 @@ void AEchoesPlayerController::NotifyMatchFinished(
             TEXT("DEFEAT — your Command Core has fallen. Press R to restart.");
     }
     SetStatusMessage(Message, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u keyboardRestart=true"),
+        static_cast<uint8>(Outcome));
 }
 
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
@@ -277,7 +302,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
     BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
-    BindPressed(TEXT("ConfirmMissionBriefing"), &AEchoesPlayerController::ConfirmMissionBriefing);
+    BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("RecallControlGroup1"), &AEchoesPlayerController::RecallControlGroup1);
     BindPressed(TEXT("RecallControlGroup2"), &AEchoesPlayerController::RecallControlGroup2);
     BindPressed(TEXT("RecallControlGroup3"), &AEchoesPlayerController::RecallControlGroup3);
@@ -292,7 +317,7 @@ void AEchoesPlayerController::SetupInputComponent()
 
 void AEchoesPlayerController::SelectionPressed()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -310,7 +335,7 @@ void AEchoesPlayerController::SelectionPressed()
 
 void AEchoesPlayerController::SelectionReleased()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         bSelectionButtonDown = false;
         return;
@@ -454,7 +479,7 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 
 void AEchoesPlayerController::ContextOrderPressed()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -722,7 +747,7 @@ void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
 
 void AEchoesPlayerController::ArmControlGroupAssignment()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -736,7 +761,7 @@ void AEchoesPlayerController::ArmControlGroupAssignment()
 
 void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -851,7 +876,7 @@ void AEchoesPlayerController::ProduceSoldier()
 
 void AEchoesPlayerController::AttackMoveAtCursor()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -941,7 +966,7 @@ void AEchoesPlayerController::AttackMoveAtCursor()
 
 void AEchoesPlayerController::PatrolAtCursor()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1032,7 +1057,7 @@ void AEchoesPlayerController::PatrolAtCursor()
 
 void AEchoesPlayerController::StopSelectedUnits()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1084,7 +1109,7 @@ void AEchoesPlayerController::StopSelectedUnits()
 
 void AEchoesPlayerController::HoldSelectedUnits()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1150,7 +1175,7 @@ void AEchoesPlayerController::HoldSelectedUnits()
 
 void AEchoesPlayerController::GuardAtCursor()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1234,7 +1259,7 @@ void AEchoesPlayerController::GuardAtCursor()
 
 void AEchoesPlayerController::QuickSaveScenario()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1256,7 +1281,7 @@ void AEchoesPlayerController::QuickSaveScenario()
 
 void AEchoesPlayerController::QuickLoadScenario()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1415,7 +1440,7 @@ void AEchoesPlayerController::IncreaseCameraZoomSpeed()
 void AEchoesPlayerController::BuildAtCursor(
     echoes::sim::EntityType BuildingType)
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1472,7 +1497,7 @@ void AEchoesPlayerController::BuildAtCursor(
 
 void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1532,7 +1557,7 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 
 void AEchoesPlayerController::TogglePause()
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }
@@ -1574,7 +1599,12 @@ void AEchoesPlayerController::RestartScenario()
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         bRuntimeStateKnown = true;
+        bMatchResultVisible = false;
+        PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+        SetIgnoreMoveInput(false);
+        SetIgnoreLookInput(false);
         SetStatusMessage(TEXT("MATCH RESTARTED — deterministic initial state restored."));
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
     else
     {
@@ -1585,7 +1615,7 @@ void AEchoesPlayerController::RestartScenario()
 void AEchoesPlayerController::SetFutureWellChoice(
     echoes::sim::FutureWellChoice Choice)
 {
-    if (bMissionBriefingVisible)
+    if (IsModalOverlayVisible())
     {
         return;
     }

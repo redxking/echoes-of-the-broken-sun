@@ -120,8 +120,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("DecreaseCameraZoomSpeed"), EKeys::Comma));
         TestTrue(TEXT("Camera zoom increase input is mapped"),
                  HasAction(TEXT("IncreaseCameraZoomSpeed"), EKeys::Period));
-        TestTrue(TEXT("Mission briefing confirmation input is mapped"),
-                 HasAction(TEXT("ConfirmMissionBriefing"), EKeys::Enter));
+        TestTrue(TEXT("Primary modal confirmation input is mapped"),
+                 HasAction(TEXT("ConfirmPrimaryAction"), EKeys::Enter));
     }
 
     echoes::sim::SimulationConfig Config;

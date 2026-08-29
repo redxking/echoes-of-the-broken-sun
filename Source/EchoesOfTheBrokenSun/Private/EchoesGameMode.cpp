@@ -120,6 +120,33 @@ void AEchoesGameMode::BeginPlay()
             Cast<AEchoesPlayerController>(GetWorld()->GetFirstPlayerController()))
     {
         Controller->NotifyRuntimeReady();
+#if WITH_EDITOR
+        FString ResultPreview;
+        if (FParse::Value(
+                FCommandLine::Get(),
+                TEXT("EchoesResultPreview="),
+                ResultPreview))
+        {
+            echoes::sim::MatchOutcome PreviewOutcome =
+                echoes::sim::MatchOutcome::Player0Victory;
+            if (ResultPreview.Equals(TEXT("Defeat"), ESearchCase::IgnoreCase))
+            {
+                PreviewOutcome = echoes::sim::MatchOutcome::Player1Victory;
+            }
+            else if (ResultPreview.Equals(TEXT("Draw"), ESearchCase::IgnoreCase))
+            {
+                PreviewOutcome = echoes::sim::MatchOutcome::Draw;
+            }
+            Bridge->SetScenarioPaused(true);
+            Controller->NotifyMatchFinished(PreviewOutcome);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_RESULT_PREVIEW] authoritative=false outcome=%u editorOnly=true"),
+                static_cast<uint8>(PreviewOutcome));
+        }
+        else
+#endif
         if (!FApp::IsUnattended() &&
             !FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
         {

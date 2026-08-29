@@ -624,6 +624,49 @@ echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
                                 : echoes::sim::MatchOutcome::Ongoing;
 }
 
+FEchoesObjectiveSnapshot
+UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
+{
+    FEchoesObjectiveSnapshot Snapshot;
+    Snapshot.bScenarioReady = bScenarioReady && Simulation.IsValid();
+    if (!Snapshot.bScenarioReady)
+    {
+        return Snapshot;
+    }
+
+    Snapshot.Outcome = Simulation->Outcome();
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId &&
+            Entity.type == echoes::sim::EntityType::CommandCore)
+        {
+            Snapshot.bLocalCoreIntact = true;
+            Snapshot.LocalCoreHitPoints = Entity.hitPoints;
+            Snapshot.LocalCoreMaxHitPoints = Entity.maxHitPoints;
+            continue;
+        }
+
+        const bool bVisible =
+            Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id);
+        if (!bVisible)
+        {
+            continue;
+        }
+        if (Entity.type == echoes::sim::EntityType::FutureWell)
+        {
+            Snapshot.bFutureWellVisible = true;
+            Snapshot.VisibleFutureWellChoice = Entity.wellChoice;
+        }
+        else if (Entity.owner != echoes::sim::kNeutralPlayer &&
+                 Entity.owner != LocalPlayerId &&
+                 Entity.type == echoes::sim::EntityType::CommandCore)
+        {
+            Snapshot.bHostileCoreVisible = true;
+        }
+    }
+    return Snapshot;
+}
+
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
     if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||

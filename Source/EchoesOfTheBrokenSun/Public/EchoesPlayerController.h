@@ -39,9 +39,22 @@ public:
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
+    void ConfirmPrimaryAction();
     [[nodiscard]] bool IsMissionBriefingVisible() const
     {
         return bMissionBriefingVisible;
+    }
+    [[nodiscard]] bool IsMatchResultVisible() const
+    {
+        return bMatchResultVisible;
+    }
+    [[nodiscard]] bool IsModalOverlayVisible() const
+    {
+        return bMissionBriefingVisible || bMatchResultVisible;
+    }
+    [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
+    {
+        return PresentedMatchOutcome;
     }
 
 private:
@@ -116,4 +129,7 @@ private:
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
     bool bMissionBriefingVisible = false;
+    bool bMatchResultVisible = false;
+    echoes::sim::MatchOutcome PresentedMatchOutcome =
+        echoes::sim::MatchOutcome::Ongoing;
 };

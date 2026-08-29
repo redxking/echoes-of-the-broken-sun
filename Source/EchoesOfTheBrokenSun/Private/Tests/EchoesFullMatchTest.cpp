@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
@@ -396,10 +397,22 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             Bridge->GetSimulation()->CurrentTick(),
             VictoryTick);
     }
-    TestTrue(TEXT("Restart succeeds after a completed skirmish"),
-             Bridge->RestartPrototypeScenario());
+    AEchoesPlayerController* ResultController =
+        World->SpawnActor<AEchoesPlayerController>();
+    if (TestNotNull(TEXT("Match result controller can be created"), ResultController))
+    {
+        ResultController->NotifyMatchFinished(Bridge->GetMatchOutcome());
+        TestTrue(TEXT("Completed skirmish presents the match result"),
+                 ResultController->IsMatchResultVisible());
+        TestTrue(TEXT("Presented result preserves the authoritative outcome"),
+                 ResultController->GetPresentedMatchOutcome() ==
+                     echoes::sim::MatchOutcome::Player0Victory);
+        ResultController->ConfirmPrimaryAction();
+        TestFalse(TEXT("Enter restart dismisses the match result"),
+                  ResultController->IsMatchResultVisible());
+    }
     TestTrue(
-        TEXT("Restart returns the skirmish to an ongoing result"),
+        TEXT("Enter restart returns the skirmish to an ongoing result"),
         Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Ongoing);
 
     Bridge->StopPrototypeScenario();
