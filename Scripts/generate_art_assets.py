@@ -1239,6 +1239,14 @@ def create_ash_cut_materials() -> tuple[unreal.MaterialInterface, ...]:
             )
         if not isinstance(instance, unreal.MaterialInstanceConstant):
             raise RuntimeError(f"Ash Cut material instance is invalid: {path}")
+        if (
+            unreal.EditorAssetLibrary.get_metadata_tag(
+                instance, "Echoes.AssetRevision"
+            )
+            == ASH_CUT_ASSET_REVISION
+        ):
+            instances.append(instance)
+            continue
         unreal.MaterialEditingLibrary.set_material_instance_parent(instance, master)
         color_value, detail_value, metallic_value, roughness_value, emission_value, detail_value_strength = values
         unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
