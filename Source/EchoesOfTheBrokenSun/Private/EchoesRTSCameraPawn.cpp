@@ -41,13 +41,13 @@ void AEchoesRTSCameraPawn::BeginPlay()
     bEdgePanArmed = false;
 #if !UE_BUILD_SHIPPING
     FString GlassScarReviewMode;
-    if (FParse::Param(
-            FCommandLine::Get(),
-            TEXT("EchoesGlassScarArtReview")) ||
-        FParse::Value(
+    if (FParse::Value(
             FCommandLine::Get(),
             TEXT("EchoesGlassScarReview="),
-            GlassScarReviewMode))
+            GlassScarReviewMode) ||
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarArtReview")))
     {
         if (GlassScarReviewMode.IsEmpty())
         {

@@ -378,13 +378,13 @@ void AEchoesGameMode::BeginPlay()
 #if !UE_BUILD_SHIPPING
     FString GlassScarReviewMode;
     const bool bGlassScarArtReview =
-        FParse::Param(
-            FCommandLine::Get(),
-            TEXT("EchoesGlassScarArtReview")) ||
         FParse::Value(
             FCommandLine::Get(),
             TEXT("EchoesGlassScarReview="),
-            GlassScarReviewMode);
+            GlassScarReviewMode) ||
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesGlassScarArtReview"));
     if (bGlassScarArtReview)
     {
         if (GlassScarReviewMode.IsEmpty())
@@ -512,13 +512,13 @@ void AEchoesGameMode::BeginPlay()
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||
-             FParse::Param(
-                 FCommandLine::Get(),
-                 TEXT("EchoesGlassScarArtReview")) ||
              FParse::Value(
                  FCommandLine::Get(),
                  TEXT("EchoesGlassScarReview="),
-                 GlassScarReviewMode)) &&
+                 GlassScarReviewMode) ||
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesGlassScarArtReview"))) &&
             Controller->GetHUD() != nullptr)
         {
             Controller->GetHUD()->bShowHUD = false;
