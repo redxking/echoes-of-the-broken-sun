@@ -92,10 +92,12 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarAshCut.SM_World_GlassScarAshCut"));
     if (TestNotNull(TEXT("Production-oriented Ash Cut mesh loads"), AshCutMesh))
     {
+#if WITH_EDITOR
         TestTrue(TEXT("Ash Cut LOD0 has a surface and lightmap UV channel"),
                  AshCutMesh->GetNumUVChannels(0) >= 2);
         TestTrue(TEXT("Ash Cut LOD1 has a surface and lightmap UV channel"),
                  AshCutMesh->GetNumUVChannels(1) >= 2);
+#endif
         const UBodySetup* BodySetup = AshCutMesh->GetBodySetup();
         TestNotNull(TEXT("Ash Cut owns authored collision data"), BodySetup);
         if (BodySetup != nullptr)
@@ -135,10 +137,12 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarBuriedCauseway.SM_World_GlassScarBuriedCauseway"));
     if (TestNotNull(TEXT("Production-oriented Buried Causeway mesh loads"), BuriedCausewayMesh))
     {
+#if WITH_EDITOR
         TestTrue(TEXT("Buried Causeway LOD0 has a surface and lightmap UV channel"),
                  BuriedCausewayMesh->GetNumUVChannels(0) >= 2);
         TestTrue(TEXT("Buried Causeway LOD1 has a surface and lightmap UV channel"),
                  BuriedCausewayMesh->GetNumUVChannels(1) >= 2);
+#endif
         const UBodySetup* BodySetup = BuriedCausewayMesh->GetBodySetup();
         TestNotNull(TEXT("Buried Causeway owns authored collision data"), BodySetup);
         if (BodySetup != nullptr)
@@ -179,10 +183,12 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.SM_World_GlassScarFoldedVerge"));
     if (TestNotNull(TEXT("Production-oriented Folded Verge mesh loads"), FoldedVergeMesh))
     {
+#if WITH_EDITOR
         TestTrue(TEXT("Folded Verge LOD0 has a surface and lightmap UV channel"),
                  FoldedVergeMesh->GetNumUVChannels(0) >= 2);
         TestTrue(TEXT("Folded Verge LOD1 has a surface and lightmap UV channel"),
                  FoldedVergeMesh->GetNumUVChannels(1) >= 2);
+#endif
         const UBodySetup* BodySetup = FoldedVergeMesh->GetBodySetup();
         TestNotNull(TEXT("Folded Verge owns authored collision data"), BodySetup);
         if (BodySetup != nullptr)
