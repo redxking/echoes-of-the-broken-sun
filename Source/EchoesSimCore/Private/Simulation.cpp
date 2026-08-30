@@ -989,6 +989,30 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
     return entity.id;
 }
 
+EntityId Simulation::SpawnPublicInterface(Faction faction, Vec2 position) {
+    if (!IsInsideMap(position) || !IsValidFaction(faction)) {
+        return 0;
+    }
+    Entity entity = MakeEntity(kNeutralPlayer, faction,
+                               EntityType::UtilityStructure, position);
+    // Public interfaces expose durable mission state but confer no command,
+    // vision, or autonomous combat authority to either player.
+    entity.attackDamage = 0;
+    entity.attackRangeRaw = 0;
+    entity.attackPeriodTicks = 0;
+    entity.attackCooldownTicks = 0;
+    entity.visionTiles = 0;
+    entity.constructionProgress = 0;
+    entity.constructionRequired = 0;
+    if (!TryAllocateEntityId(entity.id)) {
+        return 0;
+    }
+    entities_.push_back(entity);
+    ResolveAegisPower();
+    UpdateVisibility();
+    return entity.id;
+}
+
 EntityId Simulation::SpawnResourceNode(Vec2 position, std::int32_t amount) {
     if (!IsInsideMap(position) || amount <= 0) {
         return 0;
@@ -1378,9 +1402,11 @@ bool Simulation::IsAegisPost(const Entity& entity) const {
 }
 
 bool Simulation::IsAegisNetworkPowered(const Entity& aegis) const {
-    if (!IsAegisPost(aegis) || aegis.owner == kNeutralPlayer ||
-        !aegis.completed || aegis.hitPoints <= 0) {
+    if (!IsAegisPost(aegis) || !aegis.completed || aegis.hitPoints <= 0) {
         return false;
+    }
+    if (aegis.owner == kNeutralPlayer) {
+        return true;
     }
     const std::int64_t radius = config_.rules.poweredAegis.connectionRadiusRaw;
     const std::uint64_t radiusSquared =
@@ -4795,6 +4821,25 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
+        const bool neutralPublicInterface =
+            entity.owner == kNeutralPlayer &&
+            type == static_cast<std::uint8_t>(EntityType::UtilityStructure) &&
+            completed == 1 &&
+            orderType == static_cast<std::uint8_t>(OrderType::None) &&
+            entity.movementPerTickRaw == 0 && entity.visionTiles == 0 &&
+            entity.attackRangeRaw == 0 && entity.attackDamage == 0 &&
+            entity.attackPeriodTicks == 0 && entity.attackCooldownTicks == 0 &&
+            entity.workRate == 0 && entity.cargo == 0 &&
+            entity.cargoCapacity == 0 && entity.resourceRemaining == 0 &&
+            entity.constructionProgress == 0 &&
+            entity.constructionRequired == 0 &&
+            entity.productionProgress == 0 &&
+            entity.productionRequired == 0;
+        const bool neutralEntityTypeValid =
+            entity.owner != kNeutralPlayer ||
+            type == static_cast<std::uint8_t>(EntityType::ResourceNode) ||
+            type == static_cast<std::uint8_t>(EntityType::FutureWell) ||
+            neutralPublicInterface;
         if (entity.id == 0 || entity.id <= priorId ||
             faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
@@ -4821,6 +4866,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             (entity.owner != kNeutralPlayer &&
              (entity.owner >= simulation.players_.size() ||
               !simulation.players_[entity.owner].active)) ||
+            !neutralEntityTypeValid ||
             entity.maxHitPoints <= 0 || entity.hitPoints <= 0 ||
             entity.hitPoints > entity.maxHitPoints ||
             entity.movementPerTickRaw < 0 || entity.visionTiles < 0 ||

@@ -38,9 +38,13 @@ constexpr int32 ShapeOfSilenceSiteRadiusTiles = 3;
 constexpr int32 ShapeBesideUsSiteRadiusTiles = 3;
 constexpr int32 ReserveAuthoritySiteRadiusTiles = 3;
 constexpr int32 ChoirAtLumeReachSiteRadiusTiles = 3;
+constexpr int32 NoNeutralLedgerSiteRadiusTiles = 3;
 constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
 constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '0', 'Q'};
+constexpr uint8 NoNeutralLedgerQuickSaveEnvelopeVersion = 1;
+constexpr uint8 NoNeutralLedgerQuickSaveMagic[] = {
+    'E', 'C', 'H', 'O', 'M', '1', '1', 'Q'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -191,6 +195,168 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     {
         OutError = TEXT(
             "checkpoint ledger binding does not match the active nine-record campaign");
+        return false;
+    }
+
+    Offset += static_cast<int32>(LedgerLength);
+    OutSnapshotBytes.Append(
+        Envelope.GetData() + Offset,
+        static_cast<int32>(SnapshotLength));
+    return true;
+}
+
+[[nodiscard]] bool BuildNoNeutralLedgerQuickSaveEnvelope(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& SnapshotBytes,
+    TArray<uint8>& OutEnvelope,
+    FString& OutError)
+{
+    OutEnvelope.Reset();
+    OutError.Reset();
+    if ((CampaignProgress.Decisions.Num() != 10 &&
+         CampaignProgress.Decisions.Num() != 11) ||
+        SnapshotBytes.IsEmpty())
+    {
+        OutError = TEXT(
+            "Mission 11 checkpoints require an active ten-record ledger and a non-empty snapshot.");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteLedger;
+    PrerequisiteLedger.Decisions.Reserve(10);
+    for (int32 Index = 0; Index < 10; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "Mission 11 checkpoints require the canonical M01-M10 prerequisite projection.");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(
+            CampaignProgress.Decisions[Index]);
+    }
+    TArray<uint8> LedgerBytes;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, LedgerBytes, OutError) ||
+        LedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("The active campaign ledger could not be encoded.");
+        }
+        return false;
+    }
+
+    const uint64 EnvelopeSize =
+        static_cast<uint64>(UE_ARRAY_COUNT(NoNeutralLedgerQuickSaveMagic)) +
+        2ULL + 8ULL + static_cast<uint64>(LedgerBytes.Num()) +
+        static_cast<uint64>(SnapshotBytes.Num());
+    if (EnvelopeSize > static_cast<uint64>(MAX_int32))
+    {
+        OutError = TEXT("The Mission 11 checkpoint envelope is too large.");
+        return false;
+    }
+
+    OutEnvelope.Reserve(static_cast<int32>(EnvelopeSize));
+    OutEnvelope.Append(
+        NoNeutralLedgerQuickSaveMagic,
+        UE_ARRAY_COUNT(NoNeutralLedgerQuickSaveMagic));
+    OutEnvelope.Add(NoNeutralLedgerQuickSaveEnvelopeVersion);
+    OutEnvelope.Add(static_cast<uint8>(
+        EEchoesOperationMode::CampaignNoNeutralLedger));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(LedgerBytes.Num()));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(SnapshotBytes.Num()));
+    OutEnvelope.Append(LedgerBytes);
+    OutEnvelope.Append(SnapshotBytes);
+    return true;
+}
+
+[[nodiscard]] bool ExtractNoNeutralLedgerQuickSaveSnapshot(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& Envelope,
+    TArray<uint8>& OutSnapshotBytes,
+    FString& OutError)
+{
+    OutSnapshotBytes.Reset();
+    OutError.Reset();
+    constexpr int32 FixedHeaderSize =
+        UE_ARRAY_COUNT(NoNeutralLedgerQuickSaveMagic) + 2 + 8;
+    if (Envelope.Num() < FixedHeaderSize ||
+        FMemory::Memcmp(
+            Envelope.GetData(),
+            NoNeutralLedgerQuickSaveMagic,
+            UE_ARRAY_COUNT(NoNeutralLedgerQuickSaveMagic)) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint is missing the Mission 11 operation-and-ledger envelope");
+        return false;
+    }
+
+    int32 Offset = UE_ARRAY_COUNT(NoNeutralLedgerQuickSaveMagic);
+    if (Envelope[Offset++] != NoNeutralLedgerQuickSaveEnvelopeVersion)
+    {
+        OutError = TEXT(
+            "checkpoint uses an unsupported Mission 11 envelope version");
+        return false;
+    }
+    if (Envelope[Offset++] != static_cast<uint8>(
+            EEchoesOperationMode::CampaignNoNeutralLedger))
+    {
+        OutError = TEXT(
+            "checkpoint operation binding is not No Neutral Ledger");
+        return false;
+    }
+
+    uint32 LedgerLength = 0;
+    uint32 SnapshotLength = 0;
+    if (!ReadUint32LittleEndian(Envelope, Offset, LedgerLength) ||
+        !ReadUint32LittleEndian(Envelope, Offset, SnapshotLength) ||
+        LedgerLength == 0 || SnapshotLength == 0 ||
+        static_cast<uint64>(Offset) + static_cast<uint64>(LedgerLength) +
+                static_cast<uint64>(SnapshotLength) !=
+            static_cast<uint64>(Envelope.Num()))
+    {
+        OutError = TEXT("checkpoint Mission 11 envelope lengths are invalid");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteLedger;
+    if ((CampaignProgress.Decisions.Num() != 10 &&
+         CampaignProgress.Decisions.Num() != 11))
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding requires ten prerequisites and an optional Mission 11 receipt");
+        return false;
+    }
+    PrerequisiteLedger.Decisions.Reserve(10);
+    for (int32 Index = 0; Index < 10; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "checkpoint ledger binding does not contain the canonical M01-M10 projection");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(CampaignProgress.Decisions[Index]);
+    }
+    TArray<uint8> ActiveLedgerBytes;
+    FString LedgerError;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, ActiveLedgerBytes, LedgerError) ||
+        ActiveLedgerBytes.Num() != static_cast<int32>(LedgerLength) ||
+        FMemory::Memcmp(
+            Envelope.GetData() + Offset,
+            ActiveLedgerBytes.GetData(),
+            LedgerLength) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding does not match the active ten-record campaign");
         return false;
     }
 
@@ -407,6 +573,22 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     const int64 RadiusRaw = Vec2::FromTiles(RadiusTiles, 0).x.Raw();
     return DeltaX * DeltaX + DeltaY * DeltaY <= RadiusRaw * RadiusRaw;
 }
+
+[[nodiscard]] bool IsPublicInterface(
+    const echoes::sim::Entity* Entity,
+    Faction InterfaceFaction,
+    const Vec2& Site,
+    bool bExpectedPowered)
+{
+    return Entity != nullptr &&
+        Entity->owner == echoes::sim::kNeutralPlayer &&
+        Entity->faction == InterfaceFaction &&
+        Entity->type == EntityType::UtilityStructure &&
+        Entity->position == Site && Entity->hitPoints > 0 &&
+        Entity->completed && Entity->aegisPowered == bExpectedPowered &&
+        Entity->attackRangeRaw == 0 && Entity->attackDamage == 0 &&
+        Entity->attackPeriodTicks == 0 && Entity->visionTiles == 0;
+}
 }
 
 void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -457,6 +639,21 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     OruunId = 0;
     FirstMemoryWitnessId = 0;
     SecondMemoryWitnessId = 0;
+    ShapeBesideUsTalarId = 0;
+    FirstStateWitnessId = 0;
+    SecondStateWitnessId = 0;
+    ReserveAuthorityMaraId = 0;
+    ChoirAtLumeReachOruunId = 0;
+    ChoirAtLumeReachWaystoneId = 0;
+    ChoirAtLumeReachWellId = 0;
+    NoNeutralOruunId = 0;
+    NoNeutralWaystoneId = 0;
+    NoNeutralLedgerWitnessId = 0;
+    NoNeutralFirstDistrictInterfaceId = 0;
+    NoNeutralSecondDistrictInterfaceId = 0;
+    NoNeutralMeridianEvidenceInterfaceId = 0;
+    NoNeutralKharuunEvidenceInterfaceId = 0;
+    NoNeutralWellId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignBackupProgress = FEchoesCampaignProgress{};
     bCampaignBackupAvailable = false;
@@ -567,6 +764,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("RESERVE AUTHORITY");
         case EEchoesOperationMode::CampaignChoirAtLumeReach:
             return TEXT("THE CHOIR AT LUME REACH");
+        case EEchoesOperationMode::CampaignNoNeutralLedger:
+            return TEXT("NO NEUTRAL LEDGER");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -668,6 +867,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_CHOIR_AT_LUME_REACH_LOCKED] reason=nine consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger &&
+        !IsNoNeutralLedgerUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NO_NEUTRAL_LEDGER_LOCKED] reason=exact ordered ten-record campaign required"));
         return false;
     }
 
@@ -802,8 +1011,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
     const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();
-    const bool bLumeReach = SelectedOperation ==
-        EEchoesOperationMode::CampaignChoirAtLumeReach;
+    const bool bLumeReach =
+        SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach ||
+        SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger;
     const int32 BaseGlassScarBlockedTiles = bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : ConfigureGlassScar(*Simulation);
@@ -869,6 +1079,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignChoirAtLumeReach
             ? Faction::KharuunAssemblies
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignNoNeutralLedger
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -903,7 +1116,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignReserveAuthority ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignChoirAtLumeReach
+                        EEchoesOperationMode::CampaignChoirAtLumeReach ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignNoNeutralLedger
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -959,6 +1174,14 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     ChoirAtLumeReachOruunId = 0;
     ChoirAtLumeReachWaystoneId = 0;
     ChoirAtLumeReachWellId = 0;
+    NoNeutralOruunId = 0;
+    NoNeutralWaystoneId = 0;
+    NoNeutralLedgerWitnessId = 0;
+    NoNeutralFirstDistrictInterfaceId = 0;
+    NoNeutralSecondDistrictInterfaceId = 0;
+    NoNeutralMeridianEvidenceInterfaceId = 0;
+    NoNeutralKharuunEvidenceInterfaceId = 0;
+    NoNeutralWellId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -1004,6 +1227,20 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                      ChoirAtLumeReachWaystoneId == 0)
             {
                 ChoirAtLumeReachWaystoneId = Spawned;
+            }
+        }
+        if (SelectedOperation ==
+                EEchoesOperationMode::CampaignNoNeutralLedger &&
+            Owner == LocalPlayerId)
+        {
+            if (Type == EntityType::ScoutUnit && NoNeutralOruunId == 0)
+            {
+                NoNeutralOruunId = Spawned;
+            }
+            else if (Type == EntityType::Dropoff &&
+                     NoNeutralWaystoneId == 0)
+            {
+                NoNeutralWaystoneId = Spawned;
             }
         }
         return Spawned;
@@ -1446,6 +1683,64 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                GetNoNeutralLedgerPlan();
+            NoNeutralLedgerWitnessId = SpawnUnit(
+                LocalPlayerId,
+                Faction::KharuunAssemblies,
+                EntityType::ScoutUnit,
+                18,
+                22);
+            NoNeutralFirstDistrictInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.FirstDistrictSite);
+            NoNeutralSecondDistrictInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.SecondDistrictSite);
+            NoNeutralMeridianEvidenceInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.MeridianEvidenceSite);
+            NoNeutralKharuunEvidenceInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::KharuunAssemblies,
+                    Plan.KharuunEvidenceSite);
+            bSpawnSucceeded &=
+                NoNeutralFirstDistrictInterfaceId != 0 &&
+                NoNeutralSecondDistrictInterfaceId != 0 &&
+                NoNeutralMeridianEvidenceInterfaceId != 0 &&
+                NoNeutralKharuunEvidenceInterfaceId != 0;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NO_NEUTRAL_LEDGER_SPAWN] planKey=%u oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u route=(%d,%d) districts=(%d,%d):(%d,%d) evidence=(%d,%d):(%d,%d) protocol=%u publicInterfacesNeutral=true success=%s"),
+                Plan.StablePlanKey,
+                NoNeutralOruunId,
+                NoNeutralWaystoneId,
+                NoNeutralLedgerWitnessId,
+                NoNeutralFirstDistrictInterfaceId,
+                NoNeutralSecondDistrictInterfaceId,
+                NoNeutralMeridianEvidenceInterfaceId,
+                NoNeutralKharuunEvidenceInterfaceId,
+                Plan.RouteSite.x.FloorToInt(),
+                Plan.RouteSite.y.FloorToInt(),
+                Plan.FirstDistrictSite.x.FloorToInt(),
+                Plan.FirstDistrictSite.y.FloorToInt(),
+                Plan.SecondDistrictSite.x.FloorToInt(),
+                Plan.SecondDistrictSite.y.FloorToInt(),
+                Plan.MeridianEvidenceSite.x.FloorToInt(),
+                Plan.MeridianEvidenceSite.y.FloorToInt(),
+                Plan.KharuunEvidenceSite.x.FloorToInt(),
+                Plan.KharuunEvidenceSite.y.FloorToInt(),
+                static_cast<uint8>(Plan.LumeProtocol),
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
+        }
+
         if (bUseResearchInterruptionPresentation)
         {
             constexpr int32 InterruptionAttackerCount = 32;
@@ -1486,11 +1781,23 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         }
         if (bLumeReach)
         {
-            const FEchoesChoirAtLumeReachPlan Plan =
-                GetChoirAtLumeReachPlan();
-            ChoirAtLumeReachWellId = Simulation->SpawnFutureWell(
-                Plan.FutureWellSite);
-            bSpawnSucceeded &= ChoirAtLumeReachWellId != 0;
+            if (SelectedOperation ==
+                EEchoesOperationMode::CampaignNoNeutralLedger)
+            {
+                const FEchoesNoNeutralLedgerPlan Plan =
+                    GetNoNeutralLedgerPlan();
+                NoNeutralWellId = Simulation->SpawnFutureWell(
+                    Plan.FutureWellSite);
+                bSpawnSucceeded &= NoNeutralWellId != 0;
+            }
+            else
+            {
+                const FEchoesChoirAtLumeReachPlan Plan =
+                    GetChoirAtLumeReachPlan();
+                ChoirAtLumeReachWellId = Simulation->SpawnFutureWell(
+                    Plan.FutureWellSite);
+                bSpawnSucceeded &= ChoirAtLumeReachWellId != 0;
+            }
         }
         else
         {
@@ -1976,6 +2283,31 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger &&
+        (NoNeutralOruunId == 0 || NoNeutralWaystoneId == 0 ||
+         NoNeutralLedgerWitnessId == 0 ||
+         NoNeutralFirstDistrictInterfaceId == 0 ||
+         NoNeutralSecondDistrictInterfaceId == 0 ||
+         NoNeutralMeridianEvidenceInterfaceId == 0 ||
+         NoNeutralKharuunEvidenceInterfaceId == 0 ||
+         NoNeutralWellId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NO_NEUTRAL_LEDGER_INIT_FAILED] reason=mission entities unavailable oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u well=%u"),
+            NoNeutralOruunId,
+            NoNeutralWaystoneId,
+            NoNeutralLedgerWitnessId,
+            NoNeutralFirstDistrictInterfaceId,
+            NoNeutralSecondDistrictInterfaceId,
+            NoNeutralMeridianEvidenceInterfaceId,
+            NoNeutralKharuunEvidenceInterfaceId,
+            NoNeutralWellId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1994,12 +2326,30 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
 
     if (bLumeReach)
     {
-        UE_LOG(
-            LogEchoes,
-            Display,
-            TEXT("[ECHOES_LUME_REACH_TERRAIN_READY] blocked=%d publicGates=3 well=(32,43) inheritedBranch=%u"),
-            GlassScarBlockedTiles,
-            static_cast<uint8>(SevenAccountsBranch));
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                GetNoNeutralLedgerPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_LUME_CONCORDANCE_TERRAIN_READY] blocked=%d publicGates=3 well=(%d,%d) inheritedBranch=%u planKey=%u"),
+                GlassScarBlockedTiles,
+                Plan.FutureWellSite.x.FloorToInt(),
+                Plan.FutureWellSite.y.FloorToInt(),
+                static_cast<uint8>(SevenAccountsBranch),
+                Plan.StablePlanKey);
+        }
+        else
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_LUME_REACH_TERRAIN_READY] blocked=%d publicGates=3 well=(32,43) inheritedBranch=%u"),
+                GlassScarBlockedTiles,
+                static_cast<uint8>(SevenAccountsBranch));
+        }
     }
     else
     {
@@ -2238,6 +2588,36 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 Plan.FutureWellSite.y.FloorToInt(),
                 GlassScarBlockedTiles);
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                GetNoNeutralLedgerPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NO_NEUTRAL_LEDGER_READY] planKey=%u founding=%u route=%s districtA=%s districtB=%s deferred=%s lumeProtocol=%u protocol=%s oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u well=%u inheritedRecords=10 localFaction=KharuunAssemblies meridianPresence=neutralPoweredPublicInterfacesOnly choirPresence=nonPlayablePublicContact mixedFactionCommand=false hiddenTrust=false survivorVarianceUnmodeled=true proxyAttribution=false blocked=%d"),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                Plan.RouteStableName,
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.FirstContributingDistrict),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.SecondContributingDistrict),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.LumeProtocol),
+                Plan.ProtocolStableName,
+                NoNeutralOruunId,
+                NoNeutralWaystoneId,
+                NoNeutralLedgerWitnessId,
+                NoNeutralFirstDistrictInterfaceId,
+                NoNeutralSecondDistrictInterfaceId,
+                NoNeutralMeridianEvidenceInterfaceId,
+                NoNeutralKharuunEvidenceInterfaceId,
+                NoNeutralWellId,
+                GlassScarBlockedTiles);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -2374,6 +2754,14 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     ChoirAtLumeReachOruunId = 0;
     ChoirAtLumeReachWaystoneId = 0;
     ChoirAtLumeReachWellId = 0;
+    NoNeutralOruunId = 0;
+    NoNeutralWaystoneId = 0;
+    NoNeutralLedgerWitnessId = 0;
+    NoNeutralFirstDistrictInterfaceId = 0;
+    NoNeutralSecondDistrictInterfaceId = 0;
+    NoNeutralMeridianEvidenceInterfaceId = 0;
+    NoNeutralKharuunEvidenceInterfaceId = 0;
+    NoNeutralWellId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -2467,6 +2855,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies)
     {
         OutFeedback = TEXT("[FACTION_CHOIR_AT_LUME_REACH_LOCKED] Oruun and the Lume Reach listening force deploy under Kharuun authority; Mara remains an off-map liaison.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_NO_NEUTRAL_LEDGER_LOCKED] Oruun and the ledger witness deploy under Kharuun authority; Meridian and Choir contributions remain public interfaces, not commandable forces.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -2589,6 +2984,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Reserve Authority with a consistent ledger before The Choir at Lume Reach.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger &&
+        !IsNoNeutralLedgerUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Choir at Lume Reach with the exact ten-record ledger before No Neutral Ledger.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -2650,6 +3052,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::KharuunAssemblies;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -2685,6 +3092,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignChoirAtLumeReach
                 ? TEXT(" — Oruun's Kharuun listening force is locked; Mara remains an off-map liaison and the local Choir is not commandable.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignNoNeutralLedger
+                ? TEXT(" — Oruun's Kharuun force is locked; Meridian evidence and local Choir contact remain public, non-commandable interfaces.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -2716,6 +3126,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignChoirAtLumeReach
                 ? TEXT("ChoirAtLumeReach")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignNoNeutralLedger
+                ? TEXT("NoNeutralLedger")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -2943,7 +3356,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
         SelectedOperation ==
             EEchoesOperationMode::CampaignReserveAuthority ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignChoirAtLumeReach)
+            EEchoesOperationMode::CampaignChoirAtLumeReach ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -2973,7 +3388,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 : SelectedOperation ==
                         EEchoesOperationMode::CampaignReserveAuthority
                     ? TEXT("EchoesQuickSaveReserveAuthority")
-                    : TEXT("EchoesQuickSaveTheChoirAtLumeReach");
+                : SelectedOperation ==
+                        EEchoesOperationMode::CampaignChoirAtLumeReach
+                    ? TEXT("EchoesQuickSaveTheChoirAtLumeReach")
+                    : TEXT("EchoesQuickSaveNoNeutralLedger");
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
@@ -2997,7 +3415,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             : SelectedOperation ==
                     EEchoesOperationMode::CampaignReserveAuthority
                 ? TEXT("EchoesQuickSaveReserveAuthority-InvalidLedger.bin")
-                : TEXT("EchoesQuickSaveTheChoirAtLumeReach-InvalidLedger.bin"));
+            : SelectedOperation ==
+                    EEchoesOperationMode::CampaignChoirAtLumeReach
+                ? TEXT("EchoesQuickSaveTheChoirAtLumeReach-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveNoNeutralLedger-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -3701,6 +4122,75 @@ UEchoesSimulationSubsystem::CommitChoirAtLumeReachCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitNoNeutralLedgerCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedProtocol,
+    FString& OutFeedback)
+{
+    const FEchoesNoNeutralLedgerPlan Plan = GetNoNeutralLedgerPlan();
+    OutRecordedProtocol = Plan.LumeProtocol;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignNoNeutralLedger ||
+        GetNoNeutralLedgerPhase() !=
+            EEchoesNoNeutralLedgerPhase::Complete ||
+        !IsNoNeutralLedgerUnlocked() ||
+        Plan.LumeProtocol == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative No Neutral Ledger operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::NoNeutralLedger;
+    Record.WellChoice = Plan.LumeProtocol;
+    Record.AvailableWellChoices = WellChoiceMask(Plan.LumeProtocol);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::InheritedRouteSecured) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::DistrictPairIntegrated) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::BothEvidenceChannelsAttested) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::RecordedProtocolApplied) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::CoalitionRallied) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::OruunSurvived) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedProtocol = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -3877,6 +4367,22 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             return false;
         }
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        FString EnvelopeError;
+        if (!BuildNoNeutralLedgerQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *EnvelopeError);
+            return false;
+        }
+    }
 
     const FString SavePath = GetActiveQuickSavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
@@ -3907,6 +4413,17 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
         bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
+            CampaignProgress,
+            VerificationBytes,
+            VerificationSnapshotBytes,
+            EnvelopeError);
+        VerificationPayload = &VerificationSnapshotBytes;
+    }
+    else if (bVerificationRead &&
+             SelectedOperation ==
+                 EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
             CampaignProgress,
             VerificationBytes,
             VerificationSnapshotBytes,
@@ -3968,7 +4485,9 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         PersistedBytes.Num(),
         bHadPriorSave ? TEXT("retained") : TEXT("none"),
         SelectedOperation ==
-                EEchoesOperationMode::CampaignChoirAtLumeReach
+                EEchoesOperationMode::CampaignChoirAtLumeReach ||
+            SelectedOperation ==
+                EEchoesOperationMode::CampaignNoNeutralLedger
             ? TEXT("true")
             : TEXT("false"));
     return true;
@@ -4004,6 +4523,19 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             EEchoesOperationMode::CampaignChoirAtLumeReach)
         {
             if (!ExtractChoirAtLumeReachQuickSaveSnapshot(
+                    CampaignProgress,
+                    Bytes,
+                    SnapshotBytes,
+                    OutFailure))
+            {
+                return false;
+            }
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            if (!ExtractNoNeutralLedgerQuickSaveSnapshot(
                     CampaignProgress,
                     Bytes,
                     SnapshotBytes,
@@ -4250,6 +4782,87 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             {
                 OutFailure = TEXT(
                     "snapshot does not match the active The Choir at Lume Reach ledger branch");
+                return false;
+            }
+        }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                GetNoNeutralLedgerPlan();
+            const echoes::sim::Entity* Oruun =
+                Candidate->FindEntity(NoNeutralOruunId);
+            const echoes::sim::Entity* Waystone =
+                Candidate->FindEntity(NoNeutralWaystoneId);
+            const echoes::sim::Entity* Witness =
+                Candidate->FindEntity(NoNeutralLedgerWitnessId);
+            const echoes::sim::Entity* FirstDistrictInterface =
+                Candidate->FindEntity(
+                    NoNeutralFirstDistrictInterfaceId);
+            const echoes::sim::Entity* SecondDistrictInterface =
+                Candidate->FindEntity(
+                    NoNeutralSecondDistrictInterfaceId);
+            const echoes::sim::Entity* MeridianEvidenceInterface =
+                Candidate->FindEntity(
+                    NoNeutralMeridianEvidenceInterfaceId);
+            const echoes::sim::Entity* KharuunEvidenceInterface =
+                Candidate->FindEntity(
+                    NoNeutralKharuunEvidenceInterfaceId);
+            const echoes::sim::Entity* Well =
+                Candidate->FindEntity(NoNeutralWellId);
+            const auto IsKharuunEntity = [](const echoes::sim::Entity* Entity,
+                                            EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::KharuunAssemblies &&
+                       Entity->type == Type;
+            };
+            const bool bValidWell =
+                Well != nullptr && Well->type == EntityType::FutureWell &&
+                (Well->owner == echoes::sim::kNeutralPlayer ||
+                 Well->owner == LocalPlayerId) &&
+                Well->position == Plan.FutureWellSite &&
+                (Well->wellChoice == FutureWellChoice::Dormant ||
+                 Well->wellChoice == Plan.LumeProtocol);
+            TSet<EntityId> CompositionIds;
+            CompositionIds.Reserve(8);
+            CompositionIds.Add(NoNeutralOruunId);
+            CompositionIds.Add(NoNeutralWaystoneId);
+            CompositionIds.Add(NoNeutralLedgerWitnessId);
+            CompositionIds.Add(NoNeutralFirstDistrictInterfaceId);
+            CompositionIds.Add(NoNeutralSecondDistrictInterfaceId);
+            CompositionIds.Add(NoNeutralMeridianEvidenceInterfaceId);
+            CompositionIds.Add(NoNeutralKharuunEvidenceInterfaceId);
+            CompositionIds.Add(NoNeutralWellId);
+            if (!IsKharuunEntity(Oruun, EntityType::ScoutUnit) ||
+                !IsKharuunEntity(Waystone, EntityType::Dropoff) ||
+                !IsKharuunEntity(Witness, EntityType::ScoutUnit) ||
+                !IsPublicInterface(
+                    FirstDistrictInterface,
+                    Faction::MeridianCompact,
+                    Plan.FirstDistrictSite,
+                    true) ||
+                !IsPublicInterface(
+                    SecondDistrictInterface,
+                    Faction::MeridianCompact,
+                    Plan.SecondDistrictSite,
+                    true) ||
+                !IsPublicInterface(
+                    MeridianEvidenceInterface,
+                    Faction::MeridianCompact,
+                    Plan.MeridianEvidenceSite,
+                    true) ||
+                !IsPublicInterface(
+                    KharuunEvidenceInterface,
+                    Faction::KharuunAssemblies,
+                    Plan.KharuunEvidenceSite,
+                    false) ||
+                !bValidWell ||
+                CompositionIds.Num() != 8)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active No Neutral Ledger composition");
                 return false;
             }
         }
@@ -4536,6 +5149,51 @@ bool UEchoesSimulationSubsystem::IsChoirAtLumeReachUnlocked() const
            Prologue->WellChoice == Reserve->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsNoNeutralLedgerUnlocked() const
+{
+    if (!IsChoirAtLumeReachUnlocked() ||
+        CampaignProgress.Decisions.Num() < 10 ||
+        CampaignProgress.Decisions.Num() > 11)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < 10; ++Index)
+    {
+        if (static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+            static_cast<uint8>(Index + 1))
+        {
+            return false;
+        }
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Lume =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    if (Prologue == nullptr || Reserve == nullptr || Lume == nullptr)
+    {
+        return false;
+    }
+    for (int32 Index = 1; Index <= 8; ++Index)
+    {
+        if (CampaignProgress.Decisions[Index].WellChoice !=
+            Prologue->WellChoice)
+        {
+            return false;
+        }
+    }
+    FEchoesNoNeutralLedgerPlan Plan;
+    return FEchoesNoNeutralLedgerMissionModel::TryPlanForLedger(
+        Prologue->WellChoice,
+        Reserve->VerifiedFacts,
+        Lume->WellChoice,
+        Plan);
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -4643,6 +5301,31 @@ UEchoesSimulationSubsystem::GetChoirAtLumeReachPlan() const
     }
     return FEchoesChoirAtLumeReachMissionModel::PlanForChoice(
         GetRecordedPrologueChoice(), DeferredDistrict);
+}
+
+FEchoesNoNeutralLedgerPlan
+UEchoesSimulationSubsystem::GetNoNeutralLedgerPlan() const
+{
+    FEchoesNoNeutralLedgerPlan Plan;
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Lume =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    if (Prologue == nullptr || Reserve == nullptr || Lume == nullptr ||
+        !FEchoesNoNeutralLedgerMissionModel::TryPlanForLedger(
+            Prologue->WellChoice,
+            Reserve->VerifiedFacts,
+            Lume->WellChoice,
+            Plan))
+    {
+        return {};
+    }
+    return Plan;
 }
 
 echoes::sim::EntityId UEchoesSimulationSubsystem::GetCityDistrictId(
@@ -5264,6 +5947,151 @@ UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
     return FEchoesChoirAtLumeReachMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesNoNeutralLedgerPhase
+UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
+{
+    FEchoesNoNeutralLedgerMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignNoNeutralLedger &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesNoNeutralLedgerPhase::Inactive;
+    }
+
+    const FEchoesNoNeutralLedgerPlan Plan = GetNoNeutralLedgerPlan();
+    const echoes::sim::Entity* Oruun =
+        Simulation->FindEntity(NoNeutralOruunId);
+    const echoes::sim::Entity* Waystone =
+        Simulation->FindEntity(NoNeutralWaystoneId);
+    const echoes::sim::Entity* Witness =
+        Simulation->FindEntity(NoNeutralLedgerWitnessId);
+    const echoes::sim::Entity* FirstDistrictInterface =
+        Simulation->FindEntity(NoNeutralFirstDistrictInterfaceId);
+    const echoes::sim::Entity* SecondDistrictInterface =
+        Simulation->FindEntity(NoNeutralSecondDistrictInterfaceId);
+    const echoes::sim::Entity* MeridianEvidenceInterface =
+        Simulation->FindEntity(NoNeutralMeridianEvidenceInterfaceId);
+    const echoes::sim::Entity* KharuunEvidenceInterface =
+        Simulation->FindEntity(NoNeutralKharuunEvidenceInterfaceId);
+    const echoes::sim::Entity* Well =
+        Simulation->FindEntity(NoNeutralWellId);
+    Facts.bOruunIntact = Oruun != nullptr && Oruun->hitPoints > 0;
+    Facts.bWaystoneIntact = Waystone != nullptr && Waystone->hitPoints > 0;
+    Facts.bLedgerWitnessIntact =
+        Witness != nullptr && Witness->hitPoints > 0;
+    Facts.bFutureWellIntact =
+        Well != nullptr && Well->hitPoints > 0 &&
+        Well->type == EntityType::FutureWell;
+    const bool bFirstPublicDistrictAvailable = IsPublicInterface(
+        FirstDistrictInterface,
+        Faction::MeridianCompact,
+        Plan.FirstDistrictSite,
+        true);
+    const bool bSecondPublicDistrictAvailable = IsPublicInterface(
+        SecondDistrictInterface,
+        Faction::MeridianCompact,
+        Plan.SecondDistrictSite,
+        true);
+    const bool bMeridianEvidenceAvailable = IsPublicInterface(
+        MeridianEvidenceInterface,
+        Faction::MeridianCompact,
+        Plan.MeridianEvidenceSite,
+        true);
+    const bool bKharuunEvidenceAvailable = IsPublicInterface(
+        KharuunEvidenceInterface,
+        Faction::KharuunAssemblies,
+        Plan.KharuunEvidenceSite,
+        false);
+    Facts.bPublicInterfacesIntact =
+        bFirstPublicDistrictAvailable && bSecondPublicDistrictAvailable &&
+        bMeridianEvidenceAvailable && bKharuunEvidenceAvailable;
+    Facts.bInheritedRouteSecured =
+        Facts.bWaystoneIntact &&
+        Waystone->waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+        IsWithinTiles(
+            Waystone->position,
+            Plan.RouteSite,
+            NoNeutralLedgerSiteRadiusTiles);
+
+    EntityId FirstDistrictLink = 0;
+    EntityId SecondDistrictLink = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure)
+        {
+            if (FirstDistrictLink == 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.FirstDistrictSite,
+                    NoNeutralLedgerSiteRadiusTiles))
+            {
+                FirstDistrictLink = Entity.id;
+            }
+            if (SecondDistrictLink == 0 &&
+                Entity.id != FirstDistrictLink &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.SecondDistrictSite,
+                    NoNeutralLedgerSiteRadiusTiles))
+            {
+                SecondDistrictLink = Entity.id;
+            }
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+    }
+    Facts.bFirstDistrictIntegrated =
+        bFirstPublicDistrictAvailable && FirstDistrictLink != 0;
+    Facts.bSecondDistrictIntegrated =
+        bSecondPublicDistrictAvailable && SecondDistrictLink != 0;
+    Facts.bRecordedProtocolApplied =
+        Facts.bFutureWellIntact && Well->owner == LocalPlayerId &&
+        Well->wellChoice == Plan.LumeProtocol;
+    Facts.bConflictingProtocolApplied =
+        Facts.bFutureWellIntact &&
+        Well->wellChoice != FutureWellChoice::Dormant &&
+        Well->wellChoice != Plan.LumeProtocol;
+    const bool bCurrentEvidenceAttestation =
+        bMeridianEvidenceAvailable && bKharuunEvidenceAvailable &&
+        Facts.bOruunIntact && Facts.bLedgerWitnessIntact &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.KharuunEvidenceSite,
+            NoNeutralLedgerSiteRadiusTiles) &&
+        IsWithinTiles(
+            Witness->position,
+            Plan.MeridianEvidenceSite,
+            NoNeutralLedgerSiteRadiusTiles);
+    Facts.bBothEvidenceChannelsAttested =
+        Facts.bRecordedProtocolApplied || bCurrentEvidenceAttestation;
+    Facts.bCoalitionRallied =
+        Facts.bRecordedProtocolApplied && Facts.bOruunIntact &&
+        Facts.bLedgerWitnessIntact &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.RallySite,
+            NoNeutralLedgerSiteRadiusTiles) &&
+        IsWithinTiles(
+            Witness->position,
+            Plan.RallySite,
+            NoNeutralLedgerSiteRadiusTiles);
+    Facts.bReshapeWindowExpired =
+        Facts.bRecordedProtocolApplied &&
+        Plan.LumeProtocol == FutureWellChoice::Reshape &&
+        Well->reshapeUntilTick == 0 && !Facts.bCoalitionRallied;
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    return FEchoesNoNeutralLedgerMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -5295,6 +6123,7 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ReserveAuthorityBranch = GetRecordedPrologueChoice();
     Snapshot.ChoirAtLumeReachPhase = GetChoirAtLumeReachPhase();
     Snapshot.ChoirAtLumeReachPriorBranch = GetRecordedPrologueChoice();
+    Snapshot.NoNeutralLedgerPhase = GetNoNeutralLedgerPhase();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -5319,6 +6148,18 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ChoirAtLumeReachOruunId = ChoirAtLumeReachOruunId;
     Snapshot.ChoirAtLumeReachWaystoneId = ChoirAtLumeReachWaystoneId;
     Snapshot.ChoirAtLumeReachWellId = ChoirAtLumeReachWellId;
+    Snapshot.NoNeutralOruunId = NoNeutralOruunId;
+    Snapshot.NoNeutralWaystoneId = NoNeutralWaystoneId;
+    Snapshot.NoNeutralLedgerWitnessId = NoNeutralLedgerWitnessId;
+    Snapshot.NoNeutralFirstDistrictInterfaceId =
+        NoNeutralFirstDistrictInterfaceId;
+    Snapshot.NoNeutralSecondDistrictInterfaceId =
+        NoNeutralSecondDistrictInterfaceId;
+    Snapshot.NoNeutralMeridianEvidenceInterfaceId =
+        NoNeutralMeridianEvidenceInterfaceId;
+    Snapshot.NoNeutralKharuunEvidenceInterfaceId =
+        NoNeutralKharuunEvidenceInterfaceId;
+    Snapshot.NoNeutralWellId = NoNeutralWellId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
@@ -5335,6 +6176,45 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetReserveAuthorityPlan();
     const FEchoesChoirAtLumeReachPlan ChoirPlan =
         GetChoirAtLumeReachPlan();
+    const FEchoesNoNeutralLedgerPlan NoNeutralPlan =
+        GetNoNeutralLedgerPlan();
+    const bool bFirstNoNeutralPublicDistrictAvailable =
+        IsPublicInterface(
+            Simulation->FindEntity(NoNeutralFirstDistrictInterfaceId),
+            Faction::MeridianCompact,
+            NoNeutralPlan.FirstDistrictSite,
+            true);
+    const bool bSecondNoNeutralPublicDistrictAvailable =
+        IsPublicInterface(
+            Simulation->FindEntity(NoNeutralSecondDistrictInterfaceId),
+            Faction::MeridianCompact,
+            NoNeutralPlan.SecondDistrictSite,
+            true);
+    const bool bNoNeutralMeridianEvidenceAvailable =
+        IsPublicInterface(
+            Simulation->FindEntity(NoNeutralMeridianEvidenceInterfaceId),
+            Faction::MeridianCompact,
+            NoNeutralPlan.MeridianEvidenceSite,
+            true);
+    const bool bNoNeutralKharuunEvidenceAvailable =
+        IsPublicInterface(
+            Simulation->FindEntity(NoNeutralKharuunEvidenceInterfaceId),
+            Faction::KharuunAssemblies,
+            NoNeutralPlan.KharuunEvidenceSite,
+            false);
+    Snapshot.bNoNeutralPublicInterfacesIntact =
+        bFirstNoNeutralPublicDistrictAvailable &&
+        bSecondNoNeutralPublicDistrictAvailable &&
+        bNoNeutralMeridianEvidenceAvailable &&
+        bNoNeutralKharuunEvidenceAvailable;
+    Snapshot.NoNeutralFoundingDoctrine =
+        NoNeutralPlan.FoundingDoctrine;
+    Snapshot.NoNeutralLumeProtocol = NoNeutralPlan.LumeProtocol;
+    Snapshot.NoNeutralFirstDistrict =
+        NoNeutralPlan.FirstContributingDistrict;
+    Snapshot.NoNeutralSecondDistrict =
+        NoNeutralPlan.SecondContributingDistrict;
+    Snapshot.NoNeutralDeferredDistrict = NoNeutralPlan.DeferredDistrict;
     Snapshot.ChoirAtLumeReachDeferredDistrict = ChoirPlan.DeferredDistrict;
     Snapshot.ReserveAuthorityRecommendedDistrict =
         ReservePlan.RecommendedFirstDistrict;
@@ -5396,6 +6276,16 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     ChoirPlan.LiabilitySite,
                     ChoirAtLumeReachSiteRadiusTiles);
         }
+        if (Entity.id == NoNeutralWaystoneId)
+        {
+            Snapshot.bNoNeutralRouteSecured =
+                Entity.hitPoints > 0 &&
+                Entity.waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+                IsWithinTiles(
+                    Entity.position,
+                    NoNeutralPlan.RouteSite,
+                    NoNeutralLedgerSiteRadiusTiles);
+        }
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
             Entity.completed && Entity.type == EntityType::UtilityStructure &&
             IsWithinTiles(
@@ -5440,6 +6330,30 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 ChoirAtLumeReachSiteRadiusTiles))
         {
             Snapshot.bChoirSecondAnchorRaised = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure &&
+            bFirstNoNeutralPublicDistrictAvailable &&
+            IsWithinTiles(
+                Entity.position,
+                NoNeutralPlan.FirstDistrictSite,
+                NoNeutralLedgerSiteRadiusTiles))
+        {
+            Snapshot.bNoNeutralFirstDistrictIntegrated = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure &&
+            bSecondNoNeutralPublicDistrictAvailable &&
+            IsWithinTiles(
+                Entity.position,
+                NoNeutralPlan.SecondDistrictSite,
+                NoNeutralLedgerSiteRadiusTiles))
+        {
+            Snapshot.bNoNeutralSecondDistrictIntegrated = true;
         }
         if (Entity.id == LifeSupportDistrictId)
         {
@@ -5579,6 +6493,16 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 Entity.wellChoice == FutureWellChoice::Reshape &&
                 Entity.reshapeUntilTick == 0;
         }
+        if (Entity.id == NoNeutralWellId)
+        {
+            Snapshot.bNoNeutralProtocolApplied =
+                Entity.owner == LocalPlayerId &&
+                Entity.wellChoice == NoNeutralPlan.LumeProtocol;
+            Snapshot.bNoNeutralReshapeWindowExpired =
+                Snapshot.bNoNeutralProtocolApplied &&
+                NoNeutralPlan.LumeProtocol == FutureWellChoice::Reshape &&
+                Entity.reshapeUntilTick == 0;
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -5694,6 +6618,40 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         Snapshot.bChoirFirstAnchorRaised ||
         Snapshot.bChoirSecondAnchorRaised ||
         Snapshot.ChoirAtLumeReachWellChoice != FutureWellChoice::Dormant;
+    const echoes::sim::Entity* NoNeutralOruun =
+        Simulation->FindEntity(NoNeutralOruunId);
+    const echoes::sim::Entity* NoNeutralWitness =
+        Simulation->FindEntity(NoNeutralLedgerWitnessId);
+    const bool bCurrentNoNeutralEvidence =
+        bNoNeutralMeridianEvidenceAvailable &&
+        bNoNeutralKharuunEvidenceAvailable &&
+        NoNeutralOruun != nullptr && NoNeutralOruun->hitPoints > 0 &&
+        NoNeutralWitness != nullptr && NoNeutralWitness->hitPoints > 0 &&
+        IsWithinTiles(
+            NoNeutralOruun->position,
+            NoNeutralPlan.KharuunEvidenceSite,
+            NoNeutralLedgerSiteRadiusTiles) &&
+        IsWithinTiles(
+            NoNeutralWitness->position,
+            NoNeutralPlan.MeridianEvidenceSite,
+            NoNeutralLedgerSiteRadiusTiles);
+    Snapshot.bNoNeutralEvidenceAttested =
+        Snapshot.bNoNeutralProtocolApplied || bCurrentNoNeutralEvidence;
+    Snapshot.bNoNeutralCoalitionRallied =
+        Snapshot.bNoNeutralProtocolApplied &&
+        NoNeutralOruun != nullptr && NoNeutralOruun->hitPoints > 0 &&
+        NoNeutralWitness != nullptr && NoNeutralWitness->hitPoints > 0 &&
+        IsWithinTiles(
+            NoNeutralOruun->position,
+            NoNeutralPlan.RallySite,
+            NoNeutralLedgerSiteRadiusTiles) &&
+        IsWithinTiles(
+            NoNeutralWitness->position,
+            NoNeutralPlan.RallySite,
+            NoNeutralLedgerSiteRadiusTiles);
+    Snapshot.bNoNeutralReshapeWindowExpired =
+        Snapshot.bNoNeutralReshapeWindowExpired &&
+        !Snapshot.bNoNeutralCoalitionRallied;
     return Snapshot;
 }
 
@@ -6324,6 +7282,68 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         static_cast<uint8>(Consequence),
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(Plan.DeferredDistrict),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignNoNeutralLedger &&
+                     !bMatchResultReported)
+            {
+                const EEchoesNoNeutralLedgerPhase AlliancePhase =
+                    GetNoNeutralLedgerPhase();
+                const bool bAllianceFinished =
+                    AlliancePhase == EEchoesNoNeutralLedgerPhase::Complete ||
+                    AlliancePhase == EEchoesNoNeutralLedgerPhase::Failed;
+                if (bAllianceFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FEchoesNoNeutralLedgerPlan Plan =
+                        GetNoNeutralLedgerPlan();
+                    FutureWellChoice RecordedProtocol = Plan.LumeProtocol;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        AlliancePhase ==
+                                EEchoesNoNeutralLedgerPhase::Complete
+                            ? CommitNoNeutralLedgerCompletion(
+                                  RecordedProtocol,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyNoNeutralLedgerFinished(
+                            AlliancePhase ==
+                                EEchoesNoNeutralLedgerPhase::Complete,
+                            Plan.LumeProtocol,
+                            RecordedProtocol,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_NO_NEUTRAL_LEDGER_FINISHED] result=%s phase=%s planKey=%u founding=%u districtA=%u districtB=%u deferred=%u lumeProtocol=%u recordedProtocol=%u campaignStatus=%u tick=%llu detail=%s inheritedRecords=10 localAuthority=KharuunAssemblies meridianPresence=neutralPoweredPublicInterfacesOnly kharuunEvidenceInterface=neutralPublic choirPresence=nonPlayablePublicContact mixedFactionCommand=false hiddenTrust=false survivorVarianceUnmodeled=true proxyAttribution=false"),
+                        AlliancePhase ==
+                                EEchoesNoNeutralLedgerPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesNoNeutralLedgerMissionModel::StableName(
+                            AlliancePhase),
+                        Plan.StablePlanKey,
+                        static_cast<uint8>(Plan.FoundingDoctrine),
+                        static_cast<uint8>(
+                            Plan.FirstContributingDistrict),
+                        static_cast<uint8>(
+                            Plan.SecondContributingDistrict),
+                        static_cast<uint8>(Plan.DeferredDistrict),
+                        static_cast<uint8>(Plan.LumeProtocol),
+                        static_cast<uint8>(RecordedProtocol),
                         static_cast<uint8>(CampaignStatus),
                         static_cast<unsigned long long>(
                             Simulation->CurrentTick()),
@@ -7214,6 +8234,22 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 OutFeedback = TEXT("[LUME_REACH_ANCHORS_REQUIRED] Resolve the inherited liability and raise both public Listening Spines before committing this operation's Future Well.");
                 return false;
             }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignNoNeutralLedger)
+            {
+                const FEchoesNoNeutralLedgerPlan Plan =
+                    GetNoNeutralLedgerPlan();
+                if (GetNoNeutralLedgerPhase() !=
+                        EEchoesNoNeutralLedgerPhase::ApplyRecordedProtocol ||
+                    TargetId != NoNeutralWellId ||
+                    WellChoice != Plan.LumeProtocol)
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[NO_NEUTRAL_LEDGER_PROTOCOL_REQUIRED] Attest both evidence channels, then apply only the recorded %s protocol."),
+                        Plan.ProtocolDisplayName);
+                    return false;
+                }
+            }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
                 Target->wellChoice != FutureWellChoice::Dormant ||
@@ -7277,6 +8313,40 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                         ChoirAtLumeReachSiteRadiusTiles,
                         RequiredSite.x.FloorToInt(),
                         RequiredSite.y.FloorToInt());
+                    return false;
+                }
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignNoNeutralLedger &&
+                BuildType == EntityType::UtilityStructure)
+            {
+                const FEchoesNoNeutralLedgerPlan Plan =
+                    GetNoNeutralLedgerPlan();
+                const FEchoesObjectiveSnapshot Objective =
+                    GetLocalObjectiveSnapshot();
+                if (GetNoNeutralLedgerPhase() !=
+                    EEchoesNoNeutralLedgerPhase::IntegrateDistrictContributions)
+                {
+                    OutFeedback = TEXT("[NO_NEUTRAL_LEDGER_ROUTE_REQUIRED] Root the Waystone at the inherited route before linking the two recorded district contributions.");
+                    return false;
+                }
+                const bool bFirstOutstanding =
+                    !Objective.bNoNeutralFirstDistrictIntegrated &&
+                    IsWithinTiles(
+                        Position,
+                        Plan.FirstDistrictSite,
+                        NoNeutralLedgerSiteRadiusTiles);
+                const bool bSecondOutstanding =
+                    !Objective.bNoNeutralSecondDistrictIntegrated &&
+                    IsWithinTiles(
+                        Position,
+                        Plan.SecondDistrictSite,
+                        NoNeutralLedgerSiteRadiusTiles);
+                if (!bFirstOutstanding && !bSecondOutstanding)
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[NO_NEUTRAL_LEDGER_DISTRICT_SITE] Place a Listening Spine within %d tiles of either outstanding recorded district interface."),
+                        NoNeutralLedgerSiteRadiusTiles);
                     return false;
                 }
             }

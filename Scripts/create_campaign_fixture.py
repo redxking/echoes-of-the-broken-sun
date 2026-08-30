@@ -18,12 +18,18 @@ def main() -> int:
     parser.add_argument("output", type=Path)
     parser.add_argument("--choice", choices=CHOICES, default="Preserve")
     parser.add_argument(
+        "--lume-choice",
+        choices=CHOICES,
+        help="Mission 10 Lume Well choice; defaults to the founding choice",
+    )
+    parser.add_argument(
         "--through-mission",
         type=int,
-        choices=tuple(range(11)),
+        choices=tuple(range(12)),
         default=1,
     )
     args = parser.parse_args()
+    lume_choice = args.lume_choice or args.choice
 
     records = []
     if args.through_mission >= 1:
@@ -129,12 +135,23 @@ def main() -> int:
         records.append(struct.pack(
             "<BBBBIQQ",
             10,
-            CHOICES[args.choice],
+            CHOICES[lume_choice],
             0x07,
             0xFF,
             20,
             2840,
             0x7A11AB,
+        ))
+    if args.through_mission >= 11:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            11,
+            CHOICES[lume_choice],
+            CHOICE_MASKS[lume_choice],
+            0xFF,
+            20,
+            3140,
+            0x7A11AC,
         ))
     header = b"ECHOCPG1" + struct.pack("<HH", 1, len(records))
     payload = header + b"".join(records)

@@ -481,6 +481,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignChoirAtLumeReach"));
+    const bool bCampaignNoNeutralLedger =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignNoNeutralLedger"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -491,7 +496,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignShapeOfSilence ? 1 : 0) +
         (bCampaignShapeBesideUs ? 1 : 0) +
         (bCampaignReserveAuthority ? 1 : 0) +
-        (bCampaignChoirAtLumeReach ? 1 : 0);
+        (bCampaignChoirAtLumeReach ? 1 : 0) +
+        (bCampaignNoNeutralLedger ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -504,7 +510,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignChoirAtLumeReach
+            bCampaignNoNeutralLedger
+                ? EEchoesOperationMode::CampaignNoNeutralLedger
+            : bCampaignChoirAtLumeReach
                 ? EEchoesOperationMode::CampaignChoirAtLumeReach
             : bCampaignReserveAuthority
                 ? EEchoesOperationMode::CampaignReserveAuthority
@@ -532,7 +540,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignChoirAtLumeReach
+                bCampaignNoNeutralLedger
+                    ? TEXT("NoNeutralLedger")
+                : bCampaignChoirAtLumeReach
                     ? TEXT("ChoirAtLumeReach")
                 : bCampaignReserveAuthority
                     ? TEXT("ReserveAuthority")
@@ -559,7 +569,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignChoirAtLumeReach
+            bCampaignNoNeutralLedger
+                ? TEXT("NoNeutralLedger")
+            : bCampaignChoirAtLumeReach
                 ? TEXT("ChoirAtLumeReach")
             : bCampaignReserveAuthority
                 ? TEXT("ReserveAuthority")

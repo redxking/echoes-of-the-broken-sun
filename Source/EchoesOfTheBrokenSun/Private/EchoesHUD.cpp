@@ -492,6 +492,20 @@ void AEchoesHUD::DrawHUD()
                 WellChoiceDisplayName(
                     Objective.ChoirAtLumeReachWellChoice));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                Bridge->GetNoNeutralLedgerPlan();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Route  %s     Recorded Lume protocol  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Plan.RouteDisplayName,
+                Plan.ProtocolDisplayName);
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1242,6 +1256,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bChoirAtLumeReach = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignChoirAtLumeReach;
+    const bool bNoNeutralLedger = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNoNeutralLedger;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1284,6 +1301,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bShapeBesideUs ? TEXT("THE SHAPE BESIDE US")
              : bReserveAuthority ? TEXT("RESERVE AUTHORITY")
              : bChoirAtLumeReach ? TEXT("THE CHOIR AT LUME REACH")
+             : bNoNeutralLedger ? TEXT("NO NEUTRAL LEDGER")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1323,6 +1341,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 10  //  %s  //  ORUUN + LISTENING FORCE"),
                   *LocalFaction)
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 11  //  %s  //  ORUUN + LEDGER WITNESS"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1349,6 +1371,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN AUTHORITY  //  MISSION 09")
     : bChoirAtLumeReach
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 10")
+    : bNoNeutralLedger
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 11")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1399,6 +1423,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Eight consistent records grant Mara a finite reserve for three failing districts.")
         : bChoirAtLumeReach
             ? TEXT("Nine consistent records carry Oruun to Lume Reach, where Mara serves as an off-map liaison to a public local contact.")
+        : bNoNeutralLedger
+            ? TEXT("Ten ordered records admit one local coalition route. Mission 01, Mission 09, and Mission 10 select its inherited geometry and protocol.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1427,6 +1453,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Secure authority, power exactly two districts, then reach the intact deferred district.")
         : bChoirAtLumeReach
             ? TEXT("Resolve the deferred liability, raise both Listening Spines, commit the Lume Well, then reach its branch resolution.")
+        : bNoNeutralLedger
+            ? TEXT("Secure the route, integrate both contributing districts, attest both public evidence channels, apply the recorded protocol, then rally.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2283,6 +2311,123 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        const FEchoesNoNeutralLedgerPlan Plan =
+            Bridge->GetNoNeutralLedgerPlan();
+        const bool bFailed =
+            Objective.NoNeutralLedgerPhase ==
+            EEchoesNoNeutralLedgerPhase::Failed;
+        const int32 DistrictCount =
+            (Objective.bNoNeutralFirstDistrictIntegrated ? 1 : 0) +
+            (Objective.bNoNeutralSecondDistrictIntegrated ? 1 : 0);
+        const FString RouteAndDistrictState = bFailed
+            ? TEXT("ROUTE OR DISTRICT LINE LOST")
+            : DistrictCount == 2
+                ? TEXT("ROUTE SECURE — DISTRICTS 2/2")
+            : Objective.bNoNeutralRouteSecured
+                ? FString::Printf(
+                      TEXT("DISTRICTS %d/2 — LINK NEAR %d,%d"),
+                      DistrictCount,
+                      !Objective.bNoNeutralFirstDistrictIntegrated
+                          ? Plan.FirstDistrictSite.x.FloorToInt()
+                          : Plan.SecondDistrictSite.x.FloorToInt(),
+                      !Objective.bNoNeutralFirstDistrictIntegrated
+                          ? Plan.FirstDistrictSite.y.FloorToInt()
+                          : Plan.SecondDistrictSite.y.FloorToInt())
+                : FString::Printf(
+                      TEXT("ROOT WAYSTONE AT %d,%d"),
+                      Plan.RouteSite.x.FloorToInt(),
+                      Plan.RouteSite.y.FloorToInt());
+        const FString EvidenceState = bFailed
+            ? TEXT("PUBLIC CHANNELS LOST")
+            : Objective.bNoNeutralEvidenceAttested
+                ? TEXT("MERIDIAN + KHARUUN ATTESTED")
+            : DistrictCount == 2
+                ? FString::Printf(
+                      TEXT("ORUUN %d,%d + WITNESS %d,%d"),
+                      Plan.KharuunEvidenceSite.x.FloorToInt(),
+                      Plan.KharuunEvidenceSite.y.FloorToInt(),
+                      Plan.MeridianEvidenceSite.x.FloorToInt(),
+                      Plan.MeridianEvidenceSite.y.FloorToInt())
+                : TEXT("WAITING — INTEGRATE 2 DISTRICTS");
+        const FString ProtocolAndRallyState = bFailed
+            ? Objective.bNoNeutralReshapeWindowExpired
+                ? TEXT("RESHAPE RALLY WINDOW EXPIRED")
+                : TEXT("COALITION RECORD LOST")
+            : Objective.bNoNeutralCoalitionRallied
+                ? FString::Printf(
+                      TEXT("%s — COALITION RALLIED"),
+                      Plan.ProtocolDisplayName)
+            : Objective.bNoNeutralProtocolApplied
+                ? FString::Printf(
+                      TEXT("%s — RALLY %d,%d"),
+                      Plan.ProtocolDisplayName,
+                      Plan.RallySite.x.FloorToInt(),
+                      Plan.RallySite.y.FloorToInt())
+            : Objective.bNoNeutralEvidenceAttested
+                ? FString::Printf(
+                      TEXT("APPLY RECORDED %s AT %d,%d"),
+                      Plan.ProtocolDisplayName,
+                      Plan.FutureWellSite.x.FloorToInt(),
+                      Plan.FutureWellSite.y.FloorToInt())
+                : TEXT("WAITING — ATTEST BOTH CHANNELS");
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("NO NEUTRAL LEDGER  //  MISSION 11"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  ROUTE + DISTRICTS  %s"),
+                            *RouteAndDistrictState),
+            bFailed ? Failed : DistrictCount == 2 ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.72f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  EVIDENCE CHANNELS %s"),
+                            *EvidenceState),
+            bFailed ? Failed
+                    : Objective.bNoNeutralEvidenceAttested
+                        ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.72f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  PROTOCOL + RALLY  %s"),
+                            *ProtocolAndRallyState),
+            bFailed ? Failed
+                    : Objective.bNoNeutralCoalitionRallied
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.72f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NO_NEUTRAL_LEDGER_OBJECTIVES_READY] phase=%s plan=%u foundingDoctrine=%u districtPair=%u+%u deferred=%u lumeProtocol=%u oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u well=%u reconstructable=true exactOrderedLedger=true commandAuthority=Kharuun meridianInterfaces=neutralPoweredPublicNonCommandable kharuunEvidenceInterface=neutralPublicNonCommandable choirPresence=publicNonCommandable mixedFactionCommand=false hiddenTrustScore=false hiddenAttribution=false causationClaim=false"),
+                FEchoesNoNeutralLedgerMissionModel::StableName(
+                    Objective.NoNeutralLedgerPhase),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                static_cast<uint8>(Plan.FirstContributingDistrict),
+                static_cast<uint8>(Plan.SecondContributingDistrict),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.LumeProtocol),
+                Objective.NoNeutralOruunId,
+                Objective.NoNeutralWaystoneId,
+                Objective.NoNeutralLedgerWitnessId,
+                Objective.NoNeutralFirstDistrictInterfaceId,
+                Objective.NoNeutralSecondDistrictInterfaceId,
+                Objective.NoNeutralMeridianEvidenceInterfaceId,
+                Objective.NoNeutralKharuunEvidenceInterfaceId,
+                Objective.NoNeutralWellId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2413,13 +2558,19 @@ void AEchoesHUD::DrawMatchResult(
     const bool bChoirAtLumeReachResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignChoirAtLumeReach;
+    const bool bNoNeutralLedgerResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignNoNeutralLedger;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bChoirAtLumeReachResult
+        ? bNoNeutralLedgerResult
+            ? bVictory ? TEXT("COALITION LEDGER COMMITTED")
+                       : TEXT("COALITION ADMISSION FAILED")
+        : bChoirAtLumeReachResult
             ? bVictory ? TEXT("LUME REACH DECISION COMMITTED")
                        : TEXT("LUME REACH CONTACT FAILED")
         : bReserveAuthorityResult
@@ -2430,7 +2581,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bChoirAtLumeReachResult
+        ? bNoNeutralLedgerResult
+            ? bVictory ? TEXT("THE RECORD HOLDS WITHOUT A NEUTRAL HAND")
+                       : TEXT("THE COALITION LINE CANNOT BE ATTESTED")
+        : bChoirAtLumeReachResult
             ? bVictory ? TEXT("THE LISTENING LINE OPENS A WAY THROUGH")
                        : TEXT("THE CHOIR FALLS BEYOND THE ANCHORS")
         : bReserveAuthorityResult
@@ -2463,7 +2617,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bChoirAtLumeReachResult
+        ? bNoNeutralLedgerResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The inherited route, both contributing district systems, and both public evidence channels support the recorded %s protocol. This establishes one local coalition rally, not mixed-faction command, hidden authorship, casualty counts, or wider cause."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the ledger witness, the Waystone, the local Core, the Lume Well, or the active Reshape rally window was lost before coalition admission.")
+        : bChoirAtLumeReachResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("Both Listening Spines held while Oruun completed the %s resolution. This proves one local contact operation and Well decision; the Choir remains non-playable and no hidden authorship or wider cause is established."),
@@ -2550,7 +2711,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bChoirAtLumeReachResult
+                CampaignPersistenceLine = bNoNeutralLedgerResult
+                    ? FString::Printf(
+                          TEXT("MISSION 11 RECORDED // %s local coalition rally fixed."),
+                          RecordedChoice)
+                : bChoirAtLumeReachResult
                     ? FString::Printf(
                           TEXT("MISSION 10 RECORDED // %s Lume Reach decision fixed."),
                           RecordedChoice)
@@ -2635,7 +2800,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bChoirAtLumeReachResult
+        ? bNoNeutralLedgerResult
+            ? FString::Printf(
+                  TEXT("MISSION 11 — NO NEUTRAL LEDGER  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bChoirAtLumeReachResult
             ? FString::Printf(
                   TEXT("MISSION 10 — THE CHOIR AT LUME REACH  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -2892,6 +3061,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bChoirAtLumeReach = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignChoirAtLumeReach;
+    const bool bNoNeutralLedger = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNoNeutralLedger;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -2928,6 +3100,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetChoirAtLumeReachPlan()
             : FEchoesChoirAtLumeReachPlan{};
+    const FEchoesNoNeutralLedgerPlan NoNeutralPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetNoNeutralLedgerPlan()
+            : FEchoesNoNeutralLedgerPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -2976,6 +3152,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bChoirAtLumeReach
             ? FString::Printf(
                   TEXT("THE CHOIR AT LUME REACH  //  MISSION 10  //  %s"),
+                  *LocalFaction)
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("NO NEUTRAL LEDGER  //  MISSION 11  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -3030,6 +3210,12 @@ void AEchoesHUD::DrawMissionBriefing(
                       ChoirPlan.DeferredDistrict),
                   ChoirPlan.LiabilitySite.x.FloorToInt(),
                   ChoirPlan.LiabilitySite.y.FloorToInt())
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("Ten exact ordered records admit plan %02u: the %s route, two powered district systems, and the recorded %s Lume protocol."),
+                  NoNeutralPlan.StablePlanKey,
+                  NoNeutralPlan.RouteDisplayName,
+                  NoNeutralPlan.ProtocolDisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3060,6 +3246,15 @@ void AEchoesHUD::DrawMissionBriefing(
                       ReservePlan.RecommendedFirstDistrict))
         : bChoirAtLumeReach
             ? TEXT("Oruun commands Kharuun. Mara is off-map; the Choir is public contact only. Meridian units are proxies, not evidence of Mara or Compact-wide action.")
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("Oruun's Kharuun force alone is commandable. %s and %s contribute public district interfaces; %s remains a named liability, not a casualty claim."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      NoNeutralPlan.FirstContributingDistrict),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      NoNeutralPlan.SecondContributingDistrict),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      NoNeutralPlan.DeferredDistrict))
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -3125,6 +3320,15 @@ void AEchoesHUD::DrawMissionBriefing(
                   ChoirPlan.ContactSite.y.FloorToInt(),
                   ChoirPlan.LiabilitySite.x.FloorToInt(),
                   ChoirPlan.LiabilitySite.y.FloorToInt())
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("01  Re-root the Waystone at %d,%d; build [N] Kharuun links within 3 tiles of public interfaces at %d,%d and %d,%d."),
+                  NoNeutralPlan.RouteSite.x.FloorToInt(),
+                  NoNeutralPlan.RouteSite.y.FloorToInt(),
+                  NoNeutralPlan.FirstDistrictSite.x.FloorToInt(),
+                  NoNeutralPlan.FirstDistrictSite.y.FloorToInt(),
+                  NoNeutralPlan.SecondDistrictSite.x.FloorToInt(),
+                  NoNeutralPlan.SecondDistrictSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3194,6 +3398,18 @@ void AEchoesHUD::DrawMissionBriefing(
                   ChoirPlan.SecondAnchorSite.y.FloorToInt(),
                   ChoirPlan.FutureWellSite.x.FloorToInt(),
                   ChoirPlan.FutureWellSite.y.FloorToInt())
+        : bNoNeutralLedger
+            ? FString::Printf(
+                  TEXT("02  Attest with Oruun at %d,%d and the ledger witness at %d,%d; apply recorded %s at %d,%d; rally both at %d,%d."),
+                  NoNeutralPlan.KharuunEvidenceSite.x.FloorToInt(),
+                  NoNeutralPlan.KharuunEvidenceSite.y.FloorToInt(),
+                  NoNeutralPlan.MeridianEvidenceSite.x.FloorToInt(),
+                  NoNeutralPlan.MeridianEvidenceSite.y.FloorToInt(),
+                  NoNeutralPlan.ProtocolDisplayName,
+                  NoNeutralPlan.FutureWellSite.x.FloorToInt(),
+                  NoNeutralPlan.FutureWellSite.y.FloorToInt(),
+                  NoNeutralPlan.RallySite.x.FloorToInt(),
+                  NoNeutralPlan.RallySite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -3219,6 +3435,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The doctrine is inherited from eight records, but it is advisory. A third powered district violates the finite-reserve contract.")
              : bChoirAtLumeReach
                  ? TEXT("The prior branch shapes the approach and Mission 09 fixes the deferred liability. This mission's Lume Well is a new, separate irreversible decision.")
+             : bNoNeutralLedger
+                 ? TEXT("Mission 01 selects the route; Mission 09 selects the two contributing districts; Mission 10 fixes the only admissible Lume protocol. Missions 02–08 remain required evidence seals, not hidden branch variables.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -3242,6 +3460,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is one exact two-district allocation. It does not establish wider city recovery or unmodeled civilian survival.")
         : bChoirAtLumeReach
             ? TEXT("Victory is one anchored local contact and branch resolution. The Choir is not playable; no hidden authorship, unified identity, or wider cause is established.")
+        : bNoNeutralLedger
+            ? TEXT("Victory is one local Kharuun-authoritative coalition rally. Meridian and Choir interfaces remain public and non-commandable; no trust score, casualty total, hidden identity, authorship, or wider causation is inferred.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -3273,6 +3493,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA + DISTRICT NETWORK")
         : bChoirAtLumeReach
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LISTENING FORCE")
+        : bNoNeutralLedger
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LEDGER WITNESS")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -3493,7 +3715,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignReserveAuthority ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignChoirAtLumeReach)
+            EEchoesOperationMode::CampaignChoirAtLumeReach ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -3831,7 +4055,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         : Border);
             }
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignChoirAtLumeReach)
         {
             const FEchoesChoirAtLumeReachPlan Plan =
                 Bridge->GetChoirAtLumeReachPlan();
@@ -3892,6 +4117,63 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? CompleteColor : Border);
             }
         }
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            const FEchoesNoNeutralLedgerPlan Plan =
+                Bridge->GetNoNeutralLedgerPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.RouteSite,
+                TEXT("R"),
+                Objective.bNoNeutralRouteSecured
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.FirstDistrictSite,
+                TEXT("1"),
+                Objective.bNoNeutralFirstDistrictIntegrated
+                    ? CompleteColor
+                    : Objective.bNoNeutralRouteSecured
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.SecondDistrictSite,
+                TEXT("2"),
+                Objective.bNoNeutralSecondDistrictIntegrated
+                    ? CompleteColor
+                    : Objective.bNoNeutralRouteSecured
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.MeridianEvidenceSite,
+                TEXT("M"),
+                Objective.bNoNeutralEvidenceAttested
+                    ? CompleteColor
+                    : Objective.bNoNeutralFirstDistrictIntegrated &&
+                            Objective.bNoNeutralSecondDistrictIntegrated
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.KharuunEvidenceSite,
+                TEXT("K"),
+                Objective.bNoNeutralEvidenceAttested
+                    ? CompleteColor
+                    : Objective.bNoNeutralFirstDistrictIntegrated &&
+                            Objective.bNoNeutralSecondDistrictIntegrated
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.FutureWellSite,
+                TEXT("W"),
+                Objective.bNoNeutralProtocolApplied
+                    ? CompleteColor
+                    : Objective.bNoNeutralEvidenceAttested
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.RallySite,
+                TEXT("C"),
+                Objective.bNoNeutralCoalitionRallied
+                    ? CompleteColor
+                    : Objective.bNoNeutralProtocolApplied
+                        ? Border : WaitingColor);
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -3928,6 +4210,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignChoirAtLumeReach
             ? TEXT("MISSION NAV  |  CONTACT + LIABILITY + SPINES + WELL")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignNoNeutralLedger
+            ? TEXT("MISSION NAV  |  ROUTE + DISTRICTS + EVIDENCE + RALLY")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

@@ -6,6 +6,7 @@
 #include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
+#include "EchoesNoNeutralLedgerMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesReserveAuthorityMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
@@ -148,6 +149,34 @@ struct FEchoesObjectiveSnapshot final
     bool bChoirSecondAnchorRaised = false;
     bool bChoirBranchResolutionCompleted = false;
     bool bChoirReshapeWindowExpired = false;
+    EEchoesNoNeutralLedgerPhase NoNeutralLedgerPhase =
+        EEchoesNoNeutralLedgerPhase::Inactive;
+    echoes::sim::FutureWellChoice NoNeutralFoundingDoctrine =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice NoNeutralLumeProtocol =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesCityDistrict NoNeutralFirstDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    EEchoesCityDistrict NoNeutralSecondDistrict =
+        EEchoesCityDistrict::Transit;
+    EEchoesCityDistrict NoNeutralDeferredDistrict =
+        EEchoesCityDistrict::Archive;
+    echoes::sim::EntityId NoNeutralOruunId = 0;
+    echoes::sim::EntityId NoNeutralWaystoneId = 0;
+    echoes::sim::EntityId NoNeutralLedgerWitnessId = 0;
+    echoes::sim::EntityId NoNeutralFirstDistrictInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralSecondDistrictInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralMeridianEvidenceInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralKharuunEvidenceInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralWellId = 0;
+    bool bNoNeutralRouteSecured = false;
+    bool bNoNeutralPublicInterfacesIntact = false;
+    bool bNoNeutralFirstDistrictIntegrated = false;
+    bool bNoNeutralSecondDistrictIntegrated = false;
+    bool bNoNeutralEvidenceAttested = false;
+    bool bNoNeutralProtocolApplied = false;
+    bool bNoNeutralCoalitionRallied = false;
+    bool bNoNeutralReshapeWindowExpired = false;
 };
 
 /**
@@ -293,6 +322,9 @@ public:
     [[nodiscard]] EEchoesChoirAtLumeReachPhase
     GetChoirAtLumeReachPhase() const;
     [[nodiscard]] bool IsChoirAtLumeReachUnlocked() const;
+    [[nodiscard]] EEchoesNoNeutralLedgerPhase
+    GetNoNeutralLedgerPhase() const;
+    [[nodiscard]] bool IsNoNeutralLedgerUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -310,6 +342,8 @@ public:
     GetReserveAuthorityDeferredDistrict() const;
     [[nodiscard]] FEchoesChoirAtLumeReachPlan
     GetChoirAtLumeReachPlan() const;
+    [[nodiscard]] FEchoesNoNeutralLedgerPlan
+    GetNoNeutralLedgerPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -397,6 +431,9 @@ private:
     EEchoesCampaignCommitStatus CommitChoirAtLumeReachCompletion(
         echoes::sim::FutureWellChoice CurrentChoice,
         echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitNoNeutralLedgerCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
@@ -487,6 +524,14 @@ private:
     echoes::sim::EntityId ChoirAtLumeReachOruunId = 0;
     echoes::sim::EntityId ChoirAtLumeReachWaystoneId = 0;
     echoes::sim::EntityId ChoirAtLumeReachWellId = 0;
+    echoes::sim::EntityId NoNeutralOruunId = 0;
+    echoes::sim::EntityId NoNeutralWaystoneId = 0;
+    echoes::sim::EntityId NoNeutralLedgerWitnessId = 0;
+    echoes::sim::EntityId NoNeutralFirstDistrictInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralSecondDistrictInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralMeridianEvidenceInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralKharuunEvidenceInterfaceId = 0;
+    echoes::sim::EntityId NoNeutralWellId = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

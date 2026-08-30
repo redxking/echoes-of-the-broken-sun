@@ -2386,15 +2386,49 @@ void TestPoweredAegisNetworkAndCounterplay() {
     REQUIRE(observedAegis->attackDamage == 0);
     REQUIRE(observedAegis->attackRangeRaw == 0);
 
+    const EntityId publicMeridianInterface =
+        simulation.SpawnPublicInterface(
+            Faction::MeridianCompact, Vec2::FromTiles(40, 40));
+    const EntityId publicKharuunInterface =
+        simulation.SpawnPublicInterface(
+            Faction::KharuunAssemblies, Vec2::FromTiles(44, 40));
+    const Entity* meridianInterface =
+        simulation.FindEntity(publicMeridianInterface);
+    const Entity* kharuunInterface =
+        simulation.FindEntity(publicKharuunInterface);
+    REQUIRE(publicMeridianInterface != 0 && publicKharuunInterface != 0);
+    REQUIRE(meridianInterface != nullptr &&
+            meridianInterface->owner == kNeutralPlayer &&
+            meridianInterface->aegisPowered &&
+            meridianInterface->attackRangeRaw == 0 &&
+            meridianInterface->attackDamage == 0 &&
+            meridianInterface->visionTiles == 0);
+    REQUIRE(kharuunInterface != nullptr &&
+            kharuunInterface->owner == kNeutralPlayer &&
+            !kharuunInterface->aegisPowered &&
+            kharuunInterface->attackRangeRaw == 0 &&
+            kharuunInterface->attackDamage == 0 &&
+            kharuunInterface->visionTiles == 0);
+
     std::string error;
     const std::vector<std::uint8_t> poweredSnapshot =
         simulation.SaveSnapshot();
     const std::optional<Simulation> restored =
         Simulation::LoadSnapshot(poweredSnapshot, &error);
-    REQUIRE(restored.has_value());
+    if (!restored.has_value()) {
+        throw TestFailure("public-interface snapshot failed: " + error);
+    }
     REQUIRE(restored->Config().rules.poweredAegis ==
             simulation.Config().rules.poweredAegis);
     REQUIRE(restored->FindEntity(aegis)->aegisPowered);
+    REQUIRE(restored->FindEntity(publicMeridianInterface) != nullptr &&
+            restored->FindEntity(publicMeridianInterface)->owner ==
+                kNeutralPlayer &&
+            restored->FindEntity(publicMeridianInterface)->aegisPowered);
+    REQUIRE(restored->FindEntity(publicKharuunInterface) != nullptr &&
+            restored->FindEntity(publicKharuunInterface)->owner ==
+                kNeutralPlayer &&
+            !restored->FindEntity(publicKharuunInterface)->aegisPowered);
 
     std::vector<std::uint8_t> forgedPower = poweredSnapshot;
     constexpr std::size_t kSerializedEntitySize = 202;

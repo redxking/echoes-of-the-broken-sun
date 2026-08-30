@@ -14,7 +14,8 @@ enum class EEchoesCampaignMissionId : uint8
     TheShapeOfSilence = 7,
     TheShapeBesideUs = 8,
     ReserveAuthority = 9,
-    ChoirAtLumeReach = 10
+    ChoirAtLumeReach = 10,
+    NoNeutralLedger = 11
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -109,6 +110,18 @@ enum class EEchoesChoirAtLumeReachCompletionFact : uint8
     BothAnchorsRaised = 1 << 2,
     WellChoiceCommitted = 1 << 3,
     BranchResolutionCompleted = 1 << 4,
+    OruunSurvived = 1 << 5,
+    LocalCoreSurvived = 1 << 6,
+    PriorLedgerConsumed = 1 << 7
+};
+
+enum class EEchoesNoNeutralLedgerCompletionFact : uint8
+{
+    InheritedRouteSecured = 1 << 0,
+    DistrictPairIntegrated = 1 << 1,
+    BothEvidenceChannelsAttested = 1 << 2,
+    RecordedProtocolApplied = 1 << 3,
+    CoalitionRallied = 1 << 4,
     OruunSurvived = 1 << 5,
     LocalCoreSurvived = 1 << 6,
     PriorLedgerConsumed = 1 << 7

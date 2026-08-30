@@ -641,6 +641,7 @@ public:
                          Faction faction,
                          EntityType type,
                          Vec2 position);
+    EntityId SpawnPublicInterface(Faction faction, Vec2 position);
     EntityId SpawnResourceNode(Vec2 position, std::int32_t amount);
     EntityId SpawnFutureWell(Vec2 position);
     [[nodiscard]] const Entity* FindEntity(EntityId id) const;

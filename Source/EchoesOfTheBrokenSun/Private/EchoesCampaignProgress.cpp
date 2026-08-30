@@ -81,6 +81,15 @@ constexpr uint8 ChoirAtLumeReachCompletionFacts =
     static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::OruunSurvived) |
     static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::PriorLedgerConsumed);
+constexpr uint8 NoNeutralLedgerCompletionFacts =
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::InheritedRouteSecured) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::DistrictPairIntegrated) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::BothEvidenceChannelsAttested) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::RecordedProtocolApplied) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::CoalitionRallied) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::OruunSurvived) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -187,7 +196,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence &&
         Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs &&
         Record.Mission != EEchoesCampaignMissionId::ReserveAuthority &&
-        Record.Mission != EEchoesCampaignMissionId::ChoirAtLumeReach)
+        Record.Mission != EEchoesCampaignMissionId::ChoirAtLumeReach &&
+        Record.Mission != EEchoesCampaignMissionId::NoNeutralLedger)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -204,6 +214,12 @@ bool ValidateRecord(
         Record.AvailableWellChoices != AllWellChoicesMask)
     {
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The Lume Reach record must preserve all three offered Well protocols.");
+        return false;
+    }
+    if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger &&
+        Record.AvailableWellChoices != SelectedChoice)
+    {
+        OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The alliance record must retain only the recorded Lume protocol that was applied.");
         return false;
     }
     const uint8 RequiredFacts =
@@ -225,7 +241,9 @@ bool ValidateRecord(
             ? ShapeBesideUsCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::ReserveAuthority
             ? ReserveAuthorityCommonCompletionFacts
-            : ChoirAtLumeReachCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::ChoirAtLumeReach
+            ? ChoirAtLumeReachCompletionFacts
+            : NoNeutralLedgerCompletionFacts;
     const uint8 ReserveDistricts =
         Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
     const bool bValidReserveAllocation =
@@ -261,6 +279,49 @@ bool ValidateRecord(
         Record.CompletionTick == 0 || Record.FinalStateChecksum == 0)
     {
         OutError = TEXT("[CAMPAIGN_INVALID_PROVENANCE] The record lacks deterministic completion provenance.");
+        return false;
+    }
+    return true;
+}
+
+bool ValidateNoNeutralLedgerSequence(
+    const FEchoesCampaignProgress& Progress,
+    FString& OutError)
+{
+    const FEchoesCampaignDecisionRecord* Alliance =
+        Progress.FindDecision(EEchoesCampaignMissionId::NoNeutralLedger);
+    if (Alliance == nullptr)
+    {
+        return true;
+    }
+    if (Progress.Decisions.Num() != 11)
+    {
+        OutError = TEXT("[CAMPAIGN_ALLIANCE_LEDGER_INVALID] Mission 11 requires exactly ten prior records and one alliance record.");
+        return false;
+    }
+    for (int32 Index = 0; Index < 11; ++Index)
+    {
+        if (static_cast<uint8>(Progress.Decisions[Index].Mission) !=
+            static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT("[CAMPAIGN_ALLIANCE_LEDGER_ORDER] Mission 11 requires the exact ordered M01-M10 record chain.");
+            return false;
+        }
+    }
+    const FEchoesCampaignDecisionRecord& Founding = Progress.Decisions[0];
+    for (int32 Index = 1; Index <= 8; ++Index)
+    {
+        if (Progress.Decisions[Index].WellChoice != Founding.WellChoice)
+        {
+            OutError = TEXT("[CAMPAIGN_ALLIANCE_LEDGER_BRANCH] Missions 02-09 must retain the founding Well doctrine.");
+            return false;
+        }
+    }
+    const FEchoesCampaignDecisionRecord& Lume = Progress.Decisions[9];
+    if (Alliance->WellChoice != Lume.WellChoice ||
+        Alliance->AvailableWellChoices != ChoiceMask(Lume.WellChoice))
+    {
+        OutError = TEXT("[CAMPAIGN_ALLIANCE_LUME_PROTOCOL] Mission 11 does not retain the independently recorded Mission 10 protocol.");
         return false;
     }
     return true;
@@ -320,6 +381,15 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
         OutFeedback = TEXT("[CAMPAIGN_RECORD_LIMIT] The campaign ledger cannot accept another decision.");
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
+    if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger)
+    {
+        FEchoesCampaignProgress Candidate = *this;
+        Candidate.Decisions.Add(Record);
+        if (!ValidateNoNeutralLedgerSequence(Candidate, OutFeedback))
+        {
+            return EEchoesCampaignCommitStatus::StorageFailure;
+        }
+    }
     Decisions.Add(Record);
     OutFeedback = TEXT("CAMPAIGN LEDGER: mission consequence committed.");
     return EEchoesCampaignCommitStatus::Added;
@@ -360,6 +430,10 @@ bool FEchoesCampaignProgressStore::Encode(
             return false;
         }
         SeenMissions.Add(MissionValue);
+    }
+    if (!ValidateNoNeutralLedgerSequence(Progress, OutError))
+    {
+        return false;
     }
 
     OutBytes.Reserve(
