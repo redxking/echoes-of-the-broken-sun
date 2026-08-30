@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 21;
-inline constexpr std::uint32_t kReplayVersion = 21;
+inline constexpr std::uint32_t kSnapshotVersion = 22;
+inline constexpr std::uint32_t kReplayVersion = 22;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -105,6 +105,7 @@ struct Vec2 final {
 enum class Faction : std::uint8_t {
     MeridianCompact = 0,
     KharuunAssemblies = 1,
+    HollowChoir = 2,
 };
 
 enum class ResearchType : std::uint8_t {
@@ -113,9 +114,11 @@ enum class ResearchType : std::uint8_t {
     MeridianHorizonLattice = 2,
     KharuunEchoCartography = 3,
     KharuunAncestralEdge = 4,
+    ChoirHeldAlternatives = 5,
+    ChoirSharedResolution = 6,
 };
 
-inline constexpr std::size_t kResearchTypeCount = 5;
+inline constexpr std::size_t kResearchTypeCount = 7;
 
 enum class EntityType : std::uint8_t {
     Worker = 0,
@@ -182,6 +185,16 @@ enum class CommandType : std::uint8_t {
     AdaptWarform = 15,
     RaiseMineralCover = 16,
     Research = 17,
+    ReconcileToManifest = 18,
+    ReconcileToPossible = 19,
+};
+
+enum class ChoirIdentityState : std::uint8_t {
+    NotChoir = 0,
+    Manifest = 1,
+    Possible = 2,
+    DualResolveManifest = 3,
+    DualResolvePossible = 4,
 };
 
 enum class WaystoneMode : std::uint8_t {
@@ -274,6 +287,16 @@ enum class MineralCoverResult : std::uint8_t {
     EntityCapacityReached = 9,
 };
 
+enum class ChoirReconciliationResult : std::uint8_t {
+    Valid = 0,
+    InvalidPlayer = 1,
+    InvalidActor = 2,
+    AlreadyResolving = 3,
+    AlreadyStable = 4,
+    CooldownActive = 5,
+    InsufficientDawn = 6,
+};
+
 enum class MatchOutcome : std::uint8_t {
     Ongoing = 0,
     Player0Victory = 1,
@@ -299,7 +322,7 @@ struct ResourcePool final {
     friend bool operator==(const ResourcePool&, const ResourcePool&) = default;
 };
 
-inline constexpr std::size_t kFactionCount = 2;
+inline constexpr std::size_t kFactionCount = 3;
 inline constexpr std::size_t kConfigurableEntityTypeCount = 10;
 
 /** Deterministic values for one foundational simulation archetype. */
@@ -417,6 +440,28 @@ struct PoweredAegisRules final {
                            const PoweredAegisRules&) = default;
 };
 
+/** Authored Hollow Choir incompatible-capability reconciliation behavior. */
+struct ChoirIdentityRules final {
+    Tick durationTicks = 160;
+    Tick cooldownTicks = 400;
+    std::int32_t dawnCost = 20;
+    std::int32_t manifestDamagePercent = 130;
+    std::int32_t possibleMovementPercent = 130;
+    std::int32_t possibleVisionPercent = 125;
+
+    friend bool operator==(const ChoirIdentityRules&,
+                           const ChoirIdentityRules&) = default;
+};
+
+/** Authored Hollow Choir structure persistence while coherence remains funded. */
+struct ChoirCoherenceRules final {
+    Tick upkeepIntervalTicks = 600;
+    std::int32_t dawnCostPerStructure = 5;
+
+    friend bool operator==(const ChoirCoherenceRules&,
+                           const ChoirCoherenceRules&) = default;
+};
+
 /** Authored deterministic research definition. Index matches ResearchType. */
 struct ResearchRules final {
     Faction faction = Faction::MeridianCompact;
@@ -431,7 +476,7 @@ struct ResearchRules final {
 
 /** Versioned authoritative rules copied into saves, replays, and checksums. */
 struct SimulationRules final {
-    std::uint32_t version = 1;
+    std::uint32_t version = 2;
     std::array<std::uint8_t, 32> contentSha256{};
     std::array<std::array<EntityArchetypeRules,
                           kConfigurableEntityTypeCount>,
@@ -445,6 +490,8 @@ struct SimulationRules final {
     MineralCoverRules mineralCover{};
     VibrationDetectionRules vibrationDetection{};
     PoweredAegisRules poweredAegis{};
+    ChoirIdentityRules choirIdentity{};
+    ChoirCoherenceRules choirCoherence{};
     std::array<ResearchRules, kResearchTypeCount> research{};
 
     friend bool operator==(const SimulationRules&,
@@ -533,6 +580,10 @@ struct Entity final {
     Terrain mineralCoverUnderlyingTerrain = Terrain::Open;
     Tick vibrationSignatureUntilTick = 0;
     bool aegisPowered = false;
+    ChoirIdentityState choirIdentityState = ChoirIdentityState::NotChoir;
+    Tick choirIdentityResolveAtTick = 0;
+    Tick choirIdentityNextAvailableTick = 0;
+    Tick choirCoherenceNextChargeTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
 };
@@ -683,6 +734,10 @@ public:
         PlayerId player,
         EntityId actor,
         Vec2 position) const;
+    [[nodiscard]] ChoirReconciliationResult ValidateChoirReconciliation(
+        PlayerId player,
+        EntityId actor,
+        ChoirIdentityState stableState) const;
     [[nodiscard]] ResourcePool BuildCost(Faction faction, EntityType type) const;
     [[nodiscard]] ResourcePool ProductionCost(Faction faction,
                                                EntityType type) const;
@@ -786,12 +841,15 @@ private:
         const Entity& entity) const;
     [[nodiscard]] bool IsAegisPost(const Entity& entity) const;
     [[nodiscard]] bool IsAegisNetworkPowered(const Entity& aegis) const;
+    [[nodiscard]] bool IsChoirIdentityUnit(const Entity& entity) const;
+    [[nodiscard]] bool IsChoirCoherenceStructure(const Entity& entity) const;
     [[nodiscard]] EntityId InterceptingMineralCover(
         const Entity& attacker,
         const Entity& target) const;
     void ApplyWarformAdaptation(Entity& entity,
                                 WarformAdaptation adaptation);
     void ApplyResearchRule(Entity& entity, const ResearchRules& rules) const;
+    void RefreshChoirIdentityStats(Entity& entity) const;
     [[nodiscard]] std::int32_t DamageAfterDirectionalCover(
         const Entity& attacker,
         const Entity& target,
@@ -818,6 +876,8 @@ private:
     void ResolveWarformMolts();
     void ResolveMineralCovers();
     void ResolveAegisPower();
+    void ResolveChoirIdentities();
+    void ResolveChoirCoherence();
     void ProcessCommandsForCurrentTick();
     void ApplyCommand(const Command& command);
     void ProcessEntityOrders();

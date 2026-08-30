@@ -11,8 +11,8 @@
 namespace echoes::sim::net {
 
 inline constexpr std::uint16_t kEnvelopeVersion = 1;
-inline constexpr std::uint32_t kProtocolVersion = 2;
-inline constexpr std::uint32_t kPlayerViewSchemaVersion = 1;
+inline constexpr std::uint32_t kProtocolVersion = 3;
+inline constexpr std::uint32_t kPlayerViewSchemaVersion = 2;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;
 inline constexpr std::size_t kMaximumCommandBatchBytes = 16 * 1024;
@@ -50,7 +50,7 @@ enum class DecodeStatus : std::uint8_t {
 struct CompatibilityManifest final {
     std::uint32_t protocolVersion = kProtocolVersion;
     std::uint32_t snapshotVersion = kSnapshotVersion;
-    std::uint32_t simulationRulesVersion = 1;
+    std::uint32_t simulationRulesVersion = 2;
     std::uint32_t playerViewSchemaVersion = kPlayerViewSchemaVersion;
     std::uint64_t serializationFeatureFlags = 0;
     Digest256 buildIdSha256{};
@@ -192,6 +192,10 @@ struct ScopedEntityState final {
     WaystoneMode waystoneMode = WaystoneMode::NotWaystone;
     WarformAdaptation warformAdaptation = WarformAdaptation::None;
     bool aegisPowered = false;
+    ChoirIdentityState choirIdentityState = ChoirIdentityState::NotChoir;
+    Tick choirIdentityResolveAtTick = 0;
+    Tick choirIdentityNextAvailableTick = 0;
+    Tick choirCoherenceNextChargeTick = 0;
 
     friend bool operator==(const ScopedEntityState&,
                            const ScopedEntityState&) = default;

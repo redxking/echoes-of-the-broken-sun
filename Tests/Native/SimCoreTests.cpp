@@ -104,13 +104,69 @@ void ResignNetworkPacket(std::vector<std::uint8_t>& bytes) {
              NetworkCrc32(bytes, bytes.size() - 4));
 }
 
-std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
+std::size_t SnapshotV21EntityCountOffset(std::size_t mapTileCount) {
     // Snapshot v21 header/rules/research/player/sequence fields plus terrain and four fog grids.
     return 1862 + 5 * mapTileCount;
 }
 
-std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
-    return SnapshotEntityCountOffset(mapTileCount) + 4;
+std::size_t SnapshotV21FirstEntityOffset(std::size_t mapTileCount) {
+    return SnapshotV21EntityCountOffset(mapTileCount) + 4;
+}
+
+std::size_t SnapshotV22EntityCountOffset(std::size_t mapTileCount) {
+    // Snapshot v22 adds one faction row, Choir rules, and two research rows.
+    return 2598 + 5 * mapTileCount;
+}
+
+std::size_t SnapshotV22FirstEntityOffset(std::size_t mapTileCount) {
+    return SnapshotV22EntityCountOffset(mapTileCount) + 4;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV22ToV21(
+    const std::vector<std::uint8_t>& current,
+    std::size_t mapTileCount) {
+    constexpr std::size_t kV22EntityBytes = 235;
+    constexpr std::size_t kV21EntityBytes = 210;
+    constexpr std::size_t kV22EntityExtensionBytes =
+        kV22EntityBytes - kV21EntityBytes;
+    constexpr std::size_t kThirdFactionRulesBegin = 1344;
+    constexpr std::size_t kThirdFactionRulesEnd = 1984;
+    constexpr std::size_t kChoirRulesBegin = 2180;
+    constexpr std::size_t kChoirRulesEnd = 2224;
+    constexpr std::size_t kAdditionalResearchBegin = 2354;
+    constexpr std::size_t kAdditionalResearchEnd = 2406;
+    REQUIRE(ReadU32(current, 4) == 22);
+    const std::size_t firstEntity = SnapshotV22FirstEntityOffset(mapTileCount);
+    const std::uint32_t entityCount =
+        ReadU32(current, SnapshotV22EntityCountOffset(mapTileCount));
+    REQUIRE(firstEntity +
+                static_cast<std::size_t>(entityCount) * kV22EntityBytes + 8 <=
+            current.size());
+
+    std::vector<std::uint8_t> prior = current;
+    for (std::uint32_t index = entityCount; index > 0; --index) {
+        const std::size_t extension =
+            firstEntity +
+            static_cast<std::size_t>(index - 1) * kV22EntityBytes +
+            kV21EntityBytes;
+        prior.erase(
+            prior.begin() + static_cast<std::ptrdiff_t>(extension),
+            prior.begin() + static_cast<std::ptrdiff_t>(
+                                extension + kV22EntityExtensionBytes));
+    }
+    prior.erase(
+        prior.begin() + static_cast<std::ptrdiff_t>(kAdditionalResearchBegin),
+        prior.begin() + static_cast<std::ptrdiff_t>(kAdditionalResearchEnd));
+    prior.erase(
+        prior.begin() + static_cast<std::ptrdiff_t>(kChoirRulesBegin),
+        prior.begin() + static_cast<std::ptrdiff_t>(kChoirRulesEnd));
+    prior.erase(
+        prior.begin() + static_cast<std::ptrdiff_t>(kThirdFactionRulesBegin),
+        prior.begin() + static_cast<std::ptrdiff_t>(kThirdFactionRulesEnd));
+    WriteU32(prior, 4, 21);
+    WriteU32(prior, 28, 1);
+    ResignSnapshot(prior);
+    return prior;
 }
 
 std::vector<std::uint8_t> ConvertSnapshotV21ToV20(
@@ -120,9 +176,9 @@ std::vector<std::uint8_t> ConvertSnapshotV21ToV20(
     constexpr std::size_t kWellActivationOffset = 104;
     constexpr std::size_t kWellActivationBytes = 8;
     REQUIRE(ReadU32(current, 4) == 21);
-    const std::size_t firstEntity = SnapshotFirstEntityOffset(mapTileCount);
+    const std::size_t firstEntity = SnapshotV21FirstEntityOffset(mapTileCount);
     const std::uint32_t entityCount =
-        ReadU32(current, SnapshotEntityCountOffset(mapTileCount));
+        ReadU32(current, SnapshotV21EntityCountOffset(mapTileCount));
     REQUIRE(firstEntity +
                 static_cast<std::size_t>(entityCount) * kV21EntityBytes + 8 <=
             current.size());
@@ -1129,7 +1185,7 @@ void TestSnapshotAndReplay() {
 }
 
 void TestFutureWellSnapshotMigrationAndReplay() {
-    constexpr std::size_t kEntityBytes = 210;
+    constexpr std::size_t kEntityBytes = 235;
     constexpr std::size_t kWellActivationOffset = 104;
     constexpr std::size_t kMapTiles = 20U * 20U;
 
@@ -1156,7 +1212,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(simulation.FindEntity(dormantWell)->wellActivationTick == 0);
 
     const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
-    REQUIRE(ReadU32(snapshot, 4) == 21);
+    REQUIRE(ReadU32(snapshot, 4) == 22);
     std::string error;
     std::optional<Simulation> restored =
         Simulation::LoadSnapshot(snapshot, &error);
@@ -1166,8 +1222,8 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(restored->FindEntity(dormantWell)->wellActivationTick == 0);
 
     const ReplayRecord replay = simulation.ExportReplay();
-    REQUIRE(replay.version == 21);
-    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 21);
+    REQUIRE(replay.version == 22);
+    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 22);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -1176,8 +1232,21 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
+    const std::vector<std::uint8_t> prior =
+        ConvertSnapshotV22ToV21(snapshot, kMapTiles);
+    REQUIRE(ReadU32(prior, 4) == 21);
+    std::optional<Simulation> priorMigrated =
+        Simulation::LoadSnapshot(prior, &error);
+    if (!priorMigrated.has_value()) {
+        throw TestFailure("snapshot v21 migration failed: " + error);
+    }
+    REQUIRE(error.empty());
+    REQUIRE(priorMigrated->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(priorMigrated->FindEntity(dormantWell)->wellActivationTick == 0);
+    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 22);
+
     const std::vector<std::uint8_t> legacy =
-        ConvertSnapshotV21ToV20(snapshot, kMapTiles);
+        ConvertSnapshotV21ToV20(prior, kMapTiles);
     REQUIRE(ReadU32(legacy, 4) == 20);
     std::optional<Simulation> migrated =
         Simulation::LoadSnapshot(legacy, &error);
@@ -1186,9 +1255,9 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(migrated->FindEntity(activatedWell)->wellActivationTick ==
             migrated->CurrentTick());
     REQUIRE(migrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 21);
+    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 22);
 
-    const std::size_t firstEntity = SnapshotFirstEntityOffset(kMapTiles);
+    const std::size_t firstEntity = SnapshotV22FirstEntityOffset(kMapTiles);
     std::vector<std::uint8_t> futureActivation = snapshot;
     WriteU64(
         futureActivation,
@@ -1324,13 +1393,13 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     std::string error;
 
     std::vector<std::uint8_t> excessiveVision = baseline;
-    WriteU32(excessiveVision, SnapshotFirstEntityOffset(mapTiles) + 27, 50000);
+    WriteU32(excessiveVision, SnapshotV22FirstEntityOffset(mapTiles) + 27, 50000);
     ResignSnapshot(excessiveVision);
     REQUIRE(!Simulation::LoadSnapshot(excessiveVision, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 1670, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 2406, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1344,13 +1413,13 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     Simulation empty({8, 8, 20, 1});
     REQUIRE(empty.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     std::vector<std::uint8_t> truncatedEntities = empty.SaveSnapshot();
-    WriteU32(truncatedEntities, SnapshotEntityCountOffset(mapTiles), 64 * 1024);
+    WriteU32(truncatedEntities, SnapshotV22EntityCountOffset(mapTiles), 64 * 1024);
     ResignSnapshot(truncatedEntities);
     REQUIRE(!Simulation::LoadSnapshot(truncatedEntities, &error).has_value());
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 1678, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 2414, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -1443,7 +1512,7 @@ void TestAuthoredRulesDriveSimulationAndPersist() {
     REQUIRE(wellSimulation.FindPlayer(0)->resources.dawnshards == 77);
 
     SimulationConfig invalid = config;
-    invalid.rules.version = 2;
+    invalid.rules.version = 3;
     bool rejected = false;
     try {
         Simulation invalidSimulation(invalid);
@@ -2554,12 +2623,13 @@ void TestPoweredAegisNetworkAndCounterplay() {
             !restored->FindEntity(publicKharuunInterface)->aegisPowered);
 
     std::vector<std::uint8_t> forgedPower = poweredSnapshot;
-    constexpr std::size_t kSerializedEntitySize = 210;
+    constexpr std::size_t kSerializedEntitySize = 235;
+    constexpr std::size_t kAegisPowerFieldOffset = 209;
     constexpr std::size_t kAegisEntityIndex = 3;
     const std::size_t aegisPowerOffset =
-        SnapshotFirstEntityOffset(64U * 64U) +
+        SnapshotV22FirstEntityOffset(64U * 64U) +
         kAegisEntityIndex * kSerializedEntitySize +
-        (kSerializedEntitySize - 1);
+        kAegisPowerFieldOffset;
     REQUIRE(forgedPower[aegisPowerOffset] == 1);
     forgedPower[aegisPowerOffset] = 0;
     ResignSnapshot(forgedPower);
@@ -2815,6 +2885,292 @@ void TestFactionResearchProgressionAndPersistence() {
     interrupted.Step();
     REQUIRE(interrupted.FindPlayer(1)->lastInterruptedResearch ==
             ResearchType::None);
+}
+
+void TestHollowChoirIdentityReconciliationAndPersistence() {
+    using namespace echoes::sim::net;
+
+    SimulationConfig legacyConfig{24, 24, 20, 0x43484f49524c4547ULL};
+    legacyConfig.rules.version = 1;
+    Simulation legacy(legacyConfig);
+    REQUIRE(!legacy.AddPlayer(0, Faction::HollowChoir, {100, 100}));
+
+    Simulation simulation({32, 32, 20, 0x43484f4952494445ULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::HollowChoir, {1000, 100}));
+    REQUIRE(simulation.AddPlayer(1, Faction::MeridianCompact, {1000, 100}));
+    const EntityId intervalist = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Soldier,
+        Vec2::FromTiles(6, 6));
+    const EntityId threadkeeper = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Worker,
+        Vec2::FromTiles(5, 6));
+    const EntityId observer = simulation.SpawnEntity(
+        1, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(9, 6));
+    REQUIRE(intervalist != 0 && threadkeeper != 0 && observer != 0);
+
+    const EntityArchetypeRules& base =
+        simulation.Config().rules.archetypes
+            [static_cast<std::size_t>(Faction::HollowChoir)]
+            [static_cast<std::size_t>(EntityType::Soldier)];
+    const Entity* initial = simulation.FindEntity(intervalist);
+    REQUIRE(initial != nullptr);
+    REQUIRE(initial->choirIdentityState == ChoirIdentityState::Manifest);
+    REQUIRE(initial->attackDamage ==
+            base.attackDamage *
+                simulation.Config().rules.choirIdentity.manifestDamagePercent /
+                100);
+    REQUIRE(initial->movementPerTickRaw == base.movementPerTickRaw);
+    REQUIRE(simulation.FindEntity(threadkeeper)->choirIdentityState ==
+            ChoirIdentityState::NotChoir);
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                3, intervalist, ChoirIdentityState::Possible) ==
+            ChoirReconciliationResult::InvalidPlayer);
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                0, threadkeeper, ChoirIdentityState::Possible) ==
+            ChoirReconciliationResult::InvalidActor);
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                0, intervalist, ChoirIdentityState::Manifest) ==
+            ChoirReconciliationResult::AlreadyStable);
+
+    simulation.CaptureReplayBaseline();
+    Command possible = MakeCommand(
+        0, 0, 1, CommandType::ReconcileToPossible, intervalist);
+    REQUIRE(simulation.QueueCommand(possible));
+    simulation.Step();
+    const Tick resolutionTick =
+        simulation.Config().rules.choirIdentity.durationTicks;
+    const Tick nextAvailableTick =
+        resolutionTick + simulation.Config().rules.choirIdentity.cooldownTicks;
+    const Entity* dual = simulation.FindEntity(intervalist);
+    REQUIRE(dual != nullptr);
+    REQUIRE(dual->choirIdentityState ==
+            ChoirIdentityState::DualResolvePossible);
+    REQUIRE(dual->choirIdentityResolveAtTick == resolutionTick);
+    REQUIRE(dual->choirIdentityNextAvailableTick == nextAvailableTick);
+    REQUIRE(dual->attackDamage ==
+            base.attackDamage *
+                simulation.Config().rules.choirIdentity.manifestDamagePercent /
+                100);
+    REQUIRE(dual->movementPerTickRaw ==
+            base.movementPerTickRaw *
+                simulation.Config().rules.choirIdentity.possibleMovementPercent /
+                100);
+    REQUIRE(dual->visionTiles ==
+            base.visionTiles *
+                simulation.Config().rules.choirIdentity.possibleVisionPercent /
+                100);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 80);
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                0, intervalist, ChoirIdentityState::Manifest) ==
+            ChoirReconciliationResult::AlreadyResolving);
+
+    const std::optional<PlayerView> opponentView =
+        simulation.CreatePlayerView(1);
+    REQUIRE(opponentView.has_value());
+    const auto observed = std::find_if(
+        opponentView->Entities().begin(), opponentView->Entities().end(),
+        [intervalist](const Entity& entity) {
+            return entity.id == intervalist;
+        });
+    REQUIRE(observed != opponentView->Entities().end());
+    REQUIRE(observed->choirIdentityState ==
+            ChoirIdentityState::DualResolvePossible);
+    REQUIRE(observed->choirIdentityResolveAtTick == resolutionTick);
+    REQUIRE(observed->choirIdentityNextAvailableTick == nextAvailableTick);
+
+    ScopedViewKeyframe keyframe{};
+    std::string rejection;
+    REQUIRE(BuildScopedViewKeyframe(
+        *opponentView, 7, 0, keyframe, &rejection));
+    const auto scoped = std::find_if(
+        keyframe.entities.begin(), keyframe.entities.end(),
+        [intervalist](const ScopedEntityState& entity) {
+            return entity.id == intervalist;
+        });
+    REQUIRE(scoped != keyframe.entities.end());
+    REQUIRE(scoped->choirIdentityState ==
+            ChoirIdentityState::DualResolvePossible);
+    REQUIRE(scoped->choirIdentityResolveAtTick == resolutionTick);
+    const std::vector<std::uint8_t> keyframeBytes =
+        EncodeScopedViewKeyframe(keyframe);
+    REQUIRE(!keyframeBytes.empty());
+    ScopedViewKeyframe decodedKeyframe{};
+    REQUIRE(DecodeScopedViewKeyframe(keyframeBytes, decodedKeyframe) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedKeyframe == keyframe);
+
+    CommandRequest networkIdentity{};
+    networkIdentity.sequence = 2;
+    networkIdentity.executeTick = simulation.CurrentTick();
+    networkIdentity.type = CommandType::ReconcileToManifest;
+    networkIdentity.actor = intervalist;
+    const std::vector<std::uint8_t> identityBytes =
+        EncodeCommandRequest(networkIdentity);
+    REQUIRE(!identityBytes.empty());
+    CommandRequest decodedIdentity{};
+    REQUIRE(DecodeCommandRequest(identityBytes, decodedIdentity) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedIdentity == networkIdentity);
+
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::string error;
+    const std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    REQUIRE(restored->FindEntity(intervalist)->choirIdentityState ==
+            ChoirIdentityState::DualResolvePossible);
+
+    std::vector<std::uint8_t> invalidIdentity = snapshot;
+    invalidIdentity[SnapshotV22FirstEntityOffset(32U * 32U) + 210] = 0xff;
+    ResignSnapshot(invalidIdentity);
+    REQUIRE(!Simulation::LoadSnapshot(invalidIdentity, &error).has_value());
+    REQUIRE(error == "snapshot entity state is invalid");
+
+    simulation.Step(resolutionTick - simulation.CurrentTick());
+    const Entity* possibleState = simulation.FindEntity(intervalist);
+    REQUIRE(possibleState != nullptr);
+    REQUIRE(possibleState->choirIdentityState == ChoirIdentityState::Possible);
+    REQUIRE(possibleState->choirIdentityResolveAtTick == 0);
+    REQUIRE(possibleState->attackDamage == base.attackDamage);
+    REQUIRE(possibleState->movementPerTickRaw ==
+            base.movementPerTickRaw *
+                simulation.Config().rules.choirIdentity.possibleMovementPercent /
+                100);
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                0, intervalist, ChoirIdentityState::Manifest) ==
+            ChoirReconciliationResult::CooldownActive);
+    simulation.Step(nextAvailableTick - simulation.CurrentTick());
+    REQUIRE(simulation.ValidateChoirReconciliation(
+                0, intervalist, ChoirIdentityState::Manifest) ==
+            ChoirReconciliationResult::Valid);
+    Command manifest = MakeCommand(
+        simulation.CurrentTick(), 0, 2,
+        CommandType::ReconcileToManifest, intervalist);
+    REQUIRE(simulation.QueueCommand(manifest));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(intervalist)->choirIdentityState ==
+            ChoirIdentityState::DualResolveManifest);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 60);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    const std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    Simulation poor({16, 16, 20, 0x43484f4952504f4fULL});
+    REQUIRE(poor.AddPlayer(0, Faction::HollowChoir, {0, 19}));
+    const EntityId poorUnit = poor.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Soldier,
+        Vec2::FromTiles(3, 3));
+    REQUIRE(poorUnit != 0);
+    REQUIRE(poor.ValidateChoirReconciliation(
+                0, poorUnit, ChoirIdentityState::Possible) ==
+            ChoirReconciliationResult::InsufficientDawn);
+}
+
+void TestHollowChoirCoherenceOrderingAndPersistence() {
+    SimulationConfig config{24, 24, 20, 0x43484f4952434f48ULL};
+    config.rules.choirCoherence.upkeepIntervalTicks = 3;
+    config.rules.choirCoherence.dawnCostPerStructure = 5;
+    Simulation simulation(config);
+    REQUIRE(simulation.AddPlayer(0, Faction::HollowChoir, {1000, 5}));
+    const EntityId concordance = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::CommandCore,
+        Vec2::FromTiles(4, 4));
+    const EntityId intervalLoom = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Dropoff,
+        Vec2::FromTiles(8, 4));
+    const EntityId chorusLoom = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Barracks,
+        Vec2::FromTiles(12, 4));
+    REQUIRE(concordance != 0 && intervalLoom != 0 && chorusLoom != 0);
+    REQUIRE(simulation.FindEntity(concordance)->choirCoherenceNextChargeTick ==
+            0);
+    REQUIRE(simulation.FindEntity(intervalLoom)->choirCoherenceNextChargeTick ==
+            3);
+    REQUIRE(simulation.FindEntity(chorusLoom)->choirCoherenceNextChargeTick ==
+            3);
+
+    simulation.Step(2);
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+
+    simulation.Step(2);
+    restored->Step(2);
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    REQUIRE(simulation.CurrentTick() == 4);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 0);
+    REQUIRE(simulation.FindEntity(concordance) != nullptr);
+    REQUIRE(simulation.FindEntity(intervalLoom) != nullptr);
+    REQUIRE(simulation.FindEntity(intervalLoom)->choirCoherenceNextChargeTick ==
+            6);
+    REQUIRE(simulation.FindEntity(chorusLoom) == nullptr);
+    REQUIRE(Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error).has_value());
+}
+
+void TestHollowChoirAiUsesScopedThreatsAndStableTieBreaks() {
+    Simulation simulation({64, 64, 20, 0x43484f4952414931ULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::HollowChoir, {1000, 200}));
+    REQUIRE(simulation.AddPlayer(1, Faction::MeridianCompact, {1000, 200}));
+    const EntityId first = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::Soldier,
+        Vec2::FromTiles(5, 5));
+    const EntityId second = simulation.SpawnEntity(
+        0, Faction::HollowChoir, EntityType::HeavyUnit,
+        Vec2::FromTiles(7, 5));
+    const EntityId hiddenThreat = simulation.SpawnEntity(
+        1, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(58, 58));
+    REQUIRE(first != 0 && second != 0 && hiddenThreat != 0);
+    REQUIRE(!simulation.IsEntityVisibleTo(0, hiddenThreat));
+
+    const std::optional<PlayerView> hiddenView = simulation.CreatePlayerView(0);
+    REQUIRE(hiddenView.has_value());
+    const std::vector<Command> firstPass =
+        Simulation::GenerateAiCommands(*hiddenView, AiPersonality::Adaptive);
+    const std::vector<Command> secondPass =
+        Simulation::GenerateAiCommands(*hiddenView, AiPersonality::Adaptive);
+    REQUIRE(firstPass == secondPass);
+    const auto possible = std::find_if(
+        firstPass.begin(), firstPass.end(), [](const Command& command) {
+            return command.type == CommandType::ReconcileToPossible;
+        });
+    REQUIRE(possible != firstPass.end());
+    REQUIRE(possible->actor == first);
+    REQUIRE(std::count_if(
+                firstPass.begin(), firstPass.end(), [](const Command& command) {
+                    return command.type == CommandType::ReconcileToPossible ||
+                           command.type == CommandType::ReconcileToManifest;
+                }) == 1);
+    REQUIRE(simulation.QueueCommand(*possible));
+    simulation.Step(simulation.Config().rules.choirIdentity.durationTicks);
+    REQUIRE(simulation.FindEntity(first)->choirIdentityState ==
+            ChoirIdentityState::Possible);
+    simulation.Step(simulation.Config().rules.choirIdentity.cooldownTicks);
+
+    const EntityId visibleThreat = simulation.SpawnEntity(
+        1, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(9, 5));
+    REQUIRE(visibleThreat != 0);
+    REQUIRE(simulation.IsEntityVisibleTo(0, visibleThreat));
+    const std::vector<Command> threatened =
+        simulation.GenerateAiCommands(0, AiPersonality::Adaptive);
+    const auto manifest = std::find_if(
+        threatened.begin(), threatened.end(), [](const Command& command) {
+            return command.type == CommandType::ReconcileToManifest;
+        });
+    REQUIRE(manifest != threatened.end());
+    REQUIRE(manifest->actor == first);
 }
 
 void TestNetworkProtocolAdmissionAndHardening() {
@@ -3284,6 +3640,12 @@ int main() {
          TestPoweredAegisNetworkAndCounterplay},
         {"faction research progression and persistence",
          TestFactionResearchProgressionAndPersistence},
+        {"Hollow Choir identity reconciliation and persistence",
+         TestHollowChoirIdentityReconciliationAndPersistence},
+        {"Hollow Choir coherence ordering and persistence",
+         TestHollowChoirCoherenceOrderingAndPersistence},
+        {"Hollow Choir AI scoped threats and stable tie breaks",
+         TestHollowChoirAiUsesScopedThreatsAndStableTieBreaks},
         {"network protocol admission and hardening",
          TestNetworkProtocolAdmissionAndHardening},
     };

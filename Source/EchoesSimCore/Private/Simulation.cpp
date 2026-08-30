@@ -24,8 +24,12 @@ constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::uint32_t kLegacySnapshotVersion = 20;
+constexpr std::uint32_t kPriorSnapshotVersion = 21;
+constexpr std::size_t kLegacyFactionCount = 2;
+constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
-constexpr std::size_t kSerializedEntityBytes = 210;
+constexpr std::size_t kPriorSerializedEntityBytes = 210;
+constexpr std::size_t kSerializedEntityBytes = 235;
 constexpr std::size_t kSerializedCommandBytes = 38;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
 constexpr std::int32_t kMaximumMapDimension =
@@ -83,7 +87,8 @@ void SetError(std::string* destination, const std::string& message) {
 
 [[nodiscard]] bool IsValidFaction(Faction faction) {
     return faction == Faction::MeridianCompact ||
-           faction == Faction::KharuunAssemblies;
+           faction == Faction::KharuunAssemblies ||
+           faction == Faction::HollowChoir;
 }
 
 [[nodiscard]] bool IsValidEntityType(EntityType type) {
@@ -117,12 +122,18 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 }
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
-    return type >= CommandType::Stop && type <= CommandType::Research;
+    return type >= CommandType::Stop &&
+           type <= CommandType::ReconcileToPossible;
 }
 
 [[nodiscard]] bool IsValidResearchType(ResearchType type) {
     return type >= ResearchType::None &&
-           type <= ResearchType::KharuunAncestralEdge;
+           type <= ResearchType::ChoirSharedResolution;
+}
+
+[[nodiscard]] bool IsValidChoirIdentityState(ChoirIdentityState state) {
+    return state >= ChoirIdentityState::NotChoir &&
+           state <= ChoirIdentityState::DualResolvePossible;
 }
 
 [[nodiscard]] bool IsValidWellChoice(FutureWellChoice choice) {
@@ -230,10 +241,12 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
 }
 
 [[nodiscard]] bool IsValidSimulationRules(const SimulationRules& rules) {
-    if (rules.version != 1) {
+    if (rules.version != 1 && rules.version != 2) {
         return false;
     }
-    for (std::size_t faction = 0; faction < kFactionCount; ++faction) {
+    const std::size_t supportedFactionCount =
+        rules.version == 1 ? kLegacyFactionCount : kFactionCount;
+    for (std::size_t faction = 0; faction < supportedFactionCount; ++faction) {
         for (const EntityType type : kConfigurableEntityTypes) {
             const EntityArchetypeRules& archetype =
                 rules.archetypes[faction][static_cast<std::size_t>(type)];
@@ -295,7 +308,9 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
         rules.archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
                         [static_cast<std::size_t>(EntityType::UtilityStructure)];
     bool researchValid = true;
-    for (std::size_t index = 1; index < rules.research.size(); ++index) {
+    const std::size_t supportedResearchCount =
+        rules.version == 1 ? kLegacyResearchTypeCount : rules.research.size();
+    for (std::size_t index = 1; index < supportedResearchCount; ++index) {
         const ResearchRules& research = rules.research[index];
         const ResearchType type = static_cast<ResearchType>(index);
         researchValid = researchValid && IsValidFaction(research.faction) &&
@@ -315,7 +330,25 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
                 prerequisite.prerequisite == ResearchType::None;
         }
     }
-    return researchValid && well.harvestImmediateDawn >= 0 &&
+    const ChoirIdentityRules& identity = rules.choirIdentity;
+    const ChoirCoherenceRules& coherence = rules.choirCoherence;
+    const bool choirRulesValid = rules.version == 1 ||
+        (identity.durationTicks > 0 &&
+         identity.durationTicks <= identity.cooldownTicks &&
+         identity.cooldownTicks <= kMaximumSupportedTick &&
+         identity.dawnCost > 0 && identity.dawnCost <= 100000 &&
+         identity.manifestDamagePercent > 100 &&
+         identity.manifestDamagePercent <= 300 &&
+         identity.possibleMovementPercent > 100 &&
+         identity.possibleMovementPercent <= 300 &&
+         identity.possibleVisionPercent > 100 &&
+         identity.possibleVisionPercent <= 300 &&
+         coherence.upkeepIntervalTicks > 0 &&
+         coherence.upkeepIntervalTicks <= kMaximumSupportedTick &&
+         coherence.dawnCostPerStructure > 0 &&
+         coherence.dawnCostPerStructure <= 100000);
+    return researchValid && choirRulesValid &&
+           well.harvestImmediateDawn >= 0 &&
            well.preserveDawnPerInterval >= 0 &&
            well.preserveIntervalTicks > 0 &&
            well.preserveIntervalTicks <= kMaximumSupportedTick &&
@@ -705,13 +738,13 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(researchType)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::Research) ||
+    if (type > static_cast<std::uint8_t>(CommandType::ReconcileToPossible) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
         warformAdaptation >
             static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
         researchType >
-            static_cast<std::uint8_t>(ResearchType::KharuunAncestralEdge)) {
+            static_cast<std::uint8_t>(ResearchType::ChoirSharedResolution)) {
         return false;
     }
     command.type = static_cast<CommandType>(type);
@@ -790,6 +823,31 @@ SimulationRules DefaultSimulationRules() {
     set(Faction::KharuunAssemblies, EntityType::UtilityStructure,
         {{115, 25}, 440, 0, 9, 0, 0, 0, 0, 0, 120, 0, 0, 0,
          kFixedScale});
+
+    set(Faction::HollowChoir, EntityType::Worker,
+        {{55, 5}, 80, 194, 10, 0, 0, 0, 9, 12, 0, 1, 0,
+         65, kFixedScale / 8});
+    set(Faction::HollowChoir, EntityType::Soldier,
+        {{80, 35}, 115, 179, 12, 5632, 16, 25, 0, 0, 0, 2, 0,
+         100, kFixedScale / 8});
+    set(Faction::HollowChoir, EntityType::CommandCore,
+        {{0, 0}, 1250, 0, 9, 0, 0, 0, 0, 0, 400, 0, 12, 0,
+         5 * kFixedScale / 2});
+    set(Faction::HollowChoir, EntityType::Dropoff,
+        {{85, 25}, 400, 0, 6, 0, 0, 0, 0, 0, 110, 0, 6, 0,
+         kFixedScale});
+    set(Faction::HollowChoir, EntityType::Barracks,
+        {{175, 40}, 680, 0, 6, 0, 0, 0, 0, 0, 170, 0, 0, 0,
+         2 * kFixedScale});
+    set(Faction::HollowChoir, EntityType::HeavyUnit,
+        {{140, 45}, 230, 133, 9, 4096, 15, 30, 0, 0, 0, 3, 0,
+         150, kFixedScale / 8});
+    set(Faction::HollowChoir, EntityType::ScoutUnit,
+        {{75, 35}, 70, 266, 16, 4300, 7, 22, 0, 0, 0, 1, 0,
+         85, kFixedScale / 8});
+    set(Faction::HollowChoir, EntityType::UtilityStructure,
+        {{120, 35}, 480, 0, 8, 0, 0, 0, 0, 0, 130, 0, 0, 0,
+         kFixedScale});
     rules.research[static_cast<std::size_t>(
         ResearchType::MeridianPrismaticTargeting)] = {
             Faction::MeridianCompact, {120, 40}, 180, ResearchType::None,
@@ -806,6 +864,14 @@ SimulationRules DefaultSimulationRules() {
         ResearchType::KharuunAncestralEdge)] = {
             Faction::KharuunAssemblies, {110, 50}, 220,
             ResearchType::KharuunEchoCartography, 115, 100};
+    rules.research[static_cast<std::size_t>(
+        ResearchType::ChoirHeldAlternatives)] = {
+            Faction::HollowChoir, {105, 50}, 190, ResearchType::None,
+            110, 110};
+    rules.research[static_cast<std::size_t>(
+        ResearchType::ChoirSharedResolution)] = {
+            Faction::HollowChoir, {115, 60}, 230,
+            ResearchType::ChoirHeldAlternatives, 100, 120};
     return rules;
 }
 
@@ -858,6 +924,7 @@ bool Simulation::AddPlayer(PlayerId player,
                            ResourcePool startingResources) {
     if (player >= players_.size() || players_[player].active ||
         !IsValidFaction(faction) ||
+        (faction == Faction::HollowChoir && config_.rules.version < 2) ||
         startingResources.material < 0 || startingResources.dawnshards < 0) {
         return false;
     }
@@ -930,6 +997,10 @@ Entity Simulation::MakeEntity(PlayerId owner,
                 }
             }
         }
+        if (faction == Faction::HollowChoir && IsBarracksUnitType(type)) {
+            entity.choirIdentityState = ChoirIdentityState::Manifest;
+            RefreshChoirIdentityStats(entity);
+        }
         return entity;
     }
     switch (type) {
@@ -971,6 +1042,72 @@ void Simulation::ApplyResearchRule(Entity& entity,
         ApplyPercent(entity.visionTiles, rules.combatVisionPercent));
 }
 
+bool Simulation::IsChoirIdentityUnit(const Entity& entity) const {
+    return config_.rules.version >= 2 &&
+           entity.faction == Faction::HollowChoir &&
+           IsBarracksUnitType(entity.type);
+}
+
+bool Simulation::IsChoirCoherenceStructure(const Entity& entity) const {
+    return config_.rules.version >= 2 && entity.owner != kNeutralPlayer &&
+           entity.faction == Faction::HollowChoir &&
+           (entity.type == EntityType::Dropoff ||
+            entity.type == EntityType::Barracks ||
+            entity.type == EntityType::UtilityStructure);
+}
+
+void Simulation::RefreshChoirIdentityStats(Entity& entity) const {
+    if (!IsChoirIdentityUnit(entity)) {
+        return;
+    }
+    const EntityArchetypeRules& archetype =
+        ArchetypeFor(config_.rules, entity.faction, entity.type);
+    entity.movementPerTickRaw = archetype.movementPerTickRaw;
+    entity.visionTiles = archetype.visionTiles;
+    entity.attackRangeRaw = archetype.attackRangeRaw;
+    entity.attackDamage = archetype.attackDamage;
+    entity.attackPeriodTicks = archetype.attackPeriodTicks;
+    if (const PlayerState* player = FindPlayer(entity.owner); player != nullptr) {
+        for (std::size_t index = 1; index < config_.rules.research.size(); ++index) {
+            const ResearchType research = static_cast<ResearchType>(index);
+            if (player->HasCompletedResearch(research)) {
+                ApplyResearchRule(entity, config_.rules.research[index]);
+            }
+        }
+    }
+    const auto ApplyPercent = [](std::int32_t value, std::int32_t percent) {
+        return static_cast<std::int32_t>(std::clamp<std::int64_t>(
+            static_cast<std::int64_t>(value) * percent / 100,
+            0,
+            std::numeric_limits<std::int32_t>::max()));
+    };
+    const bool manifest =
+        entity.choirIdentityState == ChoirIdentityState::Manifest ||
+        entity.choirIdentityState == ChoirIdentityState::DualResolveManifest ||
+        entity.choirIdentityState == ChoirIdentityState::DualResolvePossible;
+    const bool possible =
+        entity.choirIdentityState == ChoirIdentityState::Possible ||
+        entity.choirIdentityState == ChoirIdentityState::DualResolveManifest ||
+        entity.choirIdentityState == ChoirIdentityState::DualResolvePossible;
+    if (manifest) {
+        entity.attackDamage = ApplyPercent(
+            entity.attackDamage,
+            config_.rules.choirIdentity.manifestDamagePercent);
+    }
+    if (possible) {
+        entity.movementPerTickRaw = std::max(
+            1,
+            ApplyPercent(
+                entity.movementPerTickRaw,
+                config_.rules.choirIdentity.possibleMovementPercent));
+        entity.visionTiles = std::min(
+            kMaximumVisionTiles,
+            ApplyPercent(
+                entity.visionTiles,
+                config_.rules.choirIdentity.possibleVisionPercent));
+    }
+}
+
 EntityId Simulation::SpawnEntity(PlayerId owner,
                                  Faction faction,
                                  EntityType type,
@@ -982,6 +1119,11 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
         return 0;
     }
     Entity entity = MakeEntity(owner, faction, type, position);
+    if (IsChoirCoherenceStructure(entity)) {
+        entity.choirCoherenceNextChargeTick = std::min(
+            kMaximumSupportedTick,
+            currentTick_ + config_.rules.choirCoherence.upkeepIntervalTicks);
+    }
     if (!TryAllocateEntityId(entity.id)) {
         return 0;
     }
@@ -1116,6 +1258,7 @@ bool Simulation::IsReshapedOpen(std::int32_t tileX, std::int32_t tileY) const {
             return true;
         }
     }
+
     return false;
 }
 
@@ -1519,6 +1662,38 @@ MineralCoverResult Simulation::ValidateMineralCover(
         return MineralCoverResult::EntityCapacityReached;
     }
     return MineralCoverResult::Valid;
+}
+
+ChoirReconciliationResult Simulation::ValidateChoirReconciliation(
+    PlayerId player,
+    EntityId actor,
+    ChoirIdentityState stableState) const {
+    const PlayerState* playerState = FindPlayer(player);
+    if (playerState == nullptr) {
+        return ChoirReconciliationResult::InvalidPlayer;
+    }
+    const Entity* entity = FindEntity(actor);
+    if (entity == nullptr || entity->owner != player || !entity->completed ||
+        entity->hitPoints <= 0 || !IsChoirIdentityUnit(*entity) ||
+        (stableState != ChoirIdentityState::Manifest &&
+         stableState != ChoirIdentityState::Possible)) {
+        return ChoirReconciliationResult::InvalidActor;
+    }
+    if (entity->choirIdentityState == ChoirIdentityState::DualResolveManifest ||
+        entity->choirIdentityState == ChoirIdentityState::DualResolvePossible) {
+        return ChoirReconciliationResult::AlreadyResolving;
+    }
+    if (entity->choirIdentityState == stableState) {
+        return ChoirReconciliationResult::AlreadyStable;
+    }
+    if (currentTick_ < entity->choirIdentityNextAvailableTick) {
+        return ChoirReconciliationResult::CooldownActive;
+    }
+    if (playerState->resources.dawnshards <
+        config_.rules.choirIdentity.dawnCost) {
+        return ChoirReconciliationResult::InsufficientDawn;
+    }
+    return ChoirReconciliationResult::Valid;
 }
 
 EntityId Simulation::InterceptingMineralCover(
@@ -2465,6 +2640,37 @@ void Simulation::ApplyCommand(const Command& command) {
             player->lastInterruptedResearch = ResearchType::None;
             return;
         }
+        case CommandType::ReconcileToManifest:
+        case CommandType::ReconcileToPossible: {
+            const ChoirIdentityState stableState =
+                command.type == CommandType::ReconcileToManifest
+                    ? ChoirIdentityState::Manifest
+                    : ChoirIdentityState::Possible;
+            if (ValidateChoirReconciliation(
+                    command.player, actor->id, stableState) !=
+                ChoirReconciliationResult::Valid) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr) {
+                return;
+            }
+            player->resources.dawnshards -=
+                config_.rules.choirIdentity.dawnCost;
+            actor->choirIdentityState =
+                stableState == ChoirIdentityState::Manifest
+                    ? ChoirIdentityState::DualResolveManifest
+                    : ChoirIdentityState::DualResolvePossible;
+            actor->choirIdentityResolveAtTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + config_.rules.choirIdentity.durationTicks);
+            actor->choirIdentityNextAvailableTick = std::min(
+                kMaximumSupportedTick,
+                actor->choirIdentityResolveAtTick +
+                    config_.rules.choirIdentity.cooldownTicks);
+            RefreshChoirIdentityStats(*actor);
+            return;
+        }
         case CommandType::AttackMove:
             if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
                 IsPositionPassable(command.position)) {
@@ -2699,6 +2905,12 @@ void Simulation::ProcessBuild(Entity& worker) {
     if (site->constructionProgress >= site->constructionRequired) {
         site->completed = true;
         site->hitPoints = site->maxHitPoints;
+        if (IsChoirCoherenceStructure(*site)) {
+            site->choirCoherenceNextChargeTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ +
+                    config_.rules.choirCoherence.upkeepIntervalTicks);
+        }
         worker.order = {};
     }
 }
@@ -3058,6 +3270,9 @@ void Simulation::ProcessResearch() {
                 }
                 entity.attackDamage = refreshed.attackDamage;
                 entity.visionTiles = refreshed.visionTiles;
+                if (IsChoirIdentityUnit(entity)) {
+                    RefreshChoirIdentityStats(entity);
+                }
             }
         }
         player.activeResearch = ResearchType::None;
@@ -3428,6 +3643,49 @@ void Simulation::ResolveAegisPower() {
     }
 }
 
+void Simulation::ResolveChoirIdentities() {
+    for (Entity& entity : entities_) {
+        if (!IsChoirIdentityUnit(entity) ||
+            (entity.choirIdentityState !=
+                 ChoirIdentityState::DualResolveManifest &&
+             entity.choirIdentityState !=
+                 ChoirIdentityState::DualResolvePossible) ||
+            currentTick_ < entity.choirIdentityResolveAtTick) {
+            continue;
+        }
+        entity.choirIdentityState =
+            entity.choirIdentityState ==
+                    ChoirIdentityState::DualResolveManifest
+                ? ChoirIdentityState::Manifest
+                : ChoirIdentityState::Possible;
+        entity.choirIdentityResolveAtTick = 0;
+        RefreshChoirIdentityStats(entity);
+    }
+}
+
+void Simulation::ResolveChoirCoherence() {
+    for (Entity& entity : entities_) {
+        if (!entity.completed || entity.hitPoints <= 0 ||
+            !IsChoirCoherenceStructure(entity) ||
+            entity.choirCoherenceNextChargeTick == 0 ||
+            currentTick_ < entity.choirCoherenceNextChargeTick) {
+            continue;
+        }
+        PlayerState* player = MutablePlayer(entity.owner);
+        if (player == nullptr ||
+            player->resources.dawnshards <
+                config_.rules.choirCoherence.dawnCostPerStructure) {
+            entity.hitPoints = 0;
+            continue;
+        }
+        player->resources.dawnshards -=
+            config_.rules.choirCoherence.dawnCostPerStructure;
+        entity.choirCoherenceNextChargeTick = std::min(
+            kMaximumSupportedTick,
+            currentTick_ + config_.rules.choirCoherence.upkeepIntervalTicks);
+    }
+}
+
 void Simulation::Step() {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
@@ -3436,6 +3694,8 @@ void Simulation::Step() {
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
     ResolveMineralCovers();
+    ResolveChoirIdentities();
+    ResolveChoirCoherence();
     ResolveAegisPower();
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
@@ -3450,6 +3710,7 @@ void Simulation::Step() {
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
     ResolveMineralCovers();
+    ResolveChoirIdentities();
     RemoveDestroyedEntities();
     ResolveAegisPower();
     ResolveExpiredReshapes();
@@ -3835,6 +4096,38 @@ std::vector<Command> Simulation::GenerateAiCommands(
         }
     }
 
+    EntityId choirReconciliationActor = 0;
+    ChoirIdentityState choirReconciliationTarget =
+        ChoirIdentityState::NotChoir;
+    if (config_.rules.version >= 2 &&
+        playerState->faction == Faction::HollowChoir &&
+        playerState->resources.dawnshards >=
+            config_.rules.choirIdentity.dawnCost) {
+        const ChoirIdentityState desired =
+            visibleHeavyThreats + visibleMobileThreats > 0
+                ? ChoirIdentityState::Manifest
+                : ChoirIdentityState::Possible;
+        for (const Entity& candidate : entities_) {
+            if (candidate.owner != player || !candidate.completed ||
+                candidate.hitPoints <= 0 ||
+                candidate.faction != Faction::HollowChoir ||
+                !IsBarracksUnitType(candidate.type) ||
+                candidate.choirIdentityState == desired ||
+                candidate.choirIdentityState ==
+                    ChoirIdentityState::DualResolveManifest ||
+                candidate.choirIdentityState ==
+                    ChoirIdentityState::DualResolvePossible ||
+                currentTick_ < candidate.choirIdentityNextAvailableTick) {
+                continue;
+            }
+            if (choirReconciliationActor == 0 ||
+                candidate.id < choirReconciliationActor) {
+                choirReconciliationActor = candidate.id;
+                choirReconciliationTarget = desired;
+            }
+        }
+    }
+
     EntityType expansionType = EntityType::Worker;
     const std::int32_t capacityHeadroom =
         PopulationCapacity(player) - committedPopulation;
@@ -3952,6 +4245,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
             continue;
         }
         if (actor.pendingWarformAdaptation != WarformAdaptation::None) {
+            continue;
+        }
+        if (actor.id == choirReconciliationActor) {
+            command.type = choirReconciliationTarget ==
+                                   ChoirIdentityState::Manifest
+                               ? CommandType::ReconcileToManifest
+                               : CommandType::ReconcileToPossible;
+            commands.push_back(command);
             continue;
         }
         if (actor.type == EntityType::CommandCore ||
@@ -4386,6 +4687,14 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.U64(config_.rules.vibrationDetection.signatureLingerTicks);
     writer.I32(config_.rules.vibrationDetection.contactResolutionRaw);
     writer.I32(config_.rules.poweredAegis.connectionRadiusRaw);
+    writer.U64(config_.rules.choirIdentity.durationTicks);
+    writer.U64(config_.rules.choirIdentity.cooldownTicks);
+    writer.I32(config_.rules.choirIdentity.dawnCost);
+    writer.I32(config_.rules.choirIdentity.manifestDamagePercent);
+    writer.I32(config_.rules.choirIdentity.possibleMovementPercent);
+    writer.I32(config_.rules.choirIdentity.possibleVisionPercent);
+    writer.U64(config_.rules.choirCoherence.upkeepIntervalTicks);
+    writer.I32(config_.rules.choirCoherence.dawnCostPerStructure);
     for (const ResearchRules& research : config_.rules.research) {
         writer.U8(static_cast<std::uint8_t>(research.faction));
         writer.I32(research.cost.material);
@@ -4481,6 +4790,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
             entity.mineralCoverUnderlyingTerrain));
         writer.U64(entity.vibrationSignatureUntilTick);
         writer.U8(entity.aegisPowered ? 1 : 0);
+        writer.U8(static_cast<std::uint8_t>(entity.choirIdentityState));
+        writer.U64(entity.choirIdentityResolveAtTick);
+        writer.U64(entity.choirIdentityNextAvailableTick);
+        writer.U64(entity.choirCoherenceNextChargeTick);
     }
     std::vector<Command> pending = pendingCommands_;
     std::sort(pending.begin(), pending.end(), CommandLess);
@@ -4538,11 +4851,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     std::uint32_t version = 0;
     SimulationConfig config{};
+    config.rules = SimulationRules{};
     if (!reader.U32(version)) {
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version != kSnapshotVersion && version != kLegacySnapshotVersion) {
+    if (version != kSnapshotVersion && version != kPriorSnapshotVersion &&
+        version != kLegacySnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
     }
@@ -4556,8 +4871,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot rules header is truncated");
         return std::nullopt;
     }
-    for (auto& faction : config.rules.archetypes) {
-        for (EntityArchetypeRules& archetype : faction) {
+    const std::size_t serializedFactionCount =
+        version == kSnapshotVersion ? kFactionCount : kLegacyFactionCount;
+    for (std::size_t factionIndex = 0;
+         factionIndex < serializedFactionCount;
+         ++factionIndex) {
+        for (EntityArchetypeRules& archetype :
+             config.rules.archetypes[factionIndex]) {
             if (!reader.I32(archetype.cost.material) ||
                 !reader.I32(archetype.cost.dawnshards) ||
                 !reader.I32(archetype.maxHitPoints) ||
@@ -4619,7 +4939,25 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
-    for (ResearchRules& research : config.rules.research) {
+    if (version == kSnapshotVersion &&
+        (!reader.U64(config.rules.choirIdentity.durationTicks) ||
+         !reader.U64(config.rules.choirIdentity.cooldownTicks) ||
+         !reader.I32(config.rules.choirIdentity.dawnCost) ||
+         !reader.I32(config.rules.choirIdentity.manifestDamagePercent) ||
+         !reader.I32(config.rules.choirIdentity.possibleMovementPercent) ||
+         !reader.I32(config.rules.choirIdentity.possibleVisionPercent) ||
+         !reader.U64(config.rules.choirCoherence.upkeepIntervalTicks) ||
+         !reader.I32(config.rules.choirCoherence.dawnCostPerStructure))) {
+        SetError(error, "snapshot Hollow Choir rules are truncated");
+        return std::nullopt;
+    }
+    const std::size_t serializedResearchCount =
+        version == kSnapshotVersion ? kResearchTypeCount
+                                    : kLegacyResearchTypeCount;
+    for (std::size_t researchIndex = 0;
+         researchIndex < serializedResearchCount;
+         ++researchIndex) {
+        ResearchRules& research = config.rules.research[researchIndex];
         std::uint8_t faction = 0;
         std::uint8_t prerequisite = 0;
         if (!reader.U8(faction) || !reader.I32(research.cost.material) ||
@@ -4627,9 +4965,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U64(research.researchTicks) || !reader.U8(prerequisite) ||
             !reader.I32(research.combatDamagePercent) ||
             !reader.I32(research.combatVisionPercent) ||
-            faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+            faction > static_cast<std::uint8_t>(
+                version == kSnapshotVersion ? Faction::HollowChoir
+                                            : Faction::KharuunAssemblies) ||
             prerequisite > static_cast<std::uint8_t>(
-                ResearchType::KharuunAncestralEdge)) {
+                version == kSnapshotVersion
+                    ? ResearchType::ChoirSharedResolution
+                    : ResearchType::KharuunAncestralEdge)) {
             SetError(error, "snapshot research rules are invalid");
             return std::nullopt;
         }
@@ -4679,12 +5021,22 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(player.researchProgress) ||
             !reader.I32(player.researchRequired) ||
             !reader.U8(lastInterruptedResearch) || id != index || active > 1 ||
-            faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+            faction > static_cast<std::uint8_t>(
+                version == kSnapshotVersion ? Faction::HollowChoir
+                                            : Faction::KharuunAssemblies) ||
             activeResearch > static_cast<std::uint8_t>(
-                ResearchType::KharuunAncestralEdge) ||
+                version == kSnapshotVersion
+                    ? ResearchType::ChoirSharedResolution
+                    : ResearchType::KharuunAncestralEdge) ||
             lastInterruptedResearch > static_cast<std::uint8_t>(
-                ResearchType::KharuunAncestralEdge) ||
-            (player.completedResearchMask & ~0x1eU) != 0 ||
+                version == kSnapshotVersion
+                    ? ResearchType::ChoirSharedResolution
+                    : ResearchType::KharuunAncestralEdge) ||
+            (player.completedResearchMask &
+             ~(version == kSnapshotVersion ? 0x7eU : 0x1eU)) != 0 ||
+            (active != 0 &&
+             faction == static_cast<std::uint8_t>(Faction::HollowChoir) &&
+             config.rules.version < 2) ||
             player.resources.material < 0 || player.resources.dawnshards < 0 ||
             player.researchProgress < 0 || player.researchRequired < 0 ||
             player.researchRequired > kMaximumProductionTicks ||
@@ -4751,7 +5103,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     const std::size_t serializedEntityBytes =
         version == kLegacySnapshotVersion
             ? kLegacySerializedEntityBytes
-            : kSerializedEntityBytes;
+            : version == kPriorSnapshotVersion
+                  ? kPriorSerializedEntityBytes
+                  : kSerializedEntityBytes;
     std::uint32_t entityCount = 0;
     if (!reader.U32(entityCount) || entityCount > kMaximumSerializedEntities ||
         static_cast<std::size_t>(entityCount) >
@@ -4780,6 +5134,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         std::uint8_t temporaryMineralCover = 0;
         std::uint8_t mineralCoverUnderlyingTerrain = 0;
         std::uint8_t aegisPowered = 0;
+        std::uint8_t choirIdentityState = 0;
         std::int32_t rawX = 0;
         std::int32_t rawY = 0;
         std::int32_t orderAnchorRawX = 0;
@@ -4830,7 +5185,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U64(entity.mineralCoverUntilTick) ||
             !reader.U8(mineralCoverUnderlyingTerrain) ||
             !reader.U64(entity.vibrationSignatureUntilTick) ||
-            !reader.U8(aegisPowered)) {
+            !reader.U8(aegisPowered) ||
+            (version == kSnapshotVersion &&
+             (!reader.U8(choirIdentityState) ||
+              !reader.U64(entity.choirIdentityResolveAtTick) ||
+              !reader.U64(entity.choirIdentityNextAvailableTick) ||
+              !reader.U64(entity.choirCoherenceNextChargeTick)))) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
         }
@@ -4862,8 +5222,26 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             type == static_cast<std::uint8_t>(EntityType::ResourceNode) ||
             type == static_cast<std::uint8_t>(EntityType::FutureWell) ||
             neutralPublicInterface;
+        const bool choirIdentityUnit =
+            faction == static_cast<std::uint8_t>(Faction::HollowChoir) &&
+            (type == static_cast<std::uint8_t>(EntityType::Soldier) ||
+             type == static_cast<std::uint8_t>(EntityType::HeavyUnit) ||
+             type == static_cast<std::uint8_t>(EntityType::ScoutUnit));
+        const bool choirIdentityResolving =
+            choirIdentityState == static_cast<std::uint8_t>(
+                                      ChoirIdentityState::DualResolveManifest) ||
+            choirIdentityState == static_cast<std::uint8_t>(
+                                      ChoirIdentityState::DualResolvePossible);
+        const bool choirCoherenceStructure =
+            entity.owner != kNeutralPlayer &&
+            faction == static_cast<std::uint8_t>(Faction::HollowChoir) &&
+            (type == static_cast<std::uint8_t>(EntityType::Dropoff) ||
+             type == static_cast<std::uint8_t>(EntityType::Barracks) ||
+             type == static_cast<std::uint8_t>(EntityType::UtilityStructure));
         if (entity.id == 0 || entity.id <= priorId ||
-            faction > static_cast<std::uint8_t>(Faction::KharuunAssemblies) ||
+            faction > static_cast<std::uint8_t>(
+                version == kSnapshotVersion ? Faction::HollowChoir
+                                            : Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             completed > 1 ||
             orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
@@ -4883,6 +5261,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 static_cast<std::uint8_t>(WarformAdaptation::Striker) ||
             temporaryMineralCover > 1 ||
             aegisPowered > 1 ||
+            !IsValidChoirIdentityState(
+                static_cast<ChoirIdentityState>(choirIdentityState)) ||
             mineralCoverUnderlyingTerrain >
                 static_cast<std::uint8_t>(Terrain::Scarred) ||
             (entity.owner != kNeutralPlayer &&
@@ -4993,7 +5373,28 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                   static_cast<std::uint8_t>(Faction::MeridianCompact) ||
               type !=
                   static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
-              completed == 0)) ||
+                  completed == 0)) ||
+            (choirIdentityUnit !=
+             (choirIdentityState != static_cast<std::uint8_t>(
+                                          ChoirIdentityState::NotChoir))) ||
+            (choirIdentityUnit && simulation.config_.rules.version < 2) ||
+            (choirIdentityResolving &&
+             (entity.choirIdentityResolveAtTick <= simulation.currentTick_ ||
+              entity.choirIdentityResolveAtTick > kMaximumSupportedTick ||
+              entity.choirIdentityNextAvailableTick <
+                  entity.choirIdentityResolveAtTick ||
+              entity.choirIdentityNextAvailableTick > kMaximumSupportedTick)) ||
+            (!choirIdentityResolving &&
+             entity.choirIdentityResolveAtTick != 0) ||
+            entity.choirIdentityNextAvailableTick > kMaximumSupportedTick ||
+            (!choirIdentityUnit &&
+             entity.choirIdentityNextAvailableTick != 0) ||
+            entity.choirCoherenceNextChargeTick > kMaximumSupportedTick ||
+            (choirCoherenceStructure && completed != 0 &&
+             (entity.choirCoherenceNextChargeTick == 0 ||
+              entity.choirCoherenceNextChargeTick < simulation.currentTick_)) ||
+            ((!choirCoherenceStructure || completed == 0) &&
+             entity.choirCoherenceNextChargeTick != 0) ||
             (temporaryMineralCover == 0 &&
              (entity.mineralCoverCreator != 0 ||
               entity.mineralCoverUntilTick != 0 ||
@@ -5045,6 +5446,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.mineralCoverUnderlyingTerrain =
             static_cast<Terrain>(mineralCoverUnderlyingTerrain);
         entity.aegisPowered = aegisPowered != 0;
+        entity.choirIdentityState =
+            static_cast<ChoirIdentityState>(choirIdentityState);
         if (!simulation.IsInsideMap(entity.position)) {
             SetError(error, "snapshot entity is outside the map");
             return std::nullopt;
@@ -5149,6 +5552,21 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             }
         }
     }
+    for (const Entity& entity : simulation.entities_) {
+        if (!simulation.IsChoirIdentityUnit(entity)) {
+            continue;
+        }
+        Entity expected = entity;
+        simulation.RefreshChoirIdentityStats(expected);
+        if (entity.movementPerTickRaw != expected.movementPerTickRaw ||
+            entity.visionTiles != expected.visionTiles ||
+            entity.attackRangeRaw != expected.attackRangeRaw ||
+            entity.attackDamage != expected.attackDamage ||
+            entity.attackPeriodTicks != expected.attackPeriodTicks) {
+            SetError(error, "snapshot Hollow Choir identity statistics are invalid");
+            return std::nullopt;
+        }
+    }
     std::uint32_t commandCount = 0;
     if (!reader.U32(commandCount) || commandCount > kMaximumSerializedCommands ||
         static_cast<std::size_t>(commandCount) >
@@ -5162,7 +5580,11 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             command.player >= simulation.players_.size() ||
             !simulation.players_[command.player].active ||
             command.executeTick < simulation.currentTick_ ||
-            command.executeTick > kMaximumSupportedTick || command.actor == 0) {
+            command.executeTick > kMaximumSupportedTick || command.actor == 0 ||
+            (simulation.config_.rules.version < 2 &&
+             (command.type > CommandType::Research ||
+              command.researchType >
+                  ResearchType::KharuunAncestralEdge))) {
             SetError(error, "snapshot pending command is invalid");
             return std::nullopt;
         }

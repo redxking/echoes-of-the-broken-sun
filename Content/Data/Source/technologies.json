@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "technologies": [
     {
       "id": "mc_prismatic_targeting",
@@ -36,6 +36,24 @@
       "research_ticks": 220,
       "prerequisite": "ka_echo_cartography",
       "effects": {"combat_damage_percent": 115, "combat_vision_percent": 100}
+    },
+    {
+      "id": "hc_held_alternatives",
+      "display_name": "Held Alternatives",
+      "faction": "hollow_choir",
+      "cost": {"matter": 105, "dawn": 50},
+      "research_ticks": 190,
+      "prerequisite": null,
+      "effects": {"combat_damage_percent": 110, "combat_vision_percent": 110}
+    },
+    {
+      "id": "hc_shared_resolution",
+      "display_name": "Shared Resolution",
+      "faction": "hollow_choir",
+      "cost": {"matter": 115, "dawn": 60},
+      "research_ticks": 230,
+      "prerequisite": "hc_held_alternatives",
+      "effects": {"combat_damage_percent": 100, "combat_vision_percent": 120}
     }
   ]
 }

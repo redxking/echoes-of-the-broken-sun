@@ -58,7 +58,22 @@ class ContentCompilerTests(unittest.TestCase):
         self.assertEqual(first.read_bytes(), second.read_bytes())
         self.assertEqual(first_digest, second_digest)
         self.assertEqual(first_pack["pack_format"], "echoes-content-pack")
+        self.assertEqual(first_pack["schema_version"], 2)
         self.assertEqual([item["id"] for item in first_pack["units"]], sorted(item["id"] for item in first_pack["units"]))
+        self.assertEqual(
+            {item["id"] for item in first_pack["units"] if item["faction"] == "hollow_choir"},
+            {"hc_threadkeeper", "hc_intervalist", "hc_lacuna_warden", "hc_afterimage"},
+        )
+        self.assertEqual(
+            {item["id"] for item in first_pack["buildings"] if item["faction"] == "hollow_choir"},
+            {"hc_concordance", "hc_interval_loom", "hc_chorus_loom", "hc_phase_anchor"},
+        )
+        self.assertEqual(
+            {item["id"] for item in first_pack["technologies"] if item["faction"] == "hollow_choir"},
+            {"hc_held_alternatives", "hc_shared_resolution"},
+        )
+        self.assertEqual(first_pack["hollow_choir_rules"]["identity"]["duration_ticks"], 160)
+        self.assertEqual(first_pack["hollow_choir_rules"]["coherence"]["dawn_cost_per_structure"], 5)
         bulwark = next(item for item in first_pack["units"] if item["id"] == "mc_bulwark_team")
         self.assertEqual(bulwark["deployment"]["damage_reduction_percent"], 40)
         relay = next(item for item in first_pack["units"] if item["id"] == "mc_relay_skiff")
@@ -116,6 +131,14 @@ class ContentCompilerTests(unittest.TestCase):
         self.write("units.json", units)
         self.assert_invalid("requires a worker and three distinct combat/support roles")
 
+    def test_missing_hollow_choir_roster_role_is_rejected(self) -> None:
+        units = self.load("units.json")
+        units["units"] = [
+            item for item in units["units"] if item["id"] != "hc_afterimage"
+        ]
+        self.write("units.json", units)
+        self.assert_invalid("playable faction 'hollow_choir' requires a worker and three distinct combat/support roles")
+
     def test_missing_production_structure_is_rejected(self) -> None:
         buildings = self.load("buildings.json")
         buildings["buildings"] = [
@@ -125,6 +148,14 @@ class ContentCompilerTests(unittest.TestCase):
         ]
         self.write("buildings.json", buildings)
         self.assert_invalid("requires a production structure")
+
+    def test_missing_hollow_choir_structure_role_is_rejected(self) -> None:
+        buildings = self.load("buildings.json")
+        buildings["buildings"] = [
+            item for item in buildings["buildings"] if item["id"] != "hc_phase_anchor"
+        ]
+        self.write("buildings.json", buildings)
+        self.assert_invalid("playable faction 'hollow_choir' requires four distinct structure roles")
 
     def test_invalid_numeric_range_is_rejected(self) -> None:
         wells = self.load("future_wells.json")
@@ -147,6 +178,40 @@ class ContentCompilerTests(unittest.TestCase):
         ]
         self.write("technologies.json", technologies)
         self.assert_invalid("requires exactly two technologies")
+
+    def test_hollow_choir_requires_two_technologies(self) -> None:
+        technologies = self.load("technologies.json")
+        technologies["technologies"] = [
+            item
+            for item in technologies["technologies"]
+            if item["id"] != "hc_shared_resolution"
+        ]
+        self.write("technologies.json", technologies)
+        self.assert_invalid("playable faction 'hollow_choir' requires exactly two technologies")
+
+    def test_hollow_choir_identity_rule_is_required(self) -> None:
+        rules = self.load("hollow_choir_rules.json")
+        del rules["identity"]["possible_vision_percent"]
+        self.write("hollow_choir_rules.json", rules)
+        self.assert_invalid("missing required fields: possible_vision_percent")
+
+    def test_hollow_choir_identity_cooldown_covers_duration(self) -> None:
+        rules = self.load("hollow_choir_rules.json")
+        rules["identity"]["cooldown_ticks"] = rules["identity"]["duration_ticks"] - 1
+        self.write("hollow_choir_rules.json", rules)
+        self.assert_invalid("must be at least duration_ticks")
+
+    def test_hollow_choir_identity_modifier_is_bounded(self) -> None:
+        rules = self.load("hollow_choir_rules.json")
+        rules["identity"]["manifest_damage_percent"] = 100
+        self.write("hollow_choir_rules.json", rules)
+        self.assert_invalid("must be between 101 and 300")
+
+    def test_hollow_choir_coherence_cost_is_positive(self) -> None:
+        rules = self.load("hollow_choir_rules.json")
+        rules["coherence"]["dawn_cost_per_structure"] = 0
+        self.write("hollow_choir_rules.json", rules)
+        self.assert_invalid("must be between 1 and 100000")
 
     def test_no_op_technology_is_rejected(self) -> None:
         technologies = self.load("technologies.json")

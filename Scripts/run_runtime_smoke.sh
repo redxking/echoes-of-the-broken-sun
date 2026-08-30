@@ -39,8 +39,8 @@ mkdir -p "$project_root/BuildArtifacts"
   -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 technologies=4 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 source=canonical' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 technologies=4 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=2 factions=3 playable=3 units=12 buildings=12 technologies=6 sha256=0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1 source=canonical' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=2 sha256=0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1 rosterArchetypes=24 catalogUnits=12 catalogBuildings=12 technologies=6 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored choirIdentity=authored choirCoherence=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_AUDIO_READY\] revision=presentation-audio-v1 cues=3 authored=true command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||

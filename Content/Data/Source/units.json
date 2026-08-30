@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "units": [
     {"id":"mc_surveyor","display_name":"Surveyor","faction":"meridian_compact","role":"worker","cost":{"matter":50,"dawn":0},"max_health":90,"move_speed_cm_s":360,"sight_cm":900,"population_cost":1,"production_ticks":60,"work_rate":10,"cargo_capacity":10},
     {"id":"mc_lancer","display_name":"Lancer","faction":"meridian_compact","role":"ranged_line","cost":{"matter":85,"dawn":20},"max_health":145,"move_speed_cm_s":320,"sight_cm":1100,"population_cost":2,"production_ticks":100,"attack":{"damage":18,"range_cm":650,"cooldown_ticks":30}},
@@ -8,6 +8,10 @@
     {"id":"ka_tender","display_name":"Tender","faction":"kharuun_assemblies","role":"worker","cost":{"matter":50,"dawn":0},"max_health":100,"move_speed_cm_s":390,"sight_cm":920,"population_cost":1,"production_ticks":60,"work_rate":9,"cargo_capacity":10},
     {"id":"ka_riftstalker","display_name":"Riftstalker","faction":"kharuun_assemblies","role":"mobile_skirmisher","cost":{"matter":75,"dawn":30},"max_health":125,"move_speed_cm_s":410,"sight_cm":1050,"population_cost":2,"production_ticks":100,"attack":{"damage":14,"range_cm":500,"cooldown_ticks":22}},
     {"id":"ka_cairnback","display_name":"Cairnback","faction":"kharuun_assemblies","role":"assault_screen","cost":{"matter":120,"dawn":30},"max_health":245,"move_speed_cm_s":270,"sight_cm":800,"population_cost":3,"production_ticks":140,"attack":{"damage":16,"range_cm":200,"cooldown_ticks":28},"mineral_cover":{"cast_range_cm":450,"duration_ticks":300,"cooldown_ticks":600,"dawn_cost":15,"max_health":180,"half_extent_cm":75}},
-    {"id":"ka_resonant","display_name":"Resonant","faction":"kharuun_assemblies","role":"scout_counter_scout","cost":{"matter":80,"dawn":25},"max_health":85,"move_speed_cm_s":470,"sight_cm":1550,"population_cost":1,"production_ticks":80,"attack":{"damage":8,"range_cm":380,"cooldown_ticks":20},"vibration_detection":{"radius_cm":2200,"signature_linger_ticks":40,"contact_resolution_cm":200}}
+    {"id":"ka_resonant","display_name":"Resonant","faction":"kharuun_assemblies","role":"scout_counter_scout","cost":{"matter":80,"dawn":25},"max_health":85,"move_speed_cm_s":470,"sight_cm":1550,"population_cost":1,"production_ticks":80,"attack":{"damage":8,"range_cm":380,"cooldown_ticks":20},"vibration_detection":{"radius_cm":2200,"signature_linger_ticks":40,"contact_resolution_cm":200}},
+    {"id":"hc_threadkeeper","display_name":"Threadkeeper","faction":"hollow_choir","role":"worker","cost":{"matter":55,"dawn":5},"max_health":80,"move_speed_cm_s":380,"sight_cm":1000,"population_cost":1,"production_ticks":65,"work_rate":9,"cargo_capacity":12},
+    {"id":"hc_intervalist","display_name":"Intervalist","faction":"hollow_choir","role":"phase_skirmisher","cost":{"matter":80,"dawn":35},"max_health":115,"move_speed_cm_s":350,"sight_cm":1150,"population_cost":2,"production_ticks":100,"attack":{"damage":16,"range_cm":550,"cooldown_ticks":25}},
+    {"id":"hc_lacuna_warden","display_name":"Lacuna Warden","faction":"hollow_choir","role":"recovery_controller","cost":{"matter":140,"dawn":45},"max_health":230,"move_speed_cm_s":260,"sight_cm":900,"population_cost":3,"production_ticks":150,"attack":{"damage":15,"range_cm":400,"cooldown_ticks":30}},
+    {"id":"hc_afterimage","display_name":"Afterimage","faction":"hollow_choir","role":"misdirection_support","cost":{"matter":75,"dawn":35},"max_health":70,"move_speed_cm_s":520,"sight_cm":1600,"population_cost":1,"production_ticks":85,"attack":{"damage":7,"range_cm":420,"cooldown_ticks":22}}
   ]
 }

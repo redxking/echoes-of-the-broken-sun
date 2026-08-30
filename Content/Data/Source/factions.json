@@ -1,9 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "factions": [
     {"id":"meridian_compact","display_name":"Meridian Compact","identity":["fortification","logistics","combined_arms","precision"],"primary_color":"#2E8FA3","secondary_color":"#E0B15A"},
     {"id":"kharuun_assemblies","display_name":"Kharuun Assemblies","identity":["mobility","adaptation","terrain_integration","ambush"],"primary_color":"#8A6AB2","secondary_color":"#7CBF83"},
-    {"id":"hollow_choir","display_name":"Hollow Choir","identity":["probability","misdirection","phase_control","recovery"],"vertical_slice_playable":false,"primary_color":"#C9D2F0","secondary_color":"#D9698D"}
+    {"id":"hollow_choir","display_name":"Hollow Choir","identity":["probability","misdirection","phase_control","recovery"],"vertical_slice_playable":true,"primary_color":"#C9D2F0","secondary_color":"#D9698D"}
   ]
 }
-

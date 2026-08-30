@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "buildings": [
     {"id":"mc_anchor","display_name":"Anchor","faction":"meridian_compact","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1400,"sight_cm":800,"construction_ticks":400,"logistics_capacity":12,"footprint_cells":[5,5]},
     {"id":"mc_power_link","display_name":"Power Link","faction":"meridian_compact","role":"supply_node","cost":{"matter":90,"dawn":10},"max_health":450,"sight_cm":500,"construction_ticks":100,"logistics_capacity":6,"footprint_cells":[2,2]},
@@ -8,6 +8,10 @@
     {"id":"ka_memory_hearth","display_name":"Memory Hearth","faction":"kharuun_assemblies","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1300,"sight_cm":800,"construction_ticks":400,"logistics_capacity":12,"footprint_cells":[5,5]},
     {"id":"ka_waystone","display_name":"Waystone","faction":"kharuun_assemblies","role":"mobile_supply_node","cost":{"matter":80,"dawn":20},"max_health":390,"sight_cm":500,"construction_ticks":100,"logistics_capacity":5,"footprint_cells":[2,2],"migration":{"move_speed_cm_s":120,"uproot_ticks":40,"root_ticks":60,"mobile_damage_taken_percent":125}},
     {"id":"ka_growth_basin","display_name":"Growth Basin","faction":"kharuun_assemblies","role":"production","cost":{"matter":165,"dawn":35},"max_health":700,"sight_cm":500,"construction_ticks":160,"logistics_capacity":0,"footprint_cells":[4,4],"adaptation":{"site_radius_cm":600,"molt_ticks":80,"dawn_cost":25,"molt_damage_taken_percent":150,"carapace_health_percent":135,"carapace_move_speed_percent":80,"striker_damage_percent":125,"striker_cooldown_percent":85}},
-    {"id":"ka_listening_spine","display_name":"Listening Spine","faction":"kharuun_assemblies","role":"detection","cost":{"matter":115,"dawn":25},"max_health":440,"sight_cm":900,"construction_ticks":120,"logistics_capacity":0,"footprint_cells":[2,2],"vibration_detection":{"radius_cm":2600,"signature_linger_ticks":40,"contact_resolution_cm":200}}
+    {"id":"ka_listening_spine","display_name":"Listening Spine","faction":"kharuun_assemblies","role":"detection","cost":{"matter":115,"dawn":25},"max_health":440,"sight_cm":900,"construction_ticks":120,"logistics_capacity":0,"footprint_cells":[2,2],"vibration_detection":{"radius_cm":2600,"signature_linger_ticks":40,"contact_resolution_cm":200}},
+    {"id":"hc_concordance","display_name":"Concordance","faction":"hollow_choir","role":"headquarters_dropoff","cost":{"matter":0,"dawn":0},"max_health":1250,"sight_cm":900,"construction_ticks":400,"logistics_capacity":12,"footprint_cells":[5,5]},
+    {"id":"hc_interval_loom","display_name":"Interval Loom","faction":"hollow_choir","role":"supply_node","cost":{"matter":85,"dawn":25},"max_health":400,"sight_cm":600,"construction_ticks":110,"logistics_capacity":6,"footprint_cells":[2,2]},
+    {"id":"hc_chorus_loom","display_name":"Chorus Loom","faction":"hollow_choir","role":"production","cost":{"matter":175,"dawn":40},"max_health":680,"sight_cm":550,"construction_ticks":170,"logistics_capacity":0,"footprint_cells":[4,4]},
+    {"id":"hc_phase_anchor","display_name":"Phase Anchor","faction":"hollow_choir","role":"coherence","cost":{"matter":120,"dawn":35},"max_health":480,"sight_cm":800,"construction_ticks":130,"logistics_capacity":0,"footprint_cells":[2,2]}
   ]
 }

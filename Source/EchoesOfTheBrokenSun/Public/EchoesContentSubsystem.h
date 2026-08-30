@@ -97,6 +97,22 @@ struct FEchoesFutureWellContent final
     int32 ReshapeTelegraphTicks = 0;
 };
 
+struct FEchoesChoirIdentityContent final
+{
+    int32 DurationTicks = 0;
+    int32 CooldownTicks = 0;
+    int32 DawnCost = 0;
+    int32 ManifestDamagePercent = 0;
+    int32 PossibleMovementPercent = 0;
+    int32 PossibleVisionPercent = 0;
+};
+
+struct FEchoesChoirCoherenceContent final
+{
+    int32 UpkeepIntervalTicks = 0;
+    int32 DawnCostPerStructure = 0;
+};
+
 struct FEchoesTechnologyContent final
 {
     FString Id;
@@ -121,6 +137,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesContentCatalog final
     TArray<FEchoesBuildingContent> Buildings;
     TArray<FEchoesTechnologyContent> Technologies;
     FEchoesFutureWellContent FutureWell;
+    FEchoesChoirIdentityContent ChoirIdentity;
+    FEchoesChoirCoherenceContent ChoirCoherence;
 
     [[nodiscard]] int32 PlayableFactionCount() const;
     [[nodiscard]] const FEchoesUnitContent* FindUnit(const FString& Id) const;

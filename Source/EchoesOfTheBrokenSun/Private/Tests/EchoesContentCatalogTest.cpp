@@ -32,16 +32,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     }
 
     TestEqual(TEXT("Canonical pack format version is one"), Catalog.PackVersion, 1);
-    TestEqual(TEXT("Canonical content schema is one"), Catalog.SchemaVersion, 1);
+    TestEqual(TEXT("Canonical content schema is two"), Catalog.SchemaVersion, 2);
     TestEqual(TEXT("Three authored factions are present"), Catalog.Factions.Num(), 3);
-    TestEqual(TEXT("Two factions are slice-playable"), Catalog.PlayableFactionCount(), 2);
-    TestEqual(TEXT("Eight authored units are present"), Catalog.Units.Num(), 8);
-    TestEqual(TEXT("Eight authored buildings are present"), Catalog.Buildings.Num(), 8);
-    TestEqual(TEXT("Four authored technologies are present"), Catalog.Technologies.Num(), 4);
+    TestEqual(TEXT("Three factions are slice-playable"), Catalog.PlayableFactionCount(), 3);
+    TestEqual(TEXT("Twelve authored units are present"), Catalog.Units.Num(), 12);
+    TestEqual(TEXT("Twelve authored buildings are present"), Catalog.Buildings.Num(), 12);
+    TestEqual(TEXT("Six authored technologies are present"), Catalog.Technologies.Num(), 6);
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,
-        FString(TEXT("100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0")));
+        FString(TEXT("0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1")));
 
     echoes::sim::SimulationRules Rules;
     FString RulesError;
@@ -142,6 +142,38 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
                  echoes::sim::ResearchType::MeridianHorizonLattice)]
                      .prerequisite ==
                  echoes::sim::ResearchType::MeridianPrismaticTargeting);
+    TestEqual(TEXT("Hollow Choir rules use simulation rules schema two"),
+              Rules.version, 2U);
+    TestEqual(TEXT("Intervalist health enters Hollow Choir rules"),
+              Rules.archetypes[2][1].maxHitPoints, 115);
+    TestEqual(TEXT("Lacuna Warden damage enters Hollow Choir rules"),
+              Rules.archetypes[2][7].attackDamage, 15);
+    TestEqual(TEXT("Afterimage vision enters Hollow Choir rules"),
+              Rules.archetypes[2][8].visionTiles, 16);
+    TestEqual(TEXT("Phase Anchor health enters Hollow Choir rules"),
+              Rules.archetypes[2][9].maxHitPoints, 480);
+    TestEqual(TEXT("Choir reconciliation duration enters simulation rules"),
+              Rules.choirIdentity.durationTicks,
+              static_cast<echoes::sim::Tick>(160));
+    TestEqual(TEXT("Choir reconciliation cooldown enters simulation rules"),
+              Rules.choirIdentity.cooldownTicks,
+              static_cast<echoes::sim::Tick>(400));
+    TestEqual(TEXT("Choir Manifest damage enters simulation rules"),
+              Rules.choirIdentity.manifestDamagePercent, 130);
+    TestEqual(TEXT("Choir Possible movement enters simulation rules"),
+              Rules.choirIdentity.possibleMovementPercent, 130);
+    TestEqual(TEXT("Choir Possible vision enters simulation rules"),
+              Rules.choirIdentity.possibleVisionPercent, 125);
+    TestEqual(TEXT("Choir coherence interval enters simulation rules"),
+              Rules.choirCoherence.upkeepIntervalTicks,
+              static_cast<echoes::sim::Tick>(600));
+    TestEqual(TEXT("Choir coherence cost enters simulation rules"),
+              Rules.choirCoherence.dawnCostPerStructure, 5);
+    TestTrue(TEXT("Shared Resolution dependency enters simulation rules"),
+             Rules.research[static_cast<std::size_t>(
+                 echoes::sim::ResearchType::ChoirSharedResolution)]
+                     .prerequisite ==
+                 echoes::sim::ResearchType::ChoirHeldAlternatives);
 
     const FEchoesUnitContent* Lancer = Catalog.FindUnit(TEXT("mc_lancer"));
     if (TestNotNull(TEXT("Meridian Lancer is addressable by stable ID"), Lancer))
@@ -172,6 +204,16 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
                   Relay->SupplyDurationTicks, 400);
         TestEqual(TEXT("Relay cooldown is authored"),
                   Relay->SupplyCooldownTicks, 800);
+    }
+    const FEchoesUnitContent* Intervalist =
+        Catalog.FindUnit(TEXT("hc_intervalist"));
+    if (TestNotNull(TEXT("Hollow Choir Intervalist is addressable by stable ID"),
+                    Intervalist))
+    {
+        TestEqual(TEXT("Intervalist role is authored"),
+                  Intervalist->Role, FString(TEXT("phase_skirmisher")));
+        TestEqual(TEXT("Intervalist Dawn cost is authored"),
+                  Intervalist->DawnCost, 35);
     }
     const FEchoesUnitContent* Bulwark = Catalog.FindUnit(TEXT("mc_bulwark_team"));
     if (TestNotNull(TEXT("Meridian Bulwark is addressable by stable ID"), Bulwark))
@@ -260,6 +302,25 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
                   GrowthBasin->AdaptationCarapaceMoveSpeedPercent, 80);
         TestEqual(TEXT("Growth Basin striker tradeoff is authored"),
                   GrowthBasin->AdaptationStrikerCooldownPercent, 85);
+    }
+    const FEchoesBuildingContent* PhaseAnchor =
+        Catalog.FindBuilding(TEXT("hc_phase_anchor"));
+    if (TestNotNull(TEXT("Hollow Choir Phase Anchor is addressable by stable ID"),
+                    PhaseAnchor))
+    {
+        TestEqual(TEXT("Phase Anchor coherence role is authored"),
+                  PhaseAnchor->Role, FString(TEXT("coherence")));
+        TestEqual(TEXT("Phase Anchor Dawn cost is authored"),
+                  PhaseAnchor->DawnCost, 35);
+    }
+    const FEchoesTechnologyContent* SharedResolution =
+        Catalog.FindTechnology(TEXT("hc_shared_resolution"));
+    if (TestNotNull(TEXT("Shared Resolution is addressable by stable ID"),
+                    SharedResolution))
+    {
+        TestEqual(TEXT("Shared Resolution prerequisite is authored"),
+                  SharedResolution->PrerequisiteId,
+                  FString(TEXT("hc_held_alternatives")));
     }
     TestEqual(
         TEXT("Reshape duration comes from authored data"),

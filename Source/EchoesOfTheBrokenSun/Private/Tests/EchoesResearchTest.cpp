@@ -19,10 +19,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesResearchTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
-    TestEqual(TEXT("Research interruption uses snapshot schema 21"),
-              echoes::sim::kSnapshotVersion, 21U);
-    TestEqual(TEXT("Research interruption uses replay schema 21"),
-              echoes::sim::kReplayVersion, 21U);
+    TestEqual(TEXT("Research interruption uses snapshot schema 22"),
+              echoes::sim::kSnapshotVersion, 22U);
+    TestEqual(TEXT("Research interruption uses replay schema 22"),
+              echoes::sim::kReplayVersion, 22U);
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
     {

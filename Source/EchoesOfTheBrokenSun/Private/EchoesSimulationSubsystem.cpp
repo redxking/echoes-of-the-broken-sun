@@ -103,6 +103,21 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
         Version == echoes::sim::kSnapshotVersion;
 }
 
+[[nodiscard]] bool UsesSupportedContinuitySnapshotSchema(
+    const TArray<uint8>& SnapshotBytes)
+{
+    if (SnapshotBytes.Num() < 8 || SnapshotBytes[0] != 'E' ||
+        SnapshotBytes[1] != 'B' || SnapshotBytes[2] != 'S' ||
+        SnapshotBytes[3] != 'N')
+    {
+        return false;
+    }
+    int32 Offset = 4;
+    uint32 Version = 0;
+    return ReadUint32LittleEndian(SnapshotBytes, Offset, Version) &&
+        (Version == 21U || Version == echoes::sim::kSnapshotVersion);
+}
+
 [[nodiscard]] bool BuildChoirAtLumeReachQuickSaveEnvelope(
     const FEchoesCampaignProgress& CampaignProgress,
     const TArray<uint8>& SnapshotBytes,
@@ -404,7 +419,7 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 12 checkpoints require an active eleven-record ledger and a schema-21 snapshot.");
+            "Mission 12 checkpoints require an active eleven-record ledger and a current schema-22 snapshot.");
         return false;
     }
 
@@ -552,11 +567,11 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     OutSnapshotBytes.Append(
         Envelope.GetData() + Offset,
         static_cast<int32>(SnapshotLength));
-    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    if (!UsesSupportedContinuitySnapshotSchema(OutSnapshotBytes))
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 12 checkpoints require snapshot schema 21 continuity state");
+            "Mission 12 checkpoints require supported snapshot schema 21 or 22 continuity state");
         return false;
     }
     return true;
@@ -576,7 +591,7 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 13 checkpoints require an active twelve-record ledger and a schema-21 snapshot.");
+            "Mission 13 checkpoints require an active twelve-record ledger and a current schema-22 snapshot.");
         return false;
     }
 
@@ -725,11 +740,11 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     OutSnapshotBytes.Append(
         Envelope.GetData() + Offset,
         static_cast<int32>(SnapshotLength));
-    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    if (!UsesSupportedContinuitySnapshotSchema(OutSnapshotBytes))
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 13 checkpoints require snapshot schema 21 continuity state");
+            "Mission 13 checkpoints require supported snapshot schema 21 or 22 continuity state");
         return false;
     }
     return true;
@@ -737,9 +752,16 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
 
 [[nodiscard]] const TCHAR* FactionStableName(Faction Value)
 {
-    return Value == Faction::KharuunAssemblies
-               ? TEXT("KharuunAssemblies")
-               : TEXT("MeridianCompact");
+    switch (Value)
+    {
+        case Faction::MeridianCompact:
+            return TEXT("MeridianCompact");
+        case Faction::KharuunAssemblies:
+            return TEXT("KharuunAssemblies");
+        case Faction::HollowChoir:
+            return TEXT("HollowChoir");
+    }
+    return TEXT("UnknownFaction");
 }
 
 [[nodiscard]] const TCHAR* ResearchStableName(echoes::sim::ResearchType Value)
@@ -754,6 +776,10 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
             return TEXT("KharuunEchoCartography");
         case echoes::sim::ResearchType::KharuunAncestralEdge:
             return TEXT("KharuunAncestralEdge");
+        case echoes::sim::ResearchType::ChoirHeldAlternatives:
+            return TEXT("ChoirHeldAlternatives");
+        case echoes::sim::ResearchType::ChoirSharedResolution:
+            return TEXT("ChoirSharedResolution");
         default:
             return TEXT("None");
     }
@@ -1408,11 +1434,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=16 catalogUnits=%d catalogBuildings=%d technologies=4 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored"),
+        TEXT("[ECHOES_SIM_RULES_READY] version=%u sha256=%s rosterArchetypes=24 catalogUnits=%d catalogBuildings=%d technologies=%d research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored choirIdentity=authored choirCoherence=authored"),
         Config.rules.version,
         *Content->GetCatalog().Sha256,
         Content->GetCatalog().Units.Num(),
-        Content->GetCatalog().Buildings.Num());
+        Content->GetCatalog().Buildings.Num(),
+        Content->GetCatalog().Technologies.Num());
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
     const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();

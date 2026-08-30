@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "duration_ticks": 160,
+    "cooldown_ticks": 400,
+    "dawn_cost": 20,
+    "manifest_damage_percent": 130,
+    "possible_movement_percent": 130,
+    "possible_vision_percent": 125
+  },
+  "coherence": {
+    "upkeep_interval_ticks": 600,
+    "dawn_cost_per_structure": 5
+  }
+}

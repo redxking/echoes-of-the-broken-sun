@@ -15,7 +15,7 @@ from typing import Any, NoReturn
 
 PACK_FORMAT = "echoes-content-pack"
 PACK_VERSION = 1
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 SOURCE_FILES = (
@@ -23,6 +23,7 @@ SOURCE_FILES = (
     "units.json",
     "buildings.json",
     "future_wells.json",
+    "hollow_choir_rules.json",
     "technologies.json",
 )
 
@@ -90,10 +91,23 @@ def require_id(value: Any, path: str) -> str:
     return text
 
 
-def require_schema(root: dict[str, Any], collection: str, path: str) -> list[Any]:
+def require_schema(
+    root: dict[str, Any],
+    collection: str,
+    path: str,
+    expected_version: int = SCHEMA_VERSION,
+) -> list[Any]:
     require_exact_keys(root, {"schema_version", collection}, set(), path)
-    if require_int(root["schema_version"], f"{path}.schema_version", 1, 1) != SCHEMA_VERSION:
-        fail(f"{path}.schema_version", f"unsupported schema; expected {SCHEMA_VERSION}")
+    if require_int(
+        root["schema_version"],
+        f"{path}.schema_version",
+        expected_version,
+        expected_version,
+    ) != expected_version:
+        fail(
+            f"{path}.schema_version",
+            f"unsupported schema; expected {expected_version}",
+        )
     values = require_array(root[collection], f"{path}.{collection}")
     if not values:
         fail(f"{path}.{collection}", "must not be empty")
@@ -509,6 +523,85 @@ def validate_future_wells(root: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def validate_hollow_choir_rules(root: dict[str, Any]) -> dict[str, Any]:
+    path = "hollow_choir_rules.json"
+    require_exact_keys(root, {"schema_version", "identity", "coherence"}, set(), path)
+    require_int(root["schema_version"], f"{path}.schema_version", 2, 2)
+
+    identity_path = f"{path}.identity"
+    identity = require_object(root["identity"], identity_path)
+    require_exact_keys(
+        identity,
+        {
+            "duration_ticks",
+            "cooldown_ticks",
+            "dawn_cost",
+            "manifest_damage_percent",
+            "possible_movement_percent",
+            "possible_vision_percent",
+        },
+        set(),
+        identity_path,
+    )
+    duration = require_int(
+        identity["duration_ticks"], f"{identity_path}.duration_ticks", 1, 100_000
+    )
+    cooldown = require_int(
+        identity["cooldown_ticks"], f"{identity_path}.cooldown_ticks", 1, 1_000_000
+    )
+    if cooldown < duration:
+        fail(f"{identity_path}.cooldown_ticks", "must be at least duration_ticks")
+    normalized_identity = {
+        "duration_ticks": duration,
+        "cooldown_ticks": cooldown,
+        "dawn_cost": require_int(
+            identity["dawn_cost"], f"{identity_path}.dawn_cost", 1, 100_000
+        ),
+        "manifest_damage_percent": require_int(
+            identity["manifest_damage_percent"],
+            f"{identity_path}.manifest_damage_percent",
+            101,
+            300,
+        ),
+        "possible_movement_percent": require_int(
+            identity["possible_movement_percent"],
+            f"{identity_path}.possible_movement_percent",
+            101,
+            300,
+        ),
+        "possible_vision_percent": require_int(
+            identity["possible_vision_percent"],
+            f"{identity_path}.possible_vision_percent",
+            101,
+            300,
+        ),
+    }
+
+    coherence_path = f"{path}.coherence"
+    coherence = require_object(root["coherence"], coherence_path)
+    require_exact_keys(
+        coherence,
+        {"upkeep_interval_ticks", "dawn_cost_per_structure"},
+        set(),
+        coherence_path,
+    )
+    normalized_coherence = {
+        "upkeep_interval_ticks": require_int(
+            coherence["upkeep_interval_ticks"],
+            f"{coherence_path}.upkeep_interval_ticks",
+            1,
+            1_000_000,
+        ),
+        "dawn_cost_per_structure": require_int(
+            coherence["dawn_cost_per_structure"],
+            f"{coherence_path}.dawn_cost_per_structure",
+            1,
+            100_000,
+        ),
+    }
+    return {"identity": normalized_identity, "coherence": normalized_coherence}
+
+
 def validate_technologies(
     root: dict[str, Any], faction_ids: set[str], playable: set[str]
 ) -> list[dict[str, Any]]:
@@ -624,6 +717,9 @@ def build_pack(source_dir: Path) -> dict[str, Any]:
         "units": validate_units(roots["units.json"], faction_ids, playable),
         "buildings": validate_buildings(roots["buildings.json"], faction_ids, playable),
         "future_wells": validate_future_wells(roots["future_wells.json"]),
+        "hollow_choir_rules": validate_hollow_choir_rules(
+            roots["hollow_choir_rules.json"]
+        ),
         "technologies": validate_technologies(
             roots["technologies.json"], faction_ids, playable
         ),

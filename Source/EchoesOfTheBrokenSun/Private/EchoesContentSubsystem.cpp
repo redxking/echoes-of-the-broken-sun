@@ -10,7 +10,7 @@
 namespace
 {
 constexpr int32 ExpectedPackVersion = 1;
-constexpr int32 ExpectedSchemaVersion = 1;
+constexpr int32 ExpectedSchemaVersion = 2;
 
 constexpr uint32 Sha256RoundConstants[64] = {
     0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U,
@@ -320,6 +320,14 @@ bool FEchoesContentCatalog::BuildSimulationRules(
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::HeavyUnit},
         {TEXT("ka_resonant"), TEXT("kharuun_assemblies"), TEXT("scout_counter_scout"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::ScoutUnit},
+        {TEXT("hc_threadkeeper"), TEXT("hollow_choir"), TEXT("worker"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Worker},
+        {TEXT("hc_intervalist"), TEXT("hollow_choir"), TEXT("phase_skirmisher"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Soldier},
+        {TEXT("hc_lacuna_warden"), TEXT("hollow_choir"), TEXT("recovery_controller"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::HeavyUnit},
+        {TEXT("hc_afterimage"), TEXT("hollow_choir"), TEXT("misdirection_support"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::ScoutUnit},
     };
     for (const FUnitBinding& Binding : UnitBindings)
     {
@@ -477,6 +485,14 @@ bool FEchoesContentCatalog::BuildSimulationRules(
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks},
         {TEXT("ka_listening_spine"), TEXT("kharuun_assemblies"), TEXT("detection"),
          echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::UtilityStructure},
+        {TEXT("hc_concordance"), TEXT("hollow_choir"), TEXT("headquarters_dropoff"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::CommandCore},
+        {TEXT("hc_interval_loom"), TEXT("hollow_choir"), TEXT("supply_node"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Dropoff},
+        {TEXT("hc_chorus_loom"), TEXT("hollow_choir"), TEXT("production"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Barracks},
+        {TEXT("hc_phase_anchor"), TEXT("hollow_choir"), TEXT("coherence"),
+         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::UtilityStructure},
     };
     for (const FBuildingBinding& Binding : BuildingBindings)
     {
@@ -636,6 +652,15 @@ bool FEchoesContentCatalog::BuildSimulationRules(
          echoes::sim::Faction::KharuunAssemblies,
          echoes::sim::ResearchType::KharuunAncestralEdge,
          echoes::sim::ResearchType::KharuunEchoCartography},
+        {TEXT("hc_held_alternatives"), TEXT("hollow_choir"), TEXT(""),
+         echoes::sim::Faction::HollowChoir,
+         echoes::sim::ResearchType::ChoirHeldAlternatives,
+         echoes::sim::ResearchType::None},
+        {TEXT("hc_shared_resolution"), TEXT("hollow_choir"),
+         TEXT("hc_held_alternatives"),
+         echoes::sim::Faction::HollowChoir,
+         echoes::sim::ResearchType::ChoirSharedResolution,
+         echoes::sim::ResearchType::ChoirHeldAlternatives},
     };
     for (const FTechnologyBinding& Binding : TechnologyBindings)
     {
@@ -671,6 +696,41 @@ bool FEchoesContentCatalog::BuildSimulationRules(
         FutureWell.ReshapeManifestDurationTicks;
     OutRules.futureWell.reshapeDurationMaximumTicks =
         FutureWell.ReshapeManifestDurationTicks;
+
+    if (ChoirIdentity.DurationTicks <= 0 ||
+        ChoirIdentity.CooldownTicks < ChoirIdentity.DurationTicks ||
+        ChoirIdentity.DawnCost <= 0 ||
+        ChoirIdentity.ManifestDamagePercent <= 100 ||
+        ChoirIdentity.ManifestDamagePercent > 300 ||
+        ChoirIdentity.PossibleMovementPercent <= 100 ||
+        ChoirIdentity.PossibleMovementPercent > 300 ||
+        ChoirIdentity.PossibleVisionPercent <= 100 ||
+        ChoirIdentity.PossibleVisionPercent > 300)
+    {
+        OutError = TEXT("SIM_RULES_CHOIR_IDENTITY_INVALID");
+        return false;
+    }
+    if (ChoirCoherence.UpkeepIntervalTicks <= 0 ||
+        ChoirCoherence.DawnCostPerStructure <= 0)
+    {
+        OutError = TEXT("SIM_RULES_CHOIR_COHERENCE_INVALID");
+        return false;
+    }
+    OutRules.choirIdentity.durationTicks =
+        static_cast<echoes::sim::Tick>(ChoirIdentity.DurationTicks);
+    OutRules.choirIdentity.cooldownTicks =
+        static_cast<echoes::sim::Tick>(ChoirIdentity.CooldownTicks);
+    OutRules.choirIdentity.dawnCost = ChoirIdentity.DawnCost;
+    OutRules.choirIdentity.manifestDamagePercent =
+        ChoirIdentity.ManifestDamagePercent;
+    OutRules.choirIdentity.possibleMovementPercent =
+        ChoirIdentity.PossibleMovementPercent;
+    OutRules.choirIdentity.possibleVisionPercent =
+        ChoirIdentity.PossibleVisionPercent;
+    OutRules.choirCoherence.upkeepIntervalTicks =
+        static_cast<echoes::sim::Tick>(ChoirCoherence.UpkeepIntervalTicks);
+    OutRules.choirCoherence.dawnCostPerStructure =
+        ChoirCoherence.DawnCostPerStructure;
     return true;
 }
 
@@ -1061,10 +1121,55 @@ bool FEchoesContentCatalog::LoadCanonicalPack(
         return false;
     }
 
-    OutCatalog.Sha256 = ActualDigest;
-    if (OutCatalog.PlayableFactionCount() < 2)
+    const TSharedPtr<FJsonObject>* HollowChoirRules = nullptr;
+    const TSharedPtr<FJsonObject>* ChoirIdentity = nullptr;
+    const TSharedPtr<FJsonObject>* ChoirCoherence = nullptr;
+    if (!Root->TryGetObjectField(TEXT("hollow_choir_rules"), HollowChoirRules) ||
+        HollowChoirRules == nullptr || !HollowChoirRules->IsValid() ||
+        !(*HollowChoirRules)->TryGetObjectField(TEXT("identity"), ChoirIdentity) ||
+        ChoirIdentity == nullptr || !ChoirIdentity->IsValid() ||
+        !(*HollowChoirRules)->TryGetObjectField(TEXT("coherence"), ChoirCoherence) ||
+        ChoirCoherence == nullptr || !ChoirCoherence->IsValid() ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("duration_ticks"),
+            OutCatalog.ChoirIdentity.DurationTicks,
+            TEXT("hollow_choir_rules.identity"), OutError, 1) ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("cooldown_ticks"),
+            OutCatalog.ChoirIdentity.CooldownTicks,
+            TEXT("hollow_choir_rules.identity"), OutError, 1) ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("dawn_cost"),
+            OutCatalog.ChoirIdentity.DawnCost,
+            TEXT("hollow_choir_rules.identity"), OutError, 1) ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("manifest_damage_percent"),
+            OutCatalog.ChoirIdentity.ManifestDamagePercent,
+            TEXT("hollow_choir_rules.identity"), OutError, 101) ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("possible_movement_percent"),
+            OutCatalog.ChoirIdentity.PossibleMovementPercent,
+            TEXT("hollow_choir_rules.identity"), OutError, 101) ||
+        !ReadRequiredInteger(*ChoirIdentity, TEXT("possible_vision_percent"),
+            OutCatalog.ChoirIdentity.PossibleVisionPercent,
+            TEXT("hollow_choir_rules.identity"), OutError, 101) ||
+        !ReadRequiredInteger(*ChoirCoherence, TEXT("upkeep_interval_ticks"),
+            OutCatalog.ChoirCoherence.UpkeepIntervalTicks,
+            TEXT("hollow_choir_rules.coherence"), OutError, 1) ||
+        !ReadRequiredInteger(*ChoirCoherence, TEXT("dawn_cost_per_structure"),
+            OutCatalog.ChoirCoherence.DawnCostPerStructure,
+            TEXT("hollow_choir_rules.coherence"), OutError, 1))
     {
-        OutError = TEXT("CONTENT_PLAYABLE_FACTIONS_INSUFFICIENT");
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("CONTENT_HOLLOW_CHOIR_RULES_INVALID");
+        }
+        return false;
+    }
+
+    OutCatalog.Sha256 = ActualDigest;
+    if (OutCatalog.Factions.Num() != 3 ||
+        OutCatalog.PlayableFactionCount() != 3 ||
+        OutCatalog.Units.Num() != 12 ||
+        OutCatalog.Buildings.Num() != 12 ||
+        OutCatalog.Technologies.Num() != 6)
+    {
+        OutError = TEXT("CONTENT_SCHEMA2_CARDINALITY_INVALID");
         OutCatalog = {};
         return false;
     }
