@@ -33,7 +33,7 @@ mkdir -p "${log:h}"
   -EchoesStress400 -stdout -FullStdOutLogOutput \
   -benchmark -fps=20 -benchmarkseconds=3 > "$log" 2>&1
 
-for marker in ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_GLASS_SCAR_READY \
+for marker in ECHOES_AUDIO_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_GLASS_SCAR_READY \
   ECHOES_FOG_READY ECHOES_STRESS_ORDERS_READY ECHOES_STRESS_READY \
   ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK ECHOES_STRESS_COMBAT_ACTIVE; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then
@@ -62,5 +62,5 @@ if /usr/bin/grep -Eq \
   exit 7
 fi
 
-print "Packaged stress runtime passed: four teams, 401 views, 396 attack-move orders, procedural atmosphere, and active combat initialized."
+print "Packaged stress runtime passed: authored presentation audio, four teams, 401 views, 396 attack-move orders, procedural atmosphere, and active combat initialized."
 print "Evidence log: $log"

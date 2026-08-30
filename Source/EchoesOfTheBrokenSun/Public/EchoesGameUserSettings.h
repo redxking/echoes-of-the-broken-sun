@@ -31,6 +31,10 @@ public:
     void SetCameraPanSpeedScale(float NewScale);
     [[nodiscard]] float GetCameraZoomScale() const;
     void SetCameraZoomScale(float NewScale);
+    [[nodiscard]] float GetEffectsVolume() const;
+    void SetEffectsVolume(float NewVolume);
+    [[nodiscard]] bool IsReducedDynamicRangeEnabled() const;
+    void SetReducedDynamicRangeEnabled(bool bEnabled);
 
 private:
     UPROPERTY(Config)
@@ -53,4 +57,10 @@ private:
 
     UPROPERTY(Config)
     float CameraZoomScale = 1.0f;
+
+    UPROPERTY(Config)
+    float EffectsVolume = 1.0f;
+
+    UPROPERTY(Config)
+    bool bReducedDynamicRange = false;
 };

@@ -38,6 +38,11 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Reduced motion defaults off"), Settings->IsReducedMotionEnabled());
     TestFalse(TEXT("Reduced flashing defaults off"), Settings->IsReducedFlashingEnabled());
     TestTrue(TEXT("Edge pan defaults on"), Settings->IsEdgePanEnabled());
+    TestEqual(TEXT("Effects volume defaults to 100%"),
+              Settings->GetEffectsVolume(),
+              1.0f);
+    TestFalse(TEXT("Reduced dynamic range defaults off"),
+              Settings->IsReducedDynamicRangeEnabled());
 
     Settings->SetHudScale(99.0f);
     Settings->SetCameraPanSpeedScale(0.01f);
@@ -46,6 +51,8 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     Settings->SetReducedMotionEnabled(true);
     Settings->SetReducedFlashingEnabled(true);
     Settings->SetEdgePanEnabled(false);
+    Settings->SetEffectsVolume(99.0f);
+    Settings->SetReducedDynamicRangeEnabled(true);
     Settings->ValidateSettings();
 
     TestEqual(TEXT("HUD scale is clamped"), Settings->GetHudScale(), 1.35f);
@@ -55,6 +62,11 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Reduced motion can be enabled"), Settings->IsReducedMotionEnabled());
     TestTrue(TEXT("Reduced flashing can be enabled"), Settings->IsReducedFlashingEnabled());
     TestFalse(TEXT("Edge pan can be disabled"), Settings->IsEdgePanEnabled());
+    TestEqual(TEXT("Effects volume is clamped"),
+              Settings->GetEffectsVolume(),
+              1.0f);
+    TestTrue(TEXT("Reduced dynamic range can be enabled"),
+             Settings->IsReducedDynamicRangeEnabled());
 
     return true;
 }

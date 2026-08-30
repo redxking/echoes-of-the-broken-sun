@@ -4,6 +4,7 @@
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
+#include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "Engine/EngineTypes.h"
@@ -1702,6 +1703,8 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
     BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);
     BindPressed(TEXT("IncreaseCameraZoomSpeed"), &AEchoesPlayerController::IncreaseCameraZoomSpeed);
+    BindPressed(TEXT("CycleEffectsVolume"), &AEchoesPlayerController::CycleEffectsVolume);
+    BindPressed(TEXT("ToggleReducedDynamicRange"), &AEchoesPlayerController::ToggleReducedDynamicRange);
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
@@ -3537,6 +3540,39 @@ void AEchoesPlayerController::IncreaseCameraZoomSpeed()
     AdjustCameraZoomSpeed(0.25f);
 }
 
+void AEchoesPlayerController::CycleEffectsVolume()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Effects volume could not be changed."));
+        return;
+    }
+    const float Current = Settings->GetEffectsVolume();
+    const float Next = Current > 0.8f ? 0.6f : Current > 0.2f ? 0.0f : 1.0f;
+    Settings->SetEffectsVolume(Next);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("AUDIO: effects volume set to %d%%."),
+        FMath::RoundToInt(Next * 100.0f)));
+}
+
+void AEchoesPlayerController::ToggleReducedDynamicRange()
+{
+    UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (Settings == nullptr)
+    {
+        SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] Dynamic range could not be changed."));
+        return;
+    }
+    const bool bEnabled = !Settings->IsReducedDynamicRangeEnabled();
+    Settings->SetReducedDynamicRangeEnabled(bEnabled);
+    Settings->SaveSettings();
+    SetStatusMessage(FString::Printf(
+        TEXT("AUDIO: reduced dynamic range %s."),
+        bEnabled ? TEXT("enabled") : TEXT("disabled")));
+}
+
 void AEchoesPlayerController::BuildAtCursor(
     echoes::sim::EntityType BuildingType)
 {
@@ -3610,6 +3646,12 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
     if (World == nullptr || AcceptedCount <= 0)
     {
         return;
+    }
+
+    if (UEchoesPresentationAudioSubsystem* Audio =
+            World->GetSubsystem<UEchoesPresentationAudioSubsystem>())
+    {
+        Audio->PlayCommandConfirmation();
     }
 
     FActorSpawnParameters SpawnParameters;

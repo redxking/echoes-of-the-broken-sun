@@ -1,0 +1,243 @@
+#include "EchoesPresentationAudioSubsystem.h"
+
+#include "EchoesGameUserSettings.h"
+#include "EchoesOfTheBrokenSun.h"
+#include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
+
+namespace
+{
+constexpr TCHAR CommandCuePath[] =
+    TEXT("/Game/Audio/Generated/SFX_CommandConfirm.SFX_CommandConfirm");
+constexpr TCHAR MeridianDestructionCuePath[] =
+    TEXT("/Game/Audio/Generated/SFX_DestructionMeridian.SFX_DestructionMeridian");
+constexpr TCHAR KharuunDestructionCuePath[] =
+    TEXT("/Game/Audio/Generated/SFX_DestructionKharuun.SFX_DestructionKharuun");
+constexpr float MinimumAudibleEffectsVolume = 0.005f;
+
+[[nodiscard]] const TCHAR* CueStableName(EEchoesPresentationAudioCue Cue)
+{
+    switch (Cue)
+    {
+        case EEchoesPresentationAudioCue::DestructionMeridian:
+            return TEXT("destruction_meridian");
+        case EEchoesPresentationAudioCue::DestructionKharuun:
+            return TEXT("destruction_kharuun");
+        case EEchoesPresentationAudioCue::CommandConfirm:
+        default:
+            return TEXT("command_confirm");
+    }
+}
+}
+
+void UEchoesPresentationAudioSubsystem::Initialize(
+    FSubsystemCollectionBase& Collection)
+{
+    Super::Initialize(Collection);
+    CommandConfirmSound = LoadObject<USoundBase>(nullptr, CommandCuePath);
+    MeridianDestructionSound =
+        LoadObject<USoundBase>(nullptr, MeridianDestructionCuePath);
+    KharuunDestructionSound =
+        LoadObject<USoundBase>(nullptr, KharuunDestructionCuePath);
+    DestructionAttenuation = NewObject<USoundAttenuation>(this);
+    if (DestructionAttenuation != nullptr)
+    {
+        FSoundAttenuationSettings& Attenuation =
+            DestructionAttenuation->Attenuation;
+        Attenuation.bAttenuate = true;
+        Attenuation.bSpatialize = true;
+        Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
+        Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+        Attenuation.AttenuationShapeExtents = FVector(300.0f, 0.0f, 0.0f);
+        Attenuation.FalloffDistance = 4200.0f;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_AUDIO_READY] revision=presentation-audio-v1 cues=%d authored=%s command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false"),
+        GetLoadedCueCount(),
+        HasAllAuthoredCueAssets() && HasBoundedSpatialAttenuation()
+            ? TEXT("true") : TEXT("false"));
+}
+
+bool UEchoesPresentationAudioSubsystem::PlayCommandConfirmation()
+{
+    UWorld* World = GetWorld();
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (World == nullptr || Settings == nullptr || CommandConfirmSound == nullptr)
+    {
+        return false;
+    }
+    const float EffectsVolume = Settings->GetEffectsVolume();
+    const double TimeSeconds = World->GetRealTimeSeconds();
+    if (!ReserveCue(
+            EEchoesPresentationAudioCue::CommandConfirm,
+            TimeSeconds,
+            EffectsVolume))
+    {
+        return false;
+    }
+    const float Volume = GetCueVolume(
+        EEchoesPresentationAudioCue::CommandConfirm,
+        EffectsVolume,
+        Settings->IsReducedDynamicRangeEnabled());
+    UGameplayStatics::PlaySound2D(World, CommandConfirmSound, Volume);
+    ++SuccessfulCommandPlayCount;
+    UE_LOG(
+        LogEchoes,
+        Verbose,
+        TEXT("[ECHOES_AUDIO_EVENT] cue=command_confirm played=true spatial=false volume=%.2f authoritative=false"),
+        Volume);
+    return true;
+}
+
+bool UEchoesPresentationAudioSubsystem::PlayDestruction(
+    echoes::sim::Faction Faction,
+    const FVector& Location)
+{
+    const EEchoesPresentationAudioCue Cue =
+        Faction == echoes::sim::Faction::KharuunAssemblies
+            ? EEchoesPresentationAudioCue::DestructionKharuun
+            : EEchoesPresentationAudioCue::DestructionMeridian;
+    UWorld* World = GetWorld();
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    USoundBase* Sound = GetCueAsset(Cue);
+    if (World == nullptr || Settings == nullptr || Sound == nullptr)
+    {
+        return false;
+    }
+    const float EffectsVolume = Settings->GetEffectsVolume();
+    const double TimeSeconds = World->GetRealTimeSeconds();
+    if (!ReserveCue(Cue, TimeSeconds, EffectsVolume))
+    {
+        return false;
+    }
+    const float Volume = GetCueVolume(
+        Cue,
+        EffectsVolume,
+        Settings->IsReducedDynamicRangeEnabled());
+    UGameplayStatics::PlaySoundAtLocation(
+        World,
+        Sound,
+        Location,
+        FRotator::ZeroRotator,
+        Volume,
+        1.0f,
+        0.0f,
+        DestructionAttenuation);
+    ++SuccessfulDestructionPlayCount;
+    UE_LOG(
+        LogEchoes,
+        Verbose,
+        TEXT("[ECHOES_AUDIO_EVENT] cue=%s played=true spatial=true volume=%.2f authoritative=false"),
+        CueStableName(Cue),
+        Volume);
+    return true;
+}
+
+bool UEchoesPresentationAudioSubsystem::HasAllAuthoredCueAssets() const
+{
+    return CommandConfirmSound != nullptr &&
+        MeridianDestructionSound != nullptr &&
+        KharuunDestructionSound != nullptr;
+}
+
+int32 UEchoesPresentationAudioSubsystem::GetLoadedCueCount() const
+{
+    return (CommandConfirmSound != nullptr ? 1 : 0) +
+        (MeridianDestructionSound != nullptr ? 1 : 0) +
+        (KharuunDestructionSound != nullptr ? 1 : 0);
+}
+
+bool UEchoesPresentationAudioSubsystem::HasBoundedSpatialAttenuation() const
+{
+    return DestructionAttenuation != nullptr &&
+        DestructionAttenuation->Attenuation.bAttenuate &&
+        DestructionAttenuation->Attenuation.bSpatialize &&
+        DestructionAttenuation->Attenuation.AttenuationShape ==
+            EAttenuationShape::Sphere &&
+        DestructionAttenuation->Attenuation.FalloffDistance > 0.0f;
+}
+
+bool UEchoesPresentationAudioSubsystem::ReserveCue(
+    EEchoesPresentationAudioCue Cue,
+    double TimeSeconds,
+    float EffectsVolume)
+{
+    if (!FMath::IsFinite(EffectsVolume) ||
+        EffectsVolume < MinimumAudibleEffectsVolume ||
+        !FMath::IsFinite(TimeSeconds))
+    {
+        return false;
+    }
+    double& LastSeconds =
+        Cue == EEchoesPresentationAudioCue::CommandConfirm
+            ? LastCommandSeconds
+            : LastDestructionSeconds;
+    const double Cooldown =
+        Cue == EEchoesPresentationAudioCue::CommandConfirm
+            ? GetCommandCooldownSeconds()
+            : GetDestructionCooldownSeconds();
+    if (TimeSeconds < LastSeconds || TimeSeconds - LastSeconds < Cooldown)
+    {
+        return false;
+    }
+    LastSeconds = TimeSeconds;
+    return true;
+}
+
+float UEchoesPresentationAudioSubsystem::GetCueVolume(
+    EEchoesPresentationAudioCue Cue,
+    float EffectsVolume,
+    bool bReducedDynamicRange) const
+{
+    const float SafeEffectsVolume = FMath::Clamp(EffectsVolume, 0.0f, 1.0f);
+    if (Cue == EEchoesPresentationAudioCue::CommandConfirm)
+    {
+        return SafeEffectsVolume * (bReducedDynamicRange ? 0.68f : 0.56f);
+    }
+    return SafeEffectsVolume * (bReducedDynamicRange ? 0.74f : 0.96f);
+}
+
+USoundBase* UEchoesPresentationAudioSubsystem::GetCueAsset(
+    EEchoesPresentationAudioCue Cue) const
+{
+    switch (Cue)
+    {
+        case EEchoesPresentationAudioCue::DestructionMeridian:
+            return MeridianDestructionSound;
+        case EEchoesPresentationAudioCue::DestructionKharuun:
+            return KharuunDestructionSound;
+        case EEchoesPresentationAudioCue::CommandConfirm:
+        default:
+            return CommandConfirmSound;
+    }
+}
+
+#if WITH_DEV_AUTOMATION_TESTS
+bool UEchoesPresentationAudioSubsystem::ReserveCueForTest(
+    EEchoesPresentationAudioCue Cue,
+    double TimeSeconds,
+    float EffectsVolume)
+{
+    return ReserveCue(Cue, TimeSeconds, EffectsVolume);
+}
+
+void UEchoesPresentationAudioSubsystem::ResetRateLimitsForTest()
+{
+    LastCommandSeconds = -1000.0;
+    LastDestructionSeconds = -1000.0;
+    SuccessfulCommandPlayCount = 0;
+    SuccessfulDestructionPlayCount = 0;
+}
+
+float UEchoesPresentationAudioSubsystem::GetCueVolumeForTest(
+    EEchoesPresentationAudioCue Cue,
+    float EffectsVolume,
+    bool bReducedDynamicRange) const
+{
+    return GetCueVolume(Cue, EffectsVolume, bReducedDynamicRange);
+}
+#endif

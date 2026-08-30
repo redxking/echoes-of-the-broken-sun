@@ -7,6 +7,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesTerrainView.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
@@ -5494,6 +5495,14 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
                             View->GetEntityType(),
                             bReducedMotion,
                             bReducedFlashing);
+                        if (UEchoesPresentationAudioSubsystem* Audio =
+                                GetWorld()->GetSubsystem<
+                                    UEchoesPresentationAudioSubsystem>())
+                        {
+                            Audio->PlayDestruction(
+                                View->GetEntityFaction(),
+                                View->GetActorLocation());
+                        }
                         UE_LOG(
                             LogEchoes,
                             Display,

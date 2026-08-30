@@ -1049,6 +1049,13 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("ON") : TEXT("OFF"),
         Settings != nullptr && Settings->IsReducedFlashingEnabled()
             ? TEXT("ON") : TEXT("OFF"));
+    const FString AudioAccessLine = FString::Printf(
+        TEXT("[PAGE DOWN] EFFECTS %d%%    [SHIFT+PAGE DOWN] REDUCED DYNAMIC RANGE %s"),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetEffectsVolume() : 1.0f) *
+            100.0f),
+        Settings != nullptr && Settings->IsReducedDynamicRangeEnabled()
+            ? TEXT("ON") : TEXT("OFF"));
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const UEchoesSimulationSubsystem* Bridge =
@@ -1237,6 +1244,9 @@ void AEchoesHUD::DrawTitleScreen(
     DrawText(AccessLine, Body,
              Left + 48.0f, Top + 444.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
+    DrawText(AudioAccessLine, Body,
+             Left + 48.0f, Top + 474.0f * ContentScale,
+             SmallFont, 0.78f * TextScale, false);
 
     DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,
              PanelWidth - 96.0f, 46.0f);
@@ -2206,6 +2216,13 @@ void AEchoesHUD::DrawPauseMenu(
         FMath::RoundToInt(
             (Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f) *
             100.0f));
+    const FString SettingsLineE = FString::Printf(
+        TEXT("[PAGE DOWN] EFFECTS  %d%%       [SHIFT+PAGE DOWN] REDUCED DYNAMIC RANGE  %s"),
+        FMath::RoundToInt(
+            (Settings != nullptr ? Settings->GetEffectsVolume() : 1.0f) *
+            100.0f),
+        Settings != nullptr && Settings->IsReducedDynamicRangeEnabled()
+            ? TEXT("ON") : TEXT("OFF"));
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.76f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -2238,9 +2255,11 @@ void AEchoesHUD::DrawPauseMenu(
              SmallFont, 0.82f * TextScale, false);
     DrawText(SettingsLineD, Body, Left + 42.0f, Top + 384.0f * ContentScale,
              SmallFont, 0.88f * TextScale, false);
+    DrawText(SettingsLineE, Body, Left + 42.0f, Top + 418.0f * ContentScale,
+             SmallFont, 0.78f * TextScale, false);
     DrawText(
         TEXT("Only implemented, behavior-verified options are exposed in this build."),
-        Muted, Left + 42.0f, Top + 430.0f * ContentScale,
+        Muted, Left + 42.0f, Top + 458.0f * ContentScale,
         SmallFont, 0.78f * TextScale, false);
 
     DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 76.0f,

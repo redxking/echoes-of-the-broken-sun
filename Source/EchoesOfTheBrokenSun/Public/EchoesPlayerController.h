@@ -216,6 +216,8 @@ private:
     void IncreaseCameraPanSpeed();
     void DecreaseCameraZoomSpeed();
     void IncreaseCameraZoomSpeed();
+    void CycleEffectsVolume();
+    void ToggleReducedDynamicRange();
     void AdjustCameraPanSpeed(float Delta);
     void AdjustCameraZoomSpeed(float Delta);
     void ArmControlGroupAssignment();

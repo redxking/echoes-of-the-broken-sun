@@ -12,6 +12,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTerrainView.h"
@@ -30,6 +31,7 @@
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -534,6 +536,68 @@ void AEchoesGameMode::BeginPlay()
             HiddenTerrainShelfCount,
             bReducedPresentation ? TEXT("true") : TEXT("false"),
             bReducedPresentation ? TEXT("true") : TEXT("false"));
+    }
+#endif
+
+#if !UE_BUILD_SHIPPING
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesAudioReview")))
+    {
+        const bool bReducedDynamicRange = FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesReviewReducedPresentation"));
+        if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+        {
+            Settings->SetEffectsVolume(1.0f);
+            Settings->SetReducedDynamicRangeEnabled(bReducedDynamicRange);
+        }
+        if (UEchoesPresentationAudioSubsystem* Audio =
+                GetWorld()->GetSubsystem<UEchoesPresentationAudioSubsystem>())
+        {
+            const bool bCommandPlayed = Audio->PlayCommandConfirmation();
+            const bool bMeridianPlayed = Audio->PlayDestruction(
+                echoes::sim::Faction::MeridianCompact,
+                Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(24, 24)));
+            const FVector KharuunReviewLocation =
+                Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(40, 40));
+            TWeakObjectPtr<UEchoesPresentationAudioSubsystem> WeakAudio(Audio);
+            FTimerHandle KharuunTimer;
+            GetWorldTimerManager().SetTimer(
+                KharuunTimer,
+                FTimerDelegate::CreateWeakLambda(
+                    this,
+                    [WeakAudio,
+                     bCommandPlayed,
+                     bMeridianPlayed,
+                     bReducedDynamicRange,
+                     KharuunReviewLocation]()
+                    {
+                        const bool bKharuunPlayed = WeakAudio.IsValid() &&
+                            WeakAudio->PlayDestruction(
+                                echoes::sim::Faction::KharuunAssemblies,
+                                KharuunReviewLocation);
+                        UE_LOG(
+                            LogEchoes,
+                            Display,
+                            TEXT("[ECHOES_AUDIO_REVIEW_COMPLETE] revision=presentation-audio-v1 cuesPlayed=%d command2D=%s meridian3D=%s kharuun3D=%s reducedDynamicRange=%s effectsVolume=1.00 rateLimited=true authoritative=false editorOnly=true finalAudio=false"),
+                            (bCommandPlayed ? 1 : 0) +
+                                (bMeridianPlayed ? 1 : 0) +
+                                (bKharuunPlayed ? 1 : 0),
+                            bCommandPlayed ? TEXT("true") : TEXT("false"),
+                            bMeridianPlayed ? TEXT("true") : TEXT("false"),
+                            bKharuunPlayed ? TEXT("true") : TEXT("false"),
+                            bReducedDynamicRange ? TEXT("true") : TEXT("false"));
+                    }),
+                0.16f,
+                false);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_AUDIO_REVIEW_READY] revision=presentation-audio-v1 cues=3 authored=%s sourceRate=48000 channels=1 reducedDynamicRange=%s effectsVolume=1.00 commandCooldownMs=80 destructionCooldownMs=140 authoritative=false editorOnly=true finalAudio=false"),
+                Audio->HasAllAuthoredCueAssets() &&
+                        Audio->HasBoundedSpatialAttenuation()
+                    ? TEXT("true") : TEXT("false"),
+                bReducedDynamicRange ? TEXT("true") : TEXT("false"));
+        }
     }
 #endif
 

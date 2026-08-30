@@ -42,6 +42,7 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=1 factions=3 playable=2 units=8 buildings=8 technologies=4 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 source=canonical' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=1 sha256=100f1fcd184cf94fe9b21d3f591714a2e33cc92b60f018bc6523868675156fa0 rosterArchetypes=16 catalogUnits=8 catalogBuildings=8 technologies=4 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_AUDIO_READY\] revision=presentation-audio-v1 cues=3 authored=true command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q "$expected_faction_marker" "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_POWERED_AEGIS_READY\] powered=1 publicState=true networkCounterplay=true' "$log" ||
@@ -60,5 +61,5 @@ if /usr/bin/grep -Eq '\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_BOOT_NO_SUBSYSTEM\]|\[
   exit 4
 fi
 
-print "Runtime bootstrap passed for $local_faction: environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, adaptive visible-terrain AI expansion, 20 Hz simulation, and first fixed tick initialized."
+print "Runtime bootstrap passed for $local_faction: authored presentation-audio assets, environment, reduced-motion-aware Glass Scar atmosphere, terrain, 4,096-tile fog/shroud, adaptive visible-terrain AI expansion, 20 Hz simulation, and first fixed tick initialized."
 print "Evidence log: $log"

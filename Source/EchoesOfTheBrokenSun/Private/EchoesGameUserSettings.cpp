@@ -8,6 +8,8 @@ constexpr float MinimumHudScale = 0.85f;
 constexpr float MaximumHudScale = 1.35f;
 constexpr float MinimumCameraScale = 0.5f;
 constexpr float MaximumCameraScale = 2.0f;
+constexpr float MinimumEffectsVolume = 0.0f;
+constexpr float MaximumEffectsVolume = 1.0f;
 }
 
 UEchoesGameUserSettings* UEchoesGameUserSettings::Get()
@@ -29,6 +31,8 @@ void UEchoesGameUserSettings::SetToDefaults()
     bEdgePan = true;
     CameraPanSpeedScale = 1.0f;
     CameraZoomScale = 1.0f;
+    EffectsVolume = 1.0f;
+    bReducedDynamicRange = false;
 }
 
 void UEchoesGameUserSettings::ValidateSettings()
@@ -43,6 +47,10 @@ void UEchoesGameUserSettings::ValidateSettings()
         CameraZoomScale,
         MinimumCameraScale,
         MaximumCameraScale);
+    EffectsVolume = FMath::Clamp(
+        EffectsVolume,
+        MinimumEffectsVolume,
+        MaximumEffectsVolume);
 }
 
 float UEchoesGameUserSettings::GetHudScale() const
@@ -125,4 +133,30 @@ void UEchoesGameUserSettings::SetCameraZoomScale(float NewScale)
         NewScale,
         MinimumCameraScale,
         MaximumCameraScale);
+}
+
+float UEchoesGameUserSettings::GetEffectsVolume() const
+{
+    return FMath::Clamp(
+        EffectsVolume,
+        MinimumEffectsVolume,
+        MaximumEffectsVolume);
+}
+
+void UEchoesGameUserSettings::SetEffectsVolume(float NewVolume)
+{
+    EffectsVolume = FMath::Clamp(
+        NewVolume,
+        MinimumEffectsVolume,
+        MaximumEffectsVolume);
+}
+
+bool UEchoesGameUserSettings::IsReducedDynamicRangeEnabled() const
+{
+    return bReducedDynamicRange;
+}
+
+void UEchoesGameUserSettings::SetReducedDynamicRangeEnabled(bool bEnabled)
+{
+    bReducedDynamicRange = bEnabled;
 }
