@@ -174,6 +174,50 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         }
     }
 
+    UStaticMesh* FoldedVergeMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.SM_World_GlassScarFoldedVerge"));
+    if (TestNotNull(TEXT("Production-oriented Folded Verge mesh loads"), FoldedVergeMesh))
+    {
+        TestTrue(TEXT("Folded Verge LOD0 has a surface and lightmap UV channel"),
+                 FoldedVergeMesh->GetNumUVChannels(0) >= 2);
+        TestTrue(TEXT("Folded Verge LOD1 has a surface and lightmap UV channel"),
+                 FoldedVergeMesh->GetNumUVChannels(1) >= 2);
+        const UBodySetup* BodySetup = FoldedVergeMesh->GetBodySetup();
+        TestNotNull(TEXT("Folded Verge owns authored collision data"), BodySetup);
+        if (BodySetup != nullptr)
+        {
+            TestTrue(TEXT("Folded Verge has at least one simple collision primitive"),
+                     BodySetup->AggGeom.GetElementCount() > 0);
+            TestEqual(TEXT("Folded Verge asset uses simple-and-complex collision policy"),
+                      BodySetup->GetCollisionTraceFlag(),
+                      ECollisionTraceFlag::CTF_UseSimpleAndComplex);
+        }
+
+        const TCHAR* ExpectedMaterials[] = {
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarFoldedVerge_Obsidian.MI_GlassScarFoldedVerge_Obsidian"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarFoldedVerge_Rift.MI_GlassScarFoldedVerge_Rift"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarFoldedVerge_Ceramic.MI_GlassScarFoldedVerge_Ceramic"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarFoldedVerge_Phase.MI_GlassScarFoldedVerge_Phase")};
+        for (int32 MaterialIndex = 0;
+             MaterialIndex < UE_ARRAY_COUNT(ExpectedMaterials);
+             ++MaterialIndex)
+        {
+            const UMaterialInterface* Material =
+                FoldedVergeMesh->GetMaterial(MaterialIndex);
+            TestNotNull(
+                FString::Printf(TEXT("Folded Verge material zone %d loads"), MaterialIndex),
+                Material);
+            if (Material != nullptr)
+            {
+                TestEqual(
+                    FString::Printf(TEXT("Folded Verge material zone %d is route-specific"), MaterialIndex),
+                    Material->GetPathName(),
+                    FString(ExpectedMaterials[MaterialIndex]));
+            }
+        }
+    }
+
     AEchoesGameMode* PresentationGameMode = World->SpawnActor<AEchoesGameMode>();
     if (TestNotNull(TEXT("Glass Scar presentation GameMode can be created"), PresentationGameMode) &&
         TestTrue(TEXT("Glass Scar production environment can be spawned"),
@@ -182,6 +226,7 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
     {
         AStaticMeshActor* AshCutActor = nullptr;
         AStaticMeshActor* BuriedCausewayActor = nullptr;
+        AStaticMeshActor* FoldedVergeActor = nullptr;
         for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
         {
             if (It->ActorHasTag(TEXT("EchoesRouteAshCut")))
@@ -191,6 +236,10 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
             else if (It->ActorHasTag(TEXT("EchoesRouteBuriedCauseway")))
             {
                 BuriedCausewayActor = *It;
+            }
+            else if (It->ActorHasTag(TEXT("EchoesRouteFoldedVerge")))
+            {
+                FoldedVergeActor = *It;
             }
         }
         if (TestNotNull(TEXT("Runtime Ash Cut route actor exists"), AshCutActor))
@@ -226,6 +275,24 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
                          BuriedCausewayComponent->GetMaterial(0) != nullptr &&
                              BuriedCausewayComponent->GetMaterial(0)->GetPathName().Contains(
                                  TEXT("MI_GlassScarBuriedCauseway_Stone")));
+            }
+        }
+        if (TestNotNull(TEXT("Runtime Folded Verge route actor exists"), FoldedVergeActor))
+        {
+            UStaticMeshComponent* FoldedVergeComponent =
+                FoldedVergeActor->GetStaticMeshComponent();
+            if (TestNotNull(TEXT("Runtime Folded Verge route has a mesh component"),
+                            FoldedVergeComponent))
+            {
+                TestEqual(TEXT("Runtime Folded Verge collision remains disabled"),
+                          FoldedVergeComponent->GetCollisionEnabled(),
+                          ECollisionEnabled::NoCollision);
+                TestTrue(TEXT("Runtime Folded Verge does not affect navigation"),
+                         !FoldedVergeComponent->CanEverAffectNavigation());
+                TestTrue(TEXT("Runtime Folded Verge retains its route material family"),
+                         FoldedVergeComponent->GetMaterial(0) != nullptr &&
+                             FoldedVergeComponent->GetMaterial(0)->GetPathName().Contains(
+                                 TEXT("MI_GlassScarFoldedVerge_Obsidian")));
             }
         }
     }

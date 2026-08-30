@@ -1004,7 +1004,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         AccentMesh->SetReceivesDecals(false);
         Accent->SetActorScale3D(Scale);
         if (DetailTag == TEXT("EchoesRouteAshCut") ||
-            DetailTag == TEXT("EchoesRouteBuriedCauseway"))
+            DetailTag == TEXT("EchoesRouteBuriedCauseway") ||
+            DetailTag == TEXT("EchoesRouteFoldedVerge"))
         {
             // Production-oriented route meshes own their UV-driven material
             // instances. Other environment candidates still receive the shared
@@ -1324,7 +1325,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v4 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v5 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,

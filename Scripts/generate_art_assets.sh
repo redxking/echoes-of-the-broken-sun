@@ -50,6 +50,12 @@ if ! rg -q '\[ECHOES_BURIED_CAUSEWAY_READY\].*revision=buried-causeway-productio
   exit 8
 fi
 
+if ! rg -q '\[ECHOES_FOLDED_VERGE_READY\].*revision=folded-verge-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+  print -u2 "The Folded Verge route-kit audit did not pass."
+  print -u2 "Inspect: $log"
+  exit 9
+fi
+
 if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEditorAssetSubsystem: Error:' "$log"; then
   print -u2 "The Unreal art generator reported an error."
   print -u2 "Inspect: $log"

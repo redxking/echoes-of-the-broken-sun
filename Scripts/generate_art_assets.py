@@ -33,6 +33,14 @@ BURIED_CAUSEWAY_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Conduit",
 )
 BURIED_CAUSEWAY_ASSET_REVISION = "buried-causeway-production-v1"
+FOLDED_VERGE_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarFoldedVerge"
+FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
+    f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Obsidian",
+    f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Rift",
+    f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Ceramic",
+    f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Phase",
+)
+FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v1"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v1"
@@ -857,56 +865,89 @@ def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> No
 
 
 def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """An offset, stepped possibility road readable as a five-plate zigzag."""
+    """A displaced possibility road built from hinged, offset verge plates."""
     plate_specs = (
-        (-72.0, -650.0, -11.0, 14.0),
-        (88.0, -330.0, 13.0, 28.0),
-        (-58.0, 0.0, -14.0, 42.0),
-        (104.0, 330.0, 12.0, 28.0),
-        (-48.0, 650.0, -9.0, 14.0),
+        (-112.0, -720.0, -13.0, 12.0),
+        (96.0, -480.0, 15.0, 30.0),
+        (-86.0, -240.0, -16.0, 48.0),
+        (118.0, 0.0, 14.0, 64.0),
+        (-92.0, 240.0, -15.0, 48.0),
+        (102.0, 480.0, 13.0, 30.0),
+        (-108.0, 720.0, -11.0, 12.0),
     )
     for index, (x, y, yaw, z) in enumerate(plate_specs):
+        # A dark displaced foundation carries a smaller pale walking face; the
+        # opposing yaw at each step makes the route readable without color.
         cylinder(
             mesh,
-            278.0,
-            28.0,
+            292.0,
+            34.0,
             (x, y, z),
             DARK,
             (0.0, yaw, 0.0),
-            5,
-            (0.82, 1.0, 1.0),
+            6 if high else 5,
+            (0.88, 1.0, 1.0),
         )
         cylinder(
             mesh,
-            228.0,
-            12.0,
-            (x, y, z + 21.0),
+            244.0,
+            14.0,
+            (x, y, z + 28.0),
             LIGHT,
             (0.0, yaw + 8.0, 0.0),
-            5,
-            (0.80, 1.0, 1.0),
+            6 if high else 5,
+            (0.84, 1.0, 1.0),
         )
-        box(mesh, (310.0, 13.0, 7.0), (x, y, z + 32.0), GLOW, (0.0, yaw + 90.0, 0.0))
+        box(mesh, (330.0, 12.0, 8.0), (x, y, z + 40.0), GLOW, (0.0, yaw + 90.0, 0.0))
+        for side in (-1.0, 1.0):
+            box(
+                mesh,
+                (34.0, 118.0, 58.0),
+                (x + side * 246.0, y, z + 18.0),
+                PRIMARY,
+                (side * 5.0, yaw, side * 9.0),
+            )
+            if high:
+                box(
+                    mesh,
+                    (18.0, 76.0, 18.0),
+                    (x + side * 204.0, y + side * 46.0, z + 46.0),
+                    GLOW,
+                    (0.0, yaw + side * 8.0, 0.0),
+                )
         if index < len(plate_specs) - 1:
             nx, ny, _, nz = plate_specs[index + 1]
             box(
                 mesh,
-                (180.0, 250.0, 22.0),
-                ((x + nx) * 0.5, (y + ny) * 0.5, (z + nz) * 0.5 + 3.0),
+                (168.0, 198.0, 26.0),
+                ((x + nx) * 0.5, (y + ny) * 0.5, (z + nz) * 0.5 + 7.0),
                 PRIMARY,
-                (0.0, 0.0, 0.0),
+                (0.0, (yaw + plate_specs[index + 1][2]) * 0.5, 0.0),
             )
+            if high:
+                box(
+                    mesh,
+                    (38.0, 180.0, 12.0),
+                    ((x + nx) * 0.5, (y + ny) * 0.5, (z + nz) * 0.5 + 25.0),
+                    GLOW,
+                    (0.0, (yaw + plate_specs[index + 1][2]) * 0.5, 0.0),
+                )
     for side in (-1.0, 1.0):
-        for y, height in ((-500.0, 188.0), (0.0, 244.0), (500.0, 168.0)):
+        for y, height, lean in (
+            (-590.0, 176.0, 12.0),
+            (-180.0, 226.0, -9.0),
+            (210.0, 258.0, 14.0),
+            (610.0, 188.0, -11.0),
+        ):
             cone(
                 mesh,
-                31.0,
+                34.0,
                 4.0,
                 height,
-                (side * 305.0, y, 20.0 + height * 0.5),
-                GLOW if y == 0.0 else DARK,
-                (side * 12.0, side * 20.0, 0.0),
-                6 if high else 5,
+                (side * 352.0, y, 16.0 + height * 0.5),
+                GLOW if y == 210.0 else DARK,
+                (side * lean, side * 18.0, 0.0),
+                7 if high else 5,
             )
 
 
@@ -1674,6 +1715,142 @@ def create_buried_causeway_materials() -> tuple[unreal.MaterialInterface, ...]:
     return tuple(instances)
 
 
+def create_folded_verge_materials() -> tuple[unreal.MaterialInterface, ...]:
+    """Create the dedicated four-zone material family for the Folded Verge."""
+    master = (
+        unreal.EditorAssetLibrary.load_asset(FOLDED_VERGE_MATERIAL_PATH)
+        if unreal.EditorAssetLibrary.does_asset_exist(FOLDED_VERGE_MATERIAL_PATH)
+        else None
+    )
+    if master is not None and not isinstance(master, unreal.Material):
+        raise RuntimeError(
+            f"Existing Folded Verge master is not a Material: {FOLDED_VERGE_MATERIAL_PATH}"
+        )
+    if master is None:
+        master = unreal.EditorAssetLibrary.duplicate_asset(
+            ASH_CUT_MATERIAL_PATH, FOLDED_VERGE_MATERIAL_PATH
+        )
+        if master is None or not isinstance(master, unreal.Material):
+            raise RuntimeError("Could not create M_GlassScarFoldedVerge")
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master,
+            "Echoes.Provenance",
+            "Original UV-driven Folded Verge material authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.AssetRevision", FOLDED_VERGE_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(master, False)
+
+    zone_specs = (
+        (
+            unreal.LinearColor(0.030, 0.018, 0.044, 1.0),
+            unreal.LinearColor(0.16, 0.035, 0.18, 1.0),
+            0.42,
+            0.22,
+            0.0,
+            0.22,
+        ),
+        (
+            unreal.LinearColor(0.13, 0.018, 0.15, 1.0),
+            unreal.LinearColor(0.42, 0.035, 0.34, 1.0),
+            0.22,
+            0.34,
+            0.0,
+            0.30,
+        ),
+        (
+            unreal.LinearColor(0.29, 0.25, 0.32, 1.0),
+            unreal.LinearColor(0.56, 0.43, 0.58, 1.0),
+            0.04,
+            0.62,
+            0.0,
+            0.24,
+        ),
+        (
+            unreal.LinearColor(0.42, 0.015, 0.44, 1.0),
+            unreal.LinearColor(0.96, 0.12, 0.68, 1.0),
+            0.16,
+            0.20,
+            3.0,
+            0.16,
+        ),
+    )
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    instances: list[unreal.MaterialInterface] = []
+    for path, values in zip(FOLDED_VERGE_MATERIAL_INSTANCE_PATHS, zone_specs):
+        instance = (
+            unreal.EditorAssetLibrary.load_asset(path)
+            if unreal.EditorAssetLibrary.does_asset_exist(path)
+            else None
+        )
+        if instance is None:
+            asset_name = path.rsplit("/", 1)[1]
+            instance = tools.create_asset(
+                asset_name,
+                f"{ART_ROOT}/Materials",
+                unreal.MaterialInstanceConstant,
+                unreal.MaterialInstanceConstantFactoryNew(),
+            )
+        if not isinstance(instance, unreal.MaterialInstanceConstant):
+            raise RuntimeError(f"Folded Verge material instance is invalid: {path}")
+        if (
+            unreal.EditorAssetLibrary.get_metadata_tag(
+                instance, "Echoes.AssetRevision"
+            )
+            == FOLDED_VERGE_ASSET_REVISION
+        ):
+            instances.append(instance)
+            continue
+        unreal.MaterialEditingLibrary.set_material_instance_parent(instance, master)
+        (
+            color_value,
+            detail_value,
+            metallic_value,
+            roughness_value,
+            emission_value,
+            detail_value_strength,
+        ) = values
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "Color", color_value
+        )
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "DetailColor", detail_value
+        )
+        for parameter_name, parameter_value in (
+            ("Metallic", metallic_value),
+            ("Roughness", roughness_value),
+            ("EmissiveStrength", emission_value),
+            ("DetailStrength", detail_value_strength),
+        ):
+            unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(
+                instance, parameter_name, parameter_value
+            )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance,
+            "Echoes.Provenance",
+            "Original Folded Verge material instance authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.AssetRevision", FOLDED_VERGE_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(instance, False)
+        instances.append(instance)
+    return tuple(instances)
+
+
 def create_presentation_vfx_material() -> unreal.Material:
     existing = (
         unreal.EditorAssetLibrary.load_asset(VFX_MATERIAL_PATH)
@@ -1867,12 +2044,16 @@ def create_static_mesh(
     route_revisions = {
         "GlassScarAshCut": ASH_CUT_ASSET_REVISION,
         "GlassScarBuriedCauseway": BURIED_CAUSEWAY_ASSET_REVISION,
+        "GlassScarFoldedVerge": FOLDED_VERGE_ASSET_REVISION,
     }
     route_revision = route_revisions.get(spec.name)
     is_production_route = route_revision is not None
-    route_label = (
-        "Ash Cut" if spec.name == "GlassScarAshCut" else "Buried Causeway"
-    )
+    route_labels = {
+        "GlassScarAshCut": "Ash Cut",
+        "GlassScarBuriedCauseway": "Buried Causeway",
+        "GlassScarFoldedVerge": "Folded Verge",
+    }
+    route_label = route_labels.get(spec.name, spec.display_name)
     if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
         existing = unreal.EditorAssetLibrary.load_asset(spec.asset_path)
         if isinstance(existing, unreal.StaticMesh):
@@ -2015,6 +2196,7 @@ def main() -> None:
     world_surface_material = create_world_surface_material()
     ash_cut_materials = create_ash_cut_materials()
     buried_causeway_materials = create_buried_causeway_materials()
+    folded_verge_materials = create_folded_verge_materials()
     presentation_vfx_material = create_presentation_vfx_material()
     generated = [
         create_static_mesh(
@@ -2025,9 +2207,13 @@ def main() -> None:
                 buried_causeway_materials
                 if spec.name == "GlassScarBuriedCauseway"
                 else (
-                    [world_surface_material] * 4
-                    if spec.faction == "World"
-                    else [surface_material] * 4
+                    folded_verge_materials
+                    if spec.name == "GlassScarFoldedVerge"
+                    else (
+                        [world_surface_material] * 4
+                        if spec.faction == "World"
+                        else [surface_material] * 4
+                    )
                 )
             ),
         )
@@ -2117,6 +2303,48 @@ def main() -> None:
         f"uvChannels={','.join(str(value) for value in buried_causeway_uvs)} "
         f"materials={len(buried_causeway_materials)} "
         f"simpleCollision={buried_causeway_collision_count} "
+        "runtimeAuthority=presentation runtimeCollision=false"
+    )
+    folded_verge_asset = next(
+        asset
+        for asset, spec in zip(generated, ASSETS)
+        if spec.name == "GlassScarFoldedVerge"
+    )
+    folded_verge_uvs = [
+        mesh_editor.get_num_uv_channels(folded_verge_asset, lod_index)
+        for lod_index in range(folded_verge_asset.get_num_lods())
+    ]
+    folded_verge_materials = [
+        folded_verge_asset.get_material(index).get_path_name()
+        for index in range(4)
+        if folded_verge_asset.get_material(index) is not None
+    ]
+    folded_verge_collision_count = mesh_editor.get_simple_collision_count(
+        folded_verge_asset
+    )
+    if (
+        any(count < 2 for count in folded_verge_uvs)
+        or len(folded_verge_materials) != 4
+        or any(
+            "MI_GlassScarFoldedVerge_" not in path
+            for path in folded_verge_materials
+        )
+        or folded_verge_collision_count < 1
+    ):
+        raise RuntimeError(
+            "Folded Verge route-kit audit failed: "
+            f"uvs={folded_verge_uvs} materials={folded_verge_materials} "
+            f"collision={folded_verge_collision_count}"
+        )
+    unreal.log(
+        "[ECHOES_FOLDED_VERGE_READY] "
+        f"revision={FOLDED_VERGE_ASSET_REVISION} "
+        f"lods={folded_verge_asset.get_num_lods()} "
+        f"lod0Triangles={folded_verge_asset.get_num_triangles(0)} "
+        f"lod1Triangles={folded_verge_asset.get_num_triangles(1)} "
+        f"uvChannels={','.join(str(value) for value in folded_verge_uvs)} "
+        f"materials={len(folded_verge_materials)} "
+        f"simpleCollision={folded_verge_collision_count} "
         "runtimeAuthority=presentation runtimeCollision=false"
     )
     vfx_collision_counts = [
