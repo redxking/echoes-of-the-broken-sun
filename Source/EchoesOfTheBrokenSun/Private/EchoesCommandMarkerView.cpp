@@ -40,6 +40,8 @@ AEchoesCommandMarkerView::AEchoesCommandMarkerView()
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MoveFinder(
         TEXT("/Game/Art/Generated/VFX/SM_VFX_CommandMove.SM_VFX_CommandMove"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> AttackFinder(
+        TEXT("/Game/Art/Generated/VFX/SM_VFX_CommandAttack.SM_VFX_CommandAttack"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AttackMoveFinder(
         TEXT("/Game/Art/Generated/VFX/SM_VFX_CommandAttackMove.SM_VFX_CommandAttackMove"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> PatrolFinder(
@@ -55,6 +57,7 @@ AEchoesCommandMarkerView::AEchoesCommandMarkerView()
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialFinder(
         TEXT("/Game/Art/Generated/Materials/M_EchoesPresentationVFX.M_EchoesPresentationVFX"));
     MoveMesh = MoveFinder.Object;
+    AttackMesh = AttackFinder.Object;
     AttackMoveMesh = AttackMoveFinder.Object;
     PatrolMesh = PatrolFinder.Object;
     GuardMesh = GuardFinder.Object;
@@ -106,6 +109,9 @@ void AEchoesCommandMarkerView::InitializeMarker(
     {
         case EEchoesCommandMarkerType::Move:
             BaseColor = FLinearColor(0.05f, 0.92f, 1.0f);
+            break;
+        case EEchoesCommandMarkerType::Attack:
+            BaseColor = FLinearColor(1.0f, 0.12f, 0.04f);
             break;
         case EEchoesCommandMarkerType::AttackMove:
             BaseColor = FLinearColor(1.0f, 0.34f, 0.04f);
@@ -224,6 +230,8 @@ UStaticMesh* AEchoesCommandMarkerView::MeshForMarkerType(
     {
         case EEchoesCommandMarkerType::Move:
             return MoveMesh;
+        case EEchoesCommandMarkerType::Attack:
+            return AttackMesh;
         case EEchoesCommandMarkerType::AttackMove:
             return AttackMoveMesh;
         case EEchoesCommandMarkerType::Patrol:
@@ -266,6 +274,13 @@ bool AEchoesCommandMarkerView::IsUsingAuthoredVFXAssets() const
            IsAuthoredMesh(GlyphB) && VFXMaterial != nullptr &&
            VFXMaterial->GetPathName().StartsWith(
                TEXT("/Game/Art/Generated/Materials/M_EchoesPresentationVFX"));
+}
+
+FString AEchoesCommandMarkerView::GetMarkerMeshPath() const
+{
+    return MarkerDisc != nullptr && MarkerDisc->GetStaticMesh() != nullptr
+        ? MarkerDisc->GetStaticMesh()->GetPathName()
+        : FString();
 }
 
 float AEchoesCommandMarkerView::GetMarkerDiscYaw() const

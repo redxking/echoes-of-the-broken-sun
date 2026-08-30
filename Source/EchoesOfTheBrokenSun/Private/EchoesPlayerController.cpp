@@ -1834,6 +1834,15 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
             SelectedEntityIds.Num(),
             SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
         2.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_POINTER_SELECTION] screen=(%.1f,%.1f) entity=%u selected=%d additive=%s ownerScoped=true"),
+        LastPointerScreenPosition.X,
+        LastPointerScreenPosition.Y,
+        EntityId,
+        SelectedEntityIds.Num(),
+        bAdditive ? TEXT("true") : TEXT("false"));
 }
 
 void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
@@ -1937,7 +1946,7 @@ void AEchoesPlayerController::ContextOrderPressed()
         return;
     }
 
-    IssueContextOrder(HitResult);
+    IssueContextOrder(HitResult, true);
 }
 
 void AEchoesPlayerController::KeyboardContextOrderPressed()
@@ -1980,10 +1989,12 @@ void AEchoesPlayerController::KeyboardContextOrderPressed()
             Display,
             TEXT("[ECHOES_KEYBOARD_TARGET_MODE] enabled=true source=screen_reticle hiddenStateRead=false implicit=space"));
     }
-    IssueContextOrder(HitResult);
+    IssueContextOrder(HitResult, false);
 }
 
-void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
+void AEchoesPlayerController::IssueContextOrder(
+    const FHitResult& HitResult,
+    bool bPointerSource)
 {
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -2098,17 +2109,40 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
         ShowAcceptedCommandMarker(
             Destination,
             CommandType == echoes::sim::CommandType::Attack
-                ? EEchoesCommandMarkerType::AttackMove
+                ? EEchoesCommandMarkerType::Attack
                 : CommandType == echoes::sim::CommandType::Move
                       ? EEchoesCommandMarkerType::Move
                       : EEchoesCommandMarkerType::Interact,
             AcceptedCount);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONTEXT_ORDER_ACCEPTED] source=%s screen=(%.1f,%.1f) command=%s target=%u accepted=%d rejected=%d visibleHit=%s"),
+            bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
+            bPointerSource ? LastPointerScreenPosition.X : -1.0f,
+            bPointerSource ? LastPointerScreenPosition.Y : -1.0f,
+            *CommandLabel(CommandType),
+            TargetId,
+            AcceptedCount,
+            RejectedCount,
+            TargetView != nullptr ? TEXT("true") : TEXT("false"));
     }
     else
     {
         SetStatusMessage(LastRejection.IsEmpty()
                              ? TEXT("[ORDER_REJECTED] No selected entity accepted the order.")
                              : LastRejection);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONTEXT_ORDER_REJECTED] source=%s screen=(%.1f,%.1f) command=%s target=%u rejected=%d reason=%s"),
+            bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
+            bPointerSource ? LastPointerScreenPosition.X : -1.0f,
+            bPointerSource ? LastPointerScreenPosition.Y : -1.0f,
+            *CommandLabel(CommandType),
+            TargetId,
+            RejectedCount,
+            LastRejection.IsEmpty() ? TEXT("ORDER_REJECTED") : *LastRejection);
     }
 }
 
@@ -2320,8 +2354,16 @@ void AEchoesPlayerController::PruneSelection()
 
 bool AEchoesPlayerController::TraceCursor(FHitResult& OutHitResult)
 {
-    return GetHitResultUnderCursorByChannel(
-        UEngineTypes::ConvertToTraceType(ECC_Visibility),
+    float MouseX = 0.0f;
+    float MouseY = 0.0f;
+    if (!GetMousePosition(MouseX, MouseY))
+    {
+        return false;
+    }
+    LastPointerScreenPosition = FVector2D(MouseX, MouseY);
+    return GetHitResultAtScreenPosition(
+        LastPointerScreenPosition,
+        ECC_Visibility,
         true,
         OutHitResult);
 }
@@ -2648,6 +2690,16 @@ void AEchoesPlayerController::AttackMoveAtCursor()
             HitResult.Location,
             EEchoesCommandMarkerType::AttackMove,
             AcceptedCount);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ATTACK_MOVE_ACCEPTED] source=%s screen=(%.1f,%.1f) accepted=%d rejected=%d formation=%s"),
+            bKeyboardTargetingEnabled ? TEXT("keyboard_reticle") : TEXT("pointer"),
+            bKeyboardTargetingEnabled ? -1.0f : LastPointerScreenPosition.X,
+            bKeyboardTargetingEnabled ? -1.0f : LastPointerScreenPosition.Y,
+            AcceptedCount,
+            RejectedCount,
+            *GetFormationLabel());
     }
     else
     {
@@ -3288,6 +3340,11 @@ void AEchoesPlayerController::GuardAtCursor()
         SetStatusMessage(TEXT("[SIM_NOT_READY] Guard is unavailable."));
         return;
     }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
     if (SelectedEntityIds.IsEmpty())
     {
         SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned defenders first."));
@@ -3350,6 +3407,16 @@ void AEchoesPlayerController::GuardAtCursor()
             Bridge->SimToWorld(Target->position),
             EEchoesCommandMarkerType::Guard,
             AcceptedCount);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_GUARD_ACCEPTED] source=%s screen=(%.1f,%.1f) target=%u accepted=%d rejected=%d ownerScoped=true"),
+            bKeyboardTargetingEnabled ? TEXT("keyboard_reticle") : TEXT("pointer"),
+            bKeyboardTargetingEnabled ? -1.0f : LastPointerScreenPosition.X,
+            bKeyboardTargetingEnabled ? -1.0f : LastPointerScreenPosition.Y,
+            Target->id,
+            AcceptedCount,
+            RejectedCount);
     }
     else
     {
@@ -3682,6 +3749,9 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
     const TCHAR* MarkerLabel = TEXT("move");
     switch (MarkerType)
     {
+        case EEchoesCommandMarkerType::Attack:
+            MarkerLabel = TEXT("attack");
+            break;
         case EEchoesCommandMarkerType::AttackMove:
             MarkerLabel = TEXT("attack_move");
             break;
@@ -3703,7 +3773,7 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d formation=%s vfx=selection-command-vfx-v1 authored=true collision=false navigation=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
+        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d formation=%s vfx=selection-command-vfx-v2 authored=true collision=false navigation=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
         MarkerLabel,
         AcceptedCount,
         *GetFormationLabel(),

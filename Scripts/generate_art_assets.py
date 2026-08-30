@@ -43,7 +43,7 @@ FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
 FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v1"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
-PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v1"
+PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
 DESTRUCTION_VFX_ASSET_REVISION = "destruction-vfx-v1"
 
 PRIMARY = 0
@@ -1003,6 +1003,16 @@ def vfx_command_move(mesh: unreal.DynamicMesh, high: bool) -> None:
     box(mesh, (25.0, 7.0, 5.0), (20.0, -9.0, 4.0), PRIMARY, (0.0, -42.0, 0.0))
 
 
+def vfx_command_attack(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Direct-target spearhead, distinct from the area attack-move cross."""
+    command_sigil_base(mesh, high)
+    box(mesh, (58.0, 8.0, 5.0), (-4.0, 0.0, 4.0), PRIMARY)
+    box(mesh, (34.0, 8.0, 5.0), (20.0, 11.0, 4.0), PRIMARY, (0.0, 44.0, 0.0))
+    box(mesh, (34.0, 8.0, 5.0), (20.0, -11.0, 4.0), PRIMARY, (0.0, -44.0, 0.0))
+    if high:
+        torus(mesh, 17.0, 2.6, (-17.0, 0.0, 4.0), PRIMARY, high_detail=True)
+
+
 def vfx_command_attack_move(mesh: unreal.DynamicMesh, high: bool) -> None:
     command_sigil_base(mesh, high)
     box(mesh, (68.0, 8.0, 5.0), (0.0, 0.0, 4.0), PRIMARY, (0.0, 45.0, 0.0))
@@ -1089,6 +1099,7 @@ def vfx_destruction_shard(mesh: unreal.DynamicMesh, high: bool) -> None:
 VFX_ASSETS = (
     VfxAssetSpec("SelectionHalo", "Selection halo", "persistent selected-entity readability", vfx_selection_halo),
     VfxAssetSpec("CommandMove", "Move command sigil", "accepted move confirmation", vfx_command_move),
+    VfxAssetSpec("CommandAttack", "Direct-attack command sigil", "accepted visible-target attack confirmation", vfx_command_attack),
     VfxAssetSpec("CommandAttackMove", "Attack-move command sigil", "accepted attack-move confirmation", vfx_command_attack_move),
     VfxAssetSpec("CommandPatrol", "Patrol command sigil", "accepted patrol confirmation", vfx_command_patrol),
     VfxAssetSpec("CommandGuard", "Guard command sigil", "accepted guard confirmation", vfx_command_guard),
@@ -1976,12 +1987,21 @@ def create_presentation_vfx_mesh(
             existing, "Echoes.AssetRevision"
         )
         if revision == spec.revision:
+            action = "reused"
+            existing_material = existing.get_material(0)
+            if (
+                existing_material is None
+                or existing_material.get_path_name() != material.get_path_name()
+            ):
+                existing.set_material(0, material)
+                unreal.EditorAssetLibrary.save_loaded_asset(existing, False)
+                action = "rebound-material"
             unreal.log(
                 "[ECHOES_PRESENTATION_VFX_ASSET] "
                 f"path={spec.asset_path} display={spec.display_name} "
                 f"lods={existing.get_num_lods()} "
                 f"lod0Triangles={existing.get_num_triangles(0)} "
-                f"lod1Triangles={existing.get_num_triangles(1)} action=reused"
+                f"lod1Triangles={existing.get_num_triangles(1)} action={action}"
             )
             return existing
         if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
@@ -2352,7 +2372,7 @@ def main() -> None:
         for asset in presentation_vfx_assets
     ]
     if (
-        len(presentation_vfx_assets) != 8
+        len(presentation_vfx_assets) != 9
         or any(asset.get_num_lods() != 2 for asset in presentation_vfx_assets)
         or any(count != 0 for count in vfx_collision_counts)
         or any(
@@ -2369,8 +2389,8 @@ def main() -> None:
         )
     unreal.log(
         "[ECHOES_PRESENTATION_VFX_READY] "
-        f"revision={PRESENTATION_VFX_ASSET_REVISION} assets=8 selection=1 "
-        "commands=6 orbit=1 lods=2 simpleCollision=0 "
+        f"revision={PRESENTATION_VFX_ASSET_REVISION} assets=9 selection=1 "
+        "commands=7 orbit=1 lods=2 simpleCollision=0 "
         "runtimeAuthority=presentation reducedMotion=steady "
         "reducedFlashing=steadyLowEmission finalArt=false"
     )
@@ -2402,7 +2422,7 @@ def main() -> None:
     )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "
-        f"roster=16 landmarks=4 environment=7 vfx=8 destructionVfx=3 material={MATERIAL_PATH} "
+        f"roster=16 landmarks=4 environment=7 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
         f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 

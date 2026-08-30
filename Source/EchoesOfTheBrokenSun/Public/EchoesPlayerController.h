@@ -249,7 +249,7 @@ private:
     bool TraceKeyboardTarget(FHitResult& OutHitResult);
     bool TraceCommandTarget(FHitResult& OutHitResult);
     void NudgeKeyboardTarget(const FVector2D& Direction);
-    void IssueContextOrder(const FHitResult& HitResult);
+    void IssueContextOrder(const FHitResult& HitResult, bool bPointerSource);
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
     void ProduceUnit(echoes::sim::EntityType UnitType);
@@ -270,6 +270,7 @@ private:
     FVector LastFormationForward = FVector(1.0f, 0.0f, 0.0f);
     FString StatusMessage;
     FVector2D KeyboardTargetOffset = FVector2D::ZeroVector;
+    FVector2D LastPointerScreenPosition = FVector2D::ZeroVector;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
     double NewCampaignConfirmationExpiresAt = 0.0;

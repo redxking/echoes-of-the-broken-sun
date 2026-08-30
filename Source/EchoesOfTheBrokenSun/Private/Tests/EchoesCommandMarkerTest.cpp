@@ -44,12 +44,15 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
     const uint64 AuthoritativeChecksum = Bridge->GetSimulation()->StateChecksum();
     const EEchoesCommandMarkerType MarkerTypes[] = {
         EEchoesCommandMarkerType::Move,
+        EEchoesCommandMarkerType::Attack,
         EEchoesCommandMarkerType::AttackMove,
         EEchoesCommandMarkerType::Patrol,
         EEchoesCommandMarkerType::Guard,
         EEchoesCommandMarkerType::Build,
         EEchoesCommandMarkerType::Interact,
     };
+    FString DirectAttackMeshPath;
+    FString AttackMoveMeshPath;
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(MarkerTypes); ++Index)
     {
         FActorSpawnParameters SpawnParameters;
@@ -66,7 +69,7 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
             continue;
         }
 
-        const bool bReducedPresentation = Index == 4;
+        const bool bReducedPresentation = Index == 5;
         Marker->InitializeMarker(
             MarkerTypes[Index],
             bReducedPresentation,
@@ -92,6 +95,14 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
         TestTrue(
             *FString::Printf(TEXT("Marker %d has a readable lifetime"), Index),
             Marker->GetPresentationLifetimeSeconds() >= 2.0f);
+        if (MarkerTypes[Index] == EEchoesCommandMarkerType::Attack)
+        {
+            DirectAttackMeshPath = Marker->GetMarkerMeshPath();
+        }
+        else if (MarkerTypes[Index] == EEchoesCommandMarkerType::AttackMove)
+        {
+            AttackMoveMeshPath = Marker->GetMarkerMeshPath();
+        }
 
         TArray<UStaticMeshComponent*> MeshComponents;
         Marker->GetComponents<UStaticMeshComponent>(MeshComponents);
@@ -147,6 +158,16 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
                      Marker->GetCurrentEmissiveStrength() > 2.6f);
         }
     }
+
+    TestTrue(TEXT("Direct attack owns a named authored sigil"),
+             DirectAttackMeshPath.EndsWith(
+                 TEXT("SM_VFX_CommandAttack.SM_VFX_CommandAttack")));
+    TestTrue(TEXT("Attack-move owns its area-order sigil"),
+             AttackMoveMeshPath.EndsWith(
+                 TEXT("SM_VFX_CommandAttackMove.SM_VFX_CommandAttackMove")));
+    TestNotEqual(TEXT("Direct attack and attack-move are shape-distinct"),
+                 DirectAttackMeshPath,
+                 AttackMoveMeshPath);
 
     TestEqual(
         TEXT("Presentation markers do not alter authoritative checksum"),

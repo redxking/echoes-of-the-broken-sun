@@ -369,6 +369,7 @@ void AEchoesGameMode::BeginPlay()
 
         const EEchoesCommandMarkerType MarkerTypes[] = {
             EEchoesCommandMarkerType::Move,
+            EEchoesCommandMarkerType::Attack,
             EEchoesCommandMarkerType::AttackMove,
             EEchoesCommandMarkerType::Patrol,
             EEchoesCommandMarkerType::Guard,
@@ -376,12 +377,13 @@ void AEchoesGameMode::BeginPlay()
             EEchoesCommandMarkerType::Interact,
         };
         const FIntPoint MarkerTiles[] = {
-            FIntPoint(8, 11),
-            FIntPoint(11, 11),
-            FIntPoint(14, 11),
+            FIntPoint(7, 11),
+            FIntPoint(10, 11),
+            FIntPoint(13, 11),
             FIntPoint(16, 11),
-            FIntPoint(11, 13),
-            FIntPoint(14, 13),
+            FIntPoint(8, 13),
+            FIntPoint(12, 13),
+            FIntPoint(16, 13),
         };
         int32 SpawnedMarkerCount = 0;
         int32 AuthoredMarkerCount = 0;
@@ -415,7 +417,7 @@ void AEchoesGameMode::BeginPlay()
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_PRESENTATION_VFX_REVIEW_READY] revision=selection-command-vfx-v1 markers=%d authoredMarkers=%d selected=%d ordinaryViewsHidden=%d terrainShelvesHidden=%d reducedMotion=%s reducedFlashing=%s collision=false authoritative=false editorOnly=true finalArt=false"),
+            TEXT("[ECHOES_PRESENTATION_VFX_REVIEW_READY] revision=selection-command-vfx-v2 markers=%d authoredMarkers=%d selected=%d ordinaryViewsHidden=%d terrainShelvesHidden=%d reducedMotion=%s reducedFlashing=%s collision=false authoritative=false editorOnly=true finalArt=false"),
             SpawnedMarkerCount,
             AuthoredMarkerCount,
             SelectedPreviewCount,

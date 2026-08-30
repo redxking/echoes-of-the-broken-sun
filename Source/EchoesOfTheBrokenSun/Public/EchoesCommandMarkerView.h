@@ -15,6 +15,7 @@ UENUM()
 enum class EEchoesCommandMarkerType : uint8
 {
     Move,
+    Attack,
     AttackMove,
     Patrol,
     Guard,
@@ -53,6 +54,7 @@ public:
     [[nodiscard]] bool HasCollisionDisabled() const;
     [[nodiscard]] bool HasNavigationDisabled() const;
     [[nodiscard]] bool IsUsingAuthoredVFXAssets() const;
+    [[nodiscard]] FString GetMarkerMeshPath() const;
     [[nodiscard]] float GetMarkerDiscYaw() const;
     [[nodiscard]] float GetCurrentEmissiveStrength() const
     {
@@ -82,6 +84,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> MoveMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> AttackMesh;
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> AttackMoveMesh;
