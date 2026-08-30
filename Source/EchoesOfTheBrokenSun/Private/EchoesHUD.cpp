@@ -2,6 +2,7 @@
 
 #include "EchoesContentSubsystem.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
+#include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesEntityView.h"
@@ -74,6 +75,24 @@ const TCHAR* WellChoiceDisplayName(echoes::sim::FutureWellChoice Choice)
         case echoes::sim::FutureWellChoice::Preserve: return TEXT("PRESERVE");
         case echoes::sim::FutureWellChoice::Reshape: return TEXT("RESHAPE");
         default: return TEXT("UNRESOLVED");
+    }
+}
+
+const TCHAR* ChoirIdentityDisplayName(
+    echoes::sim::ChoirIdentityState State)
+{
+    switch (State)
+    {
+        case echoes::sim::ChoirIdentityState::Manifest:
+            return TEXT("MANIFEST");
+        case echoes::sim::ChoirIdentityState::Possible:
+            return TEXT("POSSIBLE");
+        case echoes::sim::ChoirIdentityState::DualResolveManifest:
+            return TEXT("RESOLVING TO MANIFEST");
+        case echoes::sim::ChoirIdentityState::DualResolvePossible:
+            return TEXT("RESOLVING TO POSSIBLE");
+        default:
+            return TEXT("UNRESOLVED");
     }
 }
 
@@ -390,6 +409,46 @@ void AEchoesHUD::DrawHUD()
                                     : TEXT("Line Unit"),
                     Percent);
             }
+            if (const echoes::sim::Entity* Entity =
+                    Bridge->FindEntity(SelectedIds[0]);
+                Entity != nullptr &&
+                Entity->choirIdentityState !=
+                    echoes::sim::ChoirIdentityState::NotChoir)
+            {
+                SelectedType += FString::Printf(
+                    TEXT(" — %s"),
+                    ChoirIdentityDisplayName(
+                        Entity->choirIdentityState));
+                if (Entity->choirIdentityResolveAtTick >
+                    Sim->CurrentTick())
+                {
+                    const double SecondsRemaining =
+                        static_cast<double>(
+                            Entity->choirIdentityResolveAtTick -
+                            Sim->CurrentTick()) /
+                        static_cast<double>(
+                            FMath::Max<uint32>(
+                                1,
+                                Sim->Config().ticksPerSecond));
+                    SelectedType += FString::Printf(
+                        TEXT(" %.1fs"), SecondsRemaining);
+                }
+                else if (Entity->choirIdentityNextAvailableTick >
+                         Sim->CurrentTick())
+                {
+                    const double SecondsRemaining =
+                        static_cast<double>(
+                            Entity->choirIdentityNextAvailableTick -
+                            Sim->CurrentTick()) /
+                        static_cast<double>(
+                            FMath::Max<uint32>(
+                                1,
+                                Sim->Config().ticksPerSecond));
+                    SelectedType += FString::Printf(
+                        TEXT(" — RECONCILIATION %.1fs"),
+                        SecondsRemaining);
+                }
+            }
         }
         if (Bridge != nullptr &&
             Bridge->GetOperationMode() ==
@@ -530,6 +589,20 @@ void AEchoesHUD::DrawHUD()
                 Bridge->GetAssemblyOfTheMissingPlan();
             SelectionLine = FString::Printf(
                 TEXT("Selected  %d%s     Formation  %s     Public assembly plan  %02u     Recorded protocol  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Plan.StablePlanKey,
+                Plan.ProtocolDisplayName);
+        }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const FEchoesSeveralVoicesOneCommandPlan Plan =
+                Bridge->GetSeveralVoicesOneCommandPlan();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Choir crisis plan  %02u     Recorded protocol  %s"),
                 SelectedIds.Num(),
                 *SelectedType,
                 *EchoesController->GetFormationLabel(),
@@ -1299,6 +1372,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bAssemblyOfTheMissing = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    const bool bSeveralVoicesOneCommand = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1344,6 +1420,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bNoNeutralLedger ? TEXT("NO NEUTRAL LEDGER")
              : bFutureThatWon ? TEXT("THE FUTURE THAT WON")
              : bAssemblyOfTheMissing ? TEXT("ASSEMBLY OF THE MISSING")
+             : bSeveralVoicesOneCommand ? TEXT("SEVERAL VOICES, ONE COMMAND")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1395,6 +1472,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 13  //  %s  //  ORUUN + INDEPENDENT VERIFIER"),
                   *LocalFaction)
+        : bSeveralVoicesOneCommand
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 14  //  %s  //  NEME + PROTECTED VOICES"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1427,6 +1508,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 12")
     : bAssemblyOfTheMissing
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 13")
+    : bSeveralVoicesOneCommand
+        ? TEXT("[F9] CHANGE OPERATION  //  HOLLOW CHOIR AUTHORITY  //  MISSION 14")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1483,6 +1566,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Eleven ordered records bind one local restoration demonstrator to the founding doctrine, recorded district pair, and exact Lume protocol.")
         : bAssemblyOfTheMissing
             ? TEXT("Twelve ordered records bind three neutral public interfaces to the existing plan without adding hidden authorship, trust, or mixed-faction command.")
+        : bSeveralVoicesOneCommand
+            ? TEXT("Thirteen ordered records grant one bounded Hollow Choir command perspective while retaining the exact inherited protocol context.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1517,6 +1602,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Establish independent readback, verify both district inputs, activate the recorded protocol, hold stability, then observe both readbacks.")
         : bAssemblyOfTheMissing
             ? TEXT("Establish paired public-record readback, link the Crownfall index, then observe the assembly from two independent witness sites.")
+        : bSeveralVoicesOneCommand
+            ? TEXT("Resolve protected voices into incompatible states, research their shared use, then raise a Phase Anchor and hold the crisis for 8.0 seconds.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2698,6 +2785,135 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        const FEchoesSeveralVoicesOneCommandPlan Plan =
+            Bridge->GetSeveralVoicesOneCommandPlan();
+        const bool bFailed =
+            Objective.SeveralVoicesOneCommandPhase ==
+            EEchoesSeveralVoicesOneCommandPhase::Failed;
+        const echoes::sim::Simulation* MissionSimulation =
+            Bridge->GetSimulation();
+        const double TicksPerSecond =
+            MissionSimulation != nullptr
+                ? static_cast<double>(FMath::Max<uint32>(
+                      1,
+                      MissionSimulation->Config().ticksPerSecond))
+                : 20.0;
+        const double PossibleSeconds =
+            static_cast<double>(
+                Objective.SeveralVoicesPossibleResolveTicksRemaining) /
+            TicksPerSecond;
+        const double ManifestSeconds =
+            static_cast<double>(
+                Objective.SeveralVoicesManifestResolveTicksRemaining) /
+            TicksPerSecond;
+        const double CrisisSeconds =
+            static_cast<double>(
+                Objective.SeveralVoicesCrisisTicksRemaining) /
+            TicksPerSecond;
+        const FString PossibleTimer =
+            Objective.SeveralVoicesPossibleResolveTicksRemaining > 0
+                ? FString::Printf(TEXT(" %.1fs"), PossibleSeconds)
+                : FString{};
+        const FString ManifestTimer =
+            Objective.SeveralVoicesManifestResolveTicksRemaining > 0
+                ? FString::Printf(TEXT(" %.1fs"), ManifestSeconds)
+                : FString{};
+        const FString ResearchState = bFailed
+            ? TEXT("RESEARCH OR PROTECTED LINE LOST")
+            : Objective.bSeveralVoicesSharedResolutionResearched
+                ? TEXT("HELD ALTERNATIVES + SHARED RESOLUTION")
+            : Objective.bSeveralVoicesHeldAlternativesResearched
+                ? Objective.bSeveralVoicesPossibleAtSite &&
+                          Objective.bSeveralVoicesManifestAtSite &&
+                          Objective.bSeveralVoicesNemeAtCommandSite
+                    ? TEXT("F2 — RESEARCH SHARED RESOLUTION")
+                    : TEXT("HELD ALTERNATIVES — VOICE CONTRACT PENDING")
+                : TEXT("F2 — RESEARCH HELD ALTERNATIVES");
+        const FString VoiceState = bFailed
+            ? TEXT("INCOMPATIBLE VOICE CONTRACT LOST")
+            : FString::Printf(
+                  TEXT("P:%s%s%s  M:%s%s%s  N:%s"),
+                  ChoirIdentityDisplayName(
+                      Objective.SeveralVoicesPossibleState),
+                  *PossibleTimer,
+                  Objective.bSeveralVoicesPossibleAtSite
+                      ? TEXT("@SITE") : TEXT(""),
+                  ChoirIdentityDisplayName(
+                      Objective.SeveralVoicesManifestState),
+                  *ManifestTimer,
+                  Objective.bSeveralVoicesManifestAtSite
+                      ? TEXT("@SITE") : TEXT(""),
+                  Objective.bSeveralVoicesNemeAtCommandSite
+                      ? TEXT("COMMAND") : TEXT("MOVE"));
+        const FString CrisisState = bFailed
+            ? TEXT("PHASE ANCHOR CONTRACT FAILED")
+            : Objective.bSeveralVoicesCrisisWindowHeld
+                ? TEXT("PHASE ANCHOR HELD — CRISIS RESOLVED")
+            : Objective.bSeveralVoicesPhaseAnchorComplete
+                ? FString::Printf(
+                      TEXT("HOLD BOTH STATES — %.1fs"),
+                      CrisisSeconds)
+            : Objective.bSeveralVoicesSharedResolutionResearched &&
+                    Objective.bSeveralVoicesPossibleAtSite &&
+                    Objective.bSeveralVoicesManifestAtSite &&
+                    Objective.bSeveralVoicesNemeAtCommandSite
+                ? FString::Printf(
+                      TEXT("BUILD [M] PHASE ANCHOR AT %d,%d"),
+                      Plan.CrisisAnchorSite.x.FloorToInt(),
+                      Plan.CrisisAnchorSite.y.FloorToInt())
+                : TEXT("WAITING — RESOLVE VOICES + NEME");
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("SEVERAL VOICES, ONE COMMAND  //  MISSION 14"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.84f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  RESEARCH   %s"), *ResearchState),
+            bFailed ? Failed
+                    : Objective.bSeveralVoicesSharedResolutionResearched
+                        ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.66f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  VOICES     %s"), *VoiceState),
+            bFailed ? Failed
+                    : Objective.bSeveralVoicesPossibleAtSite &&
+                          Objective.bSeveralVoicesManifestAtSite &&
+                          Objective.bSeveralVoicesNemeAtCommandSite
+                        ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.60f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  CRISIS     %s"), *CrisisState),
+            bFailed ? Failed
+                    : Objective.bSeveralVoicesCrisisWindowHeld
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.66f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_OBJECTIVES_READY] phase=%s plan=%u protocol=%u possibleVoice=%u manifestVoice=%u neme=%u researchLoom=%u phaseAnchor=%u identityTimersVisible=true crisisTimerVisible=true identityResolveTicks=160 crisisHoldTicks=160 reconstructable=true exactOrderedLedger=true commandAuthority=HollowChoir finalChoirFateDecided=false campaignBalanceUnproven=true"),
+                FEchoesSeveralVoicesOneCommandMissionModel::StableName(
+                    Objective.SeveralVoicesOneCommandPhase),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Objective.SeveralVoicesPossibleVoiceId,
+                Objective.SeveralVoicesManifestVoiceId,
+                Objective.SeveralVoicesNemeId,
+                Objective.SeveralVoicesResearchLoomId,
+                Objective.SeveralVoicesPhaseAnchorId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2836,13 +3052,19 @@ void AEchoesHUD::DrawMatchResult(
     const bool bAssemblyOfTheMissingResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    const bool bSeveralVoicesOneCommandResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bAssemblyOfTheMissingResult
+        ? bSeveralVoicesOneCommandResult
+            ? bVictory ? TEXT("CHOIR CRISIS HELD")
+                       : TEXT("CHOIR CRISIS CONTRACT FAILED")
+        : bAssemblyOfTheMissingResult
             ? bVictory ? TEXT("PUBLIC ASSEMBLY RECEIPT RECORDED")
                        : TEXT("PUBLIC ASSEMBLY FAILED")
         : bFutureThatWonResult
@@ -2862,7 +3084,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bAssemblyOfTheMissingResult
+        ? bSeveralVoicesOneCommandResult
+            ? bVictory ? TEXT("SEVERAL VOICES HOLD ONE COMMAND")
+                       : TEXT("THE SHARED RESOLUTION BREAKS")
+        : bAssemblyOfTheMissingResult
             ? bVictory ? TEXT("THE MISSING RECORD HOLDS IN PUBLIC")
                        : TEXT("THE ASSEMBLY CANNOT BE OBSERVED")
         : bFutureThatWonResult
@@ -2904,7 +3129,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bAssemblyOfTheMissingResult
+        ? bSeveralVoicesOneCommandResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("One protected voice resolved to Possible, one remained Manifest, and Neme sustained both under the recorded %s protocol context through the full Phase Anchor crisis window. This completes one bounded Choir command perspective; it does not decide the Choir's final fate, prove campaign balance, or establish release readiness."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("The local Core, Neme, a protected voice, or the Research Loom was lost, the match ended, or the Phase Anchor contract was violated before the crisis window closed.")
+        : bAssemblyOfTheMissingResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The public-record pair, Crownfall index link, and both independent assembly views were observed under the recorded %s protocol. This does not assign authorship or responsibility, establish consent or trust, model civilian state, prove cryptographic authenticity, or establish wider cause."),
@@ -2928,7 +3160,7 @@ void AEchoesHUD::DrawMatchResult(
         : bChoirAtLumeReachResult
             ? bVictory
                 ? FString::Printf(
-                      TEXT("Both Listening Spines held while Oruun completed the %s resolution. This proves one local contact operation and Well decision; the Choir remains non-playable and no hidden authorship or wider cause is established."),
+                      TEXT("Both Listening Spines held while Oruun completed the %s resolution. This proves one local contact operation and Well decision; the Choir remains non-commandable in Mission 10 and no hidden authorship or wider cause is established."),
                       WellChoiceDisplayName(
                           EchoesController->GetCampaignConsequence()))
                 : TEXT("Oruun, the Waystone, a committed Listening Spine, the local Core, the Lume Well, or the active Reshape exit window was lost before resolution.")
@@ -3012,7 +3244,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bAssemblyOfTheMissingResult
+                CampaignPersistenceLine = bSeveralVoicesOneCommandResult
+                    ? FString::Printf(
+                          TEXT("MISSION 14 RECORDED // %s Choir crisis contract fixed."),
+                          RecordedChoice)
+                : bAssemblyOfTheMissingResult
                     ? FString::Printf(
                           TEXT("MISSION 13 RECORDED // %s public assembly/readback contract fixed."),
                           RecordedChoice)
@@ -3109,7 +3345,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bAssemblyOfTheMissingResult
+        ? bSeveralVoicesOneCommandResult
+            ? FString::Printf(
+                  TEXT("MISSION 14 — SEVERAL VOICES, ONE COMMAND  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bAssemblyOfTheMissingResult
             ? FString::Printf(
                   TEXT("MISSION 13 — ASSEMBLY OF THE MISSING  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -3387,6 +3627,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bAssemblyOfTheMissing = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    const bool bSeveralVoicesOneCommand = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -3435,6 +3678,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetAssemblyOfTheMissingPlan()
             : FEchoesAssemblyOfTheMissingPlan{};
+    const FEchoesSeveralVoicesOneCommandPlan SeveralVoicesPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetSeveralVoicesOneCommandPlan()
+            : FEchoesSeveralVoicesOneCommandPlan{};
     FString FactionSystems;
     const echoes::sim::Faction BriefingFaction =
         BriefingBridge != nullptr
@@ -3508,6 +3755,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("ASSEMBLY OF THE MISSING  //  MISSION 13  //  %s"),
                   *LocalFaction)
+        : bSeveralVoicesOneCommand
+            ? FString::Printf(
+                  TEXT("SEVERAL VOICES, ONE COMMAND  //  MISSION 14  //  %s"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -3577,6 +3828,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Twelve exact ordered records admit plan %02u: paired public readback, one Crownfall index link, and two independent assembly views under recorded %s."),
                   AssemblyPlan.StablePlanKey,
                   AssemblyPlan.ProtocolDisplayName)
+        : bSeveralVoicesOneCommand
+            ? FString::Printf(
+                  TEXT("Thirteen exact ordered records admit plan %02u: one bounded Hollow Choir command crisis under the inherited %s protocol context."),
+                  SeveralVoicesPlan.StablePlanKey,
+                  SeveralVoicesPlan.ProtocolDisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3599,7 +3855,7 @@ void AEchoesHUD::DrawMissionBriefing(
         : bShapeOfSilence
             ? TEXT("Oruun and both witnesses are Kharuun-authoritative. This operation tests correspondence only; it does not establish cause, a Choir identity, or hidden authorship.")
         : bShapeBesideUs
-            ? TEXT("Talar and both witnesses are Meridian-authoritative proxies. Neme is represented by observable route correspondence; a playable Hollow Choir faction and unified Choir identity are not implemented.")
+            ? TEXT("Talar and both witnesses are Meridian-authoritative proxies. Neme is represented by observable route correspondence; Mission 08 does not yet grant command over the Hollow Choir.")
         : bReserveAuthority
             ? FString::Printf(
                   TEXT("Mara holds Meridian authority. %s is the inherited recommendation, but the allocation remains the player's irreversible choice."),
@@ -3626,6 +3882,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Oruun and a Kharuun verifier alone are commandable. All three public interfaces remain neutral; %s remains deferred."),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       AssemblyPlan.DeferredDistrict))
+        : bSeveralVoicesOneCommand
+            ? TEXT("Neme and the local Hollow Choir are commandable. The protected Soldier must resolve to Possible while the protected Heavy remains Manifest; both transitions use visible deterministic timers.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -3720,6 +3978,15 @@ void AEchoesHUD::DrawMissionBriefing(
                   AssemblyPlan.MeridianPublicRecordSite.y.FloorToInt(),
                   AssemblyPlan.CrownfallIndexSite.x.FloorToInt(),
                   AssemblyPlan.CrownfallIndexSite.y.FloorToInt())
+        : bSeveralVoicesOneCommand
+            ? FString::Printf(
+                  TEXT("01  Research Held Alternatives [F2]; resolve the protected Soldier to Possible [Shift+F4] at %d,%d, keep the Heavy Manifest at %d,%d, and move Neme to %d,%d."),
+                  SeveralVoicesPlan.PossibleVoiceSite.x.FloorToInt(),
+                  SeveralVoicesPlan.PossibleVoiceSite.y.FloorToInt(),
+                  SeveralVoicesPlan.ManifestVoiceSite.x.FloorToInt(),
+                  SeveralVoicesPlan.ManifestVoiceSite.y.FloorToInt(),
+                  SeveralVoicesPlan.NemeCommandSite.x.FloorToInt(),
+                  SeveralVoicesPlan.NemeCommandSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3820,6 +4087,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   AssemblyPlan.KharuunAssemblyWitnessSite.y.FloorToInt(),
                   AssemblyPlan.MeridianAssemblyWitnessSite.x.FloorToInt(),
                   AssemblyPlan.MeridianAssemblyWitnessSite.y.FloorToInt())
+        : bSeveralVoicesOneCommand
+            ? FString::Printf(
+                  TEXT("02  Research Shared Resolution [F2], build a Phase Anchor [M] at %d,%d, and hold both incompatible voices plus Neme through the visible 8.0-second crisis timer."),
+                  SeveralVoicesPlan.CrisisAnchorSite.x.FloorToInt(),
+                  SeveralVoicesPlan.CrisisAnchorSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -3851,6 +4123,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 is the admission receipt, not another branch.")
              : bAssemblyOfTheMissing
                  ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 and M12 remain required public receipts, not new branch variables.")
+             : bSeveralVoicesOneCommand
+                 ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11–M13 admit this perspective but do not decide the Choir's fate.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -3873,13 +4147,15 @@ void AEchoesHUD::DrawMissionBriefing(
         : bReserveAuthority
             ? TEXT("Victory is one exact two-district allocation. It does not establish wider city recovery or unmodeled civilian survival.")
         : bChoirAtLumeReach
-            ? TEXT("Victory is one anchored local contact and branch resolution. The Choir is not playable; no hidden authorship, unified identity, or wider cause is established.")
+            ? TEXT("Victory is one anchored local contact and branch resolution. The Choir is not commandable in Mission 10; no hidden authorship, unified identity, or wider cause is established.")
         : bNoNeutralLedger
             ? TEXT("Victory is one local Kharuun-authoritative coalition rally. Meridian and Choir interfaces remain public and non-commandable; no trust score, casualty total, hidden identity, authorship, or wider causation is inferred.")
         : bFutureThatWon
             ? TEXT("Victory proves one bounded local activation and paired readback—not population restoration, permanence, civilian counts, trust, consent, or moral justification.")
         : bAssemblyOfTheMissing
             ? TEXT("Victory records one bounded public assembly/readback receipt—not authorship, responsibility, trust, consent, civilian state, cryptographic authenticity, or wider cause.")
+        : bSeveralVoicesOneCommand
+            ? TEXT("Victory completes one bounded Hollow Choir command crisis. It does not decide the Choir's final fate, prove campaign balance, establish ordinary-player completion, or imply release readiness.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -3917,6 +4193,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
         : bAssemblyOfTheMissing
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
+        : bSeveralVoicesOneCommand
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS NEME + HOLLOW CHOIR")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -4143,7 +4421,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignFutureThatWon ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -4695,6 +4975,41 @@ void AEchoesHUD::DrawTacticalMinimap(
                     : Objective.bAssemblyCrownfallIndexLinked
                         ? Border : WaitingColor);
         }
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const FEchoesSeveralVoicesOneCommandPlan Plan =
+                Bridge->GetSeveralVoicesOneCommandPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.PossibleVoiceSite,
+                TEXT("P"),
+                Objective.bSeveralVoicesPossibleAtSite
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.ManifestVoiceSite,
+                TEXT("M"),
+                Objective.bSeveralVoicesManifestAtSite
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.NemeCommandSite,
+                TEXT("N"),
+                Objective.bSeveralVoicesNemeAtCommandSite
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.CrisisAnchorSite,
+                TEXT("A"),
+                Objective.bSeveralVoicesCrisisWindowHeld
+                    ? CompleteColor
+                : Objective.bSeveralVoicesPhaseAnchorComplete
+                    ? Border
+                : Objective.bSeveralVoicesSharedResolutionResearched &&
+                      Objective.bSeveralVoicesPossibleAtSite &&
+                      Objective.bSeveralVoicesManifestAtSite &&
+                      Objective.bSeveralVoicesNemeAtCommandSite
+                    ? Border : WaitingColor);
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -4740,6 +5055,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignAssemblyOfTheMissing
             ? TEXT("MISSION NAV  |  M/K + C + 1/2")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+            ? TEXT("MISSION NAV  |  P/M/N/A")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

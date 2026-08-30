@@ -42,6 +42,8 @@ constexpr int32 ChoirAtLumeReachSiteRadiusTiles = 3;
 constexpr int32 NoNeutralLedgerSiteRadiusTiles = 3;
 constexpr int32 FutureThatWonSiteRadiusTiles = 3;
 constexpr int32 AssemblyOfTheMissingSiteRadiusTiles = 3;
+constexpr int32 SeveralVoicesOneCommandSiteRadiusTiles = 3;
+constexpr uint64 SeveralVoicesCrisisHoldTicks = 160;
 constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
 constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '0', 'Q'};
@@ -54,6 +56,9 @@ constexpr uint8 FutureThatWonQuickSaveMagic[] = {
 constexpr uint8 AssemblyOfTheMissingQuickSaveEnvelopeVersion = 1;
 constexpr uint8 AssemblyOfTheMissingQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '3', 'Q'};
+constexpr uint8 SeveralVoicesOneCommandQuickSaveEnvelopeVersion = 2;
+constexpr uint8 SeveralVoicesOneCommandQuickSaveMagic[] = {
+    'E', 'C', 'H', 'O', 'M', '1', '4', 'Q'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -751,6 +756,217 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     return true;
 }
 
+[[nodiscard]] bool BuildSeveralVoicesOneCommandQuickSaveEnvelope(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& SnapshotBytes,
+    bool bCrisisHoldStarted,
+    bool bCrisisContractFailed,
+    TArray<uint8>& OutEnvelope,
+    FString& OutError)
+{
+    OutEnvelope.Reset();
+    OutError.Reset();
+    if ((CampaignProgress.Decisions.Num() != 13 &&
+         CampaignProgress.Decisions.Num() != 14) ||
+        SnapshotBytes.IsEmpty() ||
+        !UsesCurrentSnapshotSchema(SnapshotBytes) ||
+        (bCrisisContractFailed && !bCrisisHoldStarted))
+    {
+        OutError = TEXT(
+            "Mission 14 checkpoints require an active thirteen-record ledger and a native schema-22 snapshot.");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteLedger;
+    PrerequisiteLedger.Decisions.Reserve(13);
+    for (int32 Index = 0; Index < 13; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "Mission 14 checkpoints require the canonical M01-M13 prerequisite projection.");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(CampaignProgress.Decisions[Index]);
+    }
+
+    TArray<uint8> LedgerBytes;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, LedgerBytes, OutError) ||
+        LedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("The active campaign ledger could not be encoded.");
+        }
+        return false;
+    }
+
+    const uint64 EnvelopeSize =
+        static_cast<uint64>(
+            UE_ARRAY_COUNT(SeveralVoicesOneCommandQuickSaveMagic)) +
+        3ULL + 8ULL + 4ULL + static_cast<uint64>(LedgerBytes.Num()) +
+        static_cast<uint64>(SnapshotBytes.Num());
+    if (EnvelopeSize > static_cast<uint64>(MAX_int32))
+    {
+        OutError = TEXT("The Mission 14 checkpoint envelope is too large.");
+        return false;
+    }
+
+    OutEnvelope.Reserve(static_cast<int32>(EnvelopeSize));
+    OutEnvelope.Append(
+        SeveralVoicesOneCommandQuickSaveMagic,
+        UE_ARRAY_COUNT(SeveralVoicesOneCommandQuickSaveMagic));
+    OutEnvelope.Add(SeveralVoicesOneCommandQuickSaveEnvelopeVersion);
+    OutEnvelope.Add(static_cast<uint8>(
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand));
+    OutEnvelope.Add(
+        (bCrisisHoldStarted ? 1U : 0U) |
+        (bCrisisContractFailed ? 2U : 0U));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(LedgerBytes.Num()));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(SnapshotBytes.Num()));
+    OutEnvelope.Append(LedgerBytes);
+    OutEnvelope.Append(SnapshotBytes);
+    AppendUint32LittleEndian(
+        OutEnvelope,
+        FCrc::MemCrc32(OutEnvelope.GetData(), OutEnvelope.Num()));
+    return true;
+}
+
+[[nodiscard]] bool ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& Envelope,
+    bool& OutCrisisHoldStarted,
+    bool& OutCrisisContractFailed,
+    TArray<uint8>& OutSnapshotBytes,
+    FString& OutError)
+{
+    OutCrisisHoldStarted = false;
+    OutCrisisContractFailed = false;
+    OutSnapshotBytes.Reset();
+    OutError.Reset();
+    constexpr int32 FixedHeaderSize =
+        UE_ARRAY_COUNT(SeveralVoicesOneCommandQuickSaveMagic) + 3 + 8;
+    constexpr int32 EnvelopeChecksumSize = 4;
+    if (Envelope.Num() < FixedHeaderSize + EnvelopeChecksumSize ||
+        FMemory::Memcmp(
+            Envelope.GetData(),
+            SeveralVoicesOneCommandQuickSaveMagic,
+            UE_ARRAY_COUNT(SeveralVoicesOneCommandQuickSaveMagic)) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint is missing the Mission 14 operation-and-ledger envelope");
+        return false;
+    }
+
+    int32 ChecksumOffset = Envelope.Num() - EnvelopeChecksumSize;
+    uint32 StoredEnvelopeChecksum = 0;
+    if (!ReadUint32LittleEndian(
+            Envelope,
+            ChecksumOffset,
+            StoredEnvelopeChecksum) ||
+        StoredEnvelopeChecksum != FCrc::MemCrc32(
+            Envelope.GetData(),
+            Envelope.Num() - EnvelopeChecksumSize))
+    {
+        OutError = TEXT("checkpoint Mission 14 envelope checksum is invalid");
+        return false;
+    }
+
+    int32 Offset = UE_ARRAY_COUNT(SeveralVoicesOneCommandQuickSaveMagic);
+    if (Envelope[Offset++] != SeveralVoicesOneCommandQuickSaveEnvelopeVersion)
+    {
+        OutError = TEXT(
+            "checkpoint uses an unsupported Mission 14 envelope version");
+        return false;
+    }
+    if (Envelope[Offset++] != static_cast<uint8>(
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand))
+    {
+        OutError = TEXT(
+            "checkpoint operation binding is not Several Voices, One Command");
+        return false;
+    }
+    const uint8 CrisisFlags = Envelope[Offset++];
+    if ((CrisisFlags & ~3U) != 0U ||
+        ((CrisisFlags & 2U) != 0U && (CrisisFlags & 1U) == 0U))
+    {
+        OutError = TEXT(
+            "checkpoint Mission 14 crisis-contract flags are invalid");
+        return false;
+    }
+
+    uint32 LedgerLength = 0;
+    uint32 SnapshotLength = 0;
+    if (!ReadUint32LittleEndian(Envelope, Offset, LedgerLength) ||
+        !ReadUint32LittleEndian(Envelope, Offset, SnapshotLength) ||
+        LedgerLength == 0 || SnapshotLength == 0 ||
+        static_cast<uint64>(Offset) + static_cast<uint64>(LedgerLength) +
+                static_cast<uint64>(SnapshotLength) +
+                static_cast<uint64>(EnvelopeChecksumSize) !=
+            static_cast<uint64>(Envelope.Num()))
+    {
+        OutError = TEXT("checkpoint Mission 14 envelope lengths are invalid");
+        return false;
+    }
+
+    if (CampaignProgress.Decisions.Num() != 13 &&
+        CampaignProgress.Decisions.Num() != 14)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding requires thirteen prerequisites and an optional Mission 14 receipt");
+        return false;
+    }
+    FEchoesCampaignProgress PrerequisiteLedger;
+    PrerequisiteLedger.Decisions.Reserve(13);
+    for (int32 Index = 0; Index < 13; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "checkpoint ledger binding does not contain the canonical M01-M13 projection");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(CampaignProgress.Decisions[Index]);
+    }
+
+    TArray<uint8> ActiveLedgerBytes;
+    FString LedgerError;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, ActiveLedgerBytes, LedgerError) ||
+        ActiveLedgerBytes.Num() != static_cast<int32>(LedgerLength) ||
+        FMemory::Memcmp(
+            Envelope.GetData() + Offset,
+            ActiveLedgerBytes.GetData(),
+            LedgerLength) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding does not match the active thirteen-record campaign");
+        return false;
+    }
+
+    Offset += static_cast<int32>(LedgerLength);
+    OutSnapshotBytes.Append(
+        Envelope.GetData() + Offset,
+        static_cast<int32>(SnapshotLength));
+    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    {
+        OutSnapshotBytes.Reset();
+        OutError = TEXT(
+            "Mission 14 checkpoints require native snapshot schema 22 Hollow Choir state");
+        return false;
+    }
+    OutCrisisHoldStarted = (CrisisFlags & 1U) != 0U;
+    OutCrisisContractFailed = (CrisisFlags & 2U) != 0U;
+    return true;
+}
+
 [[nodiscard]] const TCHAR* FactionStableName(Faction Value)
 {
     switch (Value)
@@ -1062,6 +1278,12 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     AssemblyMeridianPublicRecordInterfaceId = 0;
     AssemblyKharuunPublicRecordInterfaceId = 0;
     AssemblyCrownfallIndexInterfaceId = 0;
+    SeveralVoicesPossibleVoiceId = 0;
+    SeveralVoicesManifestVoiceId = 0;
+    SeveralVoicesNemeId = 0;
+    SeveralVoicesResearchLoomId = 0;
+    bSeveralVoicesCrisisHoldStarted = false;
+    bSeveralVoicesCrisisContractFailed = false;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignBackupProgress = FEchoesCampaignProgress{};
     bCampaignBackupAvailable = false;
@@ -1178,6 +1400,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("THE FUTURE THAT WON");
         case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
             return TEXT("ASSEMBLY OF THE MISSING");
+        case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+            return TEXT("SEVERAL VOICES, ONE COMMAND");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -1311,6 +1535,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             TEXT("[ECHOES_ASSEMBLY_OF_THE_MISSING_LOCKED] reason=exact ordered twelve-record campaign required"));
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        !IsSeveralVoicesOneCommandUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_LOCKED] reason=exact ordered thirteen-record campaign required"));
+        return false;
+    }
 
 #if UE_BUILD_SHIPPING
     const bool bUseResearchPresentation = false;
@@ -1432,6 +1666,21 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             *RulesError);
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        Config.rules.choirCoherence.upkeepIntervalTicks <=
+            SeveralVoicesCrisisHoldTicks)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SEVERAL_VOICES_TIMER_CONTRACT_REJECTED] upkeepTicks=%llu requiredGreaterThan=%llu"),
+            static_cast<unsigned long long>(
+                Config.rules.choirCoherence.upkeepIntervalTicks),
+            static_cast<unsigned long long>(
+                SeveralVoicesCrisisHoldTicks));
+        return false;
+    }
     UE_LOG(
         LogEchoes,
         Display,
@@ -1449,7 +1698,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger ||
         SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     const int32 BaseGlassScarBlockedTiles = bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : ConfigureGlassScar(*Simulation);
@@ -1524,6 +1775,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignAssemblyOfTheMissing
             ? Faction::KharuunAssemblies
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+            ? Faction::HollowChoir
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         echoes::presentation::SkirmishOpponent(ScenarioLocalFaction);
@@ -1563,6 +1817,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                         EEchoesOperationMode::CampaignFutureThatWon ||
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                    || SelectedOperation ==
+                        EEchoesOperationMode::CampaignSeveralVoicesOneCommand
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -1639,6 +1895,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     AssemblyMeridianPublicRecordInterfaceId = 0;
     AssemblyKharuunPublicRecordInterfaceId = 0;
     AssemblyCrownfallIndexInterfaceId = 0;
+    SeveralVoicesPossibleVoiceId = 0;
+    SeveralVoicesManifestVoiceId = 0;
+    SeveralVoicesNemeId = 0;
+    SeveralVoicesResearchLoomId = 0;
+    bSeveralVoicesCrisisHoldStarted = false;
+    bSeveralVoicesCrisisContractFailed = false;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -1724,6 +1986,31 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             else if (AssemblyVerifierId == 0)
             {
                 AssemblyVerifierId = Spawned;
+            }
+        }
+        if (SelectedOperation ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+            Owner == LocalPlayerId)
+        {
+            if (Type == EntityType::Soldier &&
+                SeveralVoicesPossibleVoiceId == 0)
+            {
+                SeveralVoicesPossibleVoiceId = Spawned;
+            }
+            else if (Type == EntityType::HeavyUnit &&
+                     SeveralVoicesManifestVoiceId == 0)
+            {
+                SeveralVoicesManifestVoiceId = Spawned;
+            }
+            else if (Type == EntityType::ScoutUnit &&
+                     SeveralVoicesNemeId == 0)
+            {
+                SeveralVoicesNemeId = Spawned;
+            }
+            else if (Type == EntityType::Barracks &&
+                     SeveralVoicesResearchLoomId == 0)
+            {
+                SeveralVoicesResearchLoomId = Spawned;
             }
         }
         return Spawned;
@@ -2317,6 +2604,36 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const FEchoesSeveralVoicesOneCommandPlan Plan =
+                GetSeveralVoicesOneCommandPlan();
+            bSpawnSucceeded &= SeveralVoicesPossibleVoiceId != 0 &&
+                SeveralVoicesManifestVoiceId != 0 &&
+                SeveralVoicesNemeId != 0 &&
+                SeveralVoicesResearchLoomId != 0;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_SPAWN] planKey=%u possibleVoice=%u manifestVoice=%u neme=%u researchLoom=%u possibleSite=(%d,%d) manifestSite=(%d,%d) nemeSite=(%d,%d) anchorSite=(%d,%d) protocol=%u localAuthority=HollowChoir incompatibleStates=true success=%s"),
+                Plan.StablePlanKey,
+                SeveralVoicesPossibleVoiceId,
+                SeveralVoicesManifestVoiceId,
+                SeveralVoicesNemeId,
+                SeveralVoicesResearchLoomId,
+                Plan.PossibleVoiceSite.x.FloorToInt(),
+                Plan.PossibleVoiceSite.y.FloorToInt(),
+                Plan.ManifestVoiceSite.x.FloorToInt(),
+                Plan.ManifestVoiceSite.y.FloorToInt(),
+                Plan.NemeCommandSite.x.FloorToInt(),
+                Plan.NemeCommandSite.y.FloorToInt(),
+                Plan.CrisisAnchorSite.x.FloorToInt(),
+                Plan.CrisisAnchorSite.y.FloorToInt(),
+                static_cast<uint8>(Plan.RecordedProtocol),
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
+        }
+
         if (bUseResearchInterruptionPresentation)
         {
             constexpr int32 InterruptionAttackerCount = 32;
@@ -2358,10 +2675,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         if (bLumeReach)
         {
             if (SelectedOperation ==
-                EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+                EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
             {
-                // Mission 13 consumes the recorded protocol as provenance; it
-                // intentionally exposes no selectable or claim-bearing Well.
+                // Missions 13 and 14 retain the recorded protocol as
+                // provenance; neither exposes a selectable Well.
             }
             else if (SelectedOperation ==
                 EEchoesOperationMode::CampaignFutureThatWon)
@@ -2941,6 +3260,24 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        (SeveralVoicesPossibleVoiceId == 0 ||
+         SeveralVoicesManifestVoiceId == 0 ||
+         SeveralVoicesNemeId == 0 ||
+         SeveralVoicesResearchLoomId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_INIT_FAILED] reason=protected Choir entities unavailable possibleVoice=%u manifestVoice=%u neme=%u researchLoom=%u"),
+            SeveralVoicesPossibleVoiceId,
+            SeveralVoicesManifestVoiceId,
+            SeveralVoicesNemeId,
+            SeveralVoicesResearchLoomId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -2960,6 +3297,27 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     if (bLumeReach)
     {
         if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const FEchoesSeveralVoicesOneCommandPlan Plan =
+                GetSeveralVoicesOneCommandPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_CHOIR_CRISIS_TERRAIN_READY] blocked=%d publicGates=3 possible=(%d,%d) manifest=(%d,%d) neme=(%d,%d) anchor=(%d,%d) inheritedBranch=%u planKey=%u"),
+                GlassScarBlockedTiles,
+                Plan.PossibleVoiceSite.x.FloorToInt(),
+                Plan.PossibleVoiceSite.y.FloorToInt(),
+                Plan.ManifestVoiceSite.x.FloorToInt(),
+                Plan.ManifestVoiceSite.y.FloorToInt(),
+                Plan.NemeCommandSite.x.FloorToInt(),
+                Plan.NemeCommandSite.y.FloorToInt(),
+                Plan.CrisisAnchorSite.x.FloorToInt(),
+                Plan.CrisisAnchorSite.y.FloorToInt(),
+                static_cast<uint8>(SevenAccountsBranch),
+                Plan.StablePlanKey);
+        }
+        else if (SelectedOperation ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
         {
             const FEchoesAssemblyOfTheMissingPlan Plan =
@@ -3186,7 +3544,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_SHAPE_BESIDE_US_READY] branch=%s talar=%u witnessA=%u witnessB=%u firstEcho=(%d,%d) relay=(%d,%d) stateSites=(%d,%d):(%d,%d) convergence=(%d,%d) reciprocalContactOnly=true hollowChoirFactionImplemented=false hiddenAttribution=false inheritedRecords=7 terrainDelta=%d blocked=%d"),
+                TEXT("[ECHOES_SHAPE_BESIDE_US_READY] branch=%s talar=%u witnessA=%u witnessB=%u firstEcho=(%d,%d) relay=(%d,%d) stateSites=(%d,%d):(%d,%d) convergence=(%d,%d) reciprocalContactOnly=true hollowChoirCommandGranted=false hiddenAttribution=false inheritedRecords=7 terrainDelta=%d blocked=%d"),
                 Plan.StableName,
                 ShapeBesideUsTalarId,
                 FirstStateWitnessId,
@@ -3233,7 +3591,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_CHOIR_AT_LUME_REACH_READY] approach=%s priorBranch=%u deferredDistrict=%u oruun=%u waystone=%u well=%u contact=(%d,%d) liability=(%d,%d) anchors=(%d,%d):(%d,%d) wellSite=(%d,%d) localFaction=KharuunAssemblies maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact opposition=meridianMechanicalQuarantineProxies maraInvolvementUnmodeled=true compactWideActionUnproven=true mixedFactionCommand=false hiddenAttribution=false inheritedRecords=9 blocked=%d"),
+                TEXT("[ECHOES_CHOIR_AT_LUME_REACH_READY] approach=%s priorBranch=%u deferredDistrict=%u oruun=%u waystone=%u well=%u contact=(%d,%d) liability=(%d,%d) anchors=(%d,%d):(%d,%d) wellSite=(%d,%d) localFaction=KharuunAssemblies maraPresence=liaisonOnly choirPresence=publicNonCommandableInMission10 opposition=meridianMechanicalQuarantineProxies maraInvolvementUnmodeled=true compactWideActionUnproven=true mixedFactionCommand=false hiddenAttribution=false inheritedRecords=9 blocked=%d"),
                 Plan.StableName,
                 static_cast<uint8>(Plan.PriorChoice),
                 static_cast<uint8>(Plan.DeferredDistrict),
@@ -3260,7 +3618,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_NO_NEUTRAL_LEDGER_READY] planKey=%u founding=%u route=%s districtA=%s districtB=%s deferred=%s lumeProtocol=%u protocol=%s oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u well=%u inheritedRecords=10 localFaction=KharuunAssemblies meridianPresence=neutralPoweredPublicInterfacesOnly choirPresence=nonPlayablePublicContact mixedFactionCommand=false hiddenTrust=false survivorVarianceUnmodeled=true proxyAttribution=false blocked=%d"),
+                TEXT("[ECHOES_NO_NEUTRAL_LEDGER_READY] planKey=%u founding=%u route=%s districtA=%s districtB=%s deferred=%s lumeProtocol=%u protocol=%s oruun=%u waystone=%u witness=%u districtInterfaces=%u:%u evidenceInterfaces=%u:%u well=%u inheritedRecords=10 localFaction=KharuunAssemblies meridianPresence=neutralPoweredPublicInterfacesOnly choirPresence=publicNonCommandableInMission11 mixedFactionCommand=false hiddenTrust=false survivorVarianceUnmodeled=true proxyAttribution=false blocked=%d"),
                 Plan.StablePlanKey,
                 static_cast<uint8>(Plan.FoundingDoctrine),
                 Plan.RouteStableName,
@@ -3337,6 +3695,36 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 AssemblyMeridianPublicRecordInterfaceId,
                 AssemblyKharuunPublicRecordInterfaceId,
                 AssemblyCrownfallIndexInterfaceId,
+                GlassScarBlockedTiles);
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const FEchoesSeveralVoicesOneCommandPlan Plan =
+                GetSeveralVoicesOneCommandPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_READY] planKey=%u founding=%u route=%s recordedProtocol=%u protocol=%s possibleVoice=%u manifestVoice=%u neme=%u researchLoom=%u possibleSite=(%d,%d) manifestSite=(%d,%d) nemeSite=(%d,%d) anchorSite=(%d,%d) identityResolveTicks=160 crisisHoldTicks=%llu inheritedRecords=13 localFaction=HollowChoir localAuthority=HollowChoir incompatibleStates=true visibleTimers=true finalChoirFateDecided=false campaignBalanceUnproven=true blocked=%d"),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                Plan.RouteStableName,
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Plan.ProtocolStableName,
+                SeveralVoicesPossibleVoiceId,
+                SeveralVoicesManifestVoiceId,
+                SeveralVoicesNemeId,
+                SeveralVoicesResearchLoomId,
+                Plan.PossibleVoiceSite.x.FloorToInt(),
+                Plan.PossibleVoiceSite.y.FloorToInt(),
+                Plan.ManifestVoiceSite.x.FloorToInt(),
+                Plan.ManifestVoiceSite.y.FloorToInt(),
+                Plan.NemeCommandSite.x.FloorToInt(),
+                Plan.NemeCommandSite.y.FloorToInt(),
+                Plan.CrisisAnchorSite.x.FloorToInt(),
+                Plan.CrisisAnchorSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    SeveralVoicesCrisisHoldTicks),
                 GlassScarBlockedTiles);
         }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
@@ -3496,6 +3884,12 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     AssemblyMeridianPublicRecordInterfaceId = 0;
     AssemblyKharuunPublicRecordInterfaceId = 0;
     AssemblyCrownfallIndexInterfaceId = 0;
+    SeveralVoicesPossibleVoiceId = 0;
+    SeveralVoicesManifestVoiceId = 0;
+    SeveralVoicesNemeId = 0;
+    SeveralVoicesResearchLoomId = 0;
+    bSeveralVoicesCrisisHoldStarted = false;
+    bSeveralVoicesCrisisContractFailed = false;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -3617,6 +4011,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies)
     {
         OutFeedback = TEXT("[FACTION_ASSEMBLY_OF_THE_MISSING_LOCKED] Oruun and the independent verifier deploy under Kharuun authority; all three public record interfaces remain neutral and non-commandable.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        NewFaction != Faction::HollowChoir)
+    {
+        OutFeedback = TEXT("[FACTION_SEVERAL_VOICES_ONE_COMMAND_LOCKED] Neme and the protected voices deploy under Hollow Choir authority.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -3760,6 +4161,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Future That Won with the exact twelve-record ledger before Assembly of the Missing.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        !IsSeveralVoicesOneCommandUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Assembly of the Missing with the exact thirteen-record ledger before Several Voices, One Command.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -3836,6 +4244,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::KharuunAssemblies;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        LocalFaction = Faction::HollowChoir;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -3880,6 +4293,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignAssemblyOfTheMissing
                 ? TEXT(" — Oruun and the independent verifier are locked under Kharuun authority; the Meridian, Kharuun, and Crownfall public record interfaces remain neutral and non-commandable.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+                ? TEXT(" — Neme and the local Hollow Choir are commandable; incompatible identity states must resolve on visible timers.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -3920,6 +4336,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignAssemblyOfTheMissing
                 ? TEXT("AssemblyOfTheMissing")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+                ? TEXT("SeveralVoicesOneCommand")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -4153,7 +4572,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
         SelectedOperation ==
             EEchoesOperationMode::CampaignFutureThatWon ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -4192,7 +4613,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 : SelectedOperation ==
                         EEchoesOperationMode::CampaignFutureThatWon
                     ? TEXT("EchoesQuickSaveTheFutureThatWon")
-                    : TEXT("EchoesQuickSaveAssemblyOfTheMissing");
+                : SelectedOperation ==
+                        EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                    ? TEXT("EchoesQuickSaveAssemblyOfTheMissing")
+                    : TEXT("EchoesQuickSaveSeveralVoicesOneCommand");
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
@@ -4225,7 +4649,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             : SelectedOperation ==
                     EEchoesOperationMode::CampaignFutureThatWon
                 ? TEXT("EchoesQuickSaveTheFutureThatWon-InvalidLedger.bin")
-                : TEXT("EchoesQuickSaveAssemblyOfTheMissing-InvalidLedger.bin"));
+            : SelectedOperation ==
+                    EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                ? TEXT("EchoesQuickSaveAssemblyOfTheMissing-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveSeveralVoicesOneCommand-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -5136,6 +5563,76 @@ UEchoesSimulationSubsystem::CommitAssemblyOfTheMissingCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitSeveralVoicesOneCommandCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedProtocol,
+    FString& OutFeedback)
+{
+    const FEchoesSeveralVoicesOneCommandPlan Plan =
+        GetSeveralVoicesOneCommandPlan();
+    OutRecordedProtocol = Plan.RecordedProtocol;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+        GetSeveralVoicesOneCommandPhase() !=
+            EEchoesSeveralVoicesOneCommandPhase::Complete ||
+        !IsSeveralVoicesOneCommandUnlocked() ||
+        Plan.RecordedProtocol == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative Several Voices, One Command operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::SeveralVoicesOneCommand;
+    Record.WellChoice = Plan.RecordedProtocol;
+    Record.AvailableWellChoices = WellChoiceMask(Plan.RecordedProtocol);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::PriorThirteenRecordLedgerConsumed) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::ChoirCommandAuthorityEstablished) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::HeldAlternativesResearched) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::IncompatibleVoicesResolved) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::SharedResolutionResearched) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::PhaseAnchorRaised) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::CrisisWindowHeld) |
+        static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::LocalCoreSurvived);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedProtocol = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -5313,6 +5810,24 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         }
     }
     else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        FString EnvelopeError;
+        if (!BuildSeveralVoicesOneCommandQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                bSeveralVoicesCrisisHoldStarted,
+                bSeveralVoicesCrisisContractFailed,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation ==
              EEchoesOperationMode::CampaignFutureThatWon)
     {
         FString EnvelopeError;
@@ -5383,6 +5898,8 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         FFileHelper::LoadFileToArray(VerificationBytes, *TemporaryPath);
     TArray<uint8> VerificationSnapshotBytes;
     const TArray<uint8>* VerificationPayload = &VerificationBytes;
+    bool bVerificationCrisisHoldStarted = false;
+    bool bVerificationCrisisContractFailed = false;
     FString EnvelopeError;
     bool bEnvelopeValid = true;
     if (bVerificationRead &&
@@ -5425,6 +5942,19 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
             CampaignProgress,
             VerificationBytes,
+            VerificationSnapshotBytes,
+            EnvelopeError);
+        VerificationPayload = &VerificationSnapshotBytes;
+    }
+    else if (bVerificationRead &&
+             SelectedOperation ==
+                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+            CampaignProgress,
+            VerificationBytes,
+            bVerificationCrisisHoldStarted,
+            bVerificationCrisisContractFailed,
             VerificationSnapshotBytes,
             EnvelopeError);
         VerificationPayload = &VerificationSnapshotBytes;
@@ -5490,7 +6020,9 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             SelectedOperation ==
                 EEchoesOperationMode::CampaignFutureThatWon ||
             SelectedOperation ==
-                EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+            SelectedOperation ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             ? TEXT("true")
             : TEXT("false"));
     return true;
@@ -5508,9 +6040,14 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
+    bool bLoadedCrisisHoldStarted = false;
+    bool bLoadedCrisisContractFailed = false;
     FString SelectedPath;
     FString PrimaryFailure;
-    const auto TryLoad = [this, &LoadedSimulation](
+    const auto TryLoad = [this,
+                          &LoadedSimulation,
+                          &bLoadedCrisisHoldStarted,
+                          &bLoadedCrisisContractFailed](
                              const FString& CandidatePath,
                              FString& OutFailure)
     {
@@ -5522,6 +6059,8 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         }
         TArray<uint8> SnapshotBytes;
         const TArray<uint8>* SnapshotPayload = &Bytes;
+        bool bCandidateCrisisHoldStarted = false;
+        bool bCandidateCrisisContractFailed = false;
         if (SelectedOperation ==
             EEchoesOperationMode::CampaignChoirAtLumeReach)
         {
@@ -5541,6 +6080,21 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             if (!ExtractAssemblyOfTheMissingQuickSaveSnapshot(
                     CampaignProgress,
                     Bytes,
+                    SnapshotBytes,
+                    OutFailure))
+            {
+                return false;
+            }
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            if (!ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+                    CampaignProgress,
+                    Bytes,
+                    bCandidateCrisisHoldStarted,
+                    bCandidateCrisisContractFailed,
                     SnapshotBytes,
                     OutFailure))
             {
@@ -6031,8 +6585,52 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 return false;
             }
         }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const echoes::sim::Entity* PossibleVoice =
+                Candidate->FindEntity(SeveralVoicesPossibleVoiceId);
+            const echoes::sim::Entity* ManifestVoice =
+                Candidate->FindEntity(SeveralVoicesManifestVoiceId);
+            const echoes::sim::Entity* Neme =
+                Candidate->FindEntity(SeveralVoicesNemeId);
+            const echoes::sim::Entity* ResearchLoom =
+                Candidate->FindEntity(SeveralVoicesResearchLoomId);
+            const auto IsChoirEntity = [](const echoes::sim::Entity* Entity,
+                                          EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::HollowChoir &&
+                       Entity->type == Type && Entity->hitPoints > 0;
+            };
+            TSet<EntityId> CompositionIds;
+            CompositionIds.Reserve(4);
+            CompositionIds.Add(SeveralVoicesPossibleVoiceId);
+            CompositionIds.Add(SeveralVoicesManifestVoiceId);
+            CompositionIds.Add(SeveralVoicesNemeId);
+            CompositionIds.Add(SeveralVoicesResearchLoomId);
+            if (!IsChoirEntity(PossibleVoice, EntityType::Soldier) ||
+                !IsChoirEntity(ManifestVoice, EntityType::HeavyUnit) ||
+                !IsChoirEntity(Neme, EntityType::ScoutUnit) ||
+                !IsChoirEntity(ResearchLoom, EntityType::Barracks) ||
+                PossibleVoice->choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::NotChoir ||
+                ManifestVoice->choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::NotChoir ||
+                Neme->choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::NotChoir ||
+                CompositionIds.Num() != 4)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active Several Voices, One Command Choir composition");
+                return false;
+            }
+        }
         LoadedSimulation =
             MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
+        bLoadedCrisisHoldStarted = bCandidateCrisisHoldStarted;
+        bLoadedCrisisContractFailed = bCandidateCrisisContractFailed;
         return true;
     };
 
@@ -6087,6 +6685,14 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     bSimulationPaused = false;
     bMatchResultReported =
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing;
+    bSeveralVoicesCrisisHoldStarted =
+        SelectedOperation ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        bLoadedCrisisHoldStarted;
+    bSeveralVoicesCrisisContractFailed =
+        SelectedOperation ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        bLoadedCrisisContractFailed;
     const bool bUsedBackup = SelectedPath == BackupPath;
     OutFeedback = FString::Printf(
         TEXT("QUICK LOAD: tick %llu restored%s."),
@@ -6466,6 +7072,69 @@ bool UEchoesSimulationSubsystem::IsAssemblyOfTheMissingUnlocked() const
         Plan);
 }
 
+bool UEchoesSimulationSubsystem::IsSeveralVoicesOneCommandUnlocked() const
+{
+    if (!bCampaignProgressAvailable ||
+        CampaignProgress.Decisions.Num() < 13 ||
+        CampaignProgress.Decisions.Num() > 14)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < 13; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            return false;
+        }
+    }
+
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Lume =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    const FEchoesCampaignDecisionRecord* Alliance =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::NoNeutralLedger);
+    const FEchoesCampaignDecisionRecord* Restoration =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::TheFutureThatWon);
+    const FEchoesCampaignDecisionRecord* Assembly =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::AssemblyOfTheMissing);
+    if (Prologue == nullptr || Reserve == nullptr || Lume == nullptr ||
+        Alliance == nullptr || Restoration == nullptr ||
+        Assembly == nullptr || Alliance->WellChoice != Lume->WellChoice ||
+        Restoration->WellChoice != Lume->WellChoice ||
+        Assembly->WellChoice != Lume->WellChoice ||
+        Assembly->SimulationSnapshotVersion < 21 ||
+        Assembly->SimulationSnapshotVersion > echoes::sim::kSnapshotVersion)
+    {
+        return false;
+    }
+    for (int32 Index = 1; Index <= 8; ++Index)
+    {
+        if (CampaignProgress.Decisions[Index].WellChoice !=
+            Prologue->WellChoice)
+        {
+            return false;
+        }
+    }
+
+    FEchoesSeveralVoicesOneCommandPlan Plan;
+    return FEchoesSeveralVoicesOneCommandMissionModel::TryPlanForLedger(
+        Prologue->WellChoice,
+        Reserve->VerifiedFacts,
+        Assembly->WellChoice,
+        Plan);
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -6643,6 +7312,31 @@ UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPlan() const
             Prologue->WellChoice,
             Reserve->VerifiedFacts,
             Restoration->WellChoice,
+            Plan))
+    {
+        return {};
+    }
+    return Plan;
+}
+
+FEchoesSeveralVoicesOneCommandPlan
+UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPlan() const
+{
+    FEchoesSeveralVoicesOneCommandPlan Plan;
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Assembly =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::AssemblyOfTheMissing);
+    if (Prologue == nullptr || Reserve == nullptr || Assembly == nullptr ||
+        !FEchoesSeveralVoicesOneCommandMissionModel::TryPlanForLedger(
+            Prologue->WellChoice,
+            Reserve->VerifiedFacts,
+            Assembly->WellChoice,
             Plan))
     {
         return {};
@@ -7661,6 +8355,131 @@ UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPhase() const
     return FEchoesAssemblyOfTheMissingMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesSeveralVoicesOneCommandPhase
+UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
+{
+    FEchoesSeveralVoicesOneCommandMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        bScenarioReady && Simulation.IsValid() &&
+        IsSeveralVoicesOneCommandUnlocked();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesSeveralVoicesOneCommandPhase::Inactive;
+    }
+
+    const FEchoesSeveralVoicesOneCommandPlan Plan =
+        GetSeveralVoicesOneCommandPlan();
+    const echoes::sim::Entity* PossibleVoice =
+        Simulation->FindEntity(SeveralVoicesPossibleVoiceId);
+    const echoes::sim::Entity* ManifestVoice =
+        Simulation->FindEntity(SeveralVoicesManifestVoiceId);
+    const echoes::sim::Entity* Neme =
+        Simulation->FindEntity(SeveralVoicesNemeId);
+    const echoes::sim::Entity* ResearchLoom =
+        Simulation->FindEntity(SeveralVoicesResearchLoomId);
+    const auto IsProtectedChoirEntity = [](
+        const echoes::sim::Entity* Entity,
+        EntityType Type)
+    {
+        return Entity != nullptr && Entity->owner == LocalPlayerId &&
+               Entity->faction == Faction::HollowChoir &&
+               Entity->type == Type && Entity->hitPoints > 0 &&
+               Entity->completed;
+    };
+
+    Facts.bPossibleVoiceIntact =
+        IsProtectedChoirEntity(PossibleVoice, EntityType::Soldier) &&
+        PossibleVoice->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir;
+    Facts.bManifestVoiceIntact =
+        IsProtectedChoirEntity(ManifestVoice, EntityType::HeavyUnit) &&
+        ManifestVoice->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir;
+    Facts.bNemeIntact =
+        IsProtectedChoirEntity(Neme, EntityType::ScoutUnit) &&
+        Neme->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir;
+    Facts.bResearchLoomIntact =
+        IsProtectedChoirEntity(ResearchLoom, EntityType::Barracks);
+
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId &&
+            Entity.faction == Faction::HollowChoir &&
+            Entity.type == EntityType::CommandCore &&
+            Entity.hitPoints > 0 && Entity.completed)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+        if (Entity.owner == LocalPlayerId &&
+            Entity.faction == Faction::HollowChoir &&
+            Entity.type == EntityType::UtilityStructure &&
+            Entity.hitPoints > 0 && Entity.completed &&
+            IsWithinTiles(
+                Entity.position,
+                Plan.CrisisAnchorSite,
+                SeveralVoicesOneCommandSiteRadiusTiles))
+        {
+            Facts.bPhaseAnchorComplete = true;
+            const uint64 UpkeepInterval =
+                Simulation->Config()
+                    .rules.choirCoherence.upkeepIntervalTicks;
+            if (UpkeepInterval > 0 &&
+                Entity.choirCoherenceNextChargeTick >= UpkeepInterval)
+            {
+                const uint64 CompletionTick =
+                    Entity.choirCoherenceNextChargeTick - UpkeepInterval;
+                Facts.bCrisisWindowHeld =
+                    Simulation->CurrentTick() >= CompletionTick &&
+                    Simulation->CurrentTick() - CompletionTick >=
+                        SeveralVoicesCrisisHoldTicks;
+            }
+        }
+    }
+
+    const echoes::sim::PlayerState* Player =
+        Simulation->FindPlayer(LocalPlayerId);
+    Facts.bHeldAlternativesResearched =
+        Player != nullptr && Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirHeldAlternatives);
+    Facts.bSharedResolutionResearched =
+        Player != nullptr && Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirSharedResolution);
+    Facts.bPossibleVoiceResolved =
+        Facts.bPossibleVoiceIntact &&
+        PossibleVoice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Possible;
+    Facts.bPossibleVoiceAtSite =
+        Facts.bPossibleVoiceResolved &&
+        IsWithinTiles(
+            PossibleVoice->position,
+            Plan.PossibleVoiceSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    Facts.bManifestVoiceResolved =
+        Facts.bManifestVoiceIntact &&
+        ManifestVoice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Manifest;
+    Facts.bManifestVoiceAtSite =
+        Facts.bManifestVoiceResolved &&
+        IsWithinTiles(
+            ManifestVoice->position,
+            Plan.ManifestVoiceSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    Facts.bNemeAtCommandSite =
+        Facts.bNemeIntact &&
+        IsWithinTiles(
+            Neme->position,
+            Plan.NemeCommandSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    Facts.bCrisisContractFailed =
+        bSeveralVoicesCrisisContractFailed;
+    return FEchoesSeveralVoicesOneCommandMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -7696,6 +8515,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.FutureThatWonPhase = GetFutureThatWonPhase();
     Snapshot.AssemblyOfTheMissingPhase =
         GetAssemblyOfTheMissingPhase();
+    Snapshot.SeveralVoicesOneCommandPhase =
+        GetSeveralVoicesOneCommandPhase();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -7753,6 +8574,13 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         AssemblyKharuunPublicRecordInterfaceId;
     Snapshot.AssemblyCrownfallIndexInterfaceId =
         AssemblyCrownfallIndexInterfaceId;
+    Snapshot.SeveralVoicesPossibleVoiceId =
+        SeveralVoicesPossibleVoiceId;
+    Snapshot.SeveralVoicesManifestVoiceId =
+        SeveralVoicesManifestVoiceId;
+    Snapshot.SeveralVoicesNemeId = SeveralVoicesNemeId;
+    Snapshot.SeveralVoicesResearchLoomId =
+        SeveralVoicesResearchLoomId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
@@ -7775,6 +8603,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetFutureThatWonPlan();
     const FEchoesAssemblyOfTheMissingPlan AssemblyPlan =
         GetAssemblyOfTheMissingPlan();
+    const FEchoesSeveralVoicesOneCommandPlan SeveralVoicesPlan =
+        GetSeveralVoicesOneCommandPlan();
     const bool bFirstNoNeutralPublicDistrictAvailable =
         IsPublicInterface(
             Simulation->FindEntity(NoNeutralFirstDistrictInterfaceId),
@@ -7886,6 +8716,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.AssemblySecondDistrict =
         AssemblyPlan.SecondContributingDistrict;
     Snapshot.AssemblyDeferredDistrict = AssemblyPlan.DeferredDistrict;
+    Snapshot.SeveralVoicesRecordedProtocol =
+        SeveralVoicesPlan.RecordedProtocol;
     Snapshot.ChoirAtLumeReachDeferredDistrict = ChoirPlan.DeferredDistrict;
     Snapshot.ReserveAuthorityRecommendedDistrict =
         ReservePlan.RecommendedFirstDistrict;
@@ -8453,6 +9285,134 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             AssemblyOruun->position,
             AssemblyPlan.KharuunAssemblyWitnessSite,
             AssemblyOfTheMissingSiteRadiusTiles);
+
+    const echoes::sim::PlayerState* SeveralVoicesPlayer =
+        Simulation->FindPlayer(LocalPlayerId);
+    Snapshot.bSeveralVoicesHeldAlternativesResearched =
+        SeveralVoicesPlayer != nullptr &&
+        SeveralVoicesPlayer->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirHeldAlternatives);
+    Snapshot.bSeveralVoicesSharedResolutionResearched =
+        SeveralVoicesPlayer != nullptr &&
+        SeveralVoicesPlayer->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirSharedResolution);
+
+    const echoes::sim::Entity* SeveralVoicesPossible =
+        Simulation->FindEntity(SeveralVoicesPossibleVoiceId);
+    if (SeveralVoicesPossible != nullptr &&
+        SeveralVoicesPossible->owner == LocalPlayerId &&
+        SeveralVoicesPossible->faction == Faction::HollowChoir &&
+        SeveralVoicesPossible->type == EntityType::Soldier &&
+        SeveralVoicesPossible->hitPoints > 0)
+    {
+        Snapshot.SeveralVoicesPossibleState =
+            SeveralVoicesPossible->choirIdentityState;
+        Snapshot.bSeveralVoicesPossibleAtSite =
+            SeveralVoicesPossible->choirIdentityState ==
+                echoes::sim::ChoirIdentityState::Possible &&
+            IsWithinTiles(
+                SeveralVoicesPossible->position,
+                SeveralVoicesPlan.PossibleVoiceSite,
+                SeveralVoicesOneCommandSiteRadiusTiles);
+        if (SeveralVoicesPossible->choirIdentityResolveAtTick >
+            Simulation->CurrentTick())
+        {
+            Snapshot.SeveralVoicesPossibleResolveTicksRemaining =
+                SeveralVoicesPossible->choirIdentityResolveAtTick -
+                Simulation->CurrentTick();
+        }
+    }
+
+    const echoes::sim::Entity* SeveralVoicesManifest =
+        Simulation->FindEntity(SeveralVoicesManifestVoiceId);
+    if (SeveralVoicesManifest != nullptr &&
+        SeveralVoicesManifest->owner == LocalPlayerId &&
+        SeveralVoicesManifest->faction == Faction::HollowChoir &&
+        SeveralVoicesManifest->type == EntityType::HeavyUnit &&
+        SeveralVoicesManifest->hitPoints > 0)
+    {
+        Snapshot.SeveralVoicesManifestState =
+            SeveralVoicesManifest->choirIdentityState;
+        Snapshot.bSeveralVoicesManifestAtSite =
+            SeveralVoicesManifest->choirIdentityState ==
+                echoes::sim::ChoirIdentityState::Manifest &&
+            IsWithinTiles(
+                SeveralVoicesManifest->position,
+                SeveralVoicesPlan.ManifestVoiceSite,
+                SeveralVoicesOneCommandSiteRadiusTiles);
+        if (SeveralVoicesManifest->choirIdentityResolveAtTick >
+            Simulation->CurrentTick())
+        {
+            Snapshot.SeveralVoicesManifestResolveTicksRemaining =
+                SeveralVoicesManifest->choirIdentityResolveAtTick -
+                Simulation->CurrentTick();
+        }
+    }
+
+    const echoes::sim::Entity* SeveralVoicesNeme =
+        Simulation->FindEntity(SeveralVoicesNemeId);
+    Snapshot.bSeveralVoicesNemeAtCommandSite =
+        SeveralVoicesNeme != nullptr &&
+        SeveralVoicesNeme->owner == LocalPlayerId &&
+        SeveralVoicesNeme->faction == Faction::HollowChoir &&
+        SeveralVoicesNeme->type == EntityType::ScoutUnit &&
+        SeveralVoicesNeme->hitPoints > 0 &&
+        IsWithinTiles(
+            SeveralVoicesNeme->position,
+            SeveralVoicesPlan.NemeCommandSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+
+    const uint64 SeveralVoicesUpkeepInterval =
+        Simulation->Config().rules.choirCoherence.upkeepIntervalTicks;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner != LocalPlayerId ||
+            Entity.faction != Faction::HollowChoir ||
+            Entity.type != EntityType::UtilityStructure ||
+            Entity.hitPoints <= 0 || !Entity.completed ||
+            !IsWithinTiles(
+                Entity.position,
+                SeveralVoicesPlan.CrisisAnchorSite,
+                SeveralVoicesOneCommandSiteRadiusTiles))
+        {
+            continue;
+        }
+        if (Snapshot.SeveralVoicesPhaseAnchorId == 0 ||
+            Entity.id < Snapshot.SeveralVoicesPhaseAnchorId)
+        {
+            Snapshot.SeveralVoicesPhaseAnchorId = Entity.id;
+        }
+        Snapshot.bSeveralVoicesPhaseAnchorComplete = true;
+        if (SeveralVoicesUpkeepInterval == 0 ||
+            Entity.choirCoherenceNextChargeTick <
+                SeveralVoicesUpkeepInterval)
+        {
+            continue;
+        }
+        const uint64 CompletionTick =
+            Entity.choirCoherenceNextChargeTick -
+            SeveralVoicesUpkeepInterval;
+        if (MAX_uint64 - CompletionTick < SeveralVoicesCrisisHoldTicks)
+        {
+            continue;
+        }
+        const uint64 CrisisEndTick =
+            CompletionTick + SeveralVoicesCrisisHoldTicks;
+        if (Simulation->CurrentTick() >= CrisisEndTick)
+        {
+            Snapshot.bSeveralVoicesCrisisWindowHeld = true;
+        }
+        else
+        {
+            const uint64 Remaining =
+                CrisisEndTick - Simulation->CurrentTick();
+            if (Snapshot.SeveralVoicesCrisisTicksRemaining == 0 ||
+                Remaining < Snapshot.SeveralVoicesCrisisTicksRemaining)
+            {
+                Snapshot.SeveralVoicesCrisisTicksRemaining = Remaining;
+            }
+        }
+    }
     return Snapshot;
 }
 
@@ -8476,6 +9436,19 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         Simulation->Step();
         FixedTimeAccumulator -= TickInterval;
         ++TicksThisFrame;
+        AuditSeveralVoicesOneCommandContractAfterFixedStep();
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            const EEchoesSeveralVoicesOneCommandPhase Phase =
+                GetSeveralVoicesOneCommandPhase();
+            if (Phase == EEchoesSeveralVoicesOneCommandPhase::Complete ||
+                Phase == EEchoesSeveralVoicesOneCommandPhase::Failed)
+            {
+                FixedTimeAccumulator = 0.0;
+                break;
+            }
+        }
     }
 
     if (FixedTimeAccumulator >= TickInterval)
@@ -9220,6 +10193,71 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 }
             }
             else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+                     !bMatchResultReported)
+            {
+                const EEchoesSeveralVoicesOneCommandPhase VoicesPhase =
+                    GetSeveralVoicesOneCommandPhase();
+                const bool bVoicesFinished =
+                    VoicesPhase ==
+                        EEchoesSeveralVoicesOneCommandPhase::Complete ||
+                    VoicesPhase ==
+                        EEchoesSeveralVoicesOneCommandPhase::Failed;
+                if (bVoicesFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FEchoesSeveralVoicesOneCommandPlan Plan =
+                        GetSeveralVoicesOneCommandPlan();
+                    FutureWellChoice RecordedProtocol =
+                        Plan.RecordedProtocol;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        VoicesPhase ==
+                                EEchoesSeveralVoicesOneCommandPhase::Complete
+                            ? CommitSeveralVoicesOneCommandCompletion(
+                                  RecordedProtocol,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifySeveralVoicesOneCommandFinished(
+                            VoicesPhase ==
+                                EEchoesSeveralVoicesOneCommandPhase::Complete,
+                            Plan.RecordedProtocol,
+                            RecordedProtocol,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_FINISHED] result=%s phase=%s planKey=%u founding=%u protocol=%u recordedProtocol=%u campaignStatus=%u tick=%llu detail=%s inheritedRecords=13 localAuthority=HollowChoir possibleVoice=%u manifestVoice=%u neme=%u identityResolveTicks=160 crisisHoldTicks=%llu factionPerspectiveOperation=true finalChoirFateDecided=false broadCampaignBalanceUnproven=true ordinaryHumanCompletionUnproven=true"),
+                        VoicesPhase ==
+                                EEchoesSeveralVoicesOneCommandPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesSeveralVoicesOneCommandMissionModel::StableName(
+                            VoicesPhase),
+                        Plan.StablePlanKey,
+                        static_cast<uint8>(Plan.FoundingDoctrine),
+                        static_cast<uint8>(Plan.RecordedProtocol),
+                        static_cast<uint8>(RecordedProtocol),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback,
+                        SeveralVoicesPossibleVoiceId,
+                        SeveralVoicesManifestVoiceId,
+                        SeveralVoicesNemeId,
+                        static_cast<unsigned long long>(
+                            SeveralVoicesCrisisHoldTicks));
+                }
+            }
+            else if (SelectedOperation ==
                          EEchoesOperationMode::CampaignAssemblyOfTheMissing &&
                      !bMatchResultReported)
             {
@@ -9602,6 +10640,126 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
     }
 }
 
+void UEchoesSimulationSubsystem::
+AuditSeveralVoicesOneCommandContractAfterFixedStep()
+{
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+        !bScenarioReady || !Simulation.IsValid() ||
+        bSeveralVoicesCrisisContractFailed)
+    {
+        return;
+    }
+
+    const FEchoesSeveralVoicesOneCommandPlan Plan =
+        GetSeveralVoicesOneCommandPlan();
+    const echoes::sim::Entity* PossibleVoice =
+        Simulation->FindEntity(SeveralVoicesPossibleVoiceId);
+    const echoes::sim::Entity* ManifestVoice =
+        Simulation->FindEntity(SeveralVoicesManifestVoiceId);
+    const echoes::sim::Entity* Neme =
+        Simulation->FindEntity(SeveralVoicesNemeId);
+    const echoes::sim::Entity* ResearchLoom =
+        Simulation->FindEntity(SeveralVoicesResearchLoomId);
+    const auto IsProtectedChoirEntity = [](
+        const echoes::sim::Entity* Entity,
+        EntityType Type)
+    {
+        return Entity != nullptr && Entity->owner == LocalPlayerId &&
+               Entity->faction == Faction::HollowChoir &&
+               Entity->type == Type && Entity->hitPoints > 0 &&
+               Entity->completed;
+    };
+
+    bool bLocalCoreIntact = false;
+    bool bPhaseAnchorComplete = false;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner != LocalPlayerId ||
+            Entity.faction != Faction::HollowChoir ||
+            Entity.hitPoints <= 0 || !Entity.completed)
+        {
+            continue;
+        }
+        bLocalCoreIntact |= Entity.type == EntityType::CommandCore;
+        bPhaseAnchorComplete |=
+            Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                Plan.CrisisAnchorSite,
+                SeveralVoicesOneCommandSiteRadiusTiles);
+    }
+
+    if (bPhaseAnchorComplete && !bSeveralVoicesCrisisHoldStarted)
+    {
+        bSeveralVoicesCrisisHoldStarted = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_SEVERAL_VOICES_CRISIS_HOLD_STARTED] tick=%llu"),
+            static_cast<unsigned long long>(
+                Simulation->CurrentTick()));
+    }
+    if (!bSeveralVoicesCrisisHoldStarted)
+    {
+        return;
+    }
+
+    const echoes::sim::PlayerState* Player =
+        Simulation->FindPlayer(LocalPlayerId);
+    const bool bPossibleContractValid =
+        IsProtectedChoirEntity(PossibleVoice, EntityType::Soldier) &&
+        PossibleVoice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Possible &&
+        IsWithinTiles(
+            PossibleVoice->position,
+            Plan.PossibleVoiceSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    const bool bManifestContractValid =
+        IsProtectedChoirEntity(ManifestVoice, EntityType::HeavyUnit) &&
+        ManifestVoice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Manifest &&
+        IsWithinTiles(
+            ManifestVoice->position,
+            Plan.ManifestVoiceSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    const bool bNemeContractValid =
+        IsProtectedChoirEntity(Neme, EntityType::ScoutUnit) &&
+        Neme->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir &&
+        IsWithinTiles(
+            Neme->position,
+            Plan.NemeCommandSite,
+            SeveralVoicesOneCommandSiteRadiusTiles);
+    const bool bResearchContractValid =
+        IsProtectedChoirEntity(ResearchLoom, EntityType::Barracks) &&
+        Player != nullptr &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirHeldAlternatives) &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirSharedResolution);
+    if (!bLocalCoreIntact || !bPhaseAnchorComplete ||
+        !bPossibleContractValid || !bManifestContractValid ||
+        !bNemeContractValid || !bResearchContractValid ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        bSeveralVoicesCrisisContractFailed = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_SEVERAL_VOICES_CRISIS_CONTRACT_FAILED] tick=%llu core=%s anchor=%s possible=%s manifest=%s neme=%s research=%s outcome=%u irreversible=true"),
+            static_cast<unsigned long long>(
+                Simulation->CurrentTick()),
+            bLocalCoreIntact ? TEXT("true") : TEXT("false"),
+            bPhaseAnchorComplete ? TEXT("true") : TEXT("false"),
+            bPossibleContractValid ? TEXT("true") : TEXT("false"),
+            bManifestContractValid ? TEXT("true") : TEXT("false"),
+            bNemeContractValid ? TEXT("true") : TEXT("false"),
+            bResearchContractValid ? TEXT("true") : TEXT("false"),
+            static_cast<uint8>(Simulation->Outcome()));
+    }
+}
+
 bool UEchoesSimulationSubsystem::IssueCommand(
     echoes::sim::CommandType CommandType,
     uint32 ActorId,
@@ -9682,6 +10840,16 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
     if (!Simulation.IsValid() || !bScenarioReady)
     {
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        ResearchType == echoes::sim::ResearchType::ChoirSharedResolution &&
+        GetSeveralVoicesOneCommandPhase() !=
+            EEchoesSeveralVoicesOneCommandPhase::ResearchSharedResolution)
+    {
+        OutFeedback = TEXT(
+            "[CHOIR_VOICE_CONTRACT_REQUIRED] Resolve Possible and Manifest at their inherited sites and position Neme at command before researching Shared Resolution.");
         return false;
     }
     const echoes::sim::ResearchResult Result = Simulation->ValidateResearch(
@@ -10125,10 +11293,25 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
         case CommandType::ReconcileToManifest:
         case CommandType::ReconcileToPossible:
         {
-            if (SelectedOperation != EEchoesOperationMode::Skirmish)
+            if (SelectedOperation != EEchoesOperationMode::Skirmish &&
+                SelectedOperation !=
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
             {
-                OutFeedback = TEXT("[CHOIR_SKIRMISH_ONLY] Reconciliation is available only to a player-commanded Hollow Choir skirmish force.");
+                OutFeedback = TEXT("[CHOIR_COMMAND_AUTHORITY_REQUIRED] Reconciliation requires a player-commanded Hollow Choir force.");
                 return false;
+            }
+            if (SelectedOperation ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+            {
+                const echoes::sim::PlayerState* Player =
+                    Simulation->FindPlayer(LocalPlayerId);
+                if (Player == nullptr ||
+                    !Player->HasCompletedResearch(
+                        echoes::sim::ResearchType::ChoirHeldAlternatives))
+                {
+                    OutFeedback = TEXT("[CHOIR_HELD_ALTERNATIVES_REQUIRED] Research Held Alternatives before resolving a protected voice.");
+                    return false;
+                }
             }
             const echoes::sim::ChoirIdentityState StableState =
                 CommandType == CommandType::ReconcileToManifest
@@ -10412,6 +11595,29 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = FString::Printf(
                         TEXT("[ASSEMBLY_CROWNFALL_INDEX_SITE] Place a Kharuun Listening Spine within %d tiles of the neutral Crownfall public index."),
                         AssemblyOfTheMissingSiteRadiusTiles);
+                    return false;
+                }
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+                BuildType == EntityType::UtilityStructure)
+            {
+                const FEchoesSeveralVoicesOneCommandPlan Plan =
+                    GetSeveralVoicesOneCommandPlan();
+                if (GetSeveralVoicesOneCommandPhase() !=
+                    EEchoesSeveralVoicesOneCommandPhase::AnchorCrisis)
+                {
+                    OutFeedback = TEXT("[CHOIR_CRISIS_CONTRACT_REQUIRED] Complete both Choir researches, resolve the protected voices into Possible and Manifest, and position Neme before raising the Phase Anchor.");
+                    return false;
+                }
+                if (!IsWithinTiles(
+                        Position,
+                        Plan.CrisisAnchorSite,
+                        SeveralVoicesOneCommandSiteRadiusTiles))
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[CHOIR_PHASE_ANCHOR_SITE] Place the Phase Anchor within %d tiles of the inherited crisis site."),
+                        SeveralVoicesOneCommandSiteRadiusTiles);
                     return false;
                 }
             }

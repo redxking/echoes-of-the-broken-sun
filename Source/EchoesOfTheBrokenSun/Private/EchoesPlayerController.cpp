@@ -3125,7 +3125,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignFutureThatWon
                 ? TEXT("Oruun and an independent verifier deployed under Kharuun authority; Rhyse's restoration demonstrator remains public and non-commandable; ")
-                : TEXT("Oruun and an independent verifier deployed under Kharuun authority; the Meridian, Kharuun, and Crownfall public record interfaces remain neutral and non-commandable; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                ? TEXT("Oruun and an independent verifier deployed under Kharuun authority; the Meridian, Kharuun, and Crownfall public record interfaces remain neutral and non-commandable; ")
+                : TEXT("Neme and the local Hollow Choir deployed under player command; identity resolution and the crisis hold use visible deterministic timers; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3169,6 +3172,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignAssemblyOfTheMissing
             ? TEXT("AssemblyOfTheMissing")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+            ? TEXT("SeveralVoicesOneCommand")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3255,6 +3261,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bAssemblyOfTheMissing =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    const bool bSeveralVoicesOneCommand =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3282,6 +3291,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("THE FUTURE THAT WON — establish two-person public readback, link both recorded district inputs, activate only the recorded Lume protocol, hold the bounded stability window, then observe both district readbacks. Rhyse is represented only by attributable public apparatus. Enter deploys Kharuun authority.")
         : bAssemblyOfTheMissing
             ? TEXT("ASSEMBLY OF THE MISSING — place Oruun and the independent verifier at the separate neutral public record interfaces, link the neutral Crownfall index with a Kharuun Listening Spine, then observe both independent assembly witness sites. This operation records public observations only; it does not assign responsibility or hidden authorship. Enter deploys Kharuun authority.")
+        : bSeveralVoicesOneCommand
+            ? TEXT("SEVERAL VOICES, ONE COMMAND — research Held Alternatives, resolve one protected voice to Possible while the other remains Manifest, place both voices and Neme at their inherited sites, research Shared Resolution, then raise and hold a Phase Anchor through the visible crisis timer. Enter deploys Hollow Choir authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3301,11 +3312,13 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bNoNeutralLedger ? TEXT("NoNeutralLedger")
         : bFutureThatWon ? TEXT("TheFutureThatWon")
         : bAssemblyOfTheMissing ? TEXT("AssemblyOfTheMissing")
+        : bSeveralVoicesOneCommand ? TEXT("SeveralVoicesOneCommand")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
          bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach ||
-         bNoNeutralLedger || bFutureThatWon || bAssemblyOfTheMissing)
+         bNoNeutralLedger || bFutureThatWon || bAssemblyOfTheMissing ||
+         bSeveralVoicesOneCommand)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3567,6 +3580,13 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.MeridianAssemblyWitnessSite.y.FloorToInt()),
             32.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        SetStatusMessage(
+            TEXT("M14 // F2 HELD > SOLDIER SHIFT+F4 TO P // HEAVY TO M // NEME TO N // F2 SHARED > WORKER [M] AT A // HOLD 8s"),
+            36.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3669,6 +3689,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignAssemblyOfTheMissing)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: Assembly of the Missing follows Oruun and an independent verifier under Kharuun authority. The Meridian, Kharuun, and Crownfall public record interfaces are neutral and non-commandable."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Several Voices, One Command follows Neme and a player-commanded Hollow Choir force."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3790,6 +3816,13 @@ void AEchoesPlayerController::CycleOperation()
     {
         NewOperation =
             EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignAssemblyOfTheMissing &&
+             Bridge->IsSeveralVoicesOneCommandUnlocked())
+    {
+        NewOperation =
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -5190,6 +5223,87 @@ void AEchoesPlayerController::NotifyAssemblyOfTheMissingFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=AssemblyOfTheMissing success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=boundedPublicRecordAssemblyOnly commandAuthority=Kharuun publicInterfaces=neutralNonCommandable mixedFactionCommand=false responsibilityUnassigned=true hiddenAuthorshipUnproven=true trustUnproven=true consentUnproven=true civilianStateUnmodeled=true cryptographicAuthenticityUnproven=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifySeveralVoicesOneCommandFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+
+    FString ResultMessage =
+        TEXT("MISSION FAILED — the local Core, Neme, a protected voice, or the Research Loom was lost, the match ended, or the Phase Anchor was raised outside the required identity contract. No Choir-command record was committed. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — under the inherited %s protocol context, one protected voice resolved to Possible, one remained Manifest, Neme held command at the inherited site, and the Phase Anchor sustained both incompatible capabilities through the full crisis window. This completes one bounded player-commanded Hollow Choir perspective; it does not decide the Choir's final fate or establish campaign balance."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger already contains this Choir-command record. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            const TCHAR* RecordedLabel =
+                RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Harvest
+                    ? TEXT("Harvest")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Preserve
+                    ? TEXT("Preserve")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Reshape
+                    ? TEXT("Reshape")
+                    : TEXT("Dormant");
+            ResultMessage += FString::Printf(
+                TEXT(" The earlier irreversible record retains %s; it was not rewritten. Press R to replay."),
+                RecordedLabel);
+        }
+        else
+        {
+            ResultMessage +=
+                TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=SeveralVoicesOneCommand success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=boundedChoirCommandCrisisOnly commandAuthority=HollowChoir identityTimers=visibleDeterministic crisisWindowSeconds=8 finalChoirFateDecided=false campaignBalanceUnproven=true ordinaryHumanCompletionUnproven=true releaseReadinessUnproven=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -7904,9 +8018,11 @@ void AEchoesPlayerController::ReconcileSelectedChoirIdentities(
         SetStatusMessage(TEXT("[SIM_NOT_READY] Choir reconciliation is unavailable."));
         return;
     }
-    if (Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish)
+    if (Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish &&
+        Bridge->GetOperationMode() !=
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
     {
-        SetStatusMessage(TEXT("[CHOIR_SKIRMISH_ONLY] Campaign command authority remains fixed."));
+        SetStatusMessage(TEXT("[CHOIR_COMMAND_AUTHORITY_REQUIRED] This operation does not grant command over a Hollow Choir force."));
         return;
     }
     if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
@@ -8924,6 +9040,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignAssemblyOfTheMissing
                 ? TEXT("MISSION RESTARTED — Oruun, the independent verifier, and the three neutral public record interfaces return to the deterministic twelve-record assembly state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+                ? TEXT("MISSION RESTARTED — Neme and the protected Hollow Choir voices return to the deterministic thirteen-record crisis state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
@@ -8960,6 +9079,12 @@ void AEchoesPlayerController::SynchronizeBoundCampaignProtocol()
     {
         FutureWellChoice =
             Bridge->GetAssemblyOfTheMissingPlan().RecordedProtocol;
+    }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        FutureWellChoice =
+            Bridge->GetSeveralVoicesOneCommandPlan().RecordedProtocol;
     }
 }
 
@@ -9012,6 +9137,20 @@ void AEchoesPlayerController::SetFutureWellChoice(
         SetStatusMessage(
             FString::Printf(
                 TEXT("Assembly of the Missing retains the recorded %s protocol as ledger context only. This operation exposes no selectable Future Well protocol."),
+                Plan.ProtocolDisplayName),
+            8.0f);
+        return;
+    }
+    if (Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        const FEchoesSeveralVoicesOneCommandPlan Plan =
+            Bridge->GetSeveralVoicesOneCommandPlan();
+        FutureWellChoice = Plan.RecordedProtocol;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("Several Voices, One Command retains the recorded %s protocol as ledger context only. This operation exposes no selectable Future Well protocol."),
                 Plan.ProtocolDisplayName),
             8.0f);
         return;

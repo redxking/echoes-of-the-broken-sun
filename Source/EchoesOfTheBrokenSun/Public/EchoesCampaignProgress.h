@@ -17,7 +17,8 @@ enum class EEchoesCampaignMissionId : uint8
     ChoirAtLumeReach = 10,
     NoNeutralLedger = 11,
     TheFutureThatWon = 12,
-    AssemblyOfTheMissing = 13
+    AssemblyOfTheMissing = 13,
+    SeveralVoicesOneCommand = 14
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -150,6 +151,18 @@ enum class EEchoesAssemblyOfTheMissingCompletionFact : uint8
     PublicRecordReadbackEstablished = 1 << 4,
     CrownfallIndexLinked = 1 << 5,
     IndependentAssemblyObserved = 1 << 6,
+    LocalCoreSurvived = 1 << 7
+};
+
+enum class EEchoesSeveralVoicesOneCommandCompletionFact : uint8
+{
+    PriorThirteenRecordLedgerConsumed = 1 << 0,
+    ChoirCommandAuthorityEstablished = 1 << 1,
+    HeldAlternativesResearched = 1 << 2,
+    IncompatibleVoicesResolved = 1 << 3,
+    SharedResolutionResearched = 1 << 4,
+    PhaseAnchorRaised = 1 << 5,
+    CrisisWindowHeld = 1 << 6,
     LocalCoreSurvived = 1 << 7
 };
 

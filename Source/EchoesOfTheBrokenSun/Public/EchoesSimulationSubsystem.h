@@ -11,6 +11,7 @@
 #include "EchoesNoNeutralLedgerMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesReserveAuthorityMissionModel.h"
+#include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesShapeBesideUsMissionModel.h"
@@ -232,6 +233,29 @@ struct FEchoesObjectiveSnapshot final
     bool bAssemblyCrownfallIndexLinked = false;
     bool bAssemblyMeridianWitnessObserved = false;
     bool bAssemblyKharuunWitnessObserved = false;
+    EEchoesSeveralVoicesOneCommandPhase SeveralVoicesOneCommandPhase =
+        EEchoesSeveralVoicesOneCommandPhase::Inactive;
+    echoes::sim::FutureWellChoice SeveralVoicesRecordedProtocol =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId SeveralVoicesPossibleVoiceId = 0;
+    echoes::sim::EntityId SeveralVoicesManifestVoiceId = 0;
+    echoes::sim::EntityId SeveralVoicesNemeId = 0;
+    echoes::sim::EntityId SeveralVoicesResearchLoomId = 0;
+    echoes::sim::EntityId SeveralVoicesPhaseAnchorId = 0;
+    echoes::sim::ChoirIdentityState SeveralVoicesPossibleState =
+        echoes::sim::ChoirIdentityState::NotChoir;
+    echoes::sim::ChoirIdentityState SeveralVoicesManifestState =
+        echoes::sim::ChoirIdentityState::NotChoir;
+    uint64 SeveralVoicesPossibleResolveTicksRemaining = 0;
+    uint64 SeveralVoicesManifestResolveTicksRemaining = 0;
+    bool bSeveralVoicesHeldAlternativesResearched = false;
+    bool bSeveralVoicesPossibleAtSite = false;
+    bool bSeveralVoicesManifestAtSite = false;
+    bool bSeveralVoicesNemeAtCommandSite = false;
+    bool bSeveralVoicesSharedResolutionResearched = false;
+    bool bSeveralVoicesPhaseAnchorComplete = false;
+    uint64 SeveralVoicesCrisisTicksRemaining = 0;
+    bool bSeveralVoicesCrisisWindowHeld = false;
 };
 
 /**
@@ -391,6 +415,9 @@ public:
     [[nodiscard]] EEchoesAssemblyOfTheMissingPhase
     GetAssemblyOfTheMissingPhase() const;
     [[nodiscard]] bool IsAssemblyOfTheMissingUnlocked() const;
+    [[nodiscard]] EEchoesSeveralVoicesOneCommandPhase
+    GetSeveralVoicesOneCommandPhase() const;
+    [[nodiscard]] bool IsSeveralVoicesOneCommandUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -414,6 +441,8 @@ public:
     GetFutureThatWonPlan() const;
     [[nodiscard]] FEchoesAssemblyOfTheMissingPlan
     GetAssemblyOfTheMissingPlan() const;
+    [[nodiscard]] FEchoesSeveralVoicesOneCommandPlan
+    GetSeveralVoicesOneCommandPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -517,6 +546,9 @@ private:
     EEchoesCampaignCommitStatus CommitAssemblyOfTheMissingCompletion(
         echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitSeveralVoicesOneCommandCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedProtocol,
+        FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
     bool ValidatePrototypeCommand(
@@ -538,6 +570,7 @@ private:
     [[nodiscard]] echoes::sim::Tick ResolvePlayerExecuteTick(
         echoes::sim::Tick OfflineDelayTicks) const;
     void QueueOpponentCommands();
+    void AuditSeveralVoicesOneCommandContractAfterFixedStep();
     bool SyncEntityViews(bool bTeleportNewViews);
     bool SpawnFogView();
     bool SyncFogView();
@@ -627,6 +660,12 @@ private:
     echoes::sim::EntityId AssemblyMeridianPublicRecordInterfaceId = 0;
     echoes::sim::EntityId AssemblyKharuunPublicRecordInterfaceId = 0;
     echoes::sim::EntityId AssemblyCrownfallIndexInterfaceId = 0;
+    echoes::sim::EntityId SeveralVoicesPossibleVoiceId = 0;
+    echoes::sim::EntityId SeveralVoicesManifestVoiceId = 0;
+    echoes::sim::EntityId SeveralVoicesNemeId = 0;
+    echoes::sim::EntityId SeveralVoicesResearchLoomId = 0;
+    bool bSeveralVoicesCrisisHoldStarted = false;
+    bool bSeveralVoicesCrisisContractFailed = false;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

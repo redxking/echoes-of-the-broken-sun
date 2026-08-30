@@ -15,6 +15,7 @@ constexpr int32 ChecksumSize = 4;
 constexpr uint8 AllWellChoicesMask = 0x07;
 constexpr uint32 FutureThatWonMinimumSnapshotVersion = 21;
 constexpr uint32 AssemblyOfTheMissingMinimumSnapshotVersion = 21;
+constexpr uint32 SeveralVoicesOneCommandMinimumSnapshotVersion = 22;
 constexpr uint8 PrologueCompletionFacts =
     static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
@@ -110,6 +111,15 @@ constexpr uint8 AssemblyOfTheMissingCompletionFacts =
     static_cast<uint8>(EEchoesAssemblyOfTheMissingCompletionFact::CrownfallIndexLinked) |
     static_cast<uint8>(EEchoesAssemblyOfTheMissingCompletionFact::IndependentAssemblyObserved) |
     static_cast<uint8>(EEchoesAssemblyOfTheMissingCompletionFact::LocalCoreSurvived);
+constexpr uint8 SeveralVoicesOneCommandCompletionFacts =
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::PriorThirteenRecordLedgerConsumed) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::ChoirCommandAuthorityEstablished) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::HeldAlternativesResearched) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::IncompatibleVoicesResolved) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::SharedResolutionResearched) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::PhaseAnchorRaised) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::CrisisWindowHeld) |
+    static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::LocalCoreSurvived);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -219,7 +229,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::ChoirAtLumeReach &&
         Record.Mission != EEchoesCampaignMissionId::NoNeutralLedger &&
         Record.Mission != EEchoesCampaignMissionId::TheFutureThatWon &&
-        Record.Mission != EEchoesCampaignMissionId::AssemblyOfTheMissing)
+        Record.Mission != EEchoesCampaignMissionId::AssemblyOfTheMissing &&
+        Record.Mission != EEchoesCampaignMissionId::SeveralVoicesOneCommand)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -240,7 +251,8 @@ bool ValidateRecord(
     }
     if ((Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
          Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon ||
-         Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing) &&
+         Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing ||
+         Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand) &&
         Record.AvailableWellChoices != SelectedChoice)
     {
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The downstream receipt must retain only the recorded Lume protocol that was applied.");
@@ -271,7 +283,9 @@ bool ValidateRecord(
             ? NoNeutralLedgerCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon
             ? FutureThatWonCompletionFacts
-            : AssemblyOfTheMissingCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing
+            ? AssemblyOfTheMissingCompletionFacts
+            : SeveralVoicesOneCommandCompletionFacts;
     const uint8 ReserveDistricts =
         Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
     const bool bValidReserveAllocation =
@@ -329,6 +343,16 @@ bool ValidateRecord(
             echoes::sim::kSnapshotVersion);
         return false;
     }
+    if (Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand &&
+        (Record.SimulationSnapshotVersion <
+             SeveralVoicesOneCommandMinimumSnapshotVersion ||
+         Record.SimulationSnapshotVersion > echoes::sim::kSnapshotVersion))
+    {
+        OutError = FString::Printf(
+            TEXT("[CAMPAIGN_SNAPSHOT_VERSION_REQUIRED] Mission 14 requires native Hollow Choir provenance from snapshot schema 22 through supported schema %u."),
+            echoes::sim::kSnapshotVersion);
+        return false;
+    }
     return true;
 }
 
@@ -342,28 +366,43 @@ bool ValidateNoNeutralLedgerSequence(
         Progress.FindDecision(EEchoesCampaignMissionId::TheFutureThatWon);
     const FEchoesCampaignDecisionRecord* Assembly =
         Progress.FindDecision(EEchoesCampaignMissionId::AssemblyOfTheMissing);
-    if (Alliance == nullptr && Restoration == nullptr && Assembly == nullptr)
+    const FEchoesCampaignDecisionRecord* Voices =
+        Progress.FindDecision(
+            EEchoesCampaignMissionId::SeveralVoicesOneCommand);
+    if (Alliance == nullptr && Restoration == nullptr && Assembly == nullptr &&
+        Voices == nullptr)
     {
         return true;
     }
     if (Alliance == nullptr)
     {
-        OutError = Assembly != nullptr
+        OutError = Voices != nullptr
+            ? TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires the accepted Missions 11 through 13 receipts.")
+        : Assembly != nullptr
             ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires the accepted Mission 11 and Mission 12 receipts.")
             : TEXT("[CAMPAIGN_RESTORATION_LEDGER_INVALID] Mission 12 requires the accepted Mission 11 receipt.");
         return false;
     }
-    if (Assembly != nullptr && Restoration == nullptr)
+    if ((Assembly != nullptr || Voices != nullptr) && Restoration == nullptr)
     {
         OutError = TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires the accepted Mission 12 readback receipt.");
         return false;
     }
-    const int32 ExpectedRecords = Assembly != nullptr
+    if (Voices != nullptr && Assembly == nullptr)
+    {
+        OutError = TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires the accepted Mission 13 assembly receipt.");
+        return false;
+    }
+    const int32 ExpectedRecords = Voices != nullptr
+        ? 14
+        : Assembly != nullptr
         ? 13
         : Restoration != nullptr ? 12 : 11;
     if (Progress.Decisions.Num() != ExpectedRecords)
     {
-        OutError = Assembly != nullptr
+        OutError = Voices != nullptr
+            ? TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires exactly thirteen prior records and one Choir-command record.")
+        : Assembly != nullptr
             ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires exactly twelve prior records and one public-assembly record.")
         : Restoration != nullptr
             ? TEXT("[CAMPAIGN_RESTORATION_LEDGER_INVALID] Mission 12 requires exactly eleven prior records and one restoration record.")
@@ -375,7 +414,9 @@ bool ValidateNoNeutralLedgerSequence(
         if (static_cast<uint8>(Progress.Decisions[Index].Mission) !=
             static_cast<uint8>(Index + 1))
         {
-            OutError = Assembly != nullptr
+            OutError = Voices != nullptr
+                ? TEXT("[CAMPAIGN_VOICES_LEDGER_ORDER] Mission 14 requires the exact ordered M01-M13 record chain.")
+            : Assembly != nullptr
                 ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_ORDER] Mission 13 requires the exact ordered M01-M12 record chain.")
             : Restoration != nullptr
                 ? TEXT("[CAMPAIGN_RESTORATION_LEDGER_ORDER] Mission 12 requires the exact ordered M01-M11 record chain.")
@@ -413,6 +454,14 @@ bool ValidateNoNeutralLedgerSequence(
              ChoiceMask(Restoration->WellChoice)))
     {
         OutError = TEXT("[CAMPAIGN_ASSEMBLY_LUME_PROTOCOL] Mission 13 does not retain the exact Mission 12 protocol receipt.");
+        return false;
+    }
+    if (Voices != nullptr &&
+        (Voices->WellChoice != Assembly->WellChoice ||
+         Voices->AvailableWellChoices !=
+             ChoiceMask(Assembly->WellChoice)))
+    {
+        OutError = TEXT("[CAMPAIGN_VOICES_LUME_PROTOCOL] Mission 14 does not retain the exact Mission 13 protocol receipt.");
         return false;
     }
     return true;
@@ -474,7 +523,8 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
     }
     if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
         Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon ||
-        Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing)
+        Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing ||
+        Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand)
     {
         FEchoesCampaignProgress Candidate = *this;
         Candidate.Decisions.Add(Record);
