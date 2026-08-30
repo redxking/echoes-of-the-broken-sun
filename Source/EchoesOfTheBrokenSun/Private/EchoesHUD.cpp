@@ -455,6 +455,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignShapeBesideUs)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Overlap branch  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1196,6 +1207,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bShapeOfSilence = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeOfSilence;
+    const bool bShapeBesideUs = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignShapeBesideUs;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1235,6 +1249,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bTermsOfContinuance ? TEXT("TERMS OF CONTINUANCE")
              : bNamesWithoutBirths ? TEXT("NAMES WITHOUT BIRTHS")
              : bShapeOfSilence ? TEXT("THE SHAPE OF SILENCE")
+             : bShapeBesideUs ? TEXT("THE SHAPE BESIDE US")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1262,6 +1277,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 07  //  %s  //  ORUUN + MEMORY WITNESSES"),
                   *LocalFaction)
+        : bShapeBesideUs
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 08  //  %s  //  TALAR + STATE WITNESSES"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1282,6 +1301,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN AUTHORITY  //  MISSION 06")
     : bShapeOfSilence
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 07")
+    : bShapeBesideUs
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 08")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1326,6 +1347,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Five consistent records expose a branch-specific census whose named people were never assigned births.")
         : bShapeOfSilence
             ? TEXT("Six consistent records lead Oruun to a communal-memory hollow shaped like the recovered census absence.")
+        : bShapeBesideUs
+            ? TEXT("Seven consistent records let Neme answer Talar with two routes that remain true at once.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1348,6 +1371,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Locate the census with Talar, power its archive, shelter both civilians, then extract the evidence.")
         : bShapeOfSilence
             ? TEXT("Root the Waystone, raise a Listening Spine, place both witnesses, then reach the confluence.")
+        : bShapeBesideUs
+            ? TEXT("Observe the first echo, raise its relay, traverse both states, then reach the convergence.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1918,6 +1943,86 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignShapeBesideUs)
+    {
+        const FEchoesShapeBesideUsPlan Plan =
+            Bridge->GetShapeBesideUsPlan();
+        const bool bFailed =
+            Objective.ShapeBesideUsPhase ==
+            EEchoesShapeBesideUsPhase::Failed;
+        const bool bStatesTraversed =
+            Objective.bFirstStateTraversed &&
+            Objective.bSecondStateTraversed;
+        const FString EchoState = bFailed
+            ? TEXT("CONTACT LOST")
+            : Objective.bFirstEchoObserved
+                ? TEXT("OBSERVED")
+                : FString::Printf(
+                      TEXT("TALAR TO %d,%d"),
+                      Plan.FirstEchoSite.x.FloorToInt(),
+                      Plan.FirstEchoSite.y.FloorToInt());
+        const FString RelayState = bFailed
+            ? TEXT("RELAY LOST")
+            : Objective.bEchoRelayRaised
+                ? TEXT("RAISED")
+                : Objective.bFirstEchoObserved
+                    ? FString::Printf(
+                          TEXT("BUILD AT %d,%d"),
+                          Plan.EchoRelaySite.x.FloorToInt(),
+                          Plan.EchoRelaySite.y.FloorToInt())
+                    : TEXT("WAITING — OBSERVE ECHO");
+        const FString ConvergenceState = bFailed
+            ? TEXT("OVERLAP LOST")
+            : Objective.bShapeBesideUsTalarAtConvergence
+                ? TEXT("RECIPROCAL CONTACT RECORDED")
+                : bStatesTraversed
+                    ? FString::Printf(
+                          TEXT("TALAR TO %d,%d"),
+                          Plan.ConvergenceSite.x.FloorToInt(),
+                          Plan.ConvergenceSite.y.FloorToInt())
+                : Objective.bEchoRelayRaised
+                    ? TEXT("POSITION BOTH STATE WITNESSES")
+                    : TEXT("WAITING — RAISE RELAY");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("THE SHAPE BESIDE US  //  MISSION 08"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  FIRST ECHO        %s"), *EchoState),
+            bFailed ? Failed : Objective.bFirstEchoObserved ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  ECHO RELAY        %s"), *RelayState),
+            bFailed ? Failed : Objective.bEchoRelayRaised ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  PAIRED CONVERGENCE %s"), *ConvergenceState),
+            bFailed ? Failed
+                    : Objective.bShapeBesideUsTalarAtConvergence
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_SHAPE_BESIDE_US_OBJECTIVES_READY] phase=%s branch=%s talar=%u witnessA=%u witnessB=%u reconstructable=true claimBoundary=reciprocalContactOnly hollowChoirFactionImplemented=false"),
+                FEchoesShapeBesideUsMissionModel::StableName(
+                    Objective.ShapeBesideUsPhase),
+                Plan.StableName,
+                Objective.ShapeBesideUsTalarId,
+                Objective.FirstStateWitnessId,
+                Objective.SecondStateWitnessId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2039,6 +2144,9 @@ void AEchoesHUD::DrawMatchResult(
     const bool bShapeOfSilenceResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignShapeOfSilence;
+    const bool bShapeBesideUsResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignShapeBesideUs;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
@@ -2050,7 +2158,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bShapeOfSilenceResult
+        ? bShapeBesideUsResult
+            ? bVictory ? TEXT("NEME ANSWERS FROM BOTH SIDES OF THE ROUTE")
+                       : TEXT("THE OVERLAP CLOSES AROUND THE WITNESSES")
+        : bShapeOfSilenceResult
             ? bVictory ? TEXT("THE HOLLOW ANSWERS WITH AN ABSENCE")
                        : TEXT("THE MEMORY CONFLUENCE FALLS SILENT")
         : bNamesWithoutBirthsResult
@@ -2074,7 +2185,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bShapeOfSilenceResult
+        ? bShapeBesideUsResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The %s overlap answered Talar with repeatable, actionable correspondence across both states. This establishes reciprocal contact, not one Choir identity, hidden authorship, or cause."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Talar, a state witness, the local Core, or the overlap operation was lost before convergence.")
+        : bShapeOfSilenceResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The %s memory hollow corresponds with the recovered census absence. This record establishes correspondence, not cause or hidden authorship."),
@@ -2138,7 +2256,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bShapeOfSilenceResult
+                CampaignPersistenceLine = bShapeBesideUsResult
+                    ? FString::Printf(
+                          TEXT("MISSION 08 RECORDED // %s reciprocal contact observed."),
+                          RecordedChoice)
+                : bShapeOfSilenceResult
                     ? FString::Printf(
                           TEXT("MISSION 07 RECORDED // %s memory correspondence observed."),
                           RecordedChoice)
@@ -2211,7 +2333,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bShapeOfSilenceResult
+        ? bShapeBesideUsResult
+            ? FString::Printf(
+                  TEXT("MISSION 08 — THE SHAPE BESIDE US  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bShapeOfSilenceResult
             ? FString::Printf(
                   TEXT("MISSION 07 — THE SHAPE OF SILENCE  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -2447,6 +2573,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bShapeOfSilence = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeOfSilence;
+    const bool bShapeBesideUs = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignShapeBesideUs;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -2471,6 +2600,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetShapeOfSilencePlan()
             : FEchoesShapeOfSilencePlan{};
+    const FEchoesShapeBesideUsPlan BesidePlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetShapeBesideUsPlan()
+            : FEchoesShapeBesideUsPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -2507,6 +2640,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bShapeOfSilence
             ? FString::Printf(
                   TEXT("THE SHAPE OF SILENCE  //  MISSION 07  //  %s"),
+                  *LocalFaction)
+        : bShapeBesideUs
+            ? FString::Printf(
+                  TEXT("THE SHAPE BESIDE US  //  MISSION 08  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -2545,6 +2682,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Six consistent records lead to the %s, a communal-memory hollow aligned with the recovered census absence."),
                   ShapePlan.DisplayName)
+        : bShapeBesideUs
+            ? FString::Printf(
+                  TEXT("Seven consistent records reveal the %s, where Neme's guidance remains coherent across two incompatible routes."),
+                  BesidePlan.DisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2566,6 +2707,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Talar and two civilian workers are explicit Meridian-authoritative proxies. The record establishes branch geometry, not hidden authorship or cause.")
         : bShapeOfSilence
             ? TEXT("Oruun and both witnesses are Kharuun-authoritative. This operation tests correspondence only; it does not establish cause, a Choir identity, or hidden authorship.")
+        : bShapeBesideUs
+            ? TEXT("Talar and both witnesses are Meridian-authoritative proxies. Neme is represented by observable route correspondence; a playable Hollow Choir faction and unified Choir identity are not implemented.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2612,6 +2755,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   ShapePlan.WaystoneAnchor.y.FloorToInt(),
                   ShapePlan.ListeningSpineSite.x.FloorToInt(),
                   ShapePlan.ListeningSpineSite.y.FloorToInt())
+        : bShapeBesideUs
+            ? FString::Printf(
+                  TEXT("01  Bring Talar to Neme's first echo at %d,%d, then raise an [N] relay at %d,%d."),
+                  BesidePlan.FirstEchoSite.x.FloorToInt(),
+                  BesidePlan.FirstEchoSite.y.FloorToInt(),
+                  BesidePlan.EchoRelaySite.x.FloorToInt(),
+                  BesidePlan.EchoRelaySite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2661,6 +2811,15 @@ void AEchoesHUD::DrawMissionBriefing(
                   ShapePlan.SecondWitnessSite.y.FloorToInt(),
                   ShapePlan.ConfluenceSite.x.FloorToInt(),
                   ShapePlan.ConfluenceSite.y.FloorToInt())
+        : bShapeBesideUs
+            ? FString::Printf(
+                  TEXT("02  Position state witnesses at %d,%d and %d,%d, then bring Talar to the convergence at %d,%d."),
+                  BesidePlan.FirstStateSite.x.FloorToInt(),
+                  BesidePlan.FirstStateSite.y.FloorToInt(),
+                  BesidePlan.SecondStateSite.x.FloorToInt(),
+                  BesidePlan.SecondStateSite.y.FloorToInt(),
+                  BesidePlan.ConvergenceSite.x.FloorToInt(),
+                  BesidePlan.ConvergenceSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -2680,6 +2839,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The census geometry is inherited from all five prior records; it does not identify an unseen actor or establish why births are absent.")
              : bShapeOfSilence
                  ? TEXT("The listening geometry is inherited from all six prior records; observed correspondence is not evidence of cause or authorship.")
+             : bShapeBesideUs
+                 ? TEXT("The overlap geometry is inherited from all seven prior records; reciprocal contact is not proof of one Choir identity, cause, or authorship.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -2697,6 +2858,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is protected evidence recovery. Any protected loss or either terminal Core outcome invalidates the operation.")
         : bShapeOfSilence
             ? TEXT("Victory is infrastructure-backed paired witnessing and convergence. Any protected loss or terminal Core outcome invalidates the observation.")
+        : bShapeBesideUs
+            ? TEXT("Victory is relay-backed traversal and reciprocal convergence. Any protected loss or terminal Core outcome invalidates the contact evidence.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -2722,6 +2885,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS TALAR + CIVILIAN PROXIES")
         : bShapeOfSilence
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + MEMORY WITNESSES")
+        : bShapeBesideUs
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS TALAR + STATE WITNESSES")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -2936,7 +3101,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignNamesWithoutBirths ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignShapeOfSilence)
+            EEchoesOperationMode::CampaignShapeOfSilence ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignShapeBesideUs)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -3124,7 +3291,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignShapeOfSilence)
         {
             const FEchoesShapeOfSilencePlan Plan =
                 Bridge->GetShapeOfSilencePlan();
@@ -3168,6 +3336,50 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
+        else
+        {
+            const FEchoesShapeBesideUsPlan Plan =
+                Bridge->GetShapeBesideUsPlan();
+            DrawMissionSite(
+                Plan.FirstEchoSite,
+                TEXT("N"),
+                Objective.bFirstEchoObserved
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                Plan.EchoRelaySite,
+                TEXT("R"),
+                Objective.bEchoRelayRaised
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bFirstEchoObserved
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Plan.FirstStateSite,
+                TEXT("1"),
+                Objective.bFirstStateTraversed
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bEchoRelayRaised
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Plan.SecondStateSite,
+                TEXT("2"),
+                Objective.bSecondStateTraversed
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bEchoRelayRaised
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+            DrawMissionSite(
+                Plan.ConvergenceSite,
+                TEXT("T"),
+                Objective.bShapeBesideUsTalarAtConvergence
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Objective.bFirstStateTraversed &&
+                            Objective.bSecondStateTraversed
+                        ? Border
+                        : FLinearColor(0.48f, 0.55f, 0.62f));
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -3195,6 +3407,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignShapeOfSilence
             ? TEXT("MISSION NAV  |  WAYSTONE + WITNESSES + ORUUN")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignShapeBesideUs
+            ? TEXT("MISSION NAV  |  NEME + RELAY + PAIRED STATES")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

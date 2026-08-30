@@ -3107,7 +3107,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignNamesWithoutBirths
                 ? TEXT("Talar and two civilian proxies deployed; ")
-                : TEXT("Oruun and two memory witnesses deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignShapeOfSilence
+                ? TEXT("Oruun and two memory witnesses deployed; ")
+                : TEXT("Talar and two state witnesses deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3133,6 +3136,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignShapeOfSilence
             ? TEXT("TheShapeOfSilence")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignShapeBesideUs
+            ? TEXT("TheShapeBesideUs")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3200,6 +3206,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bShapeOfSilence =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignShapeOfSilence;
+    const bool bShapeBesideUs =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignShapeBesideUs;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3215,6 +3224,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("NAMES WITHOUT BIRTHS — Talar must locate the inherited census trace, a worker must power its archive, both civilian proxies must reach shelter, and Talar must extract the evidence. Enter deploys Meridian authority.")
         : bShapeOfSilence
             ? TEXT("THE SHAPE OF SILENCE — root the Waystone, raise a Listening Spine, position both memory witnesses, then bring Oruun to the confluence. Enter deploys Kharuun authority.")
+        : bShapeBesideUs
+            ? TEXT("THE SHAPE BESIDE US — follow Neme's first echo, raise a relay, traverse both overlapping states, then bring Talar to the convergence. Enter deploys Meridian authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3228,9 +3239,11 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bTermsOfContinuance ? TEXT("TermsOfContinuance")
         : bNamesWithoutBirths ? TEXT("NamesWithoutBirths")
         : bShapeOfSilence ? TEXT("TheShapeOfSilence")
+        : bShapeBesideUs ? TEXT("TheShapeBesideUs")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
-         bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence)
+         bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
+         bShapeBesideUs)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3359,6 +3372,26 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.ConfluenceSite.y.FloorToInt()),
             18.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignShapeBesideUs)
+    {
+        const FEchoesShapeBesideUsPlan Plan =
+            Bridge->GetShapeBesideUsPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — bring Talar to the first echo at %d,%d; raise a relay at %d,%d; place witnesses at %d,%d and %d,%d; bring Talar to %d,%d."),
+                Plan.FirstEchoSite.x.FloorToInt(),
+                Plan.FirstEchoSite.y.FloorToInt(),
+                Plan.EchoRelaySite.x.FloorToInt(),
+                Plan.EchoRelaySite.y.FloorToInt(),
+                Plan.FirstStateSite.x.FloorToInt(),
+                Plan.FirstStateSite.y.FloorToInt(),
+                Plan.SecondStateSite.x.FloorToInt(),
+                Plan.SecondStateSite.y.FloorToInt(),
+                Plan.ConvergenceSite.x.FloorToInt(),
+                Plan.ConvergenceSite.y.FloorToInt()),
+            18.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3425,6 +3458,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignShapeOfSilence)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: The Shape of Silence follows Oruun and two Kharuun memory witnesses."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignShapeBesideUs)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: The Shape Beside Us follows Talar and two Meridian state witnesses."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3510,6 +3549,12 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsShapeOfSilenceUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignShapeOfSilence;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignShapeOfSilence &&
+             Bridge->IsShapeBesideUsUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignShapeBesideUs;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -4460,6 +4505,65 @@ void AEchoesPlayerController::NotifyShapeOfSilenceFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheShapeOfSilence success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=correspondenceOnly"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyShapeBesideUsFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignShapeBesideUs;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Talar, a state witness, the local Core, or the operation was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — the %s overlap answered Talar's route with repeatable, actionable correspondence. The record establishes reciprocal contact, not a unified Choir identity, hidden authorship, or cause."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this contact result. Press R to replay.");
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheShapeBesideUs success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=reciprocalContactOnly hollowChoirFactionImplemented=false"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -8033,6 +8137,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignShapeOfSilence
                 ? TEXT("MISSION RESTARTED — Oruun's listening operation returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignShapeBesideUs
+                ? TEXT("MISSION RESTARTED — Talar's overlap contact operation returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

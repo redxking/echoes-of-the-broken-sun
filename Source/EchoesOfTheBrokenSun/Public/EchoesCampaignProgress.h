@@ -11,7 +11,8 @@ enum class EEchoesCampaignMissionId : uint8
     TheUnburiedRoad = 4,
     TermsOfContinuance = 5,
     NamesWithoutBirths = 6,
-    TheShapeOfSilence = 7
+    TheShapeOfSilence = 7,
+    TheShapeBesideUs = 8
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -74,6 +75,16 @@ enum class EEchoesShapeOfSilenceCompletionFact : uint8
     ListeningSpineRaised = 1 << 1,
     BothMemoryWitnessesPositioned = 1 << 2,
     OruunReachedConfluence = 1 << 3,
+    LocalCoreSurvived = 1 << 4,
+    PriorLedgerConsumed = 1 << 5
+};
+
+enum class EEchoesShapeBesideUsCompletionFact : uint8
+{
+    FirstEchoObserved = 1 << 0,
+    EchoRelayRaised = 1 << 1,
+    BothStatesTraversed = 1 << 2,
+    NemeConvergenceReached = 1 << 3,
     LocalCoreSurvived = 1 << 4,
     PriorLedgerConsumed = 1 << 5
 };

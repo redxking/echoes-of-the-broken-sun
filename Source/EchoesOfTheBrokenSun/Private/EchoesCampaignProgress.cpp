@@ -56,6 +56,13 @@ constexpr uint8 ShapeOfSilenceCompletionFacts =
     static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::OruunReachedConfluence) |
     static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesShapeOfSilenceCompletionFact::PriorLedgerConsumed);
+constexpr uint8 ShapeBesideUsCompletionFacts =
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::FirstEchoObserved) |
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::EchoRelayRaised) |
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::BothStatesTraversed) |
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::NemeConvergenceReached) |
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -159,7 +166,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::TheUnburiedRoad &&
         Record.Mission != EEchoesCampaignMissionId::TermsOfContinuance &&
         Record.Mission != EEchoesCampaignMissionId::NamesWithoutBirths &&
-        Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence)
+        Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence &&
+        Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -185,7 +193,9 @@ bool ValidateRecord(
             ? TermsOfContinuanceCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::NamesWithoutBirths
             ? NamesWithoutBirthsCompletionFacts
-            : ShapeOfSilenceCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::TheShapeOfSilence
+            ? ShapeOfSilenceCompletionFacts
+            : ShapeBesideUsCompletionFacts;
     if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
         (Record.VerifiedFacts & ~RequiredFacts) != 0)
     {
