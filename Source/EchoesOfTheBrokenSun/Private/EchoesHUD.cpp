@@ -5,6 +5,7 @@
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesHudLayout.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
@@ -116,6 +117,12 @@ void AEchoesHUD::DrawHUD()
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const FEchoesHudLayout HudLayout = FEchoesHudLayout::Build(
+        Canvas != nullptr
+            ? FVector2D(Canvas->ClipX, Canvas->ClipY)
+            : FVector2D(1280.0f, 720.0f),
+        HudScale,
+        false);
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float TextX = 34.0f;
@@ -123,9 +130,7 @@ void AEchoesHUD::DrawHUD()
     {
         return 18.0f + Offset * HudScale;
     };
-    const float MaximumPanelWidth =
-        Canvas != nullptr ? FMath::Max(320.0f, Canvas->ClipX - 36.0f) : 920.0f;
-    const float PanelWidth = FMath::Min(920.0f * HudScale, MaximumPanelWidth);
+    const float PanelWidth = HudLayout.MainPanel.GetSize().X;
     const FLinearColor PanelColor =
         bHighContrast
             ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
@@ -170,7 +175,12 @@ void AEchoesHUD::DrawHUD()
             false);
     }
 
-    DrawRect(PanelColor, 18.0f, 18.0f, PanelWidth, 276.0f * HudScale);
+    DrawRect(
+        PanelColor,
+        HudLayout.MainPanel.Min.X,
+        HudLayout.MainPanel.Min.Y,
+        PanelWidth,
+        HudLayout.MainPanel.GetSize().Y);
     DrawText(
         TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
         AccentColor,
@@ -492,22 +502,25 @@ void AEchoesHUD::DrawHUD()
         const FString Feedback = EchoesController->GetStatusMessage();
         if (!Feedback.IsEmpty())
         {
-            const float FeedbackWidth = FMath::Min(
-                920.0f,
-                Canvas != nullptr ? Canvas->ClipX - 36.0f : 920.0f);
+            const FEchoesHudLayout FeedbackLayout = FEchoesHudLayout::Build(
+                Canvas != nullptr
+                    ? FVector2D(Canvas->ClipX, Canvas->ClipY)
+                    : FVector2D(1280.0f, 720.0f),
+                HudScale,
+                true);
             DrawRect(
                 PanelColor,
-                18.0f,
-                Canvas != nullptr ? Canvas->ClipY - 72.0f : 700.0f,
-                FeedbackWidth,
-                48.0f);
+                FeedbackLayout.StatusPanel.Min.X,
+                FeedbackLayout.StatusPanel.Min.Y,
+                FeedbackLayout.StatusPanel.GetSize().X,
+                FeedbackLayout.StatusPanel.GetSize().Y);
             DrawText(
                 Feedback,
                 Feedback.StartsWith(TEXT("["))
                     ? FLinearColor(1.0f, 0.48f, 0.18f)
                     : FLinearColor(0.25f, 1.0f, 0.66f),
                 TextX,
-                Canvas != nullptr ? Canvas->ClipY - 58.0f : 714.0f,
+                FeedbackLayout.StatusPanel.Min.Y + 14.0f,
                 GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
                 0.95f * HudScale,
                 false);
@@ -616,16 +629,16 @@ void AEchoesHUD::DrawCommandDeck(
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float PanelWidth = FMath::Min(
-        900.0f * HudScale,
-        FMath::Max(520.0f, Canvas->ClipX - 300.0f));
-    const float PanelHeight = 112.0f * HudScale;
-    const float Left = 18.0f;
-    const float Top = Canvas->ClipY - 84.0f - PanelHeight;
-    if (Top < 306.0f)
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
+    if (!Layout.bCommandDeckVisible)
     {
         return;
     }
+    const float PanelWidth = Layout.CommandDeckPanel.GetSize().X;
+    const float PanelHeight = Layout.CommandDeckPanel.GetSize().Y;
+    const float Left = Layout.CommandDeckPanel.Min.X;
+    const float Top = Layout.CommandDeckPanel.Min.Y;
 
     const FLinearColor Backdrop = bHighContrast
         ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
@@ -1277,21 +1290,16 @@ void AEchoesHUD::DrawObjectiveTracker(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
-    const float PanelWidth = FMath::Clamp(460.0f * HudScale, 390.0f, 560.0f);
-    const float PanelHeight = FMath::Clamp(178.0f * HudScale, 160.0f, 212.0f);
-    float Left = Canvas->ClipX - PanelWidth - 20.0f;
-    float Top = 18.0f;
-    const float MainPanelRight =
-        18.0f + FMath::Min(920.0f * HudScale, FMath::Max(320.0f, Canvas->ClipX - 36.0f));
-    if (Left < MainPanelRight + 20.0f)
-    {
-        Left = 18.0f;
-        Top = 310.0f;
-    }
-    if (Top + PanelHeight > Canvas->ClipY - 24.0f)
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
+    if (!Layout.bObjectiveVisible)
     {
         return;
     }
+    const float PanelWidth = Layout.ObjectivePanel.GetSize().X;
+    const float PanelHeight = Layout.ObjectivePanel.GetSize().Y;
+    const float Left = Layout.ObjectivePanel.Min.X;
+    const float Top = Layout.ObjectivePanel.Min.Y;
 
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
@@ -2637,16 +2645,15 @@ void AEchoesHUD::DrawTacticalMinimap(
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float Size = FMath::Clamp(
-        FMath::Min(220.0f * HudScale, Canvas->ClipY * 0.30f),
-        150.0f,
-        240.0f);
-    const float Left = Canvas->ClipX - Size - 20.0f;
-    const float Top = Canvas->ClipY - Size - 92.0f;
-    if (Left < 18.0f || Top < 310.0f)
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
+    if (!Layout.bMinimapVisible)
     {
         return;
     }
+    const float Size = Layout.MinimapPanel.GetSize().X;
+    const float Left = Layout.MinimapPanel.Min.X;
+    const float Top = Layout.MinimapPanel.Min.Y;
 
     const FLinearColor Border =
         bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f) : FLinearColor(0.15f, 0.88f, 1.0f);

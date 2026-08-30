@@ -282,6 +282,8 @@ private:
     int32 PointerReviewStage = 0;
     float PointerReviewStageElapsedSeconds = 0.0f;
     float PointerReviewTotalElapsedSeconds = 0.0f;
+    FString PointerReviewVariant = TEXT("Default");
+    float PointerReviewHudScale = 1.0f;
     bool bPointerCombatGuardReviewActive = false;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;

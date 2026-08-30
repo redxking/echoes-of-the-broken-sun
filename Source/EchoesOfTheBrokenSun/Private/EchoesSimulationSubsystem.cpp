@@ -7,6 +7,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesPointerCombatGuardReview.h"
 #include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesTerrainView.h"
 #include "Engine/World.h"
@@ -448,6 +449,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             Error,
             TEXT("[ECHOES_PRESENTATION_MODE_FAILED] reason=conflicting presentation modes"));
         return false;
+    }
+    if (bUsePointerCombatGuardPresentation)
+    {
+        FEchoesPointerCombatGuardReview ReviewConfiguration;
+        FString RequestedVariant;
+        if (!FEchoesPointerCombatGuardReview::TryFromCommandLine(
+                ReviewConfiguration,
+                RequestedVariant))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED] stage=bootstrap reason=INVALID_VARIANT requested=%s controlledNonshipping=true"),
+                *RequestedVariant);
+            return false;
+        }
     }
     const bool bUseAnyResearchPresentation =
         bUseResearchPresentation || bUseResearchInterruptionPresentation;

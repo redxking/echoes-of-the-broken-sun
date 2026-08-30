@@ -6,6 +6,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -44,15 +45,33 @@ void AEchoesRTSCameraPawn::BeginPlay()
             FCommandLine::Get(),
             TEXT("EchoesPointerCombatGuardReview")))
     {
-        SetActorLocation(FVector(-1600.0f, -1600.0f, 100.0f));
-        SpringArm->TargetArmLength = 4000.0f;
+        FEchoesPointerCombatGuardReview ReviewConfiguration;
+        FString RequestedVariant;
+        if (!FEchoesPointerCombatGuardReview::TryFromCommandLine(
+                ReviewConfiguration,
+                RequestedVariant))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA_FAILED] reason=INVALID_VARIANT requested=%s"),
+                *RequestedVariant);
+            return;
+        }
+        SetActorLocation(ReviewConfiguration.CameraLocation);
+        SpringArm->TargetArmLength = ReviewConfiguration.CameraZoom;
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
         Camera->SetFieldOfView(52.0f);
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA] centerTile=(24,24) zoom=4000 exactScreenProjection=true controlledNonshipping=true"));
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA] variant=%s centerTile=(%.0f,%.0f) zoom=%.0f hudScale=%.2f exactScreenProjection=true controlledNonshipping=true"),
+            *ReviewConfiguration.Variant,
+            ReviewConfiguration.CameraCenterTile.X,
+            ReviewConfiguration.CameraCenterTile.Y,
+            ReviewConfiguration.CameraZoom,
+            ReviewConfiguration.HudScale);
         return;
     }
     if (FParse::Param(

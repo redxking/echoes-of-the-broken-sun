@@ -3,8 +3,10 @@
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesHudLayout.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPresentationAudioSubsystem.h"
+#include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "Engine/EngineTypes.h"
@@ -81,6 +83,30 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
     {
         return;
     }
+    FEchoesPointerCombatGuardReview ReviewConfiguration;
+    FString RequestedVariant;
+    if (!FEchoesPointerCombatGuardReview::TryFromCommandLine(
+            ReviewConfiguration,
+            RequestedVariant))
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("CONTROLLED POINTER REVIEW FAILED — unsupported variant %s."),
+                *RequestedVariant),
+            3600.0f);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED] stage=0 reason=INVALID_VARIANT requested=%s controlledNonshipping=true"),
+            *RequestedVariant);
+        return;
+    }
+    PointerReviewVariant = ReviewConfiguration.Variant;
+    PointerReviewHudScale = ReviewConfiguration.HudScale;
+    if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+    {
+        Settings->SetHudScale(PointerReviewHudScale);
+    }
     ClearSelection();
     bKeyboardTargetingEnabled = false;
     PointerReviewDefenderId = 0;
@@ -97,7 +123,9 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED] exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true controlledNonshipping=true"));
+        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED] variant=%s hudScale=%.2f exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true nonOcclusionRequired=true controlledNonshipping=true"),
+        *PointerReviewVariant,
+        PointerReviewHudScale);
 #endif
 }
 
@@ -1591,19 +1619,45 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         return false;
     }
 
+    const FVector2D ViewportSize(
+        static_cast<float>(ViewportWidth),
+        static_cast<float>(ViewportHeight));
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        ViewportSize,
+        PointerReviewHudScale,
+        true);
+    if (!Layout.IsBattlefieldPointClear(ScreenPosition, ViewportSize))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_OCCLUDED] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f"),
+            *PointerReviewVariant,
+            StageLabel,
+            EntityId,
+            ScreenPosition.X,
+            ScreenPosition.Y,
+            ViewportWidth,
+            ViewportHeight,
+            PointerReviewHudScale);
+        return false;
+    }
+
     SetMouseLocation(
         FMath::RoundToInt(ScreenPosition.X),
         FMath::RoundToInt(ScreenPosition.Y));
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_POINTER_REVIEW_COORDINATE] stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) projectedFromLiveView=true"),
+        TEXT("[ECHOES_POINTER_REVIEW_COORDINATE] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f projectedFromLiveView=true hudOcclusion=false"),
+        *PointerReviewVariant,
         StageLabel,
         EntityId,
         ScreenPosition.X,
         ScreenPosition.Y,
         ViewportWidth,
-        ViewportHeight);
+        ViewportHeight,
+        PointerReviewHudScale);
     return true;
 }
 
@@ -1625,7 +1679,8 @@ void AEchoesPlayerController::FailPointerCombatGuardReview(
     UE_LOG(
         LogEchoes,
         Error,
-        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED] stage=%d reason=%s exactScreenCoordinates=true controlledNonshipping=true"),
+        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED] variant=%s stage=%d reason=%s exactScreenCoordinates=true nonOcclusionRequired=true controlledNonshipping=true"),
+        *PointerReviewVariant,
         PointerReviewStage,
         *Reason);
 }
@@ -1824,7 +1879,9 @@ void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_COMPLETE] defender=%u protected=%u hostile=%u initialHp=%d finalHp=%d selectedVia=LMB guardVia=J attackVia=RMB exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true authoritativeDamage=true osInjection=false unaidedHuman=false controlledNonshipping=true"),
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_COMPLETE] variant=%s hudScale=%.2f defender=%u protected=%u hostile=%u initialHp=%d finalHp=%d selectedVia=LMB guardVia=J attackVia=RMB exactScreenCoordinates=true hudOcclusion=false controllerBindings=true authoritativeCommands=true authoritativeDamage=true osInjection=false unaidedHuman=false controlledNonshipping=true"),
+            *PointerReviewVariant,
+            PointerReviewHudScale,
             PointerReviewDefenderId,
             PointerReviewProtectedId,
             PointerReviewHostileId,
@@ -1848,7 +1905,8 @@ void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_POINTER_COMBAT_GUARD_CAPTURE] requested=true showUI=true output=%s"),
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_CAPTURE] variant=%s requested=true showUI=true output=%s"),
+                *PointerReviewVariant,
                 *OutputPath);
         }
     }

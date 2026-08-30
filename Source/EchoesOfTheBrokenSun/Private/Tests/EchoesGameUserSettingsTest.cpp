@@ -3,6 +3,8 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesGameUserSettings.h"
+#include "EchoesHudLayout.h"
+#include "EchoesPointerCombatGuardReview.h"
 #include "Engine/Engine.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -67,6 +69,53 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
               1.0f);
     TestTrue(TEXT("Reduced dynamic range can be enabled"),
              Settings->IsReducedDynamicRangeEnabled());
+
+    const FVector2D ReviewViewport(1600.0f, 900.0f);
+    const FEchoesHudLayout MaximumLayout =
+        FEchoesHudLayout::Build(ReviewViewport, 1.35f, true);
+    TestTrue(
+        TEXT("Maximum-scale objective clears the main panel"),
+        MaximumLayout.ObjectivePanel.Min.Y >=
+            MaximumLayout.MainPanel.Max.Y + 16.0f);
+    TestTrue(
+        TEXT("Maximum-scale command deck clears the objective fallback"),
+        MaximumLayout.CommandDeckPanel.Min.Y >=
+            MaximumLayout.ObjectivePanel.Max.Y + 12.0f);
+    TestEqual(
+        TEXT("Maximum-scale status backing grows with the main HUD"),
+        MaximumLayout.StatusPanel.Max.X,
+        MaximumLayout.MainPanel.Max.X);
+
+    const FEchoesHudLayout DefaultLayout =
+        FEchoesHudLayout::Build(ReviewViewport, 1.0f, true);
+    TestFalse(
+        TEXT("Battlefield visibility rejects a target behind the main HUD"),
+        DefaultLayout.IsBattlefieldPointClear(
+            FVector2D(800.0f, 111.0f), ReviewViewport));
+    TestTrue(
+        TEXT("Battlefield visibility accepts a clear default target"),
+        DefaultLayout.IsBattlefieldPointClear(
+            FVector2D(997.9f, 191.8f), ReviewViewport));
+    TestTrue(
+        TEXT("Battlefield visibility accepts a clear maximum-scale target"),
+        MaximumLayout.IsBattlefieldPointClear(
+            FVector2D(1484.3f, 166.4f), ReviewViewport));
+
+    FEchoesPointerCombatGuardReview ReviewConfiguration;
+    TestTrue(
+        TEXT("All bounded pointer-review variants resolve"),
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("Default"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("Offset"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("MinHud"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("MaxHud"), ReviewConfiguration));
+    TestFalse(
+        TEXT("Unknown pointer-review variants are rejected"),
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("Unknown"), ReviewConfiguration));
 
     return true;
 }
