@@ -471,6 +471,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignShapeBesideUs"));
+    const bool bCampaignReserveAuthority =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignReserveAuthority"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -479,7 +484,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignTermsOfContinuance ? 1 : 0) +
         (bCampaignNamesWithoutBirths ? 1 : 0) +
         (bCampaignShapeOfSilence ? 1 : 0) +
-        (bCampaignShapeBesideUs ? 1 : 0);
+        (bCampaignShapeBesideUs ? 1 : 0) +
+        (bCampaignReserveAuthority ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -492,7 +498,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignShapeBesideUs
+            bCampaignReserveAuthority
+                ? EEchoesOperationMode::CampaignReserveAuthority
+            : bCampaignShapeBesideUs
                 ? EEchoesOperationMode::CampaignShapeBesideUs
             : bCampaignShapeOfSilence
                 ? EEchoesOperationMode::CampaignShapeOfSilence
@@ -516,7 +524,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignShapeBesideUs
+                bCampaignReserveAuthority
+                    ? TEXT("ReserveAuthority")
+                : bCampaignShapeBesideUs
                     ? TEXT("TheShapeBesideUs")
                 : bCampaignShapeOfSilence
                     ? TEXT("TheShapeOfSilence")
@@ -539,7 +549,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignShapeBesideUs
+            bCampaignReserveAuthority
+                ? TEXT("ReserveAuthority")
+            : bCampaignShapeBesideUs
                 ? TEXT("TheShapeBesideUs")
             : bCampaignShapeOfSilence
                 ? TEXT("TheShapeOfSilence")

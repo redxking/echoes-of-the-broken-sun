@@ -17,6 +17,7 @@ class AStaticMeshActor;
 class ADirectionalLight;
 class ASkyLight;
 enum class EEchoesCommandMarkerType : uint8;
+enum class EEchoesCityDistrict : uint8;
 class UEchoesSimulationSubsystem;
 
 /** RTS selection, faction choice, and context-order input for the local player. */
@@ -118,6 +119,13 @@ public:
         bool bSuccess,
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
+    void NotifyReserveAuthorityFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCityDistrict DeferredDistrict,
+        EEchoesCityDistrict RecordedDeferredDistrict,
         EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();

@@ -3110,7 +3110,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignShapeOfSilence
                 ? TEXT("Oruun and two memory witnesses deployed; ")
-                : TEXT("Talar and two state witnesses deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignShapeBesideUs
+                ? TEXT("Talar and two state witnesses deployed; ")
+                : TEXT("Mara and three reserve districts deployed; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3139,6 +3142,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignShapeBesideUs
             ? TEXT("TheShapeBesideUs")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignReserveAuthority
+            ? TEXT("ReserveAuthority")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3209,6 +3215,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bShapeBesideUs =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignShapeBesideUs;
+    const bool bReserveAuthority =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignReserveAuthority;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3226,6 +3235,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("THE SHAPE OF SILENCE — root the Waystone, raise a Listening Spine, position both memory witnesses, then bring Oruun to the confluence. Enter deploys Kharuun authority.")
         : bShapeBesideUs
             ? TEXT("THE SHAPE BESIDE US — follow Neme's first echo, raise a relay, traverse both overlapping states, then bring Talar to the convergence. Enter deploys Meridian authority.")
+        : bReserveAuthority
+            ? TEXT("RESERVE AUTHORITY — secure Mara's authority site, power exactly two failing districts, then bring Mara to the deferred district. Enter deploys Meridian authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3240,10 +3251,11 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bNamesWithoutBirths ? TEXT("NamesWithoutBirths")
         : bShapeOfSilence ? TEXT("TheShapeOfSilence")
         : bShapeBesideUs ? TEXT("TheShapeBesideUs")
+        : bReserveAuthority ? TEXT("ReserveAuthority")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
-         bShapeBesideUs)
+         bShapeBesideUs || bReserveAuthority)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3392,6 +3404,20 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.ConvergenceSite.y.FloorToInt()),
             18.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignReserveAuthority)
+    {
+        const FEchoesReserveAuthorityPlan Plan =
+            Bridge->GetReserveAuthorityPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("DEPLOYED — bring Mara to authority %d,%d; use [N] Power Links to power exactly two districts; then bring Mara to the deferred district. %s is the inherited recommendation, not a forced choice."),
+                Plan.AuthoritySite.x.FloorToInt(),
+                Plan.AuthoritySite.y.FloorToInt(),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.RecommendedFirstDistrict)),
+            18.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3464,6 +3490,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignShapeBesideUs)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: The Shape Beside Us follows Talar and two Meridian state witnesses."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignReserveAuthority)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Reserve Authority follows Mara and the Meridian district reserve network."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3555,6 +3587,12 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsShapeBesideUsUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignShapeBesideUs;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignShapeBesideUs &&
+             Bridge->IsReserveAuthorityUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignReserveAuthority;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -4567,6 +4605,77 @@ void AEchoesPlayerController::NotifyShapeBesideUsFinished(
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyReserveAuthorityFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCityDistrict DeferredDistrict,
+    EEchoesCityDistrict RecordedDeferredDistrict,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignReserveAuthority;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Mara, a reserve district, the local Core, or the two-district allocation contract was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — two districts retain reserve power; %s remains intact but deferred. This records one local allocation, not wider city recovery or unmodeled civilian survival."),
+            FEchoesCityReserveMissionModel::DistrictDisplayName(
+                DeferredDistrict));
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this allocation. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            ResultMessage += FString::Printf(
+                TEXT(" The earlier irreversible record instead deferred %s; it was not rewritten. Press R to replay."),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    RecordedDeferredDistrict));
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=ReserveAuthority success=%s consequence=%u recordedConsequence=%u deferred=%u recordedDeferred=%u campaignStatus=%u keyboardRestart=true claimBoundary=localAllocationOnly widerCityRestored=false civilianSurvivalUnmodeled=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(DeferredDistrict),
+        static_cast<uint8>(RecordedDeferredDistrict),
         static_cast<uint8>(CommitStatus));
 }
 
@@ -8140,6 +8249,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignShapeBesideUs
                 ? TEXT("MISSION RESTARTED — Talar's overlap contact operation returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignReserveAuthority
+                ? TEXT("MISSION RESTARTED — Mara's district allocation returns to its deterministic initial state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

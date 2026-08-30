@@ -466,6 +466,17 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 WellChoiceDisplayName(Bridge->GetRecordedPrologueChoice()));
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignReserveAuthority)
+        {
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Reserve doctrine  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Bridge->GetReserveAuthorityPlan().DisplayName);
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1210,6 +1221,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bShapeBesideUs = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeBesideUs;
+    const bool bReserveAuthority = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignReserveAuthority;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1250,6 +1264,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bNamesWithoutBirths ? TEXT("NAMES WITHOUT BIRTHS")
              : bShapeOfSilence ? TEXT("THE SHAPE OF SILENCE")
              : bShapeBesideUs ? TEXT("THE SHAPE BESIDE US")
+             : bReserveAuthority ? TEXT("RESERVE AUTHORITY")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1281,6 +1296,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 08  //  %s  //  TALAR + STATE WITNESSES"),
                   *LocalFaction)
+        : bReserveAuthority
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 09  //  %s  //  MARA + DISTRICT NETWORK"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1303,6 +1322,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN ASSEMBLIES  //  MISSION 07")
     : bShapeBesideUs
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 08")
+    : bReserveAuthority
+        ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN AUTHORITY  //  MISSION 09")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1349,6 +1370,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Six consistent records lead Oruun to a communal-memory hollow shaped like the recovered census absence.")
         : bShapeBesideUs
             ? TEXT("Seven consistent records let Neme answer Talar with two routes that remain true at once.")
+        : bReserveAuthority
+            ? TEXT("Eight consistent records grant Mara a finite reserve for three failing districts.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1373,6 +1396,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Root the Waystone, raise a Listening Spine, place both witnesses, then reach the confluence.")
         : bShapeBesideUs
             ? TEXT("Observe the first echo, raise its relay, traverse both states, then reach the convergence.")
+        : bReserveAuthority
+            ? TEXT("Secure authority, power exactly two districts, then reach the intact deferred district.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2023,6 +2048,99 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignReserveAuthority)
+    {
+        const FEchoesReserveAuthorityPlan Plan =
+            Bridge->GetReserveAuthorityPlan();
+        const bool bFailed =
+            Objective.ReserveAuthorityPhase ==
+            EEchoesReserveAuthorityPhase::Failed;
+        const int32 PoweredCount =
+            (Objective.bLifeSupportPowered ? 1 : 0) +
+            (Objective.bTransitPowered ? 1 : 0) +
+            (Objective.bArchivePowered ? 1 : 0);
+        const bool bAllocationReady = PoweredCount == 2;
+        const EEchoesCityDistrict Deferred =
+            Objective.ReserveAuthorityDeferredDistrict;
+        const bool bLifeDeferred = bAllocationReady &&
+            Deferred == EEchoesCityDistrict::LifeSupport;
+        const bool bTransitDeferred = bAllocationReady &&
+            Deferred == EEchoesCityDistrict::Transit;
+        const bool bArchiveDeferred = bAllocationReady &&
+            Deferred == EEchoesCityDistrict::Archive;
+        const FString AuthorityState = bFailed
+            ? TEXT("AUTHORITY LOST")
+            : Objective.bReserveAuthoritySecured
+                ? TEXT("SECURED")
+                : FString::Printf(
+                      TEXT("MARA TO %d,%d"),
+                      Plan.AuthoritySite.x.FloorToInt(),
+                      Plan.AuthoritySite.y.FloorToInt());
+        const FString AllocationState = bFailed
+            ? TEXT("RESERVE FAILED")
+            : FString::Printf(
+                  TEXT("%d/2  L:%s  T:%s  A:%s"),
+                  PoweredCount,
+                  Objective.bLifeSupportPowered
+                      ? TEXT("POWER")
+                      : bLifeDeferred ? TEXT("DEFER") : TEXT("OPEN"),
+                  Objective.bTransitPowered
+                      ? TEXT("POWER")
+                      : bTransitDeferred ? TEXT("DEFER") : TEXT("OPEN"),
+                  Objective.bArchivePowered
+                      ? TEXT("POWER")
+                      : bArchiveDeferred ? TEXT("DEFER") : TEXT("OPEN"));
+        const FString DeferredState = bFailed
+            ? TEXT("DISTRICT LINE LOST")
+            : Objective.bReserveAuthorityMaraAtDeferredDistrict
+                ? TEXT("INTACT — DECISION RECORDED")
+                : bAllocationReady
+                    ? FString::Printf(
+                          TEXT("MARA TO %s"),
+                          FEchoesCityReserveMissionModel::DistrictDisplayName(
+                              Deferred))
+                    : TEXT("WAITING — POWER EXACTLY TWO");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("RESERVE AUTHORITY  //  MISSION 09"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  AUTHORITY SITE    %s"), *AuthorityState),
+            bFailed ? Failed
+                    : Objective.bReserveAuthoritySecured ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  DISTRICT RESERVE  %s"), *AllocationState),
+            bFailed ? Failed : bAllocationReady ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.80f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  DEFERRED DISTRICT %s"), *DeferredState),
+            bFailed ? Failed
+                    : Objective.bReserveAuthorityMaraAtDeferredDistrict
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.80f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_RESERVE_AUTHORITY_OBJECTIVES_READY] phase=%s branch=%s mara=%u powered=%d deferred=%u reconstructable=true claimBoundary=localAllocationOnly widerCityRestored=false"),
+                FEchoesReserveAuthorityMissionModel::StableName(
+                    Objective.ReserveAuthorityPhase),
+                Plan.StableName,
+                Objective.ReserveAuthorityMaraId,
+                PoweredCount,
+                static_cast<uint8>(Deferred));
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2147,18 +2265,27 @@ void AEchoesHUD::DrawMatchResult(
     const bool bShapeBesideUsResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignShapeBesideUs;
+    const bool bReserveAuthorityResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignReserveAuthority;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bVictory ? TEXT("MISSION COMPLETE") : TEXT("MISSION FAILED")
+        ? bReserveAuthorityResult
+            ? bVictory ? TEXT("RESERVE ALLOCATION COMMITTED")
+                       : TEXT("RESERVE ALLOCATION FAILED")
+            : bVictory ? TEXT("MISSION COMPLETE") : TEXT("MISSION FAILED")
         : bVictory ? TEXT("VICTORY") : bDraw ? TEXT("DRAW") : TEXT("DEFEAT");
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bShapeBesideUsResult
+        ? bReserveAuthorityResult
+            ? bVictory ? TEXT("TWO DISTRICTS HOLD; ONE REMAINS DEFERRED")
+                       : TEXT("THE DISTRICT RESERVE EXCEEDS ITS SAFE MARGIN")
+        : bShapeBesideUsResult
             ? bVictory ? TEXT("NEME ANSWERS FROM BOTH SIDES OF THE ROUTE")
                        : TEXT("THE OVERLAP CLOSES AROUND THE WITNESSES")
         : bShapeOfSilenceResult
@@ -2185,7 +2312,16 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bShapeBesideUsResult
+        ? bReserveAuthorityResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("Two districts retain power; %s remains intact but deferred. This proves one local allocation, not wider city recovery or unmodeled civilian survival."),
+                      FEchoesCityReserveMissionModel::DistrictDisplayName(
+                          Bridge != nullptr
+                              ? Bridge->GetReserveAuthorityDeferredDistrict()
+                              : EEchoesCityDistrict::LifeSupport))
+                : TEXT("Mara, a protected district, the local Core, or the exact two-district allocation contract was lost before the record could be committed.")
+        : bShapeBesideUsResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The %s overlap answered Talar with repeatable, actionable correspondence across both states. This establishes reciprocal contact, not one Choir identity, hidden authorship, or cause."),
@@ -2256,7 +2392,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bShapeBesideUsResult
+                CampaignPersistenceLine = bReserveAuthorityResult
+                    ? FString::Printf(
+                          TEXT("MISSION 09 RECORDED // %s local reserve allocation fixed."),
+                          RecordedChoice)
+                : bShapeBesideUsResult
                     ? FString::Printf(
                           TEXT("MISSION 08 RECORDED // %s reciprocal contact observed."),
                           RecordedChoice)
@@ -2333,7 +2473,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bShapeBesideUsResult
+        ? bReserveAuthorityResult
+            ? FString::Printf(
+                  TEXT("MISSION 09 — RESERVE AUTHORITY  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bShapeBesideUsResult
             ? FString::Printf(
                   TEXT("MISSION 08 — THE SHAPE BESIDE US  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -2576,6 +2720,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bShapeBesideUs = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeBesideUs;
+    const bool bReserveAuthority = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignReserveAuthority;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -2604,6 +2751,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetShapeBesideUsPlan()
             : FEchoesShapeBesideUsPlan{};
+    const FEchoesReserveAuthorityPlan ReservePlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetReserveAuthorityPlan()
+            : FEchoesReserveAuthorityPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -2644,6 +2795,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bShapeBesideUs
             ? FString::Printf(
                   TEXT("THE SHAPE BESIDE US  //  MISSION 08  //  %s"),
+                  *LocalFaction)
+        : bReserveAuthority
+            ? FString::Printf(
+                  TEXT("RESERVE AUTHORITY  //  MISSION 09  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -2686,6 +2841,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Seven consistent records reveal the %s, where Neme's guidance remains coherent across two incompatible routes."),
                   BesidePlan.DisplayName)
+        : bReserveAuthority
+            ? FString::Printf(
+                  TEXT("Eight consistent records authorize the %s. Three Lume Reach districts are failing; the reserve can sustain exactly two."),
+                  ReservePlan.DisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2709,6 +2868,11 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Oruun and both witnesses are Kharuun-authoritative. This operation tests correspondence only; it does not establish cause, a Choir identity, or hidden authorship.")
         : bShapeBesideUs
             ? TEXT("Talar and both witnesses are Meridian-authoritative proxies. Neme is represented by observable route correspondence; a playable Hollow Choir faction and unified Choir identity are not implemented.")
+        : bReserveAuthority
+            ? FString::Printf(
+                  TEXT("Mara holds Meridian authority. %s is the inherited recommendation, but the allocation remains the player's irreversible choice."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      ReservePlan.RecommendedFirstDistrict))
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2762,6 +2926,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   BesidePlan.FirstEchoSite.y.FloorToInt(),
                   BesidePlan.EchoRelaySite.x.FloorToInt(),
                   BesidePlan.EchoRelaySite.y.FloorToInt())
+        : bReserveAuthority
+            ? FString::Printf(
+                  TEXT("01  Bring Mara to reserve authority at %d,%d, then use workers and [N] Power Links."),
+                  ReservePlan.AuthoritySite.x.FloorToInt(),
+                  ReservePlan.AuthoritySite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2820,6 +2989,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   BesidePlan.SecondStateSite.y.FloorToInt(),
                   BesidePlan.ConvergenceSite.x.FloorToInt(),
                   BesidePlan.ConvergenceSite.y.FloorToInt())
+        : bReserveAuthority
+            ? TEXT("02  Power two different districts, keep all three intact, then bring Mara to the deferred district.")
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -2841,6 +3012,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The listening geometry is inherited from all six prior records; observed correspondence is not evidence of cause or authorship.")
              : bShapeBesideUs
                  ? TEXT("The overlap geometry is inherited from all seven prior records; reciprocal contact is not proof of one Choir identity, cause, or authorship.")
+             : bReserveAuthority
+                 ? TEXT("The doctrine is inherited from eight records, but it is advisory. A third powered district violates the finite-reserve contract.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -2860,6 +3033,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is infrastructure-backed paired witnessing and convergence. Any protected loss or terminal Core outcome invalidates the observation.")
         : bShapeBesideUs
             ? TEXT("Victory is relay-backed traversal and reciprocal convergence. Any protected loss or terminal Core outcome invalidates the contact evidence.")
+        : bReserveAuthority
+            ? TEXT("Victory is one exact two-district allocation. It does not establish wider city recovery or unmodeled civilian survival.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -2887,6 +3062,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + MEMORY WITNESSES")
         : bShapeBesideUs
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS TALAR + STATE WITNESSES")
+        : bReserveAuthority
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA + DISTRICT NETWORK")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -3103,7 +3280,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeOfSilence ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignShapeBesideUs)
+            EEchoesOperationMode::CampaignShapeBesideUs ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignReserveAuthority)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -3336,7 +3515,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignShapeBesideUs)
         {
             const FEchoesShapeBesideUsPlan Plan =
                 Bridge->GetShapeBesideUsPlan();
@@ -3380,6 +3560,65 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
+        else
+        {
+            const FEchoesReserveAuthorityPlan Plan =
+                Bridge->GetReserveAuthorityPlan();
+            const int32 PoweredCount =
+                (Objective.bLifeSupportPowered ? 1 : 0) +
+                (Objective.bTransitPowered ? 1 : 0) +
+                (Objective.bArchivePowered ? 1 : 0);
+            const bool bAllocationReady = PoweredCount == 2;
+            const EEchoesCityDistrict Deferred =
+                Objective.ReserveAuthorityDeferredDistrict;
+            const FLinearColor DeferredColor =
+                bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
+                              : FLinearColor(1.0f, 0.72f, 0.18f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.AuthoritySite,
+                TEXT("R"),
+                Objective.bReserveAuthoritySecured
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : Border);
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::LifeSupport),
+                TEXT("L"),
+                Objective.bLifeSupportPowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : bAllocationReady &&
+                            Deferred == EEchoesCityDistrict::LifeSupport
+                        ? DeferredColor : WaitingColor);
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Transit),
+                TEXT("T"),
+                Objective.bTransitPowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : bAllocationReady &&
+                            Deferred == EEchoesCityDistrict::Transit
+                        ? DeferredColor : WaitingColor);
+            DrawMissionSite(
+                FEchoesCityReserveMissionModel::SiteForDistrict(
+                    EEchoesCityDistrict::Archive),
+                TEXT("A"),
+                Objective.bArchivePowered
+                    ? FLinearColor(0.25f, 1.0f, 0.66f)
+                    : bAllocationReady &&
+                            Deferred == EEchoesCityDistrict::Archive
+                        ? DeferredColor : WaitingColor);
+            if (const echoes::sim::Entity* Mara =
+                    Sim->FindEntity(Objective.ReserveAuthorityMaraId))
+            {
+                DrawMissionSite(
+                    Mara->position,
+                    TEXT("M"),
+                    Objective.bReserveAuthorityMaraAtDeferredDistrict
+                        ? FLinearColor(0.25f, 1.0f, 0.66f)
+                        : Border);
+            }
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -3410,6 +3649,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignShapeBesideUs
             ? TEXT("MISSION NAV  |  NEME + RELAY + PAIRED STATES")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignReserveAuthority
+            ? TEXT("MISSION NAV  |  AUTHORITY + TWO POWERED + ONE DEFERRED")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

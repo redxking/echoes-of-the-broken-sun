@@ -20,7 +20,7 @@ def main() -> int:
     parser.add_argument(
         "--through-mission",
         type=int,
-        choices=tuple(range(9)),
+        choices=tuple(range(10)),
         default=1,
     )
     args = parser.parse_args()
@@ -113,6 +113,17 @@ def main() -> int:
             20,
             2240,
             0x7A11A9,
+        ))
+    if args.through_mission >= 9:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            9,
+            CHOICES[args.choice],
+            CHOICE_MASKS[args.choice],
+            0x7B,
+            20,
+            2540,
+            0x7A11AA,
         ))
     header = b"ECHOCPG1" + struct.pack("<HH", 1, len(records))
     payload = header + b"".join(records)

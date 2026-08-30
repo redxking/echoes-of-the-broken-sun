@@ -6,6 +6,7 @@
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
+#include "EchoesReserveAuthorityMissionModel.h"
 #include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesShapeBesideUsMissionModel.h"
@@ -118,6 +119,17 @@ struct FEchoesObjectiveSnapshot final
     bool bFirstStateTraversed = false;
     bool bSecondStateTraversed = false;
     bool bShapeBesideUsTalarAtConvergence = false;
+    EEchoesReserveAuthorityPhase ReserveAuthorityPhase =
+        EEchoesReserveAuthorityPhase::Inactive;
+    echoes::sim::FutureWellChoice ReserveAuthorityBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::EntityId ReserveAuthorityMaraId = 0;
+    EEchoesCityDistrict ReserveAuthorityRecommendedDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    EEchoesCityDistrict ReserveAuthorityDeferredDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    bool bReserveAuthoritySecured = false;
+    bool bReserveAuthorityMaraAtDeferredDistrict = false;
 };
 
 /**
@@ -257,6 +269,9 @@ public:
     [[nodiscard]] bool IsShapeOfSilenceUnlocked() const;
     [[nodiscard]] EEchoesShapeBesideUsPhase GetShapeBesideUsPhase() const;
     [[nodiscard]] bool IsShapeBesideUsUnlocked() const;
+    [[nodiscard]] EEchoesReserveAuthorityPhase
+    GetReserveAuthorityPhase() const;
+    [[nodiscard]] bool IsReserveAuthorityUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -268,6 +283,10 @@ public:
     [[nodiscard]] FEchoesShapeOfSilencePlan
     GetShapeOfSilencePlan() const;
     [[nodiscard]] FEchoesShapeBesideUsPlan GetShapeBesideUsPlan() const;
+    [[nodiscard]] FEchoesReserveAuthorityPlan
+    GetReserveAuthorityPlan() const;
+    [[nodiscard]] EEchoesCityDistrict
+    GetReserveAuthorityDeferredDistrict() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -347,6 +366,10 @@ private:
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitShapeBesideUsCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitReserveAuthorityCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
+        EEchoesCityDistrict& OutRecordedDeferredDistrict,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
@@ -433,6 +456,7 @@ private:
     echoes::sim::EntityId ShapeBesideUsTalarId = 0;
     echoes::sim::EntityId FirstStateWitnessId = 0;
     echoes::sim::EntityId SecondStateWitnessId = 0;
+    echoes::sim::EntityId ReserveAuthorityMaraId = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

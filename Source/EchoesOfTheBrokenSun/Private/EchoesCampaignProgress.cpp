@@ -63,6 +63,15 @@ constexpr uint8 ShapeBesideUsCompletionFacts =
     static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::NemeConvergenceReached) |
     static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesShapeBesideUsCompletionFact::PriorLedgerConsumed);
+constexpr uint8 ReserveAuthorityDistrictFacts =
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::LifeSupportPowered) |
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::TransitPowered) |
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::ArchivePowered);
+constexpr uint8 ReserveAuthorityCommonCompletionFacts =
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::ReserveAuthoritySecured) |
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::DeferredDistrictReached) |
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -167,7 +176,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::TermsOfContinuance &&
         Record.Mission != EEchoesCampaignMissionId::NamesWithoutBirths &&
         Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence &&
-        Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs)
+        Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs &&
+        Record.Mission != EEchoesCampaignMissionId::ReserveAuthority)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -195,9 +205,36 @@ bool ValidateRecord(
             ? NamesWithoutBirthsCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::TheShapeOfSilence
             ? ShapeOfSilenceCompletionFacts
-            : ShapeBesideUsCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::TheShapeBesideUs
+            ? ShapeBesideUsCompletionFacts
+            : ReserveAuthorityCommonCompletionFacts;
+    const uint8 ReserveDistricts =
+        Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
+    const bool bValidReserveAllocation =
+        Record.Mission != EEchoesCampaignMissionId::ReserveAuthority ||
+        (ReserveDistricts ==
+             (static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::LifeSupportPowered) |
+              static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::TransitPowered)) ||
+         ReserveDistricts ==
+             (static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::LifeSupportPowered) |
+              static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::ArchivePowered)) ||
+         ReserveDistricts ==
+             (static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::TransitPowered) |
+              static_cast<uint8>(
+                  EEchoesReserveAuthorityCompletionFact::ArchivePowered)));
+    const uint8 AllowedFacts =
+        Record.Mission == EEchoesCampaignMissionId::ReserveAuthority
+            ? ReserveAuthorityCommonCompletionFacts |
+                  ReserveAuthorityDistrictFacts
+            : RequiredFacts;
     if ((Record.VerifiedFacts & RequiredFacts) != RequiredFacts ||
-        (Record.VerifiedFacts & ~RequiredFacts) != 0)
+        (Record.VerifiedFacts & ~AllowedFacts) != 0 ||
+        !bValidReserveAllocation)
     {
         OutError = TEXT("[CAMPAIGN_UNVERIFIED_COMPLETION] The record does not prove the mission completion contract.");
         return false;
@@ -250,7 +287,9 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
     if (const FEchoesCampaignDecisionRecord* Existing =
             FindDecision(Record.Mission))
     {
-        if (Existing->WellChoice == Record.WellChoice)
+        if (Existing->WellChoice == Record.WellChoice &&
+            Existing->AvailableWellChoices == Record.AvailableWellChoices &&
+            Existing->VerifiedFacts == Record.VerifiedFacts)
         {
             OutFeedback = TEXT("CAMPAIGN LEDGER: this mission decision was already recorded.");
             return EEchoesCampaignCommitStatus::AlreadyRecorded;
