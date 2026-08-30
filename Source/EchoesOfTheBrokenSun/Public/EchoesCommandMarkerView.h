@@ -35,7 +35,8 @@ public:
     void InitializeMarker(
         EEchoesCommandMarkerType InType,
         bool bInReducedMotion,
-        bool bInReducedFlashing);
+        bool bInReducedFlashing,
+        float InLifetimeSeconds = 2.4f);
 
     [[nodiscard]] EEchoesCommandMarkerType GetMarkerType() const
     {
@@ -50,13 +51,22 @@ public:
         return bReducedFlashing;
     }
     [[nodiscard]] bool HasCollisionDisabled() const;
+    [[nodiscard]] bool HasNavigationDisabled() const;
+    [[nodiscard]] bool IsUsingAuthoredVFXAssets() const;
+    [[nodiscard]] float GetMarkerDiscYaw() const;
+    [[nodiscard]] float GetCurrentEmissiveStrength() const
+    {
+        return CurrentEmissiveStrength;
+    }
     [[nodiscard]] float GetPresentationLifetimeSeconds() const
     {
         return PresentationLifetimeSeconds;
     }
 
 private:
-    void ApplyColor(const FLinearColor& Color);
+    void ApplyAppearance(const FLinearColor& Color, float EmissiveStrength);
+    [[nodiscard]] UStaticMesh* MeshForMarkerType(
+        EEchoesCommandMarkerType Type) const;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|Command Feedback")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -71,13 +81,28 @@ private:
     TObjectPtr<UStaticMeshComponent> GlyphB;
 
     UPROPERTY()
-    TObjectPtr<UStaticMesh> CubeMesh;
+    TObjectPtr<UStaticMesh> MoveMesh;
 
     UPROPERTY()
-    TObjectPtr<UStaticMesh> CylinderMesh;
+    TObjectPtr<UStaticMesh> AttackMoveMesh;
 
     UPROPERTY()
-    TObjectPtr<UMaterialInterface> BasicMaterial;
+    TObjectPtr<UStaticMesh> PatrolMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> GuardMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> BuildMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> InteractMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> OrbitMesh;
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInterface> VFXMaterial;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> DiscMaterial;
@@ -91,8 +116,12 @@ private:
     EEchoesCommandMarkerType MarkerType = EEchoesCommandMarkerType::Move;
     FLinearColor BaseColor = FLinearColor::White;
     FVector BaseScale = FVector::OneVector;
+    FRotator BaseDiscRotation = FRotator::ZeroRotator;
+    FVector BaseGlyphALocation = FVector::ZeroVector;
+    FVector BaseGlyphBLocation = FVector::ZeroVector;
     float ElapsedSeconds = 0.0f;
     float PresentationLifetimeSeconds = 2.4f;
+    float CurrentEmissiveStrength = 0.0f;
     bool bReducedMotion = false;
     bool bReducedFlashing = false;
 };

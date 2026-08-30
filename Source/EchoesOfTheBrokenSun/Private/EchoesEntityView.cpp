@@ -138,7 +138,10 @@ AEchoesEntityView::AEchoesEntityView()
     SelectionRing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SelectionRing"));
     SelectionRing->SetupAttachment(SceneRoot);
     SelectionRing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    SelectionRing->SetGenerateOverlapEvents(false);
     SelectionRing->SetCastShadow(false);
+    SelectionRing->SetReceivesDecals(false);
+    SelectionRing->SetCanEverAffectNavigation(false);
     SelectionRing->SetVisibility(false);
 
     HealthBarBackground = CreateDefaultSubobject<UStaticMeshComponent>(
@@ -250,12 +253,16 @@ AEchoesEntityView::AEchoesEntityView()
         TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellCore.SM_World_FutureWellCore"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellGlyphFinder(
         TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellGlyph.SM_World_FutureWellGlyph"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> SelectionHaloFinder(
+        TEXT("/Game/Art/Generated/VFX/SM_VFX_SelectionHalo.SM_VFX_SelectionHalo"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialFinder(
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> ArtMaterialFinder(
         TEXT("/Game/Art/Generated/Materials/M_EchoesSurface.M_EchoesSurface"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> WorldMaterialFinder(
         TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> PresentationVFXMaterialFinder(
+        TEXT("/Game/Art/Generated/Materials/M_EchoesPresentationVFX.M_EchoesPresentationVFX"));
 
     CubeMesh = CubeFinder.Object;
     SphereMesh = SphereFinder.Object;
@@ -264,6 +271,7 @@ AEchoesEntityView::AEchoesEntityView()
     FutureWellOrbitMesh = FutureWellOrbitFinder.Object;
     FutureWellCoreMesh = FutureWellCoreFinder.Object;
     FutureWellGlyphMesh = FutureWellGlyphFinder.Object;
+    SelectionHaloMesh = SelectionHaloFinder.Object;
     BasicMaterial = MaterialFinder.Object;
     AuthoredSurfaceMaterial = ArtMaterialFinder.Succeeded()
                                   ? ArtMaterialFinder.Object
@@ -271,10 +279,16 @@ AEchoesEntityView::AEchoesEntityView()
     AuthoredWorldSurfaceMaterial = WorldMaterialFinder.Succeeded()
                                        ? WorldMaterialFinder.Object
                                        : AuthoredSurfaceMaterial;
+    AuthoredPresentationVFXMaterial = PresentationVFXMaterialFinder.Succeeded()
+                                          ? PresentationVFXMaterialFinder.Object
+                                          : BasicMaterial;
+    bUsingAuthoredSelectionVFX =
+        SelectionHaloFinder.Succeeded() && PresentationVFXMaterialFinder.Succeeded();
 
     BodyMesh->SetStaticMesh(CylinderMesh);
     SilhouetteAccent->SetStaticMesh(CubeMesh);
-    SelectionRing->SetStaticMesh(CylinderMesh);
+    SelectionRing->SetStaticMesh(
+        SelectionHaloMesh != nullptr ? SelectionHaloMesh : CylinderMesh);
     HealthBarBackground->SetStaticMesh(CubeMesh);
     HealthBarFill->SetStaticMesh(CubeMesh);
     DeploymentCover->SetStaticMesh(CubeMesh);
@@ -315,6 +329,37 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
     SetActorLocation(SmoothedLocation, false, nullptr, ETeleportType::None);
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    if (bSelected && SelectionRing != nullptr && RingMaterial != nullptr)
+    {
+        bSelectionReducedMotionApplied =
+            Settings != nullptr && Settings->IsReducedMotionEnabled();
+        bSelectionReducedFlashingApplied =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        SelectionVFXTimeSeconds += DeltaSeconds;
+        if (!bSelectionReducedMotionApplied)
+        {
+            SelectionRing->SetRelativeRotation(
+                FRotator(0.0f, SelectionVFXTimeSeconds * 14.0f, 0.0f));
+            const float BreathingScale =
+                1.0f + 0.028f * FMath::Sin(SelectionVFXTimeSeconds * 2.2f);
+            SelectionRing->SetRelativeScale3D(
+                SelectionVFXBaseScale * BreathingScale);
+        }
+        else
+        {
+            SelectionRing->SetRelativeRotation(FRotator::ZeroRotator);
+            SelectionRing->SetRelativeScale3D(SelectionVFXBaseScale);
+        }
+        SelectionVFXEmissiveStrength = bSelectionReducedFlashingApplied
+                                           ? 1.25f
+                                           : 1.9f + 0.14f *
+                                                 FMath::Sin(
+                                                     SelectionVFXTimeSeconds *
+                                                     1.4f);
+        RingMaterial->SetScalarParameterValue(
+            EmissiveStrengthParameterName,
+            SelectionVFXEmissiveStrength);
+    }
     if (EntityType == echoes::sim::EntityType::FutureWell &&
         bUsingAuthoredFutureWellMesh &&
         FutureWellOrbitOuter != nullptr &&
@@ -729,8 +774,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         bShowSilhouetteAccent && !bUsingAuthoredRosterMesh &&
             !bUsingAuthoredFutureWellMesh,
         true);
-    SelectionRing->SetRelativeScale3D(
-        FVector(SelectionRadius, SelectionRadius, 0.025f));
+    SelectionRing->SetRelativeScale3D(FVector(
+        SelectionRadius,
+        SelectionRadius,
+        SelectionHaloMesh != nullptr ? 1.0f : 0.025f));
+    SelectionVFXBaseScale = SelectionRing->GetRelativeScale3D();
 
     const bool bShowDeploymentCover =
         State.deployed &&
@@ -881,10 +929,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
         if (RingMaterial == nullptr)
         {
-            RingMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            RingMaterial = UMaterialInstanceDynamic::Create(
+                AuthoredPresentationVFXMaterial,
+                this);
             RingMaterial->SetVectorParameterValue(
                 EntityColorParameterName,
                 FLinearColor(0.08f, 1.0f, 0.68f));
+            RingMaterial->SetScalarParameterValue(
+                EmissiveStrengthParameterName,
+                1.9f);
             SelectionRing->SetMaterial(0, RingMaterial);
         }
         if (HealthBarBackgroundMaterial == nullptr)
@@ -1369,12 +1422,52 @@ void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
 void AEchoesEntityView::SetSelected(bool bInSelected)
 {
     bSelected = bInSelected;
+    SelectionVFXTimeSeconds = 0.0f;
+    SelectionRing->SetRelativeRotation(FRotator::ZeroRotator);
+    SelectionRing->SetRelativeScale3D(SelectionVFXBaseScale);
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    bSelectionReducedMotionApplied =
+        bSelected && Settings != nullptr && Settings->IsReducedMotionEnabled();
+    bSelectionReducedFlashingApplied =
+        bSelected && Settings != nullptr && Settings->IsReducedFlashingEnabled();
+    SelectionVFXEmissiveStrength = bSelectionReducedFlashingApplied ? 1.25f : 1.9f;
+    if (RingMaterial != nullptr)
+    {
+        RingMaterial->SetScalarParameterValue(
+            EmissiveStrengthParameterName,
+            SelectionVFXEmissiveStrength);
+    }
     SelectionRing->SetVisibility(bSelected, true);
     BodyMesh->SetRenderCustomDepth(bSelected);
     BodyMesh->SetCustomDepthStencilValue(bSelected ? 1 : 0);
     SilhouetteAccent->SetRenderCustomDepth(bSelected);
     SilhouetteAccent->SetCustomDepthStencilValue(bSelected ? 1 : 0);
     UpdateHealthBar();
+}
+
+bool AEchoesEntityView::IsSelectionVFXVisible() const
+{
+    return SelectionRing != nullptr && SelectionRing->IsVisible();
+}
+
+bool AEchoesEntityView::HasSelectionVFXCollisionDisabled() const
+{
+    return SelectionRing != nullptr &&
+           SelectionRing->GetCollisionEnabled() == ECollisionEnabled::NoCollision &&
+           !SelectionRing->GetGenerateOverlapEvents();
+}
+
+bool AEchoesEntityView::HasSelectionVFXNavigationDisabled() const
+{
+    return SelectionRing != nullptr &&
+           !SelectionRing->CanEverAffectNavigation();
+}
+
+float AEchoesEntityView::GetSelectionVFXYaw() const
+{
+    return SelectionRing != nullptr
+               ? SelectionRing->GetRelativeRotation().Yaw
+               : 0.0f;
 }
 
 void AEchoesEntityView::UpdateHealthBar()

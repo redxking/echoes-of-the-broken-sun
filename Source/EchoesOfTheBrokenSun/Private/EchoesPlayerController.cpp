@@ -3661,7 +3661,7 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d formation=%s collision=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
+        TEXT("[ECHOES_COMMAND_MARKER] type=%s accepted=%d formation=%s vfx=selection-command-vfx-v1 authored=true collision=false navigation=false authoritative=false reducedMotion=%s reducedFlashing=%s finalArt=false"),
         MarkerLabel,
         AcceptedCount,
         *GetFormationLabel(),

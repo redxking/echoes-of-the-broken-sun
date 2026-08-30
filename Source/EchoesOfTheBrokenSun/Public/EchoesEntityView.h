@@ -31,6 +31,26 @@ public:
     [[nodiscard]] uint8 GetOwnerPlayerId() const { return OwnerPlayerId; }
     [[nodiscard]] echoes::sim::EntityType GetEntityType() const { return EntityType; }
     [[nodiscard]] bool IsSelected() const { return bSelected; }
+    [[nodiscard]] bool IsUsingAuthoredSelectionVFX() const
+    {
+        return bUsingAuthoredSelectionVFX;
+    }
+    [[nodiscard]] bool IsSelectionVFXVisible() const;
+    [[nodiscard]] bool HasSelectionVFXCollisionDisabled() const;
+    [[nodiscard]] bool HasSelectionVFXNavigationDisabled() const;
+    [[nodiscard]] bool IsSelectionReducedMotionApplied() const
+    {
+        return bSelectionReducedMotionApplied;
+    }
+    [[nodiscard]] bool IsSelectionReducedFlashingApplied() const
+    {
+        return bSelectionReducedFlashingApplied;
+    }
+    [[nodiscard]] float GetSelectionVFXYaw() const;
+    [[nodiscard]] float GetSelectionVFXEmissiveStrength() const
+    {
+        return SelectionVFXEmissiveStrength;
+    }
     [[nodiscard]] float GetDisplayedHealthFraction() const
     {
         return DisplayedHealthFraction;
@@ -165,6 +185,9 @@ private:
     TObjectPtr<UStaticMesh> FutureWellGlyphMesh;
 
     UPROPERTY()
+    TObjectPtr<UStaticMesh> SelectionHaloMesh;
+
+    UPROPERTY()
     TObjectPtr<UMaterialInterface> BasicMaterial;
 
     UPROPERTY()
@@ -172,6 +195,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<UMaterialInterface> AuthoredWorldSurfaceMaterial;
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInterface> AuthoredPresentationVFXMaterial;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
@@ -259,4 +285,10 @@ private:
     bool bUsingAuthoredResourceMesh = false;
     float FutureWellVisualTimeSeconds = 0.0f;
     FVector FutureWellCoreBaseScale = FVector::OneVector;
+    FVector SelectionVFXBaseScale = FVector::OneVector;
+    float SelectionVFXTimeSeconds = 0.0f;
+    float SelectionVFXEmissiveStrength = 0.0f;
+    bool bUsingAuthoredSelectionVFX = false;
+    bool bSelectionReducedMotionApplied = false;
+    bool bSelectionReducedFlashingApplied = false;
 };

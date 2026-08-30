@@ -1,4 +1,4 @@
-"""Generate the authored Echoes roster, landmark, and Glass Scar mesh set.
+"""Generate the authored Echoes roster, world, and presentation mesh set.
 
 Run this script only through Scripts/generate_art_assets.sh.  The generated
 assets are ordinary StaticMesh and Material assets; Geometry Scripting and
@@ -25,6 +25,9 @@ ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Vein",
 )
 ASH_CUT_ASSET_REVISION = "ash-cut-production-v1"
+VFX_ROOT = f"{ART_ROOT}/VFX"
+VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
+PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v1"
 
 PRIMARY = 0
 DARK = 1
@@ -48,6 +51,22 @@ class AssetSpec:
     @property
     def asset_path(self) -> str:
         return f"{ART_ROOT}/{self.faction}/{self.category}/{self.asset_name}"
+
+
+@dataclass(frozen=True)
+class VfxAssetSpec:
+    name: str
+    display_name: str
+    role: str
+    builder: Callable[[unreal.DynamicMesh, bool], None]
+
+    @property
+    def asset_name(self) -> str:
+        return f"SM_VFX_{self.name}"
+
+    @property
+    def asset_path(self) -> str:
+        return f"{VFX_ROOT}/{self.asset_name}"
 
 
 def transform(
@@ -830,6 +849,123 @@ def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
             )
 
 
+def vfx_selection_halo(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Broken-sun selection halo with cardinal acquisition brackets."""
+    torus(mesh, 50.0, 3.2, (0.0, 0.0, 2.0), high_detail=high)
+    for angle in range(0, 360, 90):
+        radial_tangent_box(
+            mesh,
+            float(angle),
+            52.0,
+            (21.0, 5.0, 4.0),
+            2.0,
+            PRIMARY,
+        )
+        radial_box(
+            mesh,
+            float(angle),
+            62.0,
+            (12.0, 4.0, 4.0),
+            2.0,
+            PRIMARY,
+        )
+    if high:
+        for angle in range(45, 360, 90):
+            radial_tangent_box(
+                mesh,
+                float(angle),
+                49.0,
+                (10.0, 3.0, 3.0),
+                2.0,
+                PRIMARY,
+            )
+
+
+def command_sigil_base(mesh: unreal.DynamicMesh, high: bool) -> None:
+    torus(mesh, 43.0, 2.8, (0.0, 0.0, 2.0), high_detail=high)
+    for angle in range(0, 360, 90):
+        radial_tangent_box(
+            mesh,
+            float(angle),
+            43.0,
+            (13.0, 4.0, 4.0),
+            2.0,
+            PRIMARY,
+        )
+
+
+def vfx_command_move(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    box(mesh, (46.0, 7.0, 5.0), (-6.0, 0.0, 4.0), PRIMARY)
+    box(mesh, (25.0, 7.0, 5.0), (20.0, 9.0, 4.0), PRIMARY, (0.0, 42.0, 0.0))
+    box(mesh, (25.0, 7.0, 5.0), (20.0, -9.0, 4.0), PRIMARY, (0.0, -42.0, 0.0))
+
+
+def vfx_command_attack_move(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    box(mesh, (68.0, 8.0, 5.0), (0.0, 0.0, 4.0), PRIMARY, (0.0, 45.0, 0.0))
+    box(mesh, (68.0, 8.0, 5.0), (0.0, 0.0, 4.0), PRIMARY, (0.0, -45.0, 0.0))
+    if high:
+        cylinder(mesh, 8.0, 5.0, (0.0, 0.0, 4.0), PRIMARY, sides=8)
+
+
+def vfx_command_patrol(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    for x, yaw in ((-15.0, 0.0), (15.0, 180.0)):
+        box(mesh, (28.0, 6.0, 5.0), (x, 0.0, 4.0), PRIMARY, (0.0, yaw, 0.0))
+        box(mesh, (18.0, 6.0, 5.0), (x + (12.0 if yaw == 0.0 else -12.0), 7.0, 4.0), PRIMARY, (0.0, yaw + 42.0, 0.0))
+        box(mesh, (18.0, 6.0, 5.0), (x + (12.0 if yaw == 0.0 else -12.0), -7.0, 4.0), PRIMARY, (0.0, yaw - 42.0, 0.0))
+
+
+def vfx_command_guard(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    box(mesh, (7.0, 52.0, 5.0), (-16.0, 0.0, 4.0), PRIMARY)
+    box(mesh, (7.0, 52.0, 5.0), (16.0, 0.0, 4.0), PRIMARY)
+    box(mesh, (38.0, 7.0, 5.0), (0.0, 22.0, 4.0), PRIMARY)
+    box(mesh, (28.0, 7.0, 5.0), (-8.0, -21.0, 4.0), PRIMARY, (0.0, 28.0, 0.0))
+    box(mesh, (28.0, 7.0, 5.0), (8.0, -21.0, 4.0), PRIMARY, (0.0, -28.0, 0.0))
+
+
+def vfx_command_build(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    for x, y, yaw in (
+        (-20.0, -20.0, 0.0),
+        (20.0, -20.0, 90.0),
+        (20.0, 20.0, 180.0),
+        (-20.0, 20.0, 270.0),
+    ):
+        box(mesh, (28.0, 7.0, 5.0), (x, y, 4.0), PRIMARY, (0.0, yaw, 0.0))
+    box(mesh, (36.0, 7.0, 5.0), (0.0, 0.0, 4.0), PRIMARY, (0.0, 45.0, 0.0))
+    box(mesh, (36.0, 7.0, 5.0), (0.0, 0.0, 4.0), PRIMARY, (0.0, -45.0, 0.0))
+
+
+def vfx_command_interact(mesh: unreal.DynamicMesh, high: bool) -> None:
+    command_sigil_base(mesh, high)
+    torus(mesh, 15.0, 3.2, (-12.0, 0.0, 4.0), PRIMARY, high_detail=high)
+    torus(mesh, 15.0, 3.2, (12.0, 0.0, 4.0), PRIMARY, high_detail=high)
+    box(mesh, (30.0, 5.0, 5.0), (0.0, 0.0, 4.0), PRIMARY)
+
+
+def vfx_command_orbit(mesh: unreal.DynamicMesh, high: bool) -> None:
+    box(mesh, (32.0, 8.0, 5.0), (-4.0, 0.0, 2.0), PRIMARY)
+    box(mesh, (22.0, 8.0, 5.0), (12.0, 7.0, 2.0), PRIMARY, (0.0, 38.0, 0.0))
+    box(mesh, (22.0, 8.0, 5.0), (12.0, -7.0, 2.0), PRIMARY, (0.0, -38.0, 0.0))
+    if high:
+        cylinder(mesh, 5.0, 5.0, (-19.0, 0.0, 2.0), PRIMARY, sides=8)
+
+
+VFX_ASSETS = (
+    VfxAssetSpec("SelectionHalo", "Selection halo", "persistent selected-entity readability", vfx_selection_halo),
+    VfxAssetSpec("CommandMove", "Move command sigil", "accepted move confirmation", vfx_command_move),
+    VfxAssetSpec("CommandAttackMove", "Attack-move command sigil", "accepted attack-move confirmation", vfx_command_attack_move),
+    VfxAssetSpec("CommandPatrol", "Patrol command sigil", "accepted patrol confirmation", vfx_command_patrol),
+    VfxAssetSpec("CommandGuard", "Guard command sigil", "accepted guard confirmation", vfx_command_guard),
+    VfxAssetSpec("CommandBuild", "Build command sigil", "accepted build confirmation", vfx_command_build),
+    VfxAssetSpec("CommandInteract", "Interact command sigil", "accepted interaction confirmation", vfx_command_interact),
+    VfxAssetSpec("CommandOrbit", "Command orbit shard", "motion-readable command accent", vfx_command_orbit),
+)
+
+
 ASSETS = (
     AssetSpec("Meridian", "Units", "Surveyor", "Surveyor", "worker engineer", meridian_surveyor),
     AssetSpec("Meridian", "Units", "Lancer", "Lancer", "ranged line unit", meridian_lancer),
@@ -1283,13 +1419,189 @@ def create_ash_cut_materials() -> tuple[unreal.MaterialInterface, ...]:
     return tuple(instances)
 
 
-def build_dynamic_mesh(spec: AssetSpec, high_detail: bool) -> unreal.DynamicMesh:
+def create_presentation_vfx_material() -> unreal.Material:
+    existing = (
+        unreal.EditorAssetLibrary.load_asset(VFX_MATERIAL_PATH)
+        if unreal.EditorAssetLibrary.does_asset_exist(VFX_MATERIAL_PATH)
+        else None
+    )
+    if existing is not None and not isinstance(existing, unreal.Material):
+        raise RuntimeError(
+            f"Existing presentation VFX asset is not a Material: {VFX_MATERIAL_PATH}"
+        )
+    if existing is not None:
+        revision = unreal.EditorAssetLibrary.get_metadata_tag(
+            existing, "Echoes.AssetRevision"
+        )
+        if revision == PRESENTATION_VFX_ASSET_REVISION:
+            unreal.log(
+                f"[ECHOES_PRESENTATION_VFX_MATERIAL] path={VFX_MATERIAL_PATH} action=reused"
+            )
+            return existing
+        if not unreal.EditorAssetLibrary.delete_asset(VFX_MATERIAL_PATH):
+            raise RuntimeError(
+                f"Could not replace presentation VFX material: {VFX_MATERIAL_PATH}"
+            )
+
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    material = tools.create_asset(
+        "M_EchoesPresentationVFX",
+        f"{ART_ROOT}/Materials",
+        unreal.Material,
+        unreal.MaterialFactoryNew(),
+    )
+    if material is None:
+        raise RuntimeError("Could not create M_EchoesPresentationVFX")
+
+    color = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionVectorParameter, -560, -160
+    )
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property(
+        "default_value", unreal.LinearColor(0.08, 0.92, 1.0, 1.0)
+    )
+    emission = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -560, -20
+    )
+    emission.set_editor_property("parameter_name", "EmissiveStrength")
+    emission.set_editor_property("default_value", 2.0)
+    emissive_color = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -260, -80
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        color, "", emissive_color, "A"
+    )
+    unreal.MaterialEditingLibrary.connect_material_expressions(
+        emission, "", emissive_color, "B"
+    )
+    metallic = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionConstant, -300, 100
+    )
+    metallic.set_editor_property("r", 0.15)
+    roughness = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionConstant, -300, 190
+    )
+    roughness.set_editor_property("r", 0.22)
+    unreal.MaterialEditingLibrary.connect_material_property(
+        color, "", unreal.MaterialProperty.MP_BASE_COLOR
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        metallic, "", unreal.MaterialProperty.MP_METALLIC
+    )
+    unreal.MaterialEditingLibrary.connect_material_property(
+        roughness, "", unreal.MaterialProperty.MP_ROUGHNESS
+    )
+    material.set_editor_property("two_sided", True)
+    unreal.MaterialEditingLibrary.layout_material_expressions(material)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.Creator", "Angelis Pseftis"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material,
+        "Echoes.Provenance",
+        "Original emissive presentation material authored in-project",
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.Status", "Production-oriented presentation VFX candidate"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.RuntimeAuthority", "Presentation only"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.AssetRevision", PRESENTATION_VFX_ASSET_REVISION
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
+    return material
+
+
+def build_dynamic_mesh(
+    spec: AssetSpec | VfxAssetSpec, high_detail: bool
+) -> unreal.DynamicMesh:
     mesh = unreal.DynamicMesh()
     mesh.enable_material_i_ds()
     spec.builder(mesh, high_detail)
     if mesh.is_empty():
         raise RuntimeError(f"Builder returned an empty mesh for {spec.display_name}")
     return mesh
+
+
+def create_presentation_vfx_mesh(
+    spec: VfxAssetSpec, material: unreal.MaterialInterface
+) -> unreal.StaticMesh:
+    existing = (
+        unreal.EditorAssetLibrary.load_asset(spec.asset_path)
+        if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path)
+        else None
+    )
+    if existing is not None and not isinstance(existing, unreal.StaticMesh):
+        raise RuntimeError(f"Existing VFX asset is not a StaticMesh: {spec.asset_path}")
+    if existing is not None:
+        revision = unreal.EditorAssetLibrary.get_metadata_tag(
+            existing, "Echoes.AssetRevision"
+        )
+        if revision == PRESENTATION_VFX_ASSET_REVISION:
+            unreal.log(
+                "[ECHOES_PRESENTATION_VFX_ASSET] "
+                f"path={spec.asset_path} display={spec.display_name} "
+                f"lods={existing.get_num_lods()} "
+                f"lod0Triangles={existing.get_num_triangles(0)} "
+                f"lod1Triangles={existing.get_num_triangles(1)} action=reused"
+            )
+            return existing
+        if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
+            raise RuntimeError(f"Could not replace VFX asset: {spec.asset_path}")
+
+    lod_zero = build_dynamic_mesh(spec, True)
+    lod_one = build_dynamic_mesh(spec, False)
+    options = unreal.GeometryScriptCreateNewStaticMeshAssetOptions(
+        enable_recompute_normals=False,
+        enable_recompute_tangents=False,
+        enable_nanite=False,
+        enable_collision=False,
+        collision_mode=unreal.CollisionTraceFlag.CTF_USE_DEFAULT,
+    )
+    asset, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh_lods(
+        [lod_zero, lod_one], spec.asset_path, options
+    )
+    if asset is None or outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
+        raise RuntimeError(
+            f"Presentation VFX mesh creation failed for {spec.asset_path}: {outcome}"
+        )
+    asset.set_material(0, material)
+    mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    mesh_editor.remove_collisions(asset)
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.Creator", "Angelis Pseftis"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Role", spec.role)
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.Provenance", "Original scripted presentation geometry"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.Status", "Production-oriented presentation VFX candidate"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.RuntimeAuthority", "Presentation only"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.CollisionPolicy", "No asset or runtime collision"
+    )
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset, "Echoes.AssetRevision", PRESENTATION_VFX_ASSET_REVISION
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(asset, False)
+    unreal.log(
+        "[ECHOES_PRESENTATION_VFX_ASSET] "
+        f"path={spec.asset_path} display={spec.display_name} "
+        f"lods={asset.get_num_lods()} "
+        f"lod0Triangles={asset.get_num_triangles(0)} "
+        f"lod1Triangles={asset.get_num_triangles(1)} action=created"
+    )
+    return asset
 
 
 def create_static_mesh(
@@ -1427,11 +1739,12 @@ def create_static_mesh(
 def main() -> None:
     unreal.log(
         "[ECHOES_ART_BEGIN] generating 16 roster assets, 4 Future Well assets, "
-        "and 7 Glass Scar environment assets"
+        "7 Glass Scar environment assets, and 8 presentation VFX assets"
     )
     surface_material = create_surface_material()
     world_surface_material = create_world_surface_material()
     ash_cut_materials = create_ash_cut_materials()
+    presentation_vfx_material = create_presentation_vfx_material()
     generated = [
         create_static_mesh(
             spec,
@@ -1444,6 +1757,10 @@ def main() -> None:
             ),
         )
         for spec in ASSETS
+    ]
+    presentation_vfx_assets = [
+        create_presentation_vfx_mesh(spec, presentation_vfx_material)
+        for spec in VFX_ASSETS
     ]
     ash_cut_asset = next(
         asset
@@ -1481,10 +1798,37 @@ def main() -> None:
         f"materials={len(ash_cut_materials)} simpleCollision={ash_cut_collision_count} "
         "runtimeAuthority=presentation runtimeCollision=false"
     )
+    vfx_collision_counts = [
+        mesh_editor.get_simple_collision_count(asset)
+        for asset in presentation_vfx_assets
+    ]
+    if (
+        len(presentation_vfx_assets) != 8
+        or any(asset.get_num_lods() != 2 for asset in presentation_vfx_assets)
+        or any(count != 0 for count in vfx_collision_counts)
+        or any(
+            asset.get_material(0) is None
+            or "M_EchoesPresentationVFX" not in asset.get_material(0).get_path_name()
+            for asset in presentation_vfx_assets
+        )
+    ):
+        raise RuntimeError(
+            "Presentation VFX audit failed: "
+            f"assets={len(presentation_vfx_assets)} "
+            f"lods={[asset.get_num_lods() for asset in presentation_vfx_assets]} "
+            f"collision={vfx_collision_counts}"
+        )
     unreal.log(
-        f"[ECHOES_ART_COMPLETE] generated={len(generated)} "
-        f"roster=16 landmarks=4 environment=7 material={MATERIAL_PATH} "
-        f"worldMaterial={WORLD_MATERIAL_PATH}"
+        "[ECHOES_PRESENTATION_VFX_READY] "
+        f"revision={PRESENTATION_VFX_ASSET_REVISION} assets=8 selection=1 "
+        "commands=6 orbit=1 lods=2 simpleCollision=0 "
+        "runtimeAuthority=presentation reducedMotion=steady "
+        "reducedFlashing=steadyLowEmission finalArt=false"
+    )
+    unreal.log(
+        f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets)} "
+        f"roster=16 landmarks=4 environment=7 vfx=8 material={MATERIAL_PATH} "
+        f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 
 

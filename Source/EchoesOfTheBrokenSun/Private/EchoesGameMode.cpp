@@ -4,9 +4,11 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EchoesCommandMarkerView.h"
 #include "EchoesHUD.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesRTSCameraPawn.h"
@@ -287,6 +289,141 @@ void AEchoesGameMode::BeginPlay()
     }
 
 #if !UE_BUILD_SHIPPING
+    const bool bPresentationVFXReview =
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesPresentationVFXReview"));
+    if (bPresentationVFXReview)
+    {
+        const bool bReducedPresentation = FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesReviewReducedPresentation"));
+        if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+        {
+            Settings->SetReducedMotionEnabled(bReducedPresentation);
+            Settings->SetReducedFlashingEnabled(bReducedPresentation);
+        }
+        if (AEchoesFogView* FogView = Bridge->GetFogView())
+        {
+            FogView->SetActorHiddenInGame(true);
+        }
+        if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
+        {
+            TerrainView->SetActorHiddenInGame(true);
+        }
+
+        int32 HiddenOrdinaryViewCount = 0;
+        if (const echoes::sim::Simulation* Simulation = Bridge->GetSimulation())
+        {
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (AEchoesEntityView* View = Bridge->FindEntityView(Entity.id))
+                {
+                    View->SetActorHiddenInGame(true);
+                    ++HiddenOrdinaryViewCount;
+                }
+            }
+        }
+        int32 HiddenTerrainShelfCount = 0;
+        for (TActorIterator<AStaticMeshActor> ActorIterator(GetWorld());
+             ActorIterator;
+             ++ActorIterator)
+        {
+            if (ActorIterator->ActorHasTag(TEXT("EchoesTerrainShelf")))
+            {
+                ActorIterator->SetActorHiddenInGame(true);
+                ++HiddenTerrainShelfCount;
+            }
+        }
+
+        int32 SelectedPreviewCount = 0;
+        const auto SpawnSelectedPreview = [this, &SelectedPreviewCount](
+                                               uint32 Id,
+                                               echoes::sim::EntityType Type,
+                                               int32 TileX,
+                                               int32 TileY)
+        {
+            AEchoesEntityView* Preview =
+                GetWorld()->SpawnActor<AEchoesEntityView>();
+            if (Preview == nullptr)
+            {
+                return;
+            }
+            echoes::sim::Entity State{};
+            State.id = Id;
+            State.owner = UEchoesSimulationSubsystem::LocalPlayerId;
+            State.faction = echoes::sim::Faction::MeridianCompact;
+            State.type = Type;
+            State.position = echoes::sim::Vec2::FromTiles(TileX, TileY);
+            State.hitPoints = 100;
+            State.maxHitPoints = 100;
+            Preview->ApplyAuthoritativeState(State, true);
+            Preview->SetSelected(true);
+            ++SelectedPreviewCount;
+        };
+        SpawnSelectedPreview(920001, echoes::sim::EntityType::Worker, 8, 8);
+        SpawnSelectedPreview(920002, echoes::sim::EntityType::Soldier, 10, 8);
+        SpawnSelectedPreview(920003, echoes::sim::EntityType::HeavyUnit, 12, 8);
+        SpawnSelectedPreview(920004, echoes::sim::EntityType::ScoutUnit, 14, 8);
+
+        const EEchoesCommandMarkerType MarkerTypes[] = {
+            EEchoesCommandMarkerType::Move,
+            EEchoesCommandMarkerType::AttackMove,
+            EEchoesCommandMarkerType::Patrol,
+            EEchoesCommandMarkerType::Guard,
+            EEchoesCommandMarkerType::Build,
+            EEchoesCommandMarkerType::Interact,
+        };
+        const FIntPoint MarkerTiles[] = {
+            FIntPoint(8, 11),
+            FIntPoint(11, 11),
+            FIntPoint(14, 11),
+            FIntPoint(16, 11),
+            FIntPoint(11, 13),
+            FIntPoint(14, 13),
+        };
+        int32 SpawnedMarkerCount = 0;
+        int32 AuthoredMarkerCount = 0;
+        for (int32 Index = 0; Index < UE_ARRAY_COUNT(MarkerTypes); ++Index)
+        {
+            FActorSpawnParameters SpawnParameters;
+            SpawnParameters.ObjectFlags |= RF_Transient;
+            SpawnParameters.SpawnCollisionHandlingOverride =
+                ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+            const FVector MarkerWorldLocation = Bridge->SimToWorld(
+                echoes::sim::Vec2::FromTiles(
+                    MarkerTiles[Index].X,
+                    MarkerTiles[Index].Y));
+            AEchoesCommandMarkerView* Marker =
+                GetWorld()->SpawnActor<AEchoesCommandMarkerView>(
+                    MarkerWorldLocation + FVector(0.0f, 0.0f, 12.0f),
+                    FRotator::ZeroRotator,
+                    SpawnParameters);
+            if (Marker == nullptr)
+            {
+                continue;
+            }
+            Marker->InitializeMarker(
+                MarkerTypes[Index],
+                bReducedPresentation,
+                bReducedPresentation,
+                30.0f);
+            ++SpawnedMarkerCount;
+            AuthoredMarkerCount += Marker->IsUsingAuthoredVFXAssets() ? 1 : 0;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_PRESENTATION_VFX_REVIEW_READY] revision=selection-command-vfx-v1 markers=%d authoredMarkers=%d selected=%d ordinaryViewsHidden=%d terrainShelvesHidden=%d reducedMotion=%s reducedFlashing=%s collision=false authoritative=false editorOnly=true finalArt=false"),
+            SpawnedMarkerCount,
+            AuthoredMarkerCount,
+            SelectedPreviewCount,
+            HiddenOrdinaryViewCount,
+            HiddenTerrainShelfCount,
+            bReducedPresentation ? TEXT("true") : TEXT("false"),
+            bReducedPresentation ? TEXT("true") : TEXT("false"));
+    }
+#endif
+
+#if !UE_BUILD_SHIPPING
     if (FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesFutureWellArtReview")))
@@ -512,6 +649,9 @@ void AEchoesGameMode::BeginPlay()
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesPresentationVFXReview")) ||
              FParse::Value(
                  FCommandLine::Get(),
                  TEXT("EchoesGlassScarReview="),

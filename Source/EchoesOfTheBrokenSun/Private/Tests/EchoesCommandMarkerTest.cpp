@@ -81,6 +81,12 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
             *FString::Printf(TEXT("Marker %d has no collision"), Index),
             Marker->HasCollisionDisabled());
         TestTrue(
+            *FString::Printf(TEXT("Marker %d cannot affect navigation"), Index),
+            Marker->HasNavigationDisabled());
+        TestTrue(
+            *FString::Printf(TEXT("Marker %d uses authored VFX assets"), Index),
+            Marker->IsUsingAuthoredVFXAssets());
+        TestTrue(
             *FString::Printf(TEXT("Marker %d retains its shape code"), Index),
             Marker->GetMarkerType() == MarkerTypes[Index]);
         TestTrue(
@@ -90,11 +96,21 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
         TArray<UStaticMeshComponent*> MeshComponents;
         Marker->GetComponents<UStaticMeshComponent>(MeshComponents);
         TestEqual(
-            *FString::Printf(TEXT("Marker %d owns three visible primitives"), Index),
+            *FString::Printf(TEXT("Marker %d owns three authored mesh layers"), Index),
             MeshComponents.Num(),
             3);
         for (UStaticMeshComponent* Component : MeshComponents)
         {
+            TestNotNull(
+                *FString::Printf(TEXT("Marker %d mesh layer is assigned"), Index),
+                Component->GetStaticMesh().Get());
+            if (Component->GetStaticMesh() != nullptr)
+            {
+                TestTrue(
+                    *FString::Printf(TEXT("Marker %d layer is project-authored"), Index),
+                    Component->GetStaticMesh()->GetPathName().StartsWith(
+                        TEXT("/Game/Art/Generated/VFX/SM_VFX_")));
+            }
             TestFalse(
                 *FString::Printf(TEXT("Marker %d primitive does not overlap"), Index),
                 Component->GetGenerateOverlapEvents());
@@ -110,9 +126,25 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
             TestTrue(TEXT("Reduced-flashing marker records the setting"),
                      Marker->IsReducedFlashingApplied());
             const FVector ScaleBeforeTick = Marker->GetActorScale3D();
+            const float YawBeforeTick = Marker->GetMarkerDiscYaw();
             Marker->Tick(0.25f);
             TestTrue(TEXT("Reduced-motion marker does not pulse its scale"),
                      Marker->GetActorScale3D().Equals(ScaleBeforeTick));
+            TestEqual(TEXT("Reduced-motion marker keeps its sigil steady"),
+                      Marker->GetMarkerDiscYaw(),
+                      YawBeforeTick);
+            TestTrue(TEXT("Reduced-flashing marker uses steady low emission"),
+                     Marker->GetCurrentEmissiveStrength() <= 1.35f);
+        }
+        else if (Index == 0)
+        {
+            const float YawBeforeTick = Marker->GetMarkerDiscYaw();
+            Marker->Tick(0.25f);
+            TestNotEqual(TEXT("Standard marker rotates its authored sigil"),
+                         Marker->GetMarkerDiscYaw(),
+                         YawBeforeTick);
+            TestTrue(TEXT("Standard marker retains readable emissive energy"),
+                     Marker->GetCurrentEmissiveStrength() > 2.6f);
         }
     }
 

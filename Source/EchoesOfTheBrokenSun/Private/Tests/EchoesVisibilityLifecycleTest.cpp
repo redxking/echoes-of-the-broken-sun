@@ -97,26 +97,66 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
     AEchoesEntityView* ScoutView = Bridge->FindEntityView(ScoutId);
     if (TestNotNull(TEXT("Visible local scout has a presentation actor"), ScoutView))
     {
+        UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+        const bool bPreviousReducedMotion =
+            Settings != nullptr && Settings->IsReducedMotionEnabled();
+        const bool bPreviousReducedFlashing =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        if (Settings != nullptr)
+        {
+            Settings->SetReducedMotionEnabled(false);
+            Settings->SetReducedFlashingEnabled(false);
+        }
         TestFalse(TEXT("Full-health scout health bar starts hidden"),
                   ScoutView->IsHealthBarVisible());
         ScoutView->SetSelected(true);
         TestTrue(TEXT("Selecting a scout exposes its health bar"),
                  ScoutView->IsHealthBarVisible());
+        TestTrue(TEXT("Selection uses the project-authored VFX family"),
+                 ScoutView->IsUsingAuthoredSelectionVFX());
+        TestTrue(TEXT("Selection VFX is visible while selected"),
+                 ScoutView->IsSelectionVFXVisible());
+        TestTrue(TEXT("Selection VFX has no collision or overlaps"),
+                 ScoutView->HasSelectionVFXCollisionDisabled());
+        TestTrue(TEXT("Selection VFX cannot affect navigation"),
+                 ScoutView->HasSelectionVFXNavigationDisabled());
+        const float StandardYawBeforeTick = ScoutView->GetSelectionVFXYaw();
+        ScoutView->Tick(0.25f);
+        TestNotEqual(TEXT("Standard selection halo rotates gently"),
+                     ScoutView->GetSelectionVFXYaw(),
+                     StandardYawBeforeTick);
+        TestTrue(TEXT("Standard selection halo retains readable emission"),
+                 ScoutView->GetSelectionVFXEmissiveStrength() > 1.7f);
         TestEqual(TEXT("Full-health scout reports a complete health fraction"),
                   ScoutView->GetDisplayedHealthFraction(),
                   1.0f);
         ScoutView->SetSelected(false);
+        TestFalse(TEXT("Deselection hides the selection VFX"),
+                  ScoutView->IsSelectionVFXVisible());
+        if (Settings != nullptr)
+        {
+            Settings->SetReducedMotionEnabled(true);
+            Settings->SetReducedFlashingEnabled(true);
+            ScoutView->SetSelected(true);
+            const float ReducedYawBeforeTick = ScoutView->GetSelectionVFXYaw();
+            ScoutView->Tick(0.25f);
+            TestTrue(TEXT("Reduced motion is applied to selection VFX"),
+                     ScoutView->IsSelectionReducedMotionApplied());
+            TestTrue(TEXT("Reduced flashing is applied to selection VFX"),
+                     ScoutView->IsSelectionReducedFlashingApplied());
+            TestEqual(TEXT("Reduced-motion selection halo remains steady"),
+                      ScoutView->GetSelectionVFXYaw(),
+                      ReducedYawBeforeTick);
+            TestTrue(TEXT("Reduced-flashing selection halo uses low emission"),
+                     ScoutView->GetSelectionVFXEmissiveStrength() <= 1.25f);
+            ScoutView->SetSelected(false);
+            Settings->SetReducedMotionEnabled(bPreviousReducedMotion);
+            Settings->SetReducedFlashingEnabled(false);
+        }
         TestFalse(TEXT("Deselection hides a full-health scout health bar"),
                   ScoutView->IsHealthBarVisible());
         echoes::sim::Entity DamagedScout =
             *InitialSimulation->FindEntity(ScoutId);
-        UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
-        const bool bPreviousReducedFlashing =
-            Settings != nullptr && Settings->IsReducedFlashingEnabled();
-        if (Settings != nullptr)
-        {
-            Settings->SetReducedFlashingEnabled(false);
-        }
         DamagedScout.hitPoints = DamagedScout.maxHitPoints / 4;
         ScoutView->ApplyAuthoritativeState(DamagedScout, true);
         TestTrue(TEXT("A damaged scout exposes its health bar without selection"),
@@ -136,6 +176,7 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
             TestFalse(TEXT("Reduced flashing suppresses the combat pulse"),
                       ScoutView->IsDamagePulseActive());
             Settings->SetReducedFlashingEnabled(bPreviousReducedFlashing);
+            Settings->SetReducedMotionEnabled(bPreviousReducedMotion);
         }
         ScoutView->ApplyAuthoritativeState(
             *InitialSimulation->FindEntity(ScoutId),
