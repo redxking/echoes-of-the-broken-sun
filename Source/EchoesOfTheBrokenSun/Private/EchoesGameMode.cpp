@@ -826,6 +826,12 @@ void AEchoesGameMode::BeginPlay()
     {
         Controller->NotifyRuntimeReady();
 #if !UE_BUILD_SHIPPING
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesPointerCombatGuardReview")))
+        {
+            Controller->StartPointerCombatGuardReview();
+        }
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||

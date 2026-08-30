@@ -197,6 +197,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
     bPrologueCompletionPresentationScenario = false;
+    bPointerCombatGuardPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
@@ -408,6 +409,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const bool bUseResearchInterruptionPresentation = false;
     const bool bUseKharuunSystemsPresentation = false;
     const bool bUsePrologueCompletionPresentation = false;
+    const bool bUsePointerCombatGuardPresentation = false;
 #else
     const bool bUseResearchPresentation =
         !bUseStressScenario &&
@@ -427,12 +429,18 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesPrologueCompletionPresentation"));
+    const bool bUsePointerCombatGuardPresentation =
+        !bUseStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesPointerCombatGuardReview"));
 #endif
     const int32 PresentationModeCount =
         (bUseResearchPresentation ? 1 : 0) +
         (bUseResearchInterruptionPresentation ? 1 : 0) +
         (bUseKharuunSystemsPresentation ? 1 : 0) +
-        (bUsePrologueCompletionPresentation ? 1 : 0);
+        (bUsePrologueCompletionPresentation ? 1 : 0) +
+        (bUsePointerCombatGuardPresentation ? 1 : 0);
     if (PresentationModeCount > 1)
     {
         UE_LOG(
@@ -445,7 +453,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         bUseResearchPresentation || bUseResearchInterruptionPresentation;
     const bool bUseAnyControlledPresentation =
         bUseAnyResearchPresentation || bUseKharuunSystemsPresentation ||
-        bUsePrologueCompletionPresentation;
+        bUsePrologueCompletionPresentation ||
+        bUsePointerCombatGuardPresentation;
     if (bUsePrologueCompletionPresentation &&
         SelectedOperation != EEchoesOperationMode::CampaignPrologue)
     {
@@ -740,8 +749,53 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 49, 58);
             SpawnUnit(Owner, ForceFaction, EntityType::UtilityStructure, 58, 53);
         };
-        SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
-        SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
+        if (bUsePointerCombatGuardPresentation)
+        {
+            const EntityId PointerCore = SpawnUnit(
+                LocalPlayerId,
+                ScenarioLocalFaction,
+                EntityType::CommandCore,
+                18,
+                18);
+            const EntityId PointerProtected = SpawnUnit(
+                LocalPlayerId,
+                ScenarioLocalFaction,
+                EntityType::Worker,
+                21,
+                20);
+            const EntityId PointerDefender = SpawnUnit(
+                LocalPlayerId,
+                ScenarioLocalFaction,
+                EntityType::HeavyUnit,
+                20,
+                23);
+            const EntityId PointerHostile = SpawnUnit(
+                OpponentPlayerId,
+                ScenarioOpponentFaction,
+                EntityType::Soldier,
+                28,
+                20);
+            const EntityId PointerOpponentCore = SpawnUnit(
+                OpponentPlayerId,
+                ScenarioOpponentFaction,
+                EntityType::CommandCore,
+                54,
+                54);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_FIXTURE] localCore=%u defender=%u protected=%u hostile=%u opponentCore=%u authoritativeCommands=true controlledNonshipping=true"),
+                PointerCore,
+                PointerDefender,
+                PointerProtected,
+                PointerHostile,
+                PointerOpponentCore);
+        }
+        else
+        {
+            SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
+            SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
+        }
 
         if (SelectedOperation ==
             EEchoesOperationMode::CampaignCityReserve)
@@ -1306,6 +1360,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         bUseKharuunSystemsPresentation;
     bPrologueCompletionPresentationScenario =
         bUsePrologueCompletionPresentation;
+    bPointerCombatGuardPresentationScenario =
+        bUsePointerCombatGuardPresentation;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
@@ -1643,6 +1699,13 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 ProloguePresentationWellId,
                 *CampaignProgressPath);
         }
+        if (bPointerCombatGuardPresentationScenario)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_PRESENTATION_READY] projectedLiveViews=true exactScreenCoordinates=true ordinaryControllerBindings=true controlledNonshipping=true"));
+        }
     }
     if (bStressScenario)
     {
@@ -1683,6 +1746,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
     bPrologueCompletionPresentationScenario = false;
+    bPointerCombatGuardPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
     bLoggedResearchPresentationInterrupted = false;
@@ -4664,7 +4728,8 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
-    if (bStressScenario || !Simulation.IsValid() ||
+    if (bStressScenario || bPointerCombatGuardPresentationScenario ||
+        !Simulation.IsValid() ||
         Simulation->CurrentTick() % Simulation->Config().ticksPerSecond != 0)
     {
         return;

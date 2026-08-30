@@ -371,6 +371,7 @@ private:
     bool bResearchInterruptionPresentationScenario = false;
     bool bKharuunSystemsPresentationScenario = false;
     bool bPrologueCompletionPresentationScenario = false;
+    bool bPointerCombatGuardPresentationScenario = false;
     bool bLoggedResearchPresentationActive = false;
     bool bLoggedResearchPresentationComplete = false;
     bool bLoggedResearchPresentationInterrupted = false;

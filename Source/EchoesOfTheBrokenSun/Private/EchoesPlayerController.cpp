@@ -10,6 +10,9 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "InputCoreTypes.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "UnrealClient.h"
 
 namespace
 {
@@ -69,6 +72,33 @@ void AEchoesPlayerController::NotifyRuntimeReady()
             TEXT("Runtime prototype ready. Select owned %s units, then right-click a destination or target."),
             *GetLocalFactionLabel()),
         7.0f);
+}
+
+void AEchoesPlayerController::StartPointerCombatGuardReview()
+{
+#if !UE_BUILD_SHIPPING
+    if (bPointerCombatGuardReviewActive)
+    {
+        return;
+    }
+    ClearSelection();
+    bKeyboardTargetingEnabled = false;
+    PointerReviewDefenderId = 0;
+    PointerReviewProtectedId = 0;
+    PointerReviewHostileId = 0;
+    PointerReviewInitialHostileHitPoints = 0;
+    PointerReviewStage = 0;
+    PointerReviewStageElapsedSeconds = 0.0f;
+    PointerReviewTotalElapsedSeconds = 0.0f;
+    bPointerCombatGuardReviewActive = true;
+    SetStatusMessage(
+        TEXT("CONTROLLED REVIEW — preparing exact-coordinate pointer selection, Guard, and direct attack."),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED] exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true controlledNonshipping=true"));
+#endif
 }
 
 FString AEchoesPlayerController::GetLocalFactionLabel() const
@@ -1502,6 +1532,12 @@ void AEchoesPlayerController::NotifyShapeOfSilenceFinished(
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
+#if !UE_BUILD_SHIPPING
+    if (bPointerCombatGuardReviewActive)
+    {
+        RunPointerCombatGuardReviewStage(DeltaTime);
+    }
+#endif
     if (bSelectionButtonDown)
     {
         float MouseX = 0.0f;
@@ -1518,6 +1554,305 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
     {
         bControlGroupAssignmentArmed = false;
     }
+}
+
+bool AEchoesPlayerController::MoveReviewPointerToEntity(
+    uint32 EntityId,
+    const TCHAR* StageLabel)
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    AEchoesEntityView* View =
+        Bridge != nullptr ? Bridge->FindEntityView(EntityId) : nullptr;
+    if (View == nullptr)
+    {
+        return false;
+    }
+
+    FVector BoundsOrigin = FVector::ZeroVector;
+    FVector BoundsExtent = FVector::ZeroVector;
+    View->GetActorBounds(false, BoundsOrigin, BoundsExtent);
+    FVector2D ScreenPosition = FVector2D::ZeroVector;
+    if (!ProjectWorldLocationToScreen(BoundsOrigin, ScreenPosition, false))
+    {
+        return false;
+    }
+
+    int32 ViewportWidth = 0;
+    int32 ViewportHeight = 0;
+    GetViewportSize(ViewportWidth, ViewportHeight);
+    if (ViewportWidth <= 0 || ViewportHeight <= 0 ||
+        ScreenPosition.X < 0.0f || ScreenPosition.Y < 0.0f ||
+        ScreenPosition.X >= static_cast<float>(ViewportWidth) ||
+        ScreenPosition.Y >= static_cast<float>(ViewportHeight))
+    {
+        return false;
+    }
+
+    SetMouseLocation(
+        FMath::RoundToInt(ScreenPosition.X),
+        FMath::RoundToInt(ScreenPosition.Y));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_POINTER_REVIEW_COORDINATE] stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) projectedFromLiveView=true"),
+        StageLabel,
+        EntityId,
+        ScreenPosition.X,
+        ScreenPosition.Y,
+        ViewportWidth,
+        ViewportHeight);
+    return true;
+}
+
+void AEchoesPlayerController::FailPointerCombatGuardReview(
+    const FString& Reason)
+{
+    bPointerCombatGuardReviewActive = false;
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge != nullptr)
+    {
+        Bridge->SetScenarioPaused(true);
+    }
+    SetStatusMessage(
+        FString::Printf(TEXT("CONTROLLED POINTER REVIEW FAILED — %s"), *Reason),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Error,
+        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED] stage=%d reason=%s exactScreenCoordinates=true controlledNonshipping=true"),
+        PointerReviewStage,
+        *Reason);
+}
+
+void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
+{
+#if !UE_BUILD_SHIPPING
+    PointerReviewStageElapsedSeconds += DeltaTime;
+    PointerReviewTotalElapsedSeconds += DeltaTime;
+    if (PointerReviewTotalElapsedSeconds > 15.0f)
+    {
+        FailPointerCombatGuardReview(TEXT("TIMEOUT"));
+        return;
+    }
+
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr || !Bridge->IsScenarioReady())
+    {
+        FailPointerCombatGuardReview(TEXT("SIM_NOT_READY"));
+        return;
+    }
+
+    const auto Advance = [this](int32 NextStage)
+    {
+        PointerReviewStage = NextStage;
+        PointerReviewStageElapsedSeconds = 0.0f;
+    };
+
+    if (PointerReviewStage == 0)
+    {
+        if (PointerReviewStageElapsedSeconds < 0.75f)
+        {
+            return;
+        }
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.type == echoes::sim::EntityType::HeavyUnit)
+            {
+                PointerReviewDefenderId = Entity.id;
+            }
+            else if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                     Entity.type == echoes::sim::EntityType::Worker)
+            {
+                PointerReviewProtectedId = Entity.id;
+            }
+            else if (Entity.owner == UEchoesSimulationSubsystem::OpponentPlayerId &&
+                     Entity.type == echoes::sim::EntityType::Soldier)
+            {
+                PointerReviewHostileId = Entity.id;
+                PointerReviewInitialHostileHitPoints = Entity.hitPoints;
+            }
+        }
+        if (PointerReviewDefenderId == 0 || PointerReviewProtectedId == 0 ||
+            PointerReviewHostileId == 0)
+        {
+            FailPointerCombatGuardReview(TEXT("FIXTURE_ENTITIES_UNAVAILABLE"));
+            return;
+        }
+        if (!MoveReviewPointerToEntity(
+                PointerReviewDefenderId,
+                TEXT("select_defender")))
+        {
+            FailPointerCombatGuardReview(TEXT("DEFENDER_PROJECTION_FAILED"));
+            return;
+        }
+        Advance(1);
+        return;
+    }
+
+    if (PointerReviewStage == 1)
+    {
+        if (PointerReviewStageElapsedSeconds < 0.15f)
+        {
+            return;
+        }
+        SelectionPressed();
+        SelectionReleased();
+        if (SelectedEntityIds.Num() != 1 ||
+            SelectedEntityIds[0] != PointerReviewDefenderId)
+        {
+            FailPointerCombatGuardReview(TEXT("POINTER_SELECTION_REJECTED"));
+            return;
+        }
+        if (!MoveReviewPointerToEntity(
+                PointerReviewProtectedId,
+                TEXT("guard_target")))
+        {
+            FailPointerCombatGuardReview(TEXT("GUARD_TARGET_PROJECTION_FAILED"));
+            return;
+        }
+        Advance(2);
+        return;
+    }
+
+    if (PointerReviewStage == 2)
+    {
+        if (PointerReviewStageElapsedSeconds < 0.15f)
+        {
+            return;
+        }
+        GuardAtCursor();
+        Advance(3);
+        return;
+    }
+
+    if (PointerReviewStage == 3)
+    {
+        const echoes::sim::Entity* Defender =
+            Bridge->FindEntity(PointerReviewDefenderId);
+        if (Defender == nullptr)
+        {
+            FailPointerCombatGuardReview(TEXT("DEFENDER_LOST"));
+            return;
+        }
+        if (Defender->order.type != echoes::sim::OrderType::Guard ||
+            Defender->order.target != PointerReviewProtectedId)
+        {
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POINTER_GUARD_OBSERVED] defender=%u protected=%u order=Guard authoritativeState=true"),
+            PointerReviewDefenderId,
+            PointerReviewProtectedId);
+        if (!MoveReviewPointerToEntity(
+                PointerReviewHostileId,
+                TEXT("direct_attack_target")))
+        {
+            FailPointerCombatGuardReview(TEXT("HOSTILE_PROJECTION_FAILED"));
+            return;
+        }
+        Advance(4);
+        return;
+    }
+
+    if (PointerReviewStage == 4)
+    {
+        if (PointerReviewStageElapsedSeconds < 0.15f)
+        {
+            return;
+        }
+        const echoes::sim::Entity* Hostile =
+            Bridge->FindEntity(PointerReviewHostileId);
+        if (Hostile == nullptr)
+        {
+            FailPointerCombatGuardReview(TEXT("HOSTILE_LOST_BEFORE_ATTACK"));
+            return;
+        }
+        PointerReviewInitialHostileHitPoints = Hostile->hitPoints;
+        ContextOrderPressed();
+        Advance(5);
+        return;
+    }
+
+    if (PointerReviewStage == 5)
+    {
+        const echoes::sim::Entity* Defender =
+            Bridge->FindEntity(PointerReviewDefenderId);
+        const echoes::sim::Entity* Hostile =
+            Bridge->FindEntity(PointerReviewHostileId);
+        const bool bAttackOrderObserved =
+            Defender != nullptr &&
+            Defender->order.type == echoes::sim::OrderType::Attack &&
+            Defender->order.target == PointerReviewHostileId;
+        const bool bDamageObserved =
+            Hostile == nullptr ||
+            Hostile->hitPoints < PointerReviewInitialHostileHitPoints;
+        if (!bAttackOrderObserved && !bDamageObserved)
+        {
+            return;
+        }
+        if (!bDamageObserved)
+        {
+            return;
+        }
+
+        Bridge->SetScenarioPaused(true);
+        bPointerCombatGuardReviewActive = false;
+        const int32 FinalHitPoints = Hostile != nullptr ? Hostile->hitPoints : 0;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("CONTROLLED REVIEW PASSED — exact-coordinate LMB selected Bulwark %u; J guarded Surveyor %u; RMB attacked Riftstalker %u (%d -> %d HP)."),
+                PointerReviewDefenderId,
+                PointerReviewProtectedId,
+                PointerReviewHostileId,
+                PointerReviewInitialHostileHitPoints,
+                FinalHitPoints),
+            3600.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_COMPLETE] defender=%u protected=%u hostile=%u initialHp=%d finalHp=%d selectedVia=LMB guardVia=J attackVia=RMB exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true authoritativeDamage=true osInjection=false unaidedHuman=false controlledNonshipping=true"),
+            PointerReviewDefenderId,
+            PointerReviewProtectedId,
+            PointerReviewHostileId,
+            PointerReviewInitialHostileHitPoints,
+            FinalHitPoints);
+
+        FString OutputPath;
+        if (FParse::Value(
+                FCommandLine::Get(),
+                TEXT("EchoesPointerCombatGuardReviewOutput="),
+                OutputPath) &&
+            !OutputPath.IsEmpty())
+        {
+            FScreenshotRequest::RequestScreenshot(
+                OutputPath,
+                true,
+                false,
+                false,
+                FIntRect(),
+                true);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_POINTER_COMBAT_GUARD_CAPTURE] requested=true showUI=true output=%s"),
+                *OutputPath);
+        }
+    }
+#endif
 }
 
 void AEchoesPlayerController::SetupInputComponent()

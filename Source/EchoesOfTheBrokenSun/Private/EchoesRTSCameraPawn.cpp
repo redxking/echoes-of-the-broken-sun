@@ -42,6 +42,21 @@ void AEchoesRTSCameraPawn::BeginPlay()
 #if !UE_BUILD_SHIPPING
     if (FParse::Param(
             FCommandLine::Get(),
+            TEXT("EchoesPointerCombatGuardReview")))
+    {
+        SetActorLocation(FVector(-1600.0f, -1600.0f, 100.0f));
+        SpringArm->TargetArmLength = 4000.0f;
+        SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
+        SpringArm->bEnableCameraLag = false;
+        Camera->SetFieldOfView(52.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA] centerTile=(24,24) zoom=4000 exactScreenProjection=true controlledNonshipping=true"));
+        return;
+    }
+    if (FParse::Param(
+            FCommandLine::Get(),
             TEXT("EchoesDestructionVFXReview")))
     {
         const bool bReducedPresentation = FParse::Param(

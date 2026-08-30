@@ -47,6 +47,7 @@ public:
         FString& OutFeedback);
     [[nodiscard]] TArray<uint32> GetValidControlGroup(int32 GroupIndex) const;
     void NotifyRuntimeReady();
+    void StartPointerCombatGuardReview();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
@@ -172,6 +173,9 @@ public:
     }
 
 private:
+    void RunPointerCombatGuardReviewStage(float DeltaTime);
+    bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
+    void FailPointerCombatGuardReview(const FString& Reason);
     void SelectionPressed();
     void SelectionReleased();
     void ContextOrderPressed();
@@ -271,6 +275,14 @@ private:
     FString StatusMessage;
     FVector2D KeyboardTargetOffset = FVector2D::ZeroVector;
     FVector2D LastPointerScreenPosition = FVector2D::ZeroVector;
+    uint32 PointerReviewDefenderId = 0;
+    uint32 PointerReviewProtectedId = 0;
+    uint32 PointerReviewHostileId = 0;
+    int32 PointerReviewInitialHostileHitPoints = 0;
+    int32 PointerReviewStage = 0;
+    float PointerReviewStageElapsedSeconds = 0.0f;
+    float PointerReviewTotalElapsedSeconds = 0.0f;
+    bool bPointerCombatGuardReviewActive = false;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
     double NewCampaignConfirmationExpiresAt = 0.0;
