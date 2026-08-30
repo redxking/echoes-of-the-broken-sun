@@ -13,7 +13,8 @@ enum class EEchoesCampaignMissionId : uint8
     NamesWithoutBirths = 6,
     TheShapeOfSilence = 7,
     TheShapeBesideUs = 8,
-    ReserveAuthority = 9
+    ReserveAuthority = 9,
+    ChoirAtLumeReach = 10
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -99,6 +100,18 @@ enum class EEchoesReserveAuthorityCompletionFact : uint8
     DeferredDistrictReached = 1 << 4,
     LocalCoreSurvived = 1 << 5,
     PriorLedgerConsumed = 1 << 6
+};
+
+enum class EEchoesChoirAtLumeReachCompletionFact : uint8
+{
+    ContactEstablished = 1 << 0,
+    DeferredLiabilityResolved = 1 << 1,
+    BothAnchorsRaised = 1 << 2,
+    WellChoiceCommitted = 1 << 3,
+    BranchResolutionCompleted = 1 << 4,
+    OruunSurvived = 1 << 5,
+    LocalCoreSurvived = 1 << 6,
+    PriorLedgerConsumed = 1 << 7
 };
 
 enum class EEchoesCampaignCommitStatus : uint8

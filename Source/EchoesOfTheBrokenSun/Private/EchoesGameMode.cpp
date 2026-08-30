@@ -476,6 +476,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignReserveAuthority"));
+    const bool bCampaignChoirAtLumeReach =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignChoirAtLumeReach"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -485,7 +490,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignNamesWithoutBirths ? 1 : 0) +
         (bCampaignShapeOfSilence ? 1 : 0) +
         (bCampaignShapeBesideUs ? 1 : 0) +
-        (bCampaignReserveAuthority ? 1 : 0);
+        (bCampaignReserveAuthority ? 1 : 0) +
+        (bCampaignChoirAtLumeReach ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -498,7 +504,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignReserveAuthority
+            bCampaignChoirAtLumeReach
+                ? EEchoesOperationMode::CampaignChoirAtLumeReach
+            : bCampaignReserveAuthority
                 ? EEchoesOperationMode::CampaignReserveAuthority
             : bCampaignShapeBesideUs
                 ? EEchoesOperationMode::CampaignShapeBesideUs
@@ -524,7 +532,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignReserveAuthority
+                bCampaignChoirAtLumeReach
+                    ? TEXT("ChoirAtLumeReach")
+                : bCampaignReserveAuthority
                     ? TEXT("ReserveAuthority")
                 : bCampaignShapeBesideUs
                     ? TEXT("TheShapeBesideUs")
@@ -549,7 +559,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignReserveAuthority
+            bCampaignChoirAtLumeReach
+                ? TEXT("ChoirAtLumeReach")
+            : bCampaignReserveAuthority
                 ? TEXT("ReserveAuthority")
             : bCampaignShapeBesideUs
                 ? TEXT("TheShapeBesideUs")

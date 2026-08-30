@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
@@ -130,6 +131,23 @@ struct FEchoesObjectiveSnapshot final
         EEchoesCityDistrict::LifeSupport;
     bool bReserveAuthoritySecured = false;
     bool bReserveAuthorityMaraAtDeferredDistrict = false;
+    EEchoesChoirAtLumeReachPhase ChoirAtLumeReachPhase =
+        EEchoesChoirAtLumeReachPhase::Inactive;
+    echoes::sim::FutureWellChoice ChoirAtLumeReachPriorBranch =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice ChoirAtLumeReachWellChoice =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesCityDistrict ChoirAtLumeReachDeferredDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    echoes::sim::EntityId ChoirAtLumeReachOruunId = 0;
+    echoes::sim::EntityId ChoirAtLumeReachWaystoneId = 0;
+    echoes::sim::EntityId ChoirAtLumeReachWellId = 0;
+    bool bChoirContactEstablished = false;
+    bool bChoirDeferredLiabilityResolved = false;
+    bool bChoirFirstAnchorRaised = false;
+    bool bChoirSecondAnchorRaised = false;
+    bool bChoirBranchResolutionCompleted = false;
+    bool bChoirReshapeWindowExpired = false;
 };
 
 /**
@@ -272,6 +290,9 @@ public:
     [[nodiscard]] EEchoesReserveAuthorityPhase
     GetReserveAuthorityPhase() const;
     [[nodiscard]] bool IsReserveAuthorityUnlocked() const;
+    [[nodiscard]] EEchoesChoirAtLumeReachPhase
+    GetChoirAtLumeReachPhase() const;
+    [[nodiscard]] bool IsChoirAtLumeReachUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -287,6 +308,8 @@ public:
     GetReserveAuthorityPlan() const;
     [[nodiscard]] EEchoesCityDistrict
     GetReserveAuthorityDeferredDistrict() const;
+    [[nodiscard]] FEchoesChoirAtLumeReachPlan
+    GetChoirAtLumeReachPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -370,6 +393,10 @@ private:
     EEchoesCampaignCommitStatus CommitReserveAuthorityCompletion(
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         EEchoesCityDistrict& OutRecordedDeferredDistrict,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitChoirAtLumeReachCompletion(
+        echoes::sim::FutureWellChoice CurrentChoice,
+        echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
@@ -457,6 +484,9 @@ private:
     echoes::sim::EntityId FirstStateWitnessId = 0;
     echoes::sim::EntityId SecondStateWitnessId = 0;
     echoes::sim::EntityId ReserveAuthorityMaraId = 0;
+    echoes::sim::EntityId ChoirAtLumeReachOruunId = 0;
+    echoes::sim::EntityId ChoirAtLumeReachWaystoneId = 0;
+    echoes::sim::EntityId ChoirAtLumeReachWellId = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

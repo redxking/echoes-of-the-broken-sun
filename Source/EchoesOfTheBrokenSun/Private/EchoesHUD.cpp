@@ -477,6 +477,21 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 Bridge->GetReserveAuthorityPlan().DisplayName);
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            const FEchoesObjectiveSnapshot Objective =
+                Bridge->GetLocalObjectiveSnapshot();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Approach  %s     Lume Well  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Bridge->GetChoirAtLumeReachPlan().DisplayName,
+                WellChoiceDisplayName(
+                    Objective.ChoirAtLumeReachWellChoice));
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1224,6 +1239,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bReserveAuthority = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignReserveAuthority;
+    const bool bChoirAtLumeReach = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1265,6 +1283,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bShapeOfSilence ? TEXT("THE SHAPE OF SILENCE")
              : bShapeBesideUs ? TEXT("THE SHAPE BESIDE US")
              : bReserveAuthority ? TEXT("RESERVE AUTHORITY")
+             : bChoirAtLumeReach ? TEXT("THE CHOIR AT LUME REACH")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1300,6 +1319,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 09  //  %s  //  MARA + DISTRICT NETWORK"),
                   *LocalFaction)
+        : bChoirAtLumeReach
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 10  //  %s  //  ORUUN + LISTENING FORCE"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1324,6 +1347,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN COMPACT  //  MISSION 08")
     : bReserveAuthority
         ? TEXT("[F9] CHANGE OPERATION  //  MERIDIAN AUTHORITY  //  MISSION 09")
+    : bChoirAtLumeReach
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 10")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1372,6 +1397,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Seven consistent records let Neme answer Talar with two routes that remain true at once.")
         : bReserveAuthority
             ? TEXT("Eight consistent records grant Mara a finite reserve for three failing districts.")
+        : bChoirAtLumeReach
+            ? TEXT("Nine consistent records carry Oruun to Lume Reach, where Mara serves as an off-map liaison to a public local contact.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1398,6 +1425,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Observe the first echo, raise its relay, traverse both states, then reach the convergence.")
         : bReserveAuthority
             ? TEXT("Secure authority, power exactly two districts, then reach the intact deferred district.")
+        : bChoirAtLumeReach
+            ? TEXT("Resolve the deferred liability, raise both Listening Spines, commit the Lume Well, then reach its branch resolution.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2141,6 +2170,119 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        const FEchoesChoirAtLumeReachPlan Plan =
+            Bridge->GetChoirAtLumeReachPlan();
+        const bool bFailed =
+            Objective.ChoirAtLumeReachPhase ==
+            EEchoesChoirAtLumeReachPhase::Failed;
+        const int32 AnchorCount =
+            (Objective.bChoirFirstAnchorRaised ? 1 : 0) +
+            (Objective.bChoirSecondAnchorRaised ? 1 : 0);
+        const bool bWellCommitted =
+            Objective.ChoirAtLumeReachWellChoice !=
+            echoes::sim::FutureWellChoice::Dormant;
+        const FString ContactState = bFailed
+            ? TEXT("CONTACT LINE LOST")
+            : Objective.bChoirDeferredLiabilityResolved
+                ? FString::Printf(
+                      TEXT("WAYSTONE ROOTED — %s LIABILITY"),
+                      FEchoesCityReserveMissionModel::DistrictDisplayName(
+                          Plan.DeferredDistrict))
+            : Objective.bChoirContactEstablished
+                ? FString::Printf(
+                      TEXT("ROOT WAYSTONE AT %d,%d"),
+                      Plan.LiabilitySite.x.FloorToInt(),
+                      Plan.LiabilitySite.y.FloorToInt())
+                : FString::Printf(
+                      TEXT("ORUUN TO CONTACT %d,%d"),
+                      Plan.ContactSite.x.FloorToInt(),
+                      Plan.ContactSite.y.FloorToInt());
+        const FString AnchorState = bFailed
+            ? TEXT("LISTENING LINE LOST")
+            : AnchorCount == 2
+                ? TEXT("2/2 LISTENING")
+            : Objective.bChoirDeferredLiabilityResolved
+                ? FString::Printf(
+                      TEXT("%d/2 — BUILD AT %d,%d"),
+                      AnchorCount,
+                      AnchorCount == 0
+                          ? Plan.FirstAnchorSite.x.FloorToInt()
+                          : Plan.SecondAnchorSite.x.FloorToInt(),
+                      AnchorCount == 0
+                          ? Plan.FirstAnchorSite.y.FloorToInt()
+                          : Plan.SecondAnchorSite.y.FloorToInt())
+                : TEXT("WAITING — ROOT WAYSTONE");
+        const echoes::sim::Vec2 ResolutionSite =
+            FEchoesChoirAtLumeReachMissionModel::ResolutionSiteForChoice(
+                Objective.ChoirAtLumeReachWellChoice);
+        const FString ResolutionState = bFailed
+            ? Objective.bChoirReshapeWindowExpired
+                ? TEXT("RESHAPE EXIT EXPIRED")
+                : TEXT("WELL ROUTE LOST")
+            : Objective.bChoirBranchResolutionCompleted
+                ? FString::Printf(
+                      TEXT("%s — RESOLVED"),
+                      WellChoiceDisplayName(
+                          Objective.ChoirAtLumeReachWellChoice))
+            : bWellCommitted
+                ? FString::Printf(
+                      TEXT("%s — ORUUN TO %d,%d"),
+                      WellChoiceDisplayName(
+                          Objective.ChoirAtLumeReachWellChoice),
+                      ResolutionSite.x.FloorToInt(),
+                      ResolutionSite.y.FloorToInt())
+            : AnchorCount == 2
+                ? FString::Printf(
+                      TEXT("Z/C/V — WELL %d,%d"),
+                      Plan.FutureWellSite.x.FloorToInt(),
+                      Plan.FutureWellSite.y.FloorToInt())
+                : TEXT("WAITING — RAISE BOTH SPINES");
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("THE CHOIR AT LUME REACH  //  MISSION 10"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  CONTACT + LIABILITY %s"), *ContactState),
+            bFailed ? Failed
+                    : Objective.bChoirDeferredLiabilityResolved
+                        ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.76f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  LISTENING ANCHORS   %s"), *AnchorState),
+            bFailed ? Failed : AnchorCount == 2 ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.76f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  WELL + RESOLUTION   %s"), *ResolutionState),
+            bFailed ? Failed
+                    : Objective.bChoirBranchResolutionCompleted
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.76f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_CHOIR_AT_LUME_REACH_OBJECTIVES_READY] phase=%s approach=%s priorBranch=%u deferred=%u oruun=%u waystone=%u well=%u reconstructable=true maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact mixedFactionCommand=false"),
+                FEchoesChoirAtLumeReachMissionModel::StableName(
+                    Objective.ChoirAtLumeReachPhase),
+                Plan.StableName,
+                static_cast<uint8>(Plan.PriorChoice),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                Objective.ChoirAtLumeReachOruunId,
+                Objective.ChoirAtLumeReachWaystoneId,
+                Objective.ChoirAtLumeReachWellId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2268,13 +2410,19 @@ void AEchoesHUD::DrawMatchResult(
     const bool bReserveAuthorityResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignReserveAuthority;
+    const bool bChoirAtLumeReachResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bReserveAuthorityResult
+        ? bChoirAtLumeReachResult
+            ? bVictory ? TEXT("LUME REACH DECISION COMMITTED")
+                       : TEXT("LUME REACH CONTACT FAILED")
+        : bReserveAuthorityResult
             ? bVictory ? TEXT("RESERVE ALLOCATION COMMITTED")
                        : TEXT("RESERVE ALLOCATION FAILED")
             : bVictory ? TEXT("MISSION COMPLETE") : TEXT("MISSION FAILED")
@@ -2282,7 +2430,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bReserveAuthorityResult
+        ? bChoirAtLumeReachResult
+            ? bVictory ? TEXT("THE LISTENING LINE OPENS A WAY THROUGH")
+                       : TEXT("THE CHOIR FALLS BEYOND THE ANCHORS")
+        : bReserveAuthorityResult
             ? bVictory ? TEXT("TWO DISTRICTS HOLD; ONE REMAINS DEFERRED")
                        : TEXT("THE DISTRICT RESERVE EXCEEDS ITS SAFE MARGIN")
         : bShapeBesideUsResult
@@ -2312,7 +2463,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bReserveAuthorityResult
+        ? bChoirAtLumeReachResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("Both Listening Spines held while Oruun completed the %s resolution. This proves one local contact operation and Well decision; the Choir remains non-playable and no hidden authorship or wider cause is established."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the Waystone, a committed Listening Spine, the local Core, the Lume Well, or the active Reshape exit window was lost before resolution.")
+        : bReserveAuthorityResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("Two districts retain power; %s remains intact but deferred. This proves one local allocation, not wider city recovery or unmodeled civilian survival."),
@@ -2392,7 +2550,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bReserveAuthorityResult
+                CampaignPersistenceLine = bChoirAtLumeReachResult
+                    ? FString::Printf(
+                          TEXT("MISSION 10 RECORDED // %s Lume Reach decision fixed."),
+                          RecordedChoice)
+                : bReserveAuthorityResult
                     ? FString::Printf(
                           TEXT("MISSION 09 RECORDED // %s local reserve allocation fixed."),
                           RecordedChoice)
@@ -2473,7 +2635,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bReserveAuthorityResult
+        ? bChoirAtLumeReachResult
+            ? FString::Printf(
+                  TEXT("MISSION 10 — THE CHOIR AT LUME REACH  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bReserveAuthorityResult
             ? FString::Printf(
                   TEXT("MISSION 09 — RESERVE AUTHORITY  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -2723,6 +2889,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bReserveAuthority = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignReserveAuthority;
+    const bool bChoirAtLumeReach = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -2755,6 +2924,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetReserveAuthorityPlan()
             : FEchoesReserveAuthorityPlan{};
+    const FEchoesChoirAtLumeReachPlan ChoirPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetChoirAtLumeReachPlan()
+            : FEchoesChoirAtLumeReachPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -2799,6 +2972,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bReserveAuthority
             ? FString::Printf(
                   TEXT("RESERVE AUTHORITY  //  MISSION 09  //  %s"),
+                  *LocalFaction)
+        : bChoirAtLumeReach
+            ? FString::Printf(
+                  TEXT("THE CHOIR AT LUME REACH  //  MISSION 10  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -2845,6 +3022,14 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("Eight consistent records authorize the %s. Three Lume Reach districts are failing; the reserve can sustain exactly two."),
                   ReservePlan.DisplayName)
+        : bChoirAtLumeReach
+            ? FString::Printf(
+                  TEXT("Nine consistent records open the %s. The deferred %s liability remains public at tile %d,%d."),
+                  ChoirPlan.DisplayName,
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      ChoirPlan.DeferredDistrict),
+                  ChoirPlan.LiabilitySite.x.FloorToInt(),
+                  ChoirPlan.LiabilitySite.y.FloorToInt())
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2873,6 +3058,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Mara holds Meridian authority. %s is the inherited recommendation, but the allocation remains the player's irreversible choice."),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       ReservePlan.RecommendedFirstDistrict))
+        : bChoirAtLumeReach
+            ? TEXT("Oruun commands Kharuun. Mara is off-map; the Choir is public contact only. Meridian units are proxies, not evidence of Mara or Compact-wide action.")
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -2931,6 +3118,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("01  Bring Mara to reserve authority at %d,%d, then use workers and [N] Power Links."),
                   ReservePlan.AuthoritySite.x.FloorToInt(),
                   ReservePlan.AuthoritySite.y.FloorToInt())
+        : bChoirAtLumeReach
+            ? FString::Printf(
+                  TEXT("01  Bring Oruun to contact %d,%d, then re-root the Waystone at the deferred liability %d,%d."),
+                  ChoirPlan.ContactSite.x.FloorToInt(),
+                  ChoirPlan.ContactSite.y.FloorToInt(),
+                  ChoirPlan.LiabilitySite.x.FloorToInt(),
+                  ChoirPlan.LiabilitySite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -2991,6 +3185,15 @@ void AEchoesHUD::DrawMissionBriefing(
                   BesidePlan.ConvergenceSite.y.FloorToInt())
         : bReserveAuthority
             ? TEXT("02  Power two different districts, keep all three intact, then bring Mara to the deferred district.")
+        : bChoirAtLumeReach
+            ? FString::Printf(
+                  TEXT("02  Build [N] Listening Spines at %d,%d and %d,%d; commit the Well at %d,%d; then move Oruun to the branch resolution."),
+                  ChoirPlan.FirstAnchorSite.x.FloorToInt(),
+                  ChoirPlan.FirstAnchorSite.y.FloorToInt(),
+                  ChoirPlan.SecondAnchorSite.x.FloorToInt(),
+                  ChoirPlan.SecondAnchorSite.y.FloorToInt(),
+                  ChoirPlan.FutureWellSite.x.FloorToInt(),
+                  ChoirPlan.FutureWellSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -3014,6 +3217,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The overlap geometry is inherited from all seven prior records; reciprocal contact is not proof of one Choir identity, cause, or authorship.")
              : bReserveAuthority
                  ? TEXT("The doctrine is inherited from eight records, but it is advisory. A third powered district violates the finite-reserve contract.")
+             : bChoirAtLumeReach
+                 ? TEXT("The prior branch shapes the approach and Mission 09 fixes the deferred liability. This mission's Lume Well is a new, separate irreversible decision.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -3035,6 +3240,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is relay-backed traversal and reciprocal convergence. Any protected loss or terminal Core outcome invalidates the contact evidence.")
         : bReserveAuthority
             ? TEXT("Victory is one exact two-district allocation. It does not establish wider city recovery or unmodeled civilian survival.")
+        : bChoirAtLumeReach
+            ? TEXT("Victory is one anchored local contact and branch resolution. The Choir is not playable; no hidden authorship, unified identity, or wider cause is established.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -3064,6 +3271,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS TALAR + STATE WITNESSES")
         : bReserveAuthority
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA + DISTRICT NETWORK")
+        : bChoirAtLumeReach
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LISTENING FORCE")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -3282,7 +3491,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignShapeBesideUs ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignReserveAuthority)
+            EEchoesOperationMode::CampaignReserveAuthority ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -3560,7 +3771,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? Border
                         : FLinearColor(0.48f, 0.55f, 0.62f));
         }
-        else
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignReserveAuthority)
         {
             const FEchoesReserveAuthorityPlan Plan =
                 Bridge->GetReserveAuthorityPlan();
@@ -3619,6 +3831,67 @@ void AEchoesHUD::DrawTacticalMinimap(
                         : Border);
             }
         }
+        else
+        {
+            const FEchoesChoirAtLumeReachPlan Plan =
+                Bridge->GetChoirAtLumeReachPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.ContactSite,
+                TEXT("C"),
+                Objective.bChoirContactEstablished
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.LiabilitySite,
+                TEXT("L"),
+                Objective.bChoirDeferredLiabilityResolved
+                    ? CompleteColor
+                    : Objective.bChoirContactEstablished
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.FirstAnchorSite,
+                TEXT("1"),
+                Objective.bChoirFirstAnchorRaised
+                    ? CompleteColor
+                    : Objective.bChoirDeferredLiabilityResolved
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.SecondAnchorSite,
+                TEXT("2"),
+                Objective.bChoirSecondAnchorRaised
+                    ? CompleteColor
+                    : Objective.bChoirFirstAnchorRaised
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.FutureWellSite,
+                TEXT("W"),
+                Objective.ChoirAtLumeReachWellChoice !=
+                        echoes::sim::FutureWellChoice::Dormant
+                    ? CompleteColor
+                    : Objective.bChoirFirstAnchorRaised &&
+                            Objective.bChoirSecondAnchorRaised
+                        ? Border : WaitingColor);
+            if (Objective.ChoirAtLumeReachWellChoice !=
+                echoes::sim::FutureWellChoice::Dormant)
+            {
+                DrawMissionSite(
+                    FEchoesChoirAtLumeReachMissionModel::ResolutionSiteForChoice(
+                        Objective.ChoirAtLumeReachWellChoice),
+                    TEXT("R"),
+                    Objective.bChoirBranchResolutionCompleted
+                        ? CompleteColor : Border);
+            }
+            if (const echoes::sim::Entity* Oruun =
+                    Sim->FindEntity(Objective.ChoirAtLumeReachOruunId))
+            {
+                DrawMissionSite(
+                    Oruun->position,
+                    TEXT("O"),
+                    Objective.bChoirBranchResolutionCompleted
+                        ? CompleteColor : Border);
+            }
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -3652,6 +3925,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignReserveAuthority
             ? TEXT("MISSION NAV  |  AUTHORITY + L/T/A")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignChoirAtLumeReach
+            ? TEXT("MISSION NAV  |  CONTACT + LIABILITY + SPINES + WELL")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

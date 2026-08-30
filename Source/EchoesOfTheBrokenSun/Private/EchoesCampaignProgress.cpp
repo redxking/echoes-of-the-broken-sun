@@ -72,6 +72,15 @@ constexpr uint8 ReserveAuthorityCommonCompletionFacts =
     static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::DeferredDistrictReached) |
     static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesReserveAuthorityCompletionFact::PriorLedgerConsumed);
+constexpr uint8 ChoirAtLumeReachCompletionFacts =
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::ContactEstablished) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::DeferredLiabilityResolved) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::BothAnchorsRaised) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::WellChoiceCommitted) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::BranchResolutionCompleted) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::OruunSurvived) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::LocalCoreSurvived) |
+    static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::PriorLedgerConsumed);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -177,7 +186,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::NamesWithoutBirths &&
         Record.Mission != EEchoesCampaignMissionId::TheShapeOfSilence &&
         Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs &&
-        Record.Mission != EEchoesCampaignMissionId::ReserveAuthority)
+        Record.Mission != EEchoesCampaignMissionId::ReserveAuthority &&
+        Record.Mission != EEchoesCampaignMissionId::ChoirAtLumeReach)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -188,6 +198,12 @@ bool ValidateRecord(
         (Record.AvailableWellChoices & ~AllWellChoicesMask) != 0)
     {
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The recorded Well decision is inconsistent.");
+        return false;
+    }
+    if (Record.Mission == EEchoesCampaignMissionId::ChoirAtLumeReach &&
+        Record.AvailableWellChoices != AllWellChoicesMask)
+    {
+        OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The Lume Reach record must preserve all three offered Well protocols.");
         return false;
     }
     const uint8 RequiredFacts =
@@ -207,7 +223,9 @@ bool ValidateRecord(
             ? ShapeOfSilenceCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::TheShapeBesideUs
             ? ShapeBesideUsCompletionFacts
-            : ReserveAuthorityCommonCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::ReserveAuthority
+            ? ReserveAuthorityCommonCompletionFacts
+            : ChoirAtLumeReachCompletionFacts;
     const uint8 ReserveDistricts =
         Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
     const bool bValidReserveAllocation =

@@ -3113,7 +3113,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignShapeBesideUs
                 ? TEXT("Talar and two state witnesses deployed; ")
-                : TEXT("Mara and three reserve districts deployed; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignReserveAuthority
+                ? TEXT("Mara and three reserve districts deployed; ")
+                : TEXT("Oruun's Kharuun listening force deployed; Mara is liaison-only; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3145,6 +3148,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignReserveAuthority
             ? TEXT("ReserveAuthority")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignChoirAtLumeReach
+            ? TEXT("ChoirAtLumeReach")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3218,6 +3224,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bReserveAuthority =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignReserveAuthority;
+    const bool bChoirAtLumeReach =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignChoirAtLumeReach;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3237,6 +3246,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("THE SHAPE BESIDE US — follow Neme's first echo, raise a relay, traverse both overlapping states, then bring Talar to the convergence. Enter deploys Meridian authority.")
         : bReserveAuthority
             ? TEXT("RESERVE AUTHORITY — secure Mara's authority site, power exactly two failing districts, then bring Mara to the deferred district. Enter deploys Meridian authority.")
+        : bChoirAtLumeReach
+            ? TEXT("THE CHOIR AT LUME REACH — establish contact with Oruun, root the Waystone at the deferred liability, raise both Listening Spines, commit this operation's Future Well, then reach its branch resolution. Mara remains an off-map liaison; the local Choir is not commandable. Enter deploys Kharuun authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3252,10 +3263,11 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bShapeOfSilence ? TEXT("TheShapeOfSilence")
         : bShapeBesideUs ? TEXT("TheShapeBesideUs")
         : bReserveAuthority ? TEXT("ReserveAuthority")
+        : bChoirAtLumeReach ? TEXT("ChoirAtLumeReach")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
-         bShapeBesideUs || bReserveAuthority)
+         bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3418,6 +3430,26 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                     Plan.RecommendedFirstDistrict)),
             18.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        const FEchoesChoirAtLumeReachPlan Plan =
+            Bridge->GetChoirAtLumeReachPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("MISSION 10 — CONTACT %d,%d > LIABILITY %d,%d > SPINES %d,%d + %d,%d > WELL %d,%d"),
+                Plan.ContactSite.x.FloorToInt(),
+                Plan.ContactSite.y.FloorToInt(),
+                Plan.LiabilitySite.x.FloorToInt(),
+                Plan.LiabilitySite.y.FloorToInt(),
+                Plan.FirstAnchorSite.x.FloorToInt(),
+                Plan.FirstAnchorSite.y.FloorToInt(),
+                Plan.SecondAnchorSite.x.FloorToInt(),
+                Plan.SecondAnchorSite.y.FloorToInt(),
+                Plan.FutureWellSite.x.FloorToInt(),
+                Plan.FutureWellSite.y.FloorToInt()),
+            22.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3496,6 +3528,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignReserveAuthority)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: Reserve Authority follows Mara and the Meridian district reserve network."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: The Choir at Lume Reach follows Oruun's Kharuun listening force. Mara is an off-map liaison, and the local Choir is not a commandable faction."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3593,6 +3631,12 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsReserveAuthorityUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignReserveAuthority;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignReserveAuthority &&
+             Bridge->IsChoirAtLumeReachUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignChoirAtLumeReach;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -4676,6 +4720,82 @@ void AEchoesPlayerController::NotifyReserveAuthorityFinished(
         static_cast<uint8>(RecordedConsequence),
         static_cast<uint8>(DeferredDistrict),
         static_cast<uint8>(RecordedDeferredDistrict),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyChoirAtLumeReachFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignChoirAtLumeReach;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Oruun, the Waystone, a committed Listening Spine, the local Core, the Lume Well, or the active Reshape exit window was lost. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — the %s protocol resolved the public Lume Reach route after both Listening Spines held. This records one local contact operation and Well decision; it does not make the Choir playable, identify hidden authorship, or prove wider causation."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage += TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage += TEXT(" Campaign ledger already contains this Lume Reach decision. Press R to replay.");
+        }
+        else if (CommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            const TCHAR* RecordedLabel =
+                RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Harvest
+                    ? TEXT("Harvest")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Preserve
+                    ? TEXT("Preserve")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Reshape
+                    ? TEXT("Reshape")
+                    : TEXT("Dormant");
+            ResultMessage += FString::Printf(
+                TEXT(" The earlier irreversible record retains %s; it was not rewritten. Press R to replay."),
+                RecordedLabel);
+        }
+        else
+        {
+            ResultMessage += TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=ChoirAtLumeReach success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=localContactOperationOnly maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact mixedFactionCommand=false hiddenAttribution=false causationClaim=false"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
         static_cast<uint8>(CommitStatus));
 }
 
@@ -8252,6 +8372,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignReserveAuthority
                 ? TEXT("MISSION RESTARTED — Mara's district allocation returns to its deterministic initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignChoirAtLumeReach
+                ? TEXT("MISSION RESTARTED — Oruun's Lume Reach contact operation returns to its deterministic initial state; Mara remains liaison-only.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }

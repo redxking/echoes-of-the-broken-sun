@@ -37,6 +37,10 @@ constexpr int32 NamesWithoutBirthsSiteRadiusTiles = 3;
 constexpr int32 ShapeOfSilenceSiteRadiusTiles = 3;
 constexpr int32 ShapeBesideUsSiteRadiusTiles = 3;
 constexpr int32 ReserveAuthoritySiteRadiusTiles = 3;
+constexpr int32 ChoirAtLumeReachSiteRadiusTiles = 3;
+constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
+constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
+    'E', 'C', 'H', 'O', 'M', '1', '0', 'Q'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -45,6 +49,157 @@ using echoes::sim::FutureWellChoice;
 using echoes::sim::ResourcePool;
 using echoes::sim::Terrain;
 using echoes::sim::Vec2;
+
+void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
+{
+    Bytes.Add(static_cast<uint8>(Value & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 8U) & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 16U) & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 24U) & 0xFFU));
+}
+
+[[nodiscard]] bool ReadUint32LittleEndian(
+    const TArray<uint8>& Bytes,
+    int32& Offset,
+    uint32& OutValue)
+{
+    if (Offset < 0 || Bytes.Num() - Offset < 4)
+    {
+        return false;
+    }
+    OutValue =
+        static_cast<uint32>(Bytes[Offset]) |
+        (static_cast<uint32>(Bytes[Offset + 1]) << 8U) |
+        (static_cast<uint32>(Bytes[Offset + 2]) << 16U) |
+        (static_cast<uint32>(Bytes[Offset + 3]) << 24U);
+    Offset += 4;
+    return true;
+}
+
+[[nodiscard]] bool BuildChoirAtLumeReachQuickSaveEnvelope(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& SnapshotBytes,
+    TArray<uint8>& OutEnvelope,
+    FString& OutError)
+{
+    OutEnvelope.Reset();
+    OutError.Reset();
+    if (CampaignProgress.Decisions.Num() != 9 || SnapshotBytes.IsEmpty())
+    {
+        OutError = TEXT(
+            "Mission 10 checkpoints require an active nine-record ledger and a non-empty snapshot.");
+        return false;
+    }
+
+    TArray<uint8> LedgerBytes;
+    if (!FEchoesCampaignProgressStore::Encode(
+            CampaignProgress, LedgerBytes, OutError) ||
+        LedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("The active campaign ledger could not be encoded.");
+        }
+        return false;
+    }
+
+    const uint64 EnvelopeSize =
+        static_cast<uint64>(UE_ARRAY_COUNT(ChoirAtLumeReachQuickSaveMagic)) +
+        2ULL + 8ULL + static_cast<uint64>(LedgerBytes.Num()) +
+        static_cast<uint64>(SnapshotBytes.Num());
+    if (EnvelopeSize > static_cast<uint64>(MAX_int32))
+    {
+        OutError = TEXT("The Mission 10 checkpoint envelope is too large.");
+        return false;
+    }
+
+    OutEnvelope.Reserve(static_cast<int32>(EnvelopeSize));
+    OutEnvelope.Append(
+        ChoirAtLumeReachQuickSaveMagic,
+        UE_ARRAY_COUNT(ChoirAtLumeReachQuickSaveMagic));
+    OutEnvelope.Add(ChoirAtLumeReachQuickSaveEnvelopeVersion);
+    OutEnvelope.Add(static_cast<uint8>(
+        EEchoesOperationMode::CampaignChoirAtLumeReach));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(LedgerBytes.Num()));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(SnapshotBytes.Num()));
+    OutEnvelope.Append(LedgerBytes);
+    OutEnvelope.Append(SnapshotBytes);
+    return true;
+}
+
+[[nodiscard]] bool ExtractChoirAtLumeReachQuickSaveSnapshot(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& Envelope,
+    TArray<uint8>& OutSnapshotBytes,
+    FString& OutError)
+{
+    OutSnapshotBytes.Reset();
+    OutError.Reset();
+    constexpr int32 FixedHeaderSize =
+        UE_ARRAY_COUNT(ChoirAtLumeReachQuickSaveMagic) + 2 + 8;
+    if (Envelope.Num() < FixedHeaderSize ||
+        FMemory::Memcmp(
+            Envelope.GetData(),
+            ChoirAtLumeReachQuickSaveMagic,
+            UE_ARRAY_COUNT(ChoirAtLumeReachQuickSaveMagic)) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint is missing the Mission 10 operation-and-ledger envelope");
+        return false;
+    }
+
+    int32 Offset = UE_ARRAY_COUNT(ChoirAtLumeReachQuickSaveMagic);
+    if (Envelope[Offset++] != ChoirAtLumeReachQuickSaveEnvelopeVersion)
+    {
+        OutError = TEXT(
+            "checkpoint uses an unsupported Mission 10 envelope version");
+        return false;
+    }
+    if (Envelope[Offset++] != static_cast<uint8>(
+            EEchoesOperationMode::CampaignChoirAtLumeReach))
+    {
+        OutError = TEXT(
+            "checkpoint operation binding is not The Choir at Lume Reach");
+        return false;
+    }
+
+    uint32 LedgerLength = 0;
+    uint32 SnapshotLength = 0;
+    if (!ReadUint32LittleEndian(Envelope, Offset, LedgerLength) ||
+        !ReadUint32LittleEndian(Envelope, Offset, SnapshotLength) ||
+        LedgerLength == 0 || SnapshotLength == 0 ||
+        static_cast<uint64>(Offset) + static_cast<uint64>(LedgerLength) +
+                static_cast<uint64>(SnapshotLength) !=
+            static_cast<uint64>(Envelope.Num()))
+    {
+        OutError = TEXT("checkpoint Mission 10 envelope lengths are invalid");
+        return false;
+    }
+
+    TArray<uint8> ActiveLedgerBytes;
+    FString LedgerError;
+    if (CampaignProgress.Decisions.Num() != 9 ||
+        !FEchoesCampaignProgressStore::Encode(
+            CampaignProgress, ActiveLedgerBytes, LedgerError) ||
+        ActiveLedgerBytes.Num() != static_cast<int32>(LedgerLength) ||
+        FMemory::Memcmp(
+            Envelope.GetData() + Offset,
+            ActiveLedgerBytes.GetData(),
+            LedgerLength) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding does not match the active nine-record campaign");
+        return false;
+    }
+
+    Offset += static_cast<int32>(LedgerLength);
+    OutSnapshotBytes.Append(
+        Envelope.GetData() + Offset,
+        static_cast<int32>(SnapshotLength));
+    return true;
+}
 
 [[nodiscard]] const TCHAR* FactionStableName(Faction Value)
 {
@@ -92,6 +247,78 @@ using echoes::sim::Vec2;
             if (Simulation.SetTerrainTile(TileX, TileY, Terrain::Blocked))
             {
                 ++BlockedTiles;
+            }
+        }
+    }
+    return BlockedTiles;
+}
+
+[[nodiscard]] int32 ConfigureLumeReach(
+    echoes::sim::Simulation& Simulation,
+    FutureWellChoice PriorChoice)
+{
+    int32 BlockedTiles = 0;
+    const auto BlockTile = [&Simulation, &BlockedTiles](int32 TileX, int32 TileY)
+    {
+        if (Simulation.SetTerrainTile(TileX, TileY, Terrain::Blocked))
+        {
+            ++BlockedTiles;
+        }
+    };
+
+    for (int32 TileY = 28; TileY <= 30; ++TileY)
+    {
+        for (int32 TileX = 8; TileX <= 55; ++TileX)
+        {
+            const bool bPublicGate =
+                (TileX >= 16 && TileX <= 19) ||
+                (TileX >= 30 && TileX <= 34) ||
+                (TileX >= 45 && TileX <= 48);
+            if (!bPublicGate)
+            {
+                BlockTile(TileX, TileY);
+            }
+        }
+    }
+    for (int32 TileY = 36; TileY <= 44; ++TileY)
+    {
+        for (int32 TileX = 20; TileX <= 25; ++TileX)
+        {
+            BlockTile(TileX, TileY);
+        }
+        for (int32 TileX = 39; TileX <= 44; ++TileX)
+        {
+            BlockTile(TileX, TileY);
+        }
+    }
+
+    if (PriorChoice == FutureWellChoice::Harvest)
+    {
+        for (int32 TileY = 34; TileY <= 38; ++TileY)
+        {
+            for (int32 TileX = 29; TileX <= 30; ++TileX)
+            {
+                BlockTile(TileX, TileY);
+            }
+        }
+    }
+    else if (PriorChoice == FutureWellChoice::Preserve)
+    {
+        for (int32 TileY = 34; TileY <= 38; ++TileY)
+        {
+            for (int32 TileX = 33; TileX <= 34; ++TileX)
+            {
+                BlockTile(TileX, TileY);
+            }
+        }
+    }
+    else if (PriorChoice == FutureWellChoice::Reshape)
+    {
+        for (int32 TileY = 34; TileY <= 35; ++TileY)
+        {
+            for (int32 TileX = 30; TileX <= 34; ++TileX)
+            {
+                BlockTile(TileX, TileY);
             }
         }
     }
@@ -338,6 +565,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("THE SHAPE BESIDE US");
         case EEchoesOperationMode::CampaignReserveAuthority:
             return TEXT("RESERVE AUTHORITY");
+        case EEchoesOperationMode::CampaignChoirAtLumeReach:
+            return TEXT("THE CHOIR AT LUME REACH");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -429,6 +658,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_RESERVE_AUTHORITY_LOCKED] reason=eight consistent prior mission records required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach &&
+        !IsChoirAtLumeReachUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CHOIR_AT_LUME_REACH_LOCKED] reason=nine consistent prior mission records required"));
         return false;
     }
 
@@ -562,18 +801,25 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Content->GetCatalog().Buildings.Num());
 
     Simulation = MakeUnique<echoes::sim::Simulation>(Config);
-    const int32 BaseGlassScarBlockedTiles = ConfigureGlassScar(*Simulation);
-    if (BaseGlassScarBlockedTiles != 165)
+    const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();
+    const bool bLumeReach = SelectedOperation ==
+        EEchoesOperationMode::CampaignChoirAtLumeReach;
+    const int32 BaseGlassScarBlockedTiles = bLumeReach
+        ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
+        : ConfigureGlassScar(*Simulation);
+    const int32 ExpectedBaseBlockedTiles = bLumeReach ? 223 : 165;
+    if (BaseGlassScarBlockedTiles != ExpectedBaseBlockedTiles)
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_GLASS_SCAR_INIT_FAILED] blocked=%d expected=165"),
-            BaseGlassScarBlockedTiles);
+            TEXT("[ECHOES_OPERATION_TERRAIN_INIT_FAILED] operation=%s blocked=%d expected=%d"),
+            *GetOperationLabel(),
+            BaseGlassScarBlockedTiles,
+            ExpectedBaseBlockedTiles);
         Simulation.Reset();
         return false;
     }
-    const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();
     const int32 SevenAccountsTerrainDelta =
         SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
             ? ApplySevenAccountsTerrain(*Simulation, SevenAccountsBranch)
@@ -620,6 +866,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignReserveAuthority
             ? Faction::MeridianCompact
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignChoirAtLumeReach
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -652,7 +901,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignShapeBesideUs ||
                     SelectedOperation ==
-                        EEchoesOperationMode::CampaignReserveAuthority
+                        EEchoesOperationMode::CampaignReserveAuthority ||
+                    SelectedOperation ==
+                        EEchoesOperationMode::CampaignChoirAtLumeReach
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -705,6 +956,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     FirstStateWitnessId = 0;
     SecondStateWitnessId = 0;
     ReserveAuthorityMaraId = 0;
+    ChoirAtLumeReachOruunId = 0;
+    ChoirAtLumeReachWaystoneId = 0;
+    ChoirAtLumeReachWellId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -735,6 +989,21 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             else if (Type == EntityType::Dropoff)
             {
                 MigrationWaystoneId = Spawned;
+            }
+        }
+        if (SelectedOperation ==
+                EEchoesOperationMode::CampaignChoirAtLumeReach &&
+            Owner == LocalPlayerId)
+        {
+            if (Type == EntityType::ScoutUnit &&
+                ChoirAtLumeReachOruunId == 0)
+            {
+                ChoirAtLumeReachOruunId = Spawned;
+            }
+            else if (Type == EntityType::Dropoff &&
+                     ChoirAtLumeReachWaystoneId == 0)
+            {
+                ChoirAtLumeReachWaystoneId = Spawned;
             }
         }
         return Spawned;
@@ -1200,19 +1469,34 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 0);
         }
 
-        const TArray<FIntPoint> MatterNodeTiles = {
-            SelectedOperation == EEchoesOperationMode::CampaignCityReserve
-                ? FIntPoint{17, 27}
-                : FIntPoint{16, 16},
-            {21, 13}, {25, 28}, {33, 22},
-            {31, 43}, {43, 36}, {47, 50}, {52, 45}};
+        const TArray<FIntPoint> MatterNodeTiles = bLumeReach
+            ? TArray<FIntPoint>{
+                  {16, 16}, {21, 13}, {26, 24}, {38, 24},
+                  {24, 48}, {40, 48}, {48, 42}, {52, 45}}
+            : TArray<FIntPoint>{
+                  SelectedOperation == EEchoesOperationMode::CampaignCityReserve
+                      ? FIntPoint{17, 27}
+                      : FIntPoint{16, 16},
+                  {21, 13}, {25, 28}, {33, 22},
+                  {31, 43}, {43, 36}, {47, 50}, {52, 45}};
         for (const FIntPoint& Tile : MatterNodeTiles)
         {
             bSpawnSucceeded &=
                 Simulation->SpawnResourceNode(Vec2::FromTiles(Tile.X, Tile.Y), 1600) != 0;
         }
-        bSpawnSucceeded &=
-            Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
+        if (bLumeReach)
+        {
+            const FEchoesChoirAtLumeReachPlan Plan =
+                GetChoirAtLumeReachPlan();
+            ChoirAtLumeReachWellId = Simulation->SpawnFutureWell(
+                Plan.FutureWellSite);
+            bSpawnSucceeded &= ChoirAtLumeReachWellId != 0;
+        }
+        else
+        {
+            bSpawnSucceeded &=
+                Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
+        }
     }
 
     if (!bSpawnSucceeded)
@@ -1676,6 +1960,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach &&
+        (ChoirAtLumeReachOruunId == 0 ||
+         ChoirAtLumeReachWaystoneId == 0 ||
+         ChoirAtLumeReachWellId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CHOIR_AT_LUME_REACH_INIT_FAILED] reason=mission entities unavailable oruun=%u waystone=%u well=%u"),
+            ChoirAtLumeReachOruunId,
+            ChoirAtLumeReachWaystoneId,
+            ChoirAtLumeReachWellId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -1692,11 +1992,23 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
     bScenarioReady = true;
 
-    UE_LOG(
-        LogEchoes,
-        Display,
-        TEXT("[ECHOES_GLASS_SCAR_READY] blocked=%d crossings=3 centralWell=(32,32)"),
-        GlassScarBlockedTiles);
+    if (bLumeReach)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_LUME_REACH_TERRAIN_READY] blocked=%d publicGates=3 well=(32,43) inheritedBranch=%u"),
+            GlassScarBlockedTiles,
+            static_cast<uint8>(SevenAccountsBranch));
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_GLASS_SCAR_READY] blocked=%d crossings=3 centralWell=(32,32)"),
+            GlassScarBlockedTiles);
+    }
 
     UE_LOG(
         LogEchoes,
@@ -1899,6 +2211,33 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 UnburiedRoadTerrainDelta,
                 GlassScarBlockedTiles);
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            const FEchoesChoirAtLumeReachPlan Plan =
+                GetChoirAtLumeReachPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_CHOIR_AT_LUME_REACH_READY] approach=%s priorBranch=%u deferredDistrict=%u oruun=%u waystone=%u well=%u contact=(%d,%d) liability=(%d,%d) anchors=(%d,%d):(%d,%d) wellSite=(%d,%d) localFaction=KharuunAssemblies maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact opposition=meridianMechanicalQuarantineProxies maraInvolvementUnmodeled=true compactWideActionUnproven=true mixedFactionCommand=false hiddenAttribution=false inheritedRecords=9 blocked=%d"),
+                Plan.StableName,
+                static_cast<uint8>(Plan.PriorChoice),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                ChoirAtLumeReachOruunId,
+                ChoirAtLumeReachWaystoneId,
+                ChoirAtLumeReachWellId,
+                Plan.ContactSite.x.FloorToInt(),
+                Plan.ContactSite.y.FloorToInt(),
+                Plan.LiabilitySite.x.FloorToInt(),
+                Plan.LiabilitySite.y.FloorToInt(),
+                Plan.FirstAnchorSite.x.FloorToInt(),
+                Plan.FirstAnchorSite.y.FloorToInt(),
+                Plan.SecondAnchorSite.x.FloorToInt(),
+                Plan.SecondAnchorSite.y.FloorToInt(),
+                Plan.FutureWellSite.x.FloorToInt(),
+                Plan.FutureWellSite.y.FloorToInt(),
+                GlassScarBlockedTiles);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -2032,6 +2371,9 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     FirstStateWitnessId = 0;
     SecondStateWitnessId = 0;
     ReserveAuthorityMaraId = 0;
+    ChoirAtLumeReachOruunId = 0;
+    ChoirAtLumeReachWaystoneId = 0;
+    ChoirAtLumeReachWellId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -2118,6 +2460,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::MeridianCompact)
     {
         OutFeedback = TEXT("[FACTION_RESERVE_AUTHORITY_LOCKED] Mara and the district reserve network deploy under Meridian authority.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_CHOIR_AT_LUME_REACH_LOCKED] Oruun and the Lume Reach listening force deploy under Kharuun authority; Mara remains an off-map liaison.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -2233,6 +2582,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Shape Beside Us with a consistent ledger before Reserve Authority.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach &&
+        !IsChoirAtLumeReachUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Reserve Authority with a consistent ledger before The Choir at Lume Reach.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -2289,6 +2645,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::MeridianCompact;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -2321,6 +2682,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignReserveAuthority
                 ? TEXT(" — Mara and the district reserve network are locked under Meridian authority.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignChoirAtLumeReach
+                ? TEXT(" — Oruun's Kharuun listening force is locked; Mara remains an off-map liaison and the local Choir is not commandable.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -2349,6 +2713,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignReserveAuthority
                 ? TEXT("ReserveAuthority")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignChoirAtLumeReach
+                ? TEXT("ChoirAtLumeReach")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -2574,7 +2941,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
         SelectedOperation ==
             EEchoesOperationMode::CampaignShapeBesideUs ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignReserveAuthority)
+            EEchoesOperationMode::CampaignReserveAuthority ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -2601,7 +2970,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 : SelectedOperation ==
                         EEchoesOperationMode::CampaignShapeBesideUs
                     ? TEXT("EchoesQuickSaveTheShapeBesideUs")
-                    : TEXT("EchoesQuickSaveReserveAuthority");
+                : SelectedOperation ==
+                        EEchoesOperationMode::CampaignReserveAuthority
+                    ? TEXT("EchoesQuickSaveReserveAuthority")
+                    : TEXT("EchoesQuickSaveTheChoirAtLumeReach");
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
@@ -2622,7 +2994,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             : SelectedOperation ==
                     EEchoesOperationMode::CampaignShapeBesideUs
                 ? TEXT("EchoesQuickSaveTheShapeBesideUs-InvalidLedger.bin")
-                : TEXT("EchoesQuickSaveReserveAuthority-InvalidLedger.bin"));
+            : SelectedOperation ==
+                    EEchoesOperationMode::CampaignReserveAuthority
+                ? TEXT("EchoesQuickSaveReserveAuthority-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveTheChoirAtLumeReach-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -3257,6 +3632,75 @@ UEchoesSimulationSubsystem::CommitReserveAuthorityCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitChoirAtLumeReachCompletion(
+    echoes::sim::FutureWellChoice CurrentChoice,
+    echoes::sim::FutureWellChoice& OutRecordedChoice,
+    FString& OutFeedback)
+{
+    OutRecordedChoice = CurrentChoice;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignChoirAtLumeReach ||
+        GetChoirAtLumeReachPhase() !=
+            EEchoesChoirAtLumeReachPhase::Complete ||
+        !IsChoirAtLumeReachUnlocked() ||
+        CurrentChoice == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative The Choir at Lume Reach operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::ChoirAtLumeReach;
+    Record.WellChoice = CurrentChoice;
+    Record.AvailableWellChoices = 0x07;
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::ContactEstablished) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::DeferredLiabilityResolved) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::BothAnchorsRaised) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::WellChoiceCommitted) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::BranchResolutionCompleted) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::OruunSurvived) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::LocalCoreSurvived) |
+        static_cast<uint8>(EEchoesChoirAtLumeReachCompletionFact::PriorLedgerConsumed);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedChoice = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -3416,6 +3860,23 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     }
     TArray<uint8> SnapshotBytes;
     SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
+    TArray<uint8> PersistedBytes = SnapshotBytes;
+    if (SelectedOperation ==
+        EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        FString EnvelopeError;
+        if (!BuildChoirAtLumeReachQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *EnvelopeError);
+            return false;
+        }
+    }
 
     const FString SavePath = GetActiveQuickSavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
@@ -3428,20 +3889,37 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         return false;
     }
     Files.Delete(*TemporaryPath, false, true, true);
-    if (!FFileHelper::SaveArrayToFile(SnapshotBytes, *TemporaryPath))
+    if (!FFileHelper::SaveArrayToFile(PersistedBytes, *TemporaryPath))
     {
         OutFeedback = TEXT("[SAVE_WRITE_FAILED] The temporary checkpoint could not be written.");
         return false;
     }
 
     TArray<uint8> VerificationBytes;
+    const bool bVerificationRead =
+        FFileHelper::LoadFileToArray(VerificationBytes, *TemporaryPath);
+    TArray<uint8> VerificationSnapshotBytes;
+    const TArray<uint8>* VerificationPayload = &VerificationBytes;
+    FString EnvelopeError;
+    bool bEnvelopeValid = true;
+    if (bVerificationRead &&
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
+            CampaignProgress,
+            VerificationBytes,
+            VerificationSnapshotBytes,
+            EnvelopeError);
+        VerificationPayload = &VerificationSnapshotBytes;
+    }
     std::string VerificationError;
     const bool bTemporaryValid =
-        FFileHelper::LoadFileToArray(VerificationBytes, *TemporaryPath) &&
+        bVerificationRead && bEnvelopeValid &&
         echoes::sim::Simulation::LoadSnapshot(
             std::span<const uint8>(
-                VerificationBytes.GetData(),
-                static_cast<size_t>(VerificationBytes.Num())),
+                VerificationPayload->GetData(),
+                static_cast<size_t>(VerificationPayload->Num())),
             &VerificationError)
             .has_value();
     if (!bTemporaryValid)
@@ -3449,9 +3927,11 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         Files.Delete(*TemporaryPath, false, true, true);
         OutFeedback = FString::Printf(
             TEXT("[SAVE_VALIDATION_FAILED] %s"),
-            VerificationError.empty()
-                ? TEXT("The temporary checkpoint could not be reopened.")
-                : UTF8_TO_TCHAR(VerificationError.c_str()));
+            !EnvelopeError.IsEmpty()
+                ? *EnvelopeError
+                : VerificationError.empty()
+                    ? TEXT("The temporary checkpoint could not be reopened.")
+                    : UTF8_TO_TCHAR(VerificationError.c_str()));
         return false;
     }
 
@@ -3483,10 +3963,14 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_QUICK_SAVE] tick=%llu bytes=%d backup=%s"),
+        TEXT("[ECHOES_QUICK_SAVE] tick=%llu bytes=%d backup=%s ledgerBound=%s"),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
-        SnapshotBytes.Num(),
-        bHadPriorSave ? TEXT("retained") : TEXT("none"));
+        PersistedBytes.Num(),
+        bHadPriorSave ? TEXT("retained") : TEXT("none"),
+        SelectedOperation ==
+                EEchoesOperationMode::CampaignChoirAtLumeReach
+            ? TEXT("true")
+            : TEXT("false"));
     return true;
 }
 
@@ -3514,12 +3998,27 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             OutFailure = TEXT("file unavailable");
             return false;
         }
+        TArray<uint8> SnapshotBytes;
+        const TArray<uint8>* SnapshotPayload = &Bytes;
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            if (!ExtractChoirAtLumeReachQuickSaveSnapshot(
+                    CampaignProgress,
+                    Bytes,
+                    SnapshotBytes,
+                    OutFailure))
+            {
+                return false;
+            }
+            SnapshotPayload = &SnapshotBytes;
+        }
         std::string Error;
         std::optional<echoes::sim::Simulation> Candidate =
             echoes::sim::Simulation::LoadSnapshot(
                 std::span<const uint8>(
-                    Bytes.GetData(),
-                    static_cast<size_t>(Bytes.Num())),
+                    SnapshotPayload->GetData(),
+                    static_cast<size_t>(SnapshotPayload->Num())),
                 &Error);
         if (!Candidate.has_value())
         {
@@ -3715,6 +4214,42 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             {
                 OutFailure = TEXT(
                     "snapshot does not match the active Reserve Authority ledger branch");
+                return false;
+            }
+        }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            const FEchoesChoirAtLumeReachPlan Plan =
+                GetChoirAtLumeReachPlan();
+            const echoes::sim::Entity* Oruun =
+                Candidate->FindEntity(ChoirAtLumeReachOruunId);
+            const echoes::sim::Entity* Waystone =
+                Candidate->FindEntity(ChoirAtLumeReachWaystoneId);
+            const echoes::sim::Entity* Well =
+                Candidate->FindEntity(ChoirAtLumeReachWellId);
+            const auto IsKharuunEntity = [](const echoes::sim::Entity* Entity,
+                                            EntityType Type)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::KharuunAssemblies &&
+                       Entity->type == Type;
+            };
+            const bool bValidWell =
+                Well != nullptr && Well->type == EntityType::FutureWell &&
+                (Well->owner == echoes::sim::kNeutralPlayer ||
+                 Well->owner == LocalPlayerId) &&
+                Well->position == Plan.FutureWellSite;
+            if (!IsKharuunEntity(Oruun, EntityType::ScoutUnit) ||
+                !IsKharuunEntity(Waystone, EntityType::Dropoff) ||
+                !bValidWell ||
+                ChoirAtLumeReachOruunId == ChoirAtLumeReachWaystoneId ||
+                ChoirAtLumeReachOruunId == ChoirAtLumeReachWellId ||
+                ChoirAtLumeReachWaystoneId == ChoirAtLumeReachWellId)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active The Choir at Lume Reach ledger branch");
                 return false;
             }
         }
@@ -3985,6 +4520,22 @@ bool UEchoesSimulationSubsystem::IsReserveAuthorityUnlocked() const
            Prologue->WellChoice == Shape->WellChoice;
 }
 
+bool UEchoesSimulationSubsystem::IsChoirAtLumeReachUnlocked() const
+{
+    if (!IsReserveAuthorityUnlocked())
+    {
+        return false;
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    return Prologue != nullptr && Reserve != nullptr &&
+           Prologue->WellChoice == Reserve->WellChoice;
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -4070,6 +4621,28 @@ UEchoesSimulationSubsystem::GetReserveAuthorityDeferredDistrict() const
     Facts.bArchivePowered =
         Archive != nullptr && Archive->hitPoints > 0 && Archive->aegisPowered;
     return FEchoesReserveAuthorityMissionModel::DeferredDistrict(Facts);
+}
+
+FEchoesChoirAtLumeReachPlan
+UEchoesSimulationSubsystem::GetChoirAtLumeReachPlan() const
+{
+    EEchoesCityDistrict DeferredDistrict = EEchoesCityDistrict::LifeSupport;
+    if (const FEchoesCampaignDecisionRecord* Reserve =
+            CampaignProgress.FindDecision(
+                EEchoesCampaignMissionId::ReserveAuthority))
+    {
+        const uint8 Facts = Reserve->VerifiedFacts;
+        DeferredDistrict =
+            (Facts & static_cast<uint8>(
+                 EEchoesReserveAuthorityCompletionFact::LifeSupportPowered)) == 0
+                ? EEchoesCityDistrict::LifeSupport
+            : (Facts & static_cast<uint8>(
+                   EEchoesReserveAuthorityCompletionFact::TransitPowered)) == 0
+                ? EEchoesCityDistrict::Transit
+                : EEchoesCityDistrict::Archive;
+    }
+    return FEchoesChoirAtLumeReachMissionModel::PlanForChoice(
+        GetRecordedPrologueChoice(), DeferredDistrict);
 }
 
 echoes::sim::EntityId UEchoesSimulationSubsystem::GetCityDistrictId(
@@ -4598,6 +5171,99 @@ UEchoesSimulationSubsystem::GetReserveAuthorityPhase() const
     return FEchoesReserveAuthorityMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesChoirAtLumeReachPhase
+UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
+{
+    FEchoesChoirAtLumeReachMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignChoirAtLumeReach &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesChoirAtLumeReachPhase::Inactive;
+    }
+
+    const FEchoesChoirAtLumeReachPlan Plan = GetChoirAtLumeReachPlan();
+    const echoes::sim::Entity* Oruun =
+        Simulation->FindEntity(ChoirAtLumeReachOruunId);
+    const echoes::sim::Entity* Waystone =
+        Simulation->FindEntity(ChoirAtLumeReachWaystoneId);
+    const echoes::sim::Entity* Well =
+        Simulation->FindEntity(ChoirAtLumeReachWellId);
+    Facts.bOruunIntact = Oruun != nullptr && Oruun->hitPoints > 0;
+    Facts.bWaystoneIntact = Waystone != nullptr && Waystone->hitPoints > 0;
+    Facts.bFutureWellIntact = Well != nullptr && Well->hitPoints > 0 &&
+        Well->type == EntityType::FutureWell;
+    Facts.bDeferredLiabilityResolved =
+        Facts.bWaystoneIntact &&
+        Waystone->waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+        IsWithinTiles(
+            Waystone->position,
+            Plan.LiabilitySite,
+            ChoirAtLumeReachSiteRadiusTiles);
+
+    EntityId FirstAnchorId = 0;
+    EntityId SecondAnchorId = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure)
+        {
+            if (FirstAnchorId == 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.FirstAnchorSite,
+                    ChoirAtLumeReachSiteRadiusTiles))
+            {
+                FirstAnchorId = Entity.id;
+            }
+            if (SecondAnchorId == 0 && Entity.id != FirstAnchorId &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.SecondAnchorSite,
+                    ChoirAtLumeReachSiteRadiusTiles))
+            {
+                SecondAnchorId = Entity.id;
+            }
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+    }
+    Facts.bFirstAnchorRaised = FirstAnchorId != 0;
+    Facts.bSecondAnchorRaised = SecondAnchorId != 0;
+    Facts.bFutureWellProtocolChosen =
+        Facts.bFutureWellIntact &&
+        Well->owner == LocalPlayerId &&
+        Well->wellChoice != FutureWellChoice::Dormant;
+    Facts.bBranchResolutionCompleted =
+        Facts.bFutureWellProtocolChosen && Facts.bOruunIntact &&
+        IsWithinTiles(
+            Oruun->position,
+            FEchoesChoirAtLumeReachMissionModel::ResolutionSiteForChoice(
+                Well->wellChoice),
+            ChoirAtLumeReachSiteRadiusTiles);
+    Facts.bReshapeWindowExpired =
+        Facts.bFutureWellProtocolChosen &&
+        Well->wellChoice == FutureWellChoice::Reshape &&
+        Well->reshapeUntilTick == 0 &&
+        !Facts.bBranchResolutionCompleted;
+    Facts.bContactEstablished =
+        (Facts.bOruunIntact &&
+         IsWithinTiles(
+             Oruun->position,
+             Plan.ContactSite,
+             ChoirAtLumeReachSiteRadiusTiles)) ||
+        Facts.bDeferredLiabilityResolved || Facts.bFirstAnchorRaised ||
+        Facts.bSecondAnchorRaised || Facts.bFutureWellProtocolChosen;
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    return FEchoesChoirAtLumeReachMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -4627,6 +5293,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ShapeBesideUsBranch = GetRecordedPrologueChoice();
     Snapshot.ReserveAuthorityPhase = GetReserveAuthorityPhase();
     Snapshot.ReserveAuthorityBranch = GetRecordedPrologueChoice();
+    Snapshot.ChoirAtLumeReachPhase = GetChoirAtLumeReachPhase();
+    Snapshot.ChoirAtLumeReachPriorBranch = GetRecordedPrologueChoice();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -4648,6 +5316,9 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.FirstStateWitnessId = FirstStateWitnessId;
     Snapshot.SecondStateWitnessId = SecondStateWitnessId;
     Snapshot.ReserveAuthorityMaraId = ReserveAuthorityMaraId;
+    Snapshot.ChoirAtLumeReachOruunId = ChoirAtLumeReachOruunId;
+    Snapshot.ChoirAtLumeReachWaystoneId = ChoirAtLumeReachWaystoneId;
+    Snapshot.ChoirAtLumeReachWellId = ChoirAtLumeReachWellId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
@@ -4662,6 +5333,9 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetShapeBesideUsPlan();
     const FEchoesReserveAuthorityPlan ReservePlan =
         GetReserveAuthorityPlan();
+    const FEchoesChoirAtLumeReachPlan ChoirPlan =
+        GetChoirAtLumeReachPlan();
+    Snapshot.ChoirAtLumeReachDeferredDistrict = ChoirPlan.DeferredDistrict;
     Snapshot.ReserveAuthorityRecommendedDistrict =
         ReservePlan.RecommendedFirstDistrict;
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
@@ -4712,6 +5386,16 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     ShapePlan.WaystoneAnchor,
                     ShapeOfSilenceSiteRadiusTiles);
         }
+        if (Entity.id == ChoirAtLumeReachWaystoneId)
+        {
+            Snapshot.bChoirDeferredLiabilityResolved =
+                Entity.hitPoints > 0 &&
+                Entity.waystoneMode == echoes::sim::WaystoneMode::Rooted &&
+                IsWithinTiles(
+                    Entity.position,
+                    ChoirPlan.LiabilitySite,
+                    ChoirAtLumeReachSiteRadiusTiles);
+        }
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
             Entity.completed && Entity.type == EntityType::UtilityStructure &&
             IsWithinTiles(
@@ -4738,6 +5422,24 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 ShapeBesideUsSiteRadiusTiles))
         {
             Snapshot.bEchoRelayRaised = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                ChoirPlan.FirstAnchorSite,
+                ChoirAtLumeReachSiteRadiusTiles))
+        {
+            Snapshot.bChoirFirstAnchorRaised = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed && Entity.type == EntityType::UtilityStructure &&
+            IsWithinTiles(
+                Entity.position,
+                ChoirPlan.SecondAnchorSite,
+                ChoirAtLumeReachSiteRadiusTiles))
+        {
+            Snapshot.bChoirSecondAnchorRaised = true;
         }
         if (Entity.id == LifeSupportDistrictId)
         {
@@ -4861,6 +5563,22 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                     BesidePlan.SecondStateSite,
                     ShapeBesideUsSiteRadiusTiles);
         }
+        if (Entity.id == ChoirAtLumeReachOruunId)
+        {
+            Snapshot.bChoirContactEstablished =
+                Entity.hitPoints > 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    ChoirPlan.ContactSite,
+                    ChoirAtLumeReachSiteRadiusTiles);
+        }
+        if (Entity.id == ChoirAtLumeReachWellId)
+        {
+            Snapshot.ChoirAtLumeReachWellChoice = Entity.wellChoice;
+            Snapshot.bChoirReshapeWindowExpired =
+                Entity.wellChoice == FutureWellChoice::Reshape &&
+                Entity.reshapeUntilTick == 0;
+        }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
         {
@@ -4957,6 +5675,25 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             FEchoesCityReserveMissionModel::SiteForDistrict(
                 Snapshot.ReserveAuthorityDeferredDistrict),
             ReserveAuthoritySiteRadiusTiles);
+    const echoes::sim::Entity* ChoirOruun =
+        Simulation->FindEntity(ChoirAtLumeReachOruunId);
+    Snapshot.bChoirBranchResolutionCompleted =
+        ChoirOruun != nullptr && ChoirOruun->hitPoints > 0 &&
+        Snapshot.ChoirAtLumeReachWellChoice != FutureWellChoice::Dormant &&
+        IsWithinTiles(
+            ChoirOruun->position,
+            FEchoesChoirAtLumeReachMissionModel::ResolutionSiteForChoice(
+                Snapshot.ChoirAtLumeReachWellChoice),
+            ChoirAtLumeReachSiteRadiusTiles);
+    Snapshot.bChoirReshapeWindowExpired =
+        Snapshot.bChoirReshapeWindowExpired &&
+        !Snapshot.bChoirBranchResolutionCompleted;
+    Snapshot.bChoirContactEstablished =
+        Snapshot.bChoirContactEstablished ||
+        Snapshot.bChoirDeferredLiabilityResolved ||
+        Snapshot.bChoirFirstAnchorRaised ||
+        Snapshot.bChoirSecondAnchorRaised ||
+        Snapshot.ChoirAtLumeReachWellChoice != FutureWellChoice::Dormant;
     return Snapshot;
 }
 
@@ -5523,6 +6260,70 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         static_cast<uint8>(RecordedConsequence),
                         static_cast<uint8>(DeferredDistrict),
                         static_cast<uint8>(RecordedDeferredDistrict),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignChoirAtLumeReach &&
+                     !bMatchResultReported)
+            {
+                const EEchoesChoirAtLumeReachPhase ChoirPhase =
+                    GetChoirAtLumeReachPhase();
+                const bool bChoirFinished =
+                    ChoirPhase == EEchoesChoirAtLumeReachPhase::Complete ||
+                    ChoirPhase == EEchoesChoirAtLumeReachPhase::Failed;
+                if (bChoirFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const echoes::sim::Entity* Well =
+                        Simulation->FindEntity(ChoirAtLumeReachWellId);
+                    const FutureWellChoice Consequence =
+                        Well != nullptr
+                            ? Well->wellChoice
+                            : FutureWellChoice::Dormant;
+                    FutureWellChoice RecordedConsequence = Consequence;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        ChoirPhase ==
+                                EEchoesChoirAtLumeReachPhase::Complete
+                            ? CommitChoirAtLumeReachCompletion(
+                                  Consequence,
+                                  RecordedConsequence,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyChoirAtLumeReachFinished(
+                            ChoirPhase ==
+                                EEchoesChoirAtLumeReachPhase::Complete,
+                            Consequence,
+                            RecordedConsequence,
+                            CampaignStatus);
+                    }
+                    const FEchoesChoirAtLumeReachPlan Plan =
+                        GetChoirAtLumeReachPlan();
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_CHOIR_AT_LUME_REACH_FINISHED] result=%s phase=%s priorBranch=%u newWellChoice=%u recordedWellChoice=%u deferredDistrict=%u campaignStatus=%u tick=%llu detail=%s maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact mixedFactionCommand=false hiddenAttribution=false causationClaim=false"),
+                        ChoirPhase ==
+                                EEchoesChoirAtLumeReachPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesChoirAtLumeReachMissionModel::StableName(
+                            ChoirPhase),
+                        static_cast<uint8>(Plan.PriorChoice),
+                        static_cast<uint8>(Consequence),
+                        static_cast<uint8>(RecordedConsequence),
+                        static_cast<uint8>(Plan.DeferredDistrict),
                         static_cast<uint8>(CampaignStatus),
                         static_cast<unsigned long long>(
                             Simulation->CurrentTick()),
@@ -6404,6 +7205,15 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 OutFeedback = TEXT("[ARCHIVE_REQUIRED] Mara Vey's archive carrier must hold the recovery site at tile 22,18 before a Well protocol can be committed.");
                 return false;
             }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignChoirAtLumeReach &&
+                (GetChoirAtLumeReachPhase() !=
+                     EEchoesChoirAtLumeReachPhase::CommitFutureWell ||
+                 TargetId != ChoirAtLumeReachWellId))
+            {
+                OutFeedback = TEXT("[LUME_REACH_ANCHORS_REQUIRED] Resolve the inherited liability and raise both public Listening Spines before committing this operation's Future Well.");
+                return false;
+            }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
                 Target->wellChoice != FutureWellChoice::Dormant ||
@@ -6433,6 +7243,42 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             {
                 OutFeedback = TEXT("[CENSUS_TRACE_REQUIRED] Talar must reach the inherited census site before a Power Link can stabilize its archive.");
                 return false;
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignChoirAtLumeReach &&
+                BuildType == EntityType::UtilityStructure)
+            {
+                const EEchoesChoirAtLumeReachPhase Phase =
+                    GetChoirAtLumeReachPhase();
+                const FEchoesChoirAtLumeReachPlan Plan =
+                    GetChoirAtLumeReachPlan();
+                const Vec2 RequiredSite =
+                    Phase == EEchoesChoirAtLumeReachPhase::RaiseFirstAnchor
+                        ? Plan.FirstAnchorSite
+                    : Phase ==
+                          EEchoesChoirAtLumeReachPhase::RaiseSecondAnchor
+                        ? Plan.SecondAnchorSite
+                        : Vec2{};
+                if (Phase !=
+                        EEchoesChoirAtLumeReachPhase::RaiseFirstAnchor &&
+                    Phase !=
+                        EEchoesChoirAtLumeReachPhase::RaiseSecondAnchor)
+                {
+                    OutFeedback = TEXT("[LUME_REACH_ANCHOR_SEQUENCE] Establish contact and root the Waystone at the deferred liability before raising the two Listening Spines in sequence.");
+                    return false;
+                }
+                if (!IsWithinTiles(
+                        Position,
+                        RequiredSite,
+                        ChoirAtLumeReachSiteRadiusTiles))
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[LUME_REACH_ANCHOR_SITE] Place the active Listening Spine within %d tiles of the public anchor at %d,%d."),
+                        ChoirAtLumeReachSiteRadiusTiles,
+                        RequiredSite.x.FloorToInt(),
+                        RequiredSite.y.FloorToInt());
+                    return false;
+                }
             }
             const echoes::sim::PlacementResult Placement =
                 Simulation->ValidatePlacement(LocalPlayerId, BuildType, Position);
