@@ -1,5 +1,7 @@
 #include "EchoesCampaignProgress.h"
 
+#include "EchoesBrokenSunMissionModel.h"
+
 #include "HAL/FileManager.h"
 #include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
@@ -10,12 +12,15 @@ namespace
 constexpr uint8 CampaignMagic[] = {
     'E', 'C', 'H', 'O', 'C', 'P', 'G', '1'};
 constexpr int32 HeaderSize = 12;
-constexpr int32 RecordSize = 24;
+constexpr int32 LegacyRecordSize = 24;
+constexpr int32 RecordSize = 27;
 constexpr int32 ChecksumSize = 4;
 constexpr uint8 AllWellChoicesMask = 0x07;
+constexpr uint8 AllFinalResolutionsMask = 0x0F;
 constexpr uint32 FutureThatWonMinimumSnapshotVersion = 21;
 constexpr uint32 AssemblyOfTheMissingMinimumSnapshotVersion = 21;
 constexpr uint32 SeveralVoicesOneCommandMinimumSnapshotVersion = 22;
+constexpr uint32 BrokenSunMinimumSnapshotVersion = 22;
 constexpr uint8 PrologueCompletionFacts =
     static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
@@ -120,6 +125,15 @@ constexpr uint8 SeveralVoicesOneCommandCompletionFacts =
     static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::PhaseAnchorRaised) |
     static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::CrisisWindowHeld) |
     static_cast<uint8>(EEchoesSeveralVoicesOneCommandCompletionFact::LocalCoreSurvived);
+constexpr uint8 BrokenSunCompletionFacts =
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::PriorFourteenRecordLedgerConsumed) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::CrownfallApproachSecured) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::AccordAssemblyEstablished) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::FinalResolutionCommitted) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::ResolutionConduitRaised) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::ResolutionWindowHeld) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::NamedWitnessesSurvived) |
+    static_cast<uint8>(EEchoesBrokenSunCompletionFact::LocalCoreSurvived);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -230,7 +244,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::NoNeutralLedger &&
         Record.Mission != EEchoesCampaignMissionId::TheFutureThatWon &&
         Record.Mission != EEchoesCampaignMissionId::AssemblyOfTheMissing &&
-        Record.Mission != EEchoesCampaignMissionId::SeveralVoicesOneCommand)
+        Record.Mission != EEchoesCampaignMissionId::SeveralVoicesOneCommand &&
+        Record.Mission != EEchoesCampaignMissionId::TheBrokenSun)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -252,10 +267,33 @@ bool ValidateRecord(
     if ((Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
          Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon ||
          Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing ||
-         Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand) &&
+         Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand ||
+         Record.Mission == EEchoesCampaignMissionId::TheBrokenSun) &&
         Record.AvailableWellChoices != SelectedChoice)
     {
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The downstream receipt must retain only the recorded Lume protocol that was applied.");
+        return false;
+    }
+    if (Record.Mission == EEchoesCampaignMissionId::TheBrokenSun)
+    {
+        const uint8 ResolutionMask =
+            FEchoesBrokenSunMissionModel::ResolutionMask(
+                Record.FinalResolution);
+        if (ResolutionMask == 0 ||
+            (Record.AvailableFinalResolutions & ResolutionMask) == 0 ||
+            (Record.AvailableFinalResolutions &
+             ~AllFinalResolutionsMask) != 0 ||
+            Record.FinalPlanKey >= 27)
+        {
+            OutError = TEXT("[CAMPAIGN_INVALID_FINAL_RESOLUTION] The final resolution, eligibility mask, or inherited plan key is inconsistent.");
+            return false;
+        }
+    }
+    else if (Record.FinalResolution != EEchoesFinalResolution::None ||
+             Record.AvailableFinalResolutions != 0 ||
+             Record.FinalPlanKey != 0xFF)
+    {
+        OutError = TEXT("[CAMPAIGN_UNEXPECTED_FINAL_RESOLUTION] Only Mission 15 may carry a final campaign resolution.");
         return false;
     }
     const uint8 RequiredFacts =
@@ -285,7 +323,9 @@ bool ValidateRecord(
             ? FutureThatWonCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing
             ? AssemblyOfTheMissingCompletionFacts
-            : SeveralVoicesOneCommandCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand
+            ? SeveralVoicesOneCommandCompletionFacts
+            : BrokenSunCompletionFacts;
     const uint8 ReserveDistricts =
         Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
     const bool bValidReserveAllocation =
@@ -353,6 +393,15 @@ bool ValidateRecord(
             echoes::sim::kSnapshotVersion);
         return false;
     }
+    if (Record.Mission == EEchoesCampaignMissionId::TheBrokenSun &&
+        (Record.SimulationSnapshotVersion < BrokenSunMinimumSnapshotVersion ||
+         Record.SimulationSnapshotVersion > echoes::sim::kSnapshotVersion))
+    {
+        OutError = FString::Printf(
+            TEXT("[CAMPAIGN_SNAPSHOT_VERSION_REQUIRED] Mission 15 requires final-operation provenance from snapshot schema 22 through supported schema %u."),
+            echoes::sim::kSnapshotVersion);
+        return false;
+    }
     return true;
 }
 
@@ -369,38 +418,52 @@ bool ValidateNoNeutralLedgerSequence(
     const FEchoesCampaignDecisionRecord* Voices =
         Progress.FindDecision(
             EEchoesCampaignMissionId::SeveralVoicesOneCommand);
+    const FEchoesCampaignDecisionRecord* Finale =
+        Progress.FindDecision(EEchoesCampaignMissionId::TheBrokenSun);
     if (Alliance == nullptr && Restoration == nullptr && Assembly == nullptr &&
-        Voices == nullptr)
+        Voices == nullptr && Finale == nullptr)
     {
         return true;
     }
     if (Alliance == nullptr)
     {
-        OutError = Voices != nullptr
+        OutError = Finale != nullptr
+            ? TEXT("[CAMPAIGN_FINALE_LEDGER_INVALID] Mission 15 requires the accepted Missions 11 through 14 receipts.")
+        : Voices != nullptr
             ? TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires the accepted Missions 11 through 13 receipts.")
         : Assembly != nullptr
             ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires the accepted Mission 11 and Mission 12 receipts.")
             : TEXT("[CAMPAIGN_RESTORATION_LEDGER_INVALID] Mission 12 requires the accepted Mission 11 receipt.");
         return false;
     }
-    if ((Assembly != nullptr || Voices != nullptr) && Restoration == nullptr)
+    if ((Assembly != nullptr || Voices != nullptr || Finale != nullptr) &&
+        Restoration == nullptr)
     {
         OutError = TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires the accepted Mission 12 readback receipt.");
         return false;
     }
-    if (Voices != nullptr && Assembly == nullptr)
+    if ((Voices != nullptr || Finale != nullptr) && Assembly == nullptr)
     {
         OutError = TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires the accepted Mission 13 assembly receipt.");
         return false;
     }
-    const int32 ExpectedRecords = Voices != nullptr
+    if (Finale != nullptr && Voices == nullptr)
+    {
+        OutError = TEXT("[CAMPAIGN_FINALE_LEDGER_INVALID] Mission 15 requires the accepted Mission 14 Choir-command receipt.");
+        return false;
+    }
+    const int32 ExpectedRecords = Finale != nullptr
+        ? 15
+        : Voices != nullptr
         ? 14
         : Assembly != nullptr
         ? 13
         : Restoration != nullptr ? 12 : 11;
     if (Progress.Decisions.Num() != ExpectedRecords)
     {
-        OutError = Voices != nullptr
+        OutError = Finale != nullptr
+            ? TEXT("[CAMPAIGN_FINALE_LEDGER_INVALID] Mission 15 requires exactly fourteen prior records and one final-resolution record.")
+        : Voices != nullptr
             ? TEXT("[CAMPAIGN_VOICES_LEDGER_INVALID] Mission 14 requires exactly thirteen prior records and one Choir-command record.")
         : Assembly != nullptr
             ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_INVALID] Mission 13 requires exactly twelve prior records and one public-assembly record.")
@@ -414,7 +477,9 @@ bool ValidateNoNeutralLedgerSequence(
         if (static_cast<uint8>(Progress.Decisions[Index].Mission) !=
             static_cast<uint8>(Index + 1))
         {
-            OutError = Voices != nullptr
+            OutError = Finale != nullptr
+                ? TEXT("[CAMPAIGN_FINALE_LEDGER_ORDER] Mission 15 requires the exact ordered M01-M14 record chain.")
+            : Voices != nullptr
                 ? TEXT("[CAMPAIGN_VOICES_LEDGER_ORDER] Mission 14 requires the exact ordered M01-M13 record chain.")
             : Assembly != nullptr
                 ? TEXT("[CAMPAIGN_ASSEMBLY_LEDGER_ORDER] Mission 13 requires the exact ordered M01-M12 record chain.")
@@ -464,6 +529,34 @@ bool ValidateNoNeutralLedgerSequence(
         OutError = TEXT("[CAMPAIGN_VOICES_LUME_PROTOCOL] Mission 14 does not retain the exact Mission 13 protocol receipt.");
         return false;
     }
+    if (Finale != nullptr &&
+        (Finale->WellChoice != Voices->WellChoice ||
+         Finale->AvailableWellChoices !=
+             ChoiceMask(Voices->WellChoice)))
+    {
+        OutError = TEXT("[CAMPAIGN_FINALE_LUME_PROTOCOL] Mission 15 does not retain the exact Mission 14 protocol receipt.");
+        return false;
+    }
+    if (Finale != nullptr)
+    {
+        const FEchoesCampaignDecisionRecord& Reserve = Progress.Decisions[8];
+        FEchoesBrokenSunPlan Plan;
+        if (!FEchoesBrokenSunMissionModel::TryPlanForLedger(
+                Founding.WellChoice,
+                Reserve.VerifiedFacts,
+                Finale->WellChoice,
+                Plan) ||
+            Finale->AvailableFinalResolutions !=
+                Plan.AvailableFinalResolutions ||
+            Finale->FinalPlanKey != Plan.StablePlanKey ||
+            !FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+                Plan,
+                Finale->FinalResolution))
+        {
+            OutError = TEXT("[CAMPAIGN_FINALE_PROJECTION_INVALID] Mission 15 does not retain the earned ending set and exact inherited plan.");
+            return false;
+        }
+    }
     return true;
 }
 
@@ -508,7 +601,11 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
     {
         if (Existing->WellChoice == Record.WellChoice &&
             Existing->AvailableWellChoices == Record.AvailableWellChoices &&
-            Existing->VerifiedFacts == Record.VerifiedFacts)
+            Existing->VerifiedFacts == Record.VerifiedFacts &&
+            Existing->FinalResolution == Record.FinalResolution &&
+            Existing->AvailableFinalResolutions ==
+                Record.AvailableFinalResolutions &&
+            Existing->FinalPlanKey == Record.FinalPlanKey)
         {
             OutFeedback = TEXT("CAMPAIGN LEDGER: this mission decision was already recorded.");
             return EEchoesCampaignCommitStatus::AlreadyRecorded;
@@ -524,7 +621,8 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
     if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
         Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon ||
         Record.Mission == EEchoesCampaignMissionId::AssemblyOfTheMissing ||
-        Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand)
+        Record.Mission == EEchoesCampaignMissionId::SeveralVoicesOneCommand ||
+        Record.Mission == EEchoesCampaignMissionId::TheBrokenSun)
     {
         FEchoesCampaignProgress Candidate = *this;
         Candidate.Decisions.Add(Record);
@@ -590,6 +688,11 @@ bool FEchoesCampaignProgressStore::Encode(
         AppendU8(OutBytes, static_cast<uint8>(Record.WellChoice));
         AppendU8(OutBytes, Record.AvailableWellChoices);
         AppendU8(OutBytes, Record.VerifiedFacts);
+        AppendU8(
+            OutBytes,
+            static_cast<uint8>(Record.FinalResolution));
+        AppendU8(OutBytes, Record.AvailableFinalResolutions);
+        AppendU8(OutBytes, Record.FinalPlanKey);
         AppendU32(OutBytes, Record.SimulationSnapshotVersion);
         AppendU64(OutBytes, Record.CompletionTick);
         AppendU64(OutBytes, Record.FinalStateChecksum);
@@ -640,16 +743,22 @@ bool FEchoesCampaignProgressStore::Decode(
         OutError = TEXT("[CAMPAIGN_TRUNCATED] The campaign header is incomplete.");
         return false;
     }
-    if (Version != FEchoesCampaignProgress::SchemaVersion)
+    if (Version < FEchoesCampaignProgress::MinimumSupportedSchemaVersion ||
+        Version > FEchoesCampaignProgress::SchemaVersion)
     {
         OutError = FString::Printf(
-            TEXT("[CAMPAIGN_VERSION_UNSUPPORTED] Expected schema %u, found %u."),
+            TEXT("[CAMPAIGN_VERSION_UNSUPPORTED] Supported schemas are %u through %u; found %u."),
+            FEchoesCampaignProgress::MinimumSupportedSchemaVersion,
             FEchoesCampaignProgress::SchemaVersion,
             Version);
         return false;
     }
+    const int32 EncodedRecordSize = Version == 1
+        ? LegacyRecordSize
+        : RecordSize;
     if (RecordCount > FEchoesCampaignProgress::MaximumDecisionRecords ||
-        Bytes.Num() != HeaderSize + RecordCount * RecordSize + ChecksumSize)
+        Bytes.Num() !=
+            HeaderSize + RecordCount * EncodedRecordSize + ChecksumSize)
     {
         OutError = TEXT("[CAMPAIGN_LENGTH_INVALID] The ledger record count is inconsistent with its length.");
         return false;
@@ -661,12 +770,28 @@ bool FEchoesCampaignProgressStore::Decode(
     {
         uint8 Mission = 0;
         uint8 Choice = 0;
+        uint8 Resolution = 0;
         FEchoesCampaignDecisionRecord Record;
         if (!ReadU8(Bytes, Offset, Mission) ||
             !ReadU8(Bytes, Offset, Choice) ||
             !ReadU8(Bytes, Offset, Record.AvailableWellChoices) ||
-            !ReadU8(Bytes, Offset, Record.VerifiedFacts) ||
-            !ReadU32(Bytes, Offset, Record.SimulationSnapshotVersion) ||
+            !ReadU8(Bytes, Offset, Record.VerifiedFacts))
+        {
+            OutError = TEXT("[CAMPAIGN_TRUNCATED] A campaign record is incomplete.");
+            return false;
+        }
+        if (Version >= 2 &&
+            (!ReadU8(Bytes, Offset, Resolution) ||
+             !ReadU8(
+                 Bytes,
+                 Offset,
+                 Record.AvailableFinalResolutions) ||
+             !ReadU8(Bytes, Offset, Record.FinalPlanKey)))
+        {
+            OutError = TEXT("[CAMPAIGN_TRUNCATED] A campaign final-resolution record is incomplete.");
+            return false;
+        }
+        if (!ReadU32(Bytes, Offset, Record.SimulationSnapshotVersion) ||
             !ReadU64(Bytes, Offset, Record.CompletionTick) ||
             !ReadU64(Bytes, Offset, Record.FinalStateChecksum))
         {
@@ -676,6 +801,8 @@ bool FEchoesCampaignProgressStore::Decode(
         Record.Mission = static_cast<EEchoesCampaignMissionId>(Mission);
         Record.WellChoice =
             static_cast<echoes::sim::FutureWellChoice>(Choice);
+        Record.FinalResolution =
+            static_cast<EEchoesFinalResolution>(Resolution);
         FString AppendFeedback;
         const EEchoesCampaignCommitStatus Status =
             Candidate.AppendDecision(Record, AppendFeedback);

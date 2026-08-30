@@ -19,7 +19,8 @@ enum class EEchoesOperationMode : uint8
     CampaignNoNeutralLedger,
     CampaignFutureThatWon,
     CampaignAssemblyOfTheMissing,
-    CampaignSeveralVoicesOneCommand
+    CampaignSeveralVoicesOneCommand,
+    CampaignTheBrokenSun
 };
 
 /** Reconstructable objective state for What the Ledger Keeps. */

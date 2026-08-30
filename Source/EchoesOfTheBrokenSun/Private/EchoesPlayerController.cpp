@@ -3078,6 +3078,8 @@ void AEchoesPlayerController::PresentTitleScreen()
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignFinalResolution = EEchoesFinalResolution::None;
+    RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
@@ -3128,7 +3130,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignAssemblyOfTheMissing
                 ? TEXT("Oruun and an independent verifier deployed under Kharuun authority; the Meridian, Kharuun, and Crownfall public record interfaces remain neutral and non-commandable; ")
-                : TEXT("Neme and the local Hollow Choir deployed under player command; identity resolution and the crisis hold use visible deterministic timers; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+                ? TEXT("Neme and the local Hollow Choir deployed under player command; identity resolution and the crisis hold use visible deterministic timers; ")
+                : TEXT("The final Hollow Choir command force is deployed; Mara, Oruun, and Talar are protected neutral witnesses; four explicit resolutions are earned across campaign routes; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3175,6 +3180,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             ? TEXT("SeveralVoicesOneCommand")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignTheBrokenSun
+            ? TEXT("TheBrokenSun")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3217,6 +3225,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
     bMatchResultVisible = false;
     bCampaignResult = false;
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignFinalResolution = EEchoesFinalResolution::None;
+    RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     bMissionBriefingVisible = true;
@@ -3264,6 +3274,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bSeveralVoicesOneCommand =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+    const bool bBrokenSun =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignTheBrokenSun;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3293,6 +3306,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("ASSEMBLY OF THE MISSING — place Oruun and the independent verifier at the separate neutral public record interfaces, link the neutral Crownfall index with a Kharuun Listening Spine, then observe both independent assembly witness sites. This operation records public observations only; it does not assign responsibility or hidden authorship. Enter deploys Kharuun authority.")
         : bSeveralVoicesOneCommand
             ? TEXT("SEVERAL VOICES, ONE COMMAND — research Held Alternatives, resolve one protected voice to Possible while the other remains Manifest, place both voices and Neme at their inherited sites, research Shared Resolution, then raise and hold a Phase Anchor through the visible crisis timer. Enter deploys Hollow Choir authority.")
+        : bBrokenSun
+            ? TEXT("THE BROKEN SUN — secure the inherited Crownfall approach, assemble Mara, Oruun, Neme, and Talar's witnessed accord, explicitly arm and confirm one earned final resolution, then raise its distinct conduit and hold the exact contract. Enter deploys Hollow Choir authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3313,12 +3328,13 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bFutureThatWon ? TEXT("TheFutureThatWon")
         : bAssemblyOfTheMissing ? TEXT("AssemblyOfTheMissing")
         : bSeveralVoicesOneCommand ? TEXT("SeveralVoicesOneCommand")
+        : bBrokenSun ? TEXT("TheBrokenSun")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
          bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach ||
          bNoNeutralLedger || bFutureThatWon || bAssemblyOfTheMissing ||
-         bSeveralVoicesOneCommand)
+         bSeveralVoicesOneCommand || bBrokenSun)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3587,6 +3603,13 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
             TEXT("M14 // F2 HELD > SOLDIER SHIFT+F4 TO P // HEAVY TO M // NEME TO N // F2 SHARED > WORKER [M] AT A // HOLD 8s"),
             36.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        SetStatusMessage(
+            TEXT("M15 // WORKER [M] APPROACH > F2 HELD > SOLDIER SHIFT+F4 POSSIBLE AT MARA > HEAVY MANIFEST AT ORUUN > NEME AT ACCORD > F2 SHARED > SHIFT+1/2/3/4 TWICE > WORKER [M] CONDUIT > HOLD"),
+            48.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3695,6 +3718,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: Several Voices, One Command follows Neme and a player-commanded Hollow Choir force."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: The Broken Sun retains Hollow Choir command. Mara, Oruun, and Talar are protected neutral witnesses, not mixed-faction command units."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3824,6 +3853,12 @@ void AEchoesPlayerController::CycleOperation()
         NewOperation =
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+             Bridge->IsBrokenSunUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignTheBrokenSun;
+    }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
     {
@@ -3916,6 +3951,8 @@ void AEchoesPlayerController::RequestNewCampaign()
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignFinalResolution = EEchoesFinalResolution::None;
+    RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
@@ -3984,6 +4021,8 @@ void AEchoesPlayerController::RequestCampaignRestore()
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignFinalResolution = EEchoesFinalResolution::None;
+    RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
@@ -5310,6 +5349,82 @@ void AEchoesPlayerController::NotifySeveralVoicesOneCommandFinished(
         static_cast<uint8>(CommitStatus));
 }
 
+void AEchoesPlayerController::NotifyBrokenSunFinished(
+    bool bSuccess,
+    EEchoesFinalResolution Resolution,
+    EEchoesFinalResolution RecordedResolution,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignTheBrokenSun;
+    CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignFinalResolution = Resolution;
+    RecordedCampaignFinalResolution = RecordedResolution;
+    CampaignCommitStatus = CommitStatus;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+
+    FString ResultMessage =
+        TEXT("MISSION FAILED — the local Core, a required command voice, one of the named witnesses, or an exact objective structure left the final contract. No campaign ending was committed. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — %s held through its full deterministic resolution window. %s"),
+            FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                Resolution),
+            FEchoesBrokenSunMissionModel::ResolutionCostSummary(
+                Resolution));
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ending committed to the ledger. Press R to replay the battle without rewriting it.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage +=
+                TEXT(" The campaign ledger already contains this ending. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            ResultMessage += FString::Printf(
+                TEXT(" This was an alternate simulated outcome; the campaign ending remains %s and was not rewritten. Press R to replay."),
+                FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                    RecordedResolution));
+        }
+        else
+        {
+            ResultMessage +=
+                TEXT(" The operation completed, but campaign storage did not commit an ending. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheBrokenSun success=%s resolution=%s recordedResolution=%s campaignStatus=%u keyboardRestart=true commandAuthority=HollowChoir mixedFactionCommand=false namedWitnesses=protectedNeutral finalOperationMechanics=bounded deterministicHold=true broadNarrativeConsequencesUnmodeled=true campaignBalanceUnproven=true ordinaryHumanCompletionUnproven=true releaseReadinessUnproven=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        FEchoesBrokenSunMissionModel::ResolutionStableName(Resolution),
+        FEchoesBrokenSunMissionModel::ResolutionStableName(
+            RecordedResolution),
+        static_cast<uint8>(CommitStatus));
+}
+
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
@@ -5737,6 +5852,26 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::ChooseReshape);
+    InputComponent->BindAction(
+        TEXT("ChooseFinalRestoration"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ChooseFinalRestoration);
+    InputComponent->BindAction(
+        TEXT("ChooseFinalStabilization"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ChooseFinalStabilization);
+    InputComponent->BindAction(
+        TEXT("ChooseFinalExtinguishment"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ChooseFinalExtinguishment);
+    InputComponent->BindAction(
+        TEXT("ChooseFinalEvolution"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ChooseFinalEvolution);
     InputComponent->BindAction(
         TEXT("BuildBarracks"),
         IE_Pressed,
@@ -6850,6 +6985,64 @@ void AEchoesPlayerController::ChoosePreserve()
 void AEchoesPlayerController::ChooseReshape()
 {
     SetFutureWellChoice(echoes::sim::FutureWellChoice::Reshape);
+}
+
+void AEchoesPlayerController::ChooseFinalRestoration()
+{
+    ChooseFinalResolution(EEchoesFinalResolution::Restoration);
+}
+
+void AEchoesPlayerController::ChooseFinalStabilization()
+{
+    ChooseFinalResolution(
+        EEchoesFinalResolution::ControlledStabilization);
+}
+
+void AEchoesPlayerController::ChooseFinalExtinguishment()
+{
+    ChooseFinalResolution(EEchoesFinalResolution::Extinguishment);
+}
+
+void AEchoesPlayerController::ChooseFinalEvolution()
+{
+    ChooseFinalResolution(EEchoesFinalResolution::OpenEvolution);
+}
+
+void AEchoesPlayerController::ChooseFinalResolution(
+    EEchoesFinalResolution Resolution)
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+        : nullptr;
+    if (Bridge == nullptr ||
+        Bridge->GetOperationMode() !=
+            EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        SetStatusMessage(
+            TEXT("[FINAL_RESOLUTION_UNAVAILABLE] Final resolutions are chosen only during The Broken Sun."),
+            4.0f);
+        return;
+    }
+    FString Feedback;
+    const bool bAccepted = Bridge->ChooseFinalResolution(
+        Resolution,
+        Feedback);
+    SetStatusMessage(
+        Feedback,
+        bAccepted ? 12.0f : 6.0f);
+    if (bAccepted)
+    {
+        if (UEchoesPresentationAudioSubsystem* Audio =
+                GetWorld()->GetSubsystem<
+                    UEchoesPresentationAudioSubsystem>())
+        {
+            Audio->PlayCommandConfirmation();
+        }
+    }
 }
 
 void AEchoesPlayerController::BuildBarracks()
@@ -8020,7 +8213,9 @@ void AEchoesPlayerController::ReconcileSelectedChoirIdentities(
     }
     if (Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish &&
         Bridge->GetOperationMode() !=
-            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+        Bridge->GetOperationMode() !=
+            EEchoesOperationMode::CampaignTheBrokenSun)
     {
         SetStatusMessage(TEXT("[CHOIR_COMMAND_AUTHORITY_REQUIRED] This operation does not grant command over a Hollow Choir force."));
         return;
@@ -8996,6 +9191,8 @@ void AEchoesPlayerController::RestartScenario()
         bCampaignSuccess = false;
         CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
         RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+        CampaignFinalResolution = EEchoesFinalResolution::None;
+        RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
         CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
         PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
         PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
@@ -9043,6 +9240,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignSeveralVoicesOneCommand
                 ? TEXT("MISSION RESTARTED — Neme and the protected Hollow Choir voices return to the deterministic thirteen-record crisis state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignTheBrokenSun
+                ? TEXT("MISSION RESTARTED — Neme, Mara, Oruun, Talar, and the Hollow Choir command force return to the deterministic fourteen-record final-operation state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
@@ -9085,6 +9285,11 @@ void AEchoesPlayerController::SynchronizeBoundCampaignProtocol()
     {
         FutureWellChoice =
             Bridge->GetSeveralVoicesOneCommandPlan().RecordedProtocol;
+    }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        FutureWellChoice = Bridge->GetBrokenSunPlan().RecordedProtocol;
     }
 }
 
@@ -9153,6 +9358,19 @@ void AEchoesPlayerController::SetFutureWellChoice(
                 TEXT("Several Voices, One Command retains the recorded %s protocol as ledger context only. This operation exposes no selectable Future Well protocol."),
                 Plan.ProtocolDisplayName),
             8.0f);
+        return;
+    }
+    if (Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        const FEchoesBrokenSunPlan Plan = Bridge->GetBrokenSunPlan();
+        FutureWellChoice = Plan.RecordedProtocol;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("The Broken Sun retains the recorded %s protocol as ledger context. Choose an eligible final resolution with Shift+1 through Shift+4 after assembling the accord."),
+                Plan.ProtocolDisplayName),
+            9.0f);
         return;
     }
     FutureWellChoice = Choice;

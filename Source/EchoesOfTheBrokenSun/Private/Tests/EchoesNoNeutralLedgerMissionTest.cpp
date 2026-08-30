@@ -295,9 +295,9 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
             EEchoesNoNeutralLedgerPhase::Failed);
 
     TestEqual(
-        TEXT("Campaign schema remains one"),
+        TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
-        static_cast<uint16>(1));
+        static_cast<uint16>(2));
     TestEqual(
         TEXT("Simulation snapshot schema advances to twenty-two"),
         echoes::sim::kSnapshotVersion,

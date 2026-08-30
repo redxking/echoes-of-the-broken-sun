@@ -288,9 +288,9 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             EEchoesFutureThatWonPhase::Failed);
 
     TestEqual(
-        TEXT("Campaign persistence schema remains one"),
+        TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
-        static_cast<uint16>(1));
+        static_cast<uint16>(2));
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,

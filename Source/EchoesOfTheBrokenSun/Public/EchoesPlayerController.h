@@ -152,11 +152,20 @@ public:
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
         EEchoesCampaignCommitStatus CommitStatus);
+    void NotifyBrokenSunFinished(
+        bool bSuccess,
+        EEchoesFinalResolution Resolution,
+        EEchoesFinalResolution RecordedResolution,
+        EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
+    void ChooseFinalRestoration();
+    void ChooseFinalStabilization();
+    void ChooseFinalExtinguishment();
+    void ChooseFinalEvolution();
     void CyclePlayableFaction();
     void CycleOperation();
     void RequestNewCampaign();
@@ -238,6 +247,15 @@ public:
     [[nodiscard]] EEchoesCampaignCommitStatus GetCampaignCommitStatus() const
     {
         return CampaignCommitStatus;
+    }
+    [[nodiscard]] EEchoesFinalResolution GetCampaignFinalResolution() const
+    {
+        return CampaignFinalResolution;
+    }
+    [[nodiscard]] EEchoesFinalResolution
+    GetRecordedCampaignFinalResolution() const
+    {
+        return RecordedCampaignFinalResolution;
     }
     [[nodiscard]] const echoes::sim::net::ScopedViewKeyframe*
     GetNetworkScopedView() const
@@ -428,6 +446,7 @@ private:
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
     void FailPointerCombatGuardReview(const FString& Reason);
+    void ChooseFinalResolution(EEchoesFinalResolution Resolution);
     void SelectionPressed();
     void SelectionReleased();
     void ContextOrderPressed();
@@ -639,6 +658,10 @@ private:
         echoes::sim::FutureWellChoice::Dormant;
     echoes::sim::FutureWellChoice RecordedCampaignConsequence =
         echoes::sim::FutureWellChoice::Dormant;
+    EEchoesFinalResolution CampaignFinalResolution =
+        EEchoesFinalResolution::None;
+    EEchoesFinalResolution RecordedCampaignFinalResolution =
+        EEchoesFinalResolution::None;
     EEchoesCampaignCommitStatus CampaignCommitStatus =
         EEchoesCampaignCommitStatus::NotApplicable;
     EEchoesOperationMode PresentedCampaignOperation =

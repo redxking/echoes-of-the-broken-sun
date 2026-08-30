@@ -18,7 +18,26 @@ enum class EEchoesCampaignMissionId : uint8
     NoNeutralLedger = 11,
     TheFutureThatWon = 12,
     AssemblyOfTheMissing = 13,
-    SeveralVoicesOneCommand = 14
+    SeveralVoicesOneCommand = 14,
+    TheBrokenSun = 15
+};
+
+/** Explicit final campaign commitments; these are not Future Well protocols. */
+enum class EEchoesFinalResolution : uint8
+{
+    None = 0,
+    Restoration = 1,
+    ControlledStabilization = 2,
+    Extinguishment = 3,
+    OpenEvolution = 4
+};
+
+enum class EEchoesFinalResolutionAvailability : uint8
+{
+    Restoration = 1 << 0,
+    ControlledStabilization = 1 << 1,
+    Extinguishment = 1 << 2,
+    OpenEvolution = 1 << 3
 };
 
 enum class EEchoesCampaignDecisionFact : uint8
@@ -166,6 +185,18 @@ enum class EEchoesSeveralVoicesOneCommandCompletionFact : uint8
     LocalCoreSurvived = 1 << 7
 };
 
+enum class EEchoesBrokenSunCompletionFact : uint8
+{
+    PriorFourteenRecordLedgerConsumed = 1 << 0,
+    CrownfallApproachSecured = 1 << 1,
+    AccordAssemblyEstablished = 1 << 2,
+    FinalResolutionCommitted = 1 << 3,
+    ResolutionConduitRaised = 1 << 4,
+    ResolutionWindowHeld = 1 << 5,
+    NamedWitnessesSurvived = 1 << 6,
+    LocalCoreSurvived = 1 << 7
+};
+
 enum class EEchoesCampaignCommitStatus : uint8
 {
     NotApplicable,
@@ -184,6 +215,10 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesCampaignDecisionRecord final
         echoes::sim::FutureWellChoice::Dormant;
     uint8 AvailableWellChoices = 0;
     uint8 VerifiedFacts = 0;
+    EEchoesFinalResolution FinalResolution =
+        EEchoesFinalResolution::None;
+    uint8 AvailableFinalResolutions = 0;
+    uint8 FinalPlanKey = 0xFF;
     uint32 SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
     uint64 CompletionTick = 0;
     uint64 FinalStateChecksum = 0;
@@ -196,7 +231,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesCampaignDecisionRecord final
 /** In-memory campaign state. Mission records are append-only within a campaign. */
 struct ECHOESOFTHEBROKENSUN_API FEchoesCampaignProgress final
 {
-    static constexpr uint16 SchemaVersion = 1;
+    static constexpr uint16 MinimumSupportedSchemaVersion = 1;
+    static constexpr uint16 SchemaVersion = 2;
     static constexpr int32 MaximumDecisionRecords = 64;
 
     TArray<FEchoesCampaignDecisionRecord> Decisions;

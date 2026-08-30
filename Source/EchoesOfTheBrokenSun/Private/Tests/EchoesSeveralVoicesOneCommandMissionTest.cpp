@@ -299,9 +299,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         FEchoesSeveralVoicesOneCommandMissionModel::DeterminePhase(Facts) ==
             EEchoesSeveralVoicesOneCommandPhase::Failed);
 
-    TestEqual(TEXT("Mission 14 retains campaign schema one"),
+    TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
-              static_cast<uint16>(1));
+              static_cast<uint16>(2));
     TestEqual(TEXT("Mission 14 requires native snapshot schema 22"),
               echoes::sim::kSnapshotVersion,
               static_cast<uint32>(22));

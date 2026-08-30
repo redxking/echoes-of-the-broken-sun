@@ -511,6 +511,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignSeveralVoicesOneCommand"));
+    const bool bCampaignTheBrokenSun =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignTheBrokenSun"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -525,7 +530,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignNoNeutralLedger ? 1 : 0) +
         (bCampaignFutureThatWon ? 1 : 0) +
         (bCampaignAssemblyOfTheMissing ? 1 : 0) +
-        (bCampaignSeveralVoicesOneCommand ? 1 : 0);
+        (bCampaignSeveralVoicesOneCommand ? 1 : 0) +
+        (bCampaignTheBrokenSun ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -538,7 +544,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignSeveralVoicesOneCommand
+            bCampaignTheBrokenSun
+                ? EEchoesOperationMode::CampaignTheBrokenSun
+            : bCampaignSeveralVoicesOneCommand
                 ? EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             : bCampaignAssemblyOfTheMissing
                 ? EEchoesOperationMode::CampaignAssemblyOfTheMissing
@@ -574,7 +582,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignSeveralVoicesOneCommand
+                bCampaignTheBrokenSun
+                    ? TEXT("TheBrokenSun")
+                : bCampaignSeveralVoicesOneCommand
                     ? TEXT("SeveralVoicesOneCommand")
                 : bCampaignAssemblyOfTheMissing
                     ? TEXT("AssemblyOfTheMissing")
@@ -609,7 +619,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignSeveralVoicesOneCommand
+            bCampaignTheBrokenSun
+                ? TEXT("TheBrokenSun")
+            : bCampaignSeveralVoicesOneCommand
                 ? TEXT("SeveralVoicesOneCommand")
             : bCampaignAssemblyOfTheMissing
                 ? TEXT("AssemblyOfTheMissing")

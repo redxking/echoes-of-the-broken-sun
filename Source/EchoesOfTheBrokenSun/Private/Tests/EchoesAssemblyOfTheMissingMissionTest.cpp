@@ -263,9 +263,9 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
         FEchoesAssemblyOfTheMissingMissionModel::DeterminePhase(Facts) ==
             EEchoesAssemblyOfTheMissingPhase::Failed);
 
-    TestEqual(TEXT("Mission 13 retains campaign schema one"),
+    TestEqual(TEXT("Mission 13 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
-              static_cast<uint16>(1));
+              static_cast<uint16>(2));
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
               static_cast<uint32>(22));

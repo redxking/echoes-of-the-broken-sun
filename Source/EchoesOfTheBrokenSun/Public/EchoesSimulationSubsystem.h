@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesBrokenSunMissionModel.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesCityReserveMissionModel.h"
@@ -256,6 +257,30 @@ struct FEchoesObjectiveSnapshot final
     bool bSeveralVoicesPhaseAnchorComplete = false;
     uint64 SeveralVoicesCrisisTicksRemaining = 0;
     bool bSeveralVoicesCrisisWindowHeld = false;
+    EEchoesBrokenSunPhase BrokenSunPhase =
+        EEchoesBrokenSunPhase::Inactive;
+    EEchoesFinalResolution BrokenSunPendingFinalResolution =
+        EEchoesFinalResolution::None;
+    EEchoesFinalResolution BrokenSunFinalResolution =
+        EEchoesFinalResolution::None;
+    uint8 BrokenSunAvailableFinalResolutions = 0;
+    echoes::sim::EntityId BrokenSunAccordVoiceId = 0;
+    echoes::sim::EntityId BrokenSunAccordHeavyId = 0;
+    echoes::sim::EntityId BrokenSunNemeId = 0;
+    echoes::sim::EntityId BrokenSunWorkerId = 0;
+    echoes::sim::EntityId BrokenSunMaraId = 0;
+    echoes::sim::EntityId BrokenSunOruunId = 0;
+    echoes::sim::EntityId BrokenSunTalarId = 0;
+    echoes::sim::EntityId BrokenSunApproachAnchorId = 0;
+    echoes::sim::EntityId BrokenSunResolutionConduitId = 0;
+    bool bBrokenSunApproachSecured = false;
+    bool bBrokenSunMeridianAccordEstablished = false;
+    bool bBrokenSunKharuunAccordEstablished = false;
+    bool bBrokenSunChoirAccordEstablished = false;
+    bool bBrokenSunResolutionConduitComplete = false;
+    uint64 BrokenSunResolutionTicksRemaining = 0;
+    bool bBrokenSunResolutionWindowHeld = false;
+    bool bBrokenSunResolutionContractFailed = false;
 };
 
 /**
@@ -358,6 +383,11 @@ public:
         echoes::sim::ChoirIdentityState StableState,
         FString& OutFeedback);
 
+    /** Arms and then confirms one earned Mission 15 resolution. */
+    bool ChooseFinalResolution(
+        EEchoesFinalResolution Resolution,
+        FString& OutFeedback);
+
     void SetScenarioPaused(bool bPaused);
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
@@ -418,6 +448,8 @@ public:
     [[nodiscard]] EEchoesSeveralVoicesOneCommandPhase
     GetSeveralVoicesOneCommandPhase() const;
     [[nodiscard]] bool IsSeveralVoicesOneCommandUnlocked() const;
+    [[nodiscard]] EEchoesBrokenSunPhase GetBrokenSunPhase() const;
+    [[nodiscard]] bool IsBrokenSunUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -443,6 +475,7 @@ public:
     GetAssemblyOfTheMissingPlan() const;
     [[nodiscard]] FEchoesSeveralVoicesOneCommandPlan
     GetSeveralVoicesOneCommandPlan() const;
+    [[nodiscard]] FEchoesBrokenSunPlan GetBrokenSunPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -549,6 +582,9 @@ private:
     EEchoesCampaignCommitStatus CommitSeveralVoicesOneCommandCompletion(
         echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitBrokenSunCompletion(
+        EEchoesFinalResolution& OutRecordedResolution,
+        FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
     bool StartScenario(bool bUseStressScenario);
     bool ValidatePrototypeCommand(
@@ -571,6 +607,7 @@ private:
         echoes::sim::Tick OfflineDelayTicks) const;
     void QueueOpponentCommands();
     void AuditSeveralVoicesOneCommandContractAfterFixedStep();
+    void AuditBrokenSunContractAfterFixedStep();
     bool SyncEntityViews(bool bTeleportNewViews);
     bool SpawnFogView();
     bool SyncFogView();
@@ -666,6 +703,22 @@ private:
     echoes::sim::EntityId SeveralVoicesResearchLoomId = 0;
     bool bSeveralVoicesCrisisHoldStarted = false;
     bool bSeveralVoicesCrisisContractFailed = false;
+    echoes::sim::EntityId BrokenSunAccordVoiceId = 0;
+    echoes::sim::EntityId BrokenSunAccordHeavyId = 0;
+    echoes::sim::EntityId BrokenSunNemeId = 0;
+    echoes::sim::EntityId BrokenSunWorkerId = 0;
+    echoes::sim::EntityId BrokenSunMaraId = 0;
+    echoes::sim::EntityId BrokenSunOruunId = 0;
+    echoes::sim::EntityId BrokenSunTalarId = 0;
+    echoes::sim::EntityId BrokenSunApproachAnchorId = 0;
+    echoes::sim::EntityId BrokenSunResolutionConduitId = 0;
+    EEchoesFinalResolution PendingBrokenSunResolution =
+        EEchoesFinalResolution::None;
+    EEchoesFinalResolution SelectedBrokenSunResolution =
+        EEchoesFinalResolution::None;
+    bool bBrokenSunResolutionHoldStarted = false;
+    bool bBrokenSunResolutionContractFailed = false;
+    uint64 BrokenSunResolutionStartTick = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

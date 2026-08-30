@@ -4,6 +4,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "HAL/FileManager.h"
+#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
@@ -51,6 +52,45 @@ FEchoesCampaignDecisionRecord MakeDecision(
     Record.CompletionTick = CompletionTick;
     Record.FinalStateChecksum = FinalChecksum;
     return Record;
+}
+
+TArray<uint8> MakeLegacySchemaOneLedger(
+    const FEchoesCampaignDecisionRecord& Record)
+{
+    TArray<uint8> Bytes;
+    const auto AppendU16 = [&Bytes](uint16 Value)
+    {
+        Bytes.Add(static_cast<uint8>(Value));
+        Bytes.Add(static_cast<uint8>(Value >> 8));
+    };
+    const auto AppendU32 = [&Bytes](uint32 Value)
+    {
+        for (int32 ByteIndex = 0; ByteIndex < 4; ++ByteIndex)
+        {
+            Bytes.Add(static_cast<uint8>(Value >> (ByteIndex * 8)));
+        }
+    };
+    const auto AppendU64 = [&Bytes](uint64 Value)
+    {
+        for (int32 ByteIndex = 0; ByteIndex < 8; ++ByteIndex)
+        {
+            Bytes.Add(static_cast<uint8>(Value >> (ByteIndex * 8)));
+        }
+    };
+
+    const uint8 Magic[] = {'E', 'C', 'H', 'O', 'C', 'P', 'G', '1'};
+    Bytes.Append(Magic, UE_ARRAY_COUNT(Magic));
+    AppendU16(1);
+    AppendU16(1);
+    Bytes.Add(static_cast<uint8>(Record.Mission));
+    Bytes.Add(static_cast<uint8>(Record.WellChoice));
+    Bytes.Add(Record.AvailableWellChoices);
+    Bytes.Add(Record.VerifiedFacts);
+    AppendU32(Record.SimulationSnapshotVersion);
+    AppendU64(Record.CompletionTick);
+    AppendU64(Record.FinalStateChecksum);
+    AppendU32(FCrc::MemCrc32(Bytes.GetData(), Bytes.Num()));
+    return Bytes;
 }
 }
 
@@ -117,6 +157,32 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
                  Feedback));
     TestTrue(TEXT("The binary round trip preserves every decision field"),
              Decoded.Decisions == Progress.Decisions);
+
+    const TArray<uint8> LegacyEncoded =
+        MakeLegacySchemaOneLedger(Preserve);
+    FEchoesCampaignProgress MigratedLegacy;
+    TestTrue(TEXT("A schema-one campaign ledger migrates in memory"),
+             FEchoesCampaignProgressStore::Decode(
+                 LegacyEncoded,
+                 MigratedLegacy,
+                 Feedback));
+    TestTrue(
+        TEXT("Legacy migration preserves the decision and adds no ending"),
+        MigratedLegacy.Decisions.Num() == 1 &&
+            MigratedLegacy.Decisions[0].WellChoice == Preserve.WellChoice &&
+            MigratedLegacy.Decisions[0].FinalResolution ==
+                EEchoesFinalResolution::None &&
+            MigratedLegacy.Decisions[0].AvailableFinalResolutions == 0 &&
+            MigratedLegacy.Decisions[0].FinalPlanKey == 0xFF);
+    TArray<uint8> MigratedEncoding;
+    TestTrue(TEXT("A migrated ledger re-encodes as schema two"),
+             FEchoesCampaignProgressStore::Encode(
+                 MigratedLegacy,
+                 MigratedEncoding,
+                 Feedback) &&
+                 MigratedEncoding.Num() > 10 &&
+                 MigratedEncoding[8] == 2 &&
+                 MigratedEncoding[9] == 0);
 
     TArray<uint8> CorruptBytes = Encoded;
     CorruptBytes[12] ^= 0x40;

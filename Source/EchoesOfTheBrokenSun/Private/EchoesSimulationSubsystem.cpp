@@ -43,6 +43,8 @@ constexpr int32 NoNeutralLedgerSiteRadiusTiles = 3;
 constexpr int32 FutureThatWonSiteRadiusTiles = 3;
 constexpr int32 AssemblyOfTheMissingSiteRadiusTiles = 3;
 constexpr int32 SeveralVoicesOneCommandSiteRadiusTiles = 3;
+constexpr int32 BrokenSunSiteRadiusTiles = 3;
+constexpr int32 BrokenSunConvergenceRadiusTiles = 2;
 constexpr uint64 SeveralVoicesCrisisHoldTicks = 160;
 constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
 constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
@@ -59,6 +61,9 @@ constexpr uint8 AssemblyOfTheMissingQuickSaveMagic[] = {
 constexpr uint8 SeveralVoicesOneCommandQuickSaveEnvelopeVersion = 2;
 constexpr uint8 SeveralVoicesOneCommandQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '4', 'Q'};
+constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
+constexpr uint8 BrokenSunQuickSaveMagic[] = {
+    'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -76,6 +81,14 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     Bytes.Add(static_cast<uint8>((Value >> 24U) & 0xFFU));
 }
 
+void AppendUint64LittleEndian(TArray<uint8>& Bytes, uint64 Value)
+{
+    for (int32 ByteIndex = 0; ByteIndex < 8; ++ByteIndex)
+    {
+        Bytes.Add(static_cast<uint8>(Value >> (ByteIndex * 8)));
+    }
+}
+
 [[nodiscard]] bool ReadUint32LittleEndian(
     const TArray<uint8>& Bytes,
     int32& Offset,
@@ -91,6 +104,25 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
         (static_cast<uint32>(Bytes[Offset + 2]) << 16U) |
         (static_cast<uint32>(Bytes[Offset + 3]) << 24U);
     Offset += 4;
+    return true;
+}
+
+[[nodiscard]] bool ReadUint64LittleEndian(
+    const TArray<uint8>& Bytes,
+    int32& Offset,
+    uint64& OutValue)
+{
+    if (Offset < 0 || Bytes.Num() - Offset < 8)
+    {
+        return false;
+    }
+    OutValue = 0;
+    for (int32 ByteIndex = 0; ByteIndex < 8; ++ByteIndex)
+    {
+        OutValue |= static_cast<uint64>(Bytes[Offset + ByteIndex])
+            << (ByteIndex * 8);
+    }
+    Offset += 8;
     return true;
 }
 
@@ -967,6 +999,318 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     return true;
 }
 
+[[nodiscard]] bool BuildBrokenSunPrerequisiteProjection(
+    const FEchoesCampaignProgress& CampaignProgress,
+    FEchoesCampaignProgress& OutPrerequisiteLedger,
+    FEchoesBrokenSunPlan& OutPlan,
+    TArray<uint8>& OutLedgerBytes,
+    FString& OutError)
+{
+    OutPrerequisiteLedger = {};
+    OutPlan = {};
+    OutLedgerBytes.Reset();
+    if (CampaignProgress.Decisions.Num() != 14 &&
+        CampaignProgress.Decisions.Num() != 15)
+    {
+        OutError = TEXT(
+            "Mission 15 checkpoints require fourteen prerequisites and an optional final receipt");
+        return false;
+    }
+    OutPrerequisiteLedger.Decisions.Reserve(14);
+    for (int32 Index = 0; Index < 14; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "Mission 15 checkpoints require the canonical M01-M14 prerequisite projection");
+            return false;
+        }
+        OutPrerequisiteLedger.Decisions.Add(
+            CampaignProgress.Decisions[Index]);
+    }
+    const FEchoesCampaignDecisionRecord& Founding =
+        OutPrerequisiteLedger.Decisions[0];
+    const FEchoesCampaignDecisionRecord& Reserve =
+        OutPrerequisiteLedger.Decisions[8];
+    const FEchoesCampaignDecisionRecord& Voices =
+        OutPrerequisiteLedger.Decisions[13];
+    if (!FEchoesBrokenSunMissionModel::TryPlanForLedger(
+            Founding.WellChoice,
+            Reserve.VerifiedFacts,
+            Voices.WellChoice,
+            OutPlan) ||
+        !FEchoesCampaignProgressStore::Encode(
+            OutPrerequisiteLedger,
+            OutLedgerBytes,
+            OutError) ||
+        OutLedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT(
+                "The active fourteen-record final projection could not be encoded");
+        }
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] bool BuildBrokenSunQuickSaveEnvelope(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& SnapshotBytes,
+    EEchoesFinalResolution PendingResolution,
+    EEchoesFinalResolution SelectedResolution,
+    bool bResolutionHoldStarted,
+    bool bResolutionContractFailed,
+    uint64 ResolutionStartTick,
+    EntityId ApproachAnchorId,
+    EntityId ResolutionConduitId,
+    TArray<uint8>& OutEnvelope,
+    FString& OutError)
+{
+    OutEnvelope.Reset();
+    OutError.Reset();
+    FEchoesCampaignProgress PrerequisiteLedger;
+    FEchoesBrokenSunPlan Plan;
+    TArray<uint8> LedgerBytes;
+    if (SnapshotBytes.IsEmpty() ||
+        !UsesCurrentSnapshotSchema(SnapshotBytes) ||
+        !BuildBrokenSunPrerequisiteProjection(
+            CampaignProgress,
+            PrerequisiteLedger,
+            Plan,
+            LedgerBytes,
+            OutError))
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT(
+                "Mission 15 checkpoints require a native schema-22 snapshot");
+        }
+        return false;
+    }
+    const bool bPendingValid =
+        PendingResolution == EEchoesFinalResolution::None ||
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            PendingResolution);
+    const bool bSelectedValid =
+        SelectedResolution == EEchoesFinalResolution::None ||
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            SelectedResolution);
+    if (!bPendingValid || !bSelectedValid ||
+        (SelectedResolution != EEchoesFinalResolution::None &&
+         PendingResolution != SelectedResolution) ||
+        (bResolutionHoldStarted &&
+         (SelectedResolution == EEchoesFinalResolution::None ||
+          ResolutionStartTick == 0 || ApproachAnchorId == 0 ||
+          ResolutionConduitId == 0)) ||
+        (!bResolutionHoldStarted &&
+         (ResolutionStartTick != 0 || ResolutionConduitId != 0)) ||
+        (ApproachAnchorId == 0 && ResolutionConduitId != 0))
+    {
+        OutError = TEXT(
+            "Mission 15 checkpoint intent, hold, or failure state is inconsistent");
+        return false;
+    }
+
+    const uint64 EnvelopeSize =
+        static_cast<uint64>(UE_ARRAY_COUNT(BrokenSunQuickSaveMagic)) +
+        6ULL + 8ULL + 8ULL + 8ULL +
+        static_cast<uint64>(LedgerBytes.Num()) +
+        static_cast<uint64>(SnapshotBytes.Num()) + 4ULL;
+    if (EnvelopeSize > static_cast<uint64>(MAX_int32))
+    {
+        OutError = TEXT("The Mission 15 checkpoint envelope is too large");
+        return false;
+    }
+
+    OutEnvelope.Reserve(static_cast<int32>(EnvelopeSize));
+    OutEnvelope.Append(
+        BrokenSunQuickSaveMagic,
+        UE_ARRAY_COUNT(BrokenSunQuickSaveMagic));
+    OutEnvelope.Add(BrokenSunQuickSaveEnvelopeVersion);
+    OutEnvelope.Add(static_cast<uint8>(
+        EEchoesOperationMode::CampaignTheBrokenSun));
+    OutEnvelope.Add(static_cast<uint8>(PendingResolution));
+    OutEnvelope.Add(static_cast<uint8>(SelectedResolution));
+    OutEnvelope.Add(Plan.AvailableFinalResolutions);
+    OutEnvelope.Add(
+        (bResolutionHoldStarted ? 1U : 0U) |
+        (bResolutionContractFailed ? 2U : 0U));
+    AppendUint64LittleEndian(OutEnvelope, ResolutionStartTick);
+    AppendUint32LittleEndian(OutEnvelope, ApproachAnchorId);
+    AppendUint32LittleEndian(OutEnvelope, ResolutionConduitId);
+    AppendUint32LittleEndian(
+        OutEnvelope,
+        static_cast<uint32>(LedgerBytes.Num()));
+    AppendUint32LittleEndian(
+        OutEnvelope,
+        static_cast<uint32>(SnapshotBytes.Num()));
+    OutEnvelope.Append(LedgerBytes);
+    OutEnvelope.Append(SnapshotBytes);
+    AppendUint32LittleEndian(
+        OutEnvelope,
+        FCrc::MemCrc32(OutEnvelope.GetData(), OutEnvelope.Num()));
+    return true;
+}
+
+[[nodiscard]] bool ExtractBrokenSunQuickSaveSnapshot(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& Envelope,
+    EEchoesFinalResolution& OutPendingResolution,
+    EEchoesFinalResolution& OutSelectedResolution,
+    bool& OutResolutionHoldStarted,
+    bool& OutResolutionContractFailed,
+    uint64& OutResolutionStartTick,
+    EntityId& OutApproachAnchorId,
+    EntityId& OutResolutionConduitId,
+    TArray<uint8>& OutSnapshotBytes,
+    FString& OutError)
+{
+    OutPendingResolution = EEchoesFinalResolution::None;
+    OutSelectedResolution = EEchoesFinalResolution::None;
+    OutResolutionHoldStarted = false;
+    OutResolutionContractFailed = false;
+    OutResolutionStartTick = 0;
+    OutApproachAnchorId = 0;
+    OutResolutionConduitId = 0;
+    OutSnapshotBytes.Reset();
+    OutError.Reset();
+    constexpr int32 FixedHeaderSize =
+        UE_ARRAY_COUNT(BrokenSunQuickSaveMagic) + 6 + 8 + 8 + 8;
+    constexpr int32 EnvelopeChecksumSize = 4;
+    if (Envelope.Num() < FixedHeaderSize + EnvelopeChecksumSize ||
+        FMemory::Memcmp(
+            Envelope.GetData(),
+            BrokenSunQuickSaveMagic,
+            UE_ARRAY_COUNT(BrokenSunQuickSaveMagic)) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint is missing the Mission 15 operation-and-ledger envelope");
+        return false;
+    }
+    int32 ChecksumOffset = Envelope.Num() - EnvelopeChecksumSize;
+    uint32 StoredChecksum = 0;
+    if (!ReadUint32LittleEndian(
+            Envelope,
+            ChecksumOffset,
+            StoredChecksum) ||
+        StoredChecksum != FCrc::MemCrc32(
+            Envelope.GetData(),
+            Envelope.Num() - EnvelopeChecksumSize))
+    {
+        OutError = TEXT("checkpoint Mission 15 envelope checksum is invalid");
+        return false;
+    }
+
+    int32 Offset = UE_ARRAY_COUNT(BrokenSunQuickSaveMagic);
+    if (Envelope[Offset++] != BrokenSunQuickSaveEnvelopeVersion ||
+        Envelope[Offset++] != static_cast<uint8>(
+            EEchoesOperationMode::CampaignTheBrokenSun))
+    {
+        OutError = TEXT(
+            "checkpoint version or operation binding is not The Broken Sun");
+        return false;
+    }
+    const EEchoesFinalResolution Pending =
+        static_cast<EEchoesFinalResolution>(Envelope[Offset++]);
+    const EEchoesFinalResolution Selected =
+        static_cast<EEchoesFinalResolution>(Envelope[Offset++]);
+    const uint8 AvailableResolutions = Envelope[Offset++];
+    const uint8 Flags = Envelope[Offset++];
+    uint64 ResolutionStartTick = 0;
+    uint32 ApproachAnchorId = 0;
+    uint32 ResolutionConduitId = 0;
+    uint32 LedgerLength = 0;
+    uint32 SnapshotLength = 0;
+    if ((Flags & ~3U) != 0U ||
+        !ReadUint64LittleEndian(
+            Envelope,
+            Offset,
+            ResolutionStartTick) ||
+        !ReadUint32LittleEndian(Envelope, Offset, ApproachAnchorId) ||
+        !ReadUint32LittleEndian(Envelope, Offset, ResolutionConduitId) ||
+        !ReadUint32LittleEndian(Envelope, Offset, LedgerLength) ||
+        !ReadUint32LittleEndian(Envelope, Offset, SnapshotLength) ||
+        LedgerLength == 0 || SnapshotLength == 0 ||
+        static_cast<uint64>(Offset) + static_cast<uint64>(LedgerLength) +
+                static_cast<uint64>(SnapshotLength) +
+                static_cast<uint64>(EnvelopeChecksumSize) !=
+            static_cast<uint64>(Envelope.Num()))
+    {
+        OutError = TEXT("checkpoint Mission 15 fields or lengths are invalid");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteLedger;
+    FEchoesBrokenSunPlan Plan;
+    TArray<uint8> ActiveLedgerBytes;
+    FString ProjectionError;
+    if (!BuildBrokenSunPrerequisiteProjection(
+            CampaignProgress,
+            PrerequisiteLedger,
+            Plan,
+            ActiveLedgerBytes,
+            ProjectionError) ||
+        AvailableResolutions != Plan.AvailableFinalResolutions ||
+        ActiveLedgerBytes.Num() != static_cast<int32>(LedgerLength) ||
+        FMemory::Memcmp(
+            Envelope.GetData() + Offset,
+            ActiveLedgerBytes.GetData(),
+            LedgerLength) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint Mission 15 ledger, plan, or earned-ending binding does not match the active campaign");
+        return false;
+    }
+    const bool bPendingValid =
+        Pending == EEchoesFinalResolution::None ||
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(Plan, Pending);
+    const bool bSelectedValid =
+        Selected == EEchoesFinalResolution::None ||
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(Plan, Selected);
+    const bool bHoldStarted = (Flags & 1U) != 0U;
+    const bool bContractFailed = (Flags & 2U) != 0U;
+    if (!bPendingValid || !bSelectedValid ||
+        (Selected != EEchoesFinalResolution::None && Pending != Selected) ||
+        (bHoldStarted &&
+         (Selected == EEchoesFinalResolution::None ||
+          ResolutionStartTick == 0 || ApproachAnchorId == 0 ||
+          ResolutionConduitId == 0)) ||
+        (!bHoldStarted &&
+         (ResolutionStartTick != 0 || ResolutionConduitId != 0)) ||
+        (ApproachAnchorId == 0 && ResolutionConduitId != 0))
+    {
+        OutError = TEXT(
+            "checkpoint Mission 15 intent, hold, or failure state is invalid");
+        return false;
+    }
+
+    Offset += static_cast<int32>(LedgerLength);
+    OutSnapshotBytes.Append(
+        Envelope.GetData() + Offset,
+        static_cast<int32>(SnapshotLength));
+    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    {
+        OutSnapshotBytes.Reset();
+        OutError = TEXT(
+            "Mission 15 checkpoints require native snapshot schema 22 state");
+        return false;
+    }
+    OutPendingResolution = Pending;
+    OutSelectedResolution = Selected;
+    OutResolutionHoldStarted = bHoldStarted;
+    OutResolutionContractFailed = bContractFailed;
+    OutResolutionStartTick = ResolutionStartTick;
+    OutApproachAnchorId = ApproachAnchorId;
+    OutResolutionConduitId = ResolutionConduitId;
+    return true;
+}
+
 [[nodiscard]] const TCHAR* FactionStableName(Faction Value)
 {
     switch (Value)
@@ -1284,6 +1628,20 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     SeveralVoicesResearchLoomId = 0;
     bSeveralVoicesCrisisHoldStarted = false;
     bSeveralVoicesCrisisContractFailed = false;
+    BrokenSunAccordVoiceId = 0;
+    BrokenSunAccordHeavyId = 0;
+    BrokenSunNemeId = 0;
+    BrokenSunWorkerId = 0;
+    BrokenSunMaraId = 0;
+    BrokenSunOruunId = 0;
+    BrokenSunTalarId = 0;
+    BrokenSunApproachAnchorId = 0;
+    BrokenSunResolutionConduitId = 0;
+    PendingBrokenSunResolution = EEchoesFinalResolution::None;
+    SelectedBrokenSunResolution = EEchoesFinalResolution::None;
+    bBrokenSunResolutionHoldStarted = false;
+    bBrokenSunResolutionContractFailed = false;
+    BrokenSunResolutionStartTick = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignBackupProgress = FEchoesCampaignProgress{};
     bCampaignBackupAvailable = false;
@@ -1402,6 +1760,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("ASSEMBLY OF THE MISSING");
         case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
             return TEXT("SEVERAL VOICES, ONE COMMAND");
+        case EEchoesOperationMode::CampaignTheBrokenSun:
+            return TEXT("THE BROKEN SUN");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -1543,6 +1903,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_LOCKED] reason=exact ordered thirteen-record campaign required"));
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        !IsBrokenSunUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_THE_BROKEN_SUN_LOCKED] reason=exact ordered fourteen-record campaign required"));
         return false;
     }
 
@@ -1700,7 +2069,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         SelectedOperation ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun;
     const int32 BaseGlassScarBlockedTiles = bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : ConfigureGlassScar(*Simulation);
@@ -1778,6 +2148,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             ? Faction::HollowChoir
+        : SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun
+            ? Faction::HollowChoir
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         echoes::presentation::SkirmishOpponent(ScenarioLocalFaction);
@@ -1819,6 +2191,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                         EEchoesOperationMode::CampaignAssemblyOfTheMissing
                     || SelectedOperation ==
                         EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+                    || SelectedOperation ==
+                        EEchoesOperationMode::CampaignTheBrokenSun
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -1831,6 +2205,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
              2,
              ScenarioOpponentFaction,
              ResourcePool{0, 0})) ||
+        (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+         (!Simulation->AddPlayer(
+              2,
+              Faction::MeridianCompact,
+              ResourcePool{0, 0}) ||
+          !Simulation->AddPlayer(
+              3,
+              Faction::KharuunAssemblies,
+              ResourcePool{0, 0}))) ||
         (bUseStressScenario &&
          (!Simulation->AddPlayer(
               2,
@@ -1901,6 +2284,20 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     SeveralVoicesResearchLoomId = 0;
     bSeveralVoicesCrisisHoldStarted = false;
     bSeveralVoicesCrisisContractFailed = false;
+    BrokenSunAccordVoiceId = 0;
+    BrokenSunAccordHeavyId = 0;
+    BrokenSunNemeId = 0;
+    BrokenSunWorkerId = 0;
+    BrokenSunMaraId = 0;
+    BrokenSunOruunId = 0;
+    BrokenSunTalarId = 0;
+    BrokenSunApproachAnchorId = 0;
+    BrokenSunResolutionConduitId = 0;
+    PendingBrokenSunResolution = EEchoesFinalResolution::None;
+    SelectedBrokenSunResolution = EEchoesFinalResolution::None;
+    bBrokenSunResolutionHoldStarted = false;
+    bBrokenSunResolutionContractFailed = false;
+    BrokenSunResolutionStartTick = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -2011,6 +2408,47 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                      SeveralVoicesResearchLoomId == 0)
             {
                 SeveralVoicesResearchLoomId = Spawned;
+            }
+        }
+        if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            if (Owner == LocalPlayerId)
+            {
+                if (Type == EntityType::Soldier &&
+                    BrokenSunAccordVoiceId == 0)
+                {
+                    BrokenSunAccordVoiceId = Spawned;
+                }
+                else if (Type == EntityType::HeavyUnit &&
+                         BrokenSunAccordHeavyId == 0)
+                {
+                    BrokenSunAccordHeavyId = Spawned;
+                }
+                else if (Type == EntityType::ScoutUnit &&
+                         BrokenSunNemeId == 0)
+                {
+                    BrokenSunNemeId = Spawned;
+                }
+                else if (Type == EntityType::Worker &&
+                         BrokenSunWorkerId == 0)
+                {
+                    BrokenSunWorkerId = Spawned;
+                }
+            }
+            else if (Owner == 2 && Type == EntityType::ScoutUnit &&
+                     BrokenSunMaraId == 0)
+            {
+                BrokenSunMaraId = Spawned;
+            }
+            else if (Owner == 2 && Type == EntityType::Worker &&
+                     BrokenSunTalarId == 0)
+            {
+                BrokenSunTalarId = Spawned;
+            }
+            else if (Owner == 3 && Type == EntityType::ScoutUnit &&
+                     BrokenSunOruunId == 0)
+            {
+                BrokenSunOruunId = Spawned;
             }
         }
         return Spawned;
@@ -2177,6 +2615,38 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         {
             SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
             SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
+        }
+
+        if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+            BrokenSunMaraId = SpawnUnit(
+                2,
+                Faction::MeridianCompact,
+                EntityType::ScoutUnit,
+                Plan.MaraAccordSite.x.FloorToInt() - 2,
+                Plan.MaraAccordSite.y.FloorToInt());
+            BrokenSunTalarId = SpawnUnit(
+                2,
+                Faction::MeridianCompact,
+                EntityType::Worker,
+                Plan.TalarPublicRecordSite.x.FloorToInt(),
+                Plan.TalarPublicRecordSite.y.FloorToInt());
+            BrokenSunOruunId = SpawnUnit(
+                3,
+                Faction::KharuunAssemblies,
+                EntityType::ScoutUnit,
+                Plan.OruunAccordSite.x.FloorToInt() + 2,
+                Plan.OruunAccordSite.y.FloorToInt());
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_BROKEN_SUN_WITNESSES_SPAWNED] mara=%u oruun=%u talar=%u neme=%u neutralWitnesses=true mixedFactionCommand=false success=%s"),
+                BrokenSunMaraId,
+                BrokenSunOruunId,
+                BrokenSunTalarId,
+                BrokenSunNemeId,
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
         if (SelectedOperation ==
@@ -2677,10 +3147,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             if (SelectedOperation ==
                 EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
                 SelectedOperation ==
-                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignTheBrokenSun)
             {
-                // Missions 13 and 14 retain the recorded protocol as
-                // provenance; neither exposes a selectable Well.
+                // Missions 13 through 15 retain the recorded protocol as
+                // provenance; none exposes another three-way Well choice.
             }
             else if (SelectedOperation ==
                 EEchoesOperationMode::CampaignFutureThatWon)
@@ -2722,6 +3194,26 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_SIM_SCENARIO_FAILED] At least one required prototype entity could not be spawned."));
+        Simulation.Reset();
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        (BrokenSunAccordVoiceId == 0 || BrokenSunAccordHeavyId == 0 ||
+         BrokenSunNemeId == 0 || BrokenSunWorkerId == 0 ||
+         BrokenSunMaraId == 0 || BrokenSunOruunId == 0 ||
+         BrokenSunTalarId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_THE_BROKEN_SUN_INIT_FAILED] reason=required command force or named witness unavailable voice=%u heavy=%u neme=%u worker=%u mara=%u oruun=%u talar=%u"),
+            BrokenSunAccordVoiceId,
+            BrokenSunAccordHeavyId,
+            BrokenSunNemeId,
+            BrokenSunWorkerId,
+            BrokenSunMaraId,
+            BrokenSunOruunId,
+            BrokenSunTalarId);
         Simulation.Reset();
         return false;
     }
@@ -3727,6 +4219,65 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                     SeveralVoicesCrisisHoldTicks),
                 GlassScarBlockedTiles);
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+            const echoes::sim::Vec2 RestorationSite =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    EEchoesFinalResolution::Restoration);
+            const echoes::sim::Vec2 ControlledSite =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    EEchoesFinalResolution::ControlledStabilization);
+            const echoes::sim::Vec2 ExtinguishmentSite =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    EEchoesFinalResolution::Extinguishment);
+            const echoes::sim::Vec2 EvolutionSite =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    EEchoesFinalResolution::OpenEvolution);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_BROKEN_SUN_READY] planKey=%u founding=%u route=%s recordedProtocol=%u protocol=%s availability=0x%02X voice=%u heavy=%u neme=%u worker=%u mara=%u oruun=%u talar=%u approach=(%d,%d) maraSite=(%d,%d) oruunSite=(%d,%d) nemeSite=(%d,%d) talarSite=(%d,%d) restoration=(%d,%d) controlled=(%d,%d) extinguishment=(%d,%d) evolution=(%d,%d) baseHoldTicks=%llu inheritedRecords=14 localFaction=HollowChoir localAuthority=HollowChoir namedWitnesses=protectedNeutral mixedFactionCommand=false explicitEndingEligibility=true hiddenMoralityScore=false oldLedgerMigration=true oldCheckpointCompatibility=false broadConsequencesUnmodeled=true campaignBalanceUnproven=true ordinaryHumanCompletionUnproven=true releaseReadinessUnproven=true blocked=%d"),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                Plan.RouteStableName,
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Plan.ProtocolStableName,
+                Plan.AvailableFinalResolutions,
+                BrokenSunAccordVoiceId,
+                BrokenSunAccordHeavyId,
+                BrokenSunNemeId,
+                BrokenSunWorkerId,
+                BrokenSunMaraId,
+                BrokenSunOruunId,
+                BrokenSunTalarId,
+                Plan.CrownfallApproachSite.x.FloorToInt(),
+                Plan.CrownfallApproachSite.y.FloorToInt(),
+                Plan.MaraAccordSite.x.FloorToInt(),
+                Plan.MaraAccordSite.y.FloorToInt(),
+                Plan.OruunAccordSite.x.FloorToInt(),
+                Plan.OruunAccordSite.y.FloorToInt(),
+                Plan.NemeAccordSite.x.FloorToInt(),
+                Plan.NemeAccordSite.y.FloorToInt(),
+                Plan.TalarPublicRecordSite.x.FloorToInt(),
+                Plan.TalarPublicRecordSite.y.FloorToInt(),
+                RestorationSite.x.FloorToInt(),
+                RestorationSite.y.FloorToInt(),
+                ControlledSite.x.FloorToInt(),
+                ControlledSite.y.FloorToInt(),
+                ExtinguishmentSite.x.FloorToInt(),
+                ExtinguishmentSite.y.FloorToInt(),
+                EvolutionSite.x.FloorToInt(),
+                EvolutionSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    Plan.ResolutionHoldTicks),
+                GlassScarBlockedTiles);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -3890,6 +4441,20 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     SeveralVoicesResearchLoomId = 0;
     bSeveralVoicesCrisisHoldStarted = false;
     bSeveralVoicesCrisisContractFailed = false;
+    BrokenSunAccordVoiceId = 0;
+    BrokenSunAccordHeavyId = 0;
+    BrokenSunNemeId = 0;
+    BrokenSunWorkerId = 0;
+    BrokenSunMaraId = 0;
+    BrokenSunOruunId = 0;
+    BrokenSunTalarId = 0;
+    BrokenSunApproachAnchorId = 0;
+    BrokenSunResolutionConduitId = 0;
+    PendingBrokenSunResolution = EEchoesFinalResolution::None;
+    SelectedBrokenSunResolution = EEchoesFinalResolution::None;
+    bBrokenSunResolutionHoldStarted = false;
+    bBrokenSunResolutionContractFailed = false;
+    BrokenSunResolutionStartTick = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -4018,6 +4583,12 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::HollowChoir)
     {
         OutFeedback = TEXT("[FACTION_SEVERAL_VOICES_ONE_COMMAND_LOCKED] Neme and the protected voices deploy under Hollow Choir authority.");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        NewFaction != Faction::HollowChoir)
+    {
+        OutFeedback = TEXT("[FACTION_THE_BROKEN_SUN_LOCKED] The final operation retains Hollow Choir command; Mara, Oruun, and Talar are protected neutral witnesses.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -4168,6 +4739,12 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Assembly of the Missing with the exact thirteen-record ledger before Several Voices, One Command.");
         return false;
     }
+    if (NewOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        !IsBrokenSunUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Several Voices, One Command with the exact fourteen-record ledger before The Broken Sun.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -4249,6 +4826,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::HollowChoir;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        LocalFaction = Faction::HollowChoir;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -4296,6 +4878,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignSeveralVoicesOneCommand
                 ? TEXT(" — Neme and the local Hollow Choir are commandable; incompatible identity states must resolve on visible timers.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignTheBrokenSun
+                ? TEXT(" — the local Hollow Choir remains commandable; Mara, Oruun, and Talar are protected neutral witnesses to an explicit earned ending choice.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -4339,6 +4924,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignSeveralVoicesOneCommand
                 ? TEXT("SeveralVoicesOneCommand")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignTheBrokenSun
+                ? TEXT("TheBrokenSun")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -4527,6 +5115,34 @@ FString UEchoesSimulationSubsystem::GetQuickSavePath()
 
 FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
 {
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        FEchoesCampaignProgress PrerequisiteLedger;
+        FEchoesBrokenSunPlan Plan;
+        TArray<uint8> LedgerBytes;
+        FString ProjectionError;
+        if (BuildBrokenSunPrerequisiteProjection(
+                CampaignProgress,
+                PrerequisiteLedger,
+                Plan,
+                LedgerBytes,
+                ProjectionError))
+        {
+            const uint32 LedgerFingerprint = FCrc::MemCrc32(
+                LedgerBytes.GetData(),
+                LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
+            return FPaths::Combine(
+                FPaths::ProjectSavedDir(),
+                TEXT("SaveGames"),
+                FString::Printf(
+                    TEXT("EchoesQuickSaveTheBrokenSun-%08X.bin"),
+                    LedgerFingerprint));
+        }
+        return FPaths::Combine(
+            FPaths::ProjectSavedDir(),
+            TEXT("SaveGames"),
+            TEXT("EchoesQuickSaveTheBrokenSun-InvalidLedger.bin"));
+    }
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
     {
         return FPaths::Combine(
@@ -5633,6 +6249,87 @@ UEchoesSimulationSubsystem::CommitSeveralVoicesOneCommandCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitBrokenSunCompletion(
+    EEchoesFinalResolution& OutRecordedResolution,
+    FString& OutFeedback)
+{
+    const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+    OutRecordedResolution = SelectedBrokenSunResolution;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT(
+            "[CAMPAIGN_LEDGER_UNAVAILABLE] The final operation is complete, but no campaign ending was saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation != EEchoesOperationMode::CampaignTheBrokenSun ||
+        GetBrokenSunPhase() != EEchoesBrokenSunPhase::Complete ||
+        !IsBrokenSunUnlocked() ||
+        !FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            SelectedBrokenSunResolution) ||
+        BrokenSunApproachAnchorId == 0 ||
+        BrokenSunResolutionConduitId == 0 ||
+        !bBrokenSunResolutionHoldStarted ||
+        bBrokenSunResolutionContractFailed)
+    {
+        OutFeedback = TEXT(
+            "[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative The Broken Sun operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::TheBrokenSun;
+    Record.WellChoice = Plan.RecordedProtocol;
+    Record.AvailableWellChoices = WellChoiceMask(Plan.RecordedProtocol);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::PriorFourteenRecordLedgerConsumed) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::CrownfallApproachSecured) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::AccordAssemblyEstablished) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::FinalResolutionCommitted) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::ResolutionConduitRaised) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::ResolutionWindowHeld) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::NamedWitnessesSurvived) |
+        static_cast<uint8>(EEchoesBrokenSunCompletionFact::LocalCoreSurvived);
+    Record.FinalResolution = SelectedBrokenSunResolution;
+    Record.AvailableFinalResolutions = Plan.AvailableFinalResolutions;
+    Record.FinalPlanKey = Plan.StablePlanKey;
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedResolution = Existing->FinalResolution;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            Candidate,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -5793,7 +6490,29 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     TArray<uint8> SnapshotBytes;
     SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
     TArray<uint8> PersistedBytes = SnapshotBytes;
-    if (SelectedOperation ==
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        FString EnvelopeError;
+        if (!BuildBrokenSunQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PendingBrokenSunResolution,
+                SelectedBrokenSunResolution,
+                bBrokenSunResolutionHoldStarted,
+                bBrokenSunResolutionContractFailed,
+                BrokenSunResolutionStartTick,
+                BrokenSunApproachAnchorId,
+                BrokenSunResolutionConduitId,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation ==
         EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
         FString EnvelopeError;
@@ -5900,9 +6619,35 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     const TArray<uint8>* VerificationPayload = &VerificationBytes;
     bool bVerificationCrisisHoldStarted = false;
     bool bVerificationCrisisContractFailed = false;
+    EEchoesFinalResolution VerificationPendingResolution =
+        EEchoesFinalResolution::None;
+    EEchoesFinalResolution VerificationSelectedResolution =
+        EEchoesFinalResolution::None;
+    bool bVerificationResolutionHoldStarted = false;
+    bool bVerificationResolutionContractFailed = false;
+    uint64 VerificationResolutionStartTick = 0;
+    EntityId VerificationApproachAnchorId = 0;
+    EntityId VerificationResolutionConduitId = 0;
     FString EnvelopeError;
     bool bEnvelopeValid = true;
     if (bVerificationRead &&
+        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
+            CampaignProgress,
+            VerificationBytes,
+            VerificationPendingResolution,
+            VerificationSelectedResolution,
+            bVerificationResolutionHoldStarted,
+            bVerificationResolutionContractFailed,
+            VerificationResolutionStartTick,
+            VerificationApproachAnchorId,
+            VerificationResolutionConduitId,
+            VerificationSnapshotBytes,
+            EnvelopeError);
+        VerificationPayload = &VerificationSnapshotBytes;
+    }
+    else if (bVerificationRead &&
         SelectedOperation ==
             EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
@@ -6013,7 +6758,8 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         static_cast<unsigned long long>(Simulation->CurrentTick()),
         PersistedBytes.Num(),
         bHadPriorSave ? TEXT("retained") : TEXT("none"),
-        SelectedOperation ==
+        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
+            SelectedOperation ==
                 EEchoesOperationMode::CampaignChoirAtLumeReach ||
             SelectedOperation ==
                 EEchoesOperationMode::CampaignNoNeutralLedger ||
@@ -6042,12 +6788,28 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
     bool bLoadedCrisisHoldStarted = false;
     bool bLoadedCrisisContractFailed = false;
+    EEchoesFinalResolution LoadedPendingResolution =
+        EEchoesFinalResolution::None;
+    EEchoesFinalResolution LoadedSelectedResolution =
+        EEchoesFinalResolution::None;
+    bool bLoadedResolutionHoldStarted = false;
+    bool bLoadedResolutionContractFailed = false;
+    uint64 LoadedResolutionStartTick = 0;
+    EntityId LoadedApproachAnchorId = 0;
+    EntityId LoadedResolutionConduitId = 0;
     FString SelectedPath;
     FString PrimaryFailure;
     const auto TryLoad = [this,
                           &LoadedSimulation,
                           &bLoadedCrisisHoldStarted,
-                          &bLoadedCrisisContractFailed](
+                          &bLoadedCrisisContractFailed,
+                          &LoadedPendingResolution,
+                          &LoadedSelectedResolution,
+                          &bLoadedResolutionHoldStarted,
+                          &bLoadedResolutionContractFailed,
+                          &LoadedResolutionStartTick,
+                          &LoadedApproachAnchorId,
+                          &LoadedResolutionConduitId](
                              const FString& CandidatePath,
                              FString& OutFailure)
     {
@@ -6061,7 +6823,35 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         const TArray<uint8>* SnapshotPayload = &Bytes;
         bool bCandidateCrisisHoldStarted = false;
         bool bCandidateCrisisContractFailed = false;
-        if (SelectedOperation ==
+        EEchoesFinalResolution CandidatePendingResolution =
+            EEchoesFinalResolution::None;
+        EEchoesFinalResolution CandidateSelectedResolution =
+            EEchoesFinalResolution::None;
+        bool bCandidateResolutionHoldStarted = false;
+        bool bCandidateResolutionContractFailed = false;
+        uint64 CandidateResolutionStartTick = 0;
+        EntityId CandidateApproachAnchorId = 0;
+        EntityId CandidateResolutionConduitId = 0;
+        if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            if (!ExtractBrokenSunQuickSaveSnapshot(
+                    CampaignProgress,
+                    Bytes,
+                    CandidatePendingResolution,
+                    CandidateSelectedResolution,
+                    bCandidateResolutionHoldStarted,
+                    bCandidateResolutionContractFailed,
+                    CandidateResolutionStartTick,
+                    CandidateApproachAnchorId,
+                    CandidateResolutionConduitId,
+                    SnapshotBytes,
+                    OutFailure))
+            {
+                return false;
+            }
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
             EEchoesOperationMode::CampaignChoirAtLumeReach)
         {
             if (!ExtractChoirAtLumeReachQuickSaveSnapshot(
@@ -6627,10 +7417,211 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 return false;
             }
         }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+            const echoes::sim::Vec2 ResolutionSite =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    CandidateSelectedResolution);
+            const echoes::sim::Entity* Voice =
+                Candidate->FindEntity(BrokenSunAccordVoiceId);
+            const echoes::sim::Entity* Heavy =
+                Candidate->FindEntity(BrokenSunAccordHeavyId);
+            const echoes::sim::Entity* Neme =
+                Candidate->FindEntity(BrokenSunNemeId);
+            const echoes::sim::Entity* Worker =
+                Candidate->FindEntity(BrokenSunWorkerId);
+            const echoes::sim::Entity* Mara =
+                Candidate->FindEntity(BrokenSunMaraId);
+            const echoes::sim::Entity* Oruun =
+                Candidate->FindEntity(BrokenSunOruunId);
+            const echoes::sim::Entity* Talar =
+                Candidate->FindEntity(BrokenSunTalarId);
+            const echoes::sim::Entity* Approach =
+                Candidate->FindEntity(CandidateApproachAnchorId);
+            const echoes::sim::Entity* Conduit =
+                Candidate->FindEntity(CandidateResolutionConduitId);
+            const auto HasIdentity = [](
+                const echoes::sim::Entity* Entity,
+                uint8 Owner,
+                Faction EntityFaction,
+                EntityType Type)
+            {
+                return Entity != nullptr && Entity->owner == Owner &&
+                       Entity->faction == EntityFaction &&
+                       Entity->type == Type;
+            };
+            const auto IsLiveIdentity = [&HasIdentity](
+                const echoes::sim::Entity* Entity,
+                uint8 Owner,
+                Faction EntityFaction,
+                EntityType Type)
+            {
+                return HasIdentity(Entity, Owner, EntityFaction, Type) &&
+                       Entity->hitPoints > 0 && Entity->completed;
+            };
+            const bool bCommandComposition =
+                IsLiveIdentity(
+                    Voice,
+                    LocalPlayerId,
+                    Faction::HollowChoir,
+                    EntityType::Soldier) &&
+                IsLiveIdentity(
+                    Heavy,
+                    LocalPlayerId,
+                    Faction::HollowChoir,
+                    EntityType::HeavyUnit) &&
+                IsLiveIdentity(
+                    Neme,
+                    LocalPlayerId,
+                    Faction::HollowChoir,
+                    EntityType::ScoutUnit) &&
+                IsLiveIdentity(
+                    Worker,
+                    LocalPlayerId,
+                    Faction::HollowChoir,
+                    EntityType::Worker);
+            const bool bWitnessComposition =
+                IsLiveIdentity(
+                    Mara,
+                    2,
+                    Faction::MeridianCompact,
+                    EntityType::ScoutUnit) &&
+                IsWithinTiles(
+                    Mara->position,
+                    Plan.MaraAccordSite,
+                    BrokenSunSiteRadiusTiles) &&
+                IsLiveIdentity(
+                    Oruun,
+                    3,
+                    Faction::KharuunAssemblies,
+                    EntityType::ScoutUnit) &&
+                IsWithinTiles(
+                    Oruun->position,
+                    Plan.OruunAccordSite,
+                    BrokenSunSiteRadiusTiles) &&
+                IsLiveIdentity(
+                    Talar,
+                    2,
+                    Faction::MeridianCompact,
+                    EntityType::Worker) &&
+                IsWithinTiles(
+                    Talar->position,
+                    Plan.TalarPublicRecordSite,
+                    BrokenSunSiteRadiusTiles);
+            const bool bApproachComposition =
+                CandidateApproachAnchorId == 0 ||
+                (IsLiveIdentity(
+                     Approach,
+                     LocalPlayerId,
+                     Faction::HollowChoir,
+                     EntityType::UtilityStructure) &&
+                 IsWithinTiles(
+                     Approach->position,
+                     Plan.CrownfallApproachSite,
+                     BrokenSunSiteRadiusTiles));
+            const bool bConduitComposition =
+                CandidateResolutionConduitId == 0 ||
+                (IsLiveIdentity(
+                     Conduit,
+                     LocalPlayerId,
+                     Faction::HollowChoir,
+                     EntityType::UtilityStructure) &&
+                 IsWithinTiles(
+                     Conduit->position,
+                     ResolutionSite,
+                     BrokenSunConvergenceRadiusTiles));
+            const echoes::sim::PlayerState* LocalPlayer =
+                Candidate->FindPlayer(LocalPlayerId);
+            const bool bSelectedAccord =
+                CandidateSelectedResolution ==
+                    EEchoesFinalResolution::None ||
+                (Voice != nullptr && Heavy != nullptr && Neme != nullptr &&
+                 Voice->choirIdentityState ==
+                     echoes::sim::ChoirIdentityState::Possible &&
+                 Heavy->choirIdentityState ==
+                     echoes::sim::ChoirIdentityState::Manifest &&
+                 Neme->choirIdentityState !=
+                     echoes::sim::ChoirIdentityState::NotChoir &&
+                 IsWithinTiles(
+                     Voice->position,
+                     Plan.MaraAccordSite,
+                     BrokenSunSiteRadiusTiles) &&
+                 IsWithinTiles(
+                     Heavy->position,
+                     Plan.OruunAccordSite,
+                     BrokenSunSiteRadiusTiles) &&
+                 IsWithinTiles(
+                     Neme->position,
+                     Plan.NemeAccordSite,
+                     BrokenSunSiteRadiusTiles) &&
+                 LocalPlayer != nullptr &&
+                 LocalPlayer->HasCompletedResearch(
+                     echoes::sim::ResearchType::ChoirHeldAlternatives) &&
+                 LocalPlayer->HasCompletedResearch(
+                     echoes::sim::ResearchType::ChoirSharedResolution) &&
+                 CandidateApproachAnchorId != 0);
+            TSet<EntityId> CompositionIds;
+            CompositionIds.Reserve(9);
+            CompositionIds.Add(BrokenSunAccordVoiceId);
+            CompositionIds.Add(BrokenSunAccordHeavyId);
+            CompositionIds.Add(BrokenSunNemeId);
+            CompositionIds.Add(BrokenSunWorkerId);
+            CompositionIds.Add(BrokenSunMaraId);
+            CompositionIds.Add(BrokenSunOruunId);
+            CompositionIds.Add(BrokenSunTalarId);
+            int32 ExpectedCompositionCount = 7;
+            if (CandidateApproachAnchorId != 0)
+            {
+                CompositionIds.Add(CandidateApproachAnchorId);
+                ++ExpectedCompositionCount;
+            }
+            if (CandidateResolutionConduitId != 0)
+            {
+                CompositionIds.Add(CandidateResolutionConduitId);
+                ++ExpectedCompositionCount;
+            }
+            const bool bLiveContractValid =
+                bCommandComposition && bWitnessComposition &&
+                bApproachComposition && bConduitComposition &&
+                bSelectedAccord;
+            if (CompositionIds.Num() != ExpectedCompositionCount ||
+                (!bCandidateResolutionContractFailed &&
+                 !bLiveContractValid) ||
+                (bCandidateResolutionContractFailed &&
+                 ((Approach != nullptr &&
+                   !HasIdentity(
+                       Approach,
+                       LocalPlayerId,
+                       Faction::HollowChoir,
+                       EntityType::UtilityStructure)) ||
+                  (Conduit != nullptr &&
+                   !HasIdentity(
+                       Conduit,
+                       LocalPlayerId,
+                       Faction::HollowChoir,
+                       EntityType::UtilityStructure)))))
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active The Broken Sun protected composition or exact objective identities");
+                return false;
+            }
+        }
         LoadedSimulation =
             MakeUnique<echoes::sim::Simulation>(std::move(*Candidate));
         bLoadedCrisisHoldStarted = bCandidateCrisisHoldStarted;
         bLoadedCrisisContractFailed = bCandidateCrisisContractFailed;
+        LoadedPendingResolution = CandidatePendingResolution;
+        LoadedSelectedResolution = CandidateSelectedResolution;
+        bLoadedResolutionHoldStarted =
+            bCandidateResolutionHoldStarted;
+        bLoadedResolutionContractFailed =
+            bCandidateResolutionContractFailed;
+        LoadedResolutionStartTick = CandidateResolutionStartTick;
+        LoadedApproachAnchorId = CandidateApproachAnchorId;
+        LoadedResolutionConduitId = CandidateResolutionConduitId;
         return true;
     };
 
@@ -6693,6 +7684,18 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         SelectedOperation ==
                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
         bLoadedCrisisContractFailed;
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        PendingBrokenSunResolution = LoadedPendingResolution;
+        SelectedBrokenSunResolution = LoadedSelectedResolution;
+        bBrokenSunResolutionHoldStarted =
+            bLoadedResolutionHoldStarted;
+        bBrokenSunResolutionContractFailed =
+            bLoadedResolutionContractFailed;
+        BrokenSunResolutionStartTick = LoadedResolutionStartTick;
+        BrokenSunApproachAnchorId = LoadedApproachAnchorId;
+        BrokenSunResolutionConduitId = LoadedResolutionConduitId;
+    }
     const bool bUsedBackup = SelectedPath == BackupPath;
     OutFeedback = FString::Printf(
         TEXT("QUICK LOAD: tick %llu restored%s."),
@@ -6701,9 +7704,22 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s"),
+        TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s ledgerBound=%s"),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
-        bUsedBackup ? TEXT("backup") : TEXT("primary"));
+        bUsedBackup ? TEXT("backup") : TEXT("primary"),
+        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignChoirAtLumeReach ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignNoNeutralLedger ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignFutureThatWon ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+            ? TEXT("true")
+            : TEXT("false"));
     return true;
 }
 
@@ -7135,6 +8151,58 @@ bool UEchoesSimulationSubsystem::IsSeveralVoicesOneCommandUnlocked() const
         Plan);
 }
 
+bool UEchoesSimulationSubsystem::IsBrokenSunUnlocked() const
+{
+    if (!bCampaignProgressAvailable ||
+        CampaignProgress.Decisions.Num() < 14 ||
+        CampaignProgress.Decisions.Num() > 15)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < 14; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            return false;
+        }
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Lume =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    const FEchoesCampaignDecisionRecord* Voices =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::SeveralVoicesOneCommand);
+    if (Prologue == nullptr || Reserve == nullptr || Lume == nullptr ||
+        Voices == nullptr || Voices->WellChoice != Lume->WellChoice ||
+        Voices->SimulationSnapshotVersion < 22 ||
+        Voices->SimulationSnapshotVersion > echoes::sim::kSnapshotVersion)
+    {
+        return false;
+    }
+    for (int32 Index = 1; Index <= 8; ++Index)
+    {
+        if (CampaignProgress.Decisions[Index].WellChoice !=
+            Prologue->WellChoice)
+        {
+            return false;
+        }
+    }
+    FEchoesBrokenSunPlan Plan;
+    return FEchoesBrokenSunMissionModel::TryPlanForLedger(
+        Prologue->WellChoice,
+        Reserve->VerifiedFacts,
+        Voices->WellChoice,
+        Plan);
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -7337,6 +8405,30 @@ UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPlan() const
             Prologue->WellChoice,
             Reserve->VerifiedFacts,
             Assembly->WellChoice,
+            Plan))
+    {
+        return {};
+    }
+    return Plan;
+}
+
+FEchoesBrokenSunPlan UEchoesSimulationSubsystem::GetBrokenSunPlan() const
+{
+    FEchoesBrokenSunPlan Plan;
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Voices =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::SeveralVoicesOneCommand);
+    if (Prologue == nullptr || Reserve == nullptr || Voices == nullptr ||
+        !FEchoesBrokenSunMissionModel::TryPlanForLedger(
+            Prologue->WellChoice,
+            Reserve->VerifiedFacts,
+            Voices->WellChoice,
             Plan))
     {
         return {};
@@ -8480,6 +9572,185 @@ UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
     return FEchoesSeveralVoicesOneCommandMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const
+{
+    FEchoesBrokenSunMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        bScenarioReady && Simulation.IsValid() && IsBrokenSunUnlocked();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesBrokenSunPhase::Inactive;
+    }
+
+    const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+    const echoes::sim::Vec2 ResolutionSite =
+        FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+            Plan,
+            SelectedBrokenSunResolution);
+    const uint64 RequiredResolutionTicks =
+        FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
+            Plan,
+            SelectedBrokenSunResolution);
+    const echoes::sim::Entity* Voice =
+        Simulation->FindEntity(BrokenSunAccordVoiceId);
+    const echoes::sim::Entity* Heavy =
+        Simulation->FindEntity(BrokenSunAccordHeavyId);
+    const echoes::sim::Entity* Neme =
+        Simulation->FindEntity(BrokenSunNemeId);
+    const echoes::sim::Entity* Worker =
+        Simulation->FindEntity(BrokenSunWorkerId);
+    const echoes::sim::Entity* Mara =
+        Simulation->FindEntity(BrokenSunMaraId);
+    const echoes::sim::Entity* Oruun =
+        Simulation->FindEntity(BrokenSunOruunId);
+    const echoes::sim::Entity* Talar =
+        Simulation->FindEntity(BrokenSunTalarId);
+    const auto IsEntity = [](
+        const echoes::sim::Entity* Entity,
+        uint8 Owner,
+        Faction EntityFaction,
+        EntityType Type)
+    {
+        return Entity != nullptr && Entity->owner == Owner &&
+               Entity->faction == EntityFaction && Entity->type == Type &&
+               Entity->hitPoints > 0 && Entity->completed;
+    };
+    const bool bVoiceIntact = IsEntity(
+        Voice,
+        LocalPlayerId,
+        Faction::HollowChoir,
+        EntityType::Soldier);
+    const bool bHeavyIntact = IsEntity(
+        Heavy,
+        LocalPlayerId,
+        Faction::HollowChoir,
+        EntityType::HeavyUnit);
+    Facts.bNemeIntact = IsEntity(
+        Neme,
+        LocalPlayerId,
+        Faction::HollowChoir,
+        EntityType::ScoutUnit);
+    const bool bWorkerIntact = IsEntity(
+        Worker,
+        LocalPlayerId,
+        Faction::HollowChoir,
+        EntityType::Worker);
+    Facts.bCommandForceIntact =
+        bVoiceIntact && bHeavyIntact && bWorkerIntact;
+    Facts.bMaraIntact = IsEntity(
+        Mara,
+        2,
+        Faction::MeridianCompact,
+        EntityType::ScoutUnit) &&
+        IsWithinTiles(
+            Mara->position,
+            Plan.MaraAccordSite,
+            BrokenSunSiteRadiusTiles);
+    Facts.bOruunIntact = IsEntity(
+        Oruun,
+        3,
+        Faction::KharuunAssemblies,
+        EntityType::ScoutUnit) &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.OruunAccordSite,
+            BrokenSunSiteRadiusTiles);
+    Facts.bTalarIntact = IsEntity(
+        Talar,
+        2,
+        Faction::MeridianCompact,
+        EntityType::Worker) &&
+        IsWithinTiles(
+            Talar->position,
+            Plan.TalarPublicRecordSite,
+            BrokenSunSiteRadiusTiles);
+
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner != LocalPlayerId ||
+            Entity.faction != Faction::HollowChoir ||
+            Entity.hitPoints <= 0 || !Entity.completed)
+        {
+            continue;
+        }
+        Facts.bLocalCoreIntact |=
+            Entity.type == EntityType::CommandCore;
+        if (Entity.type != EntityType::UtilityStructure)
+        {
+            continue;
+        }
+        const bool bAtApproach = IsWithinTiles(
+            Entity.position,
+            Plan.CrownfallApproachSite,
+            BrokenSunSiteRadiusTiles);
+        const bool bAtConvergence =
+            SelectedBrokenSunResolution !=
+                EEchoesFinalResolution::None &&
+            IsWithinTiles(
+                Entity.position,
+                ResolutionSite,
+                BrokenSunConvergenceRadiusTiles);
+        Facts.bApproachAnchorComplete |=
+            bAtApproach &&
+            (BrokenSunApproachAnchorId == 0 ||
+             Entity.id == BrokenSunApproachAnchorId);
+        Facts.bResolutionConduitComplete |=
+            bAtConvergence &&
+            (BrokenSunResolutionConduitId == 0 ||
+             Entity.id == BrokenSunResolutionConduitId);
+    }
+
+    const echoes::sim::PlayerState* Player =
+        Simulation->FindPlayer(LocalPlayerId);
+    const bool bAccordResearchComplete =
+        Player != nullptr &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirHeldAlternatives) &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirSharedResolution);
+    Facts.bMeridianAccordEstablished =
+        bAccordResearchComplete && bVoiceIntact &&
+        Voice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Possible &&
+        IsWithinTiles(
+            Voice->position,
+            Plan.MaraAccordSite,
+            BrokenSunSiteRadiusTiles);
+    Facts.bKharuunAccordEstablished =
+        bAccordResearchComplete && bHeavyIntact &&
+        Heavy->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Manifest &&
+        IsWithinTiles(
+            Heavy->position,
+            Plan.OruunAccordSite,
+            BrokenSunSiteRadiusTiles);
+    Facts.bChoirAccordEstablished =
+        bAccordResearchComplete && Facts.bNemeIntact &&
+        Neme->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir &&
+        IsWithinTiles(
+            Neme->position,
+            Plan.NemeAccordSite,
+            BrokenSunSiteRadiusTiles);
+    Facts.SelectedResolution = SelectedBrokenSunResolution;
+    Facts.bSelectedResolutionEligible =
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            SelectedBrokenSunResolution);
+    Facts.bResolutionWindowHeld =
+        bBrokenSunResolutionHoldStarted &&
+        BrokenSunResolutionStartTick > 0 &&
+        Simulation->CurrentTick() >= BrokenSunResolutionStartTick &&
+        Simulation->CurrentTick() - BrokenSunResolutionStartTick >=
+            RequiredResolutionTicks;
+    Facts.bResolutionContractFailed =
+        bBrokenSunResolutionContractFailed;
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    return FEchoesBrokenSunMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -8517,6 +9788,10 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetAssemblyOfTheMissingPhase();
     Snapshot.SeveralVoicesOneCommandPhase =
         GetSeveralVoicesOneCommandPhase();
+    Snapshot.BrokenSunPhase = GetBrokenSunPhase();
+    Snapshot.BrokenSunPendingFinalResolution =
+        PendingBrokenSunResolution;
+    Snapshot.BrokenSunFinalResolution = SelectedBrokenSunResolution;
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -9413,6 +10688,150 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
             }
         }
     }
+
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
+        IsBrokenSunUnlocked())
+    {
+        const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+        Snapshot.BrokenSunAvailableFinalResolutions =
+            Plan.AvailableFinalResolutions;
+        Snapshot.BrokenSunAccordVoiceId = BrokenSunAccordVoiceId;
+        Snapshot.BrokenSunAccordHeavyId = BrokenSunAccordHeavyId;
+        Snapshot.BrokenSunNemeId = BrokenSunNemeId;
+        Snapshot.BrokenSunWorkerId = BrokenSunWorkerId;
+        Snapshot.BrokenSunMaraId = BrokenSunMaraId;
+        Snapshot.BrokenSunOruunId = BrokenSunOruunId;
+        Snapshot.BrokenSunTalarId = BrokenSunTalarId;
+        Snapshot.BrokenSunApproachAnchorId = BrokenSunApproachAnchorId;
+        Snapshot.BrokenSunResolutionConduitId =
+            BrokenSunResolutionConduitId;
+        Snapshot.bBrokenSunResolutionContractFailed =
+            bBrokenSunResolutionContractFailed;
+
+        const auto IsEntity = [](
+            const echoes::sim::Entity* Entity,
+            uint8 Owner,
+            Faction EntityFaction,
+            EntityType Type)
+        {
+            return Entity != nullptr && Entity->owner == Owner &&
+                   Entity->faction == EntityFaction &&
+                   Entity->type == Type && Entity->hitPoints > 0 &&
+                   Entity->completed;
+        };
+        const echoes::sim::Entity* Voice =
+            Simulation->FindEntity(BrokenSunAccordVoiceId);
+        const echoes::sim::Entity* Heavy =
+            Simulation->FindEntity(BrokenSunAccordHeavyId);
+        const echoes::sim::Entity* Neme =
+            Simulation->FindEntity(BrokenSunNemeId);
+        const echoes::sim::PlayerState* Player =
+            Simulation->FindPlayer(LocalPlayerId);
+        const bool bResearchComplete =
+            Player != nullptr &&
+            Player->HasCompletedResearch(
+                echoes::sim::ResearchType::ChoirHeldAlternatives) &&
+            Player->HasCompletedResearch(
+                echoes::sim::ResearchType::ChoirSharedResolution);
+        Snapshot.bBrokenSunMeridianAccordEstablished =
+            bResearchComplete &&
+            IsEntity(
+                Voice,
+                LocalPlayerId,
+                Faction::HollowChoir,
+                EntityType::Soldier) &&
+            Voice->choirIdentityState ==
+                echoes::sim::ChoirIdentityState::Possible &&
+            IsWithinTiles(
+                Voice->position,
+                Plan.MaraAccordSite,
+                BrokenSunSiteRadiusTiles);
+        Snapshot.bBrokenSunKharuunAccordEstablished =
+            bResearchComplete &&
+            IsEntity(
+                Heavy,
+                LocalPlayerId,
+                Faction::HollowChoir,
+                EntityType::HeavyUnit) &&
+            Heavy->choirIdentityState ==
+                echoes::sim::ChoirIdentityState::Manifest &&
+            IsWithinTiles(
+                Heavy->position,
+                Plan.OruunAccordSite,
+                BrokenSunSiteRadiusTiles);
+        Snapshot.bBrokenSunChoirAccordEstablished =
+            bResearchComplete &&
+            IsEntity(
+                Neme,
+                LocalPlayerId,
+                Faction::HollowChoir,
+                EntityType::ScoutUnit) &&
+            Neme->choirIdentityState !=
+                echoes::sim::ChoirIdentityState::NotChoir &&
+            IsWithinTiles(
+                Neme->position,
+                Plan.NemeAccordSite,
+                BrokenSunSiteRadiusTiles);
+
+        const echoes::sim::Vec2 ResolutionSite =
+            FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                Plan,
+                SelectedBrokenSunResolution);
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner != LocalPlayerId ||
+                Entity.faction != Faction::HollowChoir ||
+                Entity.type != EntityType::UtilityStructure ||
+                Entity.hitPoints <= 0 || !Entity.completed)
+            {
+                continue;
+            }
+            if (IsWithinTiles(
+                    Entity.position,
+                    Plan.CrownfallApproachSite,
+                    BrokenSunSiteRadiusTiles) &&
+                (BrokenSunApproachAnchorId == 0 ||
+                 Entity.id == BrokenSunApproachAnchorId))
+            {
+                Snapshot.bBrokenSunApproachSecured = true;
+                if (Snapshot.BrokenSunApproachAnchorId == 0)
+                {
+                    Snapshot.BrokenSunApproachAnchorId = Entity.id;
+                }
+            }
+            if (SelectedBrokenSunResolution !=
+                    EEchoesFinalResolution::None &&
+                IsWithinTiles(
+                    Entity.position,
+                    ResolutionSite,
+                    BrokenSunConvergenceRadiusTiles) &&
+                (BrokenSunResolutionConduitId == 0 ||
+                 Entity.id == BrokenSunResolutionConduitId))
+            {
+                Snapshot.bBrokenSunResolutionConduitComplete = true;
+                if (Snapshot.BrokenSunResolutionConduitId == 0)
+                {
+                    Snapshot.BrokenSunResolutionConduitId = Entity.id;
+                }
+            }
+        }
+
+        const uint64 RequiredTicks =
+            FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
+                Plan,
+                SelectedBrokenSunResolution);
+        if (bBrokenSunResolutionHoldStarted &&
+            BrokenSunResolutionStartTick > 0 && RequiredTicks > 0 &&
+            Simulation->CurrentTick() >= BrokenSunResolutionStartTick)
+        {
+            const uint64 Elapsed =
+                Simulation->CurrentTick() - BrokenSunResolutionStartTick;
+            Snapshot.bBrokenSunResolutionWindowHeld =
+                Elapsed >= RequiredTicks;
+            Snapshot.BrokenSunResolutionTicksRemaining =
+                Elapsed >= RequiredTicks ? 0 : RequiredTicks - Elapsed;
+        }
+    }
     return Snapshot;
 }
 
@@ -9437,6 +10856,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         FixedTimeAccumulator -= TickInterval;
         ++TicksThisFrame;
         AuditSeveralVoicesOneCommandContractAfterFixedStep();
+        AuditBrokenSunContractAfterFixedStep();
         if (SelectedOperation ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
         {
@@ -9444,6 +10864,17 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 GetSeveralVoicesOneCommandPhase();
             if (Phase == EEchoesSeveralVoicesOneCommandPhase::Complete ||
                 Phase == EEchoesSeveralVoicesOneCommandPhase::Failed)
+            {
+                FixedTimeAccumulator = 0.0;
+                break;
+            }
+        }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const EEchoesBrokenSunPhase Phase = GetBrokenSunPhase();
+            if (Phase == EEchoesBrokenSunPhase::Complete ||
+                Phase == EEchoesBrokenSunPhase::Failed)
             {
                 FixedTimeAccumulator = 0.0;
                 break;
@@ -10193,6 +11624,79 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 }
             }
             else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignTheBrokenSun &&
+                     !bMatchResultReported)
+            {
+                const EEchoesBrokenSunPhase BrokenSunPhase =
+                    GetBrokenSunPhase();
+                const bool bBrokenSunFinished =
+                    BrokenSunPhase == EEchoesBrokenSunPhase::Complete ||
+                    BrokenSunPhase == EEchoesBrokenSunPhase::Failed;
+                if (bBrokenSunFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+                    EEchoesFinalResolution RecordedResolution =
+                        SelectedBrokenSunResolution;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        BrokenSunPhase == EEchoesBrokenSunPhase::Complete
+                            ? CommitBrokenSunCompletion(
+                                  RecordedResolution,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyBrokenSunFinished(
+                            BrokenSunPhase ==
+                                EEchoesBrokenSunPhase::Complete,
+                            SelectedBrokenSunResolution,
+                            RecordedResolution,
+                            CampaignStatus);
+                    }
+                    const uint64 RequiredResolutionTicks =
+                        FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
+                            Plan,
+                            SelectedBrokenSunResolution);
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_BROKEN_SUN_FINISHED] result=%s phase=%s planKey=%u founding=%u protocol=%u resolution=%s recordedResolution=%s availability=0x%02X campaignStatus=%u tick=%llu detail=%s inheritedRecords=14 localAuthority=HollowChoir mixedFactionCommand=false approach=%u conduit=%u holdTicks=%llu endingLedgerEstablished=%s namedWitnessesModeled=true broadPoliticalAcceptanceUnproven=true populationOutcomeUnmodeled=true permanentFutureUnproven=true campaignBalanceUnproven=true ordinaryHumanCompletionUnproven=true releaseReadinessUnproven=true"),
+                        BrokenSunPhase == EEchoesBrokenSunPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesBrokenSunMissionModel::StableName(
+                            BrokenSunPhase),
+                        Plan.StablePlanKey,
+                        static_cast<uint8>(Plan.FoundingDoctrine),
+                        static_cast<uint8>(Plan.RecordedProtocol),
+                        FEchoesBrokenSunMissionModel::ResolutionStableName(
+                            SelectedBrokenSunResolution),
+                        FEchoesBrokenSunMissionModel::ResolutionStableName(
+                            RecordedResolution),
+                        Plan.AvailableFinalResolutions,
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback,
+                        BrokenSunApproachAnchorId,
+                        BrokenSunResolutionConduitId,
+                        static_cast<unsigned long long>(
+                            RequiredResolutionTicks),
+                        CampaignStatus ==
+                                    EEchoesCampaignCommitStatus::Added ||
+                                CampaignStatus ==
+                                    EEchoesCampaignCommitStatus::AlreadyRecorded
+                            ? TEXT("true")
+                            : TEXT("false"));
+                }
+            }
+            else if (SelectedOperation ==
                          EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
                      !bMatchResultReported)
             {
@@ -10760,6 +12264,261 @@ AuditSeveralVoicesOneCommandContractAfterFixedStep()
     }
 }
 
+void UEchoesSimulationSubsystem::AuditBrokenSunContractAfterFixedStep()
+{
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignTheBrokenSun ||
+        !bScenarioReady || !Simulation.IsValid() ||
+        bBrokenSunResolutionContractFailed)
+    {
+        return;
+    }
+
+    const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+    const echoes::sim::Vec2 ResolutionSite =
+        FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+            Plan,
+            SelectedBrokenSunResolution);
+    const uint64 RequiredResolutionTicks =
+        FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
+            Plan,
+            SelectedBrokenSunResolution);
+    const auto IsEntity = [](
+        const echoes::sim::Entity* Entity,
+        uint8 Owner,
+        Faction EntityFaction,
+        EntityType Type)
+    {
+        return Entity != nullptr && Entity->owner == Owner &&
+               Entity->faction == EntityFaction && Entity->type == Type &&
+               Entity->hitPoints > 0 && Entity->completed;
+    };
+    const auto IsLocalChoir = [&IsEntity](
+        const echoes::sim::Entity* Entity,
+        EntityType Type)
+    {
+        return IsEntity(
+            Entity,
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            Faction::HollowChoir,
+            Type);
+    };
+
+    const echoes::sim::Entity* Voice =
+        Simulation->FindEntity(BrokenSunAccordVoiceId);
+    const echoes::sim::Entity* Heavy =
+        Simulation->FindEntity(BrokenSunAccordHeavyId);
+    const echoes::sim::Entity* Neme =
+        Simulation->FindEntity(BrokenSunNemeId);
+    const echoes::sim::Entity* Worker =
+        Simulation->FindEntity(BrokenSunWorkerId);
+    const echoes::sim::Entity* Mara =
+        Simulation->FindEntity(BrokenSunMaraId);
+    const echoes::sim::Entity* Oruun =
+        Simulation->FindEntity(BrokenSunOruunId);
+    const echoes::sim::Entity* Talar =
+        Simulation->FindEntity(BrokenSunTalarId);
+    const echoes::sim::PlayerState* Player =
+        Simulation->FindPlayer(LocalPlayerId);
+
+    bool bLocalCoreIntact = false;
+    const echoes::sim::Entity* ApproachCandidate = nullptr;
+    const echoes::sim::Entity* ConduitCandidate = nullptr;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner != LocalPlayerId ||
+            Entity.faction != Faction::HollowChoir ||
+            Entity.hitPoints <= 0 || !Entity.completed)
+        {
+            continue;
+        }
+        bLocalCoreIntact |= Entity.type == EntityType::CommandCore;
+        if (Entity.type != EntityType::UtilityStructure)
+        {
+            continue;
+        }
+        if (IsWithinTiles(
+                Entity.position,
+                Plan.CrownfallApproachSite,
+                BrokenSunSiteRadiusTiles) &&
+            (ApproachCandidate == nullptr ||
+             Entity.id < ApproachCandidate->id))
+        {
+            ApproachCandidate = &Entity;
+        }
+        if (SelectedBrokenSunResolution !=
+                EEchoesFinalResolution::None &&
+            IsWithinTiles(
+                Entity.position,
+                ResolutionSite,
+                BrokenSunConvergenceRadiusTiles) &&
+            (ConduitCandidate == nullptr ||
+             Entity.id < ConduitCandidate->id))
+        {
+            ConduitCandidate = &Entity;
+        }
+    }
+
+    if (BrokenSunApproachAnchorId == 0 && ApproachCandidate != nullptr)
+    {
+        BrokenSunApproachAnchorId = ApproachCandidate->id;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_BROKEN_SUN_APPROACH_BOUND] tick=%llu anchor=%u exactObjective=true"),
+            static_cast<unsigned long long>(Simulation->CurrentTick()),
+            BrokenSunApproachAnchorId);
+    }
+    const echoes::sim::Entity* ApproachAnchor =
+        Simulation->FindEntity(BrokenSunApproachAnchorId);
+    const bool bApproachValid =
+        IsLocalChoir(ApproachAnchor, EntityType::UtilityStructure) &&
+        IsWithinTiles(
+            ApproachAnchor->position,
+            Plan.CrownfallApproachSite,
+            BrokenSunSiteRadiusTiles);
+
+    const bool bVoiceValid =
+        IsLocalChoir(Voice, EntityType::Soldier) &&
+        Voice->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Possible &&
+        IsWithinTiles(
+            Voice->position,
+            Plan.MaraAccordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bHeavyValid =
+        IsLocalChoir(Heavy, EntityType::HeavyUnit) &&
+        Heavy->choirIdentityState ==
+            echoes::sim::ChoirIdentityState::Manifest &&
+        IsWithinTiles(
+            Heavy->position,
+            Plan.OruunAccordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bNemeValid =
+        IsLocalChoir(Neme, EntityType::ScoutUnit) &&
+        Neme->choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir &&
+        IsWithinTiles(
+            Neme->position,
+            Plan.NemeAccordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bWorkerValid =
+        IsLocalChoir(Worker, EntityType::Worker);
+    const bool bMaraValid =
+        IsEntity(
+            Mara,
+            2,
+            Faction::MeridianCompact,
+            EntityType::ScoutUnit) &&
+        IsWithinTiles(
+            Mara->position,
+            Plan.MaraAccordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bOruunValid =
+        IsEntity(
+            Oruun,
+            3,
+            Faction::KharuunAssemblies,
+            EntityType::ScoutUnit) &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.OruunAccordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bTalarValid =
+        IsEntity(
+            Talar,
+            2,
+            Faction::MeridianCompact,
+            EntityType::Worker) &&
+        IsWithinTiles(
+            Talar->position,
+            Plan.TalarPublicRecordSite,
+            BrokenSunSiteRadiusTiles);
+    const bool bResearchValid =
+        Player != nullptr &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirHeldAlternatives) &&
+        Player->HasCompletedResearch(
+            echoes::sim::ResearchType::ChoirSharedResolution);
+    const bool bAccordValid =
+        bVoiceValid && bHeavyValid && bNemeValid && bResearchValid;
+    const bool bResolutionValid =
+        SelectedBrokenSunResolution == EEchoesFinalResolution::None ||
+        FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            SelectedBrokenSunResolution);
+
+    if (SelectedBrokenSunResolution != EEchoesFinalResolution::None &&
+        BrokenSunResolutionConduitId == 0 &&
+        ConduitCandidate != nullptr && bApproachValid && bAccordValid &&
+        bWorkerValid && bMaraValid && bOruunValid && bTalarValid &&
+        bLocalCoreIntact && bResolutionValid)
+    {
+        BrokenSunResolutionConduitId = ConduitCandidate->id;
+    }
+    const echoes::sim::Entity* ResolutionConduit =
+        Simulation->FindEntity(BrokenSunResolutionConduitId);
+    const bool bConduitValid =
+        IsLocalChoir(ResolutionConduit, EntityType::UtilityStructure) &&
+        IsWithinTiles(
+            ResolutionConduit->position,
+            ResolutionSite,
+            BrokenSunConvergenceRadiusTiles);
+
+    if (!bBrokenSunResolutionHoldStarted && bConduitValid &&
+        SelectedBrokenSunResolution != EEchoesFinalResolution::None &&
+        bApproachValid && bAccordValid && bWorkerValid && bMaraValid &&
+        bOruunValid && bTalarValid && bLocalCoreIntact &&
+        bResolutionValid &&
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing)
+    {
+        bBrokenSunResolutionHoldStarted = true;
+        BrokenSunResolutionStartTick = Simulation->CurrentTick();
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_BROKEN_SUN_RESOLUTION_HOLD_STARTED] tick=%llu resolution=%s anchor=%u conduit=%u holdTicks=%llu exactObjectives=true"),
+            static_cast<unsigned long long>(BrokenSunResolutionStartTick),
+            FEchoesBrokenSunMissionModel::ResolutionStableName(
+                SelectedBrokenSunResolution),
+            BrokenSunApproachAnchorId,
+            BrokenSunResolutionConduitId,
+            static_cast<unsigned long long>(RequiredResolutionTicks));
+    }
+
+    const bool bAnyProtectedLoss =
+        !bWorkerValid || !bMaraValid || !bOruunValid || !bTalarValid ||
+        !IsLocalChoir(Voice, EntityType::Soldier) ||
+        !IsLocalChoir(Heavy, EntityType::HeavyUnit) ||
+        !IsLocalChoir(Neme, EntityType::ScoutUnit);
+    const bool bApproachBreach =
+        BrokenSunApproachAnchorId != 0 && !bApproachValid;
+    const bool bLockedResolutionBreach =
+        SelectedBrokenSunResolution != EEchoesFinalResolution::None &&
+        (!bApproachValid || !bAccordValid || !bResolutionValid);
+    const bool bHoldBreach =
+        bBrokenSunResolutionHoldStarted && !bConduitValid;
+    if (!bLocalCoreIntact || bAnyProtectedLoss || bApproachBreach ||
+        bLockedResolutionBreach || bHoldBreach ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        bBrokenSunResolutionContractFailed = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_BROKEN_SUN_CONTRACT_FAILED] tick=%llu core=%s protected=%s approach=%s accord=%s resolution=%s conduit=%s holdStarted=%s outcome=%u irreversible=true"),
+            static_cast<unsigned long long>(Simulation->CurrentTick()),
+            bLocalCoreIntact ? TEXT("true") : TEXT("false"),
+            bAnyProtectedLoss ? TEXT("false") : TEXT("true"),
+            bApproachValid ? TEXT("true") : TEXT("false"),
+            bAccordValid ? TEXT("true") : TEXT("false"),
+            bResolutionValid ? TEXT("true") : TEXT("false"),
+            bConduitValid ? TEXT("true") : TEXT("false"),
+            bBrokenSunResolutionHoldStarted ? TEXT("true") : TEXT("false"),
+            static_cast<uint8>(Simulation->Outcome()));
+    }
+}
+
 bool UEchoesSimulationSubsystem::IssueCommand(
     echoes::sim::CommandType CommandType,
     uint32 ActorId,
@@ -11025,6 +12784,89 @@ bool UEchoesSimulationSubsystem::IssueChoirReconciliation(
         echoes::sim::FutureWellChoice::Dormant,
         echoes::sim::EntityType::Barracks,
         OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::ChooseFinalResolution(
+    EEchoesFinalResolution Resolution,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!Simulation.IsValid() || !bScenarioReady ||
+        SelectedOperation != EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        OutFeedback = TEXT(
+            "[BROKEN_SUN_NOT_ACTIVE] Deploy The Broken Sun before committing a final resolution.");
+        return false;
+    }
+    const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+    if (!FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            Plan,
+            Resolution))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[FINAL_RESOLUTION_UNEARNED] %s is not available under this campaign's explicit doctrine, district, and Lume protocol receipts."),
+            FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                Resolution));
+        return false;
+    }
+    if (SelectedBrokenSunResolution != EEchoesFinalResolution::None)
+    {
+        if (SelectedBrokenSunResolution == Resolution)
+        {
+            OutFeedback = FString::Printf(
+                TEXT("FINAL RESOLUTION LOCKED FOR THIS OPERATION: %s. Raise the Resolution Conduit at the marked convergence and hold the contract."),
+                FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                    Resolution));
+            return true;
+        }
+        OutFeedback = FString::Printf(
+            TEXT("[FINAL_RESOLUTION_IRREVERSIBLE] %s is already committed for this operation; %s cannot replace it."),
+            FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                SelectedBrokenSunResolution),
+            FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                Resolution));
+        return false;
+    }
+    if (GetBrokenSunPhase() !=
+        EEchoesBrokenSunPhase::ChooseFinalResolution)
+    {
+        OutFeedback = TEXT(
+            "[FINAL_RESOLUTION_PREREQUISITES] Secure the Crownfall approach and assemble the three-site accord before choosing the campaign resolution.");
+        return false;
+    }
+    if (PendingBrokenSunResolution != Resolution)
+    {
+        PendingBrokenSunResolution = Resolution;
+        OutFeedback = FString::Printf(
+            TEXT("ARMED %s — %s Press the same resolution command again to make this operation's irreversible commitment."),
+            FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                Resolution),
+            FEchoesBrokenSunMissionModel::ResolutionCostSummary(
+                Resolution));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_BROKEN_SUN_RESOLUTION_ARMED] resolution=%s planKey=%u availability=0x%02X confirmationRequired=true"),
+            FEchoesBrokenSunMissionModel::ResolutionStableName(
+                Resolution),
+            Plan.StablePlanKey,
+            Plan.AvailableFinalResolutions);
+        return true;
+    }
+
+    SelectedBrokenSunResolution = Resolution;
+    OutFeedback = FString::Printf(
+        TEXT("FINAL RESOLUTION LOCKED FOR THIS OPERATION: %s — %s Raise the Resolution Conduit at the marked convergence. The campaign ending is not recorded until the operation succeeds."),
+        FEchoesBrokenSunMissionModel::ResolutionDisplayName(Resolution),
+        FEchoesBrokenSunMissionModel::ResolutionCostSummary(Resolution));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_BROKEN_SUN_RESOLUTION_LOCKED] resolution=%s planKey=%u availability=0x%02X operationIntentIrreversible=true campaignLedgerCommitted=false"),
+        FEchoesBrokenSunMissionModel::ResolutionStableName(Resolution),
+        Plan.StablePlanKey,
+        Plan.AvailableFinalResolutions);
+    return true;
 }
 
 bool UEchoesSimulationSubsystem::QueuePlayerCommand(
@@ -11295,13 +13137,17 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
         {
             if (SelectedOperation != EEchoesOperationMode::Skirmish &&
                 SelectedOperation !=
-                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+                SelectedOperation !=
+                    EEchoesOperationMode::CampaignTheBrokenSun)
             {
                 OutFeedback = TEXT("[CHOIR_COMMAND_AUTHORITY_REQUIRED] Reconciliation requires a player-commanded Hollow Choir force.");
                 return false;
             }
             if (SelectedOperation ==
-                EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+                    EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+                SelectedOperation ==
+                    EEchoesOperationMode::CampaignTheBrokenSun)
             {
                 const echoes::sim::PlayerState* Player =
                     Simulation->FindPlayer(LocalPlayerId);
@@ -11618,6 +13464,53 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = FString::Printf(
                         TEXT("[CHOIR_PHASE_ANCHOR_SITE] Place the Phase Anchor within %d tiles of the inherited crisis site."),
                         SeveralVoicesOneCommandSiteRadiusTiles);
+                    return false;
+                }
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignTheBrokenSun &&
+                BuildType == EntityType::UtilityStructure)
+            {
+                const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
+                const EEchoesBrokenSunPhase Phase = GetBrokenSunPhase();
+                const echoes::sim::Vec2 ResolutionSite =
+                    FEchoesBrokenSunMissionModel::
+                        ResolutionConvergenceSite(
+                            Plan,
+                            SelectedBrokenSunResolution);
+                const bool bApproachPlacement =
+                    Phase ==
+                        EEchoesBrokenSunPhase::SecureCrownfallApproach &&
+                    IsWithinTiles(
+                        Position,
+                        Plan.CrownfallApproachSite,
+                        BrokenSunSiteRadiusTiles);
+                const bool bConduitPlacement =
+                    Phase ==
+                        EEchoesBrokenSunPhase::RaiseResolutionConduit &&
+                    SelectedBrokenSunResolution !=
+                        EEchoesFinalResolution::None &&
+                    IsWithinTiles(
+                        Position,
+                        ResolutionSite,
+                        BrokenSunConvergenceRadiusTiles);
+                if (!bApproachPlacement && !bConduitPlacement)
+                {
+                    const echoes::sim::Vec2 RequiredSite =
+                        Phase ==
+                            EEchoesBrokenSunPhase::RaiseResolutionConduit
+                            ? ResolutionSite
+                            : Plan.CrownfallApproachSite;
+                    const int32 RequiredRadius =
+                        Phase ==
+                                EEchoesBrokenSunPhase::RaiseResolutionConduit
+                            ? BrokenSunConvergenceRadiusTiles
+                            : BrokenSunSiteRadiusTiles;
+                    OutFeedback = FString::Printf(
+                        TEXT("[BROKEN_SUN_OBJECTIVE_SITE] The ordered contract accepts a Listening Spine only for the current objective within %d tiles of %d,%d."),
+                        RequiredRadius,
+                        RequiredSite.x.FloorToInt(),
+                        RequiredSite.y.FloorToInt());
                     return false;
                 }
             }

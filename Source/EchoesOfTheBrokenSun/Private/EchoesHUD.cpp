@@ -2,6 +2,7 @@
 
 #include "EchoesContentSubsystem.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
+#include "EchoesBrokenSunMissionModel.h"
 #include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
@@ -608,6 +609,22 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 Plan.StablePlanKey,
                 Plan.ProtocolDisplayName);
+        }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const FEchoesBrokenSunPlan Plan = Bridge->GetBrokenSunPlan();
+            const FEchoesObjectiveSnapshot Objective =
+                Bridge->GetLocalObjectiveSnapshot();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Final plan  %02u     Resolution  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Plan.StablePlanKey,
+                FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                    Objective.BrokenSunFinalResolution));
         }
         else
         {
@@ -1375,6 +1392,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bSeveralVoicesOneCommand = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+    const bool bBrokenSun = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTheBrokenSun;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1421,6 +1441,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bFutureThatWon ? TEXT("THE FUTURE THAT WON")
              : bAssemblyOfTheMissing ? TEXT("ASSEMBLY OF THE MISSING")
              : bSeveralVoicesOneCommand ? TEXT("SEVERAL VOICES, ONE COMMAND")
+             : bBrokenSun ? TEXT("THE BROKEN SUN")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1476,6 +1497,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 14  //  %s  //  NEME + PROTECTED VOICES"),
                   *LocalFaction)
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 15  //  %s  //  FINAL ACCORD + NAMED WITNESSES"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1510,6 +1535,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 13")
     : bSeveralVoicesOneCommand
         ? TEXT("[F9] CHANGE OPERATION  //  HOLLOW CHOIR AUTHORITY  //  MISSION 14")
+    : bBrokenSun
+        ? TEXT("[F9] CHANGE OPERATION  //  HOLLOW CHOIR AUTHORITY  //  MISSION 15")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1568,6 +1595,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Twelve ordered records bind three neutral public interfaces to the existing plan without adding hidden authorship, trust, or mixed-faction command.")
         : bSeveralVoicesOneCommand
             ? TEXT("Thirteen ordered records grant one bounded Hollow Choir command perspective while retaining the exact inherited protocol context.")
+        : bBrokenSun
+            ? TEXT("Fourteen ordered records admit the final operation. Prior doctrine, district allocation, and Lume protocol determine the explicit earned resolution set.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1604,6 +1633,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Establish paired public-record readback, link the Crownfall index, then observe the assembly from two independent witness sites.")
         : bSeveralVoicesOneCommand
             ? TEXT("Resolve protected voices into incompatible states, research their shared use, then raise a Phase Anchor and hold the crisis for 8.0 seconds.")
+        : bBrokenSun
+            ? TEXT("Secure the approach, assemble the witnessed accord, confirm one earned resolution, then raise its distinct conduit and hold the exact final contract.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2914,6 +2945,184 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        const FEchoesBrokenSunPlan Plan = Bridge->GetBrokenSunPlan();
+        const bool bFailed =
+            Objective.BrokenSunPhase == EEchoesBrokenSunPhase::Failed;
+        const bool bAccord =
+            Objective.bBrokenSunMeridianAccordEstablished &&
+            Objective.bBrokenSunKharuunAccordEstablished &&
+            Objective.bBrokenSunChoirAccordEstablished;
+        const echoes::sim::Simulation* MissionSimulation =
+            Bridge->GetSimulation();
+        const double TicksPerSecond = MissionSimulation != nullptr
+            ? static_cast<double>(FMath::Max<uint32>(
+                  1,
+                  MissionSimulation->Config().ticksPerSecond))
+            : 20.0;
+        const double RemainingSeconds =
+            static_cast<double>(
+                Objective.BrokenSunResolutionTicksRemaining) /
+            TicksPerSecond;
+        const FString ApproachState = bFailed
+            ? TEXT("CONTRACT LOST")
+            : Objective.bBrokenSunApproachSecured
+                ? FString::Printf(
+                      TEXT("SECURED — EXACT ANCHOR %u"),
+                      Objective.BrokenSunApproachAnchorId)
+                : FString::Printf(
+                      TEXT("WORKER [M] APPROACH ANCHOR AT %d,%d"),
+                      Plan.CrownfallApproachSite.x.FloorToInt(),
+                      Plan.CrownfallApproachSite.y.FloorToInt());
+        const int32 AccordCount =
+            (Objective.bBrokenSunMeridianAccordEstablished ? 1 : 0) +
+            (Objective.bBrokenSunKharuunAccordEstablished ? 1 : 0) +
+            (Objective.bBrokenSunChoirAccordEstablished ? 1 : 0);
+        const FString AccordState = bFailed
+            ? TEXT("NAMED WITNESS OR COMMAND CONTRACT LOST")
+            : bAccord
+                ? TEXT("MARA + ORUUN + NEME + TALAR WITNESSED")
+                : FString::Printf(
+                      TEXT("%d/3 COMMAND SITES — PROTECT M/O/T + F2 BOTH"),
+                      AccordCount);
+        FString AvailableChoices;
+        const auto AppendChoice = [&AvailableChoices](
+            bool bAvailable,
+            const TCHAR* Key,
+            const TCHAR* Label)
+        {
+            if (!bAvailable)
+            {
+                return;
+            }
+            if (!AvailableChoices.IsEmpty())
+            {
+                AvailableChoices += TEXT("  ");
+            }
+            AvailableChoices += FString::Printf(
+                TEXT("[%s] %s"),
+                Key,
+                Label);
+        };
+        const uint8 Available =
+            Objective.BrokenSunAvailableFinalResolutions;
+        AppendChoice(
+            (Available & static_cast<uint8>(
+                EEchoesFinalResolutionAvailability::Restoration)) != 0,
+            TEXT("S+1"),
+            TEXT("RESTORE"));
+        AppendChoice(
+            (Available & static_cast<uint8>(
+                EEchoesFinalResolutionAvailability::ControlledStabilization)) != 0,
+            TEXT("S+2"),
+            TEXT("STABILIZE"));
+        AppendChoice(
+            (Available & static_cast<uint8>(
+                EEchoesFinalResolutionAvailability::Extinguishment)) != 0,
+            TEXT("S+3"),
+            TEXT("EXTINGUISH"));
+        AppendChoice(
+            (Available & static_cast<uint8>(
+                EEchoesFinalResolutionAvailability::OpenEvolution)) != 0,
+            TEXT("S+4"),
+            TEXT("EVOLVE"));
+        FString ResolutionState = AvailableChoices;
+        if (bFailed)
+        {
+            ResolutionState = TEXT("FINAL CONTRACT FAILED — NO ENDING COMMITTED");
+        }
+        else if (Objective.BrokenSunFinalResolution !=
+                 EEchoesFinalResolution::None)
+        {
+            const echoes::sim::Vec2 Site =
+                FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                    Plan,
+                    Objective.BrokenSunFinalResolution);
+            ResolutionState = Objective.bBrokenSunResolutionWindowHeld
+                ? FString::Printf(
+                      TEXT("%s — WINDOW HELD"),
+                      FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                          Objective.BrokenSunFinalResolution))
+            : Objective.bBrokenSunResolutionConduitComplete
+                ? FString::Printf(
+                      TEXT("HOLD %s — %.1fs"),
+                      FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                          Objective.BrokenSunFinalResolution),
+                      RemainingSeconds)
+                : FString::Printf(
+                      TEXT("%s LOCKED — WORKER [M] AT %d,%d"),
+                      FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                          Objective.BrokenSunFinalResolution),
+                      Site.x.FloorToInt(),
+                      Site.y.FloorToInt());
+        }
+        else if (Objective.BrokenSunPendingFinalResolution !=
+                 EEchoesFinalResolution::None)
+        {
+            ResolutionState = FString::Printf(
+                TEXT("ARMED %s — PRESS THE SAME SHIFT+NUMBER AGAIN"),
+                FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                    Objective.BrokenSunPendingFinalResolution));
+        }
+        else if (!bAccord)
+        {
+            ResolutionState = TEXT("WAITING — COMPLETE THE WITNESSED ACCORD");
+        }
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("THE BROKEN SUN  //  MISSION 15"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  APPROACH   %s"), *ApproachState),
+            bFailed ? Failed
+                    : Objective.bBrokenSunApproachSecured
+                        ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.64f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  ACCORD     %s"), *AccordState),
+            bFailed ? Failed : bAccord ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.60f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  RESOLUTION %s"), *ResolutionState),
+            bFailed ? Failed
+                    : Objective.bBrokenSunResolutionWindowHeld
+                        ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.54f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_BROKEN_SUN_OBJECTIVES_READY] phase=%s plan=%u founding=%u districtPair=%u+%u deferred=%u protocol=%u availability=0x%02X voice=%u heavy=%u neme=%u mara=%u oruun=%u talar=%u approach=%u conduit=%u exactOrderedLedger=true explicitChoice=true doubleConfirmation=true resolutionSpecificGeometry=true resolutionSpecificHold=true commandAuthority=HollowChoir mixedFactionCommand=false releaseReadinessUnproven=true"),
+                FEchoesBrokenSunMissionModel::StableName(
+                    Objective.BrokenSunPhase),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                static_cast<uint8>(Plan.FirstContributingDistrict),
+                static_cast<uint8>(Plan.SecondContributingDistrict),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Plan.AvailableFinalResolutions,
+                Objective.BrokenSunAccordVoiceId,
+                Objective.BrokenSunAccordHeavyId,
+                Objective.BrokenSunNemeId,
+                Objective.BrokenSunMaraId,
+                Objective.BrokenSunOruunId,
+                Objective.BrokenSunTalarId,
+                Objective.BrokenSunApproachAnchorId,
+                Objective.BrokenSunResolutionConduitId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -3055,13 +3264,35 @@ void AEchoesHUD::DrawMatchResult(
     const bool bSeveralVoicesOneCommandResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+    const bool bBrokenSunResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignTheBrokenSun;
+    const EEchoesFinalResolution FinalResolution =
+        EchoesController->GetCampaignFinalResolution();
+    const EEchoesFinalResolution RecordedFinalResolution =
+        EchoesController->GetRecordedCampaignFinalResolution();
+    const EEchoesCampaignCommitStatus CampaignCommitStatus =
+        EchoesController->GetCampaignCommitStatus();
+    const bool bBrokenSunEndingRecorded = bBrokenSunResult &&
+        (CampaignCommitStatus == EEchoesCampaignCommitStatus::Added ||
+         CampaignCommitStatus ==
+             EEchoesCampaignCommitStatus::AlreadyRecorded);
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bSeveralVoicesOneCommandResult
+        ? bBrokenSunResult
+            ? bVictory
+                ? bBrokenSunEndingRecorded
+                    ? TEXT("FINAL RESOLUTION RECORDED")
+                : CampaignCommitStatus ==
+                        EEchoesCampaignCommitStatus::ReplayConflict
+                    ? TEXT("ALTERNATE RESOLUTION REPLAY COMPLETE")
+                    : TEXT("FINAL OPERATION COMPLETE — LEDGER NOT UPDATED")
+                : TEXT("FINAL RESOLUTION CONTRACT FAILED")
+        : bSeveralVoicesOneCommandResult
             ? bVictory ? TEXT("CHOIR CRISIS HELD")
                        : TEXT("CHOIR CRISIS CONTRACT FAILED")
         : bAssemblyOfTheMissingResult
@@ -3084,7 +3315,27 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bSeveralVoicesOneCommandResult
+        ? bBrokenSunResult
+            ? bVictory
+                ? bBrokenSunEndingRecorded
+                    ? FString::Printf(
+                          TEXT("%s IS COMMITTED"),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              FinalResolution))
+                : CampaignCommitStatus ==
+                        EEchoesCampaignCommitStatus::ReplayConflict
+                    ? FString::Printf(
+                          TEXT("%s COMPLETED; %s REMAINS RECORDED"),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              FinalResolution),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              RecordedFinalResolution))
+                    : FString::Printf(
+                          TEXT("%s COMPLETED IN SIMULATION"),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              FinalResolution))
+                : TEXT("THE FINAL ACCORD BREAKS")
+        : bSeveralVoicesOneCommandResult
             ? bVictory ? TEXT("SEVERAL VOICES HOLD ONE COMMAND")
                        : TEXT("THE SHARED RESOLUTION BREAKS")
         : bAssemblyOfTheMissingResult
@@ -3129,7 +3380,22 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bSeveralVoicesOneCommandResult
+        ? bBrokenSunResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The Crownfall approach, three-part accord, exact Resolution Conduit, and fixed hold contract completed under %s. Cost: %s %s Wider social consequences, campaign balance, and release readiness remain unproven."),
+                      FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                          FinalResolution),
+                      FEchoesBrokenSunMissionModel::ResolutionCostSummary(
+                          FinalResolution),
+                      bBrokenSunEndingRecorded
+                          ? TEXT("The campaign ledger records this bounded resolution.")
+                      : CampaignCommitStatus ==
+                              EEchoesCampaignCommitStatus::ReplayConflict
+                          ? TEXT("This was a replay; the earlier ledger ending was not rewritten.")
+                          : TEXT("The simulation completed, but no durable campaign ending was saved."))
+                : TEXT("The local Core, Hollow Choir command force, Neme, Mara, Oruun, Talar, exact approach anchor, accord, chosen conduit, or fixed hold contract failed before the final resolution could be recorded.")
+        : bSeveralVoicesOneCommandResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("One protected voice resolved to Possible, one remained Manifest, and Neme sustained both under the recorded %s protocol context through the full Phase Anchor crisis window. This completes one bounded Choir command perspective; it does not decide the Choir's final fate, prove campaign balance, or establish release readiness."),
@@ -3244,7 +3510,12 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bSeveralVoicesOneCommandResult
+                CampaignPersistenceLine = bBrokenSunResult
+                    ? FString::Printf(
+                          TEXT("MISSION 15 RECORDED // %s fixed as the campaign's final resolution."),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              RecordedFinalResolution))
+                : bSeveralVoicesOneCommandResult
                     ? FString::Printf(
                           TEXT("MISSION 14 RECORDED // %s Choir crisis contract fixed."),
                           RecordedChoice)
@@ -3301,14 +3572,24 @@ void AEchoesHUD::DrawMatchResult(
                           RecordedChoice);
                 break;
             case EEchoesCampaignCommitStatus::AlreadyRecorded:
-                CampaignPersistenceLine = FString::Printf(
-                    TEXT("LEDGER VERIFIED // %s remains recorded."),
-                    RecordedChoice);
+                CampaignPersistenceLine = bBrokenSunResult
+                    ? FString::Printf(
+                          TEXT("LEDGER VERIFIED // %s remains the recorded final resolution."),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              RecordedFinalResolution))
+                    : FString::Printf(
+                          TEXT("LEDGER VERIFIED // %s remains recorded."),
+                          RecordedChoice);
                 break;
             case EEchoesCampaignCommitStatus::ReplayConflict:
-                CampaignPersistenceLine = FString::Printf(
-                    TEXT("REPLAY ONLY // campaign ledger remains %s."),
-                    RecordedChoice);
+                CampaignPersistenceLine = bBrokenSunResult
+                    ? FString::Printf(
+                          TEXT("REPLAY ONLY // campaign ledger remains %s."),
+                          FEchoesBrokenSunMissionModel::ResolutionDisplayName(
+                              RecordedFinalResolution))
+                    : FString::Printf(
+                          TEXT("REPLAY ONLY // campaign ledger remains %s."),
+                          RecordedChoice);
                 break;
             default:
                 CampaignPersistenceLine =
@@ -3345,7 +3626,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bSeveralVoicesOneCommandResult
+        ? bBrokenSunResult
+            ? FString::Printf(
+                  TEXT("MISSION 15 — THE BROKEN SUN  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bSeveralVoicesOneCommandResult
             ? FString::Printf(
                   TEXT("MISSION 14 — SEVERAL VOICES, ONE COMMAND  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -3630,6 +3915,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bSeveralVoicesOneCommand = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
+    const bool bBrokenSun = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTheBrokenSun;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -3682,6 +3970,41 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetSeveralVoicesOneCommandPlan()
             : FEchoesSeveralVoicesOneCommandPlan{};
+    const FEchoesBrokenSunPlan BrokenSunPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetBrokenSunPlan()
+            : FEchoesBrokenSunPlan{};
+    FString BrokenSunAvailableResolutions;
+    const auto AppendBrokenSunResolution =
+        [&BrokenSunAvailableResolutions](const TCHAR* Name)
+        {
+            if (!BrokenSunAvailableResolutions.IsEmpty())
+            {
+                BrokenSunAvailableResolutions += TEXT(" / ");
+            }
+            BrokenSunAvailableResolutions += Name;
+        };
+    if (FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            BrokenSunPlan, EEchoesFinalResolution::Restoration))
+    {
+        AppendBrokenSunResolution(TEXT("RESTORATION"));
+    }
+    if (FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            BrokenSunPlan,
+            EEchoesFinalResolution::ControlledStabilization))
+    {
+        AppendBrokenSunResolution(TEXT("CONTROLLED"));
+    }
+    if (FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            BrokenSunPlan, EEchoesFinalResolution::Extinguishment))
+    {
+        AppendBrokenSunResolution(TEXT("EXTINGUISHMENT"));
+    }
+    if (FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+            BrokenSunPlan, EEchoesFinalResolution::OpenEvolution))
+    {
+        AppendBrokenSunResolution(TEXT("OPEN EVOLUTION"));
+    }
     FString FactionSystems;
     const echoes::sim::Faction BriefingFaction =
         BriefingBridge != nullptr
@@ -3759,6 +4082,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? FString::Printf(
                   TEXT("SEVERAL VOICES, ONE COMMAND  //  MISSION 14  //  %s"),
                   *LocalFaction)
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("THE BROKEN SUN  //  MISSION 15  //  %s"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
               *LocalFaction);
@@ -3833,6 +4160,12 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Thirteen exact ordered records admit plan %02u: one bounded Hollow Choir command crisis under the inherited %s protocol context."),
                   SeveralVoicesPlan.StablePlanKey,
                   SeveralVoicesPlan.ProtocolDisplayName)
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("Plan %02u inherits %s, %s, protected neutral witnesses, and the earned final-resolution set."),
+                  BrokenSunPlan.StablePlanKey,
+                  BrokenSunPlan.RouteDisplayName,
+                  BrokenSunPlan.ProtocolDisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3884,6 +4217,10 @@ void AEchoesHUD::DrawMissionBriefing(
                       AssemblyPlan.DeferredDistrict))
         : bSeveralVoicesOneCommand
             ? TEXT("Neme and the local Hollow Choir are commandable. The protected Soldier must resolve to Possible while the protected Heavy remains Manifest; both transitions use visible deterministic timers.")
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("Command the local Choir and Neme. Protect neutral Mara/Oruun/Talar. Earned: %s."),
+                  *BrokenSunAvailableResolutions)
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -3987,6 +4324,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   SeveralVoicesPlan.ManifestVoiceSite.y.FloorToInt(),
                   SeveralVoicesPlan.NemeCommandSite.x.FloorToInt(),
                   SeveralVoicesPlan.NemeCommandSite.y.FloorToInt())
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("01  Build APPROACH ANCHOR [M] at %d,%d. Research both [F2]; place Possible, Manifest, and Neme at their marked sites."),
+                  BrokenSunPlan.CrownfallApproachSite.x.FloorToInt(),
+                  BrokenSunPlan.CrownfallApproachSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -4092,6 +4434,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("02  Research Shared Resolution [F2], build a Phase Anchor [M] at %d,%d, and hold both incompatible voices plus Neme through the visible 8.0-second crisis timer."),
                   SeveralVoicesPlan.CrisisAnchorSite.x.FloorToInt(),
                   SeveralVoicesPlan.CrisisAnchorSite.y.FloorToInt())
+        : bBrokenSun
+            ? FString::Printf(
+                  TEXT("02  Confirm one earned ending twice [Shift+1-4], build its [M] Resolution Conduit, then hold for %llu-%llu ticks."),
+                  static_cast<unsigned long long>(
+                      BrokenSunPlan.ResolutionHoldTicks),
+                  static_cast<unsigned long long>(
+                      BrokenSunPlan.ResolutionHoldTicks + 120))
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -4125,6 +4474,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 and M12 remain required public receipts, not new branch variables.")
              : bSeveralVoicesOneCommand
                  ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11–M13 admit this perspective but do not decide the Choir's fate.")
+             : bBrokenSun
+                 ? TEXT("M01/M09/M10 determine earned endings. M11-M14 are required receipts. There is no hidden morality score.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -4156,6 +4507,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory records one bounded public assembly/readback receipt—not authorship, responsibility, trust, consent, civilian state, cryptographic authenticity, or wider cause.")
         : bSeveralVoicesOneCommand
             ? TEXT("Victory completes one bounded Hollow Choir command crisis. It does not decide the Choir's final fate, prove campaign balance, establish ordinary-player completion, or imply release readiness.")
+        : bBrokenSun
+            ? TEXT("Victory records one ending after its conduit and hold succeed. Other endings stay unchosen; wider consequences and release readiness remain unproven.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -4195,6 +4548,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
         : bSeveralVoicesOneCommand
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS NEME + HOLLOW CHOIR")
+        : bBrokenSun
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS THE FINAL ACCORD")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -4423,7 +4778,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignTheBrokenSun)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -5010,6 +5367,58 @@ void AEchoesHUD::DrawTacticalMinimap(
                       Objective.bSeveralVoicesNemeAtCommandSite
                     ? Border : WaitingColor);
         }
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            const FEchoesBrokenSunPlan Plan = Bridge->GetBrokenSunPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.CrownfallApproachSite,
+                TEXT("A"),
+                Objective.bBrokenSunApproachSecured
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.MaraAccordSite,
+                TEXT("M"),
+                Objective.bBrokenSunMeridianAccordEstablished
+                    ? CompleteColor
+                    : Objective.bBrokenSunApproachSecured
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.OruunAccordSite,
+                TEXT("O"),
+                Objective.bBrokenSunKharuunAccordEstablished
+                    ? CompleteColor
+                    : Objective.bBrokenSunApproachSecured
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.NemeAccordSite,
+                TEXT("N"),
+                Objective.bBrokenSunChoirAccordEstablished
+                    ? CompleteColor
+                    : Objective.bBrokenSunApproachSecured
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.TalarPublicRecordSite,
+                TEXT("T"),
+                Objective.BrokenSunFinalResolution !=
+                        EEchoesFinalResolution::None
+                    ? Border : WaitingColor);
+            if (Objective.BrokenSunFinalResolution !=
+                EEchoesFinalResolution::None)
+            {
+                DrawMissionSite(
+                    FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                        Plan,
+                        Objective.BrokenSunFinalResolution),
+                    TEXT("F"),
+                    Objective.bBrokenSunResolutionWindowHeld
+                        ? CompleteColor
+                    : Objective.bBrokenSunResolutionConduitComplete
+                        ? Border : WaitingColor);
+            }
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -5058,6 +5467,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             ? TEXT("MISSION NAV  |  P/M/N/A")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignTheBrokenSun
+            ? TEXT("MISSION NAV  |  A + M/O/N/T + F")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,
