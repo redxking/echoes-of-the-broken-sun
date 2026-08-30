@@ -62,6 +62,7 @@ public:
     [[nodiscard]] bool IsRelaySupplyFieldVisible() const;
     [[nodiscard]] bool IsWaystoneStateVisible() const;
     [[nodiscard]] bool IsWarformStateVisible() const;
+    [[nodiscard]] bool IsChoirIdentityStateVisible() const;
     [[nodiscard]] bool IsAegisPowerFieldVisible() const;
     [[nodiscard]] bool IsTemporaryMineralCover() const
     {
@@ -78,6 +79,10 @@ public:
     [[nodiscard]] echoes::sim::WarformAdaptation GetPendingWarformAdaptation() const
     {
         return PendingWarformAdaptation;
+    }
+    [[nodiscard]] echoes::sim::ChoirIdentityState GetChoirIdentityState() const
+    {
+        return ChoirIdentityState;
     }
     [[nodiscard]] bool IsDamagePulseActive() const
     {
@@ -145,6 +150,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> WarformStateField;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> ChoirIdentityField;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> AegisPowerField;
@@ -249,6 +257,9 @@ private:
     TObjectPtr<UMaterialInstanceDynamic> WarformStateFieldMaterial;
 
     UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> ChoirIdentityFieldMaterial;
+
+    UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> AegisPowerFieldMaterial;
 
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
@@ -279,6 +290,8 @@ private:
         echoes::sim::WarformAdaptation::None;
     echoes::sim::WarformAdaptation PendingWarformAdaptation =
         echoes::sim::WarformAdaptation::None;
+    echoes::sim::ChoirIdentityState ChoirIdentityState =
+        echoes::sim::ChoirIdentityState::NotChoir;
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
     bool bUsingAuthoredRosterMesh = false;

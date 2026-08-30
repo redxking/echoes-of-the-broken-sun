@@ -17,7 +17,7 @@ mkdir -p "$project_root/BuildArtifacts"
 rm -rf "$report_dir"
 
 "$editor" "$project" \
-  -unattended -nop4 -nosplash -nullrhi -Multiprocess \
+  -unattended -nop4 -nosplash -nullrhi \
   -ExecCmds="Automation RunTests Echoes; Quit" \
   -TestExit="Automation Test Queue Empty" \
   -ReportExportPath="$report_dir"

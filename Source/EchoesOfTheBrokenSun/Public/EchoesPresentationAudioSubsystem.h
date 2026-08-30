@@ -13,7 +13,8 @@ enum class EEchoesPresentationAudioCue : uint8
 {
     CommandConfirm,
     DestructionMeridian,
-    DestructionKharuun
+    DestructionKharuun,
+    DestructionChoir
 };
 
 /**
@@ -86,6 +87,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<USoundBase> KharuunDestructionSound;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USoundBase> ChoirDestructionSound;
 
     UPROPERTY(Transient)
     TObjectPtr<USoundAttenuation> DestructionAttenuation;

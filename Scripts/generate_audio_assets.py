@@ -79,10 +79,27 @@ def kharuun_destruction(t: float, sample_index: int) -> float:
     return 0.48 * envelope * (0.57 * ceramic + 0.28 * knock + 0.055 * deterministic_grit)
 
 
+def choir_destruction(t: float, sample_index: int) -> float:
+    duration = 0.58
+    progress = min(1.0, t / duration)
+    envelope = smooth_envelope(t, duration, 0.018, 0.31)
+    falling_phase = math.tau * (392.0 * t - 96.0 * t * t / duration)
+    divergent = (
+        math.sin(falling_phase + 0.42 * math.sin(math.tau * 7.0 * t))
+        + math.sin(1.031 * falling_phase + 1.1 - 0.7 * progress)
+    )
+    interval = math.sin(math.tau * (611.0 - 170.0 * progress) * t + 0.8)
+    deterministic_grit = (((sample_index * 1664525 + 1013904223) >> 17) & 0x7FFF) / 16384.0 - 1.0
+    return 0.44 * envelope * (
+        0.49 * divergent + 0.21 * interval + 0.045 * deterministic_grit
+    )
+
+
 CUES = (
     CueSpec("SFX_CommandConfirm", 0.14, "Accepted local command confirmation", command_confirm),
     CueSpec("SFX_DestructionMeridian", 0.46, "Meridian functional-loss confirmation", meridian_destruction),
     CueSpec("SFX_DestructionKharuun", 0.52, "Kharuun functional-loss confirmation", kharuun_destruction),
+    CueSpec("SFX_DestructionChoir", 0.58, "Hollow Choir functional-loss confirmation", choir_destruction),
 )
 
 
@@ -171,11 +188,11 @@ def main() -> None:
         )
         imported.append(import_sound(spec))
 
-    if len(imported) != 3 or any(not isinstance(asset, unreal.SoundWave) for asset in imported):
+    if len(imported) != 4 or any(not isinstance(asset, unreal.SoundWave) for asset in imported):
         raise RuntimeError("Presentation audio audit failed")
     unreal.log(
         "[ECHOES_AUDIO_READY] "
-        f"revision={AUDIO_REVISION} cues=3 sourceRate={SAMPLE_RATE} channels=1 "
+        f"revision={AUDIO_REVISION} cues=4 sourceRate={SAMPLE_RATE} channels=1 "
         "command2D=true destruction3D=true maxConcurrentBounded=true "
         "runtimeAuthority=presentation thirdPartySamples=false finalAudio=false"
     )

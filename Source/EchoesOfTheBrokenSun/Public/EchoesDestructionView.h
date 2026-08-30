@@ -38,6 +38,7 @@ public:
     {
         return CurrentEmissiveStrength;
     }
+    [[nodiscard]] FLinearColor GetBaseColor() const { return BaseColor; }
     [[nodiscard]] FVector GetRingScale() const;
     [[nodiscard]] FVector GetShardALocation() const;
     [[nodiscard]] float GetPresentationLifetimeSeconds() const

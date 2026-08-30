@@ -15,6 +15,8 @@ constexpr TCHAR MeridianDestructionCuePath[] =
     TEXT("/Game/Audio/Generated/SFX_DestructionMeridian.SFX_DestructionMeridian");
 constexpr TCHAR KharuunDestructionCuePath[] =
     TEXT("/Game/Audio/Generated/SFX_DestructionKharuun.SFX_DestructionKharuun");
+constexpr TCHAR ChoirDestructionCuePath[] =
+    TEXT("/Game/Audio/Generated/SFX_DestructionChoir.SFX_DestructionChoir");
 constexpr float MinimumAudibleEffectsVolume = 0.005f;
 
 [[nodiscard]] const TCHAR* CueStableName(EEchoesPresentationAudioCue Cue)
@@ -25,6 +27,8 @@ constexpr float MinimumAudibleEffectsVolume = 0.005f;
             return TEXT("destruction_meridian");
         case EEchoesPresentationAudioCue::DestructionKharuun:
             return TEXT("destruction_kharuun");
+        case EEchoesPresentationAudioCue::DestructionChoir:
+            return TEXT("destruction_choir");
         case EEchoesPresentationAudioCue::CommandConfirm:
         default:
             return TEXT("command_confirm");
@@ -41,6 +45,8 @@ void UEchoesPresentationAudioSubsystem::Initialize(
         LoadObject<USoundBase>(nullptr, MeridianDestructionCuePath);
     KharuunDestructionSound =
         LoadObject<USoundBase>(nullptr, KharuunDestructionCuePath);
+    ChoirDestructionSound =
+        LoadObject<USoundBase>(nullptr, ChoirDestructionCuePath);
     DestructionAttenuation = NewObject<USoundAttenuation>(this);
     if (DestructionAttenuation != nullptr)
     {
@@ -97,10 +103,19 @@ bool UEchoesPresentationAudioSubsystem::PlayDestruction(
     echoes::sim::Faction Faction,
     const FVector& Location)
 {
-    const EEchoesPresentationAudioCue Cue =
-        Faction == echoes::sim::Faction::KharuunAssemblies
-            ? EEchoesPresentationAudioCue::DestructionKharuun
-            : EEchoesPresentationAudioCue::DestructionMeridian;
+    EEchoesPresentationAudioCue Cue =
+        EEchoesPresentationAudioCue::DestructionMeridian;
+    switch (Faction)
+    {
+        case echoes::sim::Faction::MeridianCompact:
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            Cue = EEchoesPresentationAudioCue::DestructionKharuun;
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            Cue = EEchoesPresentationAudioCue::DestructionChoir;
+            break;
+    }
     UWorld* World = GetWorld();
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     USoundBase* Sound = GetCueAsset(Cue);
@@ -141,14 +156,16 @@ bool UEchoesPresentationAudioSubsystem::HasAllAuthoredCueAssets() const
 {
     return CommandConfirmSound != nullptr &&
         MeridianDestructionSound != nullptr &&
-        KharuunDestructionSound != nullptr;
+        KharuunDestructionSound != nullptr &&
+        ChoirDestructionSound != nullptr;
 }
 
 int32 UEchoesPresentationAudioSubsystem::GetLoadedCueCount() const
 {
     return (CommandConfirmSound != nullptr ? 1 : 0) +
         (MeridianDestructionSound != nullptr ? 1 : 0) +
-        (KharuunDestructionSound != nullptr ? 1 : 0);
+        (KharuunDestructionSound != nullptr ? 1 : 0) +
+        (ChoirDestructionSound != nullptr ? 1 : 0);
 }
 
 bool UEchoesPresentationAudioSubsystem::HasBoundedSpatialAttenuation() const
@@ -210,6 +227,8 @@ USoundBase* UEchoesPresentationAudioSubsystem::GetCueAsset(
             return MeridianDestructionSound;
         case EEchoesPresentationAudioCue::DestructionKharuun:
             return KharuunDestructionSound;
+        case EEchoesPresentationAudioCue::DestructionChoir:
+            return ChoirDestructionSound;
         case EEchoesPresentationAudioCue::CommandConfirm:
         default:
             return CommandConfirmSound;

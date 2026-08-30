@@ -25,6 +25,39 @@ const TCHAR* AuthoredPresentationMeshPath(
     echoes::sim::Faction Faction,
     echoes::sim::EntityType Type)
 {
+    if (Type == echoes::sim::EntityType::ResourceNode)
+    {
+        return TEXT("/Game/Art/Generated/World/Resources/SM_World_MatterDeposit.SM_World_MatterDeposit");
+    }
+    if (Type == echoes::sim::EntityType::FutureWell)
+    {
+        return TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellBase.SM_World_FutureWellBase");
+    }
+    if (Faction == echoes::sim::Faction::HollowChoir)
+    {
+        switch (Type)
+        {
+            case echoes::sim::EntityType::Worker:
+                return TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Threadkeeper.SM_Choir_Threadkeeper");
+            case echoes::sim::EntityType::Soldier:
+                return TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Intervalist.SM_Choir_Intervalist");
+            case echoes::sim::EntityType::HeavyUnit:
+                return TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_LacunaWarden.SM_Choir_LacunaWarden");
+            case echoes::sim::EntityType::ScoutUnit:
+                return TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Afterimage.SM_Choir_Afterimage");
+            case echoes::sim::EntityType::CommandCore:
+                return TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_Concordance.SM_Choir_Concordance");
+            case echoes::sim::EntityType::Dropoff:
+                return TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_IntervalLoom.SM_Choir_IntervalLoom");
+            case echoes::sim::EntityType::Barracks:
+                return TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_ChorusLoom.SM_Choir_ChorusLoom");
+            case echoes::sim::EntityType::UtilityStructure:
+                return TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_PhaseAnchor.SM_Choir_PhaseAnchor");
+            case echoes::sim::EntityType::ResourceNode:
+            case echoes::sim::EntityType::FutureWell:
+                break;
+        }
+    }
     const bool bKharuun =
         Faction == echoes::sim::Faction::KharuunAssemblies;
     switch (Type)
@@ -62,9 +95,8 @@ const TCHAR* AuthoredPresentationMeshPath(
                        ? TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")
                        : TEXT("/Game/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.SM_Meridian_AegisPost");
         case echoes::sim::EntityType::ResourceNode:
-            return TEXT("/Game/Art/Generated/World/Resources/SM_World_MatterDeposit.SM_World_MatterDeposit");
         case echoes::sim::EntityType::FutureWell:
-            return TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellBase.SM_World_FutureWellBase");
+            break;
     }
     return nullptr;
 }
@@ -92,6 +124,10 @@ FLinearColor ColorForState(const echoes::sim::Entity& State)
     if (State.type == echoes::sim::EntityType::ResourceNode)
     {
         return FLinearColor(0.95f, 0.56f, 0.08f);
+    }
+    if (State.faction == echoes::sim::Faction::HollowChoir)
+    {
+        return FLinearColor(0.788f, 0.824f, 0.941f);
     }
     switch (State.owner)
     {
@@ -203,6 +239,15 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetReceivesDecals(false);
     WarformStateField->SetVisibility(false);
 
+    ChoirIdentityField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("ChoirIdentityField"));
+    ChoirIdentityField->SetupAttachment(SceneRoot);
+    ChoirIdentityField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ChoirIdentityField->SetGenerateOverlapEvents(false);
+    ChoirIdentityField->SetCastShadow(false);
+    ChoirIdentityField->SetReceivesDecals(false);
+    ChoirIdentityField->SetVisibility(false);
+
     AegisPowerField = CreateDefaultSubobject<UStaticMeshComponent>(
         TEXT("AegisPowerField"));
     AegisPowerField->SetupAttachment(SceneRoot);
@@ -299,6 +344,8 @@ AEchoesEntityView::AEchoesEntityView()
     WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
     WarformStateField->SetStaticMesh(CylinderMesh);
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+    ChoirIdentityField->SetStaticMesh(CylinderMesh);
+    ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetStaticMesh(CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeScale3D(FVector(1.35f, 1.35f, 0.045f));
@@ -432,6 +479,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   WarformAdaptation != State.warformAdaptation ||
                                   PendingWarformAdaptation !=
                                       State.pendingWarformAdaptation ||
+                                  ChoirIdentityState !=
+                                      State.choirIdentityState ||
                                   bTemporaryMineralCover !=
                                       State.temporaryMineralCover ||
                                   bAegisPowered != State.aegisPowered;
@@ -446,6 +495,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     WaystoneMode = State.waystoneMode;
     WarformAdaptation = State.warformAdaptation;
     PendingWarformAdaptation = State.pendingWarformAdaptation;
+    ChoirIdentityState = State.choirIdentityState;
     bTemporaryMineralCover = State.temporaryMineralCover;
     bAegisPowered = State.aegisPowered;
     HitPoints = State.hitPoints;
@@ -509,6 +559,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 {
     const bool bKharuun =
         State.faction == echoes::sim::Faction::KharuunAssemblies;
+    const bool bChoir =
+        State.faction == echoes::sim::Faction::HollowChoir;
     UStaticMesh* DesiredMesh = CylinderMesh;
     FVector BodyScale(0.48f, 0.48f, 0.70f);
     FVector BodyOffset(0.0f, 0.0f, 35.0f);
@@ -633,44 +685,44 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 switch (State.type)
                 {
                     case echoes::sim::EntityType::Worker:
-                        SelectionRadius = bKharuun ? 1.35f : 1.45f;
+                        SelectionRadius = bChoir ? 1.40f : bKharuun ? 1.35f : 1.45f;
                         HealthBarWidthScale = 1.20f;
-                        HealthBarHeight = bKharuun ? 148.0f : 194.0f;
+                        HealthBarHeight = bChoir ? 172.0f : bKharuun ? 148.0f : 194.0f;
                         break;
                     case echoes::sim::EntityType::Soldier:
-                        SelectionRadius = bKharuun ? 1.55f : 1.25f;
+                        SelectionRadius = bChoir ? 1.50f : bKharuun ? 1.55f : 1.25f;
                         HealthBarWidthScale = 1.35f;
-                        HealthBarHeight = bKharuun ? 146.0f : 166.0f;
+                        HealthBarHeight = bChoir ? 178.0f : bKharuun ? 146.0f : 166.0f;
                         break;
                     case echoes::sim::EntityType::HeavyUnit:
-                        SelectionRadius = bKharuun ? 1.95f : 1.70f;
+                        SelectionRadius = bChoir ? 1.90f : bKharuun ? 1.95f : 1.70f;
                         HealthBarWidthScale = 1.65f;
-                        HealthBarHeight = bKharuun ? 158.0f : 132.0f;
+                        HealthBarHeight = bChoir ? 180.0f : bKharuun ? 158.0f : 132.0f;
                         break;
                     case echoes::sim::EntityType::ScoutUnit:
-                        SelectionRadius = bKharuun ? 1.55f : 1.85f;
+                        SelectionRadius = bChoir ? 1.85f : bKharuun ? 1.55f : 1.85f;
                         HealthBarWidthScale = 1.40f;
-                        HealthBarHeight = bKharuun ? 216.0f : 126.0f;
+                        HealthBarHeight = bChoir ? 135.0f : bKharuun ? 216.0f : 126.0f;
                         break;
                     case echoes::sim::EntityType::CommandCore:
                         SelectionRadius = 3.95f;
                         HealthBarWidthScale = 3.10f;
-                        HealthBarHeight = bKharuun ? 214.0f : 286.0f;
+                        HealthBarHeight = bChoir ? 286.0f : bKharuun ? 214.0f : 286.0f;
                         break;
                     case echoes::sim::EntityType::Dropoff:
-                        SelectionRadius = bKharuun ? 2.55f : 3.10f;
+                        SelectionRadius = bChoir ? 2.55f : bKharuun ? 2.55f : 3.10f;
                         HealthBarWidthScale = 2.35f;
-                        HealthBarHeight = bKharuun ? 232.0f : 302.0f;
+                        HealthBarHeight = bChoir ? 225.0f : bKharuun ? 232.0f : 302.0f;
                         break;
                     case echoes::sim::EntityType::Barracks:
                         SelectionRadius = 3.55f;
                         HealthBarWidthScale = 3.00f;
-                        HealthBarHeight = bKharuun ? 146.0f : 182.0f;
+                        HealthBarHeight = bChoir ? 225.0f : bKharuun ? 146.0f : 182.0f;
                         break;
                     case echoes::sim::EntityType::UtilityStructure:
-                        SelectionRadius = bKharuun ? 2.65f : 2.90f;
+                        SelectionRadius = bChoir ? 2.65f : bKharuun ? 2.65f : 2.90f;
                         HealthBarWidthScale = 2.25f;
-                        HealthBarHeight = bKharuun ? 332.0f : 232.0f;
+                        HealthBarHeight = bChoir ? 330.0f : bKharuun ? 332.0f : 232.0f;
                         break;
                     case echoes::sim::EntityType::ResourceNode:
                         SelectionRadius = 1.45f;
@@ -766,6 +818,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             bShowSilhouetteAccent = false;
             break;
     }
+    if (bChoir &&
+        State.type != echoes::sim::EntityType::ResourceNode &&
+        State.type != echoes::sim::EntityType::FutureWell)
+    {
+        AccentMesh = SphereMesh;
+        AccentScale = FVector(0.26f, 0.26f, 0.12f);
+        AccentOffset.Z = FMath::Max(64.0f, HealthBarHeight - 34.0f);
+        AccentRotation = FRotator(0.0f, 45.0f, 0.0f);
+    }
     SilhouetteAccent->SetStaticMesh(AccentMesh);
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
@@ -857,6 +918,38 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
     WarformStateField->SetVisibility(bIsPublicWarformState, true);
+    const bool bIsChoirIdentityUnit =
+        State.faction == echoes::sim::Faction::HollowChoir &&
+        (State.type == echoes::sim::EntityType::Soldier ||
+         State.type == echoes::sim::EntityType::HeavyUnit ||
+         State.type == echoes::sim::EntityType::ScoutUnit) &&
+        State.choirIdentityState !=
+            echoes::sim::ChoirIdentityState::NotChoir;
+    if (bIsChoirIdentityUnit)
+    {
+        switch (State.choirIdentityState)
+        {
+            case echoes::sim::ChoirIdentityState::Manifest:
+                ChoirIdentityField->SetStaticMesh(CubeMesh);
+                ChoirIdentityField->SetRelativeScale3D(
+                    FVector(0.62f, 0.62f, 0.055f));
+                break;
+            case echoes::sim::ChoirIdentityState::Possible:
+                ChoirIdentityField->SetStaticMesh(SphereMesh);
+                ChoirIdentityField->SetRelativeScale3D(
+                    FVector(0.34f, 0.34f, 0.12f));
+                break;
+            case echoes::sim::ChoirIdentityState::DualResolveManifest:
+            case echoes::sim::ChoirIdentityState::DualResolvePossible:
+                ChoirIdentityField->SetStaticMesh(CylinderMesh);
+                ChoirIdentityField->SetRelativeScale3D(
+                    FVector(0.96f, 0.96f, 0.045f));
+                break;
+            case echoes::sim::ChoirIdentityState::NotChoir:
+                break;
+        }
+    }
+    ChoirIdentityField->SetVisibility(bIsChoirIdentityUnit, true);
     AegisPowerField->SetVisibility(
         State.aegisPowered &&
             State.faction == echoes::sim::Faction::MeridianCompact &&
@@ -996,6 +1089,33 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 FLinearColor(0.88f, 0.56f, 0.14f));
             WarformStateField->SetMaterial(0, WarformStateFieldMaterial);
         }
+        if (ChoirIdentityFieldMaterial == nullptr)
+        {
+            ChoirIdentityFieldMaterial =
+                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            ChoirIdentityField->SetMaterial(
+                0, ChoirIdentityFieldMaterial);
+        }
+        if (ChoirIdentityFieldMaterial != nullptr)
+        {
+            const bool bPossibleIdentity =
+                State.choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::Possible ||
+                State.choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::DualResolvePossible;
+            const bool bDualIdentity =
+                State.choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::DualResolveManifest ||
+                State.choirIdentityState ==
+                    echoes::sim::ChoirIdentityState::DualResolvePossible;
+            ChoirIdentityFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                bDualIdentity
+                    ? FLinearColor(0.86f, 0.54f, 0.76f)
+                    : bPossibleIdentity
+                          ? FLinearColor(0.851f, 0.412f, 0.553f)
+                          : FLinearColor(0.788f, 0.824f, 0.941f));
+        }
         if (AegisPowerFieldMaterial == nullptr)
         {
             AegisPowerFieldMaterial =
@@ -1015,15 +1135,21 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         if (bUsingAuthoredRosterMesh && BodyMaterials.Num() >= 4)
         {
             const FLinearColor DarkColor =
-                bKharuun
+                bChoir
+                    ? FLinearColor(0.014f, 0.019f, 0.038f)
+                : bKharuun
                     ? FLinearColor(0.022f, 0.016f, 0.020f)
                     : FLinearColor(0.018f, 0.028f, 0.042f);
             const FLinearColor LightColor =
-                bKharuun
+                bChoir
+                    ? FLinearColor(0.788f, 0.824f, 0.941f)
+                : bKharuun
                     ? FLinearColor(0.30f, 0.21f, 0.12f)
                     : FLinearColor(0.38f, 0.31f, 0.20f);
             const FLinearColor GlowColor =
-                bKharuun
+                bChoir
+                    ? FLinearColor(0.851f, 0.412f, 0.553f)
+                : bKharuun
                     ? FLinearColor(1.0f, 0.26f, 0.015f)
                     : FLinearColor(0.018f, 0.82f, 1.0f);
             const FLinearColor SlotColors[] = {
@@ -1395,6 +1521,11 @@ bool AEchoesEntityView::IsWarformStateVisible() const
     return WarformStateField != nullptr && WarformStateField->IsVisible();
 }
 
+bool AEchoesEntityView::IsChoirIdentityStateVisible() const
+{
+    return ChoirIdentityField != nullptr && ChoirIdentityField->IsVisible();
+}
+
 bool AEchoesEntityView::IsAegisPowerFieldVisible() const
 {
     return AegisPowerField != nullptr && AegisPowerField->IsVisible();
@@ -1525,10 +1656,37 @@ uint8 AEchoesEntityView::GetOwnerMarkerVariant() const
 
 FString AEchoesEntityView::GetDisplayName() const
 {
+    if (EntityFaction == echoes::sim::Faction::HollowChoir)
+    {
+        switch (EntityType)
+        {
+            case echoes::sim::EntityType::Worker:
+                return TEXT("Threadkeeper");
+            case echoes::sim::EntityType::Soldier:
+                return TEXT("Intervalist");
+            case echoes::sim::EntityType::HeavyUnit:
+                return TEXT("Lacuna Warden");
+            case echoes::sim::EntityType::ScoutUnit:
+                return TEXT("Afterimage");
+            case echoes::sim::EntityType::CommandCore:
+                return TEXT("Concordance");
+            case echoes::sim::EntityType::Dropoff:
+                return TEXT("Interval Loom");
+            case echoes::sim::EntityType::Barracks:
+                return TEXT("Chorus Loom");
+            case echoes::sim::EntityType::UtilityStructure:
+                return TEXT("Phase Anchor");
+            case echoes::sim::EntityType::ResourceNode:
+            case echoes::sim::EntityType::FutureWell:
+                break;
+        }
+    }
     switch (EntityType)
     {
         case echoes::sim::EntityType::Worker:
-            return TEXT("Worker");
+            return EntityFaction == echoes::sim::Faction::MeridianCompact
+                       ? TEXT("Surveyor")
+                       : TEXT("Tender");
         case echoes::sim::EntityType::Soldier:
             return EntityFaction == echoes::sim::Faction::MeridianCompact
                        ? TEXT("Lancer")

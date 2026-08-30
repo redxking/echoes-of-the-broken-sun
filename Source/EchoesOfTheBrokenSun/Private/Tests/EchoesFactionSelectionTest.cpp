@@ -295,6 +295,7 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
     uint32 ChoirWorker = 0;
     bool bAllLocalEntitiesAreChoir = true;
     bool bAllChoirRosterRolesPresent = true;
+    bool bAllChoirViewsUseAuthoredMeshes = true;
     TSet<echoes::sim::EntityType> ChoirRosterTypes;
     if (ChoirSimulation != nullptr)
     {
@@ -307,6 +308,11 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
             bAllLocalEntitiesAreChoir &=
                 Entity.faction == echoes::sim::Faction::HollowChoir;
             ChoirRosterTypes.Add(Entity.type);
+            const AEchoesEntityView* ChoirView =
+                Bridge->FindEntityView(Entity.id);
+            bAllChoirViewsUseAuthoredMeshes &=
+                ChoirView != nullptr &&
+                ChoirView->IsUsingAuthoredRosterMesh();
             ChoirIdentityUnit =
                 Entity.type == echoes::sim::EntityType::Soldier &&
                         ChoirIdentityUnit == 0
@@ -336,6 +342,8 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
              bAllLocalEntitiesAreChoir);
     TestTrue(TEXT("The direct Choir roster contains all eight gameplay roles"),
              bAllChoirRosterRolesPresent);
+    TestTrue(TEXT("Every direct Choir roster role uses authored Choir geometry"),
+             bAllChoirViewsUseAuthoredMeshes);
     TestNotNull(
         TEXT("Held Alternatives is available to direct Choir play"),
         ChoirSimulation != nullptr
@@ -375,6 +383,14 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
             TEXT("The queued player command exposes the dual-resolution interval"),
             ReconcilingVoice->choirIdentityState ==
                 echoes::sim::ChoirIdentityState::DualResolvePossible);
+        const AEchoesEntityView* ReconcilingView =
+            Bridge->FindEntityView(ChoirIdentityUnit);
+        TestTrue(
+            TEXT("The declared Choir identity remains visible in presentation"),
+            ReconcilingView != nullptr &&
+                ReconcilingView->IsChoirIdentityStateVisible() &&
+                ReconcilingView->GetChoirIdentityState() ==
+                    echoes::sim::ChoirIdentityState::DualResolvePossible);
     }
 
     Controller->CyclePlayableFaction();
@@ -458,7 +474,15 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_MemoryHearth.SM_Kharuun_MemoryHearth"),
         TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_Waystone.SM_Kharuun_Waystone"),
         TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_GrowthBasin.SM_Kharuun_GrowthBasin"),
-        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine")};
+        TEXT("/Game/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.SM_Kharuun_ListeningSpine"),
+        TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Threadkeeper.SM_Choir_Threadkeeper"),
+        TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Intervalist.SM_Choir_Intervalist"),
+        TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_LacunaWarden.SM_Choir_LacunaWarden"),
+        TEXT("/Game/Art/Generated/Choir/Units/SM_Choir_Afterimage.SM_Choir_Afterimage"),
+        TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_Concordance.SM_Choir_Concordance"),
+        TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_IntervalLoom.SM_Choir_IntervalLoom"),
+        TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_ChorusLoom.SM_Choir_ChorusLoom"),
+        TEXT("/Game/Art/Generated/Choir/Structures/SM_Choir_PhaseAnchor.SM_Choir_PhaseAnchor")};
     for (const TCHAR* MeshPath : AuthoredRosterMeshes)
     {
         UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, MeshPath);
@@ -521,6 +545,26 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"CyclePlayableFaction\"")) &&
                        Mapping.Contains(TEXT("Key=Tab"));
+            }));
+    TestTrue(
+        TEXT("Shift-F3 Choir Manifest mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"ReconcileChoirManifest\"")) &&
+                       Mapping.Contains(TEXT("bShift=True")) &&
+                       Mapping.Contains(TEXT("Key=F3"));
+            }));
+    TestTrue(
+        TEXT("Shift-F4 Choir Possible mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"ReconcileChoirPossible\"")) &&
+                       Mapping.Contains(TEXT("bShift=True")) &&
+                       Mapping.Contains(TEXT("Key=F4"));
             }));
     TestTrue(
         TEXT("Backspace reverse-selection mapping is present"),

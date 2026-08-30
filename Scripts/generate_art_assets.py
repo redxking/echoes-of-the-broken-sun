@@ -512,6 +512,121 @@ def kharuun_listening_spine(mesh: unreal.DynamicMesh, high: bool) -> None:
         cone(mesh, 17.0, 1.0, 78.0, (0.0, 0.0, 278.0), LIGHT, sides=6)
 
 
+def choir_threadkeeper(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A light field body held between two visibly incompatible frames."""
+    cylinder(mesh, 20.0, 66.0, (0.0, 0.0, 74.0), DARK, sides=10)
+    sphere(mesh, 24.0, (0.0, 0.0, 112.0), PRIMARY, scale=(0.78, 0.78, 1.12), high_detail=high)
+    torus(mesh, 37.0, 4.0, (0.0, 0.0, 104.0), LIGHT, (18.0, 0.0, 0.0), high)
+    torus(mesh, 31.0, 3.0, (0.0, 0.0, 104.0), GLOW, (-18.0, 90.0, 0.0), high)
+    for angle in (30.0, 150.0, 270.0):
+        a = math.radians(angle)
+        box(mesh, (48.0, 9.0, 9.0), (math.cos(a) * 27.0, math.sin(a) * 27.0, 42.0), DARK, (58.0, angle, 0.0))
+        cone(mesh, 9.0, 2.0, 42.0, (math.cos(a) * 47.0, math.sin(a) * 47.0, 17.0), LIGHT, (72.0, angle, 0.0), 6)
+    box(mesh, (61.0, 6.0, 6.0), (34.0, 0.0, 70.0), GLOW, (0.0, 0.0, 12.0))
+    if high:
+        for z in (61.0, 82.0, 126.0):
+            sphere(mesh, 5.0, (0.0, 0.0, z), GLOW, high_detail=False)
+
+
+def choir_intervalist(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Two offset combat silhouettes occupy one readable interval."""
+    for side in (-1.0, 1.0):
+        sphere(mesh, 25.0, (-5.0, side * 19.0, 82.0), DARK, scale=(1.25, 0.62, 1.0), high_detail=high)
+        cone(mesh, 17.0, 5.0, 58.0, (3.0, side * 20.0, 116.0), LIGHT, (-9.0, 0.0, 0.0), 7)
+        box(mesh, (51.0, 8.0, 10.0), (7.0, side * 34.0, 48.0), PRIMARY, (61.0, side * 10.0, side * 8.0))
+        cone(mesh, 9.0, 2.0, 43.0, (25.0, side * 45.0, 19.0), GLOW, (73.0, side * 12.0, 0.0), 6)
+    torus(mesh, 42.0, 4.0, (0.0, 0.0, 91.0), GLOW, (90.0, 0.0, 0.0), high)
+    box(mesh, (118.0, 11.0, 12.0), (43.0, 0.0, 101.0), LIGHT, (0.0, 0.0, 5.0))
+    box(mesh, (96.0, 5.0, 5.0), (48.0, 0.0, 105.0), GLOW, (0.0, 0.0, 5.0))
+    cone(mesh, 11.0, 2.0, 45.0, (109.0, 0.0, 111.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+
+
+def choir_lacuna_warden(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A broad controller shell wrapped around a deliberate central absence."""
+    torus(mesh, 69.0, 20.0, (0.0, 0.0, 74.0), DARK, (90.0, 0.0, 0.0), high)
+    torus(mesh, 51.0, 7.0, (0.0, 0.0, 74.0), GLOW, (90.0, 0.0, 0.0), high)
+    for side in (-1.0, 1.0):
+        sphere(mesh, 38.0, (-9.0, side * 48.0, 76.0), PRIMARY, scale=(1.25, 0.72, 0.82), high_detail=high)
+        box(mesh, (67.0, 18.0, 20.0), (-16.0, side * 66.0, 43.0), DARK, (52.0, side * 12.0, side * 12.0))
+        cone(mesh, 17.0, 5.0, 52.0, (2.0, side * 81.0, 18.0), LIGHT, (69.0, side * 12.0, 0.0), 7)
+        box(mesh, (72.0, 14.0, 16.0), (31.0, side * 34.0, 104.0), LIGHT, (0.0, side * 9.0, side * 8.0))
+    sphere(mesh, 21.0, (0.0, 0.0, 75.0), GLOW, scale=(0.72, 0.72, 1.35), high_detail=high)
+    if high:
+        for angle in range(0, 360, 60):
+            radial_box(mesh, float(angle), 78.0, (24.0, 5.0, 5.0), 91.0, GLOW)
+
+
+def choir_afterimage(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A fast support craft with a displaced, luminous second reading."""
+    for offset, material in ((-14.0, DARK), (14.0, LIGHT)):
+        cone(mesh, 24.0, 3.0, 105.0, (16.0 + offset, offset * 0.65, 58.0), material, (0.0, 90.0, 0.0), 7)
+        box(mesh, (74.0, 24.0, 8.0), (-3.0 + offset, offset * 0.65, 52.0), material, (0.0, offset * 0.35, 0.0))
+    sphere(mesh, 23.0, (0.0, 0.0, 66.0), PRIMARY, scale=(1.35, 0.70, 0.65), high_detail=high)
+    torus(mesh, 43.0, 3.0, (-15.0, 0.0, 78.0), GLOW, (20.0, 0.0, 0.0), high)
+    torus(mesh, 34.0, 2.5, (15.0, 0.0, 78.0), GLOW, (-20.0, 0.0, 0.0), high)
+    for side in (-1.0, 1.0):
+        box(mesh, (71.0, 33.0, 7.0), (-11.0, side * 39.0, 54.0), LIGHT, (0.0, side * 14.0, side * 4.0))
+        box(mesh, (53.0, 5.0, 4.0), (-3.0, side * 45.0, 58.0), GLOW, (0.0, side * 14.0, side * 4.0))
+
+
+def choir_concordance(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Three public voices hold one headquarters around a visible void."""
+    cylinder(mesh, 154.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=12)
+    torus(mesh, 118.0, 15.0, (0.0, 0.0, 39.0), PRIMARY, high_detail=high)
+    torus(mesh, 84.0, 6.0, (0.0, 0.0, 47.0), GLOW, high_detail=high)
+    for angle in (30.0, 150.0, 270.0):
+        a = math.radians(angle)
+        cone(mesh, 35.0, 8.0, 202.0, (math.cos(a) * 91.0, math.sin(a) * 91.0, 126.0), LIGHT, (-10.0, angle, 0.0), 8)
+        box(mesh, (10.0, 10.0, 154.0), (math.cos(a) * 84.0, math.sin(a) * 84.0, 132.0), GLOW, (-10.0, angle, 0.0))
+        radial_box(mesh, angle, 154.0, (86.0, 34.0, 22.0), 31.0, DARK)
+    sphere(mesh, 37.0, (0.0, 0.0, 117.0), PRIMARY, scale=(0.82, 0.82, 1.18), high_detail=high)
+    torus(mesh, 49.0, 5.0, (0.0, 0.0, 117.0), GLOW, (90.0, 0.0, 0.0), high)
+    if high:
+        torus(mesh, 57.0, 4.0, (0.0, 0.0, 117.0), LIGHT, (0.0, 90.0, 0.0), high)
+
+
+def choir_interval_loom(mesh: unreal.DynamicMesh, high: bool) -> None:
+    cylinder(mesh, 72.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=10)
+    cylinder(mesh, 42.0, 128.0, (0.0, 0.0, 76.0), PRIMARY, sides=10)
+    for tilt, yaw, radius in ((24.0, 0.0, 66.0), (-24.0, 90.0, 53.0)):
+        torus(mesh, radius, 6.0, (0.0, 0.0, 113.0), LIGHT, (tilt, yaw, 0.0), high)
+    torus(mesh, 39.0, 4.0, (0.0, 0.0, 113.0), GLOW, (90.0, 0.0, 0.0), high)
+    for angle in (45.0, 135.0, 225.0, 315.0):
+        radial_box(mesh, angle, 89.0, (61.0, 20.0, 18.0), 23.0, DARK, -18.0)
+        a = math.radians(angle)
+        cone(mesh, 12.0, 3.0, 61.0, (math.cos(a) * 76.0, math.sin(a) * 76.0, 54.0), LIGHT, (49.0, angle, 0.0), 6)
+    sphere(mesh, 18.0, (0.0, 0.0, 113.0), GLOW, high_detail=high)
+
+
+def choir_chorus_loom(mesh: unreal.DynamicMesh, high: bool) -> None:
+    cylinder(mesh, 148.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=12)
+    torus(mesh, 111.0, 19.0, (0.0, 0.0, 44.0), PRIMARY, high_detail=high)
+    cylinder(mesh, 65.0, 34.0, (0.0, 0.0, 39.0), GLOW, sides=12)
+    for index, angle in enumerate(range(0, 360, 60)):
+        a = math.radians(angle)
+        height = 112.0 + (index % 2) * 34.0
+        cone(mesh, 23.0, 5.0, height, (math.cos(a) * 101.0, math.sin(a) * 101.0, 57.0 + height * 0.5), LIGHT, (-13.0, angle, 0.0), 7)
+        box(mesh, (7.0, 7.0, height * 0.72), (math.cos(a) * 96.0, math.sin(a) * 96.0, 61.0 + height * 0.5), GLOW, (-13.0, angle, 0.0))
+        radial_box(mesh, float(angle), 147.0, (76.0, 25.0, 22.0), 29.0, DARK)
+    torus(mesh, 73.0, 5.0, (0.0, 0.0, 85.0), GLOW, high_detail=high)
+    if high:
+        sphere(mesh, 26.0, (0.0, 0.0, 89.0), PRIMARY, scale=(0.78, 0.78, 1.22), high_detail=True)
+
+
+def choir_phase_anchor(mesh: unreal.DynamicMesh, high: bool) -> None:
+    cylinder(mesh, 76.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=10)
+    for angle in range(0, 360, 90):
+        radial_box(mesh, float(angle), 81.0, (74.0, 20.0, 18.0), 19.0, PRIMARY, -14.0)
+    cone(mesh, 42.0, 7.0, 215.0, (0.0, 0.0, 126.0), LIGHT, sides=8)
+    cone(mesh, 23.0, 2.0, 184.0, (0.0, 0.0, 137.0), DARK, sides=8)
+    box(mesh, (8.0, 8.0, 173.0), (12.0, 0.0, 137.0), GLOW, (0.0, 0.0, -4.0))
+    torus(mesh, 55.0, 5.0, (0.0, 0.0, 117.0), GLOW, (23.0, 0.0, 0.0), high)
+    torus(mesh, 44.0, 4.0, (0.0, 0.0, 117.0), PRIMARY, (-23.0, 90.0, 0.0), high)
+    sphere(mesh, 17.0, (0.0, 0.0, 117.0), GLOW, high_detail=high)
+    if high:
+        cone(mesh, 13.0, 1.0, 71.0, (0.0, 0.0, 267.0), LIGHT, sides=6)
+
+
 def world_future_well_base(mesh: unreal.DynamicMesh, high: bool) -> None:
     """Neutral foundation: neither Meridian-built nor Kharuun-grown."""
     cylinder(mesh, 238.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=16)
@@ -1150,6 +1265,14 @@ ASSETS = (
     AssetSpec("Kharuun", "Structures", "Waystone", "Waystone", "mobile supply node", kharuun_waystone),
     AssetSpec("Kharuun", "Structures", "GrowthBasin", "Growth Basin", "production and adaptation", kharuun_growth_basin),
     AssetSpec("Kharuun", "Structures", "ListeningSpine", "Listening Spine", "vibration detection", kharuun_listening_spine),
+    AssetSpec("Choir", "Units", "Threadkeeper", "Threadkeeper", "worker and coherence tender", choir_threadkeeper),
+    AssetSpec("Choir", "Units", "Intervalist", "Intervalist", "phase skirmisher", choir_intervalist),
+    AssetSpec("Choir", "Units", "LacunaWarden", "Lacuna Warden", "recovery controller", choir_lacuna_warden),
+    AssetSpec("Choir", "Units", "Afterimage", "Afterimage", "misdirection support", choir_afterimage),
+    AssetSpec("Choir", "Structures", "Concordance", "Concordance", "headquarters and collective root", choir_concordance),
+    AssetSpec("Choir", "Structures", "IntervalLoom", "Interval Loom", "supply and coherence interval", choir_interval_loom),
+    AssetSpec("Choir", "Structures", "ChorusLoom", "Chorus Loom", "production and research", choir_chorus_loom),
+    AssetSpec("Choir", "Structures", "PhaseAnchor", "Phase Anchor", "coherence structure", choir_phase_anchor),
     AssetSpec("World", "Landmarks", "FutureWellBase", "Future Well foundation", "signature world landmark foundation", world_future_well_base),
     AssetSpec("World", "Landmarks", "FutureWellOrbit", "Future Well orbit", "animated possibility orbit", world_future_well_orbit),
     AssetSpec("World", "Landmarks", "FutureWellCore", "Future Well core", "fractured unrealized-future core", world_future_well_core),
@@ -2208,7 +2331,7 @@ def create_static_mesh(
 
 def main() -> None:
     unreal.log(
-        "[ECHOES_ART_BEGIN] generating 16 roster assets, 4 Future Well assets, "
+        "[ECHOES_ART_BEGIN] generating 24 roster assets, 4 Future Well assets, "
         "7 Glass Scar environment assets, 8 selection/command VFX assets, "
         "and 3 destruction VFX assets"
     )
@@ -2422,7 +2545,7 @@ def main() -> None:
     )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "
-        f"roster=16 landmarks=4 environment=7 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
+        f"roster=24 landmarks=4 environment=7 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
         f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 

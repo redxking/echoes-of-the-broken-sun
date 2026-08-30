@@ -15,6 +15,10 @@ case "$local_faction" in
     faction_args=(-EchoesFaction=Kharuun)
     expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=KharuunAssemblies opposition=MeridianCompact selectable=true'
     ;;
+  Choir|HollowChoir)
+    faction_args=(-EchoesFaction=Choir)
+    expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=HollowChoir opposition=MeridianCompact selectable=true'
+    ;;
   *)
     print -u2 "Unsupported ECHOES_LOCAL_FACTION: $local_faction"
     exit 2
@@ -42,7 +46,7 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=2 factions=3 playable=3 units=12 buildings=12 technologies=6 sha256=0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1 source=canonical' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_RULES_READY\] version=2 sha256=0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1 rosterArchetypes=24 catalogUnits=12 catalogBuildings=12 technologies=6 research=authored futureWell=authored bulwarkDeployment=authored relaySupply=authored waystoneMigration=authored warformAdaptation=authored mineralCover=authored vibrationDetection=authored poweredAegis=authored choirIdentity=authored choirCoherence=authored' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_WEATHER_READY\] glassScarDrift=active reducedMotionAware=true finalArt=false' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_AUDIO_READY\] revision=presentation-audio-v1 cues=3 authored=true command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false' "$log" ||
+   ! /usr/bin/grep -q '\[ECHOES_AUDIO_READY\] revision=presentation-audio-v1 cues=4 authored=true command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q "$expected_faction_marker" "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_POWERED_AEGIS_READY\] powered=1 publicState=true networkCounterplay=true' "$log" ||

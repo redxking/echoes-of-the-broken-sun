@@ -35,11 +35,11 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
-    TestTrue(TEXT("All three authored SoundWave cues load"),
+    TestTrue(TEXT("All four authored SoundWave cues load"),
              Audio->HasAllAuthoredCueAssets());
-    TestEqual(TEXT("Exactly three registered cues are loaded"),
+    TestEqual(TEXT("Exactly four registered cues are loaded"),
               Audio->GetLoadedCueCount(),
-              3);
+              4);
     TestTrue(TEXT("Destruction cues use bounded spatial attenuation"),
              Audio->HasBoundedSpatialAttenuation());
 
@@ -73,6 +73,16 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
              Audio->ReserveCueForTest(
                  EEchoesPresentationAudioCue::DestructionKharuun,
                  10.161,
+                 1.0f));
+    TestFalse(TEXT("Choir destruction shares the same bounded destruction channel"),
+              Audio->ReserveCueForTest(
+                  EEchoesPresentationAudioCue::DestructionChoir,
+                  10.20,
+                  1.0f));
+    TestTrue(TEXT("Choir destruction is admitted after the shared cooldown"),
+             Audio->ReserveCueForTest(
+                 EEchoesPresentationAudioCue::DestructionChoir,
+                 10.302,
                  1.0f));
     TestFalse(TEXT("Muted effects never reserve a voice"),
               Audio->ReserveCueForTest(
@@ -113,10 +123,15 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
              Audio->PlayDestruction(
                  echoes::sim::Faction::MeridianCompact,
                  FVector::ZeroVector));
-    TestEqual(TEXT("One command playback was recorded"),
+    Audio->ResetRateLimitsForTest();
+    TestTrue(TEXT("The authored Choir destruction cue reaches spatial playback"),
+             Audio->PlayDestruction(
+                 echoes::sim::Faction::HollowChoir,
+                 FVector::ZeroVector));
+    TestEqual(TEXT("Rate-limit reset clears the command playback fixture"),
               Audio->GetSuccessfulCommandPlayCountForTest(),
-              1);
-    TestEqual(TEXT("One destruction playback was recorded"),
+              0);
+    TestEqual(TEXT("One Choir destruction playback was recorded"),
               Audio->GetSuccessfulDestructionPlayCountForTest(),
               1);
     return true;

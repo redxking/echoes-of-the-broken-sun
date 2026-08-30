@@ -75,9 +75,18 @@ void AEchoesDestructionView::InitializeDestruction(
         InLifetimeSeconds,
         MinimumDestructionLifetimeSeconds,
         MaximumDestructionLifetimeSeconds);
-    BaseColor = Faction == echoes::sim::Faction::KharuunAssemblies
-                    ? FLinearColor(1.0f, 0.48f, 0.08f)
-                    : FLinearColor(0.05f, 0.92f, 1.0f);
+    switch (Faction)
+    {
+        case echoes::sim::Faction::MeridianCompact:
+            BaseColor = FLinearColor(0.05f, 0.92f, 1.0f);
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            BaseColor = FLinearColor(1.0f, 0.48f, 0.08f);
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            BaseColor = FLinearColor(0.851f, 0.412f, 0.553f);
+            break;
+    }
 
     float SizeScale = 1.0f;
     switch (EntityType)

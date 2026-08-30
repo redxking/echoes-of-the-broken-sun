@@ -92,6 +92,31 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
                  Reduced->GetActorScale3D().X > 1.0f);
     }
 
+    AEchoesDestructionView* Choir =
+        World->SpawnActor<AEchoesDestructionView>();
+    if (TestNotNull(TEXT("Choir destruction actor spawns"), Choir))
+    {
+        Choir->InitializeDestruction(
+            echoes::sim::Faction::HollowChoir,
+            echoes::sim::EntityType::HeavyUnit,
+            false,
+            false,
+            1.6f);
+        TestTrue(TEXT("Choir destruction uses authored shared VFX geometry"),
+                 Choir->IsUsingAuthoredVFXAssets());
+        TestTrue(TEXT("Choir destruction remains collision-free"),
+                 Choir->HasCollisionDisabled() &&
+                     Choir->HasNavigationDisabled());
+        TestFalse(
+            TEXT("Choir destruction has a distinct phase-pink palette"),
+            Standard != nullptr &&
+                Choir->GetBaseColor().Equals(Standard->GetBaseColor()));
+        TestFalse(
+            TEXT("Choir destruction does not inherit Kharuun orange"),
+            Reduced != nullptr &&
+                Choir->GetBaseColor().Equals(Reduced->GetBaseColor()));
+    }
+
     if (Standard != nullptr)
     {
         Standard->Destroy();
@@ -99,6 +124,10 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
     if (Reduced != nullptr)
     {
         Reduced->Destroy();
+    }
+    if (Choir != nullptr)
+    {
+        Choir->Destroy();
     }
 
     UEchoesSimulationSubsystem* Bridge =

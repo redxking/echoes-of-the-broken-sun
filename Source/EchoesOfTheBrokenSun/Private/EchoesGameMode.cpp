@@ -857,16 +857,22 @@ void AEchoesGameMode::BeginPlay()
         const echoes::sim::Faction Factions[] = {
             echoes::sim::Faction::MeridianCompact,
             echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::HollowChoir,
             echoes::sim::Faction::MeridianCompact,
             echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::HollowChoir,
             echoes::sim::Faction::MeridianCompact,
             echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::HollowChoir,
         };
         const echoes::sim::EntityType Types[] = {
             echoes::sim::EntityType::Soldier,
             echoes::sim::EntityType::Soldier,
+            echoes::sim::EntityType::Soldier,
             echoes::sim::EntityType::HeavyUnit,
             echoes::sim::EntityType::HeavyUnit,
+            echoes::sim::EntityType::HeavyUnit,
+            echoes::sim::EntityType::CommandCore,
             echoes::sim::EntityType::CommandCore,
             echoes::sim::EntityType::CommandCore,
         };
@@ -877,6 +883,9 @@ void AEchoesGameMode::BeginPlay()
             FIntPoint(9, 12),
             FIntPoint(12, 12),
             FIntPoint(15, 12),
+            FIntPoint(9, 15),
+            FIntPoint(12, 15),
+            FIntPoint(15, 15),
         };
         int32 SpawnedDestructionCount = 0;
         int32 AuthoredDestructionCount = 0;
@@ -942,40 +951,60 @@ void AEchoesGameMode::BeginPlay()
                 Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(24, 24)));
             const FVector KharuunReviewLocation =
                 Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(40, 40));
+            const FVector ChoirReviewLocation =
+                Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(32, 40));
             TWeakObjectPtr<UEchoesPresentationAudioSubsystem> WeakAudio(Audio);
+            TSharedRef<bool> KharuunPlayedResult = MakeShared<bool>(false);
             FTimerHandle KharuunTimer;
             GetWorldTimerManager().SetTimer(
                 KharuunTimer,
                 FTimerDelegate::CreateWeakLambda(
                     this,
-                    [WeakAudio,
-                     bCommandPlayed,
-                     bMeridianPlayed,
-                     bReducedDynamicRange,
-                     KharuunReviewLocation]()
+                    [WeakAudio, KharuunPlayedResult, KharuunReviewLocation]()
                     {
-                        const bool bKharuunPlayed = WeakAudio.IsValid() &&
+                        *KharuunPlayedResult = WeakAudio.IsValid() &&
                             WeakAudio->PlayDestruction(
                                 echoes::sim::Faction::KharuunAssemblies,
                                 KharuunReviewLocation);
+                    }),
+                0.16f,
+                false);
+            FTimerHandle ChoirTimer;
+            GetWorldTimerManager().SetTimer(
+                ChoirTimer,
+                FTimerDelegate::CreateWeakLambda(
+                    this,
+                    [WeakAudio,
+                     KharuunPlayedResult,
+                     bCommandPlayed,
+                     bMeridianPlayed,
+                     bReducedDynamicRange,
+                     ChoirReviewLocation]()
+                    {
+                        const bool bChoirPlayed = WeakAudio.IsValid() &&
+                            WeakAudio->PlayDestruction(
+                                echoes::sim::Faction::HollowChoir,
+                                ChoirReviewLocation);
                         UE_LOG(
                             LogEchoes,
                             Display,
-                            TEXT("[ECHOES_AUDIO_REVIEW_COMPLETE] revision=presentation-audio-v1 cuesPlayed=%d command2D=%s meridian3D=%s kharuun3D=%s reducedDynamicRange=%s effectsVolume=1.00 rateLimited=true authoritative=false editorOnly=true finalAudio=false"),
+                            TEXT("[ECHOES_AUDIO_REVIEW_COMPLETE] revision=presentation-audio-v1 cuesPlayed=%d command2D=%s meridian3D=%s kharuun3D=%s choir3D=%s reducedDynamicRange=%s effectsVolume=1.00 rateLimited=true authoritative=false editorOnly=true finalAudio=false"),
                             (bCommandPlayed ? 1 : 0) +
                                 (bMeridianPlayed ? 1 : 0) +
-                                (bKharuunPlayed ? 1 : 0),
+                                (*KharuunPlayedResult ? 1 : 0) +
+                                (bChoirPlayed ? 1 : 0),
                             bCommandPlayed ? TEXT("true") : TEXT("false"),
                             bMeridianPlayed ? TEXT("true") : TEXT("false"),
-                            bKharuunPlayed ? TEXT("true") : TEXT("false"),
+                            *KharuunPlayedResult ? TEXT("true") : TEXT("false"),
+                            bChoirPlayed ? TEXT("true") : TEXT("false"),
                             bReducedDynamicRange ? TEXT("true") : TEXT("false"));
                     }),
-                0.16f,
+                0.32f,
                 false);
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_AUDIO_REVIEW_READY] revision=presentation-audio-v1 cues=3 authored=%s sourceRate=48000 channels=1 reducedDynamicRange=%s effectsVolume=1.00 commandCooldownMs=80 destructionCooldownMs=140 authoritative=false editorOnly=true finalAudio=false"),
+                TEXT("[ECHOES_AUDIO_REVIEW_READY] revision=presentation-audio-v1 cues=4 authored=%s sourceRate=48000 channels=1 reducedDynamicRange=%s effectsVolume=1.00 commandCooldownMs=80 destructionCooldownMs=140 authoritative=false editorOnly=true finalAudio=false"),
                 Audio->HasAllAuthoredCueAssets() &&
                         Audio->HasBoundedSpatialAttenuation()
                     ? TEXT("true") : TEXT("false"),
