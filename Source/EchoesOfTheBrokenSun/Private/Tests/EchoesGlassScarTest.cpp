@@ -130,6 +130,50 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
         }
     }
 
+    UStaticMesh* BuriedCausewayMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarBuriedCauseway.SM_World_GlassScarBuriedCauseway"));
+    if (TestNotNull(TEXT("Production-oriented Buried Causeway mesh loads"), BuriedCausewayMesh))
+    {
+        TestTrue(TEXT("Buried Causeway LOD0 has a surface and lightmap UV channel"),
+                 BuriedCausewayMesh->GetNumUVChannels(0) >= 2);
+        TestTrue(TEXT("Buried Causeway LOD1 has a surface and lightmap UV channel"),
+                 BuriedCausewayMesh->GetNumUVChannels(1) >= 2);
+        const UBodySetup* BodySetup = BuriedCausewayMesh->GetBodySetup();
+        TestNotNull(TEXT("Buried Causeway owns authored collision data"), BodySetup);
+        if (BodySetup != nullptr)
+        {
+            TestTrue(TEXT("Buried Causeway has at least one simple collision primitive"),
+                     BodySetup->AggGeom.GetElementCount() > 0);
+            TestEqual(TEXT("Buried Causeway asset uses simple-and-complex collision policy"),
+                      BodySetup->GetCollisionTraceFlag(),
+                      ECollisionTraceFlag::CTF_UseSimpleAndComplex);
+        }
+
+        const TCHAR* ExpectedMaterials[] = {
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Stone.MI_GlassScarBuriedCauseway_Stone"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Recess.MI_GlassScarBuriedCauseway_Recess"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Ceramic.MI_GlassScarBuriedCauseway_Ceramic"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Conduit.MI_GlassScarBuriedCauseway_Conduit")};
+        for (int32 MaterialIndex = 0;
+             MaterialIndex < UE_ARRAY_COUNT(ExpectedMaterials);
+             ++MaterialIndex)
+        {
+            const UMaterialInterface* Material =
+                BuriedCausewayMesh->GetMaterial(MaterialIndex);
+            TestNotNull(
+                FString::Printf(TEXT("Buried Causeway material zone %d loads"), MaterialIndex),
+                Material);
+            if (Material != nullptr)
+            {
+                TestEqual(
+                    FString::Printf(TEXT("Buried Causeway material zone %d is route-specific"), MaterialIndex),
+                    Material->GetPathName(),
+                    FString(ExpectedMaterials[MaterialIndex]));
+            }
+        }
+    }
+
     AEchoesGameMode* PresentationGameMode = World->SpawnActor<AEchoesGameMode>();
     if (TestNotNull(TEXT("Glass Scar presentation GameMode can be created"), PresentationGameMode) &&
         TestTrue(TEXT("Glass Scar production environment can be spawned"),
@@ -137,12 +181,16 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
                      PresentationGameMode->SpawnPrototypeEnvironmentForTesting()))
     {
         AStaticMeshActor* AshCutActor = nullptr;
+        AStaticMeshActor* BuriedCausewayActor = nullptr;
         for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
         {
             if (It->ActorHasTag(TEXT("EchoesRouteAshCut")))
             {
                 AshCutActor = *It;
-                break;
+            }
+            else if (It->ActorHasTag(TEXT("EchoesRouteBuriedCauseway")))
+            {
+                BuriedCausewayActor = *It;
             }
         }
         if (TestNotNull(TEXT("Runtime Ash Cut route actor exists"), AshCutActor))
@@ -160,6 +208,24 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
                          AshCutComponent->GetMaterial(0) != nullptr &&
                              AshCutComponent->GetMaterial(0)->GetPathName().Contains(
                                  TEXT("MI_GlassScarAshCut_Basalt")));
+            }
+        }
+        if (TestNotNull(TEXT("Runtime Buried Causeway route actor exists"), BuriedCausewayActor))
+        {
+            UStaticMeshComponent* BuriedCausewayComponent =
+                BuriedCausewayActor->GetStaticMeshComponent();
+            if (TestNotNull(TEXT("Runtime Buried Causeway route has a mesh component"),
+                            BuriedCausewayComponent))
+            {
+                TestEqual(TEXT("Runtime Buried Causeway collision remains disabled"),
+                          BuriedCausewayComponent->GetCollisionEnabled(),
+                          ECollisionEnabled::NoCollision);
+                TestTrue(TEXT("Runtime Buried Causeway does not affect navigation"),
+                         !BuriedCausewayComponent->CanEverAffectNavigation());
+                TestTrue(TEXT("Runtime Buried Causeway retains its route material family"),
+                         BuriedCausewayComponent->GetMaterial(0) != nullptr &&
+                             BuriedCausewayComponent->GetMaterial(0)->GetPathName().Contains(
+                                 TEXT("MI_GlassScarBuriedCauseway_Stone")));
             }
         }
     }

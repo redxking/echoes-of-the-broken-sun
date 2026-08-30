@@ -1003,9 +1003,10 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         AccentMesh->SetCastShadow(bCastShadow);
         AccentMesh->SetReceivesDecals(false);
         Accent->SetActorScale3D(Scale);
-        if (DetailTag == TEXT("EchoesRouteAshCut"))
+        if (DetailTag == TEXT("EchoesRouteAshCut") ||
+            DetailTag == TEXT("EchoesRouteBuriedCauseway"))
         {
-            // The production-oriented Ash Cut mesh owns its UV-driven material
+            // Production-oriented route meshes own their UV-driven material
             // instances. Other environment candidates still receive the shared
             // prototype palette below.
             return true;
@@ -1323,7 +1324,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v3 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v4 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,

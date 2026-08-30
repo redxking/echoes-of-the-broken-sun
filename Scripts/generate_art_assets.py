@@ -25,6 +25,14 @@ ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Vein",
 )
 ASH_CUT_ASSET_REVISION = "ash-cut-production-v1"
+BURIED_CAUSEWAY_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarBuriedCauseway"
+BURIED_CAUSEWAY_MATERIAL_INSTANCE_PATHS = (
+    f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Stone",
+    f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Recess",
+    f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Ceramic",
+    f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Conduit",
+)
+BURIED_CAUSEWAY_ASSET_REVISION = "buried-causeway-production-v1"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v1"
@@ -783,18 +791,69 @@ def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A straight, repeated transit deck readable by uninterrupted linear rhythm."""
-    box(mesh, (580.0, 1710.0, 44.0), (0.0, 0.0, 2.0), PRIMARY)
-    for y in range(-720, 721, 240):
-        box(mesh, (530.0, 210.0, 20.0), (0.0, float(y), 34.0), LIGHT)
-        box(mesh, (26.0, 210.0, 8.0), (0.0, float(y), 49.0), GLOW)
-        for side in (-1.0, 1.0):
-            box(mesh, (42.0, 86.0, 92.0), (side * 286.0, float(y), 62.0), DARK, (0.0, 0.0, side * 6.0))
+    """A buried transit spine with a continuous deck and repeated civic ribs."""
+    # The recessed foundation and paired shoulders preserve a single broad,
+    # straight silhouette even when detail falls away at distance.
+    box(mesh, (650.0, 1810.0, 52.0), (0.0, 0.0, -10.0), DARK)
+    box(mesh, (568.0, 1760.0, 28.0), (0.0, 0.0, 20.0), PRIMARY)
     for side in (-1.0, 1.0):
-        box(mesh, (34.0, 1660.0, 42.0), (side * 272.0, 0.0, 45.0), DARK)
-    if high:
-        for y in (-600.0, -120.0, 360.0, 720.0):
-            box(mesh, (470.0, 8.0, 7.0), (0.0, y, 55.0), GLOW)
+        box(mesh, (54.0, 1740.0, 62.0), (side * 295.0, 0.0, 34.0), DARK)
+        box(mesh, (28.0, 1680.0, 20.0), (side * 257.0, 0.0, 63.0), LIGHT)
+
+    segment_y = (-720.0, -480.0, -240.0, 0.0, 240.0, 480.0, 720.0)
+    for index, y in enumerate(segment_y):
+        # Pale ceramic deck plates sit inside darker structural coffers.
+        box(mesh, (520.0, 204.0, 22.0), (0.0, y, 43.0), LIGHT)
+        box(mesh, (424.0, 164.0, 9.0), (0.0, y, 59.0), PRIMARY)
+        box(mesh, (24.0, 188.0, 8.0), (0.0, y, 67.0), GLOW)
+        for side in (-1.0, 1.0):
+            box(
+                mesh,
+                (48.0, 104.0, 116.0),
+                (side * 302.0, y, 72.0),
+                DARK,
+                (0.0, 0.0, side * (7.0 if index % 2 == 0 else -5.0)),
+            )
+            box(
+                mesh,
+                (34.0, 132.0, 38.0),
+                (side * 246.0, y, 82.0),
+                LIGHT,
+                (0.0, 0.0, side * 3.0),
+            )
+            if high:
+                box(
+                    mesh,
+                    (86.0, 28.0, 22.0),
+                    (side * 205.0, y - 76.0, 69.0),
+                    PRIMARY,
+                    (0.0, side * 4.0, 0.0),
+                )
+
+        if high:
+            # Transverse seams and inset side conduits reinforce the engineered
+            # cadence without turning the route into a luminous runway.
+            box(mesh, (476.0, 10.0, 7.0), (0.0, y + 92.0, 65.0), DARK)
+            for side in (-1.0, 1.0):
+                box(mesh, (8.0, 148.0, 6.0), (side * 174.0, y, 68.0), GLOW)
+
+    # Broken parapet spans and buried approach slabs prevent sterile symmetry
+    # while retaining the causeway's uninterrupted north-south read.
+    for side in (-1.0, 1.0):
+        for y, length, yaw in (
+            (-620.0, 176.0, -3.0),
+            (-170.0, 238.0, 2.0),
+            (320.0, 192.0, -2.0),
+            (675.0, 138.0, 4.0),
+        ):
+            box(
+                mesh,
+                (42.0, length, 74.0),
+                (side * 329.0, y, 35.0),
+                PRIMARY,
+                (side * 2.0, yaw, side * 5.0),
+            )
+        box(mesh, (470.0, 132.0, 24.0), (0.0, side * 858.0, 8.0), DARK, (0.0, 0.0, 0.0))
 
 
 def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1475,6 +1534,146 @@ def create_ash_cut_materials() -> tuple[unreal.MaterialInterface, ...]:
     return tuple(instances)
 
 
+def create_buried_causeway_materials() -> tuple[unreal.MaterialInterface, ...]:
+    """Create the dedicated four-zone material family for the Buried Causeway."""
+    master = (
+        unreal.EditorAssetLibrary.load_asset(BURIED_CAUSEWAY_MATERIAL_PATH)
+        if unreal.EditorAssetLibrary.does_asset_exist(BURIED_CAUSEWAY_MATERIAL_PATH)
+        else None
+    )
+    if master is not None and not isinstance(master, unreal.Material):
+        raise RuntimeError(
+            "Existing Buried Causeway master is not a Material: "
+            f"{BURIED_CAUSEWAY_MATERIAL_PATH}"
+        )
+    if master is None:
+        # The route masters intentionally share the same compact UV/noise graph,
+        # then diverge through registered instances. Duplicating the authored
+        # graph avoids editor-only expression drift between route families.
+        master = unreal.EditorAssetLibrary.duplicate_asset(
+            ASH_CUT_MATERIAL_PATH, BURIED_CAUSEWAY_MATERIAL_PATH
+        )
+        if master is None or not isinstance(master, unreal.Material):
+            raise RuntimeError("Could not create M_GlassScarBuriedCauseway")
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master,
+            "Echoes.Provenance",
+            "Original UV-driven Buried Causeway material authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.AssetRevision", BURIED_CAUSEWAY_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(master, False)
+
+    zone_specs = (
+        (
+            unreal.LinearColor(0.090, 0.082, 0.070, 1.0),
+            unreal.LinearColor(0.22, 0.17, 0.115, 1.0),
+            0.10,
+            0.78,
+            0.0,
+            0.25,
+        ),
+        (
+            unreal.LinearColor(0.026, 0.030, 0.034, 1.0),
+            unreal.LinearColor(0.070, 0.082, 0.090, 1.0),
+            0.34,
+            0.30,
+            0.0,
+            0.20,
+        ),
+        (
+            unreal.LinearColor(0.34, 0.29, 0.21, 1.0),
+            unreal.LinearColor(0.64, 0.53, 0.36, 1.0),
+            0.03,
+            0.58,
+            0.0,
+            0.32,
+        ),
+        (
+            unreal.LinearColor(0.025, 0.22, 0.31, 1.0),
+            unreal.LinearColor(0.18, 0.72, 0.88, 1.0),
+            0.18,
+            0.25,
+            2.3,
+            0.18,
+        ),
+    )
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    instances: list[unreal.MaterialInterface] = []
+    for path, values in zip(BURIED_CAUSEWAY_MATERIAL_INSTANCE_PATHS, zone_specs):
+        instance = (
+            unreal.EditorAssetLibrary.load_asset(path)
+            if unreal.EditorAssetLibrary.does_asset_exist(path)
+            else None
+        )
+        if instance is None:
+            asset_name = path.rsplit("/", 1)[1]
+            instance = tools.create_asset(
+                asset_name,
+                f"{ART_ROOT}/Materials",
+                unreal.MaterialInstanceConstant,
+                unreal.MaterialInstanceConstantFactoryNew(),
+            )
+        if not isinstance(instance, unreal.MaterialInstanceConstant):
+            raise RuntimeError(f"Buried Causeway material instance is invalid: {path}")
+        if (
+            unreal.EditorAssetLibrary.get_metadata_tag(
+                instance, "Echoes.AssetRevision"
+            )
+            == BURIED_CAUSEWAY_ASSET_REVISION
+        ):
+            instances.append(instance)
+            continue
+        unreal.MaterialEditingLibrary.set_material_instance_parent(instance, master)
+        (
+            color_value,
+            detail_value,
+            metallic_value,
+            roughness_value,
+            emission_value,
+            detail_value_strength,
+        ) = values
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "Color", color_value
+        )
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "DetailColor", detail_value
+        )
+        for parameter_name, parameter_value in (
+            ("Metallic", metallic_value),
+            ("Roughness", roughness_value),
+            ("EmissiveStrength", emission_value),
+            ("DetailStrength", detail_value_strength),
+        ):
+            unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(
+                instance, parameter_name, parameter_value
+            )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance,
+            "Echoes.Provenance",
+            "Original Buried Causeway material instance authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.AssetRevision", BURIED_CAUSEWAY_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(instance, False)
+        instances.append(instance)
+    return tuple(instances)
+
+
 def create_presentation_vfx_material() -> unreal.Material:
     existing = (
         unreal.EditorAssetLibrary.load_asset(VFX_MATERIAL_PATH)
@@ -1665,17 +1864,25 @@ def create_static_mesh(
 ) -> unreal.StaticMesh:
     if len(materials) != 4:
         raise RuntimeError(f"Exactly four materials are required for {spec.display_name}")
-    is_production_ash_cut = spec.name == "GlassScarAshCut"
+    route_revisions = {
+        "GlassScarAshCut": ASH_CUT_ASSET_REVISION,
+        "GlassScarBuriedCauseway": BURIED_CAUSEWAY_ASSET_REVISION,
+    }
+    route_revision = route_revisions.get(spec.name)
+    is_production_route = route_revision is not None
+    route_label = (
+        "Ash Cut" if spec.name == "GlassScarAshCut" else "Buried Causeway"
+    )
     if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
         existing = unreal.EditorAssetLibrary.load_asset(spec.asset_path)
         if isinstance(existing, unreal.StaticMesh):
             revision = unreal.EditorAssetLibrary.get_metadata_tag(
                 existing, "Echoes.AssetRevision"
             )
-            if is_production_ash_cut and revision != ASH_CUT_ASSET_REVISION:
+            if is_production_route and revision != route_revision:
                 if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
                     raise RuntimeError(
-                        f"Could not replace legacy Ash Cut asset: {spec.asset_path}"
+                        f"Could not replace legacy {route_label} asset: {spec.asset_path}"
                     )
                 existing = None
         if isinstance(existing, unreal.StaticMesh):
@@ -1711,7 +1918,7 @@ def create_static_mesh(
     for material_index in range(4):
         asset.set_material(material_index, materials[material_index])
 
-    if is_production_ash_cut:
+    if is_production_route:
         mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
         for lod_index in range(asset.get_num_lods()):
             if not mesh_editor.generate_box_uv_channel(
@@ -1722,11 +1929,13 @@ def create_static_mesh(
                 unreal.Rotator(0.0, 0.0, 0.0),
                 unreal.Vector(900.0, 1800.0, 420.0),
             ):
-                raise RuntimeError(f"Could not author Ash Cut UV0 for LOD {lod_index}")
+                raise RuntimeError(
+                    f"Could not author {route_label} UV0 for LOD {lod_index}"
+                )
             if mesh_editor.get_num_uv_channels(asset, lod_index) < 2:
                 if not mesh_editor.add_uv_channel(asset, lod_index):
                     raise RuntimeError(
-                        f"Could not add Ash Cut lightmap UV for LOD {lod_index}"
+                        f"Could not add {route_label} lightmap UV for LOD {lod_index}"
                     )
             if not mesh_editor.generate_box_uv_channel(
                 asset,
@@ -1736,17 +1945,19 @@ def create_static_mesh(
                 unreal.Rotator(0.0, 0.0, 0.0),
                 unreal.Vector(1900.0, 1900.0, 1900.0),
             ):
-                raise RuntimeError(f"Could not seed Ash Cut UV1 for LOD {lod_index}")
+                raise RuntimeError(
+                    f"Could not seed {route_label} UV1 for LOD {lod_index}"
+                )
         mesh_editor.set_generate_lightmap_uv(asset, True)
         mesh_editor.remove_collisions(asset)
         collision_index = mesh_editor.add_simple_collisions(
             asset, unreal.ScriptCollisionShapeType.BOX
         )
         if collision_index < 0:
-            raise RuntimeError("Could not author Ash Cut simple collision")
+            raise RuntimeError(f"Could not author {route_label} simple collision")
         body_setup = asset.get_editor_property("body_setup")
         if body_setup is None:
-            raise RuntimeError("Ash Cut static mesh has no body setup")
+            raise RuntimeError(f"{route_label} static mesh has no body setup")
         body_setup.set_editor_property(
             "collision_trace_flag",
             unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX,
@@ -1758,7 +1969,9 @@ def create_static_mesh(
             for lod_index in range(asset.get_num_lods())
         ]
         if any(count < 2 for count in uv_counts):
-            raise RuntimeError(f"Ash Cut requires two UV channels per LOD: {uv_counts}")
+            raise RuntimeError(
+                f"{route_label} requires two UV channels per LOD: {uv_counts}"
+            )
 
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Creator", "Angelis Pseftis")
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Faction", spec.faction)
@@ -1767,12 +1980,12 @@ def create_static_mesh(
     unreal.EditorAssetLibrary.set_metadata_tag(
         asset,
         "Echoes.Status",
-        "Production route-kit candidate" if is_production_ash_cut else "Vertical-slice art candidate",
+        "Production route-kit candidate" if is_production_route else "Vertical-slice art candidate",
     )
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.RuntimeAuthority", "Presentation only")
-    if is_production_ash_cut:
+    if is_production_route:
         unreal.EditorAssetLibrary.set_metadata_tag(
-            asset, "Echoes.AssetRevision", ASH_CUT_ASSET_REVISION
+            asset, "Echoes.AssetRevision", route_revision
         )
         unreal.EditorAssetLibrary.set_metadata_tag(
             asset, "Echoes.UVPolicy", "UV0 tiled surface; UV1 generated lightmap"
@@ -1801,6 +2014,7 @@ def main() -> None:
     surface_material = create_surface_material()
     world_surface_material = create_world_surface_material()
     ash_cut_materials = create_ash_cut_materials()
+    buried_causeway_materials = create_buried_causeway_materials()
     presentation_vfx_material = create_presentation_vfx_material()
     generated = [
         create_static_mesh(
@@ -1808,9 +2022,13 @@ def main() -> None:
             ash_cut_materials
             if spec.name == "GlassScarAshCut"
             else (
-                [world_surface_material] * 4
-                if spec.faction == "World"
-                else [surface_material] * 4
+                buried_causeway_materials
+                if spec.name == "GlassScarBuriedCauseway"
+                else (
+                    [world_surface_material] * 4
+                    if spec.faction == "World"
+                    else [surface_material] * 4
+                )
             ),
         )
         for spec in ASSETS
@@ -1857,6 +2075,48 @@ def main() -> None:
         f"lod1Triangles={ash_cut_asset.get_num_triangles(1)} "
         f"uvChannels={','.join(str(value) for value in ash_cut_uvs)} "
         f"materials={len(ash_cut_materials)} simpleCollision={ash_cut_collision_count} "
+        "runtimeAuthority=presentation runtimeCollision=false"
+    )
+    buried_causeway_asset = next(
+        asset
+        for asset, spec in zip(generated, ASSETS)
+        if spec.name == "GlassScarBuriedCauseway"
+    )
+    buried_causeway_uvs = [
+        mesh_editor.get_num_uv_channels(buried_causeway_asset, lod_index)
+        for lod_index in range(buried_causeway_asset.get_num_lods())
+    ]
+    buried_causeway_materials = [
+        buried_causeway_asset.get_material(index).get_path_name()
+        for index in range(4)
+        if buried_causeway_asset.get_material(index) is not None
+    ]
+    buried_causeway_collision_count = mesh_editor.get_simple_collision_count(
+        buried_causeway_asset
+    )
+    if (
+        any(count < 2 for count in buried_causeway_uvs)
+        or len(buried_causeway_materials) != 4
+        or any(
+            "MI_GlassScarBuriedCauseway_" not in path
+            for path in buried_causeway_materials
+        )
+        or buried_causeway_collision_count < 1
+    ):
+        raise RuntimeError(
+            "Buried Causeway route-kit audit failed: "
+            f"uvs={buried_causeway_uvs} materials={buried_causeway_materials} "
+            f"collision={buried_causeway_collision_count}"
+        )
+    unreal.log(
+        "[ECHOES_BURIED_CAUSEWAY_READY] "
+        f"revision={BURIED_CAUSEWAY_ASSET_REVISION} "
+        f"lods={buried_causeway_asset.get_num_lods()} "
+        f"lod0Triangles={buried_causeway_asset.get_num_triangles(0)} "
+        f"lod1Triangles={buried_causeway_asset.get_num_triangles(1)} "
+        f"uvChannels={','.join(str(value) for value in buried_causeway_uvs)} "
+        f"materials={len(buried_causeway_materials)} "
+        f"simpleCollision={buried_causeway_collision_count} "
         "runtimeAuthority=presentation runtimeCollision=false"
     )
     vfx_collision_counts = [
