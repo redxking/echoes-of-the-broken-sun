@@ -36,6 +36,24 @@ public:
 
     /** Server-only connection-to-seat binding for the initial 1v1 slice. */
     void ConfigureNetworkSeat(uint8 Seat);
+    void ConfigureNetworkResume(
+        uint8 Seat,
+        uint64 LastAcceptedBatchId,
+        uint64 DisconnectTick,
+        bool bMatchWasStarted);
+    void ConfigureNetworkResumeCredential(const FString& Credential);
+    [[nodiscard]] uint64 GetLastAcceptedNetworkBatchId() const
+    {
+        return LastAcceptedNetworkBatchId;
+    }
+    [[nodiscard]] bool HasNetworkMatchStarted() const
+    {
+        return bNetworkMatchStarted;
+    }
+    [[nodiscard]] bool IsNetworkResumePending() const
+    {
+        return bNetworkResumePending;
+    }
 
     [[nodiscard]] bool IsDraggingSelection() const;
     [[nodiscard]] FVector2D GetSelectionStartScreenPosition() const;
@@ -210,6 +228,14 @@ public:
 
 private:
     UFUNCTION(Server, Reliable)
+    void ServerSubmitNetworkResumeCredential(const FString& Credential);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveNetworkResumeCredentialResult(
+        bool bAccepted,
+        const FString& StableReason);
+
+    UFUNCTION(Server, Reliable)
     void ServerSubmitCompatibilityHello(const TArray<uint8>& Packet);
 
     UFUNCTION(Client, Reliable)
@@ -232,6 +258,19 @@ private:
         uint8 AssignedSeat,
         uint64 AuthorityTick,
         uint8 InputDelayTicks);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveNetworkResumeCredential(
+        const FString& Credential,
+        float GraceSeconds);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveNetworkResumeState(
+        bool bResumed,
+        uint64 NextBatchId,
+        uint64 LastAcceptedSequence,
+        uint64 AuthorityTick,
+        uint64 DisconnectTick);
 
     UFUNCTION(Server, Reliable)
     void ServerAcknowledgeScopedKeyframe(
@@ -286,8 +325,16 @@ private:
         uint64 FinalSnapshotId,
         uint64 FinalScopedDigest);
 
+    UFUNCTION(Server, Reliable)
+    void ServerConfirmNetworkReconnectSmokeComplete(
+        uint64 SnapshotId,
+        uint64 LastAcceptedSequence,
+        uint64 LastAcceptedBatchId);
+
+    void SubmitNetworkResumeCredential();
     void SubmitNetworkCompatibilityHello();
     void BeginNetworkMatch();
+    void ResumeNetworkMatch();
     void SendScopedKeyframe();
     void SendScopedUpdate();
     bool BuildNextScopedKeyframe(
@@ -331,6 +378,10 @@ private:
     void VerifyRemoteCommandExecution();
     void TryFinishNetworkClientSmoke();
     void TrySubmitNetworkMatchSmoke(
+        const echoes::sim::net::ScopedViewKeyframe& Keyframe);
+    void TryAdvanceNetworkReconnectSmoke(
+        const echoes::sim::net::ScopedViewKeyframe& Keyframe);
+    bool SubmitNetworkReconnectSmokeBatch(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe);
     void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
@@ -470,6 +521,14 @@ private:
     bool bNetworkMatchStarted = false;
     bool bNetworkClientSmoke = false;
     bool bNetworkMatchSmoke = false;
+    bool bNetworkReconnectPhaseOneSmoke = false;
+    bool bNetworkReconnectPhaseTwoSmoke = false;
+    bool bNetworkResumePending = false;
+    bool bNetworkResumeMatchWasStarted = false;
+    bool bNetworkResumeAccepted = false;
+    bool bNetworkReconnectBatchSubmitted = false;
+    bool bNetworkReconnectBatchAdmitted = false;
+    bool bNetworkReconnectCompletionSent = false;
     bool bNetworkCommandSubmitted = false;
     bool bNetworkRemoteExecutionReceived = false;
     bool bNetworkSmokeCompletionSent = false;
@@ -491,6 +550,12 @@ private:
     uint64 NetworkSnapshotAcknowledgementCount = 0;
     uint64 NextNetworkBatchId = 1;
     uint64 LastAcceptedNetworkBatchId = 0;
+    uint64 NetworkResumeDisconnectTick = 0;
+    uint64 NetworkReconnectExpectedSequence = 0;
+    uint64 NetworkReconnectExpectedBatchId = 0;
+    uint32 NetworkReconnectActorId = 0;
+    echoes::sim::Vec2 NetworkReconnectInitialPosition{};
+    FString NetworkResumeCredential;
     bool bNetworkMatchResultSent = false;
     bool bNetworkMatchResultReceived = false;
     bool bNetworkMatchCommandSubmitted = false;

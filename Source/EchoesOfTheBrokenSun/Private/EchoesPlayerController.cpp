@@ -3,6 +3,7 @@
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesGameMode.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
 #include "EchoesNetworkSession.h"
@@ -103,6 +104,20 @@ void AEchoesPlayerController::BeginPlay()
     bNetworkMatchSmoke =
         FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkMatchClientSmoke"));
+    bNetworkReconnectPhaseOneSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkReconnectPhaseOne"));
+    bNetworkReconnectPhaseTwoSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkReconnectPhaseTwo"));
+    if (GetNetMode() == NM_Client && bNetworkReconnectPhaseOneSmoke &&
+        bNetworkReconnectPhaseTwoSmoke)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=CONFLICTING_RECONNECT_PHASES"));
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
     bNetworkDelayFirstDeltaForSmoke = FParse::Param(
         FCommandLine::Get(), TEXT("EchoesNetworkDelayFirstDelta"));
     bNetworkDuplicateFirstDeltaForSmoke = FParse::Param(
@@ -132,9 +147,24 @@ void AEchoesPlayerController::BeginPlay()
     }
     if (GetNetMode() == NM_Client)
     {
-        GetWorldTimerManager().SetTimerForNextTick(
-            this,
-            &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
+        FString RequestedResumeCredential;
+        if (FParse::Value(
+                FCommandLine::Get(),
+                TEXT("EchoesNetworkResumeToken="),
+                RequestedResumeCredential) &&
+            !RequestedResumeCredential.IsEmpty())
+        {
+            NetworkResumeCredential = RequestedResumeCredential;
+            GetWorldTimerManager().SetTimerForNextTick(
+                this,
+                &AEchoesPlayerController::SubmitNetworkResumeCredential);
+        }
+        else
+        {
+            GetWorldTimerManager().SetTimerForNextTick(
+                this,
+                &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
+        }
     }
 }
 
@@ -156,6 +186,33 @@ void AEchoesPlayerController::ConfigureNetworkSeat(uint8 Seat)
     NetworkCommandContext.player = Seat;
     NetworkCommandContext.minimumInputDelayTicks = 3;
     NetworkCommandContext.maximumLeadTicks = 40;
+}
+
+void AEchoesPlayerController::ConfigureNetworkResume(
+    uint8 Seat,
+    uint64 RestoredLastAcceptedBatchId,
+    uint64 DisconnectTick,
+    bool bMatchWasStarted)
+{
+    ConfigureNetworkSeat(Seat);
+    if (!HasAuthority() || Seat >= echoes::sim::kMaximumPlayers)
+    {
+        return;
+    }
+    LastAcceptedNetworkBatchId = RestoredLastAcceptedBatchId;
+    NetworkResumeDisconnectTick = DisconnectTick;
+    bNetworkResumePending = true;
+    bNetworkResumeMatchWasStarted = bMatchWasStarted;
+}
+
+void AEchoesPlayerController::ConfigureNetworkResumeCredential(
+    const FString& Credential)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+    NetworkResumeCredential = Credential;
 }
 
 bool AEchoesPlayerController::IsNetworkClientControlActive() const
@@ -346,6 +403,74 @@ bool AEchoesPlayerController::SubmitNetworkSelectionCommand(
         MoveTemp(Intents), OrderLabel, Destination, MarkerType);
 }
 
+void AEchoesPlayerController::SubmitNetworkResumeCredential()
+{
+    if (!IsLocalController() || GetNetMode() != NM_Client ||
+        NetworkResumeCredential.IsEmpty())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RESUME_CLIENT_FAILED] reason=NET_RESUME_CREDENTIAL_UNAVAILABLE"));
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+    ServerSubmitNetworkResumeCredential(NetworkResumeCredential);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL_SENT] bytes=%d transport=reliableRpc credentialLogged=false compatibilityDeferred=true"),
+        NetworkResumeCredential.Len());
+}
+
+void AEchoesPlayerController::ServerSubmitNetworkResumeCredential_Implementation(
+    const FString& Credential)
+{
+    AEchoesGameMode* GameMode =
+        GetWorld() != nullptr
+            ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+            : nullptr;
+    FString Error;
+    const bool bAccepted =
+        GameMode != nullptr &&
+        GameMode->TryResumeNetworkPlayer(this, Credential, Error);
+    if (!bAccepted && Error.IsEmpty())
+    {
+        Error = TEXT("NET_RESUME_AUTHORITY_UNAVAILABLE");
+    }
+    ClientReceiveNetworkResumeCredentialResult(
+        bAccepted,
+        bAccepted ? TEXT("NET_RESUME_CREDENTIAL_ACCEPTED") : Error);
+}
+
+void AEchoesPlayerController::ClientReceiveNetworkResumeCredentialResult_Implementation(
+    bool bAccepted,
+    const FString& StableReason)
+{
+    if (bAccepted)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL_RESULT] accepted=true reason=%s credentialLogged=false"),
+            *StableReason);
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL_RESULT] accepted=false reason=%s credentialLogged=false"),
+            *StableReason);
+    }
+    if (!bAccepted)
+    {
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+    SubmitNetworkCompatibilityHello();
+}
+
 void AEchoesPlayerController::SubmitNetworkCompatibilityHello()
 {
     if (!IsLocalController() || GetNetMode() != NM_Client)
@@ -447,6 +572,23 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
 
     bNetworkCompatibilityAccepted = true;
     ClientReceiveCompatibilityResult(true, TEXT("NET_COMPATIBLE"));
+    ClientReceiveNetworkResumeCredential(
+        NetworkResumeCredential, 120.0f);
+    if (bNetworkResumePending && bNetworkResumeMatchWasStarted)
+    {
+        bNetworkReady = true;
+        ResumeNetworkMatch();
+        return;
+    }
+    if (bNetworkResumePending)
+    {
+        ClientReceiveNetworkResumeState(
+            true,
+            LastAcceptedNetworkBatchId + 1,
+            NetworkCommandContext.lastAcceptedSequence,
+            Simulation->CurrentTick(),
+            NetworkResumeDisconnectTick);
+    }
     ClientReceiveNetworkLobbyState(
         false, NetworkSeat, Simulation->CurrentTick(), 3);
     UE_LOG(
@@ -470,6 +612,8 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=true reason=%s"),
             *StableReason);
         if (bNetworkClientSmoke || bNetworkMatchSmoke ||
+            bNetworkReconnectPhaseOneSmoke ||
+            bNetworkReconnectPhaseTwoSmoke ||
             FParse::Param(
                 FCommandLine::Get(), TEXT("EchoesNetworkVisualReview")))
         {
@@ -490,7 +634,9 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=false reason=%s"),
             *StableReason);
     }
-    if (!bAccepted && (bNetworkClientSmoke || bNetworkMatchSmoke))
+    if (!bAccepted &&
+        (bNetworkClientSmoke || bNetworkMatchSmoke ||
+         bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke))
     {
         FPlatformMisc::RequestExit(false);
     }
@@ -550,6 +696,50 @@ void AEchoesPlayerController::BeginNetworkMatch()
         true);
 }
 
+void AEchoesPlayerController::ResumeNetworkMatch()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (!HasAuthority() || !bNetworkResumePending ||
+        !bNetworkResumeMatchWasStarted || !bNetworkCompatibilityAccepted ||
+        !bNetworkReady || Bridge == nullptr || Simulation == nullptr)
+    {
+        return;
+    }
+    bNetworkMatchStarted = true;
+    Bridge->SetNetworkHumanOpponent(true);
+    Bridge->SetScenarioPaused(false);
+    ClientReceiveNetworkLobbyState(
+        true, NetworkSeat, Simulation->CurrentTick(), 3);
+    ClientReceiveNetworkResumeState(
+        true,
+        LastAcceptedNetworkBatchId + 1,
+        NetworkCommandContext.lastAcceptedSequence,
+        Simulation->CurrentTick(),
+        NetworkResumeDisconnectTick);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_RESUMED] player=%u disconnectTick=%llu authorityTick=%llu lastAcceptedSequence=%llu nextBatch=%llu fullKeyframe=true aiControl=false"),
+        NetworkSeat,
+        static_cast<unsigned long long>(NetworkResumeDisconnectTick),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        static_cast<unsigned long long>(
+            NetworkCommandContext.lastAcceptedSequence),
+        static_cast<unsigned long long>(LastAcceptedNetworkBatchId + 1));
+    SendScopedKeyframe();
+    GetWorldTimerManager().SetTimer(
+        NetworkKeyframeTimer,
+        this,
+        &AEchoesPlayerController::SendScopedUpdate,
+        0.5f,
+        true);
+}
+
 void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
     bool bStarted,
     uint8 AssignedSeat,
@@ -576,6 +766,78 @@ void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
         NetworkSeat,
         static_cast<unsigned long long>(AuthorityTick),
         InputDelayTicks);
+}
+
+void AEchoesPlayerController::ClientReceiveNetworkResumeCredential_Implementation(
+    const FString& Credential,
+    float GraceSeconds)
+{
+    if (Credential.IsEmpty() || GraceSeconds <= 0.0f)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL_REJECTED] reason=NET_RESUME_CREDENTIAL_INVALID"));
+        return;
+    }
+    NetworkResumeCredential = Credential;
+    const bool bDevelopmentReconnectSmoke =
+        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke;
+    if (bDevelopmentReconnectSmoke)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true token=%s graceSeconds=%.0f exposure=developmentSmokeOnly"),
+            *Credential,
+            GraceSeconds);
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true token=redacted graceSeconds=%.0f exposure=memoryOnly"),
+            GraceSeconds);
+    }
+}
+
+void AEchoesPlayerController::ClientReceiveNetworkResumeState_Implementation(
+    bool bResumed,
+    uint64 RestoredNextBatchId,
+    uint64 LastAcceptedSequence,
+    uint64 AuthorityTick,
+    uint64 DisconnectTick)
+{
+    if (!bResumed || RestoredNextBatchId == 0 ||
+        AuthorityTick < DisconnectTick)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RESUME_STATE_REJECTED] resumed=%s nextBatch=%llu authorityTick=%llu disconnectTick=%llu reason=NET_RESUME_STATE_INVALID"),
+            bResumed ? TEXT("true") : TEXT("false"),
+            static_cast<unsigned long long>(RestoredNextBatchId),
+            static_cast<unsigned long long>(AuthorityTick),
+            static_cast<unsigned long long>(DisconnectTick));
+        if (bNetworkReconnectPhaseTwoSmoke)
+        {
+            FPlatformMisc::RequestExit(false);
+        }
+        return;
+    }
+    bNetworkResumeAccepted = true;
+    NetworkResumeDisconnectTick = DisconnectTick;
+    NextNetworkBatchId = RestoredNextBatchId;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_RESUME_STATE] resumed=true seat=%u disconnectTick=%llu authorityTick=%llu lastAcceptedSequence=%llu nextBatch=%llu exactSequence=true exactBatch=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(DisconnectTick),
+        static_cast<unsigned long long>(AuthorityTick),
+        static_cast<unsigned long long>(LastAcceptedSequence),
+        static_cast<unsigned long long>(RestoredNextBatchId));
 }
 
 bool AEchoesPlayerController::BuildNextScopedKeyframe(
@@ -992,6 +1254,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
         static_cast<unsigned long long>(Keyframe.scopedDigest),
         UTF8_TO_TCHAR(echoes::network::StableId(Acceptance)));
     TrySubmitNetworkMatchSmoke(Keyframe);
+    TryAdvanceNetworkReconnectSmoke(Keyframe);
     TryFinishNetworkClientSmoke();
     if (!bNetworkClientSmoke || bNetworkCommandSubmitted)
     {
@@ -1249,6 +1512,7 @@ void AEchoesPlayerController::ProcessScopedDeltaPacket(
         static_cast<int32>(Delta.entityUpserts.size()),
         static_cast<int32>(Delta.removedEntityIds.size()),
         static_cast<unsigned long long>(Current->scopedDigest));
+    TryAdvanceNetworkReconnectSmoke(*Current);
     TryFinishNetworkClientSmoke();
 }
 
@@ -1954,6 +2218,13 @@ void AEchoesPlayerController::ClientReceiveCommandBatchAdmission_Implementation(
     {
         bNetworkMatchBatchAdmitted = true;
     }
+    if ((bNetworkReconnectPhaseOneSmoke ||
+         bNetworkReconnectPhaseTwoSmoke) &&
+        BatchId == NetworkReconnectExpectedBatchId &&
+        AcceptedCount == 1 && RejectedCount == 0)
+    {
+        bNetworkReconnectBatchAdmitted = true;
+    }
 }
 
 void AEchoesPlayerController::QueueNetworkSmokeHostCommand()
@@ -2286,6 +2557,177 @@ void AEchoesPlayerController::TrySubmitNetworkMatchSmoke(
     }
 }
 
+bool AEchoesPlayerController::SubmitNetworkReconnectSmokeBatch(
+    const echoes::sim::net::ScopedViewKeyframe& Keyframe)
+{
+    const auto OwnedWorker = std::find_if(
+        Keyframe.entities.begin(),
+        Keyframe.entities.end(),
+        [&](const echoes::sim::net::ScopedEntityState& Entity)
+        {
+            return Entity.owner == NetworkSeat &&
+                   Entity.type == echoes::sim::EntityType::Worker;
+        });
+    if (OwnedWorker == Keyframe.entities.end())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=NET_OWNED_WORKER_UNAVAILABLE"));
+        return false;
+    }
+    const int32 MaximumXRaw =
+        Keyframe.mapWidthTiles * echoes::sim::kFixedScale - 1;
+    echoes::sim::net::CommandIntent Intent{};
+    Intent.type = echoes::sim::CommandType::Move;
+    Intent.actor = OwnedWorker->id;
+    Intent.position = echoes::sim::Vec2::FromRaw(
+        FMath::Min(
+            OwnedWorker->position.x.Raw() + echoes::sim::kFixedScale,
+            MaximumXRaw),
+        OwnedWorker->position.y.Raw());
+    TArray<echoes::sim::net::CommandIntent> Intents;
+    Intents.Add(Intent);
+    NetworkReconnectExpectedBatchId = NextNetworkBatchId;
+    NetworkReconnectExpectedSequence = Keyframe.lastAcceptedSequence + 1;
+    NetworkReconnectActorId = OwnedWorker->id;
+    NetworkReconnectInitialPosition = OwnedWorker->position;
+    const bool bSubmitted = SubmitNetworkCommandBatch(
+        MoveTemp(Intents),
+        bNetworkReconnectPhaseOneSmoke
+            ? TEXT("RECONNECT PHASE ONE MOVE")
+            : TEXT("RECONNECT PHASE TWO MOVE"),
+        NetworkSimToWorld(Intent.position),
+        EEchoesCommandMarkerType::Move);
+    if (bSubmitted)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RECONNECT_ORDER] phase=%u submitted=true actor=%u batch=%llu expectedSequence=%llu"),
+            bNetworkReconnectPhaseOneSmoke ? 1 : 2,
+            NetworkReconnectActorId,
+            static_cast<unsigned long long>(NetworkReconnectExpectedBatchId),
+            static_cast<unsigned long long>(NetworkReconnectExpectedSequence));
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RECONNECT_ORDER] phase=%u submitted=false actor=%u batch=%llu expectedSequence=%llu"),
+            bNetworkReconnectPhaseOneSmoke ? 1 : 2,
+            NetworkReconnectActorId,
+            static_cast<unsigned long long>(NetworkReconnectExpectedBatchId),
+            static_cast<unsigned long long>(NetworkReconnectExpectedSequence));
+    }
+    return bSubmitted;
+}
+
+void AEchoesPlayerController::TryAdvanceNetworkReconnectSmoke(
+    const echoes::sim::net::ScopedViewKeyframe& Keyframe)
+{
+    const bool bReconnectSmoke =
+        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke;
+    if (!bReconnectSmoke || bNetworkReconnectCompletionSent ||
+        !IsNetworkClientControlActive())
+    {
+        return;
+    }
+    if (bNetworkReconnectPhaseTwoSmoke && !bNetworkResumeAccepted)
+    {
+        return;
+    }
+    if (!bNetworkReconnectBatchSubmitted)
+    {
+        if (bNetworkReconnectPhaseOneSmoke && NextNetworkBatchId != 1)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] phase=1 reason=NET_INITIAL_BATCH_SEQUENCE_INVALID nextBatch=%llu"),
+                static_cast<unsigned long long>(NextNetworkBatchId));
+            FPlatformMisc::RequestExit(false);
+            return;
+        }
+        if (bNetworkReconnectPhaseTwoSmoke && NextNetworkBatchId != 2)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] phase=2 reason=NET_RESTORED_BATCH_SEQUENCE_INVALID nextBatch=%llu"),
+                static_cast<unsigned long long>(NextNetworkBatchId));
+            FPlatformMisc::RequestExit(false);
+            return;
+        }
+        bNetworkReconnectBatchSubmitted =
+            SubmitNetworkReconnectSmokeBatch(Keyframe);
+        if (!bNetworkReconnectBatchSubmitted)
+        {
+            FPlatformMisc::RequestExit(false);
+        }
+        return;
+    }
+    if (!bNetworkReconnectBatchAdmitted ||
+        Keyframe.lastAcceptedSequence < NetworkReconnectExpectedSequence)
+    {
+        return;
+    }
+    if (bNetworkReconnectPhaseOneSmoke)
+    {
+        if (NetworkResumeCredential.IsEmpty())
+        {
+            return;
+        }
+        bNetworkReconnectCompletionSent = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RECONNECT_PHASE_ONE_PASSED] token=%s snapshot=%llu tick=%llu lastAcceptedSequence=%llu nextBatch=%llu commandAdmitted=true intentionalDisconnect=true"),
+            *NetworkResumeCredential,
+            static_cast<unsigned long long>(Keyframe.snapshotId),
+            static_cast<unsigned long long>(Keyframe.simulationTick),
+            static_cast<unsigned long long>(Keyframe.lastAcceptedSequence),
+            static_cast<unsigned long long>(NextNetworkBatchId));
+        GetWorldTimerManager().SetTimer(
+            NetworkClientExitTimer,
+            this,
+            &AEchoesPlayerController::FinishNetworkClientSmoke,
+            0.1f,
+            false);
+        return;
+    }
+
+    const echoes::sim::net::ScopedEntityState* Actor =
+        FindNetworkEntity(NetworkReconnectActorId);
+    if (Actor == nullptr || Actor->position == NetworkReconnectInitialPosition ||
+        Keyframe.simulationTick <= NetworkResumeDisconnectTick)
+    {
+        return;
+    }
+    bNetworkReconnectCompletionSent = true;
+    ServerConfirmNetworkReconnectSmokeComplete(
+        Keyframe.snapshotId,
+        Keyframe.lastAcceptedSequence,
+        NetworkReconnectExpectedBatchId);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_RECONNECT_PHASE_TWO_PASSED] seat=%u snapshot=%llu tick=%llu disconnectTick=%llu lastAcceptedSequence=%llu batch=%llu commandExecuted=true fullKeyframeResync=true credentialRotated=true separateProcess=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(Keyframe.snapshotId),
+        static_cast<unsigned long long>(Keyframe.simulationTick),
+        static_cast<unsigned long long>(NetworkResumeDisconnectTick),
+        static_cast<unsigned long long>(Keyframe.lastAcceptedSequence),
+        static_cast<unsigned long long>(NetworkReconnectExpectedBatchId));
+    GetWorldTimerManager().SetTimer(
+        NetworkClientExitTimer,
+        this,
+        &AEchoesPlayerController::FinishNetworkClientSmoke,
+        0.5f,
+        false);
+}
+
 void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
     uint64 SnapshotId)
 {
@@ -2378,6 +2820,74 @@ void AEchoesPlayerController::ServerConfirmNetworkMatchSmokeComplete_Implementat
         static_cast<unsigned long long>(FinalScopedDigest));
     if (FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke")))
+    {
+        GetWorldTimerManager().SetTimer(
+            NetworkServerExitTimer,
+            FTimerDelegate::CreateLambda(
+                []()
+                {
+                    FPlatformMisc::RequestExit(false);
+                }),
+            0.75f,
+            false);
+    }
+}
+
+void AEchoesPlayerController::ServerConfirmNetworkReconnectSmokeComplete_Implementation(
+    uint64 SnapshotId,
+    uint64 ReportedLastAcceptedSequence,
+    uint64 ReportedLastAcceptedBatchId)
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const bool bSnapshotExact =
+        SnapshotId == LastAcknowledgedNetworkSnapshotId &&
+        !PendingNetworkSnapshotDigests.Contains(SnapshotId);
+    const bool bSequenceExact =
+        NetworkCommandContext.hasAcceptedSequence &&
+        NetworkCommandContext.lastAcceptedSequence ==
+            ReportedLastAcceptedSequence;
+    const bool bBatchExact =
+        LastAcceptedNetworkBatchId == ReportedLastAcceptedBatchId &&
+        ReportedLastAcceptedBatchId == 2;
+    const bool bTickAdvanced =
+        Simulation != nullptr &&
+        Simulation->CurrentTick() > NetworkResumeDisconnectTick;
+    if (!bNetworkResumePending || !bNetworkResumeMatchWasStarted ||
+        !bSnapshotExact || !bSequenceExact || !bBatchExact || !bTickAdvanced)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_RECONNECT_SERVER_FAILED] resumePending=%s matchWasStarted=%s snapshotExact=%s sequenceExact=%s batchExact=%s tickAdvanced=%s snapshot=%llu acknowledged=%llu sequence=%llu batch=%llu"),
+            bNetworkResumePending ? TEXT("true") : TEXT("false"),
+            bNetworkResumeMatchWasStarted ? TEXT("true") : TEXT("false"),
+            bSnapshotExact ? TEXT("true") : TEXT("false"),
+            bSequenceExact ? TEXT("true") : TEXT("false"),
+            bBatchExact ? TEXT("true") : TEXT("false"),
+            bTickAdvanced ? TEXT("true") : TEXT("false"),
+            static_cast<unsigned long long>(SnapshotId),
+            static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId),
+            static_cast<unsigned long long>(ReportedLastAcceptedSequence),
+            static_cast<unsigned long long>(ReportedLastAcceptedBatchId));
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_RECONNECT_SERVER_PASSED] player=%u disconnectTick=%llu authorityTick=%llu snapshot=%llu lastAcceptedSequence=%llu batch=%llu seatReservationConsumed=true credentialMatched=true credentialRotated=true aiControl=false fullKeyframeResync=true commandExecuted=true separateProcess=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(NetworkResumeDisconnectTick),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        static_cast<unsigned long long>(SnapshotId),
+        static_cast<unsigned long long>(ReportedLastAcceptedSequence),
+        static_cast<unsigned long long>(ReportedLastAcceptedBatchId));
+    if (FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkReconnectSmoke")))
     {
         GetWorldTimerManager().SetTimer(
             NetworkServerExitTimer,

@@ -26,10 +26,12 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/HUD.h"
+#include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
+#include "Misc/Guid.h"
 #include "Misc/Parse.h"
 #include "TimerManager.h"
 
@@ -39,6 +41,39 @@ const FName EnvironmentColorParameterName(TEXT("Color"));
 const FName EnvironmentMetallicParameterName(TEXT("Metallic"));
 const FName EnvironmentRoughnessParameterName(TEXT("Roughness"));
 const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
+
+[[nodiscard]] bool IsBoundedResumeCredential(const FString& Credential)
+{
+    if (Credential.Len() != 32)
+    {
+        return false;
+    }
+    for (const TCHAR Character : Credential)
+    {
+        if (!FChar::IsHexDigit(Character))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool ResumeCredentialsMatch(
+    const FString& Candidate,
+    const FString& Expected)
+{
+    if (!IsBoundedResumeCredential(Candidate) ||
+        !IsBoundedResumeCredential(Expected))
+    {
+        return false;
+    }
+    uint32 Difference = 0;
+    for (int32 Index = 0; Index < 32; ++Index)
+    {
+        Difference |= static_cast<uint32>(Candidate[Index] ^ Expected[Index]);
+    }
+    return Difference == 0;
+}
 }
 
 AEchoesGameMode::AEchoesGameMode()
@@ -58,6 +93,10 @@ void AEchoesGameMode::PostLogin(APlayerController* NewPlayer)
     }
     AEchoesPlayerController* EchoesController =
         Cast<AEchoesPlayerController>(NewPlayer);
+    if (bNetworkSeatReserved && !IsNetworkSeatReservationAvailable())
+    {
+        ExpireNetworkSeatReservation();
+    }
     if (EchoesController == nullptr || NetworkRemoteController.IsValid())
     {
         UE_LOG(
@@ -69,8 +108,32 @@ void AEchoesGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
     NetworkRemoteController = NewPlayer;
+    if (bNetworkSeatReserved)
+    {
+        bNetworkResumeValidationPending = true;
+        GetWorldTimerManager().SetTimer(
+            NetworkResumeValidationTimer,
+            this,
+            &AEchoesGameMode::ExpireNetworkResumeValidation,
+            5.0f,
+            false);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_RESUME_VALIDATION_PENDING] player=%u disconnectTick=%llu timeoutSeconds=5 seatActivated=false"),
+            UEchoesSimulationSubsystem::OpponentPlayerId,
+            static_cast<unsigned long long>(NetworkReservedDisconnectTick));
+        return;
+    }
+
+    NetworkResumeCredential = GenerateNetworkResumeCredential();
+    NetworkReservedLastBatchId = 0;
+    NetworkReservedDisconnectTick = 0;
+    bNetworkReservedMatchStarted = false;
     EchoesController->ConfigureNetworkSeat(
         UEchoesSimulationSubsystem::OpponentPlayerId);
+    EchoesController->ConfigureNetworkResumeCredential(
+        NetworkResumeCredential);
     UE_LOG(
         LogEchoes,
         Display,
@@ -82,21 +145,185 @@ void AEchoesGameMode::Logout(AController* Exiting)
 {
     if (NetworkRemoteController.Get() == Exiting)
     {
-        NetworkRemoteController.Reset();
-        if (UEchoesSimulationSubsystem* Bridge =
-                GetWorld() != nullptr
-                    ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
-                    : nullptr)
+        if (bNetworkResumeValidationPending)
         {
-            Bridge->SetNetworkHumanOpponent(false);
+            NetworkRemoteController.Reset();
+            bNetworkResumeValidationPending = false;
+            GetWorldTimerManager().ClearTimer(NetworkResumeValidationTimer);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NETWORK_RESUME_ATTEMPT_ENDED] player=%u seatReservationPreserved=true"),
+                UEchoesSimulationSubsystem::OpponentPlayerId);
+            Super::Logout(Exiting);
+            return;
         }
-        UE_LOG(
-            LogEchoes,
-            Display,
-            TEXT("[ECHOES_NETWORK_SEAT_RELEASED] player=%u"),
-            UEchoesSimulationSubsystem::OpponentPlayerId);
+        const AEchoesPlayerController* EchoesController =
+            Cast<AEchoesPlayerController>(Exiting);
+        NetworkReservedLastBatchId =
+            EchoesController != nullptr
+                ? EchoesController->GetLastAcceptedNetworkBatchId()
+                : 0;
+        bNetworkReservedMatchStarted =
+            EchoesController != nullptr &&
+            EchoesController->HasNetworkMatchStarted();
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        const echoes::sim::Simulation* Simulation =
+            Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+        NetworkReservedDisconnectTick =
+            Simulation != nullptr ? Simulation->CurrentTick() : 0;
+        bNetworkSeatReserved =
+            EchoesController != nullptr &&
+            EchoesController->IsNetworkCompatibilityAccepted() &&
+            !NetworkResumeCredential.IsEmpty();
+        NetworkReservationExpiresAt =
+            FPlatformTime::Seconds() + NetworkResumeGraceSeconds;
+        NetworkRemoteController.Reset();
+        if (!bNetworkReservedMatchStarted)
+        {
+            if (UEchoesSimulationSubsystem* MutableBridge =
+                    GetWorld() != nullptr
+                        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                        : nullptr)
+            {
+                MutableBridge->SetNetworkHumanOpponent(false);
+            }
+        }
+        if (bNetworkSeatReserved)
+        {
+            GetWorldTimerManager().SetTimer(
+                NetworkReservationTimer,
+                this,
+                &AEchoesGameMode::ExpireNetworkSeatReservation,
+                NetworkResumeGraceSeconds,
+                false);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NETWORK_SEAT_RESERVED] player=%u disconnectTick=%llu lastAcceptedBatch=%llu matchStarted=%s graceSeconds=%.0f aiControl=false credentialLogged=false"),
+                UEchoesSimulationSubsystem::OpponentPlayerId,
+                static_cast<unsigned long long>(NetworkReservedDisconnectTick),
+                static_cast<unsigned long long>(NetworkReservedLastBatchId),
+                bNetworkReservedMatchStarted ? TEXT("true") : TEXT("false"),
+                NetworkResumeGraceSeconds);
+        }
+        else
+        {
+            ExpireNetworkSeatReservation();
+        }
     }
     Super::Logout(Exiting);
+}
+
+bool AEchoesGameMode::TryResumeNetworkPlayer(
+    AEchoesPlayerController* Controller,
+    const FString& Credential,
+    FString& OutError)
+{
+    OutError.Reset();
+    if (Controller == nullptr || NetworkRemoteController.Get() != Controller ||
+        !bNetworkResumeValidationPending ||
+        !IsNetworkSeatReservationAvailable() ||
+        !ResumeCredentialsMatch(Credential, NetworkResumeCredential))
+    {
+        OutError = TEXT("NET_RESUME_CREDENTIAL_INVALID_OR_UNAVAILABLE");
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_RESUME_REJECTED] reason=%s credentialLogged=false seatReservationPreserved=true"),
+            *OutError);
+        return false;
+    }
+
+    Controller->ConfigureNetworkResume(
+        UEchoesSimulationSubsystem::OpponentPlayerId,
+        NetworkReservedLastBatchId,
+        NetworkReservedDisconnectTick,
+        bNetworkReservedMatchStarted);
+    bNetworkResumeValidationPending = false;
+    bNetworkSeatReserved = false;
+    NetworkReservationExpiresAt = 0.0;
+    GetWorldTimerManager().ClearTimer(NetworkResumeValidationTimer);
+    GetWorldTimerManager().ClearTimer(NetworkReservationTimer);
+    NetworkResumeCredential = GenerateNetworkResumeCredential();
+    Controller->ConfigureNetworkResumeCredential(NetworkResumeCredential);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_SEAT_RESUMED] player=%u disconnectTick=%llu lastAcceptedBatch=%llu credentialMatched=true credentialRotated=true credentialLogged=false sharedControl=false"),
+        UEchoesSimulationSubsystem::OpponentPlayerId,
+        static_cast<unsigned long long>(NetworkReservedDisconnectTick),
+        static_cast<unsigned long long>(NetworkReservedLastBatchId));
+    return true;
+}
+
+bool AEchoesGameMode::IsNetworkSeatReservationAvailable() const
+{
+    return bNetworkSeatReserved && !NetworkResumeCredential.IsEmpty() &&
+           FPlatformTime::Seconds() < NetworkReservationExpiresAt;
+}
+
+FString AEchoesGameMode::GenerateNetworkResumeCredential() const
+{
+    return FGuid::NewGuid().ToString(EGuidFormats::Digits);
+}
+
+void AEchoesGameMode::ExpireNetworkSeatReservation()
+{
+    if (!bNetworkSeatReserved && NetworkResumeCredential.IsEmpty())
+    {
+        return;
+    }
+    const double Now = FPlatformTime::Seconds();
+    if (bNetworkSeatReserved && Now < NetworkReservationExpiresAt)
+    {
+        GetWorldTimerManager().SetTimer(
+            NetworkReservationTimer,
+            this,
+            &AEchoesGameMode::ExpireNetworkSeatReservation,
+            static_cast<float>(NetworkReservationExpiresAt - Now),
+            false);
+        return;
+    }
+    bNetworkSeatReserved = false;
+    NetworkResumeCredential.Reset();
+    NetworkReservedLastBatchId = 0;
+    NetworkReservedDisconnectTick = 0;
+    NetworkReservationExpiresAt = 0.0;
+    bNetworkReservedMatchStarted = false;
+    GetWorldTimerManager().ClearTimer(NetworkReservationTimer);
+    if (UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr)
+    {
+        Bridge->SetNetworkHumanOpponent(false);
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_SEAT_RELEASED] player=%u reason=resumeGraceExpired aiControl=true"),
+        UEchoesSimulationSubsystem::OpponentPlayerId);
+}
+
+void AEchoesGameMode::ExpireNetworkResumeValidation()
+{
+    if (!bNetworkResumeValidationPending)
+    {
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Warning,
+        TEXT("[ECHOES_NETWORK_RESUME_REJECTED] reason=NET_RESUME_VALIDATION_TIMEOUT credentialLogged=false seatReservationPreserved=true"));
+    if (APlayerController* Controller = NetworkRemoteController.Get())
+    {
+        Controller->ClientReturnToMainMenuWithTextReason(
+            FText::FromString(TEXT("NET_RESUME_VALIDATION_TIMEOUT")));
+    }
 }
 
 void AEchoesGameMode::BeginPlay()
