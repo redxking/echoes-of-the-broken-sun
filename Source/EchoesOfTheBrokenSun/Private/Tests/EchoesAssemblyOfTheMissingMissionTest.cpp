@@ -266,9 +266,9 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     TestEqual(TEXT("Mission 13 retains campaign schema one"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(1));
-    TestEqual(TEXT("Mission 13 retains native snapshot schema twenty-one"),
+    TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(21));
+              static_cast<uint32>(22));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(
@@ -585,7 +585,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
             },
             6000));
     TestTrue(
-        TEXT("The paired readback reconstructs through schema-21 quick load"),
+        TEXT("The paired readback reconstructs through schema-22 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -672,13 +672,13 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::AssemblyOfTheMissing);
     TestTrue(
-        TEXT("Mission 13 stores one protocol, all facts, and schema-21 provenance"),
+        TEXT("Mission 13 stores one protocol, all facts, and schema-22 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 AssemblyChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 21 &&
+            MissionRecord->SimulationSnapshotVersion == 22 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

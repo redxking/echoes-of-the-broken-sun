@@ -292,9 +292,9 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(1));
     TestEqual(
-        TEXT("Mission 12 binds simulation snapshot schema twenty-one"),
+        TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(21));
+        static_cast<uint32>(22));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -768,7 +768,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             },
             5600));
     TestTrue(
-        TEXT("The readback state survives a schema-21 quick save and load"),
+        TEXT("The readback state survives a schema-22 quick save and load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -939,13 +939,13 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheFutureThatWon);
     TestTrue(
-        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-21 provenance"),
+        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-22 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 FutureThatWonChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 21 &&
+            MissionRecord->SimulationSnapshotVersion == 22 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;
