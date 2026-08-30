@@ -152,4 +152,10 @@ public:
         const FString& Path,
         FEchoesCampaignProgress& OutProgress,
         FString& OutFeedback);
+
+    /** Loads and validates exactly one named generation without fallback. */
+    static bool LoadGeneration(
+        const FString& Path,
+        FEchoesCampaignProgress& OutProgress,
+        FString& OutFeedback);
 };

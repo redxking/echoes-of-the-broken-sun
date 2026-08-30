@@ -439,6 +439,39 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
                      RetainedPriorGeneration,
                      Feedback) &&
                      RetainedPriorGeneration.Decisions.Num() == 2);
+        TestTrue(TEXT("The title exposes the validated prior generation"),
+                 Bridge->HasRestorableCampaignBackup() &&
+                     Bridge->GetCampaignBackupDecisionCount() == 2);
+        Controller->RequestCampaignRestore();
+        TestTrue(TEXT("The first restore request only arms campaign restoration"),
+                 Controller->IsCampaignRestoreConfirmationArmed() &&
+                     Bridge->GetCampaignProgress().Decisions.IsEmpty());
+        Controller->RequestCampaignRestore();
+        TestTrue(TEXT("Confirmed restoration activates the exact prior generation"),
+                 !Controller->IsCampaignRestoreConfirmationArmed() &&
+                     Bridge->GetCampaignProgress().Decisions.Num() == 2);
+        TestTrue(TEXT("Campaign restoration returns to a paused safe operation"),
+                 Bridge->GetOperationMode() ==
+                         EEchoesOperationMode::Skirmish &&
+                     Bridge->GetLocalFaction() ==
+                         echoes::sim::Faction::MeridianCompact &&
+                     Bridge->IsScenarioPaused());
+        FEchoesCampaignProgress RestoredPrimary;
+        TestTrue(TEXT("The restored generation is the validated active ledger"),
+                 FEchoesCampaignProgressStore::LoadGeneration(
+                     CampaignPath,
+                     RestoredPrimary,
+                     Feedback) &&
+                     RestoredPrimary.Decisions.Num() == 2);
+        FEchoesCampaignProgress ReversibleBackup;
+        TestTrue(TEXT("The replaced empty generation is retained for reversal"),
+                 FEchoesCampaignProgressStore::LoadGeneration(
+                     CampaignPath + TEXT(".bak"),
+                     ReversibleBackup,
+                     Feedback) &&
+                     ReversibleBackup.Decisions.IsEmpty() &&
+                     Bridge->HasRestorableCampaignBackup() &&
+                     Bridge->GetCampaignBackupDecisionCount() == 0);
         Controller->Destroy();
     }
 

@@ -184,6 +184,21 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
                  Feedback));
     TestTrue(TEXT("The prior generation exists after replacement"),
              IFileManager::Get().FileExists(*(TestPath + TEXT(".bak"))));
+    FEchoesCampaignProgress ExactBackup;
+    TestTrue(TEXT("An explicit generation load validates only the named backup"),
+             FEchoesCampaignProgressStore::LoadGeneration(
+                 TestPath + TEXT(".bak"),
+                 ExactBackup,
+                 Feedback));
+    TestTrue(TEXT("The exact backup is the first committed generation"),
+             ExactBackup.Decisions == Progress.Decisions);
+    TestFalse(TEXT("An unavailable exact generation does not fall back"),
+              FEchoesCampaignProgressStore::LoadGeneration(
+                  TestPath + TEXT(".missing"),
+                  ExactBackup,
+                  Feedback));
+    TestTrue(TEXT("The unavailable generation reports its exact boundary"),
+             Feedback.Contains(TEXT("GENERATION_UNAVAILABLE")));
 
     TestTrue(TEXT("The primary can be replaced with controlled corruption"),
              FFileHelper::SaveStringToFile(TEXT("corrupt"), *TestPath));
@@ -197,10 +212,31 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Recovered state is the exact first generation"),
              Loaded.Decisions == Progress.Decisions);
 
+    TestTrue(TEXT("Saving after fallback recovery commits a new valid primary"),
+             FEchoesCampaignProgressStore::SaveAtomic(
+                 TestPath,
+                 SecondGeneration,
+                 Feedback));
+    TestTrue(TEXT("A corrupt primary never displaces the last valid backup"),
+             FEchoesCampaignProgressStore::LoadGeneration(
+                 TestPath + TEXT(".bak"),
+                 ExactBackup,
+                 Feedback) &&
+                 ExactBackup.Decisions == Progress.Decisions);
+
+    TestTrue(TEXT("The replacement primary can be corrupted independently"),
+             FFileHelper::SaveStringToFile(TEXT("corrupt again"), *TestPath));
     TestTrue(TEXT("The backup can also be replaced with corruption"),
              FFileHelper::SaveStringToFile(
                  TEXT("also corrupt"),
                  *(TestPath + TEXT(".bak"))));
+    TestFalse(TEXT("An explicitly corrupt generation fails closed"),
+              FEchoesCampaignProgressStore::LoadGeneration(
+                  TestPath + TEXT(".bak"),
+                  ExactBackup,
+                  Feedback));
+    TestTrue(TEXT("Exact-generation corruption is identified"),
+             Feedback.Contains(TEXT("GENERATION_INVALID")));
     TestFalse(TEXT("Two corrupt generations fail closed"),
               FEchoesCampaignProgressStore::LoadWithBackup(
                   TestPath,

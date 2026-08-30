@@ -1077,8 +1077,18 @@ void AEchoesHUD::DrawTitleScreen(
             EEchoesOperationMode::CampaignShapeOfSilence;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
+    const bool bCanRestoreCampaign = Bridge != nullptr &&
+        Bridge->HasRestorableCampaignBackup();
+    const int32 ActiveCampaignRecords = Bridge != nullptr
+        ? Bridge->GetCampaignProgress().Decisions.Num()
+        : 0;
+    const int32 BackupCampaignRecords = Bridge != nullptr
+        ? Bridge->GetCampaignBackupDecisionCount()
+        : 0;
     const bool bNewCampaignArmed =
         EchoesController->IsNewCampaignConfirmationArmed();
+    const bool bCampaignRestoreArmed =
+        EchoesController->IsCampaignRestoreConfirmationArmed();
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -1154,17 +1164,33 @@ void AEchoesHUD::DrawTitleScreen(
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
-    if (bCanStartNewCampaign)
-    {
-        OperationControlLine += TEXT("  //  [F10] NEW CAMPAIGN");
-    }
     DrawText(
         OperationControlLine,
              Accent, Left + 48.0f, Top + 272.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
+    FString CampaignControlLine = FString::Printf(
+        TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
+        ActiveCampaignRecords,
+        ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S"));
+    if (bCanStartNewCampaign)
+    {
+        CampaignControlLine += TEXT("  //  [F10] NEW");
+    }
+    if (bCanRestoreCampaign)
+    {
+        CampaignControlLine += FString::Printf(
+            TEXT("  //  [PAGE UP] RESTORE PRIOR %d"),
+            BackupCampaignRecords);
+    }
+    DrawText(
+        CampaignControlLine,
+        Muted, Left + 48.0f, Top + 298.0f * ContentScale,
+        SmallFont, 0.78f * TextScale, false);
     DrawText(
         bNewCampaignArmed
             ? TEXT("NEW CAMPAIGN CONFIRMATION ARMED — ACTIVE PROGRESS WILL BE REPLACED.")
+        : bCampaignRestoreArmed
+            ? TEXT("RESTORE CONFIRMATION ARMED — VALIDATED PRIOR PROGRESS WILL BECOME ACTIVE.")
         : bPrologue
             ? TEXT("Recover Talar Venn's displaced archive before the line collapses.")
         : bSevenAccounts
@@ -1180,11 +1206,13 @@ void AEchoesHUD::DrawTitleScreen(
         : bShapeOfSilence
             ? TEXT("Six consistent records lead Oruun to a communal-memory hollow shaped like the recovered census absence.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
-             Body, Left + 48.0f, Top + 310.0f * ContentScale,
+             Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
     DrawText(
         bNewCampaignArmed
             ? TEXT("PRESS F10 AGAIN WITHIN 10 SECONDS. ONE PRIOR LEDGER GENERATION IS RETAINED.")
+        : bCampaignRestoreArmed
+            ? TEXT("PRESS PAGE UP AGAIN WITHIN 30 SECONDS. THE CURRENT GENERATION BECOMES THE BACKUP.")
         : bPrologue
             ? TEXT("Commit the Well's consequence, then withdraw to Lume Reach.")
         : bSevenAccounts
@@ -1200,14 +1228,14 @@ void AEchoesHUD::DrawTitleScreen(
         : bShapeOfSilence
             ? TEXT("Root the Waystone, raise a Listening Spine, place both witnesses, then reach the confluence.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
-             Body, Left + 48.0f, Top + 338.0f * ContentScale,
+             Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
 
     DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent,
-             Left + 48.0f, Top + 404.0f * ContentScale,
+             Left + 48.0f, Top + 410.0f * ContentScale,
              SmallFont, 0.90f * TextScale, false);
     DrawText(AccessLine, Body,
-             Left + 48.0f, Top + 438.0f * ContentScale,
+             Left + 48.0f, Top + 444.0f * ContentScale,
              SmallFont, 0.80f * TextScale, false);
 
     DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,

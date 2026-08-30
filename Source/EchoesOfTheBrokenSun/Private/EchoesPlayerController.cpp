@@ -115,6 +115,8 @@ void AEchoesPlayerController::PresentTitleScreen()
     bMatchResultVisible = false;
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
     bCampaignResult = false;
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
@@ -188,6 +190,8 @@ void AEchoesPlayerController::ConfirmTitleScreen()
     }
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
     bTitleScreenVisible = false;
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TITLE_CONFIRMED] next=OperationsBrief"));
     PresentMissionBriefing();
@@ -506,6 +510,8 @@ void AEchoesPlayerController::CycleOperation()
     }
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
     EEchoesOperationMode NewOperation = EEchoesOperationMode::Skirmish;
     if (Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
     {
@@ -573,6 +579,13 @@ bool AEchoesPlayerController::IsNewCampaignConfirmationArmed() const
                NewCampaignConfirmationExpiresAt;
 }
 
+bool AEchoesPlayerController::IsCampaignRestoreConfirmationArmed() const
+{
+    return bCampaignRestoreConfirmationArmed && GetWorld() != nullptr &&
+           GetWorld()->GetTimeSeconds() <=
+               CampaignRestoreConfirmationExpiresAt;
+}
+
 void AEchoesPlayerController::RequestNewCampaign()
 {
     if (!bTitleScreenVisible)
@@ -589,6 +602,8 @@ void AEchoesPlayerController::RequestNewCampaign()
         SetStatusMessage(TEXT("[NEW_CAMPAIGN_SIM_NOT_READY] Campaign reset is unavailable."));
         return;
     }
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
     if (Bridge->GetCampaignProgress().Decisions.IsEmpty())
     {
         bNewCampaignConfirmationArmed = false;
@@ -622,6 +637,74 @@ void AEchoesPlayerController::RequestNewCampaign()
     }
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    bCampaignResult = false;
+    bCampaignSuccess = false;
+    CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
+    CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
+    PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
+    PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
+    SetStatusMessage(Feedback, 12.0f);
+}
+
+void AEchoesPlayerController::RequestCampaignRestore()
+{
+    if (!bTitleScreenVisible)
+    {
+        SetStatusMessage(TEXT("[CAMPAIGN_RESTORE_TITLE_REQUIRED] Return to the title screen before restoring campaign progress."));
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[CAMPAIGN_RESTORE_SIM_NOT_READY] Campaign recovery is unavailable."));
+        return;
+    }
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
+    if (!Bridge->HasRestorableCampaignBackup())
+    {
+        bCampaignRestoreConfirmationArmed = false;
+        CampaignRestoreConfirmationExpiresAt = 0.0;
+        SetStatusMessage(TEXT("CAMPAIGN RECOVERY: no distinct validated prior generation is available."));
+        return;
+    }
+    if (!IsCampaignRestoreConfirmationArmed())
+    {
+        bCampaignRestoreConfirmationArmed = true;
+        CampaignRestoreConfirmationExpiresAt =
+            GetWorld()->GetTimeSeconds() + 30.0;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("CAMPAIGN RESTORE ARMED — press Page Up again within 30 seconds to activate the validated %d-record prior generation. The current generation will become the backup."),
+                Bridge->GetCampaignBackupDecisionCount()),
+            30.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CAMPAIGN_RESTORE_ARMED] activeRecords=%d backupRecords=%d confirmationSeconds=30 reversible=true"),
+            Bridge->GetCampaignProgress().Decisions.Num(),
+            Bridge->GetCampaignBackupDecisionCount());
+        return;
+    }
+
+    FString Feedback;
+    if (!Bridge->RestoreCampaignBackup(Feedback))
+    {
+        bCampaignRestoreConfirmationArmed = false;
+        CampaignRestoreConfirmationExpiresAt = 0.0;
+        SetStatusMessage(Feedback, 12.0f);
+        return;
+    }
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
     ClearSelection();
     ClearControlGroups();
     bSelectionButtonDown = false;
@@ -1623,6 +1706,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
     BindPressed(TEXT("RequestNewCampaign"), &AEchoesPlayerController::RequestNewCampaign);
+    BindPressed(TEXT("RequestCampaignRestore"), &AEchoesPlayerController::RequestCampaignRestore);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
     BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);

@@ -447,19 +447,26 @@ bool FEchoesCampaignProgressStore::SaveAtomic(
     }
 
     const bool bHadPrimary = Files.FileExists(*Path);
+    bool bRetainedValidPrimary = false;
     if (bHadPrimary)
     {
-        Files.Delete(*BackupPath, false, true, true);
-        if (!Files.Move(*BackupPath, *Path, true, true, true, true))
+        FEchoesCampaignProgress PriorPrimary;
+        FString PriorPrimaryError;
+        if (TryLoadOne(Path, PriorPrimary, PriorPrimaryError))
         {
-            Files.Delete(*TemporaryPath, false, true, true);
-            OutFeedback = TEXT("[CAMPAIGN_BACKUP_FAILED] The prior campaign ledger could not be retained.");
-            return false;
+            Files.Delete(*BackupPath, false, true, true);
+            if (!Files.Move(*BackupPath, *Path, true, true, true, true))
+            {
+                Files.Delete(*TemporaryPath, false, true, true);
+                OutFeedback = TEXT("[CAMPAIGN_BACKUP_FAILED] The prior campaign ledger could not be retained.");
+                return false;
+            }
+            bRetainedValidPrimary = true;
         }
     }
     if (!Files.Move(*Path, *TemporaryPath, true, true, true, true))
     {
-        if (bHadPrimary && Files.FileExists(*BackupPath))
+        if (bRetainedValidPrimary && Files.FileExists(*BackupPath))
         {
             Files.Move(*Path, *BackupPath, true, true, true, true);
         }
@@ -512,4 +519,28 @@ bool FEchoesCampaignProgressStore::LoadWithBackup(
         bPrimaryExists ? *PrimaryFailure : TEXT("file unavailable"),
         bBackupExists ? *BackupFailure : TEXT("file unavailable"));
     return false;
+}
+
+bool FEchoesCampaignProgressStore::LoadGeneration(
+    const FString& Path,
+    FEchoesCampaignProgress& OutProgress,
+    FString& OutFeedback)
+{
+    if (!IFileManager::Get().FileExists(*Path))
+    {
+        OutFeedback = TEXT("[CAMPAIGN_GENERATION_UNAVAILABLE] The requested campaign generation does not exist.");
+        return false;
+    }
+    if (!TryLoadOne(Path, OutProgress, OutFeedback))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[CAMPAIGN_GENERATION_INVALID] %s"),
+            *OutFeedback);
+        return false;
+    }
+    OutFeedback = FString::Printf(
+        TEXT("CAMPAIGN LEDGER: validated generation loaded with %d decision%s."),
+        OutProgress.Decisions.Num(),
+        OutProgress.Decisions.Num() == 1 ? TEXT("") : TEXT("s"));
+    return true;
 }

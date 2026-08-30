@@ -154,6 +154,9 @@ public:
     /** Replaces active campaign decisions with an empty ledger and retains one backup. */
     bool StartNewCampaign(FString& OutFeedback);
 
+    /** Restores the validated prior generation and retains the replaced active one. */
+    bool RestoreCampaignBackup(FString& OutFeedback);
+
     /** Atomically writes a validated deterministic snapshot and retains one backup. */
     bool QuickSaveScenario(FString& OutFeedback) const;
 
@@ -267,6 +270,16 @@ public:
     {
         return bCampaignProgressAvailable;
     }
+    [[nodiscard]] bool HasRestorableCampaignBackup() const
+    {
+        return bCampaignBackupAvailable;
+    }
+    [[nodiscard]] int32 GetCampaignBackupDecisionCount() const
+    {
+        return bCampaignBackupAvailable
+                   ? CampaignBackupProgress.Decisions.Num()
+                   : 0;
+    }
     [[nodiscard]] echoes::sim::Faction GetLocalFaction() const
     {
         return bStressScenario
@@ -287,6 +300,7 @@ private:
     friend class FEchoesPrologueMissionTest;
 #endif
     [[nodiscard]] FString GetActiveQuickSavePath() const;
+    void RefreshCampaignBackupState();
     EEchoesCampaignCommitStatus CommitPrologueCompletion(
         echoes::sim::FutureWellChoice CurrentChoice,
         echoes::sim::FutureWellChoice& OutRecordedChoice,
@@ -388,7 +402,9 @@ private:
     echoes::sim::EntityId FirstMemoryWitnessId = 0;
     echoes::sim::EntityId SecondMemoryWitnessId = 0;
     FEchoesCampaignProgress CampaignProgress;
+    FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;
+    bool bCampaignBackupAvailable = false;
     FString CampaignProgressPath;
     echoes::sim::ResearchType ResearchPresentationTechnology =
         echoes::sim::ResearchType::None;

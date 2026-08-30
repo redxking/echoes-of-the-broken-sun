@@ -119,6 +119,10 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("CycleFormation"), EKeys::F8));
         TestTrue(TEXT("Recoverable new-campaign input is mapped"),
                  HasAction(TEXT("RequestNewCampaign"), EKeys::F10));
+        TestTrue(TEXT("Validated campaign-restore input is mapped"),
+                 HasAction(TEXT("RequestCampaignRestore"), EKeys::F11));
+        TestTrue(TEXT("Mac-safe campaign-restore key is mapped"),
+                 HasAction(TEXT("RequestCampaignRestore"), EKeys::PageUp));
         TestTrue(TEXT("HUD-scale accessibility input is mapped"),
                  HasAction(TEXT("CycleHudScale"), EKeys::U));
         TestTrue(TEXT("High-contrast accessibility input is mapped"),

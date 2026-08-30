@@ -223,6 +223,8 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     FirstMemoryWitnessId = 0;
     SecondMemoryWitnessId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
+    CampaignBackupProgress = FEchoesCampaignProgress{};
+    bCampaignBackupAvailable = false;
     CampaignProgressPath = FEchoesCampaignProgressStore::GetDefaultPath();
 #if !UE_BUILD_SHIPPING
     FString CampaignPathOverride;
@@ -260,6 +262,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
             CampaignProgress.Decisions.Num(),
             *CampaignFeedback);
     }
+    RefreshCampaignBackupState();
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
     FogView.Reset();
     TerrainView.Reset();
@@ -2020,6 +2023,7 @@ bool UEchoesSimulationSubsystem::StartNewCampaign(FString& OutFeedback)
     const bool bHadScenario = bScenarioReady && Simulation.IsValid();
     const bool bWasPaused = bSimulationPaused;
     CampaignProgress = MoveTemp(EmptyCampaign);
+    RefreshCampaignBackupState();
     if (bHadScenario)
     {
         StopPrototypeScenario();
@@ -2048,6 +2052,101 @@ bool UEchoesSimulationSubsystem::StartNewCampaign(FString& OutFeedback)
         LogEchoes,
         Display,
         TEXT("[ECHOES_NEW_CAMPAIGN_CREATED] replacedRecords=%d operation=GlassScar local=MeridianCompact backupRetained=true scenarioReset=%s"),
+        ReplacedDecisionCount,
+        bHadScenario ? TEXT("true") : TEXT("false"));
+    return true;
+}
+
+void UEchoesSimulationSubsystem::RefreshCampaignBackupState()
+{
+    CampaignBackupProgress = FEchoesCampaignProgress{};
+    bCampaignBackupAvailable = false;
+    if (!bCampaignProgressAvailable)
+    {
+        return;
+    }
+
+    FString BackupFeedback;
+    FEchoesCampaignProgress Candidate;
+    if (!FEchoesCampaignProgressStore::LoadGeneration(
+            CampaignProgressPath + TEXT(".bak"),
+            Candidate,
+            BackupFeedback))
+    {
+        return;
+    }
+    if (Candidate.Decisions == CampaignProgress.Decisions)
+    {
+        return;
+    }
+    CampaignBackupProgress = MoveTemp(Candidate);
+    bCampaignBackupAvailable = true;
+}
+
+bool UEchoesSimulationSubsystem::RestoreCampaignBackup(FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!bCampaignProgressAvailable)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Campaign recovery is unavailable because campaign storage is unavailable.");
+        return false;
+    }
+
+    RefreshCampaignBackupState();
+    if (!bCampaignBackupAvailable)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_BACKUP_UNAVAILABLE] No distinct validated prior campaign generation is available.");
+        return false;
+    }
+
+    const FEchoesCampaignProgress RestoredCampaign = CampaignBackupProgress;
+    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
+    const int32 RestoredDecisionCount = RestoredCampaign.Decisions.Num();
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            RestoredCampaign,
+            SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return false;
+    }
+
+    const bool bHadScenario = bScenarioReady && Simulation.IsValid();
+    const bool bWasPaused = bSimulationPaused;
+    CampaignProgress = RestoredCampaign;
+    RefreshCampaignBackupState();
+    if (bHadScenario)
+    {
+        StopPrototypeScenario();
+    }
+    SelectedOperation = EEchoesOperationMode::Skirmish;
+    LocalFaction = Faction::MeridianCompact;
+    if (bHadScenario && !StartScenario(false))
+    {
+        OutFeedback = TEXT("[CAMPAIGN_RESTORE_REBUILD_FAILED] The prior ledger was restored, but the default operation could not be rebuilt.");
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CAMPAIGN_RESTORE_FAILED] stage=scenario_rebuild restoredRecords=%d replacedRecords=%d activeRetainedAsBackup=true"),
+            RestoredDecisionCount,
+            ReplacedDecisionCount);
+        return false;
+    }
+    if (bHadScenario)
+    {
+        SetScenarioPaused(bWasPaused);
+    }
+    OutFeedback = FString::Printf(
+        TEXT("CAMPAIGN RESTORED: prior generation with %d mission record%s is active; the replaced %d-record generation is retained as backup."),
+        RestoredDecisionCount,
+        RestoredDecisionCount == 1 ? TEXT("") : TEXT("s"),
+        ReplacedDecisionCount);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESTORED] restoredRecords=%d replacedRecords=%d operation=GlassScar local=MeridianCompact activeRetainedAsBackup=true scenarioReset=%s"),
+        RestoredDecisionCount,
         ReplacedDecisionCount,
         bHadScenario ? TEXT("true") : TEXT("false"));
     return true;
@@ -2196,6 +2295,7 @@ EEchoesCampaignCommitStatus UEchoesSimulationSubsystem::CommitPrologueCompletion
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2260,6 +2360,7 @@ UEchoesSimulationSubsystem::CommitSevenAccountsCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2326,6 +2427,7 @@ UEchoesSimulationSubsystem::CommitCityReserveCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2391,6 +2493,7 @@ UEchoesSimulationSubsystem::CommitUnburiedRoadCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2460,6 +2563,7 @@ UEchoesSimulationSubsystem::CommitTermsOfContinuanceCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2526,6 +2630,7 @@ UEchoesSimulationSubsystem::CommitNamesWithoutBirthsCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }
@@ -2592,6 +2697,7 @@ UEchoesSimulationSubsystem::CommitShapeOfSilenceCompletion(
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
     CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
     OutFeedback = SaveFeedback;
     return EEchoesCampaignCommitStatus::Added;
 }

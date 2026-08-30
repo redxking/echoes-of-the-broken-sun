@@ -17,19 +17,26 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("--choice", choices=CHOICES, default="Preserve")
-    parser.add_argument("--through-mission", type=int, choices=(1, 2, 3, 4, 5, 6), default=1)
+    parser.add_argument(
+        "--through-mission",
+        type=int,
+        choices=tuple(range(8)),
+        default=1,
+    )
     args = parser.parse_args()
 
-    records = [struct.pack(
-        "<BBBBIQQ",
-        1,
-        CHOICES[args.choice],
-        0x07,
-        0x0F,
-        20,
-        120,
-        0x7A11A2,
-    )]
+    records = []
+    if args.through_mission >= 1:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            1,
+            CHOICES[args.choice],
+            0x07,
+            0x0F,
+            20,
+            120,
+            0x7A11A2,
+        ))
     if args.through_mission >= 2:
         records.append(struct.pack(
             "<BBBBIQQ",
@@ -84,6 +91,17 @@ def main() -> int:
             20,
             1640,
             0x7A11A7,
+        ))
+    if args.through_mission >= 7:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            7,
+            CHOICES[args.choice],
+            CHOICE_MASKS[args.choice],
+            0x3F,
+            20,
+            1940,
+            0x7A11A8,
         ))
     header = b"ECHOCPG1" + struct.pack("<HH", 1, len(records))
     payload = header + b"".join(records)
