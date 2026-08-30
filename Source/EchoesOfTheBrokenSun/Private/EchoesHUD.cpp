@@ -1,6 +1,7 @@
 #include "EchoesHUD.h"
 
 #include "EchoesContentSubsystem.h"
+#include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesEntityView.h"
@@ -514,6 +515,20 @@ void AEchoesHUD::DrawHUD()
                 Bridge->GetFutureThatWonPlan();
             SelectionLine = FString::Printf(
                 TEXT("Selected  %d%s     Formation  %s     Restoration plan  %02u     Recorded protocol  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Plan.StablePlanKey,
+                Plan.ProtocolDisplayName);
+        }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+        {
+            const FEchoesAssemblyOfTheMissingPlan Plan =
+                Bridge->GetAssemblyOfTheMissingPlan();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Public assembly plan  %02u     Recorded protocol  %s"),
                 SelectedIds.Num(),
                 *SelectedType,
                 *EchoesController->GetFormationLabel(),
@@ -1276,6 +1291,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bFutureThatWon = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignFutureThatWon;
+    const bool bAssemblyOfTheMissing = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1320,6 +1338,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bChoirAtLumeReach ? TEXT("THE CHOIR AT LUME REACH")
              : bNoNeutralLedger ? TEXT("NO NEUTRAL LEDGER")
              : bFutureThatWon ? TEXT("THE FUTURE THAT WON")
+             : bAssemblyOfTheMissing ? TEXT("ASSEMBLY OF THE MISSING")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1367,6 +1386,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 12  //  %s  //  ORUUN + INDEPENDENT VERIFIER"),
                   *LocalFaction)
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 13  //  %s  //  ORUUN + INDEPENDENT VERIFIER"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1397,6 +1420,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 11")
     : bFutureThatWon
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 12")
+    : bAssemblyOfTheMissing
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 13")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1451,6 +1476,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Ten ordered records admit one local coalition route. Mission 01, Mission 09, and Mission 10 select its inherited geometry and protocol.")
         : bFutureThatWon
             ? TEXT("Eleven ordered records bind one local restoration demonstrator to the founding doctrine, recorded district pair, and exact Lume protocol.")
+        : bAssemblyOfTheMissing
+            ? TEXT("Twelve ordered records bind three neutral public interfaces to the existing plan without adding hidden authorship, trust, or mixed-faction command.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1483,6 +1510,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Secure the route, integrate both contributing districts, attest both public evidence channels, apply the recorded protocol, then rally.")
         : bFutureThatWon
             ? TEXT("Establish independent readback, verify both district inputs, activate the recorded protocol, hold stability, then observe both readbacks.")
+        : bAssemblyOfTheMissing
+            ? TEXT("Establish paired public-record readback, link the Crownfall index, then observe the assembly from two independent witness sites.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2571,6 +2600,99 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        const FEchoesAssemblyOfTheMissingPlan Plan =
+            Bridge->GetAssemblyOfTheMissingPlan();
+        const bool bFailed =
+            Objective.AssemblyOfTheMissingPhase ==
+            EEchoesAssemblyOfTheMissingPhase::Failed;
+        const int32 ObservationCount =
+            (Objective.bAssemblyMeridianWitnessObserved ? 1 : 0) +
+            (Objective.bAssemblyKharuunWitnessObserved ? 1 : 0);
+        const FString ReadbackState = bFailed
+            ? TEXT("PUBLIC INTERFACE LINE LOST")
+            : Objective.bAssemblyPublicRecordReadbackEstablished
+                ? TEXT("PAIRED PUBLIC READBACK ESTABLISHED")
+                : FString::Printf(
+                      TEXT("ORUUN %d,%d + VERIFIER %d,%d"),
+                      Plan.KharuunPublicRecordSite.x.FloorToInt(),
+                      Plan.KharuunPublicRecordSite.y.FloorToInt(),
+                      Plan.MeridianPublicRecordSite.x.FloorToInt(),
+                      Plan.MeridianPublicRecordSite.y.FloorToInt());
+        const FString IndexState = bFailed
+            ? TEXT("CROWNFALL LINK CONTRACT LOST")
+            : Objective.bAssemblyCrownfallIndexLinked
+                ? TEXT("CROWNFALL PUBLIC INDEX LINKED")
+            : Objective.bAssemblyPublicRecordReadbackEstablished
+                ? FString::Printf(
+                      TEXT("BUILD [N] WITHIN 3 TILES OF %d,%d"),
+                      Plan.CrownfallIndexSite.x.FloorToInt(),
+                      Plan.CrownfallIndexSite.y.FloorToInt())
+                : TEXT("WAITING — ESTABLISH PUBLIC READBACK");
+        const FString ObservationState = bFailed
+            ? TEXT("INDEPENDENT OBSERVATION LOST")
+            : ObservationCount == 2
+                ? TEXT("BOTH PUBLIC ASSEMBLY VIEWS OBSERVED")
+            : Objective.bAssemblyCrownfallIndexLinked
+                ? FString::Printf(
+                      TEXT("%d/2 — ORUUN %d,%d + VERIFIER %d,%d"),
+                      ObservationCount,
+                      Plan.KharuunAssemblyWitnessSite.x.FloorToInt(),
+                      Plan.KharuunAssemblyWitnessSite.y.FloorToInt(),
+                      Plan.MeridianAssemblyWitnessSite.x.FloorToInt(),
+                      Plan.MeridianAssemblyWitnessSite.y.FloorToInt())
+                : TEXT("WAITING — LINK CROWNFALL INDEX");
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("ASSEMBLY OF THE MISSING  //  MISSION 13"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  PUBLIC READBACK   %s"), *ReadbackState),
+            bFailed ? Failed
+                    : Objective.bAssemblyPublicRecordReadbackEstablished
+                        ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.70f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  CROWNFALL INDEX   %s"), *IndexState),
+            bFailed ? Failed
+                    : Objective.bAssemblyCrownfallIndexLinked
+                        ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.70f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  INDEPENDENT OBS.  %s"), *ObservationState),
+            bFailed ? Failed : ObservationCount == 2 ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.70f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_ASSEMBLY_OF_THE_MISSING_OBJECTIVES_READY] phase=%s plan=%u foundingDoctrine=%u districtPair=%u+%u deferred=%u protocol=%u oruun=%u verifier=%u publicRecordInterfaces=%u:%u crownfallIndex=%u reconstructable=true exactOrderedLedger=true commandAuthority=Kharuun publicInterfaces=neutralNonCommandable mixedFactionCommand=false responsibilityUnassigned=true hiddenAuthorshipUnproven=true trustUnproven=true consentUnproven=true civilianStateUnmodeled=true"),
+                FEchoesAssemblyOfTheMissingMissionModel::StableName(
+                    Objective.AssemblyOfTheMissingPhase),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                static_cast<uint8>(Plan.FirstContributingDistrict),
+                static_cast<uint8>(Plan.SecondContributingDistrict),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Objective.AssemblyOruunId,
+                Objective.AssemblyVerifierId,
+                Objective.AssemblyMeridianPublicRecordInterfaceId,
+                Objective.AssemblyKharuunPublicRecordInterfaceId,
+                Objective.AssemblyCrownfallIndexInterfaceId);
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2707,13 +2829,19 @@ void AEchoesHUD::DrawMatchResult(
     const bool bFutureThatWonResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignFutureThatWon;
+    const bool bAssemblyOfTheMissingResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bFutureThatWonResult
+        ? bAssemblyOfTheMissingResult
+            ? bVictory ? TEXT("PUBLIC ASSEMBLY RECEIPT RECORDED")
+                       : TEXT("PUBLIC ASSEMBLY FAILED")
+        : bFutureThatWonResult
             ? bVictory ? TEXT("RESTORATION PROTOCOL RECORDED")
                        : TEXT("RESTORATION DEMONSTRATION FAILED")
         : bNoNeutralLedgerResult
@@ -2730,7 +2858,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bFutureThatWonResult
+        ? bAssemblyOfTheMissingResult
+            ? bVictory ? TEXT("THE MISSING RECORD HOLDS IN PUBLIC")
+                       : TEXT("THE ASSEMBLY CANNOT BE OBSERVED")
+        : bFutureThatWonResult
             ? bVictory ? TEXT("THE RECORDED FUTURE HOLDS—HERE, FOR NOW")
                        : TEXT("THE PUBLIC READBACK CANNOT CLOSE")
         : bNoNeutralLedgerResult
@@ -2769,7 +2900,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bFutureThatWonResult
+        ? bAssemblyOfTheMissingResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The public-record pair, Crownfall index link, and both independent assembly views were observed under the recorded %s protocol. This does not assign authorship or responsibility, establish consent or trust, model civilian state, prove cryptographic authenticity, or establish wider cause."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the independent verifier, the local Core, or one of the three neutral public interfaces was lost before both assembly views were observed.")
+        : bFutureThatWonResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The recorded %s protocol held through the bounded local stability window and both district readbacks were observed. This does not establish civilian counts, population restoration, a permanent future, trust, consent, or ethical justification."),
@@ -2870,7 +3008,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bFutureThatWonResult
+                CampaignPersistenceLine = bAssemblyOfTheMissingResult
+                    ? FString::Printf(
+                          TEXT("MISSION 13 RECORDED // %s public assembly/readback contract fixed."),
+                          RecordedChoice)
+                : bFutureThatWonResult
                     ? FString::Printf(
                           TEXT("MISSION 12 RECORDED // %s local protocol/readback contract fixed."),
                           RecordedChoice)
@@ -2963,7 +3105,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bFutureThatWonResult
+        ? bAssemblyOfTheMissingResult
+            ? FString::Printf(
+                  TEXT("MISSION 13 — ASSEMBLY OF THE MISSING  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bFutureThatWonResult
             ? FString::Printf(
                   TEXT("MISSION 12 — THE FUTURE THAT WON  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -3234,6 +3380,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bFutureThatWon = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignFutureThatWon;
+    const bool bAssemblyOfTheMissing = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -3278,6 +3427,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetFutureThatWonPlan()
             : FEchoesFutureThatWonPlan{};
+    const FEchoesAssemblyOfTheMissingPlan AssemblyPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetAssemblyOfTheMissingPlan()
+            : FEchoesAssemblyOfTheMissingPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -3334,6 +3487,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bFutureThatWon
             ? FString::Printf(
                   TEXT("THE FUTURE THAT WON  //  MISSION 12  //  %s"),
+                  *LocalFaction)
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("ASSEMBLY OF THE MISSING  //  MISSION 13  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -3399,6 +3556,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Eleven exact ordered records admit plan %02u: two recorded district inputs and one bounded %s restoration demonstrator."),
                   FutureThatWonPlan.StablePlanKey,
                   FutureThatWonPlan.ProtocolDisplayName)
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("Twelve exact ordered records admit plan %02u: paired public readback, one Crownfall index link, and two independent assembly views under recorded %s."),
+                  AssemblyPlan.StablePlanKey,
+                  AssemblyPlan.ProtocolDisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3443,6 +3605,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("Oruun and a Kharuun verifier remain commandable. Rhyse appears only as public apparatus; %s stays deferred without casualty or recovery inference."),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       FutureThatWonPlan.DeferredDistrict))
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("Oruun and a Kharuun verifier alone are commandable. All three public interfaces remain neutral; %s remains deferred."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      AssemblyPlan.DeferredDistrict))
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -3528,6 +3695,15 @@ void AEchoesHUD::DrawMissionBriefing(
                   FutureThatWonPlan.FirstDistrictInputSite.y.FloorToInt(),
                   FutureThatWonPlan.SecondDistrictInputSite.x.FloorToInt(),
                   FutureThatWonPlan.SecondDistrictInputSite.y.FloorToInt())
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("01  Establish public readback with Oruun at %d,%d and the verifier at %d,%d; then build [N] within 3 tiles of the Crownfall index at %d,%d."),
+                  AssemblyPlan.KharuunPublicRecordSite.x.FloorToInt(),
+                  AssemblyPlan.KharuunPublicRecordSite.y.FloorToInt(),
+                  AssemblyPlan.MeridianPublicRecordSite.x.FloorToInt(),
+                  AssemblyPlan.MeridianPublicRecordSite.y.FloorToInt(),
+                  AssemblyPlan.CrownfallIndexSite.x.FloorToInt(),
+                  AssemblyPlan.CrownfallIndexSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3621,6 +3797,13 @@ void AEchoesHUD::DrawMissionBriefing(
                   FutureThatWonPlan.FirstDistrictInputSite.y.FloorToInt(),
                   FutureThatWonPlan.SecondDistrictInputSite.x.FloorToInt(),
                   FutureThatWonPlan.SecondDistrictInputSite.y.FloorToInt())
+        : bAssemblyOfTheMissing
+            ? FString::Printf(
+                  TEXT("02  After the public link is complete, move Oruun to %d,%d and the verifier to %d,%d to observe both assembly views."),
+                  AssemblyPlan.KharuunAssemblyWitnessSite.x.FloorToInt(),
+                  AssemblyPlan.KharuunAssemblyWitnessSite.y.FloorToInt(),
+                  AssemblyPlan.MeridianAssemblyWitnessSite.x.FloorToInt(),
+                  AssemblyPlan.MeridianAssemblyWitnessSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -3650,6 +3833,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("Mission 01 selects the route; Mission 09 selects the two contributing districts; Mission 10 fixes the only admissible Lume protocol. Missions 02–08 remain required evidence seals, not hidden branch variables.")
              : bFutureThatWon
                  ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 is the admission receipt, not another branch.")
+             : bAssemblyOfTheMissing
+                 ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 and M12 remain required public receipts, not new branch variables.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -3677,6 +3862,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is one local Kharuun-authoritative coalition rally. Meridian and Choir interfaces remain public and non-commandable; no trust score, casualty total, hidden identity, authorship, or wider causation is inferred.")
         : bFutureThatWon
             ? TEXT("Victory proves one bounded local activation and paired readback—not population restoration, permanence, civilian counts, trust, consent, or moral justification.")
+        : bAssemblyOfTheMissing
+            ? TEXT("Victory records one bounded public assembly/readback receipt—not authorship, responsibility, trust, consent, civilian state, cryptographic authenticity, or wider cause.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -3711,6 +3898,8 @@ void AEchoesHUD::DrawMissionBriefing(
         : bNoNeutralLedger
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LEDGER WITNESS")
         : bFutureThatWon
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
+        : bAssemblyOfTheMissing
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
@@ -3936,7 +4125,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignNoNeutralLedger ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignFutureThatWon)
+            EEchoesOperationMode::CampaignFutureThatWon ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -4449,6 +4640,45 @@ void AEchoesHUD::DrawTacticalMinimap(
                     ? Border
                     : bInputsVerified ? Border : WaitingColor);
         }
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+        {
+            const FEchoesAssemblyOfTheMissingPlan Plan =
+                Bridge->GetAssemblyOfTheMissingPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            DrawMissionSite(
+                Plan.MeridianPublicRecordSite,
+                TEXT("M"),
+                Objective.bAssemblyPublicRecordReadbackEstablished
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.KharuunPublicRecordSite,
+                TEXT("K"),
+                Objective.bAssemblyPublicRecordReadbackEstablished
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.CrownfallIndexSite,
+                TEXT("C"),
+                Objective.bAssemblyCrownfallIndexLinked
+                    ? CompleteColor
+                    : Objective.bAssemblyPublicRecordReadbackEstablished
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.MeridianAssemblyWitnessSite,
+                TEXT("1"),
+                Objective.bAssemblyMeridianWitnessObserved
+                    ? CompleteColor
+                    : Objective.bAssemblyCrownfallIndexLinked
+                        ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.KharuunAssemblyWitnessSite,
+                TEXT("2"),
+                Objective.bAssemblyKharuunWitnessObserved
+                    ? CompleteColor
+                    : Objective.bAssemblyCrownfallIndexLinked
+                        ? Border : WaitingColor);
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -4491,6 +4721,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignFutureThatWon
             ? TEXT("MISSION NAV  |  M/K + 1/2 + D/W")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignAssemblyOfTheMissing
+            ? TEXT("MISSION NAV  |  M/K + C + 1/2")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

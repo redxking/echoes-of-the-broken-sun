@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesFutureThatWonMissionModel.h"
@@ -209,6 +210,28 @@ struct FEchoesObjectiveSnapshot final
     bool bFutureWonReshapeWindowExpired = false;
     uint64 FutureWonActivationTick = 0;
     uint64 FutureWonStabilityEndTick = 0;
+    EEchoesAssemblyOfTheMissingPhase AssemblyOfTheMissingPhase =
+        EEchoesAssemblyOfTheMissingPhase::Inactive;
+    echoes::sim::FutureWellChoice AssemblyFoundingDoctrine =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice AssemblyRecordedProtocol =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesCityDistrict AssemblyFirstDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    EEchoesCityDistrict AssemblySecondDistrict =
+        EEchoesCityDistrict::Transit;
+    EEchoesCityDistrict AssemblyDeferredDistrict =
+        EEchoesCityDistrict::Archive;
+    echoes::sim::EntityId AssemblyOruunId = 0;
+    echoes::sim::EntityId AssemblyVerifierId = 0;
+    echoes::sim::EntityId AssemblyMeridianPublicRecordInterfaceId = 0;
+    echoes::sim::EntityId AssemblyKharuunPublicRecordInterfaceId = 0;
+    echoes::sim::EntityId AssemblyCrownfallIndexInterfaceId = 0;
+    bool bAssemblyPublicInterfacesIntact = false;
+    bool bAssemblyPublicRecordReadbackEstablished = false;
+    bool bAssemblyCrownfallIndexLinked = false;
+    bool bAssemblyMeridianWitnessObserved = false;
+    bool bAssemblyKharuunWitnessObserved = false;
 };
 
 /**
@@ -360,6 +383,9 @@ public:
     [[nodiscard]] EEchoesFutureThatWonPhase
     GetFutureThatWonPhase() const;
     [[nodiscard]] bool IsFutureThatWonUnlocked() const;
+    [[nodiscard]] EEchoesAssemblyOfTheMissingPhase
+    GetAssemblyOfTheMissingPhase() const;
+    [[nodiscard]] bool IsAssemblyOfTheMissingUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -381,6 +407,8 @@ public:
     GetNoNeutralLedgerPlan() const;
     [[nodiscard]] FEchoesFutureThatWonPlan
     GetFutureThatWonPlan() const;
+    [[nodiscard]] FEchoesAssemblyOfTheMissingPlan
+    GetAssemblyOfTheMissingPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -473,6 +501,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitFutureThatWonCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedProtocol,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitAssemblyOfTheMissingCompletion(
         echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -580,6 +611,11 @@ private:
     echoes::sim::EntityId FutureWonKharuunReadbackInterfaceId = 0;
     echoes::sim::EntityId FutureWonDemonstratorInterfaceId = 0;
     echoes::sim::EntityId FutureWonWellId = 0;
+    echoes::sim::EntityId AssemblyOruunId = 0;
+    echoes::sim::EntityId AssemblyVerifierId = 0;
+    echoes::sim::EntityId AssemblyMeridianPublicRecordInterfaceId = 0;
+    echoes::sim::EntityId AssemblyKharuunPublicRecordInterfaceId = 0;
+    echoes::sim::EntityId AssemblyCrownfallIndexInterfaceId = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

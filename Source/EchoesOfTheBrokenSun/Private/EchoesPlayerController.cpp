@@ -3123,7 +3123,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignNoNeutralLedger
                 ? TEXT("Oruun's Kharuun ledger force deployed; Meridian and Choir interfaces remain public and non-commandable; ")
-                : TEXT("Oruun and an independent verifier deployed under Kharuun authority; Rhyse's restoration demonstrator remains public and non-commandable; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignFutureThatWon
+                ? TEXT("Oruun and an independent verifier deployed under Kharuun authority; Rhyse's restoration demonstrator remains public and non-commandable; ")
+                : TEXT("Oruun and an independent verifier deployed under Kharuun authority; the Meridian, Kharuun, and Crownfall public record interfaces remain neutral and non-commandable; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3164,6 +3167,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignFutureThatWon
             ? TEXT("TheFutureThatWon")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignAssemblyOfTheMissing
+            ? TEXT("AssemblyOfTheMissing")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3247,6 +3253,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bFutureThatWon =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignFutureThatWon;
+    const bool bAssemblyOfTheMissing =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3272,6 +3281,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("NO NEUTRAL LEDGER — secure the inherited route, integrate the two powered district systems, attest the public Meridian and Kharuun evidence channels, apply the exact recorded Lume protocol, then rally Oruun and the ledger witness. Only Oruun's Kharuun force is commandable. Enter deploys Kharuun authority.")
         : bFutureThatWon
             ? TEXT("THE FUTURE THAT WON — establish two-person public readback, link both recorded district inputs, activate only the recorded Lume protocol, hold the bounded stability window, then observe both district readbacks. Rhyse is represented only by attributable public apparatus. Enter deploys Kharuun authority.")
+        : bAssemblyOfTheMissing
+            ? TEXT("ASSEMBLY OF THE MISSING — place Oruun and the independent verifier at the separate neutral public record interfaces, link the neutral Crownfall index with a Kharuun Listening Spine, then observe both independent assembly witness sites. This operation records public observations only; it does not assign responsibility or hidden authorship. Enter deploys Kharuun authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3290,11 +3301,12 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bChoirAtLumeReach ? TEXT("ChoirAtLumeReach")
         : bNoNeutralLedger ? TEXT("NoNeutralLedger")
         : bFutureThatWon ? TEXT("TheFutureThatWon")
+        : bAssemblyOfTheMissing ? TEXT("AssemblyOfTheMissing")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
          bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach ||
-         bNoNeutralLedger || bFutureThatWon)
+         bNoNeutralLedger || bFutureThatWon || bAssemblyOfTheMissing)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3536,6 +3548,26 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.SecondDistrictInputSite.y.FloorToInt()),
             32.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        const FEchoesAssemblyOfTheMissingPlan Plan =
+            Bridge->GetAssemblyOfTheMissingPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("MISSION 13 — PUBLIC READBACK KHARUUN %d,%d + MERIDIAN %d,%d > LISTENING SPINE NEAR CROWNFALL INDEX %d,%d > OBSERVE KHARUUN %d,%d + MERIDIAN %d,%d"),
+                Plan.KharuunPublicRecordSite.x.FloorToInt(),
+                Plan.KharuunPublicRecordSite.y.FloorToInt(),
+                Plan.MeridianPublicRecordSite.x.FloorToInt(),
+                Plan.MeridianPublicRecordSite.y.FloorToInt(),
+                Plan.CrownfallIndexSite.x.FloorToInt(),
+                Plan.CrownfallIndexSite.y.FloorToInt(),
+                Plan.KharuunAssemblyWitnessSite.x.FloorToInt(),
+                Plan.KharuunAssemblyWitnessSite.y.FloorToInt(),
+                Plan.MeridianAssemblyWitnessSite.x.FloorToInt(),
+                Plan.MeridianAssemblyWitnessSite.y.FloorToInt()),
+            32.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3632,6 +3664,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignFutureThatWon)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: The Future That Won follows Oruun and an independent verifier under Kharuun authority. Rhyse's demonstrator and Meridian readbacks are public interfaces, not commandable factions."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: Assembly of the Missing follows Oruun and an independent verifier under Kharuun authority. The Meridian, Kharuun, and Crownfall public record interfaces are neutral and non-commandable."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3747,6 +3785,13 @@ void AEchoesPlayerController::CycleOperation()
              Bridge->IsFutureThatWonUnlocked())
     {
         NewOperation = EEchoesOperationMode::CampaignFutureThatWon;
+    }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignFutureThatWon &&
+             Bridge->IsAssemblyOfTheMissingUnlocked())
+    {
+        NewOperation =
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
@@ -5066,6 +5111,87 @@ void AEchoesPlayerController::NotifyFutureThatWonFinished(
         LogEchoes,
         Display,
         TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheFutureThatWon success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=boundedLocalProtocolReadbackOnly commandAuthority=Kharuun rhysePresence=attributablePublicApparatusOnly mixedFactionCommand=false civilianCountsUnmodeled=true populationRestorationUnproven=true permanentFutureUnproven=true trustUnproven=true consentUnproven=true ethicalJustificationUnproven=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
+void AEchoesPlayerController::NotifyAssemblyOfTheMissingFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignAssemblyOfTheMissing;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Oruun, the independent verifier, the local Core, or one of the neutral public record interfaces was lost before the bounded assembly completed. No public-assembly record was committed. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — the separate Meridian and Kharuun public record interfaces were read, the neutral Crownfall index was linked, and both independent assembly witness sites were observed under the recorded %s protocol context. This records one bounded public assembly only; it does not assign responsibility, establish hidden authorship, prove trust or consent, count civilians, or create mixed-faction command."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger already contains this public-assembly record. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            const TCHAR* RecordedLabel =
+                RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Harvest
+                    ? TEXT("Harvest")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Preserve
+                    ? TEXT("Preserve")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Reshape
+                    ? TEXT("Reshape")
+                    : TEXT("Dormant");
+            ResultMessage += FString::Printf(
+                TEXT(" The earlier irreversible record retains %s; it was not rewritten. Press R to replay."),
+                RecordedLabel);
+        }
+        else
+        {
+            ResultMessage +=
+                TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=AssemblyOfTheMissing success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=boundedPublicRecordAssemblyOnly commandAuthority=Kharuun publicInterfaces=neutralNonCommandable mixedFactionCommand=false responsibilityUnassigned=true hiddenAuthorshipUnproven=true trustUnproven=true consentUnproven=true civilianStateUnmodeled=true cryptographicAuthenticityUnproven=true"),
         bSuccess ? TEXT("true") : TEXT("false"),
         static_cast<uint8>(Consequence),
         static_cast<uint8>(RecordedConsequence),
@@ -8656,6 +8782,9 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignFutureThatWon
                 ? TEXT("MISSION RESTARTED — Oruun and the independent verifier return to the deterministic eleven-record restoration-demonstrator state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignAssemblyOfTheMissing
+                ? TEXT("MISSION RESTARTED — Oruun, the independent verifier, and the three neutral public record interfaces return to the deterministic twelve-record assembly state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
@@ -8686,6 +8815,12 @@ void AEchoesPlayerController::SynchronizeBoundCampaignProtocol()
     {
         FutureWellChoice =
             Bridge->GetFutureThatWonPlan().RecordedProtocol;
+    }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        FutureWellChoice =
+            Bridge->GetAssemblyOfTheMissingPlan().RecordedProtocol;
     }
 }
 
@@ -8724,6 +8859,20 @@ void AEchoesPlayerController::SetFutureWellChoice(
         SetStatusMessage(
             FString::Printf(
                 TEXT("The Future That Won admits only the recorded %s protocol. Right-click the Future Well with a worker after independent readback and both district inputs are verified."),
+                Plan.ProtocolDisplayName),
+            8.0f);
+        return;
+    }
+    if (Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        const FEchoesAssemblyOfTheMissingPlan Plan =
+            Bridge->GetAssemblyOfTheMissingPlan();
+        FutureWellChoice = Plan.RecordedProtocol;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("Assembly of the Missing retains the recorded %s protocol as ledger context only. This operation exposes no selectable Future Well protocol."),
                 Plan.ProtocolDisplayName),
             8.0f);
         return;

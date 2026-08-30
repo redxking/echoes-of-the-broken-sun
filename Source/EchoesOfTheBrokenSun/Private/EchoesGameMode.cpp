@@ -491,6 +491,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignFutureThatWon"));
+    const bool bCampaignAssemblyOfTheMissing =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignAssemblyOfTheMissing"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -503,7 +508,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignReserveAuthority ? 1 : 0) +
         (bCampaignChoirAtLumeReach ? 1 : 0) +
         (bCampaignNoNeutralLedger ? 1 : 0) +
-        (bCampaignFutureThatWon ? 1 : 0);
+        (bCampaignFutureThatWon ? 1 : 0) +
+        (bCampaignAssemblyOfTheMissing ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -516,7 +522,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignFutureThatWon
+            bCampaignAssemblyOfTheMissing
+                ? EEchoesOperationMode::CampaignAssemblyOfTheMissing
+            : bCampaignFutureThatWon
                 ? EEchoesOperationMode::CampaignFutureThatWon
             : bCampaignNoNeutralLedger
                 ? EEchoesOperationMode::CampaignNoNeutralLedger
@@ -548,7 +556,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignFutureThatWon
+                bCampaignAssemblyOfTheMissing
+                    ? TEXT("AssemblyOfTheMissing")
+                : bCampaignFutureThatWon
                     ? TEXT("TheFutureThatWon")
                 : bCampaignNoNeutralLedger
                     ? TEXT("NoNeutralLedger")
@@ -579,7 +589,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignFutureThatWon
+            bCampaignAssemblyOfTheMissing
+                ? TEXT("AssemblyOfTheMissing")
+            : bCampaignFutureThatWon
                 ? TEXT("TheFutureThatWon")
             : bCampaignNoNeutralLedger
                 ? TEXT("NoNeutralLedger")
