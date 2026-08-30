@@ -2536,6 +2536,46 @@ void TestFactionResearchProgressionAndPersistence() {
     REQUIRE(replayed.has_value());
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
+    Simulation cancelled({20, 20, 20, 93});
+    AddTwoPlayers(cancelled, {1000, 500}, {0, 0});
+    const EntityId cancelledFoundry = cancelled.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(6, 6));
+    REQUIRE(cancelledFoundry != 0);
+    cancelled.CaptureReplayBaseline();
+    Command cancellableResearch = MakeCommand(
+        0, 0, 1, CommandType::Research, cancelledFoundry);
+    cancellableResearch.researchType =
+        ResearchType::MeridianPrismaticTargeting;
+    REQUIRE(cancelled.QueueCommand(cancellableResearch));
+    cancelled.Step();
+    const PlayerState* cancelledPlayer = cancelled.FindPlayer(0);
+    REQUIRE(cancelledPlayer != nullptr);
+    REQUIRE(cancelledPlayer->activeResearch ==
+            ResearchType::MeridianPrismaticTargeting);
+    const ResourcePool committedResearchResources =
+        cancelledPlayer->resources;
+    Command cancelResearch = MakeCommand(
+        cancelled.CurrentTick(), 0, 2, CommandType::Stop,
+        cancelledFoundry);
+    REQUIRE(cancelled.QueueCommand(cancelResearch));
+    cancelled.Step();
+    cancelledPlayer = cancelled.FindPlayer(0);
+    REQUIRE(cancelledPlayer->activeResearch == ResearchType::None);
+    REQUIRE(cancelledPlayer->researchProducer == 0);
+    REQUIRE(cancelledPlayer->researchProgress == 0);
+    REQUIRE(cancelledPlayer->researchRequired == 0);
+    REQUIRE(cancelledPlayer->lastInterruptedResearch ==
+            ResearchType::MeridianPrismaticTargeting);
+    REQUIRE(cancelledPlayer->resources == committedResearchResources);
+    REQUIRE(!cancelledPlayer->HasCompletedResearch(
+        ResearchType::MeridianPrismaticTargeting));
+    const std::optional<Simulation> replayedCancellation =
+        Simulation::ReplayToEnd(cancelled.ExportReplay(), &error);
+    REQUIRE(replayedCancellation.has_value());
+    REQUIRE(replayedCancellation->StateChecksum() ==
+            cancelled.StateChecksum());
+
     SimulationConfig interruptedConfig{20, 20, 20, 92};
     interruptedConfig.rules
         .archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]

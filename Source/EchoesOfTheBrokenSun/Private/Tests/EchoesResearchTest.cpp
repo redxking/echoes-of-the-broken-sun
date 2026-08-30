@@ -132,6 +132,49 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
              Replayed.has_value() &&
                  Replayed->StateChecksum() == Simulation.StateChecksum());
 
+    echoes::sim::Simulation Cancelled(Scenario->Config());
+    TestTrue(TEXT("Cancellation test player initializes"),
+             Cancelled.AddPlayer(
+                 0, echoes::sim::Faction::MeridianCompact, {1000, 500}));
+    const echoes::sim::EntityId CancelledFoundry = Cancelled.SpawnEntity(
+        0,
+        echoes::sim::Faction::MeridianCompact,
+        echoes::sim::EntityType::Barracks,
+        echoes::sim::Vec2::FromTiles(6, 6));
+    echoes::sim::Command CancellableResearch;
+    CancellableResearch.executeTick = 0;
+    CancellableResearch.player = 0;
+    CancellableResearch.sequence = 1;
+    CancellableResearch.type = echoes::sim::CommandType::Research;
+    CancellableResearch.actor = CancelledFoundry;
+    CancellableResearch.researchType =
+        echoes::sim::ResearchType::MeridianPrismaticTargeting;
+    TestTrue(TEXT("Player research starts before cancellation"),
+             Cancelled.QueueCommand(CancellableResearch));
+    Cancelled.Step();
+    const echoes::sim::ResourcePool ResourcesAfterCommit =
+        Cancelled.FindPlayer(0)->resources;
+    echoes::sim::Command CancelResearch;
+    CancelResearch.executeTick = Cancelled.CurrentTick();
+    CancelResearch.player = 0;
+    CancelResearch.sequence = 2;
+    CancelResearch.type = echoes::sim::CommandType::Stop;
+    CancelResearch.actor = CancelledFoundry;
+    TestTrue(TEXT("Stop command admits a player-driven research interruption"),
+             Cancelled.QueueCommand(CancelResearch));
+    Cancelled.Step();
+    const echoes::sim::PlayerState* CancelledPlayer =
+        Cancelled.FindPlayer(0);
+    TestTrue(TEXT("Player-driven interruption clears active research"),
+             CancelledPlayer != nullptr &&
+                 CancelledPlayer->activeResearch ==
+                     echoes::sim::ResearchType::None &&
+                 CancelledPlayer->lastInterruptedResearch ==
+                     echoes::sim::ResearchType::MeridianPrismaticTargeting);
+    TestTrue(TEXT("Player-driven interruption does not refund committed costs"),
+             CancelledPlayer != nullptr &&
+                 CancelledPlayer->resources == ResourcesAfterCommit);
+
     TArray<FString> InputMappings;
     GConfig->GetArray(
         TEXT("/Script/Engine.InputSettings"),

@@ -48,6 +48,7 @@ bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
         EEchoesCommandMarkerType::Patrol,
         EEchoesCommandMarkerType::Guard,
         EEchoesCommandMarkerType::Build,
+        EEchoesCommandMarkerType::Interact,
     };
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(MarkerTypes); ++Index)
     {

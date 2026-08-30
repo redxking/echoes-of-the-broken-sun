@@ -18,7 +18,8 @@ enum class EEchoesCommandMarkerType : uint8
     AttackMove,
     Patrol,
     Guard,
-    Build
+    Build,
+    Interact
 };
 
 UCLASS(NotBlueprintable, Transient)

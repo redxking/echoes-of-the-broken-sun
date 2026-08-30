@@ -2295,9 +2295,20 @@ void Simulation::ApplyCommand(const Command& command) {
         return;
     }
     switch (command.type) {
-        case CommandType::Stop:
+        case CommandType::Stop: {
+            PlayerState* player = MutablePlayer(command.player);
+            if (player != nullptr &&
+                player->activeResearch != ResearchType::None &&
+                player->researchProducer == actor->id) {
+                player->lastInterruptedResearch = player->activeResearch;
+                player->activeResearch = ResearchType::None;
+                player->researchProducer = 0;
+                player->researchProgress = 0;
+                player->researchRequired = 0;
+            }
             actor->order = {};
             return;
+        }
         case CommandType::Move:
             if (actor->movementPerTickRaw > 0 && IsInsideMap(command.position) &&
                 (actor->waystoneMode == WaystoneMode::NotWaystone ||

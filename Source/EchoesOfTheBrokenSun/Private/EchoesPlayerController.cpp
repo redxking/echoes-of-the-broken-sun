@@ -2012,7 +2012,9 @@ void AEchoesPlayerController::IssueContextOrder(const FHitResult& HitResult)
             Destination,
             CommandType == echoes::sim::CommandType::Attack
                 ? EEchoesCommandMarkerType::AttackMove
-                : EEchoesCommandMarkerType::Move,
+                : CommandType == echoes::sim::CommandType::Move
+                      ? EEchoesCommandMarkerType::Move
+                      : EEchoesCommandMarkerType::Interact,
             AcceptedCount);
     }
     else
@@ -2675,6 +2677,21 @@ void AEchoesPlayerController::StopSelectedUnits()
         SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned units first."));
         return;
     }
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    const echoes::sim::PlayerState* Player =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    const bool bCancellingResearch =
+        Player != nullptr &&
+        Player->activeResearch != echoes::sim::ResearchType::None &&
+        SelectedEntityIds.Contains(Player->researchProducer);
+    const uint32 ResearchProducer =
+        bCancellingResearch ? Player->researchProducer : 0;
+    const echoes::sim::ResearchType InterruptedResearch =
+        bCancellingResearch
+            ? Player->activeResearch
+            : echoes::sim::ResearchType::None;
     int32 AcceptedCount = 0;
     FString LastRejection;
     for (const uint32 EntityId : SelectedEntityIds)
@@ -2696,14 +2713,28 @@ void AEchoesPlayerController::StopSelectedUnits()
             LastRejection = Feedback;
         }
     }
-    SetStatusMessage(
-        AcceptedCount > 0
-            ? FString::Printf(TEXT("STOP: %d unit%s stopped."),
-                              AcceptedCount,
-                              AcceptedCount == 1 ? TEXT("") : TEXT("s"))
-            : LastRejection.IsEmpty()
-                  ? TEXT("[STOP_REJECTED] No selected entity accepted the order.")
-                  : LastRejection);
+    const FString StopFeedback =
+        bCancellingResearch && AcceptedCount > 0
+            ? TEXT("RESEARCH INTERRUPTION QUEUED: selected producer stopped // costs will not be refunded.")
+            : AcceptedCount > 0
+                  ? FString::Printf(
+                        TEXT("STOP: %d unit%s stopped."),
+                        AcceptedCount,
+                        AcceptedCount == 1 ? TEXT("") : TEXT("s"))
+                  : LastRejection.IsEmpty()
+                        ? TEXT("[STOP_REJECTED] No selected entity accepted the order.")
+                        : LastRejection;
+    SetStatusMessage(StopFeedback);
+    if (bCancellingResearch && AcceptedCount > 0)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_RESEARCH_CANCEL_QUEUED] player=%u producer=%u technology=%u costsRefunded=false input=stop"),
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            ResearchProducer,
+            static_cast<uint8>(InterruptedResearch));
+    }
 }
 
 void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
@@ -3537,6 +3568,9 @@ void AEchoesPlayerController::ShowAcceptedCommandMarker(
         case EEchoesCommandMarkerType::Build:
             MarkerLabel = TEXT("build");
             break;
+        case EEchoesCommandMarkerType::Interact:
+            MarkerLabel = TEXT("interact");
+            break;
         case EEchoesCommandMarkerType::Move:
             break;
     }
@@ -3795,6 +3829,17 @@ void AEchoesPlayerController::TogglePauseMenu()
 
 void AEchoesPlayerController::RestartScenario()
 {
+    // Legacy action mappings may also dispatch the unmodified R action while
+    // the Shift+R research chord is held. The chord belongs to ResearchNext.
+    if (IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift))
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_RESTART_SUPPRESSED] reason=research_chord modifier=shift"));
+        return;
+    }
     if (bTitleScreenVisible || bMissionBriefingVisible)
     {
         return;

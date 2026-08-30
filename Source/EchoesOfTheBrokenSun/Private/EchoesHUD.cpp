@@ -231,7 +231,7 @@ void AEchoesHUD::DrawHUD()
                     0,
                     100);
                 ResearchLine = FString::Printf(
-                    TEXT("RESEARCH  %s  %d%%     production suspended"),
+                    TEXT("RESEARCH  %s  %d%%     [X] cancel selected producer // NO REFUND"),
                     ResearchDisplayName(Player->activeResearch),
                     Percent);
             }
@@ -794,7 +794,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         1.12f * Scale,
         false);
     DrawText(
-        TEXT("Research occupies the selected production structure. Destruction interrupts the project without refund."),
+        TEXT("Research occupies the selected production structure. Close the archive, then X on that producer cancels without refund; destruction also interrupts."),
         MutedColor,
         TextX,
         Layout.Origin.Y + 58.0f * Scale,
@@ -893,7 +893,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         }
         else if (bInterrupted)
         {
-            Status = TEXT("INTERRUPTED — producer destroyed; costs lost");
+            Status = TEXT("INTERRUPTED — costs lost; select the producer to restart");
             StatusColor = FLinearColor(1.0f, 0.38f, 0.22f);
         }
         else if (Player->activeResearch != echoes::sim::ResearchType::None)

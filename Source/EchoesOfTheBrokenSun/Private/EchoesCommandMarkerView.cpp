@@ -107,6 +107,13 @@ void AEchoesCommandMarkerView::InitializeMarker(
             GlyphA->SetRelativeScale3D(FVector(0.74f, 0.10f, 0.03f));
             GlyphB->SetRelativeScale3D(FVector(0.10f, 0.74f, 0.03f));
             break;
+        case EEchoesCommandMarkerType::Interact:
+            BaseColor = FLinearColor(0.32f, 0.95f, 0.82f);
+            GlyphA->SetRelativeLocation(FVector(-18.0f, 0.0f, 6.0f));
+            GlyphB->SetRelativeLocation(FVector(18.0f, 0.0f, 7.0f));
+            GlyphA->SetRelativeScale3D(FVector(0.09f, 0.48f, 0.03f));
+            GlyphB->SetRelativeScale3D(FVector(0.09f, 0.48f, 0.03f));
+            break;
     }
 
     BaseScale = GetActorScale3D();
