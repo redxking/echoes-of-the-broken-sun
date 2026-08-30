@@ -212,10 +212,7 @@ public:
         const echoes::sim::net::CommandRequest& Request,
         echoes::sim::net::CommandAdmissionContext& Context,
         std::string* SimulationRejection = nullptr);
-    void SetNetworkHumanOpponent(bool bEnabled)
-    {
-        bNetworkHumanOpponent = bEnabled;
-    }
+    void SetNetworkHumanOpponent(bool bEnabled);
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
     [[nodiscard]] AEchoesEntityView* FindEntityView(uint32 EntityId) const;
     [[nodiscard]] AEchoesFogView* GetFogView() const;
@@ -350,6 +347,8 @@ private:
         echoes::sim::FutureWellChoice WellChoice,
         echoes::sim::EntityType BuildType,
         FString& OutFeedback);
+    [[nodiscard]] echoes::sim::Tick ResolvePlayerExecuteTick(
+        echoes::sim::Tick OfflineDelayTicks) const;
     void QueueOpponentCommands();
     bool SyncEntityViews(bool bTeleportNewViews);
     bool SpawnFogView();

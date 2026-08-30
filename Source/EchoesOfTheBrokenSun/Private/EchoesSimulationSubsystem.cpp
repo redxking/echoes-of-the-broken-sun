@@ -20,6 +20,7 @@
 #include "Misc/Paths.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace
 {
@@ -3259,6 +3260,18 @@ void UEchoesSimulationSubsystem::SetScenarioPaused(bool bPaused)
         bSimulationPaused ? TEXT("true") : TEXT("false"));
 }
 
+void UEchoesSimulationSubsystem::SetNetworkHumanOpponent(bool bEnabled)
+{
+    bNetworkHumanOpponent = bEnabled;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_COMMAND_POLICY] active=%s authorityDelayTicks=%u opponentAiSuppressed=%s"),
+        bEnabled ? TEXT("true") : TEXT("false"),
+        bEnabled ? 3U : 1U,
+        bEnabled ? TEXT("true") : TEXT("false"));
+}
+
 echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
 {
     return Simulation.IsValid() ? Simulation->Outcome()
@@ -4977,7 +4990,7 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
         return false;
     }
     echoes::sim::Command Command{};
-    Command.executeTick = Simulation->CurrentTick();
+    Command.executeTick = ResolvePlayerExecuteTick(0);
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence++;
     Command.type = echoes::sim::CommandType::Research;
@@ -5059,7 +5072,7 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     }
 
     echoes::sim::Command Command;
-    Command.executeTick = Simulation->CurrentTick() + 1;
+    Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence++;
     Command.type = echoes::sim::CommandType::AdaptWarform;
@@ -5147,7 +5160,7 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     }
 
     echoes::sim::Command Command;
-    Command.executeTick = Simulation->CurrentTick() + 1;
+    Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence++;
     Command.type = CommandType;
@@ -5184,6 +5197,24 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
         Command.target,
         static_cast<unsigned long long>(Command.sequence));
     return true;
+}
+
+echoes::sim::Tick UEchoesSimulationSubsystem::ResolvePlayerExecuteTick(
+    echoes::sim::Tick OfflineDelayTicks) const
+{
+    if (!Simulation.IsValid())
+    {
+        return 0;
+    }
+    const echoes::sim::Tick DelayTicks =
+        bNetworkHumanOpponent ? 3 : OfflineDelayTicks;
+    const echoes::sim::Tick CurrentTick = Simulation->CurrentTick();
+    if (DelayTicks >
+        std::numeric_limits<echoes::sim::Tick>::max() - CurrentTick)
+    {
+        return std::numeric_limits<echoes::sim::Tick>::max();
+    }
+    return CurrentTick + DelayTicks;
 }
 
 bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(

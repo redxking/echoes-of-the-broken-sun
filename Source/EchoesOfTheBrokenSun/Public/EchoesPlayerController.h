@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesFormationLayout.h"
+#include "EchoesNetworkSession.h"
 #include "EchoesPrologueMissionModel.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/NetworkProtocol.h"
@@ -189,6 +190,23 @@ private:
     void ClientReceiveScopedKeyframe(const TArray<uint8>& Packet);
 
     UFUNCTION(Server, Reliable)
+    void ServerSetNetworkReady();
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveNetworkLobbyState(
+        bool bStarted,
+        uint64 AuthorityTick,
+        uint8 InputDelayTicks);
+
+    UFUNCTION(Server, Reliable)
+    void ServerAcknowledgeScopedKeyframe(
+        uint64 SnapshotId,
+        uint64 ScopedDigest);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestScopedKeyframe(uint64 LastAcceptedSnapshotId);
+
+    UFUNCTION(Server, Reliable)
     void ServerSubmitNetworkCommand(const TArray<uint8>& Packet);
 
     UFUNCTION(Client, Reliable)
@@ -209,7 +227,11 @@ private:
     void ServerConfirmNetworkSmokeComplete(uint64 SnapshotId);
 
     void SubmitNetworkCompatibilityHello();
+    void BeginNetworkMatch();
+    void SendScopedKeyframe();
+    void QueueNetworkSmokeHostCommand();
     void VerifyRemoteCommandExecution();
+    void TryFinishNetworkClientSmoke();
     void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
@@ -344,13 +366,28 @@ private:
     bool bCampaignResult = false;
     uint8 NetworkSeat = echoes::sim::kNeutralPlayer;
     bool bNetworkCompatibilityAccepted = false;
+    bool bNetworkReady = false;
+    bool bNetworkMatchStarted = false;
     bool bNetworkClientSmoke = false;
+    bool bNetworkCommandSubmitted = false;
+    bool bNetworkRemoteExecutionReceived = false;
+    bool bNetworkSmokeCompletionSent = false;
     bool bNetworkCommandExecutionVerified = false;
+    bool bNetworkHostExecutionVerified = false;
     uint64 LastNetworkSnapshotId = 0;
+    uint64 LastAcknowledgedNetworkSnapshotId = 0;
+    uint64 NetworkSnapshotAcknowledgementCount = 0;
+    echoes::network::ScopedViewState NetworkViewState{};
+    TMap<uint64, uint64> PendingNetworkSnapshotDigests;
     echoes::sim::net::CommandAdmissionContext NetworkCommandContext{};
     echoes::sim::net::CommandRequest PendingRemoteCommand{};
     echoes::sim::Vec2 PendingRemoteInitialPosition{};
+    uint32 PendingHostCommandActor = 0;
+    uint64 PendingHostCommandExecuteTick = 0;
+    echoes::sim::Vec2 PendingHostCommandInitialPosition{};
+    echoes::sim::Vec2 PendingHostCommandTargetPosition{};
     FTimerHandle NetworkExecutionTimer;
+    FTimerHandle NetworkKeyframeTimer;
     FTimerHandle NetworkClientExitTimer;
     FTimerHandle NetworkServerExitTimer;
     bool bCampaignSuccess = false;

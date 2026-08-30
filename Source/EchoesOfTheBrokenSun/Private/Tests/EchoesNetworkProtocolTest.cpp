@@ -154,6 +154,35 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                  KeyframeBytes, DecodedKeyframe) ==
                  DecodeStatus::IntegrityMismatch);
 
+    echoes::network::ScopedViewState ClientView;
+    TestTrue(TEXT("Client view accepts the first authoritative keyframe"),
+             ClientView.Accept(Keyframe) ==
+                 echoes::network::ScopedViewAcceptance::AcceptedFirst);
+    TestTrue(TEXT("Client view rejects duplicate lineage without mutation"),
+             ClientView.Accept(Keyframe) ==
+                     echoes::network::ScopedViewAcceptance::StaleOrDuplicate &&
+                 ClientView.AcceptedCount() == 1);
+    ScopedViewKeyframe NextKeyframe = Keyframe;
+    ++NextKeyframe.snapshotId;
+    ++NextKeyframe.simulationTick;
+    TestTrue(TEXT("Client view advances contiguous lineage"),
+             ClientView.Accept(NextKeyframe) ==
+                 echoes::network::ScopedViewAcceptance::AcceptedNext);
+    ScopedViewKeyframe RecoveryKeyframe = NextKeyframe;
+    RecoveryKeyframe.snapshotId += 2;
+    RecoveryKeyframe.simulationTick += 5;
+    TestTrue(TEXT("A later full keyframe recovers a missing lineage member"),
+             ClientView.Accept(RecoveryKeyframe) ==
+                     echoes::network::ScopedViewAcceptance::AcceptedRecovery &&
+                 ClientView.Current()->snapshotId ==
+                     RecoveryKeyframe.snapshotId);
+    ScopedViewKeyframe WrongSeat = RecoveryKeyframe;
+    ++WrongSeat.snapshotId;
+    WrongSeat.player = 0;
+    TestTrue(TEXT("Client view fails closed if scoped player changes"),
+             ClientView.Accept(WrongSeat) ==
+                 echoes::network::ScopedViewAcceptance::PlayerChanged);
+
     return true;
 }
 

@@ -20,6 +20,7 @@
 #include "UnrealClient.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace
 {
@@ -192,55 +193,15 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
     NetworkCommandContext.hasAcceptedSequence = *NextSequence > 1;
     NetworkCommandContext.lastAcceptedSequence = *NextSequence - 1;
 
-    const std::optional<echoes::sim::PlayerView> View =
-        Simulation->CreatePlayerView(NetworkSeat);
-    echoes::sim::net::ScopedViewKeyframe Keyframe{};
-    std::string KeyframeError;
-    if (!View.has_value() ||
-        !echoes::sim::net::BuildScopedViewKeyframe(
-            *View,
-            ++LastNetworkSnapshotId,
-            NetworkCommandContext.lastAcceptedSequence,
-            Keyframe,
-            &KeyframeError))
-    {
-        const FString Reason = KeyframeError.empty()
-            ? TEXT("NET_PLAYER_VIEW_UNAVAILABLE")
-            : FString(UTF8_TO_TCHAR(KeyframeError.c_str()));
-        UE_LOG(
-            LogEchoes,
-            Error,
-            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=%s"),
-            NetworkSeat,
-            *Reason);
-        ClientReceiveCompatibilityResult(false, Reason);
-        return;
-    }
-    const std::vector<std::uint8_t> EncodedKeyframe =
-        echoes::sim::net::EncodeScopedViewKeyframe(Keyframe);
-    if (EncodedKeyframe.empty())
-    {
-        ClientReceiveCompatibilityResult(
-            false, TEXT("NET_KEYFRAME_ENCODING_FAILED"));
-        return;
-    }
-
     bNetworkCompatibilityAccepted = true;
-    Bridge->SetNetworkHumanOpponent(true);
     ClientReceiveCompatibilityResult(true, TEXT("NET_COMPATIBLE"));
-    ClientReceiveScopedKeyframe(
-        echoes::network::ToByteArray(EncodedKeyframe));
+    ClientReceiveNetworkLobbyState(false, Simulation->CurrentTick(), 3);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_KEYFRAME_SENT] player=%u snapshot=%llu tick=%llu bytes=%d entities=%d tiles=%d digest=%llu hiddenAuthorityExcluded=true"),
+        TEXT("[ECHOES_NETWORK_LOBBY] player=%u compatible=true ready=false started=false authorityTick=%llu"),
         NetworkSeat,
-        static_cast<unsigned long long>(Keyframe.snapshotId),
-        static_cast<unsigned long long>(Keyframe.simulationTick),
-        static_cast<int32>(EncodedKeyframe.size()),
-        static_cast<int32>(Keyframe.entities.size()),
-        static_cast<int32>(Keyframe.tiles.size()),
-        static_cast<unsigned long long>(Keyframe.scopedDigest));
+        static_cast<unsigned long long>(Simulation->CurrentTick()));
 }
 
 void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
@@ -255,6 +216,7 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             Display,
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=true reason=%s"),
             *StableReason);
+        ServerSetNetworkReady();
     }
     else
     {
@@ -270,6 +232,150 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
     }
 }
 
+void AEchoesPlayerController::ServerSetNetworkReady_Implementation()
+{
+    if (!bNetworkCompatibilityAccepted || bNetworkReady ||
+        NetworkSeat >= echoes::sim::kMaximumPlayers)
+    {
+        return;
+    }
+    bNetworkReady = true;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_LOBBY] player=%u compatible=true ready=true started=false"),
+        NetworkSeat);
+    BeginNetworkMatch();
+}
+
+void AEchoesPlayerController::BeginNetworkMatch()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (!HasAuthority() || !bNetworkReady || bNetworkMatchStarted ||
+        Bridge == nullptr || Simulation == nullptr)
+    {
+        return;
+    }
+    bNetworkMatchStarted = true;
+    Bridge->SetNetworkHumanOpponent(true);
+    if (FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
+    {
+        QueueNetworkSmokeHostCommand();
+    }
+    Bridge->SetScenarioPaused(false);
+    ClientReceiveNetworkLobbyState(true, Simulation->CurrentTick(), 3);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_STARTED] player=%u authorityTick=%llu inputDelayTicks=3 readyGate=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(Simulation->CurrentTick()));
+    SendScopedKeyframe();
+    GetWorldTimerManager().SetTimer(
+        NetworkKeyframeTimer,
+        this,
+        &AEchoesPlayerController::SendScopedKeyframe,
+        0.5f,
+        true);
+}
+
+void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
+    bool bStarted,
+    uint64 AuthorityTick,
+    uint8 InputDelayTicks)
+{
+    bNetworkMatchStarted = bStarted;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_LOBBY_RESULT] compatible=%s started=%s authorityTick=%llu inputDelayTicks=%u"),
+        bNetworkCompatibilityAccepted ? TEXT("true") : TEXT("false"),
+        bStarted ? TEXT("true") : TEXT("false"),
+        static_cast<unsigned long long>(AuthorityTick),
+        InputDelayTicks);
+}
+
+void AEchoesPlayerController::SendScopedKeyframe()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (!HasAuthority() || !bNetworkMatchStarted || Simulation == nullptr)
+    {
+        return;
+    }
+    const std::optional<echoes::sim::PlayerView> View =
+        Simulation->CreatePlayerView(NetworkSeat);
+    echoes::sim::net::ScopedViewKeyframe Keyframe{};
+    std::string KeyframeError;
+    if (!View.has_value() ||
+        !echoes::sim::net::BuildScopedViewKeyframe(
+            *View,
+            ++LastNetworkSnapshotId,
+            NetworkCommandContext.lastAcceptedSequence,
+            Keyframe,
+            &KeyframeError))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=%s"),
+            NetworkSeat,
+            KeyframeError.empty()
+                ? TEXT("NET_PLAYER_VIEW_UNAVAILABLE")
+                : UTF8_TO_TCHAR(KeyframeError.c_str()));
+        return;
+    }
+    const std::vector<std::uint8_t> Encoded =
+        echoes::sim::net::EncodeScopedViewKeyframe(Keyframe);
+    if (Encoded.empty())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=NET_KEYFRAME_ENCODING_FAILED"),
+            NetworkSeat);
+        return;
+    }
+    if (PendingNetworkSnapshotDigests.Num() >= 8)
+    {
+        GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_STATE_STALLED] player=%u pendingSnapshots=%d reason=NET_SNAPSHOT_ACK_WINDOW_EXHAUSTED"),
+            NetworkSeat,
+            PendingNetworkSnapshotDigests.Num());
+        ClientReturnToMainMenuWithTextReason(
+            FText::FromString(TEXT("NET_SNAPSHOT_ACK_WINDOW_EXHAUSTED")));
+        return;
+    }
+    PendingNetworkSnapshotDigests.Add(
+        Keyframe.snapshotId, Keyframe.scopedDigest);
+    ClientReceiveScopedKeyframe(echoes::network::ToByteArray(Encoded));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_KEYFRAME_SENT] player=%u snapshot=%llu previous=%llu tick=%llu bytes=%d entities=%d tiles=%d digest=%llu hiddenAuthorityExcluded=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(Keyframe.snapshotId),
+        static_cast<unsigned long long>(Keyframe.snapshotId - 1),
+        static_cast<unsigned long long>(Keyframe.simulationTick),
+        static_cast<int32>(Encoded.size()),
+        static_cast<int32>(Keyframe.entities.size()),
+        static_cast<int32>(Keyframe.tiles.size()),
+        static_cast<unsigned long long>(Keyframe.scopedDigest));
+}
+
 void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
     const TArray<uint8>& Packet)
 {
@@ -277,8 +383,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
     const echoes::sim::net::DecodeStatus Decode =
         echoes::sim::net::DecodeScopedViewKeyframe(
             echoes::network::AsByteSpan(Packet), Keyframe);
-    if (Decode != echoes::sim::net::DecodeStatus::Ok ||
-        Keyframe.player >= echoes::sim::kMaximumPlayers)
+    if (Decode != echoes::sim::net::DecodeStatus::Ok)
     {
         const FString Reason(
             UTF8_TO_TCHAR(echoes::sim::net::StableId(Decode).data()));
@@ -287,25 +392,81 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
             Error,
             TEXT("[ECHOES_NETWORK_KEYFRAME_REJECTED] reason=%s"),
             *Reason);
+        ServerRequestScopedKeyframe(LastNetworkSnapshotId);
+        return;
+    }
+    if (Keyframe.player >= echoes::sim::kMaximumPlayers)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_REJECTED] reason=NET_VIEW_INVALID_PLAYER player=%u"),
+            Keyframe.player);
         if (bNetworkClientSmoke)
         {
             FPlatformMisc::RequestExit(false);
         }
         return;
     }
+    const echoes::network::ScopedViewAcceptance Acceptance =
+        NetworkViewState.Accept(Keyframe);
+    if (Acceptance ==
+            echoes::network::ScopedViewAcceptance::InvalidSnapshot ||
+        Acceptance == echoes::network::ScopedViewAcceptance::PlayerChanged)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_REJECTED] reason=%s snapshot=%llu"),
+            UTF8_TO_TCHAR(echoes::network::StableId(Acceptance)),
+            static_cast<unsigned long long>(Keyframe.snapshotId));
+        if (bNetworkClientSmoke)
+        {
+            FPlatformMisc::RequestExit(false);
+        }
+        return;
+    }
+    if (Acceptance ==
+        echoes::network::ScopedViewAcceptance::StaleOrDuplicate)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_IGNORED] reason=%s snapshot=%llu acceptedSnapshot=%llu"),
+            UTF8_TO_TCHAR(echoes::network::StableId(Acceptance)),
+            static_cast<unsigned long long>(Keyframe.snapshotId),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        return;
+    }
+    const uint64 PreviousSnapshotId = LastNetworkSnapshotId;
     LastNetworkSnapshotId = Keyframe.snapshotId;
+    if (Acceptance ==
+        echoes::network::ScopedViewAcceptance::AcceptedRecovery)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_RECOVERY] previous=%llu recovered=%llu fullKeyframe=true"),
+            static_cast<unsigned long long>(PreviousSnapshotId),
+            static_cast<unsigned long long>(Keyframe.snapshotId));
+    }
+    ServerAcknowledgeScopedKeyframe(
+        Keyframe.snapshotId, Keyframe.scopedDigest);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_KEYFRAME_RECEIVED] player=%u snapshot=%llu tick=%llu bytes=%d entities=%d tiles=%d digest=%llu hiddenAuthorityExcluded=true"),
+        TEXT("[ECHOES_NETWORK_KEYFRAME_RECEIVED] player=%u snapshot=%llu previous=%llu tick=%llu bytes=%d entities=%d tiles=%d digest=%llu lineage=%s hiddenAuthorityExcluded=true"),
         Keyframe.player,
         static_cast<unsigned long long>(Keyframe.snapshotId),
+        static_cast<unsigned long long>(PreviousSnapshotId),
         static_cast<unsigned long long>(Keyframe.simulationTick),
         Packet.Num(),
         static_cast<int32>(Keyframe.entities.size()),
         static_cast<int32>(Keyframe.tiles.size()),
-        static_cast<unsigned long long>(Keyframe.scopedDigest));
-    if (!bNetworkClientSmoke)
+        static_cast<unsigned long long>(Keyframe.scopedDigest),
+        UTF8_TO_TCHAR(echoes::network::StableId(Acceptance)));
+    TryFinishNetworkClientSmoke();
+    if (!bNetworkClientSmoke || bNetworkCommandSubmitted)
     {
         return;
     }
@@ -329,7 +490,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
     }
     echoes::sim::net::CommandRequest Request{};
     Request.sequence = Keyframe.lastAcceptedSequence + 1;
-    Request.executeTick = Keyframe.simulationTick + 3;
+    Request.executeTick = 0;
     Request.type = echoes::sim::CommandType::Move;
     Request.actor = OwnedWorker->id;
     const int32 MaximumXRaw =
@@ -351,16 +512,62 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
         return;
     }
     ServerSubmitNetworkCommand(echoes::network::ToByteArray(Encoded));
+    bNetworkCommandSubmitted = true;
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_COMMAND_SENT] sequence=%llu executeTick=%llu actor=%u targetRaw=(%d,%d) bytes=%d"),
+        TEXT("[ECHOES_NETWORK_COMMAND_SENT] sequence=%llu requestedExecuteTick=%llu actor=%u targetRaw=(%d,%d) bytes=%d authorityAssignsTick=true"),
         static_cast<unsigned long long>(Request.sequence),
         static_cast<unsigned long long>(Request.executeTick),
         Request.actor,
         Request.position.x.Raw(),
         Request.position.y.Raw(),
         static_cast<int32>(Encoded.size()));
+}
+
+void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
+    uint64 SnapshotId,
+    uint64 ScopedDigest)
+{
+    const uint64* ExpectedDigest =
+        PendingNetworkSnapshotDigests.Find(SnapshotId);
+    if (ExpectedDigest == nullptr || *ExpectedDigest != ScopedDigest ||
+        SnapshotId <= LastAcknowledgedNetworkSnapshotId)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_ACK_REJECTED] player=%u snapshot=%llu digest=%llu lastAck=%llu reason=NET_SNAPSHOT_LINEAGE_INVALID"),
+            NetworkSeat,
+            static_cast<unsigned long long>(SnapshotId),
+            static_cast<unsigned long long>(ScopedDigest),
+            static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId));
+        return;
+    }
+    PendingNetworkSnapshotDigests.Remove(SnapshotId);
+    LastAcknowledgedNetworkSnapshotId = SnapshotId;
+    ++NetworkSnapshotAcknowledgementCount;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED] player=%u snapshot=%llu digest=%llu acknowledgements=%llu lineageExact=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(SnapshotId),
+        static_cast<unsigned long long>(ScopedDigest),
+        static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
+}
+
+void AEchoesPlayerController::ServerRequestScopedKeyframe_Implementation(
+    uint64 LastAcceptedSnapshotId)
+{
+    UE_LOG(
+        LogEchoes,
+        Warning,
+        TEXT("[ECHOES_NETWORK_KEYFRAME_REQUESTED] player=%u lastAccepted=%llu authorityLatest=%llu recovery=fullKeyframe"),
+        NetworkSeat,
+        static_cast<unsigned long long>(LastAcceptedSnapshotId),
+        static_cast<unsigned long long>(LastNetworkSnapshotId));
+    SendScopedKeyframe();
 }
 
 void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
@@ -395,6 +602,20 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
                 echoes::sim::net::StableId(Decode).data())));
         return;
     }
+    const uint64 RequestedExecuteTick = Request.executeTick;
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    if (Simulation == nullptr ||
+        Simulation->CurrentTick() >
+            std::numeric_limits<echoes::sim::Tick>::max() - 3)
+    {
+        ClientReceiveCommandAdmission(
+            static_cast<uint8>(
+                echoes::sim::net::CommandAdmissionStatus::TickRangeInvalid),
+            Simulation != nullptr ? Simulation->CurrentTick() : 0,
+            TEXT("NET_AUTHORITY_TICK_RANGE_INVALID"));
+        return;
+    }
+    Request.executeTick = Simulation->CurrentTick() + 3;
     const echoes::sim::Entity* Actor = Bridge->FindEntity(Request.actor);
     PendingRemoteInitialPosition =
         Actor != nullptr ? Actor->position : echoes::sim::Vec2{};
@@ -416,10 +637,11 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_NETWORK_COMMAND_ADMISSION] player=%u status=%s sequence=%llu executeTick=%llu actor=%u serverTick=%llu simulationReason=%s"),
+            TEXT("[ECHOES_NETWORK_COMMAND_ADMISSION] player=%u status=%s sequence=%llu requestedExecuteTick=%llu assignedExecuteTick=%llu actor=%u serverTick=%llu authorityAssigned=true simulationReason=%s"),
             NetworkSeat,
             UTF8_TO_TCHAR(echoes::sim::net::StableId(Admission).data()),
             static_cast<unsigned long long>(Request.sequence),
+            static_cast<unsigned long long>(RequestedExecuteTick),
             static_cast<unsigned long long>(Request.executeTick),
             Request.actor,
             static_cast<unsigned long long>(ServerTick),
@@ -430,10 +652,11 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NETWORK_COMMAND_ADMISSION] player=%u status=%s sequence=%llu executeTick=%llu actor=%u serverTick=%llu simulationReason=%s"),
+            TEXT("[ECHOES_NETWORK_COMMAND_ADMISSION] player=%u status=%s sequence=%llu requestedExecuteTick=%llu assignedExecuteTick=%llu actor=%u serverTick=%llu authorityAssigned=true simulationReason=%s"),
             NetworkSeat,
             UTF8_TO_TCHAR(echoes::sim::net::StableId(Admission).data()),
             static_cast<unsigned long long>(Request.sequence),
+            static_cast<unsigned long long>(RequestedExecuteTick),
             static_cast<unsigned long long>(Request.executeTick),
             Request.actor,
             static_cast<unsigned long long>(ServerTick),
@@ -442,11 +665,6 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
     if (Admission == echoes::sim::net::CommandAdmissionStatus::Accepted)
     {
         PendingRemoteCommand = Request;
-        if (FParse::Param(
-                FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
-        {
-            Bridge->SetScenarioPaused(false);
-        }
         GetWorldTimerManager().SetTimer(
             NetworkExecutionTimer,
             this,
@@ -454,6 +672,70 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
             1.0f,
             false);
     }
+}
+
+void AEchoesPlayerController::QueueNetworkSmokeHostCommand()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (Bridge == nullptr || Simulation == nullptr)
+    {
+        return;
+    }
+    const auto Worker = std::find_if(
+        Simulation->Entities().begin(),
+        Simulation->Entities().end(),
+        [](const echoes::sim::Entity& Entity)
+        {
+            return Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                   Entity.type == echoes::sim::EntityType::Worker;
+        });
+    if (Worker == Simulation->Entities().end())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_HOST_COMMAND_FAILED] reason=NET_HOST_WORKER_UNAVAILABLE"));
+        return;
+    }
+    PendingHostCommandActor = Worker->id;
+    PendingHostCommandInitialPosition = Worker->position;
+    PendingHostCommandTargetPosition = echoes::sim::Vec2::FromRaw(
+        Worker->position.x.Raw() + echoes::sim::kFixedScale,
+        Worker->position.y.Raw());
+    PendingHostCommandExecuteTick = Simulation->CurrentTick() + 3;
+    FString Feedback;
+    if (!Bridge->IssueCommand(
+            echoes::sim::CommandType::Move,
+            PendingHostCommandActor,
+            0,
+            Bridge->SimToWorld(PendingHostCommandTargetPosition),
+            echoes::sim::FutureWellChoice::Dormant,
+            Feedback))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_HOST_COMMAND_FAILED] actor=%u reason=%s"),
+            PendingHostCommandActor,
+            *Feedback);
+        PendingHostCommandActor = 0;
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_HOST_COMMAND_QUEUED] player=%u actor=%u assignedExecuteTick=%llu authorityTick=%llu delayTicks=3 targetRaw=(%d,%d)"),
+        UEchoesSimulationSubsystem::LocalPlayerId,
+        PendingHostCommandActor,
+        static_cast<unsigned long long>(PendingHostCommandExecuteTick),
+        static_cast<unsigned long long>(Simulation->CurrentTick()),
+        PendingHostCommandTargetPosition.x.Raw(),
+        PendingHostCommandTargetPosition.y.Raw());
 }
 
 void AEchoesPlayerController::ClientReceiveCommandAdmission_Implementation(
@@ -506,6 +788,14 @@ void AEchoesPlayerController::VerifyRemoteCommandExecution()
         Simulation->CurrentTick() > PendingRemoteCommand.executeTick &&
         Actor->position == PendingRemoteCommand.position &&
         Actor->position != PendingRemoteInitialPosition;
+    const echoes::sim::Entity* HostActor =
+        Bridge != nullptr ? Bridge->FindEntity(PendingHostCommandActor)
+                          : nullptr;
+    bNetworkHostExecutionVerified =
+        Simulation != nullptr && HostActor != nullptr &&
+        Simulation->CurrentTick() > PendingHostCommandExecuteTick &&
+        HostActor->position == PendingHostCommandTargetPosition &&
+        HostActor->position != PendingHostCommandInitialPosition;
     bNetworkCommandExecutionVerified = bExecuted;
     const uint64 ServerTick =
         Simulation != nullptr ? Simulation->CurrentTick() : 0;
@@ -539,6 +829,32 @@ void AEchoesPlayerController::VerifyRemoteCommandExecution()
             Actor != nullptr ? Actor->position.y.Raw() : 0,
             PendingRemoteCommand.position.x.Raw(),
             PendingRemoteCommand.position.y.Raw(),
+            static_cast<unsigned long long>(ServerTick));
+    }
+    if (bNetworkHostExecutionVerified)
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_HOST_COMMAND_EXECUTION] executed=true actor=%u positionRaw=(%d,%d) expectedRaw=(%d,%d) serverTick=%llu delayTicks=3"),
+            PendingHostCommandActor,
+            HostActor->position.x.Raw(),
+            HostActor->position.y.Raw(),
+            PendingHostCommandTargetPosition.x.Raw(),
+            PendingHostCommandTargetPosition.y.Raw(),
+            static_cast<unsigned long long>(ServerTick));
+    }
+    else
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_HOST_COMMAND_EXECUTION] executed=false actor=%u positionRaw=(%d,%d) expectedRaw=(%d,%d) serverTick=%llu delayTicks=3"),
+            PendingHostCommandActor,
+            HostActor != nullptr ? HostActor->position.x.Raw() : 0,
+            HostActor != nullptr ? HostActor->position.y.Raw() : 0,
+            PendingHostCommandTargetPosition.x.Raw(),
+            PendingHostCommandTargetPosition.y.Raw(),
             static_cast<unsigned long long>(ServerTick));
     }
 }
@@ -581,13 +897,26 @@ void AEchoesPlayerController::ClientReceiveCommandExecution_Implementation(
         FPlatformMisc::RequestExit(false);
         return;
     }
+    bNetworkRemoteExecutionReceived = true;
+    TryFinishNetworkClientSmoke();
+}
+
+void AEchoesPlayerController::TryFinishNetworkClientSmoke()
+{
+    if (!bNetworkClientSmoke || bNetworkSmokeCompletionSent ||
+        !bNetworkRemoteExecutionReceived ||
+        NetworkViewState.AcceptedCount() < 2)
+    {
+        return;
+    }
+    bNetworkSmokeCompletionSent = true;
     ServerConfirmNetworkSmokeComplete(LastNetworkSnapshotId);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_CLIENT_SMOKE_PASSED] snapshot=%llu actor=%u separateProcess=true connectionBound=true"),
+        TEXT("[ECHOES_NETWORK_CLIENT_SMOKE_PASSED] snapshot=%llu acceptedKeyframes=%llu separateProcess=true readyGate=true periodicState=true authorityAssignedCommands=true connectionBound=true"),
         static_cast<unsigned long long>(LastNetworkSnapshotId),
-        ActorId);
+        static_cast<unsigned long long>(NetworkViewState.AcceptedCount()));
     GetWorldTimerManager().SetTimer(
         NetworkClientExitTimer,
         this,
@@ -600,23 +929,28 @@ void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
     uint64 SnapshotId)
 {
     if (!bNetworkCommandExecutionVerified ||
-        SnapshotId != LastNetworkSnapshotId)
+        !bNetworkHostExecutionVerified ||
+        NetworkSnapshotAcknowledgementCount < 2 ||
+        SnapshotId != LastAcknowledgedNetworkSnapshotId)
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NETWORK_SERVER_SMOKE_FAILED] snapshot=%llu expected=%llu executionVerified=%s"),
+            TEXT("[ECHOES_NETWORK_SERVER_SMOKE_FAILED] snapshot=%llu expectedAck=%llu remoteExecutionVerified=%s hostExecutionVerified=%s acknowledgements=%llu"),
             static_cast<unsigned long long>(SnapshotId),
-            static_cast<unsigned long long>(LastNetworkSnapshotId),
-            bNetworkCommandExecutionVerified ? TEXT("true") : TEXT("false"));
+            static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId),
+            bNetworkCommandExecutionVerified ? TEXT("true") : TEXT("false"),
+            bNetworkHostExecutionVerified ? TEXT("true") : TEXT("false"),
+            static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
         return;
     }
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_SERVER_SMOKE_PASSED] snapshot=%llu player=%u separateProcess=true connectionBound=true hiddenAuthorityExcluded=true"),
+        TEXT("[ECHOES_NETWORK_SERVER_SMOKE_PASSED] snapshot=%llu player=%u acknowledgements=%llu separateProcess=true readyGate=true periodicState=true hostRemoteDelayParity=true authorityAssignedCommands=true connectionBound=true hiddenAuthorityExcluded=true"),
         static_cast<unsigned long long>(SnapshotId),
-        NetworkSeat);
+        NetworkSeat,
+        static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
     if (FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
     {

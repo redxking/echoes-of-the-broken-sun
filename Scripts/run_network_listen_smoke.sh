@@ -89,19 +89,27 @@ fi
 
 required_server_markers=(
   '\[ECHOES_NETWORK_SEAT_BOUND\] player=1 connectionBound=true sharedControl=false'
+  '\[ECHOES_NETWORK_AUTHORITY_WAITING\] tick=0 paused=true player=1 readyGate=true'
+  '\[ECHOES_NETWORK_LOBBY\] player=1 compatible=true ready=true started=false'
+  '\[ECHOES_NETWORK_MATCH_STARTED\] player=1 authorityTick=0 inputDelayTicks=3 readyGate=true'
+  '\[ECHOES_NETWORK_HOST_COMMAND_QUEUED\] player=0 .* assignedExecuteTick=3 authorityTick=0 delayTicks=3'
   '\[ECHOES_NETWORK_KEYFRAME_SENT\] player=1 .* hiddenAuthorityExcluded=true'
-  '\[ECHOES_NETWORK_COMMAND_ADMISSION\] player=1 status=NET_CMD_ACCEPTED'
+  '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 snapshot=2 .* lineageExact=true'
+  '\[ECHOES_NETWORK_COMMAND_ADMISSION\] player=1 status=NET_CMD_ACCEPTED .* requestedExecuteTick=0 assignedExecuteTick=3 .* serverTick=0 authorityAssigned=true'
   '\[ECHOES_NETWORK_COMMAND_EXECUTION\] executed=true'
-  '\[ECHOES_NETWORK_SERVER_SMOKE_PASSED\] .* separateProcess=true connectionBound=true hiddenAuthorityExcluded=true'
+  '\[ECHOES_NETWORK_HOST_COMMAND_EXECUTION\] executed=true .* delayTicks=3'
+  '\[ECHOES_NETWORK_SERVER_SMOKE_PASSED\] .* separateProcess=true readyGate=true periodicState=true hostRemoteDelayParity=true authorityAssignedCommands=true connectionBound=true hiddenAuthorityExcluded=true'
 )
 required_client_markers=(
   '\[ECHOES_NETWORK_HELLO_SENT\]'
   '\[ECHOES_NETWORK_COMPATIBILITY_RESULT\] accepted=true reason=NET_COMPATIBLE'
+  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=false authorityTick=0 inputDelayTicks=3'
+  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=true authorityTick=0 inputDelayTicks=3'
   '\[ECHOES_NETWORK_KEYFRAME_RECEIVED\] player=1 .* hiddenAuthorityExcluded=true'
-  '\[ECHOES_NETWORK_COMMAND_SENT\]'
+  '\[ECHOES_NETWORK_COMMAND_SENT\] .* requestedExecuteTick=0 .* authorityAssignsTick=true'
   '\[ECHOES_NETWORK_COMMAND_RESULT\] status=NET_CMD_ACCEPTED'
   '\[ECHOES_NETWORK_EXECUTION_RESULT\] executed=true'
-  '\[ECHOES_NETWORK_CLIENT_SMOKE_PASSED\] .* separateProcess=true connectionBound=true'
+  '\[ECHOES_NETWORK_CLIENT_SMOKE_PASSED\] .* separateProcess=true readyGate=true periodicState=true authorityAssignedCommands=true connectionBound=true'
 )
 for marker in "${required_server_markers[@]}"; do
   if ! /usr/bin/grep -Eq "$marker" "$server_log"; then
@@ -109,6 +117,13 @@ for marker in "${required_server_markers[@]}"; do
     exit 5
   fi
 done
+
+if [[ "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_SENT\]' "$server_log")" -lt 2 ||
+      "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\]' "$server_log")" -lt 2 ||
+      "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_RECEIVED\]' "$client_log")" -lt 2 ]]; then
+  print -u2 "Network smoke did not prove repeated scoped-state delivery and acknowledgement."
+  exit 6
+fi
 for marker in "${required_client_markers[@]}"; do
   if ! /usr/bin/grep -Eq "$marker" "$client_log"; then
     print -u2 "Client marker missing: $marker"
@@ -133,6 +148,6 @@ fi
 server_pid=""
 trap - EXIT INT TERM
 
-print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, one visibility-scoped keyframe, one remote command admission, and authoritative execution."
+print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, explicit ready/start, matched three-tick host/remote authority scheduling, repeated visibility-scoped keyframes with exact acknowledgements, and authoritative execution."
 print "Server evidence log: $server_log"
 print "Client evidence log: $client_log"

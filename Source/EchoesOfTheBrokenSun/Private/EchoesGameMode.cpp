@@ -342,21 +342,23 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
-    if (GetNetMode() == NM_ListenServer &&
-        FParse::Param(
-            FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
+    if (GetNetMode() == NM_ListenServer)
     {
         Bridge->SetNetworkHumanOpponent(true);
         Bridge->SetScenarioPaused(true);
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_NETWORK_AUTHORITY_WAITING] tick=%llu paused=true player=%u"),
+            TEXT("[ECHOES_NETWORK_AUTHORITY_WAITING] tick=%llu paused=true player=%u readyGate=true smoke=%s"),
             static_cast<unsigned long long>(
                 Bridge->GetSimulation() != nullptr
                     ? Bridge->GetSimulation()->CurrentTick()
                     : 0),
-            UEchoesSimulationSubsystem::OpponentPlayerId);
+            UEchoesSimulationSubsystem::OpponentPlayerId,
+            FParse::Param(
+                FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke"))
+                ? TEXT("true")
+                : TEXT("false"));
     }
 
 #if !UE_BUILD_SHIPPING
