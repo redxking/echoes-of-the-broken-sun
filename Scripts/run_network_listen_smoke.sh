@@ -18,10 +18,13 @@ if [[ "$port" != <-> || "$port" -lt 1024 || "$port" -gt 65535 ]]; then
   print -u2 "ECHOES_NETWORK_PORT must be an integer from 1024 through 65535."
   exit 2
 fi
-if [[ "$fault_mode" != "none" && "$fault_mode" != "drop-first-delta" ]]; then
-  print -u2 "ECHOES_NETWORK_FAULT_MODE must be none or drop-first-delta."
-  exit 2
-fi
+case "$fault_mode" in
+  none|drop-first-delta|delay-first-delta|duplicate-first-delta|reorder-first-two-deltas|drop-delta-burst) ;;
+  *)
+    print -u2 "ECHOES_NETWORK_FAULT_MODE must be none, drop-first-delta, delay-first-delta, duplicate-first-delta, reorder-first-two-deltas, or drop-delta-burst."
+    exit 2
+    ;;
+esac
 
 mkdir -p "$project_root/BuildArtifacts"
 : > "$server_log"
@@ -65,9 +68,13 @@ if [[ "$server_ready" != true ]]; then
 fi
 
 client_fault_args=()
-if [[ "$fault_mode" == "drop-first-delta" ]]; then
-  client_fault_args+=("-EchoesNetworkDropFirstDelta")
-fi
+case "$fault_mode" in
+  drop-first-delta) client_fault_args+=("-EchoesNetworkDropFirstDelta") ;;
+  delay-first-delta) client_fault_args+=("-EchoesNetworkDelayFirstDelta") ;;
+  duplicate-first-delta) client_fault_args+=("-EchoesNetworkDuplicateFirstDelta") ;;
+  reorder-first-two-deltas) client_fault_args+=("-EchoesNetworkReorderFirstTwoDeltas") ;;
+  drop-delta-burst) client_fault_args+=("-EchoesNetworkDropDeltaBurst") ;;
+esac
 
 "$editor" "$project" "127.0.0.1:${port}" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
@@ -153,14 +160,49 @@ if [[ "$assigned_tick" != <-> || "$server_tick" != <-> ||
   exit 6
 fi
 
-if [[ "$fault_mode" == "drop-first-delta" ]]; then
-  fault_markers=(
-    '\[ECHOES_NETWORK_DELTA_DROPPED\] injected=true'
-    '\[ECHOES_NETWORK_DELTA_REJECTED\] .* reason=NET_DELTA_BASE_MISSING'
-    '\[ECHOES_NETWORK_KEYFRAME_RECOVERY_REQUESTED\] .* reason=NET_DELTA_BASE_MISSING rateLimited=true'
-    '\[ECHOES_NETWORK_KEYFRAME_REQUESTED\] player=1 .* recovery=fullKeyframe'
-    '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 snapshot=.* retired=3 pendingSnapshots=0 lineageExact=true'
-  )
+fault_markers=()
+case "$fault_mode" in
+  drop-first-delta)
+    fault_markers+=(
+      '\[ECHOES_NETWORK_DELTA_DROPPED\] injected=true'
+      '\[ECHOES_NETWORK_DELTA_REJECTED\] .* reason=NET_DELTA_BASE_MISSING'
+      '\[ECHOES_NETWORK_KEYFRAME_RECOVERY_REQUESTED\] .* reason=NET_DELTA_BASE_MISSING rateLimited=true'
+      '\[ECHOES_NETWORK_KEYFRAME_REQUESTED\] player=1 .* recovery=fullKeyframe'
+      '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 snapshot=.* retired=3 pendingSnapshots=0 lineageExact=true'
+    )
+    ;;
+  delay-first-delta)
+    fault_markers+=(
+      '\[ECHOES_NETWORK_DELTA_DELAYED\] injected=true delayMilliseconds=250'
+      '\[ECHOES_NETWORK_DELTA_DELAY_COMPLETE\] injected=true'
+      '\[ECHOES_NETWORK_DELTA_RECEIVED\] player=1 .* lineage=NET_VIEW_ACCEPTED_DELTA'
+    )
+    ;;
+  duplicate-first-delta)
+    fault_markers+=(
+      '\[ECHOES_NETWORK_DELTA_DUPLICATED\] injected=true'
+      '\[ECHOES_NETWORK_DELTA_IGNORED\] .* reason=NET_VIEW_STALE_OR_DUPLICATE recoveryRequested=false'
+    )
+    ;;
+  reorder-first-two-deltas)
+    fault_markers+=(
+      '\[ECHOES_NETWORK_DELTA_REORDER_HELD\] injected=true'
+      '\[ECHOES_NETWORK_DELTA_REORDERED\] injected=true .* deliveryOrder=newerThenOlder'
+      '\[ECHOES_NETWORK_DELTA_REJECTED\] .* reason=NET_DELTA_BASE_MISSING'
+      '\[ECHOES_NETWORK_KEYFRAME_RECOVERY\] .* fullKeyframe=true'
+    )
+    ;;
+  drop-delta-burst)
+    fault_markers+=(
+      '\[ECHOES_NETWORK_DELTA_BURST_DROPPED\] injected=true ordinal=1 burstSize=3'
+      '\[ECHOES_NETWORK_DELTA_BURST_DROPPED\] injected=true ordinal=2 burstSize=3'
+      '\[ECHOES_NETWORK_DELTA_BURST_DROPPED\] injected=true ordinal=3 burstSize=3'
+      '\[ECHOES_NETWORK_DELTA_REJECTED\] .* reason=NET_DELTA_BASE_MISSING'
+      '\[ECHOES_NETWORK_KEYFRAME_RECOVERY\] .* fullKeyframe=true'
+    )
+    ;;
+esac
+if [[ "${#fault_markers[@]}" -gt 0 ]]; then
   for marker in "${fault_markers[@]}"; do
     if ! /usr/bin/grep -Eq "$marker" "$server_log" "$client_log"; then
       print -u2 "Fault-recovery marker missing: $marker"
@@ -177,7 +219,9 @@ done
 
 failure_pattern='\[ECHOES_NETWORK_.*(FAILED|REJECTED)\]|Fatal error:|Assertion failed:|Ensure condition failed:|SIGSEGV:|=== Critical error:'
 failure_lines="$(/usr/bin/grep -E "$failure_pattern" "$server_log" "$client_log" || true)"
-if [[ "$fault_mode" == "drop-first-delta" ]]; then
+if [[ "$fault_mode" == "drop-first-delta" ||
+      "$fault_mode" == "reorder-first-two-deltas" ||
+      "$fault_mode" == "drop-delta-burst" ]]; then
   failure_lines="$(print -r -- "$failure_lines" | /usr/bin/grep -v '\[ECHOES_NETWORK_DELTA_REJECTED\].*NET_DELTA_BASE_MISSING' || true)"
 fi
 if [[ -n "$failure_lines" ]]; then

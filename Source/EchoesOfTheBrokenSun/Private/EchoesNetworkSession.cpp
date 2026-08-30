@@ -5,12 +5,12 @@
 namespace echoes::network {
 namespace {
 
-// SHA-256("EchoesOfTheBrokenSun:0.81.0:protocol-2:snapshot-20:view-1").
+// SHA-256("EchoesOfTheBrokenSun:0.82.0:protocol-2:snapshot-20:view-1").
 constexpr sim::net::Digest256 BuildId{
-    0xdc, 0x18, 0x6d, 0x4d, 0x24, 0x04, 0x5a, 0x00,
-    0x5d, 0xb7, 0xb8, 0xef, 0xcf, 0x7c, 0x55, 0x3e,
-    0xe4, 0xe6, 0x42, 0x97, 0xe2, 0xa9, 0x86, 0x32,
-    0x05, 0x3c, 0xfb, 0x6b, 0x69, 0xef, 0x56, 0x24};
+    0x58, 0x6b, 0x85, 0xe7, 0x7b, 0xfa, 0xfc, 0x1a,
+    0x5d, 0x2f, 0x68, 0xb3, 0x42, 0x1a, 0x85, 0xeb,
+    0xaa, 0x29, 0x2b, 0xbe, 0xeb, 0xa9, 0xa9, 0x8d,
+    0x6c, 0x4a, 0xa3, 0x91, 0x3a, 0x3e, 0xd6, 0x66};
 constexpr sim::net::Digest256 CanonicalRulesPack{
     0x10, 0x0f, 0x1f, 0xcd, 0x18, 0x4c, 0xf9, 0x4f,
     0xe9, 0xb2, 0x1d, 0x3f, 0x59, 0x17, 0x14, 0xa2,
@@ -112,8 +112,7 @@ ScopedViewAcceptance ScopedViewState::AcceptDelta(
     {
         error->clear();
     }
-    if (!current_.has_value() ||
-        delta.baseSnapshotId != current_->snapshotId)
+    if (!current_.has_value())
     {
         if (error != nullptr)
         {
@@ -124,6 +123,18 @@ ScopedViewAcceptance ScopedViewState::AcceptDelta(
     if (delta.player != current_->player)
     {
         return ScopedViewAcceptance::PlayerChanged;
+    }
+    if (delta.snapshotId <= current_->snapshotId)
+    {
+        return ScopedViewAcceptance::StaleOrDuplicate;
+    }
+    if (delta.baseSnapshotId != current_->snapshotId)
+    {
+        if (error != nullptr)
+        {
+            *error = "NET_DELTA_BASE_MISSING";
+        }
+        return ScopedViewAcceptance::BaseMissing;
     }
     sim::net::ScopedViewKeyframe applied{};
     if (!sim::net::ApplyScopedViewDelta(

@@ -265,10 +265,10 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                  *DeltaClientView.Current() == DeltaTarget);
     const ScopedViewKeyframe AcceptedDeltaState =
         *DeltaClientView.Current();
-    TestTrue(TEXT("Client state rejects a delta whose base is no longer current"),
+    TestTrue(TEXT("Client state ignores a stale duplicate without recovery"),
              DeltaClientView.AcceptDelta(DecodedDelta, &Rejection) ==
-                     echoes::network::ScopedViewAcceptance::BaseMissing &&
-                 Rejection == "NET_DELTA_BASE_MISSING" &&
+                     echoes::network::ScopedViewAcceptance::StaleOrDuplicate &&
+                 Rejection.empty() &&
                  DeltaClientView.AcceptedCount() == 2 &&
                  *DeltaClientView.Current() == AcceptedDeltaState);
     ScopedViewDelta WrongDeltaDigest = DecodedDelta;

@@ -103,6 +103,33 @@ void AEchoesPlayerController::BeginPlay()
     bNetworkMatchSmoke =
         FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkMatchClientSmoke"));
+    bNetworkDelayFirstDeltaForSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkDelayFirstDelta"));
+    bNetworkDuplicateFirstDeltaForSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkDuplicateFirstDelta"));
+    bNetworkReorderFirstTwoDeltasForSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkReorderFirstTwoDeltas"));
+    bNetworkDropDeltaBurstForSmoke = FParse::Param(
+        FCommandLine::Get(), TEXT("EchoesNetworkDropDeltaBurst"));
+    const int32 NetworkFaultModeCount =
+        (FParse::Param(
+             FCommandLine::Get(), TEXT("EchoesNetworkDropFirstDelta"))
+             ? 1
+             : 0) +
+        (bNetworkDelayFirstDeltaForSmoke ? 1 : 0) +
+        (bNetworkDuplicateFirstDeltaForSmoke ? 1 : 0) +
+        (bNetworkReorderFirstTwoDeltasForSmoke ? 1 : 0) +
+        (bNetworkDropDeltaBurstForSmoke ? 1 : 0);
+    if (GetNetMode() == NM_Client && NetworkFaultModeCount > 1)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_FAULT_MODE_FAILED] reason=CONFLICTING_FAULT_MODES count=%d"),
+            NetworkFaultModeCount);
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
     if (GetNetMode() == NM_Client)
     {
         GetWorldTimerManager().SetTimerForNextTick(
@@ -933,6 +960,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
     if (Acceptance ==
         echoes::network::ScopedViewAcceptance::AcceptedRecovery)
     {
+        bNetworkFaultRecoveryObserved = true;
         UE_LOG(
             LogEchoes,
             Warning,
@@ -1040,6 +1068,109 @@ void AEchoesPlayerController::ClientReceiveScopedDelta_Implementation(
             static_cast<unsigned long long>(LastNetworkSnapshotId));
         return;
     }
+
+    if (bNetworkDropDeltaBurstForSmoke && NetworkDroppedDeltaCount < 3)
+    {
+        ++NetworkDroppedDeltaCount;
+        bNetworkFaultInjectionPerformed = true;
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_BURST_DROPPED] injected=true ordinal=%u burstSize=3 bytes=%d acceptedSnapshot=%llu"),
+            NetworkDroppedDeltaCount,
+            Packet.Num(),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        return;
+    }
+
+    if (bNetworkDelayFirstDeltaForSmoke &&
+        !bNetworkFaultInjectionPerformed)
+    {
+        bNetworkFaultInjectionPerformed = true;
+        PendingNetworkFaultDelta = Packet;
+        GetWorldTimerManager().SetTimer(
+            NetworkFaultDeliveryTimer,
+            this,
+            &AEchoesPlayerController::DeliverDelayedNetworkDelta,
+            0.25f,
+            false);
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_DELAYED] injected=true delayMilliseconds=250 bytes=%d acceptedSnapshot=%llu"),
+            Packet.Num(),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        return;
+    }
+
+    if (bNetworkReorderFirstTwoDeltasForSmoke &&
+        !bNetworkFaultInjectionPerformed)
+    {
+        if (PendingNetworkFaultDelta.IsEmpty())
+        {
+            PendingNetworkFaultDelta = Packet;
+            UE_LOG(
+                LogEchoes,
+                Warning,
+                TEXT("[ECHOES_NETWORK_DELTA_REORDER_HELD] injected=true bytes=%d acceptedSnapshot=%llu"),
+                Packet.Num(),
+                static_cast<unsigned long long>(LastNetworkSnapshotId));
+            return;
+        }
+        bNetworkFaultInjectionPerformed = true;
+        TArray<uint8> HeldPacket = MoveTemp(PendingNetworkFaultDelta);
+        PendingNetworkFaultDelta.Reset();
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_REORDERED] injected=true newerBytes=%d heldBytes=%d deliveryOrder=newerThenOlder acceptedSnapshot=%llu"),
+            Packet.Num(),
+            HeldPacket.Num(),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        ProcessScopedDeltaPacket(Packet);
+        ProcessScopedDeltaPacket(HeldPacket);
+        return;
+    }
+
+    if (bNetworkDuplicateFirstDeltaForSmoke &&
+        !bNetworkFaultInjectionPerformed)
+    {
+        bNetworkFaultInjectionPerformed = true;
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_DUPLICATED] injected=true bytes=%d acceptedSnapshot=%llu"),
+            Packet.Num(),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        ProcessScopedDeltaPacket(Packet);
+        ProcessScopedDeltaPacket(Packet);
+        return;
+    }
+
+    ProcessScopedDeltaPacket(Packet);
+}
+
+void AEchoesPlayerController::DeliverDelayedNetworkDelta()
+{
+    if (PendingNetworkFaultDelta.IsEmpty())
+    {
+        return;
+    }
+    TArray<uint8> Packet = MoveTemp(PendingNetworkFaultDelta);
+    PendingNetworkFaultDelta.Reset();
+    bNetworkDelayedDeltaDelivered = true;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_DELTA_DELAY_COMPLETE] injected=true bytes=%d acceptedSnapshot=%llu"),
+        Packet.Num(),
+        static_cast<unsigned long long>(LastNetworkSnapshotId));
+    ProcessScopedDeltaPacket(Packet);
+}
+
+void AEchoesPlayerController::ProcessScopedDeltaPacket(
+    const TArray<uint8>& Packet)
+{
     echoes::sim::net::ScopedViewDelta Delta{};
     const echoes::sim::net::DecodeStatus Decode =
         echoes::sim::net::DecodeScopedViewDelta(
@@ -1054,6 +1185,20 @@ void AEchoesPlayerController::ClientReceiveScopedDelta_Implementation(
     std::string ApplyError;
     const echoes::network::ScopedViewAcceptance Acceptance =
         NetworkViewState.AcceptDelta(Delta, &ApplyError);
+    if (Acceptance ==
+        echoes::network::ScopedViewAcceptance::StaleOrDuplicate)
+    {
+        bNetworkDuplicateDeltaIgnored = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_DELTA_IGNORED] snapshot=%llu base=%llu acceptedSnapshot=%llu reason=NET_VIEW_STALE_OR_DUPLICATE recoveryRequested=false"),
+            static_cast<unsigned long long>(Delta.snapshotId),
+            static_cast<unsigned long long>(Delta.baseSnapshotId),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        TryFinishNetworkClientSmoke();
+        return;
+    }
     if (Acceptance != echoes::network::ScopedViewAcceptance::AcceptedDelta)
     {
         const FString Reason = ApplyError.empty()
@@ -2040,9 +2185,21 @@ void AEchoesPlayerController::ClientReceiveCommandExecution_Implementation(
 
 void AEchoesPlayerController::TryFinishNetworkClientSmoke()
 {
+    const bool bRecoveryRequired =
+        FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkDropFirstDelta")) ||
+        bNetworkReorderFirstTwoDeltasForSmoke ||
+        bNetworkDropDeltaBurstForSmoke;
+    const bool bFaultAcceptanceSatisfied =
+        (!bRecoveryRequired || bNetworkFaultRecoveryObserved) &&
+        (!bNetworkDelayFirstDeltaForSmoke ||
+         bNetworkDelayedDeltaDelivered) &&
+        (!bNetworkDuplicateFirstDeltaForSmoke ||
+         bNetworkDuplicateDeltaIgnored);
     if (!bNetworkClientSmoke || bNetworkSmokeCompletionSent ||
         !bNetworkRemoteExecutionReceived ||
-        NetworkViewState.AcceptedCount() < 2)
+        NetworkViewState.AcceptedCount() < 2 ||
+        !bFaultAcceptanceSatisfied)
     {
         return;
     }

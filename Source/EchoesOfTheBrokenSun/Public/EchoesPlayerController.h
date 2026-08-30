@@ -294,6 +294,8 @@ private:
         echoes::sim::net::ScopedViewKeyframe& OutKeyframe,
         FString& OutError);
     void RequestScopedKeyframeRecovery(const FString& Reason);
+    void ProcessScopedDeltaPacket(const TArray<uint8>& Packet);
+    void DeliverDelayedNetworkDelta();
     [[nodiscard]] bool IsNetworkClientControlActive() const;
     [[nodiscard]] const echoes::sim::net::ScopedEntityState*
     FindNetworkEntity(uint32 EntityId) const;
@@ -475,6 +477,15 @@ private:
     bool bNetworkHostExecutionVerified = false;
     bool bNetworkRemoteBattlefieldReady = false;
     bool bNetworkDroppedFirstDeltaForSmoke = false;
+    bool bNetworkDelayFirstDeltaForSmoke = false;
+    bool bNetworkDuplicateFirstDeltaForSmoke = false;
+    bool bNetworkReorderFirstTwoDeltasForSmoke = false;
+    bool bNetworkDropDeltaBurstForSmoke = false;
+    bool bNetworkFaultInjectionPerformed = false;
+    bool bNetworkFaultRecoveryObserved = false;
+    bool bNetworkDelayedDeltaDelivered = false;
+    bool bNetworkDuplicateDeltaIgnored = false;
+    uint8 NetworkDroppedDeltaCount = 0;
     uint64 LastNetworkSnapshotId = 0;
     uint64 LastAcknowledgedNetworkSnapshotId = 0;
     uint64 NetworkSnapshotAcknowledgementCount = 0;
@@ -506,6 +517,8 @@ private:
     FTimerHandle NetworkKeyframeTimer;
     FTimerHandle NetworkClientExitTimer;
     FTimerHandle NetworkServerExitTimer;
+    FTimerHandle NetworkFaultDeliveryTimer;
+    TArray<uint8> PendingNetworkFaultDelta;
     double LastScopedRecoveryRequestClientSeconds = -1000.0;
     double LastScopedRecoveryRequestServerSeconds = -1000.0;
     echoes::network::CommandRateLimiter NetworkCommandRateLimiter{};
