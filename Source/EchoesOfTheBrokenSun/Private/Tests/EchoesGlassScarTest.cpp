@@ -4,10 +4,15 @@
 
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesEntityView.h"
+#include "EchoesGameMode.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTerrainView.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Materials/MaterialInterface.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "Tests/AutomationCommon.h"
 
 #include <algorithm>
@@ -79,6 +84,83 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
             TestTrue(
                 FString::Printf(TEXT("Authored Glass Scar mesh has four material zones: %s"), MeshPath),
                 Mesh->GetStaticMaterials().Num() >= 4);
+        }
+    }
+
+    UStaticMesh* AshCutMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarAshCut.SM_World_GlassScarAshCut"));
+    if (TestNotNull(TEXT("Production-oriented Ash Cut mesh loads"), AshCutMesh))
+    {
+        TestTrue(TEXT("Ash Cut LOD0 has a surface and lightmap UV channel"),
+                 AshCutMesh->GetNumUVChannels(0) >= 2);
+        TestTrue(TEXT("Ash Cut LOD1 has a surface and lightmap UV channel"),
+                 AshCutMesh->GetNumUVChannels(1) >= 2);
+        const UBodySetup* BodySetup = AshCutMesh->GetBodySetup();
+        TestNotNull(TEXT("Ash Cut owns authored collision data"), BodySetup);
+        if (BodySetup != nullptr)
+        {
+            TestTrue(TEXT("Ash Cut has at least one simple collision primitive"),
+                     BodySetup->AggGeom.GetElementCount() > 0);
+            TestEqual(TEXT("Ash Cut asset uses simple-and-complex collision policy"),
+                      BodySetup->GetCollisionTraceFlag(),
+                      ECollisionTraceFlag::CTF_UseSimpleAndComplex);
+        }
+
+        const TCHAR* ExpectedMaterials[] = {
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarAshCut_Basalt.MI_GlassScarAshCut_Basalt"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarAshCut_Ash.MI_GlassScarAshCut_Ash"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarAshCut_Glass.MI_GlassScarAshCut_Glass"),
+            TEXT("/Game/Art/Generated/Materials/MI_GlassScarAshCut_Vein.MI_GlassScarAshCut_Vein")};
+        for (int32 MaterialIndex = 0;
+             MaterialIndex < UE_ARRAY_COUNT(ExpectedMaterials);
+             ++MaterialIndex)
+        {
+            const UMaterialInterface* Material = AshCutMesh->GetMaterial(MaterialIndex);
+            TestNotNull(
+                FString::Printf(TEXT("Ash Cut material zone %d loads"), MaterialIndex),
+                Material);
+            if (Material != nullptr)
+            {
+                TestEqual(
+                    FString::Printf(TEXT("Ash Cut material zone %d is route-specific"), MaterialIndex),
+                    Material->GetPathName(),
+                    FString(ExpectedMaterials[MaterialIndex]));
+            }
+        }
+    }
+
+    AEchoesGameMode* PresentationGameMode = World->SpawnActor<AEchoesGameMode>();
+    if (TestNotNull(TEXT("Glass Scar presentation GameMode can be created"), PresentationGameMode) &&
+        TestTrue(TEXT("Glass Scar production environment can be spawned"),
+                 PresentationGameMode != nullptr &&
+                     PresentationGameMode->SpawnPrototypeEnvironmentForTesting()))
+    {
+        AStaticMeshActor* AshCutActor = nullptr;
+        for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+        {
+            if (It->ActorHasTag(TEXT("EchoesRouteAshCut")))
+            {
+                AshCutActor = *It;
+                break;
+            }
+        }
+        if (TestNotNull(TEXT("Runtime Ash Cut route actor exists"), AshCutActor))
+        {
+            UStaticMeshComponent* AshCutComponent =
+                AshCutActor->GetStaticMeshComponent();
+            if (TestNotNull(TEXT("Runtime Ash Cut route has a mesh component"), AshCutComponent))
+            {
+                TestEqual(TEXT("Runtime Ash Cut collision remains disabled"),
+                          AshCutComponent->GetCollisionEnabled(),
+                          ECollisionEnabled::NoCollision);
+                TestTrue(TEXT("Runtime Ash Cut does not affect navigation"),
+                         !AshCutComponent->CanEverAffectNavigation());
+                TestTrue(TEXT("Runtime Ash Cut retains its route material family"),
+                         AshCutComponent->GetMaterial(0) != nullptr &&
+                             AshCutComponent->GetMaterial(0)->GetPathName().Contains(
+                                 TEXT("MI_GlassScarAshCut_Basalt")));
+            }
         }
     }
 

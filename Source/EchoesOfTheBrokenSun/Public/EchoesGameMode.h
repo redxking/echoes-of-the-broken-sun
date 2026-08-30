@@ -15,6 +15,13 @@ public:
 
     virtual void BeginPlay() override;
 
+#if WITH_DEV_AUTOMATION_TESTS
+    bool SpawnPrototypeEnvironmentForTesting()
+    {
+        return SpawnPrototypeEnvironment();
+    }
+#endif
+
 private:
     bool SpawnPrototypeEnvironment();
     void CleanupPrototypeEnvironment();

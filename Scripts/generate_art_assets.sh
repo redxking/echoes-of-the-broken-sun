@@ -26,11 +26,17 @@ if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=27 roster=16 landmarks=4 environme
   exit 3
 fi
 
-if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:' "$log"; then
+if ! rg -q '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+  print -u2 "The Ash Cut route-kit audit did not pass."
+  print -u2 "Inspect: $log"
+  exit 5
+fi
+
+if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEditorAssetSubsystem: Error:' "$log"; then
   print -u2 "The Unreal art generator reported an error."
   print -u2 "Inspect: $log"
   exit 4
 fi
 
-print "Generated 16 roster meshes, 4 Future Well meshes, 7 Glass Scar environment meshes, and the shared surface material."
+print "Generated 16 roster meshes, 4 Future Well meshes, 7 Glass Scar environment meshes, and the Ash Cut production-oriented route kit."
 print "Evidence log: $log"

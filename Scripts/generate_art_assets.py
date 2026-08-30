@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Sequence
 
 import unreal
 
@@ -17,6 +17,14 @@ import unreal
 ART_ROOT = "/Game/Art/Generated"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
+ASH_CUT_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarAshCut"
+ASH_CUT_MATERIAL_INSTANCE_PATHS = (
+    f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Basalt",
+    f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Ash",
+    f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Glass",
+    f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Vein",
+)
+ASH_CUT_ASSET_REVISION = "ash-cut-production-v1"
 
 PRIMARY = 0
 DARK = 1
@@ -663,42 +671,93 @@ def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """An irregular, low trench crossing readable by its scalloped outline."""
-    for index, y in enumerate((-630.0, -315.0, 0.0, 315.0, 630.0)):
-        x = (-34.0, 24.0, -12.0, 38.0, -26.0)[index]
-        yaw = (-7.0, 5.0, -3.0, 7.0, -5.0)[index]
+    """Production-oriented Ash Cut trench with layered banks and a continuous bed."""
+    segment_specs = (
+        (-38.0, -720.0, -8.0, 0.86),
+        (18.0, -480.0, 5.0, 0.92),
+        (-26.0, -240.0, -4.0, 0.88),
+        (12.0, 0.0, 3.0, 0.94),
+        (34.0, 240.0, 7.0, 0.88),
+        (-14.0, 480.0, -5.0, 0.92),
+        (-32.0, 720.0, -7.0, 0.86),
+    )
+    for index, (x, y, yaw, width_scale) in enumerate(segment_specs):
         cylinder(
             mesh,
-            248.0,
-            30.0,
-            (x, y, 3.0),
+            268.0,
+            38.0,
+            (x, y, 1.0),
             DARK,
             (0.0, yaw, 0.0),
-            6,
-            (0.82 + (index % 2) * 0.08, 1.0, 1.0),
+            8 if high else 6,
+            (width_scale, 1.0, 1.0),
         )
         cylinder(
             mesh,
-            202.0,
-            12.0,
-            (x, y, 24.0),
+            224.0,
+            14.0,
+            (x, y, 28.0),
             LIGHT,
-            (0.0, yaw + 4.0, 0.0),
-            6,
-            (0.78, 1.0, 1.0),
+            (0.0, yaw + 3.0, 0.0),
+            8 if high else 6,
+            (width_scale * 0.92, 1.0, 1.0),
         )
-        box(mesh, (13.0, 226.0, 6.0), (x - 31.0, y, 34.0), GLOW, (0.0, yaw + 3.0, 0.0))
+        box(
+            mesh,
+            (14.0, 238.0, 7.0),
+            (x - 34.0, y, 39.0),
+            GLOW,
+            (0.0, yaw + 2.0, 0.0),
+        )
+        if high and index < len(segment_specs) - 1:
+            next_x, next_y, _, _ = segment_specs[index + 1]
+            box(
+                mesh,
+                (172.0, 72.0, 10.0),
+                ((x + next_x) * 0.5, (y + next_y) * 0.5, 20.0),
+                LIGHT,
+                (0.0, yaw, 0.0),
+            )
+
+    bank_y = (-660.0, -440.0, -220.0, 0.0, 220.0, 440.0, 660.0)
     for side in (-1.0, 1.0):
-        for y, height, lean in ((-470.0, 198.0, 14.0), (50.0, 260.0, -9.0), (510.0, 176.0, 11.0)):
+        for index, y in enumerate(bank_y):
+            height = (118.0, 158.0, 136.0, 184.0, 148.0, 166.0, 122.0)[index]
+            x = side * (286.0 + (index % 3) * 18.0)
+            yaw = side * (-8.0 + index * 2.5)
+            box(
+                mesh,
+                (112.0, 214.0, 46.0),
+                (x, y, 24.0 + (index % 2) * 9.0),
+                PRIMARY,
+                (side * 7.0, yaw, side * 4.0),
+            )
+            box(
+                mesh,
+                (92.0, 188.0, 18.0),
+                (x - side * 15.0, y + 8.0, 57.0 + (index % 2) * 9.0),
+                DARK,
+                (side * 7.0, yaw - side * 3.0, side * 4.0),
+            )
+            if high:
+                box(
+                    mesh,
+                    (74.0, 142.0, 8.0),
+                    (x - side * 24.0, y + 4.0, 73.0 + (index % 2) * 9.0),
+                    LIGHT,
+                    (side * 7.0, yaw - side * 2.0, side * 4.0),
+                )
+
+        for y, height, lean in ((-520.0, 214.0, 14.0), (40.0, 286.0, -9.0), (545.0, 194.0, 11.0)):
             cone(
                 mesh,
-                34.0,
+                38.0,
                 4.0,
                 height,
-                (side * 248.0, y, 28.0 + height * 0.5),
-                PRIMARY,
+                (side * 354.0, y, 36.0 + height * 0.5),
+                GLOW if y == 40.0 else PRIMARY,
                 (side * lean, side * 12.0, 0.0),
-                6 if high else 5,
+                7 if high else 5,
             )
 
 
@@ -991,6 +1050,231 @@ def create_world_surface_material() -> unreal.Material:
     return material
 
 
+def create_ash_cut_materials() -> tuple[unreal.MaterialInterface, ...]:
+    """Create the UV-driven four-zone material family for the Ash Cut route."""
+    master = (
+        unreal.EditorAssetLibrary.load_asset(ASH_CUT_MATERIAL_PATH)
+        if unreal.EditorAssetLibrary.does_asset_exist(ASH_CUT_MATERIAL_PATH)
+        else None
+    )
+    if master is not None and not isinstance(master, unreal.Material):
+        raise RuntimeError(
+            f"Existing Ash Cut master is not a Material: {ASH_CUT_MATERIAL_PATH}"
+        )
+
+    if master is None:
+        tools = unreal.AssetToolsHelpers.get_asset_tools()
+        master = tools.create_asset(
+            "M_GlassScarAshCut",
+            f"{ART_ROOT}/Materials",
+            unreal.Material,
+            unreal.MaterialFactoryNew(),
+        )
+        if master is None:
+            raise RuntimeError("Could not create M_GlassScarAshCut")
+
+        color = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionVectorParameter, -880, -220
+        )
+        color.set_editor_property("parameter_name", "Color")
+        color.set_editor_property(
+            "default_value", unreal.LinearColor(0.055, 0.038, 0.034, 1.0)
+        )
+        detail_color = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionVectorParameter, -880, -80
+        )
+        detail_color.set_editor_property("parameter_name", "DetailColor")
+        detail_color.set_editor_property(
+            "default_value", unreal.LinearColor(0.19, 0.085, 0.035, 1.0)
+        )
+        texture_coordinate = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionTextureCoordinate, -900, 100
+        )
+        texture_coordinate.set_editor_property("coordinate_index", 0)
+        texture_coordinate.set_editor_property("u_tiling", 3.0)
+        texture_coordinate.set_editor_property("v_tiling", 6.0)
+        noise = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionNoise, -650, 70
+        )
+        noise.set_editor_property("scale", 3.6)
+        noise.set_editor_property("quality", 2)
+        noise.set_editor_property("levels", 4)
+        noise.set_editor_property("output_min", 0.0)
+        noise.set_editor_property("output_max", 1.0)
+        noise.set_editor_property("turbulence", True)
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            texture_coordinate, "", noise, "Position"
+        )
+        detail_strength = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionScalarParameter, -650, -70
+        )
+        detail_strength.set_editor_property("parameter_name", "DetailStrength")
+        detail_strength.set_editor_property("default_value", 0.34)
+        detail_mask = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionMultiply, -410, 30
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            noise, "", detail_mask, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            detail_strength, "", detail_mask, "B"
+        )
+        color_blend = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionLinearInterpolate, -150, -150
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            color, "", color_blend, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            detail_color, "", color_blend, "B"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            detail_mask, "", color_blend, "Alpha"
+        )
+
+        metallic = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionScalarParameter, -400, 210
+        )
+        metallic.set_editor_property("parameter_name", "Metallic")
+        metallic.set_editor_property("default_value", 0.08)
+        roughness = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionScalarParameter, -400, 310
+        )
+        roughness.set_editor_property("parameter_name", "Roughness")
+        roughness.set_editor_property("default_value", 0.78)
+        emission = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionScalarParameter, -400, -280
+        )
+        emission.set_editor_property("parameter_name", "EmissiveStrength")
+        emission.set_editor_property("default_value", 0.0)
+        emissive_color = unreal.MaterialEditingLibrary.create_material_expression(
+            master, unreal.MaterialExpressionMultiply, -130, -280
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            color_blend, "", emissive_color, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            emission, "", emissive_color, "B"
+        )
+
+        unreal.MaterialEditingLibrary.connect_material_property(
+            color_blend, "", unreal.MaterialProperty.MP_BASE_COLOR
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            metallic, "", unreal.MaterialProperty.MP_METALLIC
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            roughness, "", unreal.MaterialProperty.MP_ROUGHNESS
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+        )
+        unreal.MaterialEditingLibrary.layout_material_expressions(master)
+        unreal.MaterialEditingLibrary.recompile_material(master)
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master,
+            "Echoes.Provenance",
+            "Original UV-driven Ash Cut material authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            master, "Echoes.AssetRevision", ASH_CUT_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(master, False)
+
+    zone_specs = (
+        (
+            unreal.LinearColor(0.040, 0.026, 0.026, 1.0),
+            unreal.LinearColor(0.17, 0.050, 0.022, 1.0),
+            0.10,
+            0.82,
+            0.0,
+            0.28,
+        ),
+        (
+            unreal.LinearColor(0.15, 0.105, 0.075, 1.0),
+            unreal.LinearColor(0.32, 0.18, 0.075, 1.0),
+            0.03,
+            0.91,
+            0.0,
+            0.42,
+        ),
+        (
+            unreal.LinearColor(0.055, 0.018, 0.026, 1.0),
+            unreal.LinearColor(0.44, 0.075, 0.025, 1.0),
+            0.46,
+            0.24,
+            0.0,
+            0.20,
+        ),
+        (
+            unreal.LinearColor(0.50, 0.025, 0.012, 1.0),
+            unreal.LinearColor(1.0, 0.24, 0.035, 1.0),
+            0.18,
+            0.31,
+            3.4,
+            0.50,
+        ),
+    )
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    instances: list[unreal.MaterialInterface] = []
+    for path, values in zip(ASH_CUT_MATERIAL_INSTANCE_PATHS, zone_specs):
+        instance = (
+            unreal.EditorAssetLibrary.load_asset(path)
+            if unreal.EditorAssetLibrary.does_asset_exist(path)
+            else None
+        )
+        if instance is None:
+            asset_name = path.rsplit("/", 1)[1]
+            instance = tools.create_asset(
+                asset_name,
+                f"{ART_ROOT}/Materials",
+                unreal.MaterialInstanceConstant,
+                unreal.MaterialInstanceConstantFactoryNew(),
+            )
+        if not isinstance(instance, unreal.MaterialInstanceConstant):
+            raise RuntimeError(f"Ash Cut material instance is invalid: {path}")
+        unreal.MaterialEditingLibrary.set_material_instance_parent(instance, master)
+        color_value, detail_value, metallic_value, roughness_value, emission_value, detail_value_strength = values
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "Color", color_value
+        )
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            instance, "DetailColor", detail_value
+        )
+        for parameter_name, parameter_value in (
+            ("Metallic", metallic_value),
+            ("Roughness", roughness_value),
+            ("EmissiveStrength", emission_value),
+            ("DetailStrength", detail_value_strength),
+        ):
+            unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(
+                instance, parameter_name, parameter_value
+            )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance,
+            "Echoes.Provenance",
+            "Original Ash Cut material instance authored in-project",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.Status", "Production route-kit candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            instance, "Echoes.AssetRevision", ASH_CUT_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(instance, False)
+        instances.append(instance)
+    return tuple(instances)
+
+
 def build_dynamic_mesh(spec: AssetSpec, high_detail: bool) -> unreal.DynamicMesh:
     mesh = unreal.DynamicMesh()
     mesh.enable_material_i_ds()
@@ -1000,9 +1284,24 @@ def build_dynamic_mesh(spec: AssetSpec, high_detail: bool) -> unreal.DynamicMesh
     return mesh
 
 
-def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> unreal.StaticMesh:
+def create_static_mesh(
+    spec: AssetSpec, materials: Sequence[unreal.MaterialInterface]
+) -> unreal.StaticMesh:
+    if len(materials) != 4:
+        raise RuntimeError(f"Exactly four materials are required for {spec.display_name}")
+    is_production_ash_cut = spec.name == "GlassScarAshCut"
     if unreal.EditorAssetLibrary.does_asset_exist(spec.asset_path):
         existing = unreal.EditorAssetLibrary.load_asset(spec.asset_path)
+        if isinstance(existing, unreal.StaticMesh):
+            revision = unreal.EditorAssetLibrary.get_metadata_tag(
+                existing, "Echoes.AssetRevision"
+            )
+            if is_production_ash_cut and revision != ASH_CUT_ASSET_REVISION:
+                if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
+                    raise RuntimeError(
+                        f"Could not replace legacy Ash Cut asset: {spec.asset_path}"
+                    )
+                existing = None
         if isinstance(existing, unreal.StaticMesh):
             unreal.log(
                 "[ECHOES_ART_ASSET] "
@@ -1013,7 +1312,8 @@ def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> un
                 "action=reused"
             )
             return existing
-        raise RuntimeError(f"Existing asset is not a StaticMesh: {spec.asset_path}")
+        if existing is not None:
+            raise RuntimeError(f"Existing asset is not a StaticMesh: {spec.asset_path}")
 
     lod_zero = build_dynamic_mesh(spec, True)
     lod_one = build_dynamic_mesh(spec, False)
@@ -1031,16 +1331,79 @@ def create_static_mesh(spec: AssetSpec, surface_material: unreal.Material) -> un
         raise RuntimeError(f"Static-mesh creation failed for {spec.asset_path}: {outcome}")
 
     while len(asset.get_editor_property("static_materials")) < 4:
-        asset.add_material(surface_material)
+        asset.add_material(materials[0])
     for material_index in range(4):
-        asset.set_material(material_index, surface_material)
+        asset.set_material(material_index, materials[material_index])
+
+    if is_production_ash_cut:
+        mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        for lod_index in range(asset.get_num_lods()):
+            if not mesh_editor.generate_box_uv_channel(
+                asset,
+                lod_index,
+                0,
+                unreal.Vector(0.0, 0.0, 80.0),
+                unreal.Rotator(0.0, 0.0, 0.0),
+                unreal.Vector(900.0, 1800.0, 420.0),
+            ):
+                raise RuntimeError(f"Could not author Ash Cut UV0 for LOD {lod_index}")
+            if mesh_editor.get_num_uv_channels(asset, lod_index) < 2:
+                if not mesh_editor.add_uv_channel(asset, lod_index):
+                    raise RuntimeError(
+                        f"Could not add Ash Cut lightmap UV for LOD {lod_index}"
+                    )
+            if not mesh_editor.generate_box_uv_channel(
+                asset,
+                lod_index,
+                1,
+                unreal.Vector(0.0, 0.0, 80.0),
+                unreal.Rotator(0.0, 0.0, 0.0),
+                unreal.Vector(1900.0, 1900.0, 1900.0),
+            ):
+                raise RuntimeError(f"Could not seed Ash Cut UV1 for LOD {lod_index}")
+        mesh_editor.set_generate_lightmap_uv(asset, True)
+        mesh_editor.remove_collisions(asset)
+        collision_index = mesh_editor.add_simple_collisions(
+            asset, unreal.ScriptCollisionShapeType.BOX
+        )
+        if collision_index < 0:
+            raise RuntimeError("Could not author Ash Cut simple collision")
+        body_setup = asset.get_editor_property("body_setup")
+        if body_setup is None:
+            raise RuntimeError("Ash Cut static mesh has no body setup")
+        body_setup.set_editor_property(
+            "collision_trace_flag",
+            unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX,
+        )
+        asset.set_editor_property("light_map_coordinate_index", 1)
+        asset.set_editor_property("light_map_resolution", 128)
+        uv_counts = [
+            mesh_editor.get_num_uv_channels(asset, lod_index)
+            for lod_index in range(asset.get_num_lods())
+        ]
+        if any(count < 2 for count in uv_counts):
+            raise RuntimeError(f"Ash Cut requires two UV channels per LOD: {uv_counts}")
 
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Creator", "Angelis Pseftis")
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Faction", spec.faction)
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Role", spec.role)
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Provenance", "Original scripted Unreal geometry")
-    unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Status", "Vertical-slice art candidate")
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset,
+        "Echoes.Status",
+        "Production route-kit candidate" if is_production_ash_cut else "Vertical-slice art candidate",
+    )
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.RuntimeAuthority", "Presentation only")
+    if is_production_ash_cut:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.AssetRevision", ASH_CUT_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.UVPolicy", "UV0 tiled surface; UV1 generated lightmap"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.CollisionPolicy", "Authored simple box; runtime disabled"
+        )
     unreal.EditorAssetLibrary.save_loaded_asset(asset, False)
 
     unreal.log(
@@ -1060,13 +1423,56 @@ def main() -> None:
     )
     surface_material = create_surface_material()
     world_surface_material = create_world_surface_material()
+    ash_cut_materials = create_ash_cut_materials()
     generated = [
         create_static_mesh(
             spec,
-            world_surface_material if spec.faction == "World" else surface_material,
+            ash_cut_materials
+            if spec.name == "GlassScarAshCut"
+            else (
+                [world_surface_material] * 4
+                if spec.faction == "World"
+                else [surface_material] * 4
+            ),
         )
         for spec in ASSETS
     ]
+    ash_cut_asset = next(
+        asset
+        for asset, spec in zip(generated, ASSETS)
+        if spec.name == "GlassScarAshCut"
+    )
+    mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    ash_cut_uvs = [
+        mesh_editor.get_num_uv_channels(ash_cut_asset, lod_index)
+        for lod_index in range(ash_cut_asset.get_num_lods())
+    ]
+    ash_cut_materials = [
+        ash_cut_asset.get_material(index).get_path_name()
+        for index in range(4)
+        if ash_cut_asset.get_material(index) is not None
+    ]
+    ash_cut_collision_count = mesh_editor.get_simple_collision_count(ash_cut_asset)
+    if (
+        any(count < 2 for count in ash_cut_uvs)
+        or len(ash_cut_materials) != 4
+        or any("MI_GlassScarAshCut_" not in path for path in ash_cut_materials)
+        or ash_cut_collision_count < 1
+    ):
+        raise RuntimeError(
+            "Ash Cut route-kit audit failed: "
+            f"uvs={ash_cut_uvs} materials={ash_cut_materials} "
+            f"collision={ash_cut_collision_count}"
+        )
+    unreal.log(
+        "[ECHOES_ASH_CUT_READY] "
+        f"revision={ASH_CUT_ASSET_REVISION} lods={ash_cut_asset.get_num_lods()} "
+        f"lod0Triangles={ash_cut_asset.get_num_triangles(0)} "
+        f"lod1Triangles={ash_cut_asset.get_num_triangles(1)} "
+        f"uvChannels={','.join(str(value) for value in ash_cut_uvs)} "
+        f"materials={len(ash_cut_materials)} simpleCollision={ash_cut_collision_count} "
+        "runtimeAuthority=presentation runtimeCollision=false"
+    )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated)} "
         f"roster=16 landmarks=4 environment=7 material={MATERIAL_PATH} "

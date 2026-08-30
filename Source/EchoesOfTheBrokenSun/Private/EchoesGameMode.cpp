@@ -677,10 +677,18 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         AccentMesh->SetMobility(EComponentMobility::Movable);
         AccentMesh->SetStaticMesh(MeshAsset);
         AccentMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        AccentMesh->SetCanEverAffectNavigation(false);
         AccentMesh->SetGenerateOverlapEvents(false);
         AccentMesh->SetCastShadow(bCastShadow);
         AccentMesh->SetReceivesDecals(false);
         Accent->SetActorScale3D(Scale);
+        if (DetailTag == TEXT("EchoesRouteAshCut"))
+        {
+            // The production-oriented Ash Cut mesh owns its UV-driven material
+            // instances. Other environment candidates still receive the shared
+            // prototype palette below.
+            return true;
+        }
         const FLinearColor Palette[] = {
             Color,
             FLinearColor(Color.R * 0.22f, Color.G * 0.22f, Color.B * 0.25f),
@@ -994,7 +1002,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v2 authoredAssets=7 shelves=4 routes=3 bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v3 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,
