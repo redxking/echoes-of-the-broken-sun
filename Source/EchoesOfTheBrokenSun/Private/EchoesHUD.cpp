@@ -5,6 +5,7 @@
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesEntityView.h"
+#include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -56,6 +57,10 @@ const TCHAR* ResearchDisplayName(echoes::sim::ResearchType Technology)
             return TEXT("Echo Cartography");
         case echoes::sim::ResearchType::KharuunAncestralEdge:
             return TEXT("Ancestral Edge");
+        case echoes::sim::ResearchType::ChoirHeldAlternatives:
+            return TEXT("Held Alternatives");
+        case echoes::sim::ResearchType::ChoirSharedResolution:
+            return TEXT("Shared Resolution");
         default:
             return TEXT("Unknown Technology");
     }
@@ -272,14 +277,10 @@ void AEchoesHUD::DrawHUD()
                 *MatchState,
                 static_cast<unsigned long long>(Sim->CurrentTick()),
                 Sim->Config().ticksPerSecond);
-            const bool bMeridian =
-                Player->faction == echoes::sim::Faction::MeridianCompact;
-            const echoes::sim::ResearchType First = bMeridian
-                ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-                : echoes::sim::ResearchType::KharuunEchoCartography;
-            const echoes::sim::ResearchType Second = bMeridian
-                ? echoes::sim::ResearchType::MeridianHorizonLattice
-                : echoes::sim::ResearchType::KharuunAncestralEdge;
+            const echoes::presentation::FFactionTechnologyProfile Profile =
+                echoes::presentation::TechnologyProfile(Player->faction);
+            const echoes::sim::ResearchType First = Profile.TierOne;
+            const echoes::sim::ResearchType Second = Profile.TierTwo;
             if (Player->activeResearch != echoes::sim::ResearchType::None)
             {
                 const int32 Percent = FMath::Clamp(
@@ -578,21 +579,25 @@ void AEchoesHUD::DrawHUD()
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);
-    const bool bKharuunControls =
+    const echoes::sim::Faction PresentedFaction =
         NetworkView != nullptr
-            ? NetworkView->faction ==
-                  echoes::sim::Faction::KharuunAssemblies
-            : Bridge != nullptr &&
-                  Bridge->GetLocalFaction() ==
-                      echoes::sim::Faction::KharuunAssemblies;
-    const FString FactionControlLine =
-        bNetworkRemoteView
-            ? bKharuunControls
-                ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
-                : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build")
-        : bKharuunControls
-            ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
-            : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
+            ? NetworkView->faction
+            : Bridge != nullptr
+                  ? Bridge->GetLocalFaction()
+                  : echoes::sim::Faction::MeridianCompact;
+    FString FactionControlLine;
+    switch (PresentedFaction)
+    {
+        case echoes::sim::Faction::MeridianCompact:
+            FactionControlLine = TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            FactionControlLine = TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover");
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            FactionControlLine = TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [Shift+F3] Manifest  [Shift+F4] Possible");
+            break;
+    }
     DrawText(
         FactionControlLine,
         SecondaryColor,
@@ -907,6 +912,12 @@ void AEchoesHUD::DrawCommandDeck(
     {
         ContextLine += TEXT("    [F4/F5] WARFORM");
     }
+    else if (
+        Bridge->GetLocalFaction() == echoes::sim::Faction::HollowChoir &&
+        Profile.CombatCount > 0)
+    {
+        ContextLine += TEXT("    [SHIFT+F3/F4] RECONCILE IDENTITY");
+    }
     DrawText(
         ContextLine,
         Accent,
@@ -1021,21 +1032,15 @@ void AEchoesHUD::DrawTechnologyPanel(
         }
     }
 
-    const bool bMeridian =
-        Player->faction == echoes::sim::Faction::MeridianCompact;
+    const echoes::presentation::FFactionTechnologyProfile Profile =
+        echoes::presentation::TechnologyProfile(Player->faction);
     const echoes::sim::ResearchType Technologies[2] = {
-        bMeridian
-            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-            : echoes::sim::ResearchType::KharuunEchoCartography,
-        bMeridian
-            ? echoes::sim::ResearchType::MeridianHorizonLattice
-            : echoes::sim::ResearchType::KharuunAncestralEdge,
+        Profile.TierOne,
+        Profile.TierTwo,
     };
     const TCHAR* StableIds[2] = {
-        bMeridian ? TEXT("mc_prismatic_targeting")
-                  : TEXT("ka_echo_cartography"),
-        bMeridian ? TEXT("mc_horizon_lattice")
-                  : TEXT("ka_ancestral_edge"),
+        Profile.TierOneContentId,
+        Profile.TierTwoContentId,
     };
     const UEchoesContentSubsystem* Content =
         GetWorld() != nullptr && GetWorld()->GetGameInstance() != nullptr
@@ -2744,9 +2749,8 @@ void AEchoesHUD::DrawObjectiveTracker(
              Objective.bLocalCoreIntact ? Active : Failed,
              Left + 18.0f, Top + 89.0f, SmallFont, 0.82f * TextScale, false);
     const FString OpponentShortName =
-        Bridge->GetOpponentFaction() == echoes::sim::Faction::KharuunAssemblies
-            ? TEXT("KHARUUN")
-            : TEXT("MERIDIAN");
+        echoes::presentation::FactionShortName(
+            Bridge->GetOpponentFaction());
     DrawText(FString::Printf(
                  TEXT("03  %s CORE    %s"),
                  *OpponentShortName,
@@ -3431,11 +3435,23 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetAssemblyOfTheMissingPlan()
             : FEchoesAssemblyOfTheMissingPlan{};
-    const bool bLocalKharuun =
-        LocalFaction == TEXT("KHARUUN ASSEMBLIES");
-    const FString FactionSystems = bLocalKharuun
-        ? TEXT("Kharuun systems: [F3] Waystone  |  [F4/F5] warform  |  [F6] Cairnback cover")
-        : TEXT("Meridian systems: [Backslash] Bulwark deployment  |  [=] Relay supply");
+    FString FactionSystems;
+    const echoes::sim::Faction BriefingFaction =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetLocalFaction()
+            : echoes::sim::Faction::MeridianCompact;
+    switch (BriefingFaction)
+    {
+        case echoes::sim::Faction::MeridianCompact:
+            FactionSystems = TEXT("Meridian systems: [Backslash] Bulwark deployment  |  [=] Relay supply");
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            FactionSystems = TEXT("Kharuun systems: [F3] Waystone  |  [F4/F5] warform  |  [F6] Cairnback cover");
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            FactionSystems = TEXT("Hollow Choir systems: [Shift+F3] Manifest  |  [Shift+F4] Possible  |  coherence draws Dawnshards");
+            break;
+    }
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f), 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
     DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);

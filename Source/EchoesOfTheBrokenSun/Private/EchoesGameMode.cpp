@@ -8,6 +8,7 @@
 #include "EchoesDestructionView.h"
 #include "EchoesHUD.h"
 #include "EchoesEntityView.h"
+#include "EchoesFactionPolicy.h"
 #include "EchoesFogView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -399,6 +400,15 @@ void AEchoesGameMode::BeginPlay()
                 ESearchCase::IgnoreCase))
         {
             Requested = echoes::sim::Faction::KharuunAssemblies;
+        }
+        else if (RequestedFaction.Equals(
+                     TEXT("Choir"),
+                     ESearchCase::IgnoreCase) ||
+                 RequestedFaction.Equals(
+                     TEXT("HollowChoir"),
+                     ESearchCase::IgnoreCase))
+        {
+            Requested = echoes::sim::Faction::HollowChoir;
         }
         else if (!RequestedFaction.Equals(
                      TEXT("Meridian"),

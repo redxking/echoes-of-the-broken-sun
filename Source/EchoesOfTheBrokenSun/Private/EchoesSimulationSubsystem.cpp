@@ -4,6 +4,7 @@
 #include "EchoesDestructionView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
@@ -1525,9 +1526,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
-        ScenarioLocalFaction == Faction::MeridianCompact
-            ? Faction::KharuunAssemblies
-            : Faction::MeridianCompact;
+        echoes::presentation::SkirmishOpponent(ScenarioLocalFaction);
     if (bUseKharuunSystemsPresentation &&
         ScenarioLocalFaction != Faction::KharuunAssemblies)
     {
@@ -2463,9 +2462,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             return false;
         }
         ResearchPresentationTechnology =
-            ScenarioLocalFaction == Faction::MeridianCompact
-                ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-                : echoes::sim::ResearchType::KharuunEchoCartography;
+            echoes::presentation::TechnologyProfile(ScenarioLocalFaction)
+                .TierOne;
         echoes::sim::Command Command{};
         Command.executeTick = Simulation->CurrentTick() + 1;
         Command.player = LocalPlayerId;
@@ -3523,7 +3521,8 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
 {
     OutFeedback.Reset();
     if (NewFaction != Faction::MeridianCompact &&
-        NewFaction != Faction::KharuunAssemblies)
+        NewFaction != Faction::KharuunAssemblies &&
+        NewFaction != Faction::HollowChoir)
     {
         OutFeedback = TEXT("[FACTION_INVALID] That force is not playable in Glass Scar.");
         return false;
@@ -3543,6 +3542,12 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies)
     {
         OutFeedback = TEXT("[FACTION_SEVEN_ACCOUNTS_LOCKED] Oruun deploys with the Kharuun Assemblies.");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve &&
+        NewFaction != Faction::MeridianCompact)
+    {
+        OutFeedback = TEXT("[FACTION_CITY_RESERVE_LOCKED] Mara Vey deploys with the Meridian Compact.");
         return false;
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad &&
@@ -9830,6 +9835,30 @@ bool UEchoesSimulationSubsystem::IssueMineralCover(
         OutFeedback);
 }
 
+bool UEchoesSimulationSubsystem::IssueChoirReconciliation(
+    uint32 ActorId,
+    echoes::sim::ChoirIdentityState StableState,
+    FString& OutFeedback)
+{
+    if (StableState != echoes::sim::ChoirIdentityState::Manifest &&
+        StableState != echoes::sim::ChoirIdentityState::Possible)
+    {
+        OutFeedback = TEXT("[CHOIR_IDENTITY_INVALID] Choose Manifest or Possible identity.");
+        return false;
+    }
+    const echoes::sim::Entity* Actor = FindEntity(ActorId);
+    return QueuePlayerCommand(
+        StableState == echoes::sim::ChoirIdentityState::Manifest
+            ? echoes::sim::CommandType::ReconcileToManifest
+            : echoes::sim::CommandType::ReconcileToPossible,
+        ActorId,
+        0,
+        Actor != nullptr ? Actor->position : echoes::sim::Vec2{},
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Barracks,
+        OutFeedback);
+}
+
 bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     echoes::sim::CommandType CommandType,
     uint32 ActorId,
@@ -10093,6 +10122,42 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     break;
             }
             return false;
+        case CommandType::ReconcileToManifest:
+        case CommandType::ReconcileToPossible:
+        {
+            if (SelectedOperation != EEchoesOperationMode::Skirmish)
+            {
+                OutFeedback = TEXT("[CHOIR_SKIRMISH_ONLY] Reconciliation is available only to a player-commanded Hollow Choir skirmish force.");
+                return false;
+            }
+            const echoes::sim::ChoirIdentityState StableState =
+                CommandType == CommandType::ReconcileToManifest
+                    ? echoes::sim::ChoirIdentityState::Manifest
+                    : echoes::sim::ChoirIdentityState::Possible;
+            switch (Simulation->ValidateChoirReconciliation(
+                LocalPlayerId, Actor.id, StableState))
+            {
+                case echoes::sim::ChoirReconciliationResult::Valid:
+                    return true;
+                case echoes::sim::ChoirReconciliationResult::InvalidPlayer:
+                case echoes::sim::ChoirReconciliationResult::InvalidActor:
+                    OutFeedback = TEXT("[CHOIR_IDENTITY_REQUIRED] Select a completed Hollow Choir identity unit.");
+                    break;
+                case echoes::sim::ChoirReconciliationResult::AlreadyResolving:
+                    OutFeedback = TEXT("[CHOIR_RECONCILING] This voice is already resolving between identities.");
+                    break;
+                case echoes::sim::ChoirReconciliationResult::AlreadyStable:
+                    OutFeedback = TEXT("[CHOIR_ALREADY_STABLE] This voice already holds the requested identity.");
+                    break;
+                case echoes::sim::ChoirReconciliationResult::CooldownActive:
+                    OutFeedback = TEXT("[CHOIR_RECONCILIATION_COOLDOWN] This voice cannot reconcile again yet.");
+                    break;
+                case echoes::sim::ChoirReconciliationResult::InsufficientDawn:
+                    OutFeedback = TEXT("[INSUFFICIENT_DAWN] The Choir cannot fund this reconciliation.");
+                    break;
+            }
+            return false;
+        }
         case CommandType::Research:
             OutFeedback = TEXT("[RESEARCH_FORM_REQUIRED] Use a declared research command.");
             return false;

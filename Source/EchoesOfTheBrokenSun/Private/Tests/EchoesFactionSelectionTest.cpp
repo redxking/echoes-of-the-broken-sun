@@ -277,6 +277,117 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         }
     }
 
+    Controller->CyclePlayableFaction();
+    TestTrue(
+        TEXT("The title cycle exposes Hollow Choir as the third playable faction"),
+        Bridge->GetLocalFaction() == echoes::sim::Faction::HollowChoir);
+    TestTrue(
+        TEXT("The declared Choir skirmish matchup uses Meridian opposition"),
+        Bridge->GetOpponentFaction() ==
+            echoes::sim::Faction::MeridianCompact);
+    TestEqual(
+        TEXT("Controller reports the Hollow Choir explicitly"),
+        Controller->GetLocalFactionLabel(),
+        FString(TEXT("HOLLOW CHOIR")));
+
+    const echoes::sim::Simulation* ChoirSimulation = Bridge->GetSimulation();
+    uint32 ChoirIdentityUnit = 0;
+    uint32 ChoirWorker = 0;
+    bool bAllLocalEntitiesAreChoir = true;
+    bool bAllChoirRosterRolesPresent = true;
+    TSet<echoes::sim::EntityType> ChoirRosterTypes;
+    if (ChoirSimulation != nullptr)
+    {
+        for (const echoes::sim::Entity& Entity : ChoirSimulation->Entities())
+        {
+            if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId)
+            {
+                continue;
+            }
+            bAllLocalEntitiesAreChoir &=
+                Entity.faction == echoes::sim::Faction::HollowChoir;
+            ChoirRosterTypes.Add(Entity.type);
+            ChoirIdentityUnit =
+                Entity.type == echoes::sim::EntityType::Soldier &&
+                        ChoirIdentityUnit == 0
+                    ? Entity.id
+                    : ChoirIdentityUnit;
+            ChoirWorker =
+                Entity.type == echoes::sim::EntityType::Worker &&
+                        ChoirWorker == 0
+                    ? Entity.id
+                    : ChoirWorker;
+        }
+        const echoes::sim::EntityType RequiredTypes[] = {
+            echoes::sim::EntityType::Worker,
+            echoes::sim::EntityType::Soldier,
+            echoes::sim::EntityType::HeavyUnit,
+            echoes::sim::EntityType::ScoutUnit,
+            echoes::sim::EntityType::CommandCore,
+            echoes::sim::EntityType::Dropoff,
+            echoes::sim::EntityType::Barracks,
+            echoes::sim::EntityType::UtilityStructure};
+        for (const echoes::sim::EntityType Type : RequiredTypes)
+        {
+            bAllChoirRosterRolesPresent &= ChoirRosterTypes.Contains(Type);
+        }
+    }
+    TestTrue(TEXT("Every locally owned roster entity is Hollow Choir"),
+             bAllLocalEntitiesAreChoir);
+    TestTrue(TEXT("The direct Choir roster contains all eight gameplay roles"),
+             bAllChoirRosterRolesPresent);
+    TestNotNull(
+        TEXT("Held Alternatives is available to direct Choir play"),
+        ChoirSimulation != nullptr
+            ? ChoirSimulation->ResearchDefinition(
+                  echoes::sim::ResearchType::ChoirHeldAlternatives)
+            : nullptr);
+    TestNotNull(
+        TEXT("Shared Resolution is available to direct Choir play"),
+        ChoirSimulation != nullptr
+            ? ChoirSimulation->ResearchDefinition(
+                  echoes::sim::ResearchType::ChoirSharedResolution)
+            : nullptr);
+
+    Feedback.Reset();
+    TestFalse(
+        TEXT("A Threadkeeper cannot reconcile combat identity"),
+        ChoirWorker != 0 && Bridge->IssueChoirReconciliation(
+            ChoirWorker,
+            echoes::sim::ChoirIdentityState::Possible,
+            Feedback));
+    Feedback.Reset();
+    TestTrue(
+        TEXT("A direct Choir player can reconcile a voice toward Possible"),
+        ChoirIdentityUnit != 0 && Bridge->IssueChoirReconciliation(
+            ChoirIdentityUnit,
+            echoes::sim::ChoirIdentityState::Possible,
+            Feedback));
+    Bridge->SetScenarioPaused(false);
+    Bridge->Tick(0.10f);
+    const echoes::sim::Entity* ReconcilingVoice =
+        Bridge->FindEntity(ChoirIdentityUnit);
+    if (TestNotNull(
+            TEXT("The reconciling Choir voice remains authoritative"),
+            ReconcilingVoice))
+    {
+        TestTrue(
+            TEXT("The queued player command exposes the dual-resolution interval"),
+            ReconcilingVoice->choirIdentityState ==
+                echoes::sim::ChoirIdentityState::DualResolvePossible);
+    }
+
+    Controller->CyclePlayableFaction();
+    TestTrue(
+        TEXT("The third title step wraps Choir back to Meridian"),
+        Bridge->GetLocalFaction() ==
+            echoes::sim::Faction::MeridianCompact);
+    Controller->CyclePlayableFaction();
+    TestTrue(
+        TEXT("The title cycle can return to Kharuun before deployment"),
+        Bridge->GetLocalFaction() ==
+            echoes::sim::Faction::KharuunAssemblies);
+
     Controller->ConfirmPrimaryAction();
     TestTrue(TEXT("Selected Kharuun force reaches the operations brief"),
              Controller->IsMissionBriefingVisible());

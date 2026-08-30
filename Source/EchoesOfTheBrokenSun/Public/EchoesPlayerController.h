@@ -455,6 +455,10 @@ private:
     void AdaptSelectedWarformsStriker();
     void AdaptSelectedWarforms(echoes::sim::WarformAdaptation Adaptation);
     void RaiseSelectedCairnbackCoverAtCursor();
+    void ReconcileSelectedChoirToManifest();
+    void ReconcileSelectedChoirToPossible();
+    void ReconcileSelectedChoirIdentities(
+        echoes::sim::ChoirIdentityState StableState);
     void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();

@@ -269,7 +269,7 @@ public:
     /** Recreates the bounded match from its deterministic initial state. */
     bool RestartPrototypeScenario();
 
-    /** Rebuilds the undeployed operation for one of the two playable factions. */
+    /** Rebuilds the undeployed skirmish for one of the three playable factions. */
     bool SelectLocalFaction(
         echoes::sim::Faction NewFaction,
         FString& OutFeedback);
@@ -327,6 +327,11 @@ public:
     bool IssueMineralCover(
         uint32 ActorId,
         const FVector& WorldPosition,
+        FString& OutFeedback);
+
+    bool IssueChoirReconciliation(
+        uint32 ActorId,
+        echoes::sim::ChoirIdentityState StableState,
         FString& OutFeedback);
 
     void SetScenarioPaused(bool bPaused);
@@ -451,9 +456,15 @@ public:
     }
     [[nodiscard]] echoes::sim::Faction GetOpponentFaction() const
     {
-        return GetLocalFaction() == echoes::sim::Faction::MeridianCompact
-                   ? echoes::sim::Faction::KharuunAssemblies
-                   : echoes::sim::Faction::MeridianCompact;
+        switch (GetLocalFaction())
+        {
+            case echoes::sim::Faction::MeridianCompact:
+                return echoes::sim::Faction::KharuunAssemblies;
+            case echoes::sim::Faction::KharuunAssemblies:
+            case echoes::sim::Faction::HollowChoir:
+                return echoes::sim::Faction::MeridianCompact;
+        }
+        return echoes::sim::Faction::MeridianCompact;
     }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;

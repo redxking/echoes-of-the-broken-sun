@@ -3,6 +3,7 @@
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesFactionPolicy.h"
 #include "EchoesGameMode.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
@@ -44,9 +45,7 @@ constexpr float NetworkTileWorldSize = 200.0f;
 
 [[nodiscard]] FString FactionDisplayName(echoes::sim::Faction Faction)
 {
-    return Faction == echoes::sim::Faction::KharuunAssemblies
-               ? TEXT("KHARUUN ASSEMBLIES")
-               : TEXT("MERIDIAN COMPACT");
+    return echoes::presentation::FactionDisplayName(Faction);
 }
 
 [[nodiscard]] bool OutcomeBelongsToSeat(
@@ -3673,9 +3672,8 @@ void AEchoesPlayerController::CyclePlayableFaction()
         return;
     }
     const echoes::sim::Faction NewFaction =
-        Bridge->GetLocalFaction() == echoes::sim::Faction::MeridianCompact
-            ? echoes::sim::Faction::KharuunAssemblies
-            : echoes::sim::Faction::MeridianCompact;
+        echoes::presentation::NextPlayableFaction(
+            Bridge->GetLocalFaction());
     FString Feedback;
     if (!Bridge->SelectLocalFaction(NewFaction, Feedback))
     {
@@ -5736,6 +5734,16 @@ void AEchoesPlayerController::SetupInputComponent()
         this,
         &AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor);
     InputComponent->BindAction(
+        TEXT("ReconcileChoirManifest"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ReconcileSelectedChoirToManifest);
+    InputComponent->BindAction(
+        TEXT("ReconcileChoirPossible"),
+        IE_Pressed,
+        this,
+        &AEchoesPlayerController::ReconcileSelectedChoirToPossible);
+    InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
         this,
@@ -6780,16 +6788,12 @@ void AEchoesPlayerController::ResearchNextTechnology()
             SetStatusMessage(TEXT("[NETWORK_NOT_READY] Research is unavailable."));
             return;
         }
-        const bool bMeridian =
-            View->faction == echoes::sim::Faction::MeridianCompact;
+        const echoes::presentation::FFactionTechnologyProfile Profile =
+            echoes::presentation::TechnologyProfile(View->faction);
         const echoes::sim::ResearchType Research =
             TechnologyPanelFocusedTier == 0
-                ? (bMeridian
-                       ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-                       : echoes::sim::ResearchType::KharuunEchoCartography)
-                : (bMeridian
-                       ? echoes::sim::ResearchType::MeridianHorizonLattice
-                       : echoes::sim::ResearchType::KharuunAncestralEdge);
+                ? Profile.TierOne
+                : Profile.TierTwo;
         ResearchTechnology(Research);
         TechnologyPanelFocusedTier = 1;
         return;
@@ -6809,13 +6813,11 @@ void AEchoesPlayerController::ResearchNextTechnology()
         SetStatusMessage(TEXT("[SIM_NOT_READY] Research is unavailable."));
         return;
     }
+    const echoes::presentation::FFactionTechnologyProfile Profile =
+        echoes::presentation::TechnologyProfile(Player->faction);
     const echoes::sim::ResearchType Candidates[] = {
-        Player->faction == echoes::sim::Faction::MeridianCompact
-            ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-            : echoes::sim::ResearchType::KharuunEchoCartography,
-        Player->faction == echoes::sim::Faction::MeridianCompact
-            ? echoes::sim::ResearchType::MeridianHorizonLattice
-            : echoes::sim::ResearchType::KharuunAncestralEdge,
+        Profile.TierOne,
+        Profile.TierTwo,
     };
     for (const echoes::sim::ResearchType Research : Candidates)
     {
@@ -6840,16 +6842,12 @@ void AEchoesPlayerController::ResearchTechnologyByTier(int32 TierIndex)
             SetStatusMessage(TEXT("[RESEARCH_TECHNOLOGY_INVALID] Technology selection is unavailable."));
             return;
         }
-        const bool bMeridian =
-            View->faction == echoes::sim::Faction::MeridianCompact;
+        const echoes::presentation::FFactionTechnologyProfile Profile =
+            echoes::presentation::TechnologyProfile(View->faction);
         ResearchTechnology(
             TierIndex == 0
-                ? (bMeridian
-                       ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-                       : echoes::sim::ResearchType::KharuunEchoCartography)
-                : (bMeridian
-                       ? echoes::sim::ResearchType::MeridianHorizonLattice
-                       : echoes::sim::ResearchType::KharuunAncestralEdge));
+                ? Profile.TierOne
+                : Profile.TierTwo);
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -6867,16 +6865,12 @@ void AEchoesPlayerController::ResearchTechnologyByTier(int32 TierIndex)
         SetStatusMessage(TEXT("[RESEARCH_TECHNOLOGY_INVALID] Technology selection is unavailable."));
         return;
     }
-    const bool bMeridian =
-        Player->faction == echoes::sim::Faction::MeridianCompact;
+    const echoes::presentation::FFactionTechnologyProfile Profile =
+        echoes::presentation::TechnologyProfile(Player->faction);
     const echoes::sim::ResearchType Research =
         TierIndex == 0
-            ? (bMeridian
-                   ? echoes::sim::ResearchType::MeridianPrismaticTargeting
-                   : echoes::sim::ResearchType::KharuunEchoCartography)
-            : (bMeridian
-                   ? echoes::sim::ResearchType::MeridianHorizonLattice
-                   : echoes::sim::ResearchType::KharuunAncestralEdge);
+            ? Profile.TierOne
+            : Profile.TierTwo;
     ResearchTechnology(Research);
 }
 
@@ -6964,14 +6958,30 @@ void AEchoesPlayerController::ResearchTechnology(
         SetStatusMessage(Feedback);
         return;
     }
-    const TCHAR* Label =
-        Research == echoes::sim::ResearchType::MeridianPrismaticTargeting
-            ? TEXT("PRISMATIC TARGETING")
-            : Research == echoes::sim::ResearchType::MeridianHorizonLattice
-                  ? TEXT("HORIZON LATTICE")
-                  : Research == echoes::sim::ResearchType::KharuunEchoCartography
-                        ? TEXT("ECHO CARTOGRAPHY")
-                        : TEXT("ANCESTRAL EDGE");
+    const TCHAR* Label = TEXT("UNKNOWN TECHNOLOGY");
+    switch (Research)
+    {
+        case echoes::sim::ResearchType::MeridianPrismaticTargeting:
+            Label = TEXT("PRISMATIC TARGETING");
+            break;
+        case echoes::sim::ResearchType::MeridianHorizonLattice:
+            Label = TEXT("HORIZON LATTICE");
+            break;
+        case echoes::sim::ResearchType::KharuunEchoCartography:
+            Label = TEXT("ECHO CARTOGRAPHY");
+            break;
+        case echoes::sim::ResearchType::KharuunAncestralEdge:
+            Label = TEXT("ANCESTRAL EDGE");
+            break;
+        case echoes::sim::ResearchType::ChoirHeldAlternatives:
+            Label = TEXT("HELD ALTERNATIVES");
+            break;
+        case echoes::sim::ResearchType::ChoirSharedResolution:
+            Label = TEXT("SHARED RESOLUTION");
+            break;
+        case echoes::sim::ResearchType::None:
+            break;
+    }
     SetStatusMessage(FString::Printf(TEXT("%s: research queued."), Label));
 }
 
@@ -7816,6 +7826,135 @@ void AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor()
                   : LastRejection);
 }
 
+void AEchoesPlayerController::ReconcileSelectedChoirToManifest()
+{
+    ReconcileSelectedChoirIdentities(
+        echoes::sim::ChoirIdentityState::Manifest);
+}
+
+void AEchoesPlayerController::ReconcileSelectedChoirToPossible()
+{
+    ReconcileSelectedChoirIdentities(
+        echoes::sim::ChoirIdentityState::Possible);
+}
+
+void AEchoesPlayerController::ReconcileSelectedChoirIdentities(
+    echoes::sim::ChoirIdentityState StableState)
+{
+    if (IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    if (StableState != echoes::sim::ChoirIdentityState::Manifest &&
+        StableState != echoes::sim::ChoirIdentityState::Possible)
+    {
+        SetStatusMessage(TEXT("[CHOIR_IDENTITY_INVALID] Choose Manifest or Possible identity."));
+        return;
+    }
+    const TCHAR* IdentityName =
+        StableState == echoes::sim::ChoirIdentityState::Manifest
+            ? TEXT("MANIFEST")
+            : TEXT("POSSIBLE");
+    const echoes::sim::CommandType CommandType =
+        StableState == echoes::sim::ChoirIdentityState::Manifest
+            ? echoes::sim::CommandType::ReconcileToManifest
+            : echoes::sim::CommandType::ReconcileToPossible;
+
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Choir reconciliation is unavailable."));
+            return;
+        }
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Actor =
+                FindNetworkEntity(EntityId);
+            if (Actor == nullptr || Actor->owner != NetworkSeat ||
+                Actor->faction != echoes::sim::Faction::HollowChoir ||
+                (Actor->type != echoes::sim::EntityType::Soldier &&
+                 Actor->type != echoes::sim::EntityType::HeavyUnit &&
+                 Actor->type != echoes::sim::EntityType::ScoutUnit))
+            {
+                continue;
+            }
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = CommandType;
+            Intent.actor = Actor->id;
+            Intent.position = Actor->position;
+            Intents.Add(Intent);
+        }
+        (void)SubmitNetworkCommandBatch(
+            MoveTemp(Intents),
+            FString::Printf(TEXT("ONLINE CHOIR %s"), IdentityName),
+            FVector::ZeroVector,
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
+
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(TEXT("[SIM_NOT_READY] Choir reconciliation is unavailable."));
+        return;
+    }
+    if (Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish)
+    {
+        SetStatusMessage(TEXT("[CHOIR_SKIRMISH_ONLY] Campaign command authority remains fixed."));
+        return;
+    }
+    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
+        return;
+    }
+
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString LastRejection;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr ||
+            Entity->faction != echoes::sim::Faction::HollowChoir ||
+            (Entity->type != echoes::sim::EntityType::Soldier &&
+             Entity->type != echoes::sim::EntityType::HeavyUnit &&
+             Entity->type != echoes::sim::EntityType::ScoutUnit))
+        {
+            ++RejectedCount;
+            continue;
+        }
+        FString Feedback;
+        if (Bridge->IssueChoirReconciliation(
+                EntityId, StableState, Feedback))
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            LastRejection = Feedback;
+        }
+    }
+    SetStatusMessage(
+        AcceptedCount > 0
+            ? FString::Printf(
+                  TEXT("CHOIR %s: %d voice%s reconciling, %d rejected."),
+                  IdentityName,
+                  AcceptedCount,
+                  AcceptedCount == 1 ? TEXT("") : TEXT("s"),
+                  RejectedCount)
+            : LastRejection.IsEmpty()
+                  ? TEXT("[CHOIR_IDENTITY_REQUIRED] Select a Hollow Choir combat voice.")
+                  : LastRejection);
+}
+
 void AEchoesPlayerController::HoldSelectedUnits()
 {
     if (IsModalOverlayVisible())
@@ -8567,10 +8706,10 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
                 ? Simulation->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
                 : nullptr;
         const echoes::sim::ResearchType FirstTechnology =
-            Player != nullptr &&
-                    Player->faction == echoes::sim::Faction::KharuunAssemblies
-                ? echoes::sim::ResearchType::KharuunEchoCartography
-                : echoes::sim::ResearchType::MeridianPrismaticTargeting;
+            Player != nullptr
+                ? echoes::presentation::TechnologyProfile(Player->faction)
+                      .TierOne
+                : echoes::sim::ResearchType::None;
         TechnologyPanelFocusedTier =
             Player != nullptr && Player->HasCompletedResearch(FirstTechnology)
                 ? 1
@@ -8989,6 +9128,10 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("RAISE MINERAL COVER");
         case echoes::sim::CommandType::Research:
             return TEXT("RESEARCH");
+        case echoes::sim::CommandType::ReconcileToManifest:
+            return TEXT("RECONCILE TO MANIFEST");
+        case echoes::sim::CommandType::ReconcileToPossible:
+            return TEXT("RECONCILE TO POSSIBLE");
     }
     return TEXT("ORDER");
 }
