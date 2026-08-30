@@ -86,6 +86,15 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
         MaximumLayout.StatusPanel.Max.X,
         MaximumLayout.MainPanel.Max.X);
 
+    const FEchoesHudLayout CompactMaximumLayout =
+        FEchoesHudLayout::Build(FVector2D(1280.0f, 720.0f), 1.35f, true);
+    TestTrue(
+        TEXT("Compact maximum-scale objective remains visible"),
+        CompactMaximumLayout.bObjectiveVisible);
+    TestFalse(
+        TEXT("Compact maximum-scale command deck hides instead of overlapping objectives"),
+        CompactMaximumLayout.bCommandDeckVisible);
+
     const FEchoesHudLayout DefaultLayout =
         FEchoesHudLayout::Build(ReviewViewport, 1.0f, true);
     TestFalse(
@@ -100,6 +109,20 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
         TEXT("Battlefield visibility accepts a clear maximum-scale target"),
         MaximumLayout.IsBattlefieldPointClear(
             FVector2D(1484.3f, 166.4f), ReviewViewport));
+    TestFalse(
+        TEXT("Battlefield visibility rejects actor bounds crossing the viewport edge"),
+        DefaultLayout.IsBattlefieldBoxClear(
+            FBox2D(
+                FVector2D(1560.0f, 320.0f),
+                FVector2D(1592.0f, 360.0f)),
+            ReviewViewport));
+    TestTrue(
+        TEXT("Battlefield visibility accepts complete actor bounds in clear field space"),
+        DefaultLayout.IsBattlefieldBoxClear(
+            FBox2D(
+                FVector2D(980.0f, 310.0f),
+                FVector2D(1020.0f, 350.0f)),
+            ReviewViewport));
 
     FEchoesPointerCombatGuardReview ReviewConfiguration;
     TestTrue(
@@ -111,7 +134,13 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
         FEchoesPointerCombatGuardReview::TryResolve(
             TEXT("MinHud"), ReviewConfiguration) &&
         FEchoesPointerCombatGuardReview::TryResolve(
-            TEXT("MaxHud"), ReviewConfiguration));
+            TEXT("MaxHud"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("Compact"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("Mac16x10"), ReviewConfiguration) &&
+        FEchoesPointerCombatGuardReview::TryResolve(
+            TEXT("FullHD"), ReviewConfiguration));
     TestFalse(
         TEXT("Unknown pointer-review variants are rejected"),
         FEchoesPointerCombatGuardReview::TryResolve(

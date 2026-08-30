@@ -284,6 +284,7 @@ private:
     float PointerReviewTotalElapsedSeconds = 0.0f;
     FString PointerReviewVariant = TEXT("Default");
     float PointerReviewHudScale = 1.0f;
+    FIntPoint PointerReviewExpectedViewport = FIntPoint(1600, 900);
     bool bPointerCombatGuardReviewActive = false;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;

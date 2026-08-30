@@ -32,9 +32,9 @@ required_markers=(
   '\[ECHOES_POINTER_COMBAT_GUARD_FIXTURE\].*authoritativeCommands=true.*controlledNonshipping=true'
   "\\[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED\\] variant=$variant .*nonOcclusionRequired=true"
   "\\[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA\\] variant=$variant .*exactScreenProjection=true"
-  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=select_defender .*hudOcclusion=false"
-  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=guard_target .*hudOcclusion=false"
-  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=direct_attack_target .*hudOcclusion=false"
+  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=select_defender .*viewport=\\($expected_width,$expected_height\\).*fullBoundsVisible=true hudOcclusion=false"
+  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=guard_target .*viewport=\\($expected_width,$expected_height\\).*fullBoundsVisible=true hudOcclusion=false"
+  "\\[ECHOES_POINTER_REVIEW_COORDINATE\\] variant=$variant stage=direct_attack_target .*viewport=\\($expected_width,$expected_height\\).*fullBoundsVisible=true hudOcclusion=false"
   '\[ECHOES_POINTER_SELECTION\].*entity=[1-9][0-9]*.*ownerScoped=true'
   '\[ECHOES_GUARD_ACCEPTED\] source=pointer.*accepted=1.*ownerScoped=true'
   '\[ECHOES_POINTER_GUARD_OBSERVED\].*order=Guard.*authoritativeState=true'
@@ -49,7 +49,7 @@ for marker in "${required_markers[@]}"; do
   fi
 done
 
-if /usr/bin/grep -Eq '\[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED\]|\[ECHOES_POINTER_REVIEW_OCCLUDED\]|\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_CONTENT_FAILED\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
+if /usr/bin/grep -Eq '\[ECHOES_POINTER_COMBAT_GUARD_REVIEW_FAILED\]|\[ECHOES_POINTER_REVIEW_OCCLUDED\]|\[ECHOES_POINTER_REVIEW_VIEWPORT_MISMATCH\]|\[ECHOES_BOOT_INCOMPLETE\]|\[ECHOES_CONTENT_FAILED\]|\[ECHOES_SIM_VIEW_SYNC_FAILED\]|Fatal error:|Assertion failed:' "$log"; then
   print -u2 "The controlled pointer combat/Guard review reported a failure. Inspect: $log"
   exit 4
 fi

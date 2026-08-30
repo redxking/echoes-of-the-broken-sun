@@ -66,12 +66,14 @@ void AEchoesRTSCameraPawn::BeginPlay()
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA] variant=%s centerTile=(%.0f,%.0f) zoom=%.0f hudScale=%.2f exactScreenProjection=true controlledNonshipping=true"),
+            TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_CAMERA] variant=%s centerTile=(%.0f,%.0f) zoom=%.0f hudScale=%.2f expectedViewport=(%d,%d) exactScreenProjection=true controlledNonshipping=true"),
             *ReviewConfiguration.Variant,
             ReviewConfiguration.CameraCenterTile.X,
             ReviewConfiguration.CameraCenterTile.Y,
             ReviewConfiguration.CameraZoom,
-            ReviewConfiguration.HudScale);
+            ReviewConfiguration.HudScale,
+            ReviewConfiguration.ExpectedViewport.X,
+            ReviewConfiguration.ExpectedViewport.Y);
         return;
     }
     if (FParse::Param(

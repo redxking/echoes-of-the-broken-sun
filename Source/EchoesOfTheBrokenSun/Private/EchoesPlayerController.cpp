@@ -103,6 +103,7 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
     }
     PointerReviewVariant = ReviewConfiguration.Variant;
     PointerReviewHudScale = ReviewConfiguration.HudScale;
+    PointerReviewExpectedViewport = ReviewConfiguration.ExpectedViewport;
     if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
     {
         Settings->SetHudScale(PointerReviewHudScale);
@@ -123,9 +124,11 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED] variant=%s hudScale=%.2f exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true nonOcclusionRequired=true controlledNonshipping=true"),
+        TEXT("[ECHOES_POINTER_COMBAT_GUARD_REVIEW_STARTED] variant=%s hudScale=%.2f expectedViewport=(%d,%d) exactScreenCoordinates=true controllerBindings=true authoritativeCommands=true nonOcclusionRequired=true controlledNonshipping=true"),
         *PointerReviewVariant,
-        PointerReviewHudScale);
+        PointerReviewHudScale,
+        PointerReviewExpectedViewport.X,
+        PointerReviewExpectedViewport.Y);
 #endif
 }
 
@@ -1607,10 +1610,38 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
     {
         return false;
     }
+    FBox2D ProjectedBounds(ForceInit);
+    for (int32 CornerIndex = 0; CornerIndex < 8; ++CornerIndex)
+    {
+        const FVector WorldCorner = BoundsOrigin + FVector(
+            (CornerIndex & 1) != 0 ? BoundsExtent.X : -BoundsExtent.X,
+            (CornerIndex & 2) != 0 ? BoundsExtent.Y : -BoundsExtent.Y,
+            (CornerIndex & 4) != 0 ? BoundsExtent.Z : -BoundsExtent.Z);
+        FVector2D ProjectedCorner = FVector2D::ZeroVector;
+        if (!ProjectWorldLocationToScreen(WorldCorner, ProjectedCorner, false))
+        {
+            return false;
+        }
+        ProjectedBounds += ProjectedCorner;
+    }
 
     int32 ViewportWidth = 0;
     int32 ViewportHeight = 0;
     GetViewportSize(ViewportWidth, ViewportHeight);
+    if (ViewportWidth != PointerReviewExpectedViewport.X ||
+        ViewportHeight != PointerReviewExpectedViewport.Y)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_MISMATCH] variant=%s expected=(%d,%d) actual=(%d,%d)"),
+            *PointerReviewVariant,
+            PointerReviewExpectedViewport.X,
+            PointerReviewExpectedViewport.Y,
+            ViewportWidth,
+            ViewportHeight);
+        return false;
+    }
     if (ViewportWidth <= 0 || ViewportHeight <= 0 ||
         ScreenPosition.X < 0.0f || ScreenPosition.Y < 0.0f ||
         ScreenPosition.X >= static_cast<float>(ViewportWidth) ||
@@ -1626,17 +1657,21 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         ViewportSize,
         PointerReviewHudScale,
         true);
-    if (!Layout.IsBattlefieldPointClear(ScreenPosition, ViewportSize))
+    if (!Layout.IsBattlefieldBoxClear(ProjectedBounds, ViewportSize))
     {
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_POINTER_REVIEW_OCCLUDED] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f"),
+            TEXT("[ECHOES_POINTER_REVIEW_OCCLUDED] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) bounds=(%.1f,%.1f)-(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f"),
             *PointerReviewVariant,
             StageLabel,
             EntityId,
             ScreenPosition.X,
             ScreenPosition.Y,
+            ProjectedBounds.Min.X,
+            ProjectedBounds.Min.Y,
+            ProjectedBounds.Max.X,
+            ProjectedBounds.Max.Y,
             ViewportWidth,
             ViewportHeight,
             PointerReviewHudScale);
@@ -1649,12 +1684,16 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_POINTER_REVIEW_COORDINATE] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f projectedFromLiveView=true hudOcclusion=false"),
+        TEXT("[ECHOES_POINTER_REVIEW_COORDINATE] variant=%s stage=%s entity=%u screen=(%.1f,%.1f) bounds=(%.1f,%.1f)-(%.1f,%.1f) viewport=(%d,%d) hudScale=%.2f projectedFromLiveView=true fullBoundsVisible=true hudOcclusion=false"),
         *PointerReviewVariant,
         StageLabel,
         EntityId,
         ScreenPosition.X,
         ScreenPosition.Y,
+        ProjectedBounds.Min.X,
+        ProjectedBounds.Min.Y,
+        ProjectedBounds.Max.X,
+        ProjectedBounds.Max.Y,
         ViewportWidth,
         ViewportHeight,
         PointerReviewHudScale);
