@@ -3651,7 +3651,7 @@ void AEchoesHUD::DrawTacticalMinimap(
             ? TEXT("MISSION NAV  |  NEME + RELAY + PAIRED STATES")
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignReserveAuthority
-            ? TEXT("MISSION NAV  |  AUTHORITY + TWO POWERED + ONE DEFERRED")
+            ? TEXT("MISSION NAV  |  AUTHORITY + L/T/A")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,
