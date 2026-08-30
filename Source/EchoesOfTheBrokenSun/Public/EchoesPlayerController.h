@@ -162,6 +162,8 @@ public:
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
+    /** Opens the exact next briefing derived from durable campaign progress. */
+    void ContinueCampaign();
     void ChooseFinalRestoration();
     void ChooseFinalStabilization();
     void ChooseFinalExtinguishment();
@@ -234,6 +236,13 @@ public:
     [[nodiscard]] bool WasCampaignSuccessful() const
     {
         return bCampaignResult && bCampaignSuccess;
+    }
+    [[nodiscard]] bool CanAdvanceCampaignResult() const
+    {
+        return bCampaignResult && bCampaignSuccess &&
+            (CampaignCommitStatus == EEchoesCampaignCommitStatus::Added ||
+             CampaignCommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded);
     }
     [[nodiscard]] echoes::sim::FutureWellChoice GetCampaignConsequence() const
     {

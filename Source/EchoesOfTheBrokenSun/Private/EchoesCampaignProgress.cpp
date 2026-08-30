@@ -3,6 +3,7 @@
 #include "EchoesBrokenSunMissionModel.h"
 
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -21,6 +22,24 @@ constexpr uint32 FutureThatWonMinimumSnapshotVersion = 21;
 constexpr uint32 AssemblyOfTheMissingMinimumSnapshotVersion = 21;
 constexpr uint32 SeveralVoicesOneCommandMinimumSnapshotVersion = 22;
 constexpr uint32 BrokenSunMinimumSnapshotVersion = 22;
+
+[[nodiscard]] bool AtomicReplaceCampaignFile(
+    const FString& Destination,
+    const FString& Source)
+{
+#if PLATFORM_MAC
+    return FPlatformFileManager::Get()
+        .GetPlatformFile()
+        .MoveFile(*Destination, *Source);
+#else
+    return IFileManager::Get().Move(
+        *Destination, *Source, true, true, true, true);
+#endif
+}
+#if WITH_DEV_AUTOMATION_TESTS
+bool bFailNextCampaignBackupRotationForTesting = false;
+bool bFailNextCampaignCommitForTesting = false;
+#endif
 constexpr uint8 PrologueCompletionFacts =
     static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
@@ -644,6 +663,18 @@ FString FEchoesCampaignProgressStore::GetDefaultPath()
         TEXT("EchoesCampaignProgress.bin"));
 }
 
+#if WITH_DEV_AUTOMATION_TESTS
+void FEchoesCampaignProgressStore::FailNextBackupRotationForTesting()
+{
+    bFailNextCampaignBackupRotationForTesting = true;
+}
+
+void FEchoesCampaignProgressStore::FailNextCommitForTesting()
+{
+    bFailNextCampaignCommitForTesting = true;
+}
+#endif
+
 bool FEchoesCampaignProgressStore::Encode(
     const FEchoesCampaignProgress& Progress,
     TArray<uint8>& OutBytes,
@@ -858,6 +889,16 @@ bool FEchoesCampaignProgressStore::SaveAtomic(
     }
 
     const bool bHadPrimary = Files.FileExists(*Path);
+    const bool bHadBackup = Files.FileExists(*BackupPath);
+    TArray<uint8> PriorBackupBytes;
+    if (bHadBackup &&
+        !FFileHelper::LoadFileToArray(PriorBackupBytes, *BackupPath))
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = TEXT(
+            "[CAMPAIGN_BACKUP_READ_FAILED] The existing campaign recovery generation could not be retained exactly.");
+        return false;
+    }
     bool bRetainedValidPrimary = false;
     if (bHadPrimary)
     {
@@ -865,8 +906,14 @@ bool FEchoesCampaignProgressStore::SaveAtomic(
         FString PriorPrimaryError;
         if (TryLoadOne(Path, PriorPrimary, PriorPrimaryError))
         {
-            Files.Delete(*BackupPath, false, true, true);
-            if (!Files.Move(*BackupPath, *Path, true, true, true, true))
+            bool bForceBackupRotationFailure = false;
+#if WITH_DEV_AUTOMATION_TESTS
+            bForceBackupRotationFailure =
+                bFailNextCampaignBackupRotationForTesting;
+            bFailNextCampaignBackupRotationForTesting = false;
+#endif
+            if (bForceBackupRotationFailure ||
+                !AtomicReplaceCampaignFile(BackupPath, Path))
             {
                 Files.Delete(*TemporaryPath, false, true, true);
                 OutFeedback = TEXT("[CAMPAIGN_BACKUP_FAILED] The prior campaign ledger could not be retained.");
@@ -875,14 +922,35 @@ bool FEchoesCampaignProgressStore::SaveAtomic(
             bRetainedValidPrimary = true;
         }
     }
-    if (!Files.Move(*Path, *TemporaryPath, true, true, true, true))
+    bool bForceCommitFailure = false;
+#if WITH_DEV_AUTOMATION_TESTS
+    bForceCommitFailure = bFailNextCampaignCommitForTesting;
+    bFailNextCampaignCommitForTesting = false;
+#endif
+    if (bForceCommitFailure ||
+        !AtomicReplaceCampaignFile(Path, TemporaryPath))
     {
+        bool bPrimaryRestored = !bRetainedValidPrimary;
         if (bRetainedValidPrimary && Files.FileExists(*BackupPath))
         {
-            Files.Move(*Path, *BackupPath, true, true, true, true);
+            bPrimaryRestored =
+                AtomicReplaceCampaignFile(Path, BackupPath);
         }
         Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = TEXT("[CAMPAIGN_COMMIT_FAILED] The validated campaign ledger was not committed.");
+        bool bBackupRestored = !bHadBackup;
+        if (bPrimaryRestored && bHadBackup)
+        {
+            bBackupRestored =
+                FFileHelper::SaveArrayToFile(
+                    PriorBackupBytes,
+                    *TemporaryPath) &&
+                AtomicReplaceCampaignFile(
+                    BackupPath,
+                    TemporaryPath);
+        }
+        OutFeedback = bPrimaryRestored && bBackupRestored
+            ? TEXT("[CAMPAIGN_COMMIT_FAILED] The validated campaign ledger was not committed; the prior primary and recovery generation remain active.")
+            : TEXT("[CAMPAIGN_ROLLBACK_FAILED] The validated campaign ledger was not committed and the prior generation set could not be restored completely.");
         return false;
     }
     OutFeedback = FString::Printf(

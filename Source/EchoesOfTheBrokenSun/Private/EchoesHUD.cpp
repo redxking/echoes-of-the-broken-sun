@@ -1405,6 +1405,9 @@ void AEchoesHUD::DrawTitleScreen(
     const int32 BackupCampaignRecords = Bridge != nullptr
         ? Bridge->GetCampaignBackupDecisionCount()
         : 0;
+    const FEchoesCampaignJourney CampaignJourney = Bridge != nullptr
+        ? Bridge->GetCampaignJourney()
+        : FEchoesCampaignJourney{};
     const bool bNewCampaignArmed =
         EchoesController->IsNewCampaignConfirmationArmed();
     const bool bCampaignRestoreArmed =
@@ -1548,6 +1551,22 @@ void AEchoesHUD::DrawTitleScreen(
         TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
         ActiveCampaignRecords,
         ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S"));
+    if (CampaignJourney.State == EEchoesCampaignJourneyState::Ready)
+    {
+        CampaignControlLine += FString::Printf(
+            TEXT("  //  [C] CONTINUE M%02d %s"),
+            CampaignJourney.CompletedMissionCount + 1,
+            FEchoesCampaignJourneyModel::OperationDisplayName(
+                CampaignJourney.NextOperation));
+    }
+    else if (CampaignJourney.State == EEchoesCampaignJourneyState::Complete)
+    {
+        CampaignControlLine += TEXT("  //  COMPLETE 15/15");
+    }
+    else
+    {
+        CampaignControlLine += TEXT("  //  CONTINUATION UNAVAILABLE");
+    }
     if (bCanStartNewCampaign)
     {
         CampaignControlLine += TEXT("  //  [F10] NEW");
@@ -1651,10 +1670,15 @@ void AEchoesHUD::DrawTitleScreen(
 
     DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,
              PanelWidth - 96.0f, 46.0f);
-    DrawText(TEXT("PRESS ENTER TO OPEN THE OPERATIONS BRIEF"),
+    DrawText(
+             CampaignJourney.State == EEchoesCampaignJourneyState::Ready
+                 ? TEXT("ENTER: OPEN SELECTED BRIEF   //   C: CONTINUE CAMPAIGN")
+             : CampaignJourney.State == EEchoesCampaignJourneyState::Complete
+                 ? TEXT("ENTER: OPEN SELECTED BRIEF   //   CAMPAIGN COMPLETE")
+                 : TEXT("PRESS ENTER TO OPEN THE OPERATIONS BRIEF"),
              bHighContrast ? FLinearColor::Black
                            : FLinearColor(0.0f, 0.06f, 0.09f),
-             Left + PanelWidth * 0.5f - 174.0f * TextScale,
+             Left + PanelWidth * 0.5f - 236.0f * TextScale,
              Top + PanelHeight - 69.0f,
              SmallFont, 0.94f * TextScale, false);
 }
@@ -3225,6 +3249,11 @@ void AEchoesHUD::DrawMatchResult(
     const echoes::sim::MatchOutcome Outcome =
         EchoesController->GetPresentedMatchOutcome();
     const bool bCampaignResult = EchoesController->IsCampaignResult();
+    const FEchoesCampaignJourney CampaignJourney = Bridge != nullptr
+        ? Bridge->GetCampaignJourney()
+        : FEchoesCampaignJourney{};
+    const bool bCampaignResultCanAdvance =
+        EchoesController->CanAdvanceCampaignResult();
     const bool bSevenAccountsResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignSevenAccounts;
@@ -3702,12 +3731,20 @@ void AEchoesHUD::DrawMatchResult(
     DrawRect(Accent, Left + 44.0f, Top + PanelHeight - 82.0f,
              PanelWidth - 88.0f, 46.0f);
     DrawText(
-             bCampaignResult
+             bCampaignResultCanAdvance &&
+                     CampaignJourney.State ==
+                         EEchoesCampaignJourneyState::Ready
+                 ? TEXT("ENTER: CONTINUE CAMPAIGN   //   R: REPLAY MISSION")
+             : bCampaignResultCanAdvance &&
+                     CampaignJourney.State ==
+                         EEchoesCampaignJourneyState::Complete
+                 ? TEXT("ENTER: RETURN TO TITLE   //   R: REPLAY FINALE")
+             : bCampaignResult
                  ? TEXT("PRESS ENTER OR R TO REPLAY MISSION")
                  : TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),
              bHighContrast || !bVictory ? FLinearColor::Black
                                          : FLinearColor(0.0f, 0.08f, 0.05f),
-             Left + PanelWidth * 0.5f - 176.0f * TextScale,
+             Left + PanelWidth * 0.5f - 214.0f * TextScale,
              Top + PanelHeight - 69.0f,
              SmallFont, 0.92f * TextScale, false);
 }

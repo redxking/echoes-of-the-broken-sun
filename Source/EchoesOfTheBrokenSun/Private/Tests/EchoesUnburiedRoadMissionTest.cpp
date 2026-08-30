@@ -471,11 +471,13 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
                      Controller->GetPresentedCampaignOperation() ==
                          EEchoesOperationMode::CampaignUnburiedRoad);
         Controller->ConfirmPrimaryAction();
-        TestTrue(TEXT("Replay reconstructs the unburied road"),
+        TestTrue(TEXT("Mission 04 advances to Terms of Continuance briefing"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::CampaignUnburiedRoad &&
-                     Bridge->GetUnburiedRoadPhase() ==
-                         EEchoesUnburiedRoadPhase::EstablishRoadhead);
+                         EEchoesOperationMode::CampaignTermsOfContinuance &&
+                     Controller->IsMissionBriefingVisible() &&
+                     Bridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::SynchronizeNetworks &&
+                     Bridge->IsScenarioPaused());
         Controller->Destroy();
     }
 

@@ -3088,7 +3088,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     SetIgnoreLookInput(true);
     SetStatusMessage(
         FString::Printf(
-            TEXT("ECHOES OF THE BROKEN SUN — F9 changes operation; %sEnter opens the brief."),
+            TEXT("ECHOES OF THE BROKEN SUN — F9 changes operation; C continues the campaign; %sEnter opens the selected brief."),
             Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
                 ? TEXT("Tab changes faction; ")
             : Bridge->GetOperationMode() ==
@@ -3138,7 +3138,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_TITLE_READY] operation=%s operationChoice=true keyboardStart=true factionChoice=%s"),
+        TEXT("[ECHOES_TITLE_READY] operation=%s operationChoice=true campaignContinue=true keyboardStart=true factionChoice=%s"),
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
             ? TEXT("WhatTheLedgerKeeps")
         : Bridge->GetOperationMode() ==
@@ -3878,6 +3878,96 @@ void AEchoesPlayerController::CycleOperation()
         3600.0f);
 }
 
+void AEchoesPlayerController::ContinueCampaign()
+{
+    const bool bContinuingFromTitle = bTitleScreenVisible;
+    const bool bContinuingFromResult =
+        bMatchResultVisible && CanAdvanceCampaignResult();
+    if (!bContinuingFromTitle && !bContinuingFromResult)
+    {
+        return;
+    }
+
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(
+            TEXT("[CAMPAIGN_CONTINUE_SIM_NOT_READY] Campaign continuation is unavailable."),
+            12.0f);
+        return;
+    }
+
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
+    const FEchoesCampaignJourney Journey = Bridge->GetCampaignJourney();
+    if (Journey.State == EEchoesCampaignJourneyState::Complete)
+    {
+        if (bContinuingFromResult)
+        {
+            PresentTitleScreen();
+        }
+        SetStatusMessage(
+            TEXT("CAMPAIGN COMPLETE — the recorded Broken Sun resolution is preserved in the campaign ledger. Choose an operation to replay or start a new campaign."),
+            3600.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CAMPAIGN_CONTINUE] state=complete records=%d source=%s mission16=false"),
+            Journey.CompletedMissionCount,
+            bContinuingFromResult ? TEXT("result") : TEXT("title"));
+        return;
+    }
+    if (Journey.State != EEchoesCampaignJourneyState::Ready)
+    {
+        SetStatusMessage(
+            TEXT("[CAMPAIGN_CONTINUE_UNAVAILABLE] The active ledger does not admit a safe next mission. Restore a validated prior generation or start a new campaign."),
+            15.0f);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CAMPAIGN_CONTINUE] state=unavailable records=%d source=%s"),
+            Journey.CompletedMissionCount,
+            bContinuingFromResult ? TEXT("result") : TEXT("title"));
+        return;
+    }
+
+    FString Feedback;
+    if (!Bridge->SelectOperationMode(Journey.NextOperation, Feedback))
+    {
+        SetStatusMessage(Feedback, 15.0f);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CAMPAIGN_CONTINUE] state=selection_failed records=%d next=%s source=%s detail=%s"),
+            Journey.CompletedMissionCount,
+            FEchoesCampaignJourneyModel::OperationDisplayName(
+                Journey.NextOperation),
+            bContinuingFromResult ? TEXT("result") : TEXT("title"),
+            *Feedback);
+        return;
+    }
+
+    SynchronizeBoundCampaignProtocol();
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    PresentMissionBriefing();
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_CONTINUE] state=ready records=%d next=%s source=%s briefing=true paused=true"),
+        Journey.CompletedMissionCount,
+        FEchoesCampaignJourneyModel::OperationDisplayName(
+            Journey.NextOperation),
+        bContinuingFromResult ? TEXT("result") : TEXT("title"));
+}
+
 bool AEchoesPlayerController::IsNewCampaignConfirmationArmed() const
 {
     return bNewCampaignConfirmationArmed && GetWorld() != nullptr &&
@@ -4345,7 +4435,14 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     }
     else if (bMatchResultVisible)
     {
-        RestartScenario();
+        if (CanAdvanceCampaignResult())
+        {
+            ContinueCampaign();
+        }
+        else
+        {
+            RestartScenario();
+        }
     }
     else if (bTechnologyPanelVisible)
     {
@@ -6035,6 +6132,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
+    BindPressed(TEXT("ContinueCampaign"), &AEchoesPlayerController::ContinueCampaign);
     BindPressed(TEXT("RequestNewCampaign"), &AEchoesPlayerController::RequestNewCampaign);
     BindPressed(TEXT("RequestCampaignRestore"), &AEchoesPlayerController::RequestCampaignRestore);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
@@ -9386,9 +9484,28 @@ void AEchoesPlayerController::SetStatusMessage(
     float DisplaySeconds)
 {
     StatusMessage = Message;
+    if (bMatchResultVisible && CanAdvanceCampaignResult())
+    {
+        if (PresentedCampaignOperation ==
+            EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            StatusMessage.ReplaceInline(
+                TEXT("Press R to replay the battle without rewriting it."),
+                TEXT("Press Enter to return to title or R to replay the battle without rewriting it."));
+            StatusMessage.ReplaceInline(
+                TEXT("Press R to replay."),
+                TEXT("Press Enter to return to title or R to replay."));
+        }
+        else
+        {
+            StatusMessage.ReplaceInline(
+                TEXT("Press R to replay."),
+                TEXT("Press Enter to continue the campaign or R to replay."));
+        }
+    }
     StatusMessageExpiresAt =
         GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() + DisplaySeconds : 0.0;
-    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLAYER_FEEDBACK] %s"), *Message);
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLAYER_FEEDBACK] %s"), *StatusMessage);
 }
 
 bool AEchoesPlayerController::IsDraggingSelection() const

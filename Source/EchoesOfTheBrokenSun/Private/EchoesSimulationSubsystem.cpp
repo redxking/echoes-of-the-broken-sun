@@ -14,6 +14,7 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
@@ -64,6 +65,9 @@ constexpr uint8 SeveralVoicesOneCommandQuickSaveMagic[] = {
 constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
 constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
+constexpr uint8 QuickSaveContainerVersion = 1;
+constexpr uint8 QuickSaveContainerMagic[] = {
+    'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -72,6 +76,38 @@ using echoes::sim::FutureWellChoice;
 using echoes::sim::ResourcePool;
 using echoes::sim::Terrain;
 using echoes::sim::Vec2;
+
+[[nodiscard]] bool TryGetFixedCampaignFaction(
+    EEchoesOperationMode Operation,
+    Faction& OutFaction)
+{
+    switch (Operation)
+    {
+        case EEchoesOperationMode::CampaignSevenAccounts:
+        case EEchoesOperationMode::CampaignUnburiedRoad:
+        case EEchoesOperationMode::CampaignShapeOfSilence:
+        case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        case EEchoesOperationMode::CampaignNoNeutralLedger:
+        case EEchoesOperationMode::CampaignFutureThatWon:
+        case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+            OutFaction = Faction::KharuunAssemblies;
+            return true;
+        case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        case EEchoesOperationMode::CampaignTheBrokenSun:
+            OutFaction = Faction::HollowChoir;
+            return true;
+        case EEchoesOperationMode::CampaignPrologue:
+        case EEchoesOperationMode::CampaignCityReserve:
+        case EEchoesOperationMode::CampaignTermsOfContinuance:
+        case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        case EEchoesOperationMode::CampaignShapeBesideUs:
+        case EEchoesOperationMode::CampaignReserveAuthority:
+            OutFaction = Faction::MeridianCompact;
+            return true;
+        default:
+            return false;
+    }
+}
 
 void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
 {
@@ -124,6 +160,135 @@ void AppendUint64LittleEndian(TArray<uint8>& Bytes, uint64 Value)
     }
     Offset += 8;
     return true;
+}
+
+enum class EQuickSaveContainerRead : uint8
+{
+    Legacy,
+    Wrapped,
+    Invalid
+};
+
+[[nodiscard]] bool UsesQuickSaveContainer(EEchoesOperationMode Operation)
+{
+    return Operation == EEchoesOperationMode::Skirmish ||
+        Operation == EEchoesOperationMode::CampaignPrologue ||
+        Operation == EEchoesOperationMode::CampaignSevenAccounts ||
+        Operation == EEchoesOperationMode::CampaignCityReserve ||
+        Operation == EEchoesOperationMode::CampaignUnburiedRoad ||
+        Operation == EEchoesOperationMode::CampaignTermsOfContinuance ||
+        Operation == EEchoesOperationMode::CampaignNamesWithoutBirths ||
+        Operation == EEchoesOperationMode::CampaignShapeOfSilence ||
+        Operation == EEchoesOperationMode::CampaignShapeBesideUs ||
+        Operation == EEchoesOperationMode::CampaignReserveAuthority;
+}
+
+[[nodiscard]] bool BuildQuickSaveContainer(
+    EEchoesOperationMode Operation,
+    Faction LocalFaction,
+    const TArray<uint8>& Payload,
+    TArray<uint8>& OutContainer,
+    FString& OutError)
+{
+    OutContainer.Reset();
+    OutError.Reset();
+    if (Payload.IsEmpty())
+    {
+        OutError = TEXT("checkpoint payload is empty");
+        return false;
+    }
+    OutContainer.Reserve(
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 12 + Payload.Num());
+    OutContainer.Append(
+        QuickSaveContainerMagic,
+        UE_ARRAY_COUNT(QuickSaveContainerMagic));
+    OutContainer.Add(QuickSaveContainerVersion);
+    OutContainer.Add(static_cast<uint8>(Operation));
+    OutContainer.Add(static_cast<uint8>(LocalFaction));
+    OutContainer.Add(0);
+    AppendUint32LittleEndian(
+        OutContainer,
+        static_cast<uint32>(Payload.Num()));
+    OutContainer.Append(Payload);
+    AppendUint32LittleEndian(
+        OutContainer,
+        FCrc::MemCrc32(OutContainer.GetData(), OutContainer.Num()));
+    return true;
+}
+
+[[nodiscard]] EQuickSaveContainerRead ExtractQuickSaveContainer(
+    EEchoesOperationMode ExpectedOperation,
+    Faction ExpectedFaction,
+    const TArray<uint8>& Bytes,
+    TArray<uint8>& OutPayload,
+    FString& OutError)
+{
+    OutPayload.Reset();
+    OutError.Reset();
+    if (Bytes.Num() < UE_ARRAY_COUNT(QuickSaveContainerMagic) ||
+        FMemory::Memcmp(
+            Bytes.GetData(),
+            QuickSaveContainerMagic,
+            UE_ARRAY_COUNT(QuickSaveContainerMagic)) != 0)
+    {
+        return EQuickSaveContainerRead::Legacy;
+    }
+    constexpr int32 HeaderSize =
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 4;
+    constexpr int32 ChecksumSize = 4;
+    if (Bytes.Num() < HeaderSize + ChecksumSize)
+    {
+        OutError = TEXT("checkpoint container is truncated");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    int32 Offset = UE_ARRAY_COUNT(QuickSaveContainerMagic);
+    const uint8 Version = Bytes[Offset++];
+    const uint8 Operation = Bytes[Offset++];
+    const uint8 FactionValue = Bytes[Offset++];
+    const uint8 Reserved = Bytes[Offset++];
+    uint32 PayloadLength = 0;
+    if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
+        Version != QuickSaveContainerVersion || Reserved != 0 ||
+        Operation != static_cast<uint8>(ExpectedOperation) ||
+        FactionValue != static_cast<uint8>(ExpectedFaction) ||
+        PayloadLength > static_cast<uint32>(MAX_int32) ||
+        Bytes.Num() != HeaderSize + static_cast<int32>(PayloadLength) +
+                ChecksumSize)
+    {
+        OutError = TEXT(
+            "checkpoint container does not match the active operation and faction");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    const int32 ChecksumOffset = Bytes.Num() - ChecksumSize;
+    int32 ChecksumReadOffset = ChecksumOffset;
+    uint32 StoredChecksum = 0;
+    if (!ReadUint32LittleEndian(
+            Bytes,
+            ChecksumReadOffset,
+            StoredChecksum) ||
+        StoredChecksum != FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset))
+    {
+        OutError = TEXT("checkpoint container checksum is invalid");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    OutPayload.Append(
+        Bytes.GetData() + HeaderSize,
+        static_cast<int32>(PayloadLength));
+    return EQuickSaveContainerRead::Wrapped;
+}
+
+[[nodiscard]] bool AtomicReplaceFile(
+    const FString& Destination,
+    const FString& Source)
+{
+#if PLATFORM_MAC
+    return FPlatformFileManager::Get()
+        .GetPlatformFile()
+        .MoveFile(*Destination, *Source);
+#else
+    return IFileManager::Get().Move(
+        *Destination, *Source, true, true, true, true);
+#endif
 }
 
 [[nodiscard]] bool UsesCurrentSnapshotSchema(
@@ -1730,41 +1895,73 @@ echoes::sim::Vec2 UEchoesSimulationSubsystem::GetEvacuationSite()
 
 FString UEchoesSimulationSubsystem::GetOperationLabel() const
 {
-    switch (SelectedOperation)
+    return FEchoesCampaignJourneyModel::OperationDisplayName(
+        SelectedOperation);
+}
+
+FEchoesCampaignJourney UEchoesSimulationSubsystem::GetCampaignJourney() const
+{
+    if (!bCampaignProgressAvailable)
     {
-        case EEchoesOperationMode::CampaignPrologue:
-            return TEXT("WHAT THE LEDGER KEEPS");
-        case EEchoesOperationMode::CampaignSevenAccounts:
-            return TEXT("SEVEN ACCOUNTS OF RAIN");
-        case EEchoesOperationMode::CampaignCityReserve:
-            return TEXT("A CITY ON RESERVE");
-        case EEchoesOperationMode::CampaignUnburiedRoad:
-            return TEXT("THE UNBURIED ROAD");
-        case EEchoesOperationMode::CampaignTermsOfContinuance:
-            return TEXT("TERMS OF CONTINUANCE");
-        case EEchoesOperationMode::CampaignNamesWithoutBirths:
-            return TEXT("NAMES WITHOUT BIRTHS");
-        case EEchoesOperationMode::CampaignShapeOfSilence:
-            return TEXT("THE SHAPE OF SILENCE");
-        case EEchoesOperationMode::CampaignShapeBesideUs:
-            return TEXT("THE SHAPE BESIDE US");
-        case EEchoesOperationMode::CampaignReserveAuthority:
-            return TEXT("RESERVE AUTHORITY");
-        case EEchoesOperationMode::CampaignChoirAtLumeReach:
-            return TEXT("THE CHOIR AT LUME REACH");
-        case EEchoesOperationMode::CampaignNoNeutralLedger:
-            return TEXT("NO NEUTRAL LEDGER");
-        case EEchoesOperationMode::CampaignFutureThatWon:
-            return TEXT("THE FUTURE THAT WON");
-        case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
-            return TEXT("ASSEMBLY OF THE MISSING");
-        case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
-            return TEXT("SEVERAL VOICES, ONE COMMAND");
-        case EEchoesOperationMode::CampaignTheBrokenSun:
-            return TEXT("THE BROKEN SUN");
-        default:
-            return TEXT("GLASS SCAR");
+        return {};
     }
+
+    FEchoesCampaignJourney Journey =
+        FEchoesCampaignJourneyModel::Resolve(CampaignProgress);
+    if (Journey.State != EEchoesCampaignJourneyState::Ready)
+    {
+        return Journey;
+    }
+
+    const bool bAdmitted =
+        Journey.NextOperation == EEchoesOperationMode::CampaignPrologue ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignSevenAccounts &&
+         IsSevenAccountsUnlocked()) ||
+        (Journey.NextOperation == EEchoesOperationMode::CampaignCityReserve &&
+         IsCityReserveUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignUnburiedRoad &&
+         IsUnburiedRoadUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignTermsOfContinuance &&
+         IsTermsOfContinuanceUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignNamesWithoutBirths &&
+         IsNamesWithoutBirthsUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignShapeOfSilence &&
+         IsShapeOfSilenceUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignShapeBesideUs &&
+         IsShapeBesideUsUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignReserveAuthority &&
+         IsReserveAuthorityUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignChoirAtLumeReach &&
+         IsChoirAtLumeReachUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignNoNeutralLedger &&
+         IsNoNeutralLedgerUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignFutureThatWon &&
+         IsFutureThatWonUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignAssemblyOfTheMissing &&
+         IsAssemblyOfTheMissingUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
+         IsSeveralVoicesOneCommandUnlocked()) ||
+        (Journey.NextOperation ==
+             EEchoesOperationMode::CampaignTheBrokenSun &&
+         IsBrokenSunUnlocked());
+    if (!bAdmitted)
+    {
+        Journey.State = EEchoesCampaignJourneyState::Unavailable;
+        Journey.NextOperation = EEchoesOperationMode::Skirmish;
+    }
+    return Journey;
 }
 
 bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
@@ -1777,6 +1974,17 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             TEXT("[ECHOES_SIM_ALREADY_READY] Prototype simulation start ignored."));
         return true;
     }
+#if WITH_DEV_AUTOMATION_TESTS
+    if (bFailNextScenarioStartForTesting)
+    {
+        bFailNextScenarioStartForTesting = false;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_TEST_SCENARIO_START_REJECTED] oneShot=true"));
+        return false;
+    }
+#endif
 
     if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
         !IsSevenAccountsUnlocked())
@@ -4760,77 +4968,7 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         StopPrototypeScenario();
     }
     SelectedOperation = NewOperation;
-    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignTermsOfContinuance)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignNamesWithoutBirths)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignShapeOfSilence)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignShapeBesideUs)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignReserveAuthority)
-    {
-        LocalFaction = Faction::MeridianCompact;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignChoirAtLumeReach)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignNoNeutralLedger)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignFutureThatWon)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
-    {
-        LocalFaction = Faction::KharuunAssemblies;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
-    {
-        LocalFaction = Faction::HollowChoir;
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignTheBrokenSun)
-    {
-        LocalFaction = Faction::HollowChoir;
-    }
+    (void)TryGetFixedCampaignFaction(SelectedOperation, LocalFaction);
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -4961,50 +5099,99 @@ bool UEchoesSimulationSubsystem::StartNewCampaign(FString& OutFeedback)
         return true;
     }
 
-    FEchoesCampaignProgress EmptyCampaign;
-    FString SaveFeedback;
-    if (!FEchoesCampaignProgressStore::SaveAtomic(
-            CampaignProgressPath,
-            EmptyCampaign,
-            SaveFeedback))
-    {
-        OutFeedback = SaveFeedback;
-        return false;
-    }
-
-    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
+    const FEchoesCampaignProgress PreviousCampaign = CampaignProgress;
+    const EEchoesOperationMode PreviousOperation = SelectedOperation;
+    const Faction PreviousFaction = LocalFaction;
     const bool bHadScenario = bScenarioReady && Simulation.IsValid();
     const bool bWasPaused = bSimulationPaused;
+    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
+    FEchoesCampaignProgress EmptyCampaign;
     CampaignProgress = MoveTemp(EmptyCampaign);
     RefreshCampaignBackupState();
     if (bHadScenario)
     {
         StopPrototypeScenario();
     }
-    SelectedOperation = EEchoesOperationMode::Skirmish;
+    const FEchoesCampaignJourney NewJourney = GetCampaignJourney();
+    SelectedOperation =
+        NewJourney.State == EEchoesCampaignJourneyState::Ready
+            ? NewJourney.NextOperation
+            : EEchoesOperationMode::Skirmish;
     LocalFaction = Faction::MeridianCompact;
+    (void)TryGetFixedCampaignFaction(SelectedOperation, LocalFaction);
     if (bHadScenario && !StartScenario(false))
     {
-        OutFeedback = TEXT("[NEW_CAMPAIGN_REBUILD_FAILED] The empty ledger was committed, but the default operation could not be rebuilt.");
+        StopPrototypeScenario();
+        CampaignProgress = PreviousCampaign;
+        RefreshCampaignBackupState();
+        SelectedOperation = PreviousOperation;
+        LocalFaction = PreviousFaction;
+        const bool bScenarioRollbackSucceeded =
+            StartScenario(false);
+        if (bScenarioRollbackSucceeded)
+        {
+            SetScenarioPaused(bWasPaused);
+        }
+        OutFeedback = bScenarioRollbackSucceeded
+            ? TEXT("[NEW_CAMPAIGN_REBUILD_FAILED] Mission 01 could not be rebuilt; the prior campaign and title scenario were restored.")
+            : TEXT("[NEW_CAMPAIGN_ROLLBACK_FAILED] Mission 01 could not be rebuilt and the prior title scenario could not be restored. The durable campaign ledger was not changed.");
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NEW_CAMPAIGN_FAILED] stage=scenario_rebuild replacedRecords=%d backupRetained=true"),
-            ReplacedDecisionCount);
+            TEXT("[ECHOES_NEW_CAMPAIGN_FAILED] stage=scenario_rebuild replacedRecords=%d durableLedgerUntouched=true scenarioRollback=%s"),
+            ReplacedDecisionCount,
+            bScenarioRollbackSucceeded ? TEXT("true") : TEXT("false"));
         return false;
     }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            CampaignProgress,
+            SaveFeedback))
+    {
+        if (bHadScenario)
+        {
+            StopPrototypeScenario();
+        }
+        CampaignProgress = PreviousCampaign;
+        RefreshCampaignBackupState();
+        SelectedOperation = PreviousOperation;
+        LocalFaction = PreviousFaction;
+        const bool bScenarioRollbackSucceeded =
+            !bHadScenario || StartScenario(false);
+        if (bScenarioRollbackSucceeded && bHadScenario)
+        {
+            SetScenarioPaused(bWasPaused);
+        }
+        OutFeedback = bScenarioRollbackSucceeded
+            ? FString::Printf(
+                  TEXT("[NEW_CAMPAIGN_SAVE_FAILED] Mission 01 was rebuilt, but the empty ledger could not be committed; the prior campaign and title scenario were restored. %s"),
+                  *SaveFeedback)
+            : FString::Printf(
+                  TEXT("[NEW_CAMPAIGN_ROLLBACK_FAILED] The empty ledger could not be committed and the prior title scenario could not be restored. %s"),
+                  *SaveFeedback);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NEW_CAMPAIGN_FAILED] stage=storage_commit replacedRecords=%d scenarioRollback=%s detail=%s"),
+            ReplacedDecisionCount,
+            bScenarioRollbackSucceeded ? TEXT("true") : TEXT("false"),
+            *SaveFeedback);
+        return false;
+    }
+    RefreshCampaignBackupState();
     if (bHadScenario)
     {
         SetScenarioPaused(bWasPaused);
     }
     OutFeedback = FString::Printf(
-        TEXT("NEW CAMPAIGN CREATED: %d prior mission record%s replaced; one prior ledger generation retained as backup."),
+        TEXT("NEW CAMPAIGN CREATED: %d prior mission record%s replaced; one prior ledger generation retained as backup. Mission 01 is ready."),
         ReplacedDecisionCount,
         ReplacedDecisionCount == 1 ? TEXT("") : TEXT("s"));
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NEW_CAMPAIGN_CREATED] replacedRecords=%d operation=GlassScar local=MeridianCompact backupRetained=true scenarioReset=%s"),
+        TEXT("[ECHOES_NEW_CAMPAIGN_CREATED] replacedRecords=%d operation=WhatTheLedgerKeeps local=MeridianCompact backupRetained=true scenarioReset=%s"),
         ReplacedDecisionCount,
         bHadScenario ? TEXT("true") : TEXT("false"));
     return true;
@@ -5052,55 +5239,127 @@ bool UEchoesSimulationSubsystem::RestoreCampaignBackup(FString& OutFeedback)
         return false;
     }
 
+    const FEchoesCampaignProgress PreviousCampaign = CampaignProgress;
     const FEchoesCampaignProgress RestoredCampaign = CampaignBackupProgress;
-    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
-    const int32 RestoredDecisionCount = RestoredCampaign.Decisions.Num();
-    FString SaveFeedback;
-    if (!FEchoesCampaignProgressStore::SaveAtomic(
-            CampaignProgressPath,
-            RestoredCampaign,
-            SaveFeedback))
-    {
-        OutFeedback = SaveFeedback;
-        return false;
-    }
-
+    const EEchoesOperationMode PreviousOperation = SelectedOperation;
+    const Faction PreviousFaction = LocalFaction;
     const bool bHadScenario = bScenarioReady && Simulation.IsValid();
     const bool bWasPaused = bSimulationPaused;
+    const int32 ReplacedDecisionCount = CampaignProgress.Decisions.Num();
+    const int32 RestoredDecisionCount = RestoredCampaign.Decisions.Num();
     CampaignProgress = RestoredCampaign;
     RefreshCampaignBackupState();
     if (bHadScenario)
     {
         StopPrototypeScenario();
     }
-    SelectedOperation = EEchoesOperationMode::Skirmish;
+    const FEchoesCampaignJourney RestoredJourney = GetCampaignJourney();
+    SelectedOperation =
+        RestoredJourney.State == EEchoesCampaignJourneyState::Ready
+            ? RestoredJourney.NextOperation
+            : EEchoesOperationMode::Skirmish;
     LocalFaction = Faction::MeridianCompact;
+    (void)TryGetFixedCampaignFaction(SelectedOperation, LocalFaction);
     if (bHadScenario && !StartScenario(false))
     {
-        OutFeedback = TEXT("[CAMPAIGN_RESTORE_REBUILD_FAILED] The prior ledger was restored, but the default operation could not be rebuilt.");
+        StopPrototypeScenario();
+        CampaignProgress = PreviousCampaign;
+        RefreshCampaignBackupState();
+        SelectedOperation = PreviousOperation;
+        LocalFaction = PreviousFaction;
+        const bool bScenarioRollbackSucceeded =
+            StartScenario(false);
+        if (bScenarioRollbackSucceeded)
+        {
+            SetScenarioPaused(bWasPaused);
+        }
+        OutFeedback = bScenarioRollbackSucceeded
+            ? TEXT("[CAMPAIGN_RESTORE_REBUILD_FAILED] The restored campaign could not be rebuilt; the prior campaign and title scenario were restored.")
+            : TEXT("[CAMPAIGN_RESTORE_ROLLBACK_FAILED] The restored campaign could not be rebuilt and the prior title scenario could not be restored. The durable campaign generations were not changed.");
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_CAMPAIGN_RESTORE_FAILED] stage=scenario_rebuild restoredRecords=%d replacedRecords=%d activeRetainedAsBackup=true"),
+            TEXT("[ECHOES_CAMPAIGN_RESTORE_FAILED] stage=scenario_rebuild restoredRecords=%d replacedRecords=%d durableGenerationsUntouched=true scenarioRollback=%s"),
             RestoredDecisionCount,
-            ReplacedDecisionCount);
+            ReplacedDecisionCount,
+            bScenarioRollbackSucceeded ? TEXT("true") : TEXT("false"));
         return false;
     }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath,
+            CampaignProgress,
+            SaveFeedback))
+    {
+        if (bHadScenario)
+        {
+            StopPrototypeScenario();
+        }
+        CampaignProgress = PreviousCampaign;
+        RefreshCampaignBackupState();
+        SelectedOperation = PreviousOperation;
+        LocalFaction = PreviousFaction;
+        const bool bScenarioRollbackSucceeded =
+            !bHadScenario || StartScenario(false);
+        if (bScenarioRollbackSucceeded && bHadScenario)
+        {
+            SetScenarioPaused(bWasPaused);
+        }
+        OutFeedback = bScenarioRollbackSucceeded
+            ? FString::Printf(
+                  TEXT("[CAMPAIGN_RESTORE_SAVE_FAILED] The restored mission was rebuilt, but its ledger could not be committed; the prior campaign and title scenario were restored. %s"),
+                  *SaveFeedback)
+            : FString::Printf(
+                  TEXT("[CAMPAIGN_RESTORE_ROLLBACK_FAILED] The restored ledger could not be committed and the prior title scenario could not be restored. %s"),
+                  *SaveFeedback);
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_CAMPAIGN_RESTORE_FAILED] stage=storage_commit restoredRecords=%d replacedRecords=%d scenarioRollback=%s detail=%s"),
+            RestoredDecisionCount,
+            ReplacedDecisionCount,
+            bScenarioRollbackSucceeded ? TEXT("true") : TEXT("false"),
+            *SaveFeedback);
+        return false;
+    }
+    RefreshCampaignBackupState();
     if (bHadScenario)
     {
         SetScenarioPaused(bWasPaused);
     }
-    OutFeedback = FString::Printf(
-        TEXT("CAMPAIGN RESTORED: prior generation with %d mission record%s is active; the replaced %d-record generation is retained as backup."),
-        RestoredDecisionCount,
-        RestoredDecisionCount == 1 ? TEXT("") : TEXT("s"),
-        ReplacedDecisionCount);
+    if (RestoredJourney.State == EEchoesCampaignJourneyState::Ready)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("CAMPAIGN RESTORED: prior generation with %d mission record%s is active; the replaced %d-record generation is retained as backup. %s is ready."),
+            RestoredDecisionCount,
+            RestoredDecisionCount == 1 ? TEXT("") : TEXT("s"),
+            ReplacedDecisionCount,
+            FEchoesCampaignJourneyModel::OperationDisplayName(
+                RestoredJourney.NextOperation));
+    }
+    else if (RestoredJourney.State == EEchoesCampaignJourneyState::Complete)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("CAMPAIGN RESTORED: the completed fifteen-record campaign is active; the replaced %d-record generation is retained as backup."),
+            ReplacedDecisionCount);
+    }
+    else
+    {
+        OutFeedback = FString::Printf(
+            TEXT("CAMPAIGN RESTORED: prior generation with %d mission record%s is active; the replaced %d-record generation is retained as backup, but its campaign continuation is unavailable."),
+            RestoredDecisionCount,
+            RestoredDecisionCount == 1 ? TEXT("") : TEXT("s"),
+            ReplacedDecisionCount);
+    }
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_CAMPAIGN_RESTORED] restoredRecords=%d replacedRecords=%d operation=GlassScar local=MeridianCompact activeRetainedAsBackup=true scenarioReset=%s"),
+        TEXT("[ECHOES_CAMPAIGN_RESTORED] restoredRecords=%d replacedRecords=%d operation=%s local=%u journeyState=%u activeRetainedAsBackup=true scenarioReset=%s"),
         RestoredDecisionCount,
         ReplacedDecisionCount,
+        FEchoesCampaignJourneyModel::OperationDisplayName(SelectedOperation),
+        static_cast<uint8>(LocalFaction),
+        static_cast<uint8>(RestoredJourney.State),
         bHadScenario ? TEXT("true") : TEXT("false"));
     return true;
 }
@@ -6594,11 +6853,30 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             return false;
         }
     }
+    if (UsesQuickSaveContainer(SelectedOperation))
+    {
+        TArray<uint8> ContainerBytes;
+        FString ContainerError;
+        if (!BuildQuickSaveContainer(
+                SelectedOperation,
+                LocalFaction,
+                PersistedBytes,
+                ContainerBytes,
+                ContainerError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_CONTAINER_FAILED] %s"),
+                *ContainerError);
+            return false;
+        }
+        PersistedBytes = MoveTemp(ContainerBytes);
+    }
 
     const FString SavePath = GetActiveQuickSavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
     const FString TemporaryPath = SavePath + TEXT(".tmp");
     const FString BackupPath = SavePath + TEXT(".bak");
+    const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
     IFileManager& Files = IFileManager::Get();
     if (!Files.MakeDirectory(*SaveDirectory, true))
     {
@@ -6612,152 +6890,334 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         return false;
     }
 
-    TArray<uint8> VerificationBytes;
-    const bool bVerificationRead =
-        FFileHelper::LoadFileToArray(VerificationBytes, *TemporaryPath);
-    TArray<uint8> VerificationSnapshotBytes;
-    const TArray<uint8>* VerificationPayload = &VerificationBytes;
-    bool bVerificationCrisisHoldStarted = false;
-    bool bVerificationCrisisContractFailed = false;
-    EEchoesFinalResolution VerificationPendingResolution =
-        EEchoesFinalResolution::None;
-    EEchoesFinalResolution VerificationSelectedResolution =
-        EEchoesFinalResolution::None;
-    bool bVerificationResolutionHoldStarted = false;
-    bool bVerificationResolutionContractFailed = false;
-    uint64 VerificationResolutionStartTick = 0;
-    EntityId VerificationApproachAnchorId = 0;
-    EntityId VerificationResolutionConduitId = 0;
-    FString EnvelopeError;
-    bool bEnvelopeValid = true;
-    if (bVerificationRead &&
-        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    const auto ValidateCheckpointFile = [this](
+                                                const FString& CandidatePath,
+                                                FString& OutFailure)
     {
-        bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            VerificationPendingResolution,
-            VerificationSelectedResolution,
-            bVerificationResolutionHoldStarted,
-            bVerificationResolutionContractFailed,
-            VerificationResolutionStartTick,
-            VerificationApproachAnchorId,
-            VerificationResolutionConduitId,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    else if (bVerificationRead &&
-        SelectedOperation ==
-            EEchoesOperationMode::CampaignChoirAtLumeReach)
-    {
-        bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    else if (bVerificationRead &&
-             SelectedOperation ==
+        TArray<uint8> CandidateBytes;
+        if (!FFileHelper::LoadFileToArray(CandidateBytes, *CandidatePath))
+        {
+            OutFailure = TEXT("file unavailable");
+            return false;
+        }
+
+        TArray<uint8> ContainerPayload;
+        const TArray<uint8>* OperationPayload = &CandidateBytes;
+        if (UsesQuickSaveContainer(SelectedOperation))
+        {
+            const EQuickSaveContainerRead ContainerRead =
+                ExtractQuickSaveContainer(
+                    SelectedOperation,
+                    LocalFaction,
+                    CandidateBytes,
+                    ContainerPayload,
+                    OutFailure);
+            if (ContainerRead == EQuickSaveContainerRead::Invalid)
+            {
+                return false;
+            }
+            if (ContainerRead == EQuickSaveContainerRead::Legacy)
+            {
+                OutFailure = TEXT(
+                    "legacy checkpoint is load-compatible but cannot replace a context-bound recovery generation");
+                return false;
+            }
+            OperationPayload = &ContainerPayload;
+        }
+
+        TArray<uint8> SnapshotBytes;
+        const TArray<uint8>* SnapshotPayload = OperationPayload;
+        bool bCrisisHoldStarted = false;
+        bool bCrisisContractFailed = false;
+        EEchoesFinalResolution PendingResolution =
+            EEchoesFinalResolution::None;
+        EEchoesFinalResolution SelectedResolution =
+            EEchoesFinalResolution::None;
+        bool bResolutionHoldStarted = false;
+        bool bResolutionContractFailed = false;
+        uint64 ResolutionStartTick = 0;
+        EntityId ApproachAnchorId = 0;
+        EntityId ResolutionConduitId = 0;
+        bool bEnvelopeValid = true;
+        if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                PendingResolution,
+                SelectedResolution,
+                bResolutionHoldStarted,
+                bResolutionContractFailed,
+                ResolutionStartTick,
+                ApproachAnchorId,
+                ResolutionConduitId,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
                  EEchoesOperationMode::CampaignNoNeutralLedger)
-    {
-        bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    else if (bVerificationRead &&
-             SelectedOperation ==
+        {
+            bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
                  EEchoesOperationMode::CampaignFutureThatWon)
-    {
-        bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    else if (bVerificationRead &&
-             SelectedOperation ==
+        {
+            bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
                  EEchoesOperationMode::CampaignAssemblyOfTheMissing)
-    {
-        bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    else if (bVerificationRead &&
-             SelectedOperation ==
+        {
+            bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
                  EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
-    {
-        bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
-            CampaignProgress,
-            VerificationBytes,
-            bVerificationCrisisHoldStarted,
-            bVerificationCrisisContractFailed,
-            VerificationSnapshotBytes,
-            EnvelopeError);
-        VerificationPayload = &VerificationSnapshotBytes;
-    }
-    std::string VerificationError;
-    const bool bTemporaryValid =
-        bVerificationRead && bEnvelopeValid &&
-        echoes::sim::Simulation::LoadSnapshot(
-            std::span<const uint8>(
-                VerificationPayload->GetData(),
-                static_cast<size_t>(VerificationPayload->Num())),
-            &VerificationError)
-            .has_value();
-    if (!bTemporaryValid)
+        {
+            bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+                CampaignProgress,
+                *OperationPayload,
+                bCrisisHoldStarted,
+                bCrisisContractFailed,
+                SnapshotBytes,
+                OutFailure);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        if (!bEnvelopeValid)
+        {
+            return false;
+        }
+
+        std::string SnapshotError;
+        std::optional<echoes::sim::Simulation> Candidate =
+            echoes::sim::Simulation::LoadSnapshot(
+                std::span<const uint8>(
+                    SnapshotPayload->GetData(),
+                    static_cast<size_t>(SnapshotPayload->Num())),
+                &SnapshotError);
+        if (!Candidate.has_value())
+        {
+            OutFailure = SnapshotError.empty()
+                ? TEXT("checkpoint snapshot could not be reopened")
+                : UTF8_TO_TCHAR(SnapshotError.c_str());
+            return false;
+        }
+        const echoes::sim::SimulationConfig& Config = Candidate->Config();
+        const echoes::sim::PlayerState* CandidateLocalPlayer =
+            Candidate->FindPlayer(LocalPlayerId);
+        if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
+            Config.mapHeightTiles != PrototypeMapHeightTiles ||
+            Config.ticksPerSecond != PrototypeTicksPerSecond ||
+            Config.randomSeed != PrototypeSeed ||
+            !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
+            CandidateLocalPlayer == nullptr ||
+            CandidateLocalPlayer->faction != LocalFaction)
+        {
+            OutFailure = TEXT(
+                "checkpoint is not compatible with the active Glass Scar operation and faction");
+            return false;
+        }
+        return true;
+    };
+
+    FString TemporaryFailure;
+    if (!ValidateCheckpointFile(TemporaryPath, TemporaryFailure))
     {
         Files.Delete(*TemporaryPath, false, true, true);
         OutFeedback = FString::Printf(
             TEXT("[SAVE_VALIDATION_FAILED] %s"),
-            !EnvelopeError.IsEmpty()
-                ? *EnvelopeError
-                : VerificationError.empty()
-                    ? TEXT("The temporary checkpoint could not be reopened.")
-                    : UTF8_TO_TCHAR(VerificationError.c_str()));
+            TemporaryFailure.IsEmpty()
+                ? TEXT("The temporary checkpoint could not be reopened.")
+                : *TemporaryFailure);
         return false;
     }
 
     const bool bHadPriorSave = Files.FileExists(*SavePath);
-    if (bHadPriorSave)
+    FString PriorFailure;
+    const bool bPriorSaveValid =
+        bHadPriorSave && ValidateCheckpointFile(SavePath, PriorFailure);
+    const bool bHadPriorBackup = Files.FileExists(*BackupPath);
+    FString ExistingBackupFailure;
+    const bool bExistingBackupValid =
+        bHadPriorBackup &&
+        ValidateCheckpointFile(BackupPath, ExistingBackupFailure);
+    const bool bHadStagedBackup =
+        Files.FileExists(*BackupTemporaryPath);
+    FString ExistingStagedBackupFailure;
+    const bool bExistingStagedBackupValid =
+        bHadStagedBackup &&
+        ValidateCheckpointFile(
+            BackupTemporaryPath,
+            ExistingStagedBackupFailure);
+    bool bRetainedValidPrimary = false;
+    bool bBackupRotationDeferred = false;
+    if (bPriorSaveValid)
     {
-        Files.Delete(*BackupPath, false, true, true);
-        if (!Files.Move(*BackupPath, *SavePath, true, true, true, true))
+        TArray<uint8> PriorPrimaryBytes;
+        if (!FFileHelper::LoadFileToArray(PriorPrimaryBytes, *SavePath) ||
+            PriorPrimaryBytes.IsEmpty() ||
+            !FFileHelper::SaveArrayToFile(
+                PriorPrimaryBytes,
+                *BackupTemporaryPath))
         {
             Files.Delete(*TemporaryPath, false, true, true);
-            OutFeedback = TEXT("[SAVE_BACKUP_FAILED] The prior checkpoint could not be retained.");
+            Files.Delete(*BackupTemporaryPath, false, true, true);
+            OutFeedback = TEXT(
+                "[SAVE_BACKUP_FAILED] The prior validated checkpoint could not be staged safely.");
+            return false;
+        }
+        FString StagedBackupFailure;
+        if (!ValidateCheckpointFile(
+                BackupTemporaryPath,
+                StagedBackupFailure))
+        {
+            Files.Delete(*TemporaryPath, false, true, true);
+            Files.Delete(*BackupTemporaryPath, false, true, true);
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_BACKUP_VALIDATION_FAILED] %s"),
+                StagedBackupFailure.IsEmpty()
+                    ? TEXT("The staged recovery checkpoint could not be reopened.")
+                    : *StagedBackupFailure);
             return false;
         }
     }
-    if (!Files.Move(*SavePath, *TemporaryPath, true, true, true, true))
+    else if (bHadPriorSave)
     {
-        if (bHadPriorSave && Files.FileExists(*BackupPath))
-        {
-            Files.Move(*SavePath, *BackupPath, true, true, true, true);
-        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_QUICK_SAVE_PRIMARY_REJECTED] detail=%s validRecoveryPreserved=%s backupDetail=%s stagedDetail=%s"),
+            PriorFailure.IsEmpty() ? TEXT("checkpoint invalid") : *PriorFailure,
+            bExistingBackupValid || bExistingStagedBackupValid
+                ? TEXT("true")
+                : TEXT("false"),
+            bHadPriorBackup
+                ? (ExistingBackupFailure.IsEmpty()
+                       ? TEXT("validated")
+                       : *ExistingBackupFailure)
+                : TEXT("not present"),
+            bHadStagedBackup
+                ? (ExistingStagedBackupFailure.IsEmpty()
+                       ? TEXT("validated")
+                       : *ExistingStagedBackupFailure)
+                : TEXT("not present"));
+    }
+    if (!AtomicReplaceFile(SavePath, TemporaryPath))
+    {
         Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed.");
+        OutFeedback = bPriorSaveValid
+            ? TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed; the prior checkpoint remains active and its recovery copy remains staged.")
+            : TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed.");
         return false;
     }
+    if (bPriorSaveValid)
+    {
+        bool bForceBackupRotationFailure = false;
+#if WITH_DEV_AUTOMATION_TESTS
+        bForceBackupRotationFailure =
+            bFailNextQuickSaveBackupRotationForTesting;
+        bFailNextQuickSaveBackupRotationForTesting = false;
+#endif
+        if (bForceBackupRotationFailure ||
+            !AtomicReplaceFile(BackupPath, BackupTemporaryPath))
+        {
+            bBackupRotationDeferred = true;
+            OutFeedback = TEXT(
+                "QUICK SAVE: the new primary committed; backup rotation was deferred and the prior validated checkpoint remains staged for recovery.");
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_QUICK_SAVE_BACKUP_ROTATION_DEFERRED] stagedRecovery=%s existingBackupValid=%s"),
+                *BackupTemporaryPath,
+                bExistingBackupValid ? TEXT("true") : TEXT("false"));
+        }
+        else
+        {
+            bRetainedValidPrimary = true;
+        }
+    }
 
-    OutFeedback = FString::Printf(
-        TEXT("QUICK SAVE: tick %llu committed."),
-        static_cast<unsigned long long>(Simulation->CurrentTick()));
+    const unsigned long long CurrentTick =
+        static_cast<unsigned long long>(Simulation->CurrentTick());
+    if (!OutFeedback.IsEmpty())
+    {
+        // Preserve the explicit degraded-recovery result above.
+    }
+    else if (bHadPriorSave && !bPriorSaveValid && bExistingBackupValid)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("QUICK SAVE: tick %llu committed; the existing validated recovery checkpoint was preserved."),
+            CurrentTick);
+    }
+    else if (bHadPriorSave && !bPriorSaveValid &&
+             bExistingStagedBackupValid)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("QUICK SAVE: tick %llu committed; the validated staged recovery checkpoint was preserved."),
+            CurrentTick);
+    }
+    else if (bHadPriorSave && !bPriorSaveValid &&
+             (bHadPriorBackup || bHadStagedBackup))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("QUICK SAVE: tick %llu committed; the prior primary and recovery generations were invalid, so this checkpoint is the only validated generation."),
+            CurrentTick);
+    }
+    else if (bHadPriorSave && !bPriorSaveValid)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("QUICK SAVE: tick %llu committed; the prior primary was invalid and no validated recovery generation existed, so this checkpoint is the only validated generation."),
+            CurrentTick);
+    }
+    else
+    {
+        OutFeedback = FString::Printf(
+            TEXT("QUICK SAVE: tick %llu committed."),
+            CurrentTick);
+    }
     UE_LOG(
         LogEchoes,
         Display,
         TEXT("[ECHOES_QUICK_SAVE] tick=%llu bytes=%d backup=%s ledgerBound=%s"),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
         PersistedBytes.Num(),
-        bHadPriorSave ? TEXT("retained") : TEXT("none"),
+        bRetainedValidPrimary
+            ? TEXT("rotated")
+        : bBackupRotationDeferred
+            ? TEXT("staged_rotation_deferred")
+        : bExistingBackupValid
+            ? TEXT("preserved_valid")
+        : bExistingStagedBackupValid
+            ? TEXT("preserved_valid_staged")
+        : bHadPriorBackup
+            ? TEXT("preserved_invalid")
+        : bHadStagedBackup
+            ? TEXT("preserved_invalid_staged")
+        : bHadPriorSave ? TEXT("none_invalid_primary") : TEXT("none"),
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
             SelectedOperation ==
                 EEchoesOperationMode::CampaignChoirAtLumeReach ||
@@ -6785,6 +7245,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
 
     const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
+    const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
     bool bLoadedCrisisHoldStarted = false;
     bool bLoadedCrisisContractFailed = false;
@@ -6814,13 +7275,38 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                              FString& OutFailure)
     {
         TArray<uint8> Bytes;
+        if (!IFileManager::Get().FileExists(*CandidatePath))
+        {
+            OutFailure = TEXT("file unavailable");
+            return false;
+        }
         if (!FFileHelper::LoadFileToArray(Bytes, *CandidatePath))
         {
             OutFailure = TEXT("file unavailable");
             return false;
         }
+        TArray<uint8> ContainerPayload;
+        const TArray<uint8>* OperationPayload = &Bytes;
+        if (UsesQuickSaveContainer(SelectedOperation))
+        {
+            const EQuickSaveContainerRead ContainerRead =
+                ExtractQuickSaveContainer(
+                    SelectedOperation,
+                    LocalFaction,
+                    Bytes,
+                    ContainerPayload,
+                    OutFailure);
+            if (ContainerRead == EQuickSaveContainerRead::Invalid)
+            {
+                return false;
+            }
+            if (ContainerRead == EQuickSaveContainerRead::Wrapped)
+            {
+                OperationPayload = &ContainerPayload;
+            }
+        }
         TArray<uint8> SnapshotBytes;
-        const TArray<uint8>* SnapshotPayload = &Bytes;
+        const TArray<uint8>* SnapshotPayload = OperationPayload;
         bool bCandidateCrisisHoldStarted = false;
         bool bCandidateCrisisContractFailed = false;
         EEchoesFinalResolution CandidatePendingResolution =
@@ -6836,7 +7322,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractBrokenSunQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     CandidatePendingResolution,
                     CandidateSelectedResolution,
                     bCandidateResolutionHoldStarted,
@@ -6856,7 +7342,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractChoirAtLumeReachQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     SnapshotBytes,
                     OutFailure))
             {
@@ -6869,7 +7355,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractAssemblyOfTheMissingQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     SnapshotBytes,
                     OutFailure))
             {
@@ -6882,7 +7368,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     bCandidateCrisisHoldStarted,
                     bCandidateCrisisContractFailed,
                     SnapshotBytes,
@@ -6897,7 +7383,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractNoNeutralLedgerQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     SnapshotBytes,
                     OutFailure))
             {
@@ -6910,7 +7396,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         {
             if (!ExtractFutureThatWonQuickSaveSnapshot(
                     CampaignProgress,
-                    Bytes,
+                    *OperationPayload,
                     SnapshotBytes,
                     OutFailure))
             {
@@ -7631,16 +8117,25 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     }
     else
     {
-        FString BackupFailure;
-        if (!TryLoad(BackupPath, BackupFailure))
+        FString StagedBackupFailure;
+        if (TryLoad(BackupTemporaryPath, StagedBackupFailure))
         {
-            OutFeedback = FString::Printf(
-                TEXT("[LOAD_NO_VALID_CHECKPOINT] primary=%s; backup=%s"),
-                *PrimaryFailure,
-                *BackupFailure);
-            return false;
+            SelectedPath = BackupTemporaryPath;
         }
-        SelectedPath = BackupPath;
+        else
+        {
+            FString BackupFailure;
+            if (!TryLoad(BackupPath, BackupFailure))
+            {
+                OutFeedback = FString::Printf(
+                    TEXT("[LOAD_NO_VALID_CHECKPOINT] primary=%s; backup=%s; staged=%s"),
+                    *PrimaryFailure,
+                    *BackupFailure,
+                    *StagedBackupFailure);
+                return false;
+            }
+            SelectedPath = BackupPath;
+        }
     }
 
     TUniquePtr<echoes::sim::Simulation> PreviousSimulation =
@@ -7697,16 +8192,26 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         BrokenSunResolutionConduitId = LoadedResolutionConduitId;
     }
     const bool bUsedBackup = SelectedPath == BackupPath;
+    const bool bUsedStagedBackup =
+        SelectedPath == BackupTemporaryPath;
     OutFeedback = FString::Printf(
         TEXT("QUICK LOAD: tick %llu restored%s."),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
-        bUsedBackup ? TEXT(" from prior-generation backup") : TEXT(""));
+        bUsedBackup
+            ? TEXT(" from prior-generation backup")
+        : bUsedStagedBackup
+            ? TEXT(" from staged prior-generation recovery")
+            : TEXT(""));
     UE_LOG(
         LogEchoes,
         Display,
         TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s ledgerBound=%s"),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
-        bUsedBackup ? TEXT("backup") : TEXT("primary"),
+        bUsedBackup
+            ? TEXT("backup")
+        : bUsedStagedBackup
+            ? TEXT("staged_recovery")
+            : TEXT("primary"),
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
                 SelectedOperation ==
                     EEchoesOperationMode::CampaignChoirAtLumeReach ||

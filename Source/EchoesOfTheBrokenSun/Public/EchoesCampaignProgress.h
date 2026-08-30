@@ -282,4 +282,12 @@ public:
         const FString& Path,
         FEchoesCampaignProgress& OutProgress,
         FString& OutFeedback);
+
+#if WITH_DEV_AUTOMATION_TESTS
+    /** One-shot fault injection before rotating a validated primary. */
+    static void FailNextBackupRotationForTesting();
+
+    /** One-shot fault injection after rotation but before primary commit. */
+    static void FailNextCommitForTesting();
+#endif
 };

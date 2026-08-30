@@ -405,12 +405,49 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
                      Controller->GetPresentedCampaignOperation() ==
                          EEchoesOperationMode::CampaignSevenAccounts);
         Controller->ConfirmPrimaryAction();
-        TestTrue(TEXT("Replay retains mission two and reconstructs its start"),
+        TestTrue(TEXT("Persisted Mission 02 advances to the Mission 03 briefing"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::CampaignSevenAccounts &&
-                     Bridge->GetSevenAccountsPhase() ==
-                         EEchoesSevenAccountsPhase::EstablishWaystone);
+                         EEchoesOperationMode::CampaignCityReserve &&
+                     Controller->IsMissionBriefingVisible() &&
+                     Bridge->IsScenarioPaused());
         Controller->PresentTitleScreen();
+
+        FEchoesCampaignProgress BackupBeforeFailedReset;
+        TestTrue(
+            TEXT("The pre-reset prior generation is captured exactly"),
+            FEchoesCampaignProgressStore::LoadGeneration(
+                CampaignPath + TEXT(".bak"),
+                BackupBeforeFailedReset,
+                Feedback) &&
+                BackupBeforeFailedReset.Decisions.Num() == 1);
+
+        AddExpectedError(
+            TEXT("ECHOES_NEW_CAMPAIGN_FAILED"),
+            EAutomationExpectedErrorFlags::Contains,
+            1);
+        Bridge->FailNextScenarioStartForTesting();
+        Controller->RequestNewCampaign();
+        Controller->RequestNewCampaign();
+        FEchoesCampaignProgress NewCampaignRollbackPrimary;
+        FEchoesCampaignProgress NewCampaignRollbackBackup;
+        TestTrue(
+            TEXT("A failed Mission 01 rebuild leaves both durable generations unchanged"),
+            Bridge->GetCampaignProgress().Decisions.Num() == 2 &&
+                Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignCityReserve &&
+                Bridge->IsScenarioReady() && Bridge->IsScenarioPaused() &&
+                FEchoesCampaignProgressStore::LoadGeneration(
+                    CampaignPath,
+                    NewCampaignRollbackPrimary,
+                    Feedback) &&
+                NewCampaignRollbackPrimary.Decisions.Num() == 2 &&
+                FEchoesCampaignProgressStore::LoadGeneration(
+                    CampaignPath + TEXT(".bak"),
+                    NewCampaignRollbackBackup,
+                    Feedback) &&
+                NewCampaignRollbackBackup.Decisions ==
+                    BackupBeforeFailedReset.Decisions);
+
         Controller->RequestNewCampaign();
         TestTrue(TEXT("The first F10 press only arms confirmation"),
                  Controller->IsNewCampaignConfirmationArmed() &&
@@ -419,12 +456,19 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("The confirmed new campaign clears active decisions"),
                  !Controller->IsNewCampaignConfirmationArmed() &&
                      Bridge->GetCampaignProgress().Decisions.IsEmpty());
-        TestTrue(TEXT("New-campaign authority returns to the default operation"),
+        TestTrue(TEXT("New-campaign authority opens the Mission 01 journey"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::Skirmish &&
+                         EEchoesOperationMode::CampaignPrologue &&
                      Bridge->GetLocalFaction() ==
                          echoes::sim::Faction::MeridianCompact &&
                      Bridge->IsScenarioPaused());
+        Controller->ContinueCampaign();
+        TestTrue(TEXT("Continue Campaign opens the fresh Mission 01 briefing"),
+                 Controller->IsMissionBriefingVisible() &&
+                     Bridge->GetOperationMode() ==
+                         EEchoesOperationMode::CampaignPrologue &&
+                     Bridge->IsScenarioPaused());
+        Controller->PresentTitleScreen();
         FEchoesCampaignProgress EmptyReload;
         TestTrue(TEXT("The empty active ledger reloads transactionally"),
                  FEchoesCampaignProgressStore::LoadWithBackup(
@@ -442,6 +486,29 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("The title exposes the validated prior generation"),
                  Bridge->HasRestorableCampaignBackup() &&
                      Bridge->GetCampaignBackupDecisionCount() == 2);
+
+        AddExpectedError(
+            TEXT("ECHOES_CAMPAIGN_RESTORE_FAILED"),
+            EAutomationExpectedErrorFlags::Contains,
+            1);
+        Bridge->FailNextScenarioStartForTesting();
+        Controller->RequestCampaignRestore();
+        Controller->RequestCampaignRestore();
+        FEchoesCampaignProgress RestoreRollbackPrimary;
+        TestTrue(
+            TEXT("A failed restored-mission rebuild restores the empty campaign"),
+            Bridge->GetCampaignProgress().Decisions.IsEmpty() &&
+                Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignPrologue &&
+                Bridge->IsScenarioReady() && Bridge->IsScenarioPaused() &&
+                FEchoesCampaignProgressStore::LoadGeneration(
+                    CampaignPath,
+                    RestoreRollbackPrimary,
+                    Feedback) &&
+                RestoreRollbackPrimary.Decisions.IsEmpty() &&
+                Bridge->HasRestorableCampaignBackup() &&
+                Bridge->GetCampaignBackupDecisionCount() == 2);
+
         Controller->RequestCampaignRestore();
         TestTrue(TEXT("The first restore request only arms campaign restoration"),
                  Controller->IsCampaignRestoreConfirmationArmed() &&
@@ -450,11 +517,17 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Confirmed restoration activates the exact prior generation"),
                  !Controller->IsCampaignRestoreConfirmationArmed() &&
                      Bridge->GetCampaignProgress().Decisions.Num() == 2);
-        TestTrue(TEXT("Campaign restoration returns to a paused safe operation"),
+        TestTrue(TEXT("Campaign restoration selects its exact next mission"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::Skirmish &&
+                         EEchoesOperationMode::CampaignCityReserve &&
                      Bridge->GetLocalFaction() ==
                          echoes::sim::Faction::MeridianCompact &&
+                     Bridge->IsScenarioPaused());
+        Controller->ContinueCampaign();
+        TestTrue(TEXT("Restored progress opens the Mission 03 briefing"),
+                 Controller->IsMissionBriefingVisible() &&
+                     Bridge->GetOperationMode() ==
+                         EEchoesOperationMode::CampaignCityReserve &&
                      Bridge->IsScenarioPaused());
         FEchoesCampaignProgress RestoredPrimary;
         TestTrue(TEXT("The restored generation is the validated active ledger"),

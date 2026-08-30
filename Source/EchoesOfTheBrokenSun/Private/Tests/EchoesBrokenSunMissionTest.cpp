@@ -4,6 +4,7 @@
 
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
@@ -1102,6 +1103,13 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->GetLocalObjectiveSnapshot().
                 bBrokenSunResolutionContractFailed);
 
+    TArray<uint8> ValidHoldBackupBytes;
+    TestTrue(
+        TEXT("The ledger-bound active-hold recovery generation is readable"),
+        FFileHelper::LoadFileToArray(
+            ValidHoldBackupBytes,
+            *(QuickSavePath + TEXT(".bak"))) &&
+            !ValidHoldBackupBytes.IsEmpty());
     TArray<uint8> CorruptedFailedCheckpoint;
     TestTrue(
         TEXT("The failed primary checkpoint can be corrupted for backup recovery"),
@@ -1126,6 +1134,18 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesBrokenSunPhase::HoldFinalResolution &&
             !Bridge->GetLocalObjectiveSnapshot().
                 bBrokenSunResolutionContractFailed);
+    TestTrue(
+        TEXT("Mission 15 can save after recovering from a corrupt primary"),
+        Bridge->QuickSaveScenario(Feedback) &&
+            Feedback.Contains(
+                TEXT("validated recovery checkpoint was preserved")));
+    TArray<uint8> PreservedHoldBackupBytes;
+    TestTrue(
+        TEXT("The ledger-bound valid backup survives corrupt-primary replacement"),
+        FFileHelper::LoadFileToArray(
+            PreservedHoldBackupBytes,
+            *(QuickSavePath + TEXT(".bak"))) &&
+            PreservedHoldBackupBytes == ValidHoldBackupBytes);
     TestTrue(
         TEXT("Holding the restored exact contract commits Mission 15"),
         TickUntil(
@@ -1176,6 +1196,29 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             TEXT("A different earned ending cannot rewrite the final record"),
             Reloaded.AppendDecision(RuntimeConflict, Feedback),
             EEchoesCampaignCommitStatus::ReplayConflict);
+    }
+
+    AEchoesPlayerController* EndingController =
+        WorldWrapper.GetTestWorld()->SpawnActor<AEchoesPlayerController>();
+    if (TestNotNull(
+            TEXT("The completed campaign can present its terminal journey"),
+            EndingController))
+    {
+        EndingController->NotifyBrokenSunFinished(
+            true,
+            EEchoesFinalResolution::ControlledStabilization,
+            EEchoesFinalResolution::ControlledStabilization,
+            EEchoesCampaignCommitStatus::AlreadyRecorded);
+        EndingController->ConfirmPrimaryAction();
+        TestTrue(
+            TEXT("Mission 15 Enter returns to title without inventing Mission 16"),
+            EndingController->IsTitleScreenVisible() &&
+                !EndingController->IsMatchResultVisible() &&
+                Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignTheBrokenSun &&
+                Bridge->GetCampaignJourney().State ==
+                    EEchoesCampaignJourneyState::Complete);
+        EndingController->Destroy();
     }
 
     Bridge->StopPrototypeScenario();

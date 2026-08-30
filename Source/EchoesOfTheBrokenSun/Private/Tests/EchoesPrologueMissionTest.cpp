@@ -330,14 +330,31 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
                  Controller->GetCampaignCommitStatus() ==
                      EEchoesCampaignCommitStatus::AlreadyRecorded);
     Controller->ConfirmPrimaryAction();
-    TestFalse(TEXT("Enter replays the completed mission"),
+    TestFalse(TEXT("Enter leaves the completed mission result"),
               Controller->IsMatchResultVisible());
-    TestTrue(TEXT("Replay retains the selected prologue operation"),
+    TestTrue(TEXT("Enter advances to the exact next campaign briefing"),
+             Controller->IsMissionBriefingVisible() &&
+                 Bridge->IsScenarioPaused());
+    TestTrue(TEXT("Campaign continuation selects Mission 02"),
              Bridge->GetOperationMode() ==
-                 EEchoesOperationMode::CampaignPrologue);
-    TestTrue(TEXT("Replay restores the initial archive objective"),
-             Bridge->GetProloguePhase() ==
-                 EEchoesProloguePhase::RecoverArchive);
+                 EEchoesOperationMode::CampaignSevenAccounts);
+    TestTrue(TEXT("Mission 02 reconstructs its inherited initial objective"),
+             Bridge->GetSevenAccountsPhase() ==
+                 EEchoesSevenAccountsPhase::EstablishWaystone);
+    Controller->NotifySevenAccountsFinished(
+        false,
+        echoes::sim::FutureWellChoice::Preserve,
+        echoes::sim::FutureWellChoice::Preserve,
+        EEchoesCampaignCommitStatus::NotApplicable);
+    Controller->ConfirmPrimaryAction();
+    TestTrue(TEXT("A failed mission retries instead of advancing"),
+             !Controller->IsMatchResultVisible() &&
+                 !Controller->IsMissionBriefingVisible() &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignSevenAccounts &&
+                 Bridge->GetSevenAccountsPhase() ==
+                     EEchoesSevenAccountsPhase::EstablishWaystone &&
+                 !Bridge->IsScenarioPaused());
 
     Controller->Destroy();
     Bridge->StopPrototypeScenario();

@@ -258,6 +258,62 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
                  Feedback));
     TestTrue(TEXT("The exact backup is the first committed generation"),
              ExactBackup.Decisions == Progress.Decisions);
+
+    FEchoesCampaignProgress ThirdGeneration = SecondGeneration;
+    ThirdGeneration.Decisions[0].CompletionTick += 100;
+    ThirdGeneration.Decisions[0].FinalStateChecksum += 100;
+    FEchoesCampaignProgressStore::FailNextBackupRotationForTesting();
+    TestFalse(
+        TEXT("A forced atomic backup-rotation fault rejects the commit"),
+        FEchoesCampaignProgressStore::SaveAtomic(
+            TestPath,
+            ThirdGeneration,
+            Feedback));
+    TestTrue(
+        TEXT("Backup-rotation failure is identified"),
+        Feedback.Contains(TEXT("CAMPAIGN_BACKUP_FAILED")));
+    FEchoesCampaignProgress PrimaryAfterRotationFault;
+    FEchoesCampaignProgress BackupAfterRotationFault;
+    TestTrue(
+        TEXT("A failed rotation leaves both campaign generations exact"),
+        FEchoesCampaignProgressStore::LoadGeneration(
+            TestPath,
+            PrimaryAfterRotationFault,
+            Feedback) &&
+            PrimaryAfterRotationFault.Decisions ==
+                SecondGeneration.Decisions &&
+            FEchoesCampaignProgressStore::LoadGeneration(
+                TestPath + TEXT(".bak"),
+                BackupAfterRotationFault,
+                Feedback) &&
+            BackupAfterRotationFault.Decisions == Progress.Decisions);
+
+    FEchoesCampaignProgressStore::FailNextCommitForTesting();
+    TestFalse(
+        TEXT("A forced primary-commit fault rejects the replacement"),
+        FEchoesCampaignProgressStore::SaveAtomic(
+            TestPath,
+            ThirdGeneration,
+            Feedback));
+    TestTrue(
+        TEXT("Primary-commit failure reports complete generation rollback"),
+        Feedback.Contains(TEXT("CAMPAIGN_COMMIT_FAILED")));
+    FEchoesCampaignProgress PrimaryAfterCommitFault;
+    FEchoesCampaignProgress BackupAfterCommitFault;
+    TestTrue(
+        TEXT("Commit failure restores both the prior primary and backup"),
+        FEchoesCampaignProgressStore::LoadGeneration(
+            TestPath,
+            PrimaryAfterCommitFault,
+            Feedback) &&
+            PrimaryAfterCommitFault.Decisions ==
+                SecondGeneration.Decisions &&
+            FEchoesCampaignProgressStore::LoadGeneration(
+                TestPath + TEXT(".bak"),
+                BackupAfterCommitFault,
+                Feedback) &&
+            BackupAfterCommitFault.Decisions == Progress.Decisions);
+
     TestFalse(TEXT("An unavailable exact generation does not fall back"),
               FEchoesCampaignProgressStore::LoadGeneration(
                   TestPath + TEXT(".missing"),

@@ -835,11 +835,13 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                      Controller->GetPresentedCampaignOperation() ==
                          EEchoesOperationMode::CampaignTermsOfContinuance);
         Controller->ConfirmPrimaryAction();
-        TestTrue(TEXT("Replay reconstructs Terms of Continuance"),
+        TestTrue(TEXT("Mission 05 advances to Names Without Births briefing"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::CampaignTermsOfContinuance &&
-                     Bridge->GetTermsOfContinuancePhase() ==
-                         EEchoesTermsOfContinuancePhase::SynchronizeNetworks);
+                         EEchoesOperationMode::CampaignNamesWithoutBirths &&
+                     Controller->IsMissionBriefingVisible() &&
+                     Bridge->GetNamesWithoutBirthsPhase() ==
+                         EEchoesNamesWithoutBirthsPhase::LocateCensus &&
+                     Bridge->IsScenarioPaused());
         Controller->Destroy();
     }
 

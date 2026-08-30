@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "EchoesCampaignJourneyModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
@@ -412,6 +413,8 @@ public:
         return SelectedOperation;
     }
     [[nodiscard]] FString GetOperationLabel() const;
+    /** Resolves the exact next campaign operation from the validated ledger. */
+    [[nodiscard]] FEchoesCampaignJourney GetCampaignJourney() const;
     [[nodiscard]] EEchoesProloguePhase GetProloguePhase() const;
     [[nodiscard]] EEchoesSevenAccountsPhase GetSevenAccountsPhase() const;
     [[nodiscard]] bool IsSevenAccountsUnlocked() const;
@@ -530,6 +533,18 @@ public:
     }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;
+#if WITH_DEV_AUTOMATION_TESTS
+    /** One-shot fault injection for transactional scenario-transition tests. */
+    void FailNextScenarioStartForTesting()
+    {
+        bFailNextScenarioStartForTesting = true;
+    }
+    /** One-shot fault injection for atomic checkpoint-rotation tests. */
+    void FailNextQuickSaveBackupRotationForTesting()
+    {
+        bFailNextQuickSaveBackupRotationForTesting = true;
+    }
+#endif
 
 private:
 #if WITH_DEV_AUTOMATION_TESTS
@@ -624,6 +639,10 @@ private:
     double FixedTimeAccumulator = 0.0;
     uint64 NextPlayerCommandSequence = 1;
     bool bScenarioReady = false;
+#if WITH_DEV_AUTOMATION_TESTS
+    bool bFailNextScenarioStartForTesting = false;
+    mutable bool bFailNextQuickSaveBackupRotationForTesting = false;
+#endif
     bool bWarnedAboutTimeClamp = false;
     bool bLoggedFirstTick = false;
     bool bLoggedStressCombat = false;

@@ -370,11 +370,13 @@ bool FEchoesCityReserveMissionTest::RunTest(const FString& Parameters)
                      Controller->GetPresentedCampaignOperation() ==
                          EEchoesOperationMode::CampaignCityReserve);
         Controller->ConfirmPrimaryAction();
-        TestTrue(TEXT("Replay reconstructs the disconnected reserve grid"),
+        TestTrue(TEXT("Mission 03 advances to The Unburied Road briefing"),
                  Bridge->GetOperationMode() ==
-                         EEchoesOperationMode::CampaignCityReserve &&
-                     Bridge->GetCityReservePhase() ==
-                         EEchoesCityReservePhase::StabilizePriority);
+                         EEchoesOperationMode::CampaignUnburiedRoad &&
+                     Controller->IsMissionBriefingVisible() &&
+                     Bridge->GetUnburiedRoadPhase() ==
+                         EEchoesUnburiedRoadPhase::EstablishRoadhead &&
+                     Bridge->IsScenarioPaused());
         Controller->Destroy();
     }
 
