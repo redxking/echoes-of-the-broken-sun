@@ -20,10 +20,16 @@ mkdir -p "$project_root/Saved/Logs"
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=35 roster=16 landmarks=4 environment=7 vfx=8' "$log"; then
-  print -u2 "The Unreal art generator did not report all 35 assets."
+if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=38 roster=16 landmarks=4 environment=7 vfx=8 destructionVfx=3' "$log"; then
+  print -u2 "The Unreal art generator did not report all 38 assets."
   print -u2 "Inspect: $log"
   exit 3
+fi
+
+if ! rg -q '\[ECHOES_DESTRUCTION_VFX_READY\].*revision=destruction-vfx-v1.*assets=3 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
+  print -u2 "The destruction VFX asset audit did not pass."
+  print -u2 "Inspect: $log"
+  exit 7
 fi
 
 if ! rg -q '\[ECHOES_PRESENTATION_VFX_READY\].*revision=selection-command-vfx-v1.*assets=8 selection=1 commands=6 orbit=1 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
@@ -44,5 +50,5 @@ if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEditorA
   exit 4
 fi
 
-print "Generated 16 roster meshes, 4 Future Well meshes, 7 Glass Scar environment meshes, 8 selection/command VFX meshes, and their authored material families."
+print "Generated 16 roster meshes, 4 Future Well meshes, 7 Glass Scar environment meshes, 8 selection/command VFX meshes, 3 destruction VFX meshes, and their authored material families."
 print "Evidence log: $log"

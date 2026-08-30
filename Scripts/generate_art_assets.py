@@ -28,6 +28,7 @@ ASH_CUT_ASSET_REVISION = "ash-cut-production-v1"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v1"
+DESTRUCTION_VFX_ASSET_REVISION = "destruction-vfx-v1"
 
 PRIMARY = 0
 DARK = 1
@@ -59,6 +60,7 @@ class VfxAssetSpec:
     display_name: str
     role: str
     builder: Callable[[unreal.DynamicMesh, bool], None]
+    revision: str = PRESENTATION_VFX_ASSET_REVISION
 
     @property
     def asset_name(self) -> str:
@@ -954,6 +956,36 @@ def vfx_command_orbit(mesh: unreal.DynamicMesh, high: bool) -> None:
         cylinder(mesh, 5.0, 5.0, (-19.0, 0.0, 2.0), PRIMARY, sides=8)
 
 
+def vfx_destruction_ring(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Fractured radial shock ring used only after a visible entity is removed."""
+    torus(mesh, 48.0, 3.5, (0.0, 0.0, 2.0), high_detail=high)
+    step = 45 if high else 90
+    for angle in range(0, 360, step):
+        radial_tangent_box(
+            mesh,
+            float(angle),
+            49.0,
+            (18.0, 5.0, 4.0),
+            2.0,
+            PRIMARY,
+        )
+
+
+def vfx_destruction_core(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Compact broken-sun ember that collapses without becoming gameplay state."""
+    cylinder(mesh, 12.0, 8.0, (0.0, 0.0, 4.0), PRIMARY, sides=12 if high else 8)
+    for yaw in (0.0, 60.0, 120.0):
+        box(mesh, (38.0, 6.0, 6.0), (0.0, 0.0, 5.0), PRIMARY, (0.0, yaw, 0.0))
+
+
+def vfx_destruction_shard(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Directional debris accent with a deliberately asymmetric silhouette."""
+    box(mesh, (34.0, 9.0, 7.0), (0.0, 0.0, 3.0), PRIMARY, (0.0, 18.0, 0.0))
+    box(mesh, (18.0, 7.0, 6.0), (13.0, 7.0, 4.0), PRIMARY, (0.0, 54.0, 0.0))
+    if high:
+        box(mesh, (12.0, 5.0, 5.0), (-13.0, -6.0, 5.0), PRIMARY, (0.0, -38.0, 0.0))
+
+
 VFX_ASSETS = (
     VfxAssetSpec("SelectionHalo", "Selection halo", "persistent selected-entity readability", vfx_selection_halo),
     VfxAssetSpec("CommandMove", "Move command sigil", "accepted move confirmation", vfx_command_move),
@@ -963,6 +995,30 @@ VFX_ASSETS = (
     VfxAssetSpec("CommandBuild", "Build command sigil", "accepted build confirmation", vfx_command_build),
     VfxAssetSpec("CommandInteract", "Interact command sigil", "accepted interaction confirmation", vfx_command_interact),
     VfxAssetSpec("CommandOrbit", "Command orbit shard", "motion-readable command accent", vfx_command_orbit),
+)
+
+DESTRUCTION_VFX_ASSETS = (
+    VfxAssetSpec(
+        "DestructionRing",
+        "Destruction shock ring",
+        "visible authoritative-removal confirmation",
+        vfx_destruction_ring,
+        DESTRUCTION_VFX_ASSET_REVISION,
+    ),
+    VfxAssetSpec(
+        "DestructionCore",
+        "Destruction core ember",
+        "low-frequency destruction focal point",
+        vfx_destruction_core,
+        DESTRUCTION_VFX_ASSET_REVISION,
+    ),
+    VfxAssetSpec(
+        "DestructionShard",
+        "Destruction debris shard",
+        "non-authoritative directional debris accent",
+        vfx_destruction_shard,
+        DESTRUCTION_VFX_ASSET_REVISION,
+    ),
 )
 
 
@@ -1543,7 +1599,7 @@ def create_presentation_vfx_mesh(
         revision = unreal.EditorAssetLibrary.get_metadata_tag(
             existing, "Echoes.AssetRevision"
         )
-        if revision == PRESENTATION_VFX_ASSET_REVISION:
+        if revision == spec.revision:
             unreal.log(
                 "[ECHOES_PRESENTATION_VFX_ASSET] "
                 f"path={spec.asset_path} display={spec.display_name} "
@@ -1591,7 +1647,7 @@ def create_presentation_vfx_mesh(
         asset, "Echoes.CollisionPolicy", "No asset or runtime collision"
     )
     unreal.EditorAssetLibrary.set_metadata_tag(
-        asset, "Echoes.AssetRevision", PRESENTATION_VFX_ASSET_REVISION
+        asset, "Echoes.AssetRevision", spec.revision
     )
     unreal.EditorAssetLibrary.save_loaded_asset(asset, False)
     unreal.log(
@@ -1739,7 +1795,8 @@ def create_static_mesh(
 def main() -> None:
     unreal.log(
         "[ECHOES_ART_BEGIN] generating 16 roster assets, 4 Future Well assets, "
-        "7 Glass Scar environment assets, and 8 presentation VFX assets"
+        "7 Glass Scar environment assets, 8 selection/command VFX assets, "
+        "and 3 destruction VFX assets"
     )
     surface_material = create_surface_material()
     world_surface_material = create_world_surface_material()
@@ -1761,6 +1818,10 @@ def main() -> None:
     presentation_vfx_assets = [
         create_presentation_vfx_mesh(spec, presentation_vfx_material)
         for spec in VFX_ASSETS
+    ]
+    destruction_vfx_assets = [
+        create_presentation_vfx_mesh(spec, presentation_vfx_material)
+        for spec in DESTRUCTION_VFX_ASSETS
     ]
     ash_cut_asset = next(
         asset
@@ -1825,9 +1886,35 @@ def main() -> None:
         "runtimeAuthority=presentation reducedMotion=steady "
         "reducedFlashing=steadyLowEmission finalArt=false"
     )
+    destruction_collision_counts = [
+        mesh_editor.get_simple_collision_count(asset)
+        for asset in destruction_vfx_assets
+    ]
+    if (
+        len(destruction_vfx_assets) != 3
+        or any(asset.get_num_lods() != 2 for asset in destruction_vfx_assets)
+        or any(count != 0 for count in destruction_collision_counts)
+        or any(
+            asset.get_material(0) is None
+            or "M_EchoesPresentationVFX" not in asset.get_material(0).get_path_name()
+            for asset in destruction_vfx_assets
+        )
+    ):
+        raise RuntimeError(
+            "Destruction VFX audit failed: "
+            f"assets={len(destruction_vfx_assets)} "
+            f"lods={[asset.get_num_lods() for asset in destruction_vfx_assets]} "
+            f"collision={destruction_collision_counts}"
+        )
     unreal.log(
-        f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets)} "
-        f"roster=16 landmarks=4 environment=7 vfx=8 material={MATERIAL_PATH} "
+        "[ECHOES_DESTRUCTION_VFX_READY] "
+        f"revision={DESTRUCTION_VFX_ASSET_REVISION} assets=3 lods=2 "
+        "simpleCollision=0 runtimeAuthority=presentation "
+        "reducedMotion=steady reducedFlashing=steadyLowEmission finalArt=false"
+    )
+    unreal.log(
+        f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "
+        f"roster=16 landmarks=4 environment=7 vfx=8 destructionVfx=3 material={MATERIAL_PATH} "
         f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 

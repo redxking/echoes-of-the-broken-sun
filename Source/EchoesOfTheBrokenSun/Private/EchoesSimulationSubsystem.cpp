@@ -1,8 +1,10 @@
 #include "EchoesSimulationSubsystem.h"
 
 #include "EchoesContentSubsystem.h"
+#include "EchoesDestructionView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesTerrainView.h"
@@ -5463,6 +5465,47 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
         {
             if (AEchoesEntityView* View = Pair.Value.Get())
             {
+                const bool bAuthoritativelyRemoved =
+                    !bTeleportNewViews &&
+                    Simulation->FindEntity(Pair.Key) == nullptr &&
+                    View->GetEntityType() != echoes::sim::EntityType::ResourceNode &&
+                    View->GetEntityType() != echoes::sim::EntityType::FutureWell &&
+                    !View->IsTemporaryMineralCover();
+                if (bAuthoritativelyRemoved)
+                {
+                    FActorSpawnParameters SpawnParameters;
+                    SpawnParameters.ObjectFlags |= RF_Transient;
+                    SpawnParameters.SpawnCollisionHandlingOverride =
+                        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                    if (AEchoesDestructionView* Destruction =
+                            GetWorld()->SpawnActor<AEchoesDestructionView>(
+                                View->GetActorLocation(),
+                                FRotator::ZeroRotator,
+                                SpawnParameters))
+                    {
+                        const UEchoesGameUserSettings* Settings =
+                            UEchoesGameUserSettings::Get();
+                        const bool bReducedMotion =
+                            Settings != nullptr && Settings->IsReducedMotionEnabled();
+                        const bool bReducedFlashing =
+                            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+                        Destruction->InitializeDestruction(
+                            View->GetEntityFaction(),
+                            View->GetEntityType(),
+                            bReducedMotion,
+                            bReducedFlashing);
+                        UE_LOG(
+                            LogEchoes,
+                            Display,
+                            TEXT("[ECHOES_DESTRUCTION_VFX] revision=destruction-vfx-v1 entity=%u authored=%s reducedMotion=%s reducedFlashing=%s collision=false navigation=false authoritative=false finalArt=false"),
+                            Pair.Key,
+                            Destruction->IsUsingAuthoredVFXAssets()
+                                ? TEXT("true")
+                                : TEXT("false"),
+                            bReducedMotion ? TEXT("true") : TEXT("false"),
+                            bReducedFlashing ? TEXT("true") : TEXT("false"));
+                    }
+                }
                 View->Destroy();
             }
             RemovedIds.Add(Pair.Key);

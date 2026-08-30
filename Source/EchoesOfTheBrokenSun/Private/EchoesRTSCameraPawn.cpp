@@ -42,6 +42,30 @@ void AEchoesRTSCameraPawn::BeginPlay()
 #if !UE_BUILD_SHIPPING
     if (FParse::Param(
             FCommandLine::Get(),
+            TEXT("EchoesDestructionVFXReview")))
+    {
+        const bool bReducedPresentation = FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesReviewReducedPresentation"));
+        bArtReviewMode = true;
+        SetActorLocation(FVector(-4200.0f, -4200.0f, 100.0f));
+        SpringArm->TargetArmLength = 2500.0f;
+        SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
+        SpringArm->bEnableCameraLag = false;
+        Camera->SetFieldOfView(52.0f);
+        Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+        Camera->PostProcessSettings.AutoExposureBias = -0.25f;
+        Camera->PostProcessBlendWeight = 1.0f;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DESTRUCTION_VFX_REVIEW_CAMERA] center=(-4200,-4200) zoom=2500 reducedMotion=%s reducedFlashing=%s editorOnly=true"),
+            bReducedPresentation ? TEXT("true") : TEXT("false"),
+            bReducedPresentation ? TEXT("true") : TEXT("false"));
+        return;
+    }
+    if (FParse::Param(
+            FCommandLine::Get(),
             TEXT("EchoesPresentationVFXReview")))
     {
         const bool bReducedPresentation = FParse::Param(

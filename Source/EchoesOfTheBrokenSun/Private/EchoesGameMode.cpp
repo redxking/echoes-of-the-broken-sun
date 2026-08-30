@@ -5,6 +5,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EchoesCommandMarkerView.h"
+#include "EchoesDestructionView.h"
 #include "EchoesHUD.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
@@ -424,6 +425,119 @@ void AEchoesGameMode::BeginPlay()
 #endif
 
 #if !UE_BUILD_SHIPPING
+    const bool bDestructionVFXReview =
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesDestructionVFXReview"));
+    if (bDestructionVFXReview)
+    {
+        const bool bReducedPresentation = FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesReviewReducedPresentation"));
+        if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+        {
+            Settings->SetReducedMotionEnabled(bReducedPresentation);
+            Settings->SetReducedFlashingEnabled(bReducedPresentation);
+        }
+        if (AEchoesFogView* FogView = Bridge->GetFogView())
+        {
+            FogView->SetActorHiddenInGame(true);
+        }
+        if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
+        {
+            TerrainView->SetActorHiddenInGame(true);
+        }
+        int32 HiddenOrdinaryViewCount = 0;
+        if (const echoes::sim::Simulation* Simulation = Bridge->GetSimulation())
+        {
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (AEchoesEntityView* View = Bridge->FindEntityView(Entity.id))
+                {
+                    View->SetActorHiddenInGame(true);
+                    ++HiddenOrdinaryViewCount;
+                }
+            }
+        }
+        int32 HiddenTerrainShelfCount = 0;
+        for (TActorIterator<AStaticMeshActor> ActorIterator(GetWorld());
+             ActorIterator;
+             ++ActorIterator)
+        {
+            if (ActorIterator->ActorHasTag(TEXT("EchoesTerrainShelf")))
+            {
+                ActorIterator->SetActorHiddenInGame(true);
+                ++HiddenTerrainShelfCount;
+            }
+        }
+
+        const echoes::sim::Faction Factions[] = {
+            echoes::sim::Faction::MeridianCompact,
+            echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::MeridianCompact,
+            echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::MeridianCompact,
+            echoes::sim::Faction::KharuunAssemblies,
+        };
+        const echoes::sim::EntityType Types[] = {
+            echoes::sim::EntityType::Soldier,
+            echoes::sim::EntityType::Soldier,
+            echoes::sim::EntityType::HeavyUnit,
+            echoes::sim::EntityType::HeavyUnit,
+            echoes::sim::EntityType::CommandCore,
+            echoes::sim::EntityType::CommandCore,
+        };
+        const FIntPoint ReviewTiles[] = {
+            FIntPoint(9, 9),
+            FIntPoint(12, 9),
+            FIntPoint(15, 9),
+            FIntPoint(9, 12),
+            FIntPoint(12, 12),
+            FIntPoint(15, 12),
+        };
+        int32 SpawnedDestructionCount = 0;
+        int32 AuthoredDestructionCount = 0;
+        for (int32 Index = 0; Index < UE_ARRAY_COUNT(Types); ++Index)
+        {
+            FActorSpawnParameters SpawnParameters;
+            SpawnParameters.ObjectFlags |= RF_Transient;
+            SpawnParameters.SpawnCollisionHandlingOverride =
+                ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+            const FVector ReviewLocation = Bridge->SimToWorld(
+                echoes::sim::Vec2::FromTiles(
+                    ReviewTiles[Index].X,
+                    ReviewTiles[Index].Y));
+            AEchoesDestructionView* Destruction =
+                GetWorld()->SpawnActor<AEchoesDestructionView>(
+                    ReviewLocation + FVector(0.0f, 0.0f, 10.0f),
+                    FRotator::ZeroRotator,
+                    SpawnParameters);
+            if (Destruction == nullptr)
+            {
+                continue;
+            }
+            Destruction->InitializeDestruction(
+                Factions[Index],
+                Types[Index],
+                bReducedPresentation,
+                bReducedPresentation,
+                30.0f);
+            ++SpawnedDestructionCount;
+            AuthoredDestructionCount +=
+                Destruction->IsUsingAuthoredVFXAssets() ? 1 : 0;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DESTRUCTION_VFX_REVIEW_READY] revision=destruction-vfx-v1 presentations=%d authored=%d ordinaryViewsHidden=%d terrainShelvesHidden=%d reducedMotion=%s reducedFlashing=%s collision=false navigation=false authoritative=false editorOnly=true finalArt=false"),
+            SpawnedDestructionCount,
+            AuthoredDestructionCount,
+            HiddenOrdinaryViewCount,
+            HiddenTerrainShelfCount,
+            bReducedPresentation ? TEXT("true") : TEXT("false"),
+            bReducedPresentation ? TEXT("true") : TEXT("false"));
+    }
+#endif
+
+#if !UE_BUILD_SHIPPING
     if (FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesFutureWellArtReview")))
@@ -652,6 +766,9 @@ void AEchoesGameMode::BeginPlay()
              FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesPresentationVFXReview")) ||
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesDestructionVFXReview")) ||
              FParse::Value(
                  FCommandLine::Get(),
                  TEXT("EchoesGlassScarReview="),

@@ -30,6 +30,7 @@ public:
     [[nodiscard]] uint32 GetEntityId() const { return EntityId; }
     [[nodiscard]] uint8 GetOwnerPlayerId() const { return OwnerPlayerId; }
     [[nodiscard]] echoes::sim::EntityType GetEntityType() const { return EntityType; }
+    [[nodiscard]] echoes::sim::Faction GetEntityFaction() const { return EntityFaction; }
     [[nodiscard]] bool IsSelected() const { return bSelected; }
     [[nodiscard]] bool IsUsingAuthoredSelectionVFX() const
     {
