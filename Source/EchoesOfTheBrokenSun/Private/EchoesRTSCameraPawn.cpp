@@ -123,7 +123,7 @@ void AEchoesRTSCameraPawn::BeginPlay()
         SpringArm->TargetArmLength =
             bOverview
                 ? 10800.0f
-                : ((bBuriedCauseway || bFoldedVerge) ? 2850.0f : 2300.0f);
+                : (bFoldedVerge ? 3350.0f : (bBuriedCauseway ? 2850.0f : 2300.0f));
         SpringArm->SetRelativeRotation(
             FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
