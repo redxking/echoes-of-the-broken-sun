@@ -468,8 +468,10 @@ void AEchoesHUD::DrawHUD()
                 EchoesController->GetNetworkScopedView())
         {
             SelectionLine = FString::Printf(
-                TEXT("AUTHORITY SNAPSHOT  %llu     Local selection and order submission disabled"),
-                static_cast<unsigned long long>(RemoteView->snapshotId));
+                TEXT("AUTHORITY SNAPSHOT  %llu     Selected  %d     Formation  %s"),
+                static_cast<unsigned long long>(RemoteView->snapshotId),
+                SelectedIds.Num(),
+                *EchoesController->GetFormationLabel());
         }
     }
     DrawText(
@@ -488,7 +490,7 @@ void AEchoesHUD::DrawHUD()
     const bool bNetworkRemoteView = NetworkView != nullptr;
     DrawText(
         bNetworkRemoteView
-            ? TEXT("REMOTE VIEW  WASD / edge: pan  Wheel: zoom     Order input is not enabled in this transport slice")
+            ? TEXT("ONLINE  WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Space] keyboard order")
             : TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order"),
         SecondaryColor,
         TextX,
@@ -505,7 +507,9 @@ void AEchoesHUD::DrawHUD()
                       echoes::sim::Faction::KharuunAssemblies;
     const FString FactionControlLine =
         bNetworkRemoteView
-            ? TEXT("NETWORK COMMAND ADAPTERS  pending qualification // scoped battlefield observation only")
+            ? bKharuunControls
+                ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
+                : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build")
         : bKharuunControls
             ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
             : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
@@ -2037,7 +2041,7 @@ void AEchoesHUD::DrawMatchResult(
             EEchoesOperationMode::CampaignShapeOfSilence;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
-        : Outcome == echoes::sim::MatchOutcome::Player0Victory;
+        : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult

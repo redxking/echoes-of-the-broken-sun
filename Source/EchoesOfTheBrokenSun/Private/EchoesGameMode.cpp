@@ -356,7 +356,9 @@ void AEchoesGameMode::BeginPlay()
                     : 0),
             UEchoesSimulationSubsystem::OpponentPlayerId,
             FParse::Param(
-                FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke"))
+                FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")) ||
+                    FParse::Param(
+                        FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke"))
                 ? TEXT("true")
                 : TEXT("false"));
     }

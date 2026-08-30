@@ -63,6 +63,18 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
              RateLimiter.TryConsume(11.0) &&
                  RateLimiter.CurrentCount() == 1);
 
+    echoes::network::CommandRateLimiter IntentLimiter;
+    TestTrue(TEXT("One bounded batch may consume the full intent budget"),
+             IntentLimiter.TryConsume(
+                 20.0,
+                 echoes::network::CommandRateLimiter::MaximumIntentsPerWindow) &&
+                 IntentLimiter.CurrentCount() == 1 &&
+                 IntentLimiter.CurrentIntentCount() == 1024);
+    TestFalse(TEXT("Intent budget rejects another request in the same window"),
+              IntentLimiter.TryConsume(20.5, 1));
+    TestFalse(TEXT("A single over-budget intent count fails closed"),
+              IntentLimiter.TryConsume(21.0, 1025));
+
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
     SimulationConfig RuntimeConfig{16, 16, 20, 77};
@@ -93,6 +105,33 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                  DecodeStatus::Ok);
     TestTrue(TEXT("Decoded command request is exact"),
              DecodedRequest == Request);
+
+    CommandBatchRequest Batch{};
+    Batch.clientBatchId = 1;
+    CommandIntent FirstIntent{};
+    FirstIntent.type = CommandType::Move;
+    FirstIntent.actor = 10;
+    FirstIntent.position = Vec2::FromTiles(5, 4);
+    CommandIntent SecondIntent = FirstIntent;
+    SecondIntent.actor = 20;
+    SecondIntent.position = Vec2::FromTiles(6, 4);
+    Batch.intents = {FirstIntent, SecondIntent};
+    const std::vector<std::uint8_t> BatchBytes =
+        EncodeCommandBatchRequest(Batch);
+    const TArray<uint8> UnrealBatchBytes =
+        echoes::network::ToByteArray(BatchBytes);
+    CommandBatchRequest DecodedBatch{};
+    TestTrue(TEXT("Unreal byte arrays preserve canonical multi-actor batches"),
+             !UnrealBatchBytes.IsEmpty() &&
+                 DecodeCommandBatchRequest(
+                     echoes::network::AsByteSpan(UnrealBatchBytes),
+                     DecodedBatch) == DecodeStatus::Ok &&
+                 DecodedBatch == Batch);
+    std::vector<std::uint8_t> TamperedBatch = BatchBytes;
+    TamperedBatch.back() ^= 1;
+    TestTrue(TEXT("Tampered multi-actor batches fail closed"),
+             DecodeCommandBatchRequest(TamperedBatch, DecodedBatch) ==
+                 DecodeStatus::IntegrityMismatch);
 
     CommandAdmissionContext Context{};
     Context.player = 1;

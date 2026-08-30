@@ -2799,6 +2799,67 @@ void TestNetworkProtocolAdmissionAndHardening() {
     REQUIRE(DecodeCommandRequest(malformed, decodedRequest) ==
             DecodeStatus::IntegrityMismatch);
 
+    CommandBatchRequest batch{};
+    batch.clientBatchId = 9;
+    CommandIntent firstIntent{};
+    firstIntent.type = CommandType::Move;
+    firstIntent.actor = 44;
+    firstIntent.position = Vec2::FromTiles(4, 5);
+    CommandIntent secondIntent{};
+    secondIntent.type = CommandType::Attack;
+    secondIntent.actor = 55;
+    secondIntent.target = 77;
+    secondIntent.position = Vec2::FromTiles(7, 8);
+    secondIntent.wellChoice = FutureWellChoice::Reshape;
+    batch.intents = {firstIntent, secondIntent};
+    const std::vector<std::uint8_t> batchBytes =
+        EncodeCommandBatchRequest(batch);
+    REQUIRE(!batchBytes.empty());
+    REQUIRE(batchBytes.size() < kMaximumCommandBatchBytes);
+    REQUIRE(batchBytes == EncodeCommandBatchRequest(batch));
+    CommandBatchRequest decodedBatch{};
+    REQUIRE(DecodeCommandBatchRequest(batchBytes, decodedBatch) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedBatch == batch);
+
+    CommandBatchRequest invalidBatch = batch;
+    invalidBatch.clientBatchId = 0;
+    REQUIRE(EncodeCommandBatchRequest(invalidBatch).empty());
+    invalidBatch = batch;
+    invalidBatch.intents.clear();
+    REQUIRE(EncodeCommandBatchRequest(invalidBatch).empty());
+    invalidBatch = batch;
+    std::reverse(invalidBatch.intents.begin(), invalidBatch.intents.end());
+    REQUIRE(EncodeCommandBatchRequest(invalidBatch).empty());
+    invalidBatch = batch;
+    invalidBatch.intents[1].actor = invalidBatch.intents[0].actor;
+    REQUIRE(EncodeCommandBatchRequest(invalidBatch).empty());
+    invalidBatch = batch;
+    invalidBatch.intents.assign(
+        kMaximumCommandsPerBatch + 1, firstIntent);
+    REQUIRE(EncodeCommandBatchRequest(invalidBatch).empty());
+
+    malformed = batchBytes;
+    malformed[malformed.size() - 1] ^= 1;
+    REQUIRE(DecodeCommandBatchRequest(malformed, decodedBatch) ==
+            DecodeStatus::IntegrityMismatch);
+    malformed = batchBytes;
+    malformed[18] = 1;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCommandBatchRequest(malformed, decodedBatch) ==
+            DecodeStatus::InvalidEncoding);
+    malformed = batchBytes;
+    malformed[21] = 0;
+    malformed[22] = 0;
+    malformed[23] = 0;
+    malformed[24] = 0;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCommandBatchRequest(malformed, decodedBatch) ==
+            DecodeStatus::InvalidEncoding);
+    malformed.assign(kMaximumCommandBatchBytes + 1, 0);
+    REQUIRE(DecodeCommandBatchRequest(malformed, decodedBatch) ==
+            DecodeStatus::PacketTooLarge);
+
     Simulation simulation({16, 16, 20, 31});
     AddTwoPlayers(simulation);
     const EntityId remoteWorker = simulation.SpawnEntity(

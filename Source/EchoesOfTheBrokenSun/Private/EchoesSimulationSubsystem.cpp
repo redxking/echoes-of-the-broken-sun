@@ -412,6 +412,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const bool bUseKharuunSystemsPresentation = false;
     const bool bUsePrologueCompletionPresentation = false;
     const bool bUsePointerCombatGuardPresentation = false;
+    const bool bUseNetworkMatchSmoke = false;
 #else
     const bool bUseResearchPresentation =
         !bUseStressScenario &&
@@ -436,6 +437,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesPointerCombatGuardReview"));
+    const bool bUseNetworkMatchSmoke =
+        !bUseStressScenario &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke"));
 #endif
     const int32 PresentationModeCount =
         (bUseResearchPresentation ? 1 : 0) +
@@ -472,7 +476,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const bool bUseAnyControlledPresentation =
         bUseAnyResearchPresentation || bUseKharuunSystemsPresentation ||
         bUsePrologueCompletionPresentation ||
-        bUsePointerCombatGuardPresentation;
+        bUsePointerCombatGuardPresentation || bUseNetworkMatchSmoke;
     if (bUsePrologueCompletionPresentation &&
         SelectedOperation != EEchoesOperationMode::CampaignPrologue)
     {
@@ -767,7 +771,47 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 49, 58);
             SpawnUnit(Owner, ForceFaction, EntityType::UtilityStructure, 58, 53);
         };
-        if (bUsePointerCombatGuardPresentation)
+        if (bUseNetworkMatchSmoke)
+        {
+            const EntityId AuthorityCore = SpawnUnit(
+                LocalPlayerId,
+                ScenarioLocalFaction,
+                EntityType::CommandCore,
+                18,
+                18);
+            const EntityId RemoteCore = SpawnUnit(
+                OpponentPlayerId,
+                ScenarioOpponentFaction,
+                EntityType::CommandCore,
+                54,
+                54);
+            constexpr int32 RemoteAttackerCount = 24;
+            EntityId FirstRemoteAttacker = 0;
+            EntityId LastRemoteAttacker = 0;
+            for (int32 Index = 0; Index < RemoteAttackerCount; ++Index)
+            {
+                const EntityId Attacker = SpawnUnit(
+                    OpponentPlayerId,
+                    ScenarioOpponentFaction,
+                    EntityType::Soldier,
+                    21,
+                    18);
+                FirstRemoteAttacker = FirstRemoteAttacker == 0
+                    ? Attacker
+                    : FirstRemoteAttacker;
+                LastRemoteAttacker = Attacker;
+            }
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_NETWORK_MATCH_FIXTURE] authorityCore=%u remoteCore=%u remoteAttackers=%d firstRemoteAttacker=%u lastRemoteAttacker=%u controlledNonshipping=true ordinaryCombatResolution=true"),
+                AuthorityCore,
+                RemoteCore,
+                RemoteAttackerCount,
+                FirstRemoteAttacker,
+                LastRemoteAttacker);
+        }
+        else if (bUsePointerCombatGuardPresentation)
         {
             const EntityId PointerCore = SpawnUnit(
                 LocalPlayerId,

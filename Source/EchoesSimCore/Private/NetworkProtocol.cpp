@@ -17,6 +17,12 @@ constexpr std::size_t kCommandPacketBytes =
     kHeaderBytes + 2 * sizeof(std::uint64_t) + sizeof(std::uint8_t) +
     2 * sizeof(std::uint32_t) + 2 * sizeof(std::int32_t) +
     4 * sizeof(std::uint8_t) + kIntegrityBytes;
+constexpr std::size_t kCommandIntentBytes =
+    sizeof(std::uint8_t) + 2 * sizeof(std::uint32_t) +
+    2 * sizeof(std::int32_t) + 4 * sizeof(std::uint8_t);
+constexpr std::size_t kCommandBatchMinimumBytes =
+    kHeaderBytes + sizeof(std::uint64_t) + 2 * sizeof(std::uint16_t) +
+    kIntegrityBytes;
 constexpr std::size_t kScopedEntityBytes = 27;
 constexpr std::size_t kScopedKeyframeMinimumBytes = 90;
 constexpr std::size_t kScopedTileChangeBytes = 5;
@@ -270,6 +276,47 @@ void AppendIntegrity(Writer& writer) {
     return player < kMaximumPlayers;
 }
 
+void WriteCommandIntent(Writer& writer, const CommandIntent& intent) {
+    writer.U8(static_cast<std::uint8_t>(intent.type));
+    writer.U32(intent.actor);
+    writer.U32(intent.target);
+    writer.I32(intent.position.x.Raw());
+    writer.I32(intent.position.y.Raw());
+    writer.U8(static_cast<std::uint8_t>(intent.buildType));
+    writer.U8(static_cast<std::uint8_t>(intent.wellChoice));
+    writer.U8(static_cast<std::uint8_t>(intent.warformAdaptation));
+    writer.U8(static_cast<std::uint8_t>(intent.researchType));
+}
+
+[[nodiscard]] bool ReadCommandIntent(Reader& reader, CommandIntent& intent) {
+    std::uint8_t commandType = 0;
+    std::uint8_t buildType = 0;
+    std::uint8_t wellChoice = 0;
+    std::uint8_t adaptation = 0;
+    std::uint8_t research = 0;
+    std::int32_t positionX = 0;
+    std::int32_t positionY = 0;
+    if (!reader.U8(commandType) || !reader.U32(intent.actor) ||
+        !reader.U32(intent.target) || !reader.I32(positionX) ||
+        !reader.I32(positionY) || !reader.U8(buildType) ||
+        !reader.U8(wellChoice) || !reader.U8(adaptation) ||
+        !reader.U8(research) || intent.actor == 0 ||
+        !IsValidCommandTypeEncoding(commandType) ||
+        !IsValidEntityTypeEncoding(buildType) ||
+        !IsValidWellChoiceEncoding(wellChoice) ||
+        !IsValidWarformAdaptationEncoding(adaptation) ||
+        !IsValidResearchTypeEncoding(research)) {
+        return false;
+    }
+    intent.type = static_cast<CommandType>(commandType);
+    intent.position = Vec2::FromRaw(positionX, positionY);
+    intent.buildType = static_cast<EntityType>(buildType);
+    intent.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+    intent.warformAdaptation = static_cast<WarformAdaptation>(adaptation);
+    intent.researchType = static_cast<ResearchType>(research);
+    return true;
+}
+
 [[nodiscard]] bool IsValidScopedOwner(PlayerId player) {
     return IsValidScopedPlayer(player) || player == kNeutralPlayer;
 }
@@ -471,6 +518,86 @@ DecodeStatus DecodeCommandRequest(std::span<const std::uint8_t> bytes,
     decoded.warformAdaptation = static_cast<WarformAdaptation>(adaptation);
     decoded.researchType = static_cast<ResearchType>(research);
     request = decoded;
+    return DecodeStatus::Ok;
+}
+
+std::vector<std::uint8_t> EncodeCommandBatchRequest(
+    const CommandBatchRequest& request) {
+    if (request.clientBatchId == 0 || request.intents.empty() ||
+        request.intents.size() > kMaximumCommandsPerBatch) {
+        return {};
+    }
+    EntityId priorActor = 0;
+    for (const CommandIntent& intent : request.intents) {
+        if (intent.actor <= priorActor ||
+            !IsValidCommandTypeEncoding(
+                static_cast<std::uint8_t>(intent.type)) ||
+            !IsValidEntityTypeEncoding(
+                static_cast<std::uint8_t>(intent.buildType)) ||
+            !IsValidWellChoiceEncoding(
+                static_cast<std::uint8_t>(intent.wellChoice)) ||
+            !IsValidWarformAdaptationEncoding(
+                static_cast<std::uint8_t>(intent.warformAdaptation)) ||
+            !IsValidResearchTypeEncoding(
+                static_cast<std::uint8_t>(intent.researchType))) {
+            return {};
+        }
+        priorActor = intent.actor;
+    }
+    Writer writer;
+    WriteHeader(writer, PacketKind::CommandBatchRequest);
+    writer.U64(request.clientBatchId);
+    writer.U16(static_cast<std::uint16_t>(request.intents.size()));
+    writer.U16(0);
+    for (const CommandIntent& intent : request.intents) {
+        WriteCommandIntent(writer, intent);
+    }
+    AppendIntegrity(writer);
+    std::vector<std::uint8_t> encoded = std::move(writer).Finish();
+    return encoded.size() <= kMaximumCommandBatchBytes
+               ? std::move(encoded)
+               : std::vector<std::uint8_t>{};
+}
+
+DecodeStatus DecodeCommandBatchRequest(
+    std::span<const std::uint8_t> bytes,
+    CommandBatchRequest& request) {
+    const DecodeStatus packetStatus = ValidateVariablePacket(
+        bytes, kCommandBatchMinimumBytes, kMaximumCommandBatchBytes);
+    if (packetStatus != DecodeStatus::Ok) {
+        return packetStatus;
+    }
+    Reader reader(bytes.first(bytes.size() - kIntegrityBytes));
+    const DecodeStatus headerStatus =
+        ReadHeader(reader, PacketKind::CommandBatchRequest);
+    if (headerStatus != DecodeStatus::Ok) {
+        return headerStatus;
+    }
+    CommandBatchRequest decoded{};
+    std::uint16_t intentCount = 0;
+    std::uint16_t reserved = 0;
+    std::size_t intentBytes = 0;
+    if (!reader.U64(decoded.clientBatchId) || !reader.U16(intentCount) ||
+        !reader.U16(reserved) || decoded.clientBatchId == 0 || reserved != 0 ||
+        intentCount == 0 || intentCount > kMaximumCommandsPerBatch ||
+        !CheckedMultiplySize(intentCount, kCommandIntentBytes, intentBytes) ||
+        reader.Remaining() != intentBytes) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    decoded.intents.reserve(intentCount);
+    EntityId priorActor = 0;
+    for (std::uint16_t index = 0; index < intentCount; ++index) {
+        CommandIntent intent{};
+        if (!ReadCommandIntent(reader, intent) || intent.actor <= priorActor) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorActor = intent.actor;
+        decoded.intents.push_back(intent);
+    }
+    if (reader.Remaining() != 0) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    request = std::move(decoded);
     return DecodeStatus::Ok;
 }
 

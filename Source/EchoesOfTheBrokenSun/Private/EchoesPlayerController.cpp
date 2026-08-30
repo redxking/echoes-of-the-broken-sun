@@ -47,6 +47,20 @@ constexpr float NetworkTileWorldSize = 200.0f;
                ? TEXT("KHARUUN ASSEMBLIES")
                : TEXT("MERIDIAN COMPACT");
 }
+
+[[nodiscard]] bool OutcomeBelongsToSeat(
+    echoes::sim::MatchOutcome Outcome,
+    uint8 Seat)
+{
+    switch (Outcome)
+    {
+        case echoes::sim::MatchOutcome::Player0Victory: return Seat == 0;
+        case echoes::sim::MatchOutcome::Player1Victory: return Seat == 1;
+        case echoes::sim::MatchOutcome::Player2Victory: return Seat == 2;
+        case echoes::sim::MatchOutcome::Player3Victory: return Seat == 3;
+        default: return false;
+    }
+}
 }
 
 AEchoesPlayerController::AEchoesPlayerController()
@@ -86,6 +100,9 @@ void AEchoesPlayerController::BeginPlay()
 
     bNetworkClientSmoke =
         FParse::Param(FCommandLine::Get(), TEXT("EchoesNetworkClientSmoke"));
+    bNetworkMatchSmoke =
+        FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkMatchClientSmoke"));
     if (GetNetMode() == NM_Client)
     {
         GetWorldTimerManager().SetTimerForNextTick(
@@ -112,6 +129,194 @@ void AEchoesPlayerController::ConfigureNetworkSeat(uint8 Seat)
     NetworkCommandContext.player = Seat;
     NetworkCommandContext.minimumInputDelayTicks = 3;
     NetworkCommandContext.maximumLeadTicks = 40;
+}
+
+bool AEchoesPlayerController::IsNetworkClientControlActive() const
+{
+    return GetNetMode() == NM_Client && IsLocalController() &&
+           bNetworkCompatibilityAccepted && bNetworkMatchStarted &&
+           NetworkSeat < echoes::sim::kMaximumPlayers &&
+           GetNetworkScopedView() != nullptr && !bMatchResultVisible;
+}
+
+const echoes::sim::net::ScopedEntityState*
+AEchoesPlayerController::FindNetworkEntity(uint32 EntityId) const
+{
+    const echoes::sim::net::ScopedViewKeyframe* View = GetNetworkScopedView();
+    if (View == nullptr)
+    {
+        return nullptr;
+    }
+    const auto Entity = std::lower_bound(
+        View->entities.begin(),
+        View->entities.end(),
+        EntityId,
+        [](const echoes::sim::net::ScopedEntityState& Candidate, uint32 Id)
+        {
+            return Candidate.id < Id;
+        });
+    return Entity != View->entities.end() && Entity->id == EntityId
+               ? &*Entity
+               : nullptr;
+}
+
+FVector AEchoesPlayerController::NetworkSimToWorld(
+    const echoes::sim::Vec2& Position) const
+{
+    const echoes::sim::net::ScopedViewKeyframe* View = GetNetworkScopedView();
+    if (View == nullptr)
+    {
+        return FVector::ZeroVector;
+    }
+    const float MapHalfX = static_cast<float>(View->mapWidthTiles) * 0.5f;
+    const float MapHalfY = static_cast<float>(View->mapHeightTiles) * 0.5f;
+    const float TileX = static_cast<float>(Position.x.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale);
+    const float TileY = static_cast<float>(Position.y.Raw()) /
+                        static_cast<float>(echoes::sim::kFixedScale);
+    return FVector(
+        (TileX - MapHalfX) * NetworkTileWorldSize,
+        (TileY - MapHalfY) * NetworkTileWorldSize,
+        0.0f);
+}
+
+echoes::sim::Vec2 AEchoesPlayerController::NetworkWorldToSim(
+    const FVector& Position) const
+{
+    const echoes::sim::net::ScopedViewKeyframe* View = GetNetworkScopedView();
+    if (View == nullptr)
+    {
+        return {};
+    }
+    const double MapHalfX = static_cast<double>(View->mapWidthTiles) * 0.5;
+    const double MapHalfY = static_cast<double>(View->mapHeightTiles) * 0.5;
+    return echoes::sim::Vec2::FromRaw(
+        FMath::RoundToInt32(
+            (static_cast<double>(Position.X) / NetworkTileWorldSize + MapHalfX) *
+            echoes::sim::kFixedScale),
+        FMath::RoundToInt32(
+            (static_cast<double>(Position.Y) / NetworkTileWorldSize + MapHalfY) *
+            echoes::sim::kFixedScale));
+}
+
+bool AEchoesPlayerController::SubmitNetworkCommandBatch(
+    TArray<echoes::sim::net::CommandIntent> Intents,
+    const FString& OrderLabel,
+    const FVector& MarkerLocation,
+    EEchoesCommandMarkerType MarkerType)
+{
+    if (!IsNetworkClientControlActive())
+    {
+        SetStatusMessage(TEXT("[NETWORK_NOT_READY] The remote battlefield is not accepting orders."));
+        return false;
+    }
+    if (Intents.IsEmpty() ||
+        Intents.Num() >
+            static_cast<int32>(echoes::sim::net::kMaximumCommandsPerBatch) ||
+        NextNetworkBatchId == 0 ||
+        NextNetworkBatchId == std::numeric_limits<uint64>::max())
+    {
+        SetStatusMessage(TEXT("[NETWORK_BATCH_INVALID] The selected order exceeds the bounded command batch."));
+        return false;
+    }
+    Intents.Sort(
+        [](const echoes::sim::net::CommandIntent& Left,
+           const echoes::sim::net::CommandIntent& Right)
+        {
+            return Left.actor < Right.actor;
+        });
+    for (int32 Index = 1; Index < Intents.Num(); ++Index)
+    {
+        if (Intents[Index - 1].actor == Intents[Index].actor)
+        {
+            SetStatusMessage(TEXT("[NETWORK_BATCH_DUPLICATE] Each selected actor may receive one order per gesture."));
+            return false;
+        }
+    }
+
+    echoes::sim::net::CommandBatchRequest Request{};
+    Request.clientBatchId = NextNetworkBatchId++;
+    Request.intents.reserve(static_cast<std::size_t>(Intents.Num()));
+    for (const echoes::sim::net::CommandIntent& Intent : Intents)
+    {
+        Request.intents.push_back(Intent);
+    }
+    const std::vector<std::uint8_t> Encoded =
+        echoes::sim::net::EncodeCommandBatchRequest(Request);
+    if (Encoded.empty())
+    {
+        SetStatusMessage(TEXT("[NETWORK_BATCH_ENCODING_FAILED] The order was not sent."));
+        return false;
+    }
+    ServerSubmitNetworkCommandBatch(echoes::network::ToByteArray(Encoded));
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("%s: %d actor intent%s submitted for authority admission."),
+            *OrderLabel,
+            Intents.Num(),
+            Intents.Num() == 1 ? TEXT("") : TEXT("s")),
+        4.0f);
+    ShowAcceptedCommandMarker(
+        MarkerLocation, MarkerType, Intents.Num());
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_COMMAND_BATCH_SENT] batch=%llu intents=%d bytes=%d canonicalActors=true authorityAssignsSequence=true authorityAssignsTick=true"),
+        static_cast<unsigned long long>(Request.clientBatchId),
+        Intents.Num(),
+        static_cast<int32>(Encoded.size()));
+    return true;
+}
+
+bool AEchoesPlayerController::SubmitNetworkSelectionCommand(
+    echoes::sim::CommandType CommandType,
+    uint32 TargetId,
+    const FVector& Destination,
+    bool bUseFormation,
+    bool bUseActorPosition,
+    const FString& OrderLabel,
+    EEchoesCommandMarkerType MarkerType,
+    echoes::sim::EntityType BuildType,
+    echoes::sim::WarformAdaptation Adaptation,
+    echoes::sim::ResearchType Research)
+{
+    PruneSelection();
+    if (SelectedEntityIds.IsEmpty())
+    {
+        SetStatusMessage(TEXT("[NO_SELECTION] Select one or more owned entities first."));
+        return false;
+    }
+    const TArray<FVector> FormationDestinations =
+        bUseFormation
+            ? BuildSelectedFormationDestinations(
+                  Destination, SelectedEntityIds.Num())
+            : TArray<FVector>{};
+    TArray<echoes::sim::net::CommandIntent> Intents;
+    Intents.Reserve(SelectedEntityIds.Num());
+    for (int32 Index = 0; Index < SelectedEntityIds.Num(); ++Index)
+    {
+        const echoes::sim::net::ScopedEntityState* Actor =
+            FindNetworkEntity(SelectedEntityIds[Index]);
+        if (Actor == nullptr || Actor->owner != NetworkSeat)
+        {
+            continue;
+        }
+        echoes::sim::net::CommandIntent Intent{};
+        Intent.type = CommandType;
+        Intent.actor = Actor->id;
+        Intent.target = TargetId;
+        Intent.position = bUseActorPosition
+            ? Actor->position
+            : NetworkWorldToSim(
+                  bUseFormation ? FormationDestinations[Index] : Destination);
+        Intent.wellChoice = FutureWellChoice;
+        Intent.buildType = BuildType;
+        Intent.warformAdaptation = Adaptation;
+        Intent.researchType = Research;
+        Intents.Add(Intent);
+    }
+    return SubmitNetworkCommandBatch(
+        MoveTemp(Intents), OrderLabel, Destination, MarkerType);
 }
 
 void AEchoesPlayerController::SubmitNetworkCompatibilityHello()
@@ -237,7 +442,7 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             Display,
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=true reason=%s"),
             *StableReason);
-        if (bNetworkClientSmoke ||
+        if (bNetworkClientSmoke || bNetworkMatchSmoke ||
             FParse::Param(
                 FCommandLine::Get(), TEXT("EchoesNetworkVisualReview")))
         {
@@ -258,7 +463,7 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=false reason=%s"),
             *StableReason);
     }
-    if (!bAccepted && bNetworkClientSmoke)
+    if (!bAccepted && (bNetworkClientSmoke || bNetworkMatchSmoke))
     {
         FPlatformMisc::RequestExit(false);
     }
@@ -491,7 +696,17 @@ void AEchoesPlayerController::SendScopedUpdate()
     PendingNetworkSnapshotDigests.Add(
         Current.snapshotId, Current.scopedDigest);
     LastSentNetworkKeyframe = Current;
-    if (DeltaBytes.empty() || DeltaBytes.size() >= KeyframeBytes.size())
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const bool bFinalState =
+        Simulation != nullptr &&
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing;
+    if (bFinalState || DeltaBytes.empty() ||
+        DeltaBytes.size() >= KeyframeBytes.size())
     {
         ClientReceiveScopedKeyframe(
             echoes::network::ToByteArray(KeyframeBytes));
@@ -507,8 +722,10 @@ void AEchoesPlayerController::SendScopedUpdate()
             static_cast<int32>(Current.entities.size()),
             static_cast<int32>(Current.tiles.size()),
             static_cast<unsigned long long>(Current.scopedDigest),
-            DeltaError.empty() ? TEXT("deltaNotSmaller")
+            bFinalState ? TEXT("finalReliableKeyframe")
+            : DeltaError.empty() ? TEXT("deltaNotSmaller")
                                : UTF8_TO_TCHAR(DeltaError.c_str()));
+        PublishNetworkMatchResultIfFinished(Current);
         return;
     }
     ClientReceiveScopedDelta(echoes::network::ToByteArray(DeltaBytes));
@@ -526,6 +743,127 @@ void AEchoesPlayerController::SendScopedUpdate()
         static_cast<int32>(Delta.entityUpserts.size()),
         static_cast<int32>(Delta.removedEntityIds.size()),
         static_cast<unsigned long long>(Delta.scopedDigest));
+    PublishNetworkMatchResultIfFinished(Current);
+}
+
+void AEchoesPlayerController::PublishNetworkMatchResultIfFinished(
+    const echoes::sim::net::ScopedViewKeyframe& FinalView)
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const echoes::sim::MatchOutcome Outcome =
+        Simulation != nullptr
+            ? Simulation->Outcome()
+            : echoes::sim::MatchOutcome::Ongoing;
+    if (!HasAuthority() || bNetworkMatchResultSent || Simulation == nullptr ||
+        Outcome == echoes::sim::MatchOutcome::Ongoing ||
+        FinalView.simulationTick != Simulation->CurrentTick())
+    {
+        return;
+    }
+    bNetworkMatchResultSent = true;
+    GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
+    ClientReceiveNetworkMatchResult(
+        static_cast<uint8>(Outcome),
+        FinalView.simulationTick,
+        FinalView.snapshotId,
+        FinalView.scopedDigest);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_RESULT_SENT] player=%u outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu reliableFinalKeyframe=true"),
+        NetworkSeat,
+        static_cast<uint8>(Outcome),
+        static_cast<unsigned long long>(FinalView.simulationTick),
+        static_cast<unsigned long long>(FinalView.snapshotId),
+        static_cast<unsigned long long>(FinalView.scopedDigest));
+}
+
+void AEchoesPlayerController::ClientReceiveNetworkMatchResult_Implementation(
+    uint8 OutcomeValue,
+    uint64 FinalTick,
+    uint64 FinalSnapshotId,
+    uint64 FinalScopedDigest)
+{
+    const echoes::sim::MatchOutcome Outcome =
+        static_cast<echoes::sim::MatchOutcome>(OutcomeValue);
+    const echoes::sim::net::ScopedViewKeyframe* View = GetNetworkScopedView();
+    if (bNetworkMatchResultReceived ||
+        Outcome == echoes::sim::MatchOutcome::Ongoing ||
+        OutcomeValue >
+            static_cast<uint8>(echoes::sim::MatchOutcome::Player3Victory) ||
+        View == nullptr || View->snapshotId != FinalSnapshotId ||
+        View->simulationTick != FinalTick ||
+        View->scopedDigest != FinalScopedDigest)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_MATCH_RESULT_REJECTED] outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu acceptedSnapshot=%llu acceptedTick=%llu acceptedDigest=%llu reason=NET_RESULT_STATE_MISMATCH"),
+            OutcomeValue,
+            static_cast<unsigned long long>(FinalTick),
+            static_cast<unsigned long long>(FinalSnapshotId),
+            static_cast<unsigned long long>(FinalScopedDigest),
+            static_cast<unsigned long long>(View != nullptr ? View->snapshotId : 0),
+            static_cast<unsigned long long>(View != nullptr ? View->simulationTick : 0),
+            static_cast<unsigned long long>(View != nullptr ? View->scopedDigest : 0));
+        return;
+    }
+    bNetworkMatchResultReceived = true;
+    NotifyMatchFinished(Outcome);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_RESULT_RECEIVED] seat=%u outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu stateMatched=true"),
+        NetworkSeat,
+        OutcomeValue,
+        static_cast<unsigned long long>(FinalTick),
+        static_cast<unsigned long long>(FinalSnapshotId),
+        static_cast<unsigned long long>(FinalScopedDigest));
+    if (bNetworkMatchSmoke)
+    {
+        const bool bPresentedVictory = DidPresentedLocalPlayerWin();
+        if (!bNetworkMatchCommandSubmitted || !bNetworkMatchBatchAdmitted ||
+            !bPresentedVictory || Outcome != echoes::sim::MatchOutcome::Player1Victory)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_MATCH_CLIENT_SMOKE_FAILED] submitted=%s batchAdmitted=%s seat=%u outcome=%u presentedVictory=%s"),
+                bNetworkMatchCommandSubmitted ? TEXT("true") : TEXT("false"),
+                bNetworkMatchBatchAdmitted ? TEXT("true") : TEXT("false"),
+                NetworkSeat,
+                OutcomeValue,
+                bPresentedVictory ? TEXT("true") : TEXT("false"));
+            FPlatformMisc::RequestExit(false);
+            return;
+        }
+        bNetworkMatchSmokeCompletionSent = true;
+        ServerConfirmNetworkMatchSmokeComplete(
+            OutcomeValue,
+            FinalTick,
+            FinalSnapshotId,
+            FinalScopedDigest);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_MATCH_CLIENT_SMOKE_PASSED] seat=%u outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu batchAdmitted=true ordinaryCombatResolution=true presentedVictory=true finalStateMatched=true separateProcess=true"),
+            NetworkSeat,
+            OutcomeValue,
+            static_cast<unsigned long long>(FinalTick),
+            static_cast<unsigned long long>(FinalSnapshotId),
+            static_cast<unsigned long long>(FinalScopedDigest));
+        GetWorldTimerManager().SetTimer(
+            NetworkClientExitTimer,
+            this,
+            &AEchoesPlayerController::FinishNetworkClientSmoke,
+            0.5f,
+            false);
+    }
 }
 
 void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
@@ -625,6 +963,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
         static_cast<int32>(Keyframe.tiles.size()),
         static_cast<unsigned long long>(Keyframe.scopedDigest),
         UTF8_TO_TCHAR(echoes::network::StableId(Acceptance)));
+    TrySubmitNetworkMatchSmoke(Keyframe);
     TryFinishNetworkClientSmoke();
     if (!bNetworkClientSmoke || bNetworkCommandSubmitted)
     {
@@ -1247,6 +1586,231 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
     }
 }
 
+void AEchoesPlayerController::ServerSubmitNetworkCommandBatch_Implementation(
+    const TArray<uint8>& Packet)
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    if (!bNetworkCompatibilityAccepted || !bNetworkMatchStarted ||
+        Bridge == nullptr || Simulation == nullptr)
+    {
+        ClientReceiveCommandBatchAdmission(
+            0,
+            0,
+            0,
+            Simulation != nullptr ? Simulation->CurrentTick() : 0,
+            !bNetworkCompatibilityAccepted
+                ? TEXT("NET_COMPATIBILITY_REQUIRED")
+                : TEXT("NET_MATCH_NOT_STARTED"));
+        return;
+    }
+
+    echoes::sim::net::CommandBatchRequest Batch{};
+    const echoes::sim::net::DecodeStatus Decode =
+        echoes::sim::net::DecodeCommandBatchRequest(
+            echoes::network::AsByteSpan(Packet), Batch);
+    if (Decode != echoes::sim::net::DecodeStatus::Ok)
+    {
+        ClientReceiveCommandBatchAdmission(
+            0,
+            0,
+            0,
+            Simulation->CurrentTick(),
+            FString(UTF8_TO_TCHAR(
+                echoes::sim::net::StableId(Decode).data())));
+        return;
+    }
+
+    const uint64 ExpectedBatchId = LastAcceptedNetworkBatchId + 1;
+    if (ExpectedBatchId == 0 || Batch.clientBatchId != ExpectedBatchId)
+    {
+        ClientReceiveCommandBatchAdmission(
+            Batch.clientBatchId,
+            0,
+            static_cast<int32>(Batch.intents.size()),
+            Simulation->CurrentTick(),
+            TEXT("NET_COMMAND_BATCH_SEQUENCE_UNEXPECTED"));
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_COMMAND_BATCH_REJECTED] player=%u batch=%llu expected=%llu reason=NET_COMMAND_BATCH_SEQUENCE_UNEXPECTED"),
+            NetworkSeat,
+            static_cast<unsigned long long>(Batch.clientBatchId),
+            static_cast<unsigned long long>(ExpectedBatchId));
+        return;
+    }
+    // A syntactically valid next batch consumes the client-batch sequence even
+    // when rate or semantic admission rejects every contained intent.
+    LastAcceptedNetworkBatchId = Batch.clientBatchId;
+
+    const double CommandNow = FPlatformTime::Seconds();
+    if (!NetworkCommandRateLimiter.TryConsume(
+            CommandNow,
+            static_cast<std::uint32_t>(Batch.intents.size())))
+    {
+        ClientReceiveCommandBatchAdmission(
+            Batch.clientBatchId,
+            0,
+            static_cast<int32>(Batch.intents.size()),
+            Simulation->CurrentTick(),
+            TEXT("NET_COMMAND_RATE_LIMITED"));
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_COMMAND_RATE_LIMITED] player=%u requests=%u intents=%u windowSeconds=1 requestLimit=%u intentLimit=%u"),
+            NetworkSeat,
+            NetworkCommandRateLimiter.CurrentCount(),
+            NetworkCommandRateLimiter.CurrentIntentCount(),
+            echoes::network::CommandRateLimiter::MaximumCommandsPerWindow,
+            echoes::network::CommandRateLimiter::MaximumIntentsPerWindow);
+        return;
+    }
+    if (Simulation->CurrentTick() >
+        std::numeric_limits<echoes::sim::Tick>::max() - 3)
+    {
+        ClientReceiveCommandBatchAdmission(
+            Batch.clientBatchId,
+            0,
+            static_cast<int32>(Batch.intents.size()),
+            Simulation->CurrentTick(),
+            TEXT("NET_AUTHORITY_TICK_RANGE_INVALID"));
+        return;
+    }
+
+    const uint64 AssignedExecuteTick = Simulation->CurrentTick() + 3;
+    int32 AcceptedCount = 0;
+    int32 RejectedCount = 0;
+    FString FirstRejection;
+    for (const echoes::sim::net::CommandIntent& Intent : Batch.intents)
+    {
+        uint64 NextSequence = 1;
+        if (NetworkCommandContext.hasAcceptedSequence)
+        {
+            if (NetworkCommandContext.lastAcceptedSequence ==
+                std::numeric_limits<uint64>::max())
+            {
+                ++RejectedCount;
+                if (FirstRejection.IsEmpty())
+                {
+                    FirstRejection = TEXT("NET_COMMAND_SEQUENCE_EXHAUSTED");
+                }
+                continue;
+            }
+            NextSequence = NetworkCommandContext.lastAcceptedSequence + 1;
+        }
+        echoes::sim::net::CommandRequest Request{};
+        Request.sequence = NextSequence;
+        Request.executeTick = AssignedExecuteTick;
+        Request.type = Intent.type;
+        Request.actor = Intent.actor;
+        Request.target = Intent.target;
+        Request.position = Intent.position;
+        Request.buildType = Intent.buildType;
+        Request.wellChoice = Intent.wellChoice;
+        Request.warformAdaptation = Intent.warformAdaptation;
+        Request.researchType = Intent.researchType;
+        std::string Rejection;
+        const echoes::sim::net::CommandAdmissionStatus Admission =
+            Bridge->AdmitNetworkCommand(
+                Request, NetworkCommandContext, &Rejection);
+        if (Admission == echoes::sim::net::CommandAdmissionStatus::Accepted)
+        {
+            ++AcceptedCount;
+        }
+        else
+        {
+            ++RejectedCount;
+            if (FirstRejection.IsEmpty())
+            {
+                FirstRejection = Rejection.empty()
+                    ? FString(UTF8_TO_TCHAR(
+                          echoes::sim::net::StableId(Admission).data()))
+                    : FString(UTF8_TO_TCHAR(Rejection.c_str()));
+            }
+        }
+        UE_LOG(
+            LogEchoes,
+            Verbose,
+            TEXT("[ECHOES_NETWORK_COMMAND_BATCH_INTENT] player=%u batch=%llu actor=%u type=%u status=%s assignedSequence=%llu assignedExecuteTick=%llu"),
+            NetworkSeat,
+            static_cast<unsigned long long>(Batch.clientBatchId),
+            Intent.actor,
+            static_cast<uint8>(Intent.type),
+            UTF8_TO_TCHAR(echoes::sim::net::StableId(Admission).data()),
+            static_cast<unsigned long long>(NextSequence),
+            static_cast<unsigned long long>(AssignedExecuteTick));
+    }
+
+    ClientReceiveCommandBatchAdmission(
+        Batch.clientBatchId,
+        AcceptedCount,
+        RejectedCount,
+        Simulation->CurrentTick(),
+        FirstRejection);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_COMMAND_BATCH_ADMISSION] player=%u batch=%llu intents=%d accepted=%d rejected=%d assignedExecuteTick=%llu lastAcceptedSequence=%llu authorityAssigned=true firstRejection=%s"),
+        NetworkSeat,
+        static_cast<unsigned long long>(Batch.clientBatchId),
+        static_cast<int32>(Batch.intents.size()),
+        AcceptedCount,
+        RejectedCount,
+        static_cast<unsigned long long>(AssignedExecuteTick),
+        static_cast<unsigned long long>(
+            NetworkCommandContext.lastAcceptedSequence),
+        FirstRejection.IsEmpty() ? TEXT("none") : *FirstRejection);
+}
+
+void AEchoesPlayerController::ClientReceiveCommandBatchAdmission_Implementation(
+    uint64 BatchId,
+    int32 AcceptedCount,
+    int32 RejectedCount,
+    uint64 ServerTick,
+    const FString& FirstRejection)
+{
+    const FString Detail = FirstRejection.IsEmpty()
+        ? TEXT("none")
+        : FirstRejection;
+    if (AcceptedCount > 0)
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("ONLINE ORDER %llu — authority accepted %d, rejected %d."),
+                static_cast<unsigned long long>(BatchId),
+                AcceptedCount,
+                RejectedCount),
+            4.0f);
+    }
+    else
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("[ONLINE_ORDER_REJECTED] Batch %llu: %s"),
+                static_cast<unsigned long long>(BatchId),
+                *Detail),
+            5.0f);
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_COMMAND_BATCH_RESULT] batch=%llu accepted=%d rejected=%d serverTick=%llu firstRejection=%s"),
+        static_cast<unsigned long long>(BatchId),
+        AcceptedCount,
+        RejectedCount,
+        static_cast<unsigned long long>(ServerTick),
+        *Detail);
+    if (bNetworkMatchSmoke && BatchId == 1 && AcceptedCount >= 2 &&
+        RejectedCount == 0)
+    {
+        bNetworkMatchBatchAdmitted = true;
+    }
+}
+
 void AEchoesPlayerController::QueueNetworkSmokeHostCommand()
 {
     UEchoesSimulationSubsystem* Bridge =
@@ -1498,6 +2062,73 @@ void AEchoesPlayerController::TryFinishNetworkClientSmoke()
         false);
 }
 
+void AEchoesPlayerController::TrySubmitNetworkMatchSmoke(
+    const echoes::sim::net::ScopedViewKeyframe& Keyframe)
+{
+    if (!bNetworkMatchSmoke || bNetworkMatchCommandSubmitted ||
+        Keyframe.player != NetworkSeat || !IsNetworkClientControlActive())
+    {
+        return;
+    }
+
+    const auto AuthorityCore = std::find_if(
+        Keyframe.entities.begin(),
+        Keyframe.entities.end(),
+        [&](const echoes::sim::net::ScopedEntityState& Entity)
+        {
+            return Entity.owner != NetworkSeat &&
+                   Entity.owner != echoes::sim::kNeutralPlayer &&
+                   Entity.type == echoes::sim::EntityType::CommandCore;
+        });
+    if (AuthorityCore == Keyframe.entities.end())
+    {
+        return;
+    }
+
+    ClearSelection();
+    for (const echoes::sim::net::ScopedEntityState& Entity : Keyframe.entities)
+    {
+        if (Entity.owner == NetworkSeat &&
+            Entity.type == echoes::sim::EntityType::Soldier)
+        {
+            SelectedEntityIds.Add(Entity.id);
+            SetEntitySelected(Entity.id, true);
+        }
+    }
+    if (SelectedEntityIds.Num() < 2)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_MATCH_CLIENT_SMOKE_FAILED] reason=NET_MATCH_FIXTURE_ATTACKERS_UNAVAILABLE selected=%d"),
+            SelectedEntityIds.Num());
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+
+    const FVector TargetWorld = NetworkSimToWorld(AuthorityCore->position);
+    const int32 SubmittedActorCount = SelectedEntityIds.Num();
+    bNetworkMatchCommandSubmitted = SubmitNetworkSelectionCommand(
+        echoes::sim::CommandType::Attack,
+        AuthorityCore->id,
+        TargetWorld,
+        false,
+        false,
+        TEXT("MATCH SMOKE DIRECT ATTACK"),
+        EEchoesCommandMarkerType::Attack);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_ORDER_SUBMITTED] submitted=%s selectedActors=%d targetCore=%u selectionAdapter=true orderAdapter=true batched=true"),
+        bNetworkMatchCommandSubmitted ? TEXT("true") : TEXT("false"),
+        SubmittedActorCount,
+        AuthorityCore->id);
+    if (!bNetworkMatchCommandSubmitted)
+    {
+        FPlatformMisc::RequestExit(false);
+    }
+}
+
 void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
     uint64 SnapshotId)
 {
@@ -1526,6 +2157,70 @@ void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
         static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
     if (FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
+    {
+        GetWorldTimerManager().SetTimer(
+            NetworkServerExitTimer,
+            FTimerDelegate::CreateLambda(
+                []()
+                {
+                    FPlatformMisc::RequestExit(false);
+                }),
+            0.75f,
+            false);
+    }
+}
+
+void AEchoesPlayerController::ServerConfirmNetworkMatchSmokeComplete_Implementation(
+    uint8 OutcomeValue,
+    uint64 FinalTick,
+    uint64 FinalSnapshotId,
+    uint64 FinalScopedDigest)
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const bool bFinalViewExact = LastSentNetworkKeyframe.has_value() &&
+        LastSentNetworkKeyframe->snapshotId == FinalSnapshotId &&
+        LastSentNetworkKeyframe->simulationTick == FinalTick &&
+        LastSentNetworkKeyframe->scopedDigest == FinalScopedDigest;
+    const bool bAcknowledgedExact =
+        LastAcknowledgedNetworkSnapshotId == FinalSnapshotId &&
+        !PendingNetworkSnapshotDigests.Contains(FinalSnapshotId);
+    const bool bOutcomeExact = Simulation != nullptr &&
+        static_cast<uint8>(Simulation->Outcome()) == OutcomeValue &&
+        Simulation->CurrentTick() == FinalTick &&
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Player1Victory;
+    if (!bNetworkMatchResultSent || !bFinalViewExact ||
+        !bAcknowledgedExact || !bOutcomeExact)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_MATCH_SERVER_SMOKE_FAILED] resultSent=%s finalViewExact=%s acknowledgedExact=%s outcomeExact=%s outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu"),
+            bNetworkMatchResultSent ? TEXT("true") : TEXT("false"),
+            bFinalViewExact ? TEXT("true") : TEXT("false"),
+            bAcknowledgedExact ? TEXT("true") : TEXT("false"),
+            bOutcomeExact ? TEXT("true") : TEXT("false"),
+            OutcomeValue,
+            static_cast<unsigned long long>(FinalTick),
+            static_cast<unsigned long long>(FinalSnapshotId),
+            static_cast<unsigned long long>(FinalScopedDigest));
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_MATCH_SERVER_SMOKE_PASSED] player=%u outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu batchAuthority=true ordinaryCombatResolution=true reliableFinalKeyframe=true exactAcknowledgement=true separateProcess=true"),
+        NetworkSeat,
+        OutcomeValue,
+        static_cast<unsigned long long>(FinalTick),
+        static_cast<unsigned long long>(FinalSnapshotId),
+        static_cast<unsigned long long>(FinalScopedDigest));
+    if (FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke")))
     {
         GetWorldTimerManager().SetTimer(
             NetworkServerExitTimer,
@@ -1652,6 +2347,15 @@ FString AEchoesPlayerController::GetOpponentFactionLabel() const
         Bridge != nullptr
             ? Bridge->GetOpponentFaction()
             : echoes::sim::Faction::KharuunAssemblies);
+}
+
+bool AEchoesPlayerController::DidPresentedLocalPlayerWin() const
+{
+    const uint8 LocalSeat =
+        GetNetMode() == NM_Client && NetworkSeat < echoes::sim::kMaximumPlayers
+            ? NetworkSeat
+            : UEchoesSimulationSubsystem::LocalPlayerId;
+    return OutcomeBelongsToSeat(PresentedMatchOutcome, LocalSeat);
 }
 
 void AEchoesPlayerController::PresentTitleScreen()
@@ -2635,14 +3339,17 @@ void AEchoesPlayerController::NotifyMatchFinished(
     SetIgnoreLookInput(true);
     FString Message =
         TEXT("DRAW — both Command Cores fell in the same deterministic tick. Press R to restart.");
-    if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
+    if (OutcomeBelongsToSeat(
+            Outcome,
+            GetNetMode() == NM_Client &&
+                    NetworkSeat < echoes::sim::kMaximumPlayers
+                ? NetworkSeat
+                : UEchoesSimulationSubsystem::LocalPlayerId))
     {
         Message =
             TEXT("VICTORY — the opposing Command Core has fallen. Press R to restart.");
     }
-    else if (Outcome == echoes::sim::MatchOutcome::Player1Victory ||
-             Outcome == echoes::sim::MatchOutcome::Player2Victory ||
-             Outcome == echoes::sim::MatchOutcome::Player3Victory)
+    else if (Outcome != echoes::sim::MatchOutcome::Draw)
     {
         Message =
             TEXT("DEFEAT — your Command Core has fallen. Press R to restart.");
@@ -3739,8 +4446,10 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
         View = Cast<AEchoesEntityView>(HitResult.GetActor());
     }
 
-    if (View == nullptr ||
-        View->GetOwnerPlayerId() != UEchoesSimulationSubsystem::LocalPlayerId)
+    const uint8 SelectableOwner =
+        GetNetMode() == NM_Client ? NetworkSeat
+                                  : UEchoesSimulationSubsystem::LocalPlayerId;
+    if (View == nullptr || View->GetOwnerPlayerId() != SelectableOwner)
     {
         if (!bAdditive)
         {
@@ -3785,6 +4494,69 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
 
 void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 {
+    if (GetNetMode() == NM_Client)
+    {
+        const echoes::sim::net::ScopedViewKeyframe* NetworkView =
+            GetNetworkScopedView();
+        if (!IsNetworkClientControlActive() || NetworkView == nullptr)
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Drag selection is unavailable."));
+            return;
+        }
+        if (!bAdditive)
+        {
+            ClearSelection();
+        }
+        const float MinX = FMath::Min(
+            SelectionStartScreenPosition.X,
+            SelectionCurrentScreenPosition.X);
+        const float MaxX = FMath::Max(
+            SelectionStartScreenPosition.X,
+            SelectionCurrentScreenPosition.X);
+        const float MinY = FMath::Min(
+            SelectionStartScreenPosition.Y,
+            SelectionCurrentScreenPosition.Y);
+        const float MaxY = FMath::Max(
+            SelectionStartScreenPosition.Y,
+            SelectionCurrentScreenPosition.Y);
+        for (const echoes::sim::net::ScopedEntityState& Entity :
+             NetworkView->entities)
+        {
+            if (Entity.owner != NetworkSeat)
+            {
+                continue;
+            }
+            const TWeakObjectPtr<AEchoesEntityView>* StoredView =
+                NetworkEntityViews.Find(Entity.id);
+            AEchoesEntityView* EntityView =
+                StoredView != nullptr ? StoredView->Get() : nullptr;
+            if (EntityView == nullptr)
+            {
+                continue;
+            }
+            FVector2D ScreenPosition;
+            if (ProjectWorldLocationToScreen(
+                    EntityView->GetActorLocation() +
+                        FVector(0.0f, 0.0f, 60.0f),
+                    ScreenPosition,
+                    false) &&
+                ScreenPosition.X >= MinX && ScreenPosition.X <= MaxX &&
+                ScreenPosition.Y >= MinY && ScreenPosition.Y <= MaxY &&
+                !SelectedEntityIds.Contains(Entity.id))
+            {
+                SelectedEntityIds.Add(Entity.id);
+                EntityView->SetSelected(true);
+            }
+        }
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("ONLINE DRAG SELECT: %d owned entit%s."),
+                SelectedEntityIds.Num(),
+                SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
+            2.0f);
+        return;
+    }
+
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -3866,12 +4638,21 @@ void AEchoesPlayerController::ContextOrderPressed()
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Orders cannot be issued."));
+            return;
+        }
+    }
+    else if (Bridge == nullptr || !Bridge->IsScenarioReady())
     {
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
-    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    if (GetNetMode() != NM_Client &&
+        Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
     {
         SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
         return;
@@ -3903,12 +4684,21 @@ void AEchoesPlayerController::KeyboardContextOrderPressed()
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Orders cannot be issued."));
+            return;
+        }
+    }
+    else if (Bridge == nullptr || !Bridge->IsScenarioReady())
     {
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
-    if (Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
+    if (GetNetMode() != NM_Client &&
+        Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing)
     {
         SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
         return;
@@ -3938,14 +4728,97 @@ void AEchoesPlayerController::IssueContextOrder(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    const AEchoesEntityView* TargetView =
+        Cast<AEchoesEntityView>(HitResult.GetActor());
+    if (GetNetMode() == NM_Client)
+    {
+        const echoes::sim::net::ScopedEntityState* TargetEntity =
+            TargetView != nullptr
+                ? FindNetworkEntity(TargetView->GetEntityId())
+                : nullptr;
+        echoes::sim::CommandType CommandType =
+            echoes::sim::CommandType::Move;
+        uint32 TargetId = 0;
+        FVector Destination = HitResult.Location;
+        if (TargetEntity != nullptr)
+        {
+            TargetId = TargetEntity->id;
+            Destination = NetworkSimToWorld(TargetEntity->position);
+            if (TargetEntity->type == echoes::sim::EntityType::ResourceNode)
+            {
+                CommandType = echoes::sim::CommandType::Gather;
+            }
+            else if (TargetEntity->type == echoes::sim::EntityType::FutureWell)
+            {
+                CommandType = echoes::sim::CommandType::FutureWell;
+            }
+            else if (TargetEntity->owner != echoes::sim::kNeutralPlayer &&
+                     TargetEntity->owner != NetworkSeat)
+            {
+                CommandType = echoes::sim::CommandType::Attack;
+            }
+            else if (TargetEntity->owner == NetworkSeat &&
+                     (TargetEntity->type ==
+                          echoes::sim::EntityType::CommandCore ||
+                      TargetEntity->type == echoes::sim::EntityType::Dropoff))
+            {
+                CommandType = echoes::sim::CommandType::Deliver;
+            }
+        }
+        const TArray<FVector> FormationDestinations =
+            BuildSelectedFormationDestinations(
+                Destination, SelectedEntityIds.Num());
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        Intents.Reserve(SelectedEntityIds.Num());
+        for (int32 Index = 0; Index < SelectedEntityIds.Num(); ++Index)
+        {
+            const echoes::sim::net::ScopedEntityState* Actor =
+                FindNetworkEntity(SelectedEntityIds[Index]);
+            if (Actor == nullptr || Actor->owner != NetworkSeat)
+            {
+                continue;
+            }
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = CommandType;
+            Intent.actor = Actor->id;
+            Intent.target = TargetId;
+            Intent.position = NetworkWorldToSim(
+                CommandType == echoes::sim::CommandType::Move
+                    ? FormationDestinations[Index]
+                    : Destination);
+            Intent.wellChoice = FutureWellChoice;
+            Intents.Add(Intent);
+        }
+        const FString OrderLabel =
+            CommandType == echoes::sim::CommandType::Move
+                ? FString::Printf(TEXT("ONLINE MOVE / %s"), *GetFormationLabel())
+                : FString::Printf(
+                      TEXT("ONLINE %s"), *CommandLabel(CommandType));
+        const EEchoesCommandMarkerType MarkerType =
+            CommandType == echoes::sim::CommandType::Attack
+                ? EEchoesCommandMarkerType::Attack
+            : CommandType == echoes::sim::CommandType::Move
+                ? EEchoesCommandMarkerType::Move
+                : EEchoesCommandMarkerType::Interact;
+        (void)SubmitNetworkCommandBatch(
+            MoveTemp(Intents), OrderLabel, Destination, MarkerType);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_CONTEXT_ORDER] source=%s command=%s target=%u selected=%d visibleHit=%s"),
+            bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
+            *CommandLabel(CommandType),
+            TargetId,
+            SelectedEntityIds.Num(),
+            TargetView != nullptr ? TEXT("true") : TEXT("false"));
+        return;
+    }
     if (Bridge == nullptr)
     {
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
 
-    const AEchoesEntityView* TargetView =
-        Cast<AEchoesEntityView>(HitResult.GetActor());
     const echoes::sim::Entity* TargetEntity =
         TargetView != nullptr
             ? Bridge->FindEntity(TargetView->GetEntityId())
@@ -4086,6 +4959,19 @@ void AEchoesPlayerController::IssueContextOrder(
 
 void AEchoesPlayerController::SetEntitySelected(uint32 EntityId, bool bSelected)
 {
+    if (GetNetMode() == NM_Client)
+    {
+        const TWeakObjectPtr<AEchoesEntityView>* StoredView =
+            NetworkEntityViews.Find(EntityId);
+        if (StoredView != nullptr)
+        {
+            if (AEchoesEntityView* View = StoredView->Get())
+            {
+                View->SetSelected(bSelected);
+            }
+        }
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4135,10 +5021,15 @@ bool AEchoesPlayerController::SetControlGroup(
     TArray<uint32> ValidIds;
     for (const uint32 EntityId : EntityIds)
     {
+        const echoes::sim::net::ScopedEntityState* NetworkEntity =
+            GetNetMode() == NM_Client ? FindNetworkEntity(EntityId) : nullptr;
         const echoes::sim::Entity* Entity =
-            Bridge != nullptr ? Bridge->FindEntity(EntityId) : nullptr;
-        if (Entity != nullptr &&
-            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId)
+            GetNetMode() != NM_Client && Bridge != nullptr
+                ? Bridge->FindEntity(EntityId)
+                : nullptr;
+        if ((NetworkEntity != nullptr && NetworkEntity->owner == NetworkSeat) ||
+            (Entity != nullptr &&
+             Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId))
         {
             ValidIds.AddUnique(EntityId);
         }
@@ -4172,10 +5063,15 @@ TArray<uint32> AEchoesPlayerController::GetValidControlGroup(
             : nullptr;
     for (const uint32 EntityId : ControlGroups[GroupIndex])
     {
+        const echoes::sim::net::ScopedEntityState* NetworkEntity =
+            GetNetMode() == NM_Client ? FindNetworkEntity(EntityId) : nullptr;
         const echoes::sim::Entity* Entity =
-            Bridge != nullptr ? Bridge->FindEntity(EntityId) : nullptr;
-        if (Entity != nullptr &&
-            Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId)
+            GetNetMode() != NM_Client && Bridge != nullptr
+                ? Bridge->FindEntity(EntityId)
+                : nullptr;
+        if ((NetworkEntity != nullptr && NetworkEntity->owner == NetworkSeat) ||
+            (Entity != nullptr &&
+             Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId))
         {
             ValidIds.Add(EntityId);
         }
@@ -4280,10 +5176,19 @@ void AEchoesPlayerController::PruneSelection()
             : nullptr;
     for (int32 Index = SelectedEntityIds.Num() - 1; Index >= 0; --Index)
     {
+        const echoes::sim::net::ScopedEntityState* NetworkEntity =
+            GetNetMode() == NM_Client
+                ? FindNetworkEntity(SelectedEntityIds[Index])
+                : nullptr;
         const echoes::sim::Entity* Entity =
-            Bridge != nullptr ? Bridge->FindEntity(SelectedEntityIds[Index]) : nullptr;
-        if (Entity == nullptr ||
-            Entity->owner != UEchoesSimulationSubsystem::LocalPlayerId)
+            GetNetMode() != NM_Client && Bridge != nullptr
+                ? Bridge->FindEntity(SelectedEntityIds[Index])
+                : nullptr;
+        const bool bValid = GetNetMode() == NM_Client
+            ? NetworkEntity != nullptr && NetworkEntity->owner == NetworkSeat
+            : Entity != nullptr &&
+                  Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId;
+        if (!bValid)
         {
             SelectedEntityIds.RemoveAtSwap(Index, 1, EAllowShrinking::No);
         }
@@ -4341,7 +5246,20 @@ TArray<FVector> AEchoesPlayerController::BuildSelectedFormationDestinations(
             : nullptr;
     FVector Centroid = FVector::ZeroVector;
     int32 PositionCount = 0;
-    if (Bridge != nullptr)
+    if (GetNetMode() == NM_Client)
+    {
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Entity =
+                FindNetworkEntity(EntityId);
+            if (Entity != nullptr)
+            {
+                Centroid += NetworkSimToWorld(Entity->position);
+                ++PositionCount;
+            }
+        }
+    }
+    else if (Bridge != nullptr)
     {
         for (const uint32 EntityId : SelectedEntityIds)
         {
@@ -4427,6 +5345,29 @@ void AEchoesPlayerController::ResearchNextTechnology()
     {
         return;
     }
+    if (GetNetMode() == NM_Client)
+    {
+        const echoes::sim::net::ScopedViewKeyframe* View =
+            GetNetworkScopedView();
+        if (!IsNetworkClientControlActive() || View == nullptr)
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Research is unavailable."));
+            return;
+        }
+        const bool bMeridian =
+            View->faction == echoes::sim::Faction::MeridianCompact;
+        const echoes::sim::ResearchType Research =
+            TechnologyPanelFocusedTier == 0
+                ? (bMeridian
+                       ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+                       : echoes::sim::ResearchType::KharuunEchoCartography)
+                : (bMeridian
+                       ? echoes::sim::ResearchType::MeridianHorizonLattice
+                       : echoes::sim::ResearchType::KharuunAncestralEdge);
+        ResearchTechnology(Research);
+        TechnologyPanelFocusedTier = 1;
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4464,6 +5405,27 @@ void AEchoesPlayerController::ResearchNextTechnology()
 
 void AEchoesPlayerController::ResearchTechnologyByTier(int32 TierIndex)
 {
+    if (GetNetMode() == NM_Client)
+    {
+        const echoes::sim::net::ScopedViewKeyframe* View =
+            GetNetworkScopedView();
+        if (View == nullptr || TierIndex < 0 || TierIndex > 1)
+        {
+            SetStatusMessage(TEXT("[RESEARCH_TECHNOLOGY_INVALID] Technology selection is unavailable."));
+            return;
+        }
+        const bool bMeridian =
+            View->faction == echoes::sim::Faction::MeridianCompact;
+        ResearchTechnology(
+            TierIndex == 0
+                ? (bMeridian
+                       ? echoes::sim::ResearchType::MeridianPrismaticTargeting
+                       : echoes::sim::ResearchType::KharuunEchoCartography)
+                : (bMeridian
+                       ? echoes::sim::ResearchType::MeridianHorizonLattice
+                       : echoes::sim::ResearchType::KharuunAncestralEdge));
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4500,6 +5462,39 @@ void AEchoesPlayerController::ResearchTechnology(
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Research is unavailable."));
+            return;
+        }
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Entity =
+                FindNetworkEntity(EntityId);
+            if (Entity == nullptr || Entity->owner != NetworkSeat ||
+                Entity->type != echoes::sim::EntityType::Barracks)
+            {
+                continue;
+            }
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = echoes::sim::CommandType::Research;
+            Intent.actor = Entity->id;
+            Intent.position = Entity->position;
+            Intent.researchType = Research;
+            TArray<echoes::sim::net::CommandIntent> Intents;
+            Intents.Add(Intent);
+            (void)SubmitNetworkCommandBatch(
+                MoveTemp(Intents),
+                TEXT("ONLINE RESEARCH"),
+                NetworkSimToWorld(Entity->position),
+                EEchoesCommandMarkerType::Interact);
+            return;
+        }
+        SetStatusMessage(TEXT("[RESEARCH_PRODUCER_INVALID] Select an owned production structure."));
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4561,6 +5556,26 @@ void AEchoesPlayerController::AttackMoveAtCursor()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        FHitResult HitResult;
+        if (!IsNetworkClientControlActive() ||
+            !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Attack-move requires an active remote battlefield target."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::AttackMove,
+            0,
+            HitResult.Location,
+            true,
+            false,
+            FString::Printf(
+                TEXT("ONLINE ATTACK-MOVE / %s"), *GetFormationLabel()),
+            EEchoesCommandMarkerType::AttackMove);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4655,6 +5670,26 @@ void AEchoesPlayerController::PatrolAtCursor()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        FHitResult HitResult;
+        if (!IsNetworkClientControlActive() ||
+            !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Patrol requires an active remote battlefield target."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::Patrol,
+            0,
+            HitResult.Location,
+            true,
+            false,
+            FString::Printf(
+                TEXT("ONLINE PATROL / %s"), *GetFormationLabel()),
+            EEchoesCommandMarkerType::Patrol);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4740,6 +5775,23 @@ void AEchoesPlayerController::StopSelectedUnits()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Stop is unavailable."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::Stop,
+            0,
+            FVector::ZeroVector,
+            false,
+            true,
+            TEXT("ONLINE STOP"),
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4821,6 +5873,25 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        FHitResult HitResult;
+        if (!IsNetworkClientControlActive() ||
+            !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Bulwark deployment requires a remote battlefield direction."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::ToggleDeploy,
+            0,
+            HitResult.Location,
+            false,
+            false,
+            TEXT("ONLINE BULWARK DEPLOY / PACK"),
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4905,6 +5976,23 @@ void AEchoesPlayerController::ActivateRelaySupply()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Relay supply is unavailable."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::ActivateRelaySupply,
+            0,
+            FVector::ZeroVector,
+            false,
+            true,
+            TEXT("ONLINE RELAY SUPPLY"),
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4969,6 +6057,23 @@ void AEchoesPlayerController::ToggleWaystoneRoot()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Waystone migration is unavailable."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::ToggleWaystoneRoot,
+            0,
+            FVector::ZeroVector,
+            false,
+            true,
+            TEXT("ONLINE WAYSTONE ROOT / MIGRATE"),
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5044,6 +6149,76 @@ void AEchoesPlayerController::AdaptSelectedWarforms(
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        const echoes::sim::net::ScopedViewKeyframe* View =
+            GetNetworkScopedView();
+        if (!IsNetworkClientControlActive() || View == nullptr)
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Warform adaptation is unavailable."));
+            return;
+        }
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Actor =
+                FindNetworkEntity(EntityId);
+            if (Actor == nullptr || Actor->owner != NetworkSeat ||
+                Actor->faction != echoes::sim::Faction::KharuunAssemblies ||
+                (Actor->type != echoes::sim::EntityType::Soldier &&
+                 Actor->type != echoes::sim::EntityType::HeavyUnit &&
+                 Actor->type != echoes::sim::EntityType::ScoutUnit))
+            {
+                continue;
+            }
+            const echoes::sim::net::ScopedEntityState* NearestBasin = nullptr;
+            uint64 NearestDistance = TNumericLimits<uint64>::Max();
+            for (const echoes::sim::net::ScopedEntityState& Candidate :
+                 View->entities)
+            {
+                if (Candidate.owner != NetworkSeat || !Candidate.completed ||
+                    Candidate.type != echoes::sim::EntityType::Barracks)
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Actor->position.x.Raw()) -
+                    Candidate.position.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Actor->position.y.Raw()) -
+                    Candidate.position.y.Raw();
+                const uint64 Distance = static_cast<uint64>(
+                    DeltaX * DeltaX + DeltaY * DeltaY);
+                if (Distance < NearestDistance ||
+                    (Distance == NearestDistance &&
+                     (NearestBasin == nullptr ||
+                      Candidate.id < NearestBasin->id)))
+                {
+                    NearestDistance = Distance;
+                    NearestBasin = &Candidate;
+                }
+            }
+            if (NearestBasin == nullptr)
+            {
+                continue;
+            }
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = echoes::sim::CommandType::AdaptWarform;
+            Intent.actor = Actor->id;
+            Intent.target = NearestBasin->id;
+            Intent.position = Actor->position;
+            Intent.warformAdaptation = Adaptation;
+            Intents.Add(Intent);
+        }
+        (void)SubmitNetworkCommandBatch(
+            MoveTemp(Intents),
+            Adaptation == echoes::sim::WarformAdaptation::Carapace
+                ? TEXT("ONLINE CARAPACE MOLT")
+                : TEXT("ONLINE STRIKER MOLT"),
+            FVector::ZeroVector,
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5138,6 +6313,25 @@ void AEchoesPlayerController::RaiseSelectedCairnbackCoverAtCursor()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        FHitResult HitResult;
+        if (!IsNetworkClientControlActive() ||
+            !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Mineral cover requires an active remote battlefield target."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::RaiseMineralCover,
+            0,
+            HitResult.Location,
+            false,
+            false,
+            TEXT("ONLINE MINERAL COVER"),
+            EEchoesCommandMarkerType::Build);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5203,6 +6397,23 @@ void AEchoesPlayerController::HoldSelectedUnits()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Hold position is unavailable."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::Hold,
+            0,
+            FVector::ZeroVector,
+            false,
+            true,
+            TEXT("ONLINE HOLD POSITION"),
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5269,6 +6480,36 @@ void AEchoesPlayerController::GuardAtCursor()
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        FHitResult HitResult;
+        if (!IsNetworkClientControlActive() ||
+            !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Guard requires a visible owned target."));
+            return;
+        }
+        const AEchoesEntityView* TargetView =
+            Cast<AEchoesEntityView>(HitResult.GetActor());
+        const echoes::sim::net::ScopedEntityState* Target =
+            TargetView != nullptr
+                ? FindNetworkEntity(TargetView->GetEntityId())
+                : nullptr;
+        if (Target == nullptr || Target->owner != NetworkSeat)
+        {
+            SetStatusMessage(TEXT("[GUARD_TARGET_INVALID] Point at a live owned entity."));
+            return;
+        }
+        (void)SubmitNetworkSelectionCommand(
+            echoes::sim::CommandType::Guard,
+            Target->id,
+            NetworkSimToWorld(Target->position),
+            false,
+            false,
+            TEXT("ONLINE GUARD"),
+            EEchoesCommandMarkerType::Guard);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5586,6 +6827,45 @@ void AEchoesPlayerController::BuildAtCursor(
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Construction is unavailable."));
+            return;
+        }
+        uint32 WorkerId = 0;
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Entity =
+                FindNetworkEntity(EntityId);
+            if (Entity != nullptr && Entity->owner == NetworkSeat &&
+                Entity->type == echoes::sim::EntityType::Worker)
+            {
+                WorkerId = EntityId;
+                break;
+            }
+        }
+        FHitResult HitResult;
+        if (WorkerId == 0 || !TraceCommandTarget(HitResult))
+        {
+            SetStatusMessage(TEXT("[BUILD_REQUIRES_WORKER] Select an owned worker and target visible open ground."));
+            return;
+        }
+        echoes::sim::net::CommandIntent Intent{};
+        Intent.type = echoes::sim::CommandType::Build;
+        Intent.actor = WorkerId;
+        Intent.position = NetworkWorldToSim(HitResult.Location);
+        Intent.buildType = BuildingType;
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        Intents.Add(Intent);
+        (void)SubmitNetworkCommandBatch(
+            MoveTemp(Intents),
+            TEXT("ONLINE CONSTRUCTION"),
+            HitResult.Location,
+            EEchoesCommandMarkerType::Build);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5726,6 +7006,44 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
         return;
     }
     PruneSelection();
+    if (GetNetMode() == NM_Client)
+    {
+        if (!IsNetworkClientControlActive())
+        {
+            SetStatusMessage(TEXT("[NETWORK_NOT_READY] Production is unavailable."));
+            return;
+        }
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            const echoes::sim::net::ScopedEntityState* Entity =
+                FindNetworkEntity(EntityId);
+            const bool bCompatible = Entity != nullptr &&
+                Entity->owner == NetworkSeat &&
+                ((UnitType == echoes::sim::EntityType::Worker &&
+                  Entity->type == echoes::sim::EntityType::CommandCore) ||
+                 ((UnitType == echoes::sim::EntityType::Soldier ||
+                   UnitType == echoes::sim::EntityType::HeavyUnit ||
+                   UnitType == echoes::sim::EntityType::ScoutUnit) &&
+                  Entity->type == echoes::sim::EntityType::Barracks));
+            if (!bCompatible)
+            {
+                continue;
+            }
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = echoes::sim::CommandType::Produce;
+            Intent.actor = Entity->id;
+            Intent.position = Entity->position;
+            Intent.buildType = UnitType;
+            Intents.Add(Intent);
+        }
+        (void)SubmitNetworkCommandBatch(
+            MoveTemp(Intents),
+            TEXT("ONLINE PRODUCTION"),
+            FVector::ZeroVector,
+            EEchoesCommandMarkerType::Interact);
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()

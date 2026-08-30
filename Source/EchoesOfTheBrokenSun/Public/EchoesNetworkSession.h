@@ -15,15 +15,24 @@ BuildCompatibilityManifest(const sim::Simulation* simulation = nullptr);
 class ECHOESOFTHEBROKENSUN_API CommandRateLimiter final
 {
 public:
+    // Retained name for the accepted 0.80 request-window contract.
     static constexpr std::uint32_t MaximumCommandsPerWindow = 8;
+    static constexpr std::uint32_t MaximumIntentsPerWindow = 1024;
     static constexpr double WindowSeconds = 1.0;
 
-    [[nodiscard]] bool TryConsume(double nowSeconds);
-    [[nodiscard]] std::uint32_t CurrentCount() const { return currentCount_; }
+    [[nodiscard]] bool TryConsume(
+        double nowSeconds,
+        std::uint32_t intentCount = 1);
+    [[nodiscard]] std::uint32_t CurrentCount() const { return requestCount_; }
+    [[nodiscard]] std::uint32_t CurrentIntentCount() const
+    {
+        return intentCount_;
+    }
 
 private:
     double windowStartSeconds_ = -1.0;
-    std::uint32_t currentCount_ = 0;
+    std::uint32_t requestCount_ = 0;
+    std::uint32_t intentCount_ = 0;
 };
 
 enum class ScopedViewAcceptance : std::uint8_t

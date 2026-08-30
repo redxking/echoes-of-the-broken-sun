@@ -11,10 +11,12 @@
 namespace echoes::sim::net {
 
 inline constexpr std::uint16_t kEnvelopeVersion = 1;
-inline constexpr std::uint32_t kProtocolVersion = 1;
+inline constexpr std::uint32_t kProtocolVersion = 2;
 inline constexpr std::uint32_t kPlayerViewSchemaVersion = 1;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;
+inline constexpr std::size_t kMaximumCommandBatchBytes = 16 * 1024;
+inline constexpr std::size_t kMaximumCommandsPerBatch = 512;
 inline constexpr std::size_t kMaximumScopedKeyframeBytes = 256 * 1024;
 inline constexpr std::size_t kMaximumScopedDeltaBytes = 256 * 1024;
 inline constexpr std::size_t kMaximumScopedEntities = 4096;
@@ -28,6 +30,7 @@ enum class PacketKind : std::uint8_t {
     CommandRequest = 2,
     ScopedViewKeyframe = 3,
     ScopedViewDelta = 4,
+    CommandBatchRequest = 5,
 };
 
 enum class DecodeStatus : std::uint8_t {
@@ -106,6 +109,35 @@ EncodeCommandRequest(const CommandRequest& request);
 [[nodiscard]] ECHOESSIMCORE_API DecodeStatus DecodeCommandRequest(
     std::span<const std::uint8_t> bytes,
     CommandRequest& request);
+
+// A single player gesture can address a bounded, canonically ordered set of
+// actors. Seat, simulation sequence, and execution tick remain authority-owned.
+struct CommandIntent final {
+    CommandType type = CommandType::Stop;
+    EntityId actor = 0;
+    EntityId target = 0;
+    Vec2 position{};
+    EntityType buildType = EntityType::Barracks;
+    FutureWellChoice wellChoice = FutureWellChoice::Dormant;
+    WarformAdaptation warformAdaptation = WarformAdaptation::None;
+    ResearchType researchType = ResearchType::None;
+
+    friend bool operator==(const CommandIntent&, const CommandIntent&) = default;
+};
+
+struct CommandBatchRequest final {
+    std::uint64_t clientBatchId = 0;
+    std::vector<CommandIntent> intents{};
+
+    friend bool operator==(const CommandBatchRequest&,
+                           const CommandBatchRequest&) = default;
+};
+
+[[nodiscard]] ECHOESSIMCORE_API std::vector<std::uint8_t>
+EncodeCommandBatchRequest(const CommandBatchRequest& request);
+[[nodiscard]] ECHOESSIMCORE_API DecodeStatus DecodeCommandBatchRequest(
+    std::span<const std::uint8_t> bytes,
+    CommandBatchRequest& request);
 
 struct CommandAdmissionContext final {
     PlayerId player = 0;

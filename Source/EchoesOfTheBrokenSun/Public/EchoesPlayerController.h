@@ -160,6 +160,7 @@ public:
     {
         return PresentedMatchOutcome;
     }
+    [[nodiscard]] bool DidPresentedLocalPlayerWin() const;
     [[nodiscard]] EEchoesOperationMode GetPresentedCampaignOperation() const
     {
         return PresentedCampaignOperation;
@@ -243,11 +244,29 @@ private:
     UFUNCTION(Server, Reliable)
     void ServerSubmitNetworkCommand(const TArray<uint8>& Packet);
 
+    UFUNCTION(Server, Reliable)
+    void ServerSubmitNetworkCommandBatch(const TArray<uint8>& Packet);
+
     UFUNCTION(Client, Reliable)
     void ClientReceiveCommandAdmission(
         uint8 Status,
         uint64 ServerTick,
         const FString& SimulationReason);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveCommandBatchAdmission(
+        uint64 BatchId,
+        int32 AcceptedCount,
+        int32 RejectedCount,
+        uint64 ServerTick,
+        const FString& FirstRejection);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveNetworkMatchResult(
+        uint8 Outcome,
+        uint64 FinalTick,
+        uint64 FinalSnapshotId,
+        uint64 FinalScopedDigest);
 
     UFUNCTION(Client, Reliable)
     void ClientReceiveCommandExecution(
@@ -260,6 +279,13 @@ private:
     UFUNCTION(Server, Reliable)
     void ServerConfirmNetworkSmokeComplete(uint64 SnapshotId);
 
+    UFUNCTION(Server, Reliable)
+    void ServerConfirmNetworkMatchSmokeComplete(
+        uint8 Outcome,
+        uint64 FinalTick,
+        uint64 FinalSnapshotId,
+        uint64 FinalScopedDigest);
+
     void SubmitNetworkCompatibilityHello();
     void BeginNetworkMatch();
     void SendScopedKeyframe();
@@ -268,12 +294,42 @@ private:
         echoes::sim::net::ScopedViewKeyframe& OutKeyframe,
         FString& OutError);
     void RequestScopedKeyframeRecovery(const FString& Reason);
+    [[nodiscard]] bool IsNetworkClientControlActive() const;
+    [[nodiscard]] const echoes::sim::net::ScopedEntityState*
+    FindNetworkEntity(uint32 EntityId) const;
+    [[nodiscard]] FVector NetworkSimToWorld(
+        const echoes::sim::Vec2& Position) const;
+    [[nodiscard]] echoes::sim::Vec2 NetworkWorldToSim(
+        const FVector& Position) const;
+    bool SubmitNetworkCommandBatch(
+        TArray<echoes::sim::net::CommandIntent> Intents,
+        const FString& OrderLabel,
+        const FVector& MarkerLocation,
+        EEchoesCommandMarkerType MarkerType);
+    bool SubmitNetworkSelectionCommand(
+        echoes::sim::CommandType CommandType,
+        uint32 TargetId,
+        const FVector& Destination,
+        bool bUseFormation,
+        bool bUseActorPosition,
+        const FString& OrderLabel,
+        EEchoesCommandMarkerType MarkerType,
+        echoes::sim::EntityType BuildType =
+            echoes::sim::EntityType::Barracks,
+        echoes::sim::WarformAdaptation Adaptation =
+            echoes::sim::WarformAdaptation::None,
+        echoes::sim::ResearchType Research =
+            echoes::sim::ResearchType::None);
+    void PublishNetworkMatchResultIfFinished(
+        const echoes::sim::net::ScopedViewKeyframe& FinalView);
     bool SyncNetworkPresentation(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe);
     void DestroyNetworkPresentation();
     void QueueNetworkSmokeHostCommand();
     void VerifyRemoteCommandExecution();
     void TryFinishNetworkClientSmoke();
+    void TrySubmitNetworkMatchSmoke(
+        const echoes::sim::net::ScopedViewKeyframe& Keyframe);
     void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
@@ -411,6 +467,7 @@ private:
     bool bNetworkReady = false;
     bool bNetworkMatchStarted = false;
     bool bNetworkClientSmoke = false;
+    bool bNetworkMatchSmoke = false;
     bool bNetworkCommandSubmitted = false;
     bool bNetworkRemoteExecutionReceived = false;
     bool bNetworkSmokeCompletionSent = false;
@@ -421,6 +478,13 @@ private:
     uint64 LastNetworkSnapshotId = 0;
     uint64 LastAcknowledgedNetworkSnapshotId = 0;
     uint64 NetworkSnapshotAcknowledgementCount = 0;
+    uint64 NextNetworkBatchId = 1;
+    uint64 LastAcceptedNetworkBatchId = 0;
+    bool bNetworkMatchResultSent = false;
+    bool bNetworkMatchResultReceived = false;
+    bool bNetworkMatchCommandSubmitted = false;
+    bool bNetworkMatchBatchAdmitted = false;
+    bool bNetworkMatchSmokeCompletionSent = false;
     echoes::network::ScopedViewState NetworkViewState{};
     std::optional<echoes::sim::net::ScopedViewKeyframe>
         LastSentNetworkKeyframe{};

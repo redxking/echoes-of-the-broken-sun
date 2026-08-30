@@ -5,12 +5,12 @@
 namespace echoes::network {
 namespace {
 
-// SHA-256("EchoesOfTheBrokenSun:0.80.0:protocol-1:snapshot-20:view-1").
+// SHA-256("EchoesOfTheBrokenSun:0.81.0:protocol-2:snapshot-20:view-1").
 constexpr sim::net::Digest256 BuildId{
-    0xeb, 0xd8, 0x53, 0xe6, 0xe1, 0x8e, 0x85, 0x8e,
-    0x19, 0x10, 0x28, 0x56, 0xc6, 0x74, 0xdb, 0xe6,
-    0xcd, 0xf7, 0x5f, 0x13, 0x6f, 0x66, 0xd8, 0x81,
-    0x7a, 0x71, 0xc6, 0x61, 0xd1, 0x93, 0x4a, 0x32};
+    0xdc, 0x18, 0x6d, 0x4d, 0x24, 0x04, 0x5a, 0x00,
+    0x5d, 0xb7, 0xb8, 0xef, 0xcf, 0x7c, 0x55, 0x3e,
+    0xe4, 0xe6, 0x42, 0x97, 0xe2, 0xa9, 0x86, 0x32,
+    0x05, 0x3c, 0xfb, 0x6b, 0x69, 0xef, 0x56, 0x24};
 constexpr sim::net::Digest256 CanonicalRulesPack{
     0x10, 0x0f, 0x1f, 0xcd, 0x18, 0x4c, 0xf9, 0x4f,
     0xe9, 0xb2, 0x1d, 0x3f, 0x59, 0x17, 0x14, 0xa2,
@@ -46,9 +46,12 @@ sim::net::CompatibilityManifest BuildCompatibilityManifest(
     return manifest;
 }
 
-bool CommandRateLimiter::TryConsume(double nowSeconds)
+bool CommandRateLimiter::TryConsume(
+    double nowSeconds,
+    std::uint32_t intentCount)
 {
-    if (!std::isfinite(nowSeconds) || nowSeconds < 0.0 ||
+    if (!std::isfinite(nowSeconds) || nowSeconds < 0.0 || intentCount == 0 ||
+        intentCount > MaximumIntentsPerWindow ||
         (windowStartSeconds_ >= 0.0 && nowSeconds < windowStartSeconds_))
     {
         return false;
@@ -57,13 +60,16 @@ bool CommandRateLimiter::TryConsume(double nowSeconds)
         nowSeconds - windowStartSeconds_ >= WindowSeconds)
     {
         windowStartSeconds_ = nowSeconds;
-        currentCount_ = 0;
+        requestCount_ = 0;
+        intentCount_ = 0;
     }
-    if (currentCount_ >= MaximumCommandsPerWindow)
+    if (requestCount_ >= MaximumCommandsPerWindow ||
+        intentCount_ > MaximumIntentsPerWindow - intentCount)
     {
         return false;
     }
-    ++currentCount_;
+    ++requestCount_;
+    intentCount_ += intentCount;
     return true;
 }
 
