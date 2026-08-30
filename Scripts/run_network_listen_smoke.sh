@@ -9,6 +9,7 @@ port="${ECHOES_NETWORK_PORT:-7797}"
 server_log="${ECHOES_NETWORK_SERVER_LOG:-$project_root/BuildArtifacts/NetworkListenServer.log}"
 client_log="${ECHOES_NETWORK_CLIENT_LOG:-$project_root/BuildArtifacts/NetworkListenClient.log}"
 fault_mode="${ECHOES_NETWORK_FAULT_MODE:-none}"
+transport_profile="${ECHOES_NETWORK_TRANSPORT_PROFILE:-none}"
 
 if [[ ! -x "$editor" ]]; then
   print -u2 "Unreal Editor is not available at: $editor"
@@ -23,6 +24,31 @@ case "$fault_mode" in
   *)
     print -u2 "ECHOES_NETWORK_FAULT_MODE must be none, drop-first-delta, delay-first-delta, duplicate-first-delta, reorder-first-two-deltas, or drop-delta-burst."
     exit 2
+    ;;
+esac
+case "$transport_profile" in
+  none|latency-jitter|loss) ;;
+  *)
+    print -u2 "ECHOES_NETWORK_TRANSPORT_PROFILE must be none, latency-jitter, or loss."
+    exit 2
+    ;;
+esac
+
+transport_args=()
+transport_markers=()
+case "$transport_profile" in
+  latency-jitter)
+    transport_args+=("-GameNetDriverPktLag=75" "-GameNetDriverPktLagVariance=25")
+    transport_markers+=(
+      'PktLag set to 75'
+      'PktLagVariance set to 25'
+    )
+    ;;
+  loss)
+    transport_args+=("-GameNetDriverPktLoss=10")
+    transport_markers+=(
+      'PktLoss set to 10'
+    )
     ;;
 esac
 
@@ -47,6 +73,7 @@ trap cleanup_processes EXIT INT TERM
 "$editor" "$project" "/Engine/Maps/Entry?listen" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
   -port="$port" -EchoesAutoStart -EchoesNetworkListenSmoke \
+  "${transport_args[@]}" \
   -AbsLog="$server_log" &
 server_pid=$!
 
@@ -79,6 +106,7 @@ esac
 "$editor" "$project" "127.0.0.1:${port}" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
   -EchoesNetworkClientSmoke "${client_fault_args[@]}" \
+  "${transport_args[@]}" \
   -AbsLog="$client_log" &
 client_pid=$!
 
@@ -217,6 +245,16 @@ for marker in "${required_client_markers[@]}"; do
   fi
 done
 
+if [[ "${#transport_markers[@]}" -gt 0 ]]; then
+  for marker in "${transport_markers[@]}"; do
+    if ! /usr/bin/grep -Fq "$marker" "$server_log" ||
+       ! /usr/bin/grep -Fq "$marker" "$client_log"; then
+      print -u2 "NetDriver packet-simulation marker missing from one or both processes: $marker"
+      exit 6
+    fi
+  done
+fi
+
 failure_pattern='\[ECHOES_NETWORK_.*(FAILED|REJECTED)\]|Fatal error:|Assertion failed:|Ensure condition failed:|SIGSEGV:|=== Critical error:'
 failure_lines="$(/usr/bin/grep -E "$failure_pattern" "$server_log" "$client_log" || true)"
 if [[ "$fault_mode" == "drop-first-delta" ||
@@ -242,6 +280,6 @@ fi
 server_pid=""
 trap - EXIT INT TERM
 
-print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, explicit ready/start, matched three-tick host/remote authority scheduling, rendered scoped client state, base-linked deltas with exact acknowledgements, authoritative execution, and fault mode $fault_mode."
+print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, explicit ready/start, matched three-tick host/remote authority scheduling, rendered scoped client state, base-linked deltas with exact acknowledgements, authoritative execution, fault mode $fault_mode, and NetDriver transport profile $transport_profile."
 print "Server evidence log: $server_log"
 print "Client evidence log: $client_log"

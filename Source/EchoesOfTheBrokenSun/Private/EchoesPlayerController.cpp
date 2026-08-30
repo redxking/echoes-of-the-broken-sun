@@ -2475,19 +2475,14 @@ void AEchoesPlayerController::TryFinishNetworkClientSmoke()
         return;
     }
     bNetworkSmokeCompletionSent = true;
-    ServerConfirmNetworkSmokeComplete(LastNetworkSnapshotId);
+    NetworkSmokeCompletionSnapshotId = LastNetworkSnapshotId;
+    ServerConfirmNetworkSmokeComplete(NetworkSmokeCompletionSnapshotId);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_CLIENT_SMOKE_PASSED] snapshot=%llu acceptedKeyframes=%llu separateProcess=true readyGate=true periodicState=true authorityAssignedCommands=true connectionBound=true"),
+        TEXT("[ECHOES_NETWORK_CLIENT_COMPLETION_REQUESTED] snapshot=%llu acceptedKeyframes=%llu reliable=true waitingForAuthority=true"),
         static_cast<unsigned long long>(LastNetworkSnapshotId),
         static_cast<unsigned long long>(NetworkViewState.AcceptedCount()));
-    GetWorldTimerManager().SetTimer(
-        NetworkClientExitTimer,
-        this,
-        &AEchoesPlayerController::FinishNetworkClientSmoke,
-        0.1f,
-        false);
 }
 
 void AEchoesPlayerController::TrySubmitNetworkMatchSmoke(
@@ -2754,6 +2749,7 @@ void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
         static_cast<unsigned long long>(SnapshotId),
         NetworkSeat,
         static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
+    ClientConfirmNetworkSmokeComplete(SnapshotId);
     if (FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
     {
@@ -2764,9 +2760,39 @@ void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
                 {
                     FPlatformMisc::RequestExit(false);
                 }),
-            0.75f,
+            2.0f,
             false);
     }
+}
+
+void AEchoesPlayerController::ClientConfirmNetworkSmokeComplete_Implementation(
+    uint64 SnapshotId)
+{
+    if (!bNetworkClientSmoke || !bNetworkSmokeCompletionSent ||
+        SnapshotId != NetworkSmokeCompletionSnapshotId)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_CLIENT_SMOKE_FAILED] reason=NET_COMPLETION_CONFIRMATION_MISMATCH snapshot=%llu expected=%llu completionRequested=%s"),
+            static_cast<unsigned long long>(SnapshotId),
+            static_cast<unsigned long long>(NetworkSmokeCompletionSnapshotId),
+            bNetworkSmokeCompletionSent ? TEXT("true") : TEXT("false"));
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_CLIENT_SMOKE_PASSED] snapshot=%llu acceptedKeyframes=%llu authorityConfirmed=true reliableCompletion=true separateProcess=true readyGate=true periodicState=true authorityAssignedCommands=true connectionBound=true"),
+        static_cast<unsigned long long>(SnapshotId),
+        static_cast<unsigned long long>(NetworkViewState.AcceptedCount()));
+    GetWorldTimerManager().SetTimer(
+        NetworkClientExitTimer,
+        this,
+        &AEchoesPlayerController::FinishNetworkClientSmoke,
+        0.5f,
+        false);
 }
 
 void AEchoesPlayerController::ServerConfirmNetworkMatchSmokeComplete_Implementation(

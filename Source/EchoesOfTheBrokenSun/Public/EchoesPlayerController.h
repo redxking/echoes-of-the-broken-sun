@@ -318,6 +318,9 @@ private:
     UFUNCTION(Server, Reliable)
     void ServerConfirmNetworkSmokeComplete(uint64 SnapshotId);
 
+    UFUNCTION(Client, Reliable)
+    void ClientConfirmNetworkSmokeComplete(uint64 SnapshotId);
+
     UFUNCTION(Server, Reliable)
     void ServerConfirmNetworkMatchSmokeComplete(
         uint8 Outcome,
@@ -548,6 +551,7 @@ private:
     uint64 LastNetworkSnapshotId = 0;
     uint64 LastAcknowledgedNetworkSnapshotId = 0;
     uint64 NetworkSnapshotAcknowledgementCount = 0;
+    uint64 NetworkSmokeCompletionSnapshotId = 0;
     uint64 NextNetworkBatchId = 1;
     uint64 LastAcceptedNetworkBatchId = 0;
     uint64 NetworkResumeDisconnectTick = 0;
