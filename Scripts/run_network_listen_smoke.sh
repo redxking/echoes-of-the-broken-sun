@@ -255,11 +255,28 @@ if [[ "${#transport_markers[@]}" -gt 0 ]]; then
   done
 fi
 
+if [[ "$transport_profile" == "loss" ]] &&
+   /usr/bin/grep -Eq '\[ECHOES_NETWORK_DELTA_REJECTED\].*reason=NET_DELTA_BASE_MISSING' "$client_log"; then
+  transport_recovery_markers=(
+    '\[ECHOES_NETWORK_KEYFRAME_RECOVERY_REQUESTED\] .* reason=NET_DELTA_BASE_MISSING rateLimited=true'
+    '\[ECHOES_NETWORK_KEYFRAME_REQUESTED\] player=1 .* recovery=fullKeyframe'
+    '\[ECHOES_NETWORK_KEYFRAME_RECOVERY\] .* fullKeyframe=true'
+    '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 .* pendingSnapshots=0 lineageExact=true'
+  )
+  for marker in "${transport_recovery_markers[@]}"; do
+    if ! /usr/bin/grep -Eq "$marker" "$server_log" "$client_log"; then
+      print -u2 "Transport-loss recovery marker missing: $marker"
+      exit 6
+    fi
+  done
+fi
+
 failure_pattern='\[ECHOES_NETWORK_.*(FAILED|REJECTED)\]|Fatal error:|Assertion failed:|Ensure condition failed:|SIGSEGV:|=== Critical error:'
 failure_lines="$(/usr/bin/grep -E "$failure_pattern" "$server_log" "$client_log" || true)"
 if [[ "$fault_mode" == "drop-first-delta" ||
       "$fault_mode" == "reorder-first-two-deltas" ||
-      "$fault_mode" == "drop-delta-burst" ]]; then
+      "$fault_mode" == "drop-delta-burst" ||
+      "$transport_profile" == "loss" ]]; then
   failure_lines="$(print -r -- "$failure_lines" | /usr/bin/grep -v '\[ECHOES_NETWORK_DELTA_REJECTED\].*NET_DELTA_BASE_MISSING' || true)"
 fi
 if [[ -n "$failure_lines" ]]; then
