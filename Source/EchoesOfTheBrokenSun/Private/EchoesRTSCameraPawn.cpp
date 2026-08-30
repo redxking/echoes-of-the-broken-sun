@@ -104,6 +104,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
         const bool bOverview = GlassScarReviewMode.Equals(
             TEXT("Overview"),
             ESearchCase::IgnoreCase);
+        const bool bBuriedCauseway = GlassScarReviewMode.Equals(
+            TEXT("BuriedCauseway"),
+            ESearchCase::IgnoreCase);
         const float CenterX =
             GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase)
                 ? -3800.0f
@@ -114,7 +117,8 @@ void AEchoesRTSCameraPawn::BeginPlay()
                 : 0.0f;
         bArtReviewMode = true;
         SetActorLocation(FVector(CenterX, 0.0f, 100.0f));
-        SpringArm->TargetArmLength = bOverview ? 10800.0f : 2300.0f;
+        SpringArm->TargetArmLength =
+            bOverview ? 10800.0f : (bBuriedCauseway ? 2850.0f : 2300.0f);
         SpringArm->SetRelativeRotation(
             FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
