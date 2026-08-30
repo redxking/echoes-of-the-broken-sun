@@ -2883,6 +2883,69 @@ void TestNetworkProtocolAdmissionAndHardening() {
     simulation.Step(20);
     REQUIRE(simulation.FindEntity(remoteWorker)->position ==
             Vec2::FromTiles(11, 10));
+
+    const EntityId visibleHostile = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(12, 10));
+    REQUIRE(visibleHostile != 0);
+    const std::optional<PlayerView> remoteView =
+        simulation.CreatePlayerView(1);
+    REQUIRE(remoteView.has_value());
+    REQUIRE(!simulation.IsEntityVisibleTo(1, localWorker));
+    REQUIRE(simulation.IsEntityVisibleTo(1, visibleHostile));
+
+    ScopedViewKeyframe keyframe{};
+    REQUIRE(BuildScopedViewKeyframe(
+        *remoteView, 1, context.lastAcceptedSequence, keyframe, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(keyframe.player == 1);
+    REQUIRE(keyframe.simulationTick == simulation.CurrentTick());
+    REQUIRE(keyframe.lastAcceptedSequence == 1);
+    REQUIRE(keyframe.tiles.size() == 16 * 16);
+    REQUIRE(keyframe.scopedDigest != 0);
+    REQUIRE(std::none_of(
+        keyframe.entities.begin(), keyframe.entities.end(),
+        [&](const ScopedEntityState& entity) {
+            return entity.id == localWorker;
+        }));
+    const auto visibleHostileState = std::find_if(
+        keyframe.entities.begin(), keyframe.entities.end(),
+        [&](const ScopedEntityState& entity) {
+            return entity.id == visibleHostile;
+        });
+    REQUIRE(visibleHostileState != keyframe.entities.end());
+    REQUIRE(visibleHostileState->hitPoints == 1);
+    REQUIRE(visibleHostileState->maxHitPoints == 1);
+
+    const std::vector<std::uint8_t> keyframeBytes =
+        EncodeScopedViewKeyframe(keyframe);
+    REQUIRE(!keyframeBytes.empty());
+    REQUIRE(keyframeBytes == EncodeScopedViewKeyframe(keyframe));
+    ScopedViewKeyframe decodedKeyframe{};
+    REQUIRE(DecodeScopedViewKeyframe(keyframeBytes, decodedKeyframe) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedKeyframe == keyframe);
+
+    malformed = keyframeBytes;
+    malformed.pop_back();
+    REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==
+            DecodeStatus::IntegrityMismatch);
+    malformed.resize(89);
+    REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==
+            DecodeStatus::LengthMismatch);
+    malformed = keyframeBytes;
+    malformed[78] = 0x80;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==
+            DecodeStatus::InvalidEncoding);
+    malformed = keyframeBytes;
+    malformed[malformed.size() - 12] ^= 1;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==
+            DecodeStatus::IntegrityMismatch);
+    malformed.assign(kMaximumScopedKeyframeBytes + 1, 0);
+    REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==
+            DecodeStatus::PacketTooLarge);
 }
 
 }  // namespace

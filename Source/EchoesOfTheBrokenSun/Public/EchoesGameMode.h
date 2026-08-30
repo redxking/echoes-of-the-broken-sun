@@ -14,6 +14,8 @@ public:
     AEchoesGameMode();
 
     virtual void BeginPlay() override;
+    virtual void PostLogin(APlayerController* NewPlayer) override;
+    virtual void Logout(AController* Exiting) override;
 
 #if WITH_DEV_AUTOMATION_TESTS
     bool SpawnPrototypeEnvironmentForTesting()
@@ -25,4 +27,5 @@ public:
 private:
     bool SpawnPrototypeEnvironment();
     void CleanupPrototypeEnvironment();
+    TWeakObjectPtr<APlayerController> NetworkRemoteController;
 };

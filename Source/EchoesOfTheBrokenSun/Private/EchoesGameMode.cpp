@@ -48,6 +48,57 @@ AEchoesGameMode::AEchoesGameMode()
     HUDClass = AEchoesHUD::StaticClass();
 }
 
+void AEchoesGameMode::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+    if (GetNetMode() != NM_ListenServer || NewPlayer == nullptr ||
+        NewPlayer->IsLocalController())
+    {
+        return;
+    }
+    AEchoesPlayerController* EchoesController =
+        Cast<AEchoesPlayerController>(NewPlayer);
+    if (EchoesController == nullptr || NetworkRemoteController.IsValid())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_SEAT_REJECTED] reason=NET_SEAT_UNAVAILABLE"));
+        NewPlayer->ClientReturnToMainMenuWithTextReason(
+            FText::FromString(TEXT("NET_SEAT_UNAVAILABLE")));
+        return;
+    }
+    NetworkRemoteController = NewPlayer;
+    EchoesController->ConfigureNetworkSeat(
+        UEchoesSimulationSubsystem::OpponentPlayerId);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_SEAT_BOUND] player=%u connectionBound=true sharedControl=false"),
+        UEchoesSimulationSubsystem::OpponentPlayerId);
+}
+
+void AEchoesGameMode::Logout(AController* Exiting)
+{
+    if (NetworkRemoteController.Get() == Exiting)
+    {
+        NetworkRemoteController.Reset();
+        if (UEchoesSimulationSubsystem* Bridge =
+                GetWorld() != nullptr
+                    ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                    : nullptr)
+        {
+            Bridge->SetNetworkHumanOpponent(false);
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_SEAT_RELEASED] player=%u"),
+            UEchoesSimulationSubsystem::OpponentPlayerId);
+    }
+    Super::Logout(Exiting);
+}
+
 void AEchoesGameMode::BeginPlay()
 {
     Super::BeginPlay();
@@ -289,6 +340,23 @@ void AEchoesGameMode::BeginPlay()
             Controller->NotifyRuntimeFailure(TEXT("ECHOES_SIM_INIT_FAILED"));
         }
         return;
+    }
+
+    if (GetNetMode() == NM_ListenServer &&
+        FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
+    {
+        Bridge->SetNetworkHumanOpponent(true);
+        Bridge->SetScenarioPaused(true);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_AUTHORITY_WAITING] tick=%llu paused=true player=%u"),
+            static_cast<unsigned long long>(
+                Bridge->GetSimulation() != nullptr
+                    ? Bridge->GetSimulation()->CurrentTick()
+                    : 0),
+            UEchoesSimulationSubsystem::OpponentPlayerId);
     }
 
 #if !UE_BUILD_SHIPPING

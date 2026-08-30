@@ -15,12 +15,17 @@ inline constexpr std::uint32_t kProtocolVersion = 1;
 inline constexpr std::uint32_t kPlayerViewSchemaVersion = 1;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;
+inline constexpr std::size_t kMaximumScopedKeyframeBytes = 256 * 1024;
+inline constexpr std::size_t kMaximumScopedEntities = 4096;
+inline constexpr std::size_t kMaximumScopedTiles = 256 * 256;
+inline constexpr std::size_t kMaximumVibrationSignatures = 1024;
 
 using Digest256 = std::array<std::uint8_t, kDigestBytes>;
 
 enum class PacketKind : std::uint8_t {
     CompatibilityHello = 1,
     CommandRequest = 2,
+    ScopedViewKeyframe = 3,
 };
 
 enum class DecodeStatus : std::uint8_t {
@@ -77,7 +82,7 @@ EncodeCompatibilityHello(const CompatibilityManifest& manifest);
     std::span<const std::uint8_t> bytes,
     CompatibilityManifest& manifest);
 
-// Player identity is intentionally absent. The authority binds the authenticated
+// Player identity is intentionally absent. The authority binds the owning
 // connection to a seat and supplies PlayerId only after this packet is decoded.
 struct CommandRequest final {
     std::uint64_t sequence = 0;
@@ -102,7 +107,7 @@ EncodeCommandRequest(const CommandRequest& request);
 
 struct CommandAdmissionContext final {
     PlayerId player = 0;
-    Tick minimumInputDelayTicks = 2;
+    Tick minimumInputDelayTicks = 3;
     Tick maximumLeadTicks = 40;
     bool hasAcceptedSequence = false;
     std::uint64_t lastAcceptedSequence = 0;
@@ -129,5 +134,70 @@ ECHOESSIMCORE_API CommandAdmissionStatus AdmitCommandRequest(
     CommandAdmissionContext& context,
     Simulation& simulation,
     std::string* simulationRejection = nullptr);
+
+struct ScopedTileState final {
+    Visibility visibility = Visibility::Unexplored;
+    Terrain terrain = Terrain::Blocked;
+    bool passable = false;
+
+    friend bool operator==(const ScopedTileState&,
+                           const ScopedTileState&) = default;
+};
+
+struct ScopedEntityState final {
+    EntityId id = 0;
+    PlayerId owner = kNeutralPlayer;
+    Faction faction = Faction::MeridianCompact;
+    EntityType type = EntityType::Worker;
+    Vec2 position{};
+    std::int32_t hitPoints = 1;
+    std::int32_t maxHitPoints = 1;
+    bool completed = true;
+    FutureWellChoice wellChoice = FutureWellChoice::Dormant;
+    bool deployed = false;
+    WaystoneMode waystoneMode = WaystoneMode::NotWaystone;
+    WarformAdaptation warformAdaptation = WarformAdaptation::None;
+    bool aegisPowered = false;
+
+    friend bool operator==(const ScopedEntityState&,
+                           const ScopedEntityState&) = default;
+};
+
+struct ScopedViewKeyframe final {
+    std::uint32_t protocolVersion = kProtocolVersion;
+    std::uint64_t snapshotId = 0;
+    Tick simulationTick = 0;
+    std::uint32_t playerViewSchemaVersion = kPlayerViewSchemaVersion;
+    std::uint64_t lastAcceptedSequence = 0;
+    std::int32_t mapWidthTiles = 0;
+    std::int32_t mapHeightTiles = 0;
+    PlayerId player = 0;
+    Faction faction = Faction::MeridianCompact;
+    ResourcePool resources{};
+    std::int32_t populationUsed = 0;
+    std::int32_t populationCapacity = 0;
+    std::vector<ScopedTileState> tiles{};
+    std::vector<ScopedEntityState> entities{};
+    std::vector<VibrationSignature> vibrationSignatures{};
+    std::uint64_t scopedDigest = 0;
+
+    friend bool operator==(const ScopedViewKeyframe&,
+                           const ScopedViewKeyframe&) = default;
+};
+
+// Materializes only information already admitted by PlayerView. Hidden entities,
+// authoritative random state, opponent internals, and full-state checksums are
+// unavailable at this boundary.
+[[nodiscard]] ECHOESSIMCORE_API bool BuildScopedViewKeyframe(
+    const PlayerView& view,
+    std::uint64_t snapshotId,
+    std::uint64_t lastAcceptedSequence,
+    ScopedViewKeyframe& keyframe,
+    std::string* error = nullptr);
+[[nodiscard]] ECHOESSIMCORE_API std::vector<std::uint8_t>
+EncodeScopedViewKeyframe(const ScopedViewKeyframe& keyframe);
+[[nodiscard]] ECHOESSIMCORE_API DecodeStatus DecodeScopedViewKeyframe(
+    std::span<const std::uint8_t> bytes,
+    ScopedViewKeyframe& keyframe);
 
 }  // namespace echoes::sim::net

@@ -11,6 +11,7 @@
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
 class AEchoesEntityView;
@@ -207,6 +208,14 @@ public:
     [[nodiscard]] FEchoesObjectiveSnapshot GetLocalObjectiveSnapshot() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
+    echoes::sim::net::CommandAdmissionStatus AdmitNetworkCommand(
+        const echoes::sim::net::CommandRequest& Request,
+        echoes::sim::net::CommandAdmissionContext& Context,
+        std::string* SimulationRejection = nullptr);
+    void SetNetworkHumanOpponent(bool bEnabled)
+    {
+        bNetworkHumanOpponent = bEnabled;
+    }
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
     [[nodiscard]] AEchoesEntityView* FindEntityView(uint32 EntityId) const;
     [[nodiscard]] AEchoesFogView* GetFogView() const;
@@ -382,6 +391,7 @@ private:
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
+    bool bNetworkHumanOpponent = false;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;
     EEchoesOperationMode SelectedOperation = EEchoesOperationMode::Skirmish;

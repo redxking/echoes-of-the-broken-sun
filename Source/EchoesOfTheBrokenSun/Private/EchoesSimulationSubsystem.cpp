@@ -4745,7 +4745,8 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
-    if (bStressScenario || bPointerCombatGuardPresentationScenario ||
+    if (bStressScenario || bNetworkHumanOpponent ||
+        bPointerCombatGuardPresentationScenario ||
         !Simulation.IsValid() ||
         Simulation->CurrentTick() % Simulation->Config().ticksPerSecond != 0)
     {
@@ -5727,6 +5728,20 @@ void UEchoesSimulationSubsystem::DestroyEntityViews()
 const echoes::sim::Simulation* UEchoesSimulationSubsystem::GetSimulation() const
 {
     return Simulation.Get();
+}
+
+echoes::sim::net::CommandAdmissionStatus
+UEchoesSimulationSubsystem::AdmitNetworkCommand(
+    const echoes::sim::net::CommandRequest& Request,
+    echoes::sim::net::CommandAdmissionContext& Context,
+    std::string* SimulationRejection)
+{
+    if (!bScenarioReady || !Simulation.IsValid())
+    {
+        return echoes::sim::net::CommandAdmissionStatus::InvalidSeat;
+    }
+    return echoes::sim::net::AdmitCommandRequest(
+        Request, Context, *Simulation, SimulationRejection);
 }
 
 const echoes::sim::Entity* UEchoesSimulationSubsystem::FindEntity(uint32 EntityId) const

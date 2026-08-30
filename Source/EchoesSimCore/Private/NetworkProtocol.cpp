@@ -16,6 +16,8 @@ constexpr std::size_t kCommandPacketBytes =
     kHeaderBytes + 2 * sizeof(std::uint64_t) + sizeof(std::uint8_t) +
     2 * sizeof(std::uint32_t) + 2 * sizeof(std::int32_t) +
     4 * sizeof(std::uint8_t) + kIntegrityBytes;
+constexpr std::size_t kScopedEntityBytes = 27;
+constexpr std::size_t kScopedKeyframeMinimumBytes = 90;
 
 class Writer final {
 public:
@@ -144,6 +146,15 @@ private:
     return ~crc;
 }
 
+[[nodiscard]] std::uint64_t Fnv1a64(std::span<const std::uint8_t> bytes) {
+    std::uint64_t digest = 14695981039346656037ULL;
+    for (const std::uint8_t byte : bytes) {
+        digest ^= byte;
+        digest *= 1099511628211ULL;
+    }
+    return digest;
+}
+
 void WriteHeader(Writer& writer, PacketKind kind) {
     writer.U32(kPacketMagic);
     writer.U16(kEnvelopeVersion);
@@ -176,11 +187,30 @@ DecodeStatus ReadHeader(Reader& reader, PacketKind expectedKind) {
 }
 
 DecodeStatus ValidatePacket(std::span<const std::uint8_t> bytes,
-                            std::size_t expectedBytes) {
-    if (bytes.size() > kMaximumPacketBytes) {
+                            std::size_t expectedBytes,
+                            std::size_t maximumBytes = kMaximumPacketBytes) {
+    if (bytes.size() > maximumBytes) {
         return DecodeStatus::PacketTooLarge;
     }
     if (bytes.size() != expectedBytes) {
+        return DecodeStatus::LengthMismatch;
+    }
+    Reader integrityReader(bytes.last(kIntegrityBytes));
+    std::uint32_t encodedCrc = 0;
+    if (!integrityReader.U32(encodedCrc) ||
+        encodedCrc != Crc32(bytes.first(bytes.size() - kIntegrityBytes))) {
+        return DecodeStatus::IntegrityMismatch;
+    }
+    return DecodeStatus::Ok;
+}
+
+DecodeStatus ValidateVariablePacket(std::span<const std::uint8_t> bytes,
+                                    std::size_t minimumBytes,
+                                    std::size_t maximumBytes) {
+    if (bytes.size() > maximumBytes) {
+        return DecodeStatus::PacketTooLarge;
+    }
+    if (bytes.size() < minimumBytes) {
         return DecodeStatus::LengthMismatch;
     }
     Reader integrityReader(bytes.last(kIntegrityBytes));
@@ -215,6 +245,40 @@ void AppendIntegrity(Writer& writer) {
 [[nodiscard]] bool IsValidResearchTypeEncoding(std::uint8_t value) {
     return value <=
            static_cast<std::uint8_t>(ResearchType::KharuunAncestralEdge);
+}
+
+[[nodiscard]] bool IsValidFactionEncoding(std::uint8_t value) {
+    return value <= static_cast<std::uint8_t>(Faction::KharuunAssemblies);
+}
+
+[[nodiscard]] bool IsValidVisibilityEncoding(std::uint8_t value) {
+    return value <= static_cast<std::uint8_t>(Visibility::Visible);
+}
+
+[[nodiscard]] bool IsValidTerrainEncoding(std::uint8_t value) {
+    return value <= static_cast<std::uint8_t>(Terrain::Scarred);
+}
+
+[[nodiscard]] bool IsValidWaystoneModeEncoding(std::uint8_t value) {
+    return value <= static_cast<std::uint8_t>(WaystoneMode::Rooting);
+}
+
+[[nodiscard]] bool IsValidScopedPlayer(PlayerId player) {
+    return player < kMaximumPlayers;
+}
+
+[[nodiscard]] bool IsValidScopedOwner(PlayerId player) {
+    return IsValidScopedPlayer(player) || player == kNeutralPlayer;
+}
+
+[[nodiscard]] bool CheckedMultiplySize(std::size_t lhs,
+                                       std::size_t rhs,
+                                       std::size_t& result) {
+    if (lhs != 0 && rhs > std::numeric_limits<std::size_t>::max() / lhs) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
 }
 
 [[nodiscard]] bool CheckedAdd(Tick lhs, Tick rhs, Tick& result) {
@@ -488,6 +552,358 @@ CommandAdmissionStatus AdmitCommandRequest(
     context.hasAcceptedSequence = true;
     context.lastAcceptedSequence = request.sequence;
     return CommandAdmissionStatus::Accepted;
+}
+
+bool BuildScopedViewKeyframe(const PlayerView& view,
+                             std::uint64_t snapshotId,
+                             std::uint64_t lastAcceptedSequence,
+                             ScopedViewKeyframe& keyframe,
+                             std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    const SimulationConfig& config = view.Config();
+    if (snapshotId == 0 || config.mapWidthTiles <= 0 ||
+        config.mapHeightTiles <= 0 ||
+        config.mapWidthTiles > 256 || config.mapHeightTiles > 256 ||
+        !IsValidScopedPlayer(view.Player().id) ||
+        !IsValidFactionEncoding(
+            static_cast<std::uint8_t>(view.Player().faction))) {
+        if (error != nullptr) {
+            *error = "NET_SCOPED_VIEW_INVALID";
+        }
+        return false;
+    }
+    std::size_t tileCount = 0;
+    if (!CheckedMultiplySize(
+            static_cast<std::size_t>(config.mapWidthTiles),
+            static_cast<std::size_t>(config.mapHeightTiles), tileCount) ||
+        tileCount > kMaximumScopedTiles ||
+        view.Entities().size() > kMaximumScopedEntities ||
+        view.VibrationSignatures().size() > kMaximumVibrationSignatures) {
+        if (error != nullptr) {
+            *error = "NET_SCOPED_VIEW_CAPACITY";
+        }
+        return false;
+    }
+
+    ScopedViewKeyframe built{};
+    built.snapshotId = snapshotId;
+    built.simulationTick = view.CurrentTick();
+    built.lastAcceptedSequence = lastAcceptedSequence;
+    built.mapWidthTiles = config.mapWidthTiles;
+    built.mapHeightTiles = config.mapHeightTiles;
+    built.player = view.Player().id;
+    built.faction = view.Player().faction;
+    built.resources = view.Player().resources;
+    built.populationUsed = view.PopulationUsed();
+    built.populationCapacity = view.PopulationCapacity();
+    built.tiles.reserve(tileCount);
+    for (std::int32_t y = 0; y < config.mapHeightTiles; ++y) {
+        for (std::int32_t x = 0; x < config.mapWidthTiles; ++x) {
+            const Vec2 position = Vec2::FromTiles(x, y);
+            const Visibility visibility = view.VisibilityAt(position);
+            const Terrain terrain = view.TerrainAt(x, y);
+            built.tiles.push_back(
+                {visibility, terrain, view.IsPositionPassable(position)});
+        }
+    }
+    built.entities.reserve(view.Entities().size());
+    for (const Entity& entity : view.Entities()) {
+        built.entities.push_back(
+            {entity.id,
+             entity.owner,
+             entity.faction,
+             entity.type,
+             entity.position,
+             entity.hitPoints,
+             entity.maxHitPoints,
+             entity.completed,
+             entity.wellChoice,
+             entity.deployed,
+             entity.waystoneMode,
+             entity.warformAdaptation,
+             entity.aegisPowered});
+    }
+    std::sort(
+        built.entities.begin(), built.entities.end(),
+        [](const ScopedEntityState& lhs, const ScopedEntityState& rhs) {
+            return lhs.id < rhs.id;
+        });
+    built.vibrationSignatures = view.VibrationSignatures();
+
+    const std::vector<std::uint8_t> encoded = EncodeScopedViewKeyframe(built);
+    ScopedViewKeyframe finalized{};
+    if (encoded.empty() ||
+        DecodeScopedViewKeyframe(encoded, finalized) != DecodeStatus::Ok) {
+        if (error != nullptr) {
+            *error = "NET_SCOPED_VIEW_ENCODING_FAILED";
+        }
+        return false;
+    }
+    keyframe = std::move(finalized);
+    return true;
+}
+
+std::vector<std::uint8_t> EncodeScopedViewKeyframe(
+    const ScopedViewKeyframe& keyframe) {
+    if (keyframe.snapshotId == 0 || keyframe.mapWidthTiles <= 0 ||
+        keyframe.mapHeightTiles <= 0 || keyframe.mapWidthTiles > 256 ||
+        keyframe.mapHeightTiles > 256 ||
+        !IsValidScopedPlayer(keyframe.player) ||
+        !IsValidFactionEncoding(static_cast<std::uint8_t>(keyframe.faction)) ||
+        keyframe.resources.material < 0 || keyframe.resources.dawnshards < 0 ||
+        keyframe.populationUsed < 0 || keyframe.populationCapacity < 0 ||
+        keyframe.entities.size() > kMaximumScopedEntities ||
+        keyframe.vibrationSignatures.size() >
+            kMaximumVibrationSignatures) {
+        return {};
+    }
+    std::size_t expectedTiles = 0;
+    if (!CheckedMultiplySize(
+            static_cast<std::size_t>(keyframe.mapWidthTiles),
+            static_cast<std::size_t>(keyframe.mapHeightTiles), expectedTiles) ||
+        expectedTiles != keyframe.tiles.size() ||
+        expectedTiles > kMaximumScopedTiles) {
+        return {};
+    }
+
+    Writer writer;
+    WriteHeader(writer, PacketKind::ScopedViewKeyframe);
+    writer.U32(keyframe.protocolVersion);
+    writer.U64(keyframe.snapshotId);
+    writer.U64(keyframe.simulationTick);
+    writer.U32(keyframe.playerViewSchemaVersion);
+    writer.U64(keyframe.lastAcceptedSequence);
+    writer.I32(keyframe.mapWidthTiles);
+    writer.I32(keyframe.mapHeightTiles);
+    writer.U8(keyframe.player);
+    writer.U8(static_cast<std::uint8_t>(keyframe.faction));
+    writer.I32(keyframe.resources.material);
+    writer.I32(keyframe.resources.dawnshards);
+    writer.I32(keyframe.populationUsed);
+    writer.I32(keyframe.populationCapacity);
+    writer.U32(static_cast<std::uint32_t>(keyframe.tiles.size()));
+    writer.U32(static_cast<std::uint32_t>(keyframe.entities.size()));
+    writer.U32(static_cast<std::uint32_t>(
+        keyframe.vibrationSignatures.size()));
+    for (const ScopedTileState& tile : keyframe.tiles) {
+        if (!IsValidVisibilityEncoding(
+                static_cast<std::uint8_t>(tile.visibility)) ||
+            !IsValidTerrainEncoding(static_cast<std::uint8_t>(tile.terrain)) ||
+            (tile.visibility == Visibility::Unexplored &&
+             (tile.terrain != Terrain::Blocked || tile.passable))) {
+            return {};
+        }
+        writer.U8(
+            static_cast<std::uint8_t>(tile.visibility) |
+            (static_cast<std::uint8_t>(tile.terrain) << 2) |
+            (tile.passable ? 0x10U : 0U));
+    }
+    EntityId priorEntity = 0;
+    for (const ScopedEntityState& entity : keyframe.entities) {
+        if (entity.id == 0 || entity.id <= priorEntity ||
+            !IsValidScopedOwner(entity.owner) ||
+            !IsValidFactionEncoding(static_cast<std::uint8_t>(entity.faction)) ||
+            !IsValidEntityTypeEncoding(static_cast<std::uint8_t>(entity.type)) ||
+            entity.hitPoints <= 0 || entity.maxHitPoints <= 0 ||
+            entity.hitPoints > entity.maxHitPoints ||
+            !IsValidWellChoiceEncoding(
+                static_cast<std::uint8_t>(entity.wellChoice)) ||
+            !IsValidWaystoneModeEncoding(
+                static_cast<std::uint8_t>(entity.waystoneMode)) ||
+            !IsValidWarformAdaptationEncoding(
+                static_cast<std::uint8_t>(entity.warformAdaptation))) {
+            return {};
+        }
+        priorEntity = entity.id;
+        writer.U32(entity.id);
+        writer.U8(entity.owner);
+        writer.U8(static_cast<std::uint8_t>(entity.faction));
+        writer.U8(static_cast<std::uint8_t>(entity.type));
+        writer.I32(entity.position.x.Raw());
+        writer.I32(entity.position.y.Raw());
+        writer.I32(entity.hitPoints);
+        writer.I32(entity.maxHitPoints);
+        writer.U8((entity.completed ? 0x01U : 0U) |
+                  (entity.deployed ? 0x02U : 0U) |
+                  (entity.aegisPowered ? 0x04U : 0U));
+        writer.U8(static_cast<std::uint8_t>(entity.wellChoice));
+        writer.U8(static_cast<std::uint8_t>(entity.waystoneMode));
+        writer.U8(static_cast<std::uint8_t>(entity.warformAdaptation));
+    }
+    Vec2 priorSignature = Vec2::FromRaw(-1, -1);
+    for (const VibrationSignature& signature :
+         keyframe.vibrationSignatures) {
+        const Vec2 position = signature.approximatePosition;
+        if (position.x.Raw() < 0 || position.y.Raw() < 0 ||
+            position.x.Raw() >= keyframe.mapWidthTiles * kFixedScale ||
+            position.y.Raw() >= keyframe.mapHeightTiles * kFixedScale ||
+            (priorSignature.x.Raw() >= 0 &&
+             (position.x.Raw() < priorSignature.x.Raw() ||
+              (position.x.Raw() == priorSignature.x.Raw() &&
+               position.y.Raw() <= priorSignature.y.Raw())))) {
+            return {};
+        }
+        priorSignature = position;
+        writer.I32(position.x.Raw());
+        writer.I32(position.y.Raw());
+    }
+    const std::uint64_t digest = Fnv1a64(writer.Bytes());
+    writer.U64(digest);
+    AppendIntegrity(writer);
+    std::vector<std::uint8_t> encoded = std::move(writer).Finish();
+    if (encoded.size() > kMaximumScopedKeyframeBytes) {
+        return {};
+    }
+    return encoded;
+}
+
+DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
+                                      ScopedViewKeyframe& keyframe) {
+    const DecodeStatus packetStatus = ValidateVariablePacket(
+        bytes, kScopedKeyframeMinimumBytes, kMaximumScopedKeyframeBytes);
+    if (packetStatus != DecodeStatus::Ok) {
+        return packetStatus;
+    }
+    Reader reader(bytes.first(bytes.size() - kIntegrityBytes));
+    const DecodeStatus headerStatus =
+        ReadHeader(reader, PacketKind::ScopedViewKeyframe);
+    if (headerStatus != DecodeStatus::Ok) {
+        return headerStatus;
+    }
+
+    ScopedViewKeyframe decoded{};
+    std::uint8_t faction = 0;
+    std::uint32_t tileCount = 0;
+    std::uint32_t entityCount = 0;
+    std::uint32_t signatureCount = 0;
+    if (!reader.U32(decoded.protocolVersion) ||
+        !reader.U64(decoded.snapshotId) ||
+        !reader.U64(decoded.simulationTick) ||
+        !reader.U32(decoded.playerViewSchemaVersion) ||
+        !reader.U64(decoded.lastAcceptedSequence) ||
+        !reader.I32(decoded.mapWidthTiles) ||
+        !reader.I32(decoded.mapHeightTiles) || !reader.U8(decoded.player) ||
+        !reader.U8(faction) || !reader.I32(decoded.resources.material) ||
+        !reader.I32(decoded.resources.dawnshards) ||
+        !reader.I32(decoded.populationUsed) ||
+        !reader.I32(decoded.populationCapacity) || !reader.U32(tileCount) ||
+        !reader.U32(entityCount) || !reader.U32(signatureCount)) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    decoded.faction = static_cast<Faction>(faction);
+    std::size_t expectedTiles = 0;
+    std::size_t entityBytes = 0;
+    std::size_t signatureBytes = 0;
+    if (decoded.protocolVersion != kProtocolVersion ||
+        decoded.playerViewSchemaVersion != kPlayerViewSchemaVersion ||
+        decoded.snapshotId == 0 || decoded.mapWidthTiles <= 0 ||
+        decoded.mapHeightTiles <= 0 || decoded.mapWidthTiles > 256 ||
+        decoded.mapHeightTiles > 256 ||
+        !IsValidScopedPlayer(decoded.player) ||
+        !IsValidFactionEncoding(faction) || decoded.resources.material < 0 ||
+        decoded.resources.dawnshards < 0 || decoded.populationUsed < 0 ||
+        decoded.populationCapacity < 0 ||
+        !CheckedMultiplySize(
+            static_cast<std::size_t>(decoded.mapWidthTiles),
+            static_cast<std::size_t>(decoded.mapHeightTiles), expectedTiles) ||
+        expectedTiles != tileCount || tileCount > kMaximumScopedTiles ||
+        entityCount > kMaximumScopedEntities ||
+        signatureCount > kMaximumVibrationSignatures ||
+        !CheckedMultiplySize(entityCount, kScopedEntityBytes, entityBytes) ||
+        !CheckedMultiplySize(signatureCount, 8, signatureBytes) ||
+        reader.Remaining() != tileCount + entityBytes + signatureBytes + 8) {
+        return DecodeStatus::InvalidEncoding;
+    }
+
+    decoded.tiles.reserve(tileCount);
+    for (std::uint32_t index = 0; index < tileCount; ++index) {
+        std::uint8_t packed = 0;
+        if (!reader.U8(packed) || (packed & 0xe0U) != 0 ||
+            !IsValidVisibilityEncoding(packed & 0x03U) ||
+            !IsValidTerrainEncoding((packed >> 2) & 0x03U)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        const ScopedTileState tile{
+            static_cast<Visibility>(packed & 0x03U),
+            static_cast<Terrain>((packed >> 2) & 0x03U),
+            (packed & 0x10U) != 0};
+        if (tile.visibility == Visibility::Unexplored &&
+            (tile.terrain != Terrain::Blocked || tile.passable)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        decoded.tiles.push_back(tile);
+    }
+
+    decoded.entities.reserve(entityCount);
+    EntityId priorEntity = 0;
+    for (std::uint32_t index = 0; index < entityCount; ++index) {
+        ScopedEntityState entity{};
+        std::uint8_t factionValue = 0;
+        std::uint8_t type = 0;
+        std::uint8_t flags = 0;
+        std::uint8_t wellChoice = 0;
+        std::uint8_t waystoneMode = 0;
+        std::uint8_t adaptation = 0;
+        std::int32_t positionX = 0;
+        std::int32_t positionY = 0;
+        if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
+            !reader.U8(factionValue) || !reader.U8(type) ||
+            !reader.I32(positionX) || !reader.I32(positionY) ||
+            !reader.I32(entity.hitPoints) ||
+            !reader.I32(entity.maxHitPoints) || !reader.U8(flags) ||
+            !reader.U8(wellChoice) || !reader.U8(waystoneMode) ||
+            !reader.U8(adaptation) || entity.id == 0 ||
+            entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
+            !IsValidFactionEncoding(factionValue) ||
+            !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
+            entity.hitPoints <= 0 || entity.maxHitPoints <= 0 ||
+            entity.hitPoints > entity.maxHitPoints ||
+            !IsValidWellChoiceEncoding(wellChoice) ||
+            !IsValidWaystoneModeEncoding(waystoneMode) ||
+            !IsValidWarformAdaptationEncoding(adaptation)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorEntity = entity.id;
+        entity.faction = static_cast<Faction>(factionValue);
+        entity.type = static_cast<EntityType>(type);
+        entity.position = Vec2::FromRaw(positionX, positionY);
+        entity.completed = (flags & 0x01U) != 0;
+        entity.deployed = (flags & 0x02U) != 0;
+        entity.aegisPowered = (flags & 0x04U) != 0;
+        entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+        entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
+        entity.warformAdaptation =
+            static_cast<WarformAdaptation>(adaptation);
+        decoded.entities.push_back(entity);
+    }
+
+    decoded.vibrationSignatures.reserve(signatureCount);
+    Vec2 priorSignature = Vec2::FromRaw(-1, -1);
+    for (std::uint32_t index = 0; index < signatureCount; ++index) {
+        std::int32_t x = 0;
+        std::int32_t y = 0;
+        if (!reader.I32(x) || !reader.I32(y) || x < 0 || y < 0 ||
+            x >= decoded.mapWidthTiles * kFixedScale ||
+            y >= decoded.mapHeightTiles * kFixedScale ||
+            (priorSignature.x.Raw() >= 0 &&
+             (x < priorSignature.x.Raw() ||
+              (x == priorSignature.x.Raw() &&
+               y <= priorSignature.y.Raw())))) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorSignature = Vec2::FromRaw(x, y);
+        decoded.vibrationSignatures.push_back({priorSignature});
+    }
+
+    const std::size_t digestOffset = bytes.size() - kIntegrityBytes - 8;
+    if (!reader.U64(decoded.scopedDigest) || reader.Remaining() != 0 ||
+        decoded.scopedDigest != Fnv1a64(bytes.first(digestOffset))) {
+        return DecodeStatus::IntegrityMismatch;
+    }
+    keyframe = std::move(decoded);
+    return DecodeStatus::Ok;
 }
 
 }  // namespace echoes::sim::net

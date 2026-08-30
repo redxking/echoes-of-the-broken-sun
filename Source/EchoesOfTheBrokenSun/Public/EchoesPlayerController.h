@@ -5,6 +5,7 @@
 #include "EchoesFormationLayout.h"
 #include "EchoesPrologueMissionModel.h"
 #include "GameFramework/PlayerController.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesPlayerController.generated.h"
 
@@ -25,6 +26,9 @@ public:
     virtual void BeginPlay() override;
     virtual void PlayerTick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
+
+    /** Server-only connection-to-seat binding for the initial 1v1 slice. */
+    void ConfigureNetworkSeat(uint8 Seat);
 
     [[nodiscard]] bool IsDraggingSelection() const;
     [[nodiscard]] FVector2D GetSelectionStartScreenPosition() const;
@@ -173,6 +177,40 @@ public:
     }
 
 private:
+    UFUNCTION(Server, Reliable)
+    void ServerSubmitCompatibilityHello(const TArray<uint8>& Packet);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveCompatibilityResult(
+        bool bAccepted,
+        const FString& StableReason);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveScopedKeyframe(const TArray<uint8>& Packet);
+
+    UFUNCTION(Server, Reliable)
+    void ServerSubmitNetworkCommand(const TArray<uint8>& Packet);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveCommandAdmission(
+        uint8 Status,
+        uint64 ServerTick,
+        const FString& SimulationReason);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveCommandExecution(
+        bool bExecuted,
+        uint32 ActorId,
+        int32 PositionXRaw,
+        int32 PositionYRaw,
+        uint64 ServerTick);
+
+    UFUNCTION(Server, Reliable)
+    void ServerConfirmNetworkSmokeComplete(uint64 SnapshotId);
+
+    void SubmitNetworkCompatibilityHello();
+    void VerifyRemoteCommandExecution();
+    void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
     void FailPointerCombatGuardReview(const FString& Reason);
@@ -304,6 +342,17 @@ private:
     bool bNewCampaignConfirmationArmed = false;
     bool bCampaignRestoreConfirmationArmed = false;
     bool bCampaignResult = false;
+    uint8 NetworkSeat = echoes::sim::kNeutralPlayer;
+    bool bNetworkCompatibilityAccepted = false;
+    bool bNetworkClientSmoke = false;
+    bool bNetworkCommandExecutionVerified = false;
+    uint64 LastNetworkSnapshotId = 0;
+    echoes::sim::net::CommandAdmissionContext NetworkCommandContext{};
+    echoes::sim::net::CommandRequest PendingRemoteCommand{};
+    echoes::sim::Vec2 PendingRemoteInitialPosition{};
+    FTimerHandle NetworkExecutionTimer;
+    FTimerHandle NetworkClientExitTimer;
+    FTimerHandle NetworkServerExitTimer;
     bool bCampaignSuccess = false;
     echoes::sim::FutureWellChoice CampaignConsequence =
         echoes::sim::FutureWellChoice::Dormant;
