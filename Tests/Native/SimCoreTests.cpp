@@ -2926,6 +2926,75 @@ void TestNetworkProtocolAdmissionAndHardening() {
             DecodeStatus::Ok);
     REQUIRE(decodedKeyframe == keyframe);
 
+    ScopedViewKeyframe changedKeyframe = keyframe;
+    changedKeyframe.snapshotId = 2;
+    changedKeyframe.simulationTick += 10;
+    changedKeyframe.resources.material += 5;
+    const auto changedTile = std::find_if(
+        changedKeyframe.tiles.begin(), changedKeyframe.tiles.end(),
+        [](const ScopedTileState& tile) {
+            return tile.visibility != Visibility::Unexplored;
+        });
+    REQUIRE(changedTile != changedKeyframe.tiles.end());
+    changedTile->passable = !changedTile->passable;
+    REQUIRE(!changedKeyframe.entities.empty());
+    changedKeyframe.entities.front().position = Vec2::FromRaw(
+        changedKeyframe.entities.front().position.x.Raw() + 1,
+        changedKeyframe.entities.front().position.y.Raw());
+    changedKeyframe.entities.erase(
+        std::remove_if(
+            changedKeyframe.entities.begin(),
+            changedKeyframe.entities.end(),
+            [&](const ScopedEntityState& entity) {
+                return entity.id == visibleHostile;
+            }),
+        changedKeyframe.entities.end());
+    const std::vector<std::uint8_t> changedKeyframeBytes =
+        EncodeScopedViewKeyframe(changedKeyframe);
+    REQUIRE(!changedKeyframeBytes.empty());
+    REQUIRE(DecodeScopedViewKeyframe(
+                changedKeyframeBytes, changedKeyframe) == DecodeStatus::Ok);
+
+    ScopedViewDelta delta{};
+    REQUIRE(BuildScopedViewDelta(
+        keyframe, changedKeyframe, delta, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(delta.baseSnapshotId == keyframe.snapshotId);
+    REQUIRE(delta.snapshotId == changedKeyframe.snapshotId);
+    REQUIRE(delta.tileChanges.size() == 1);
+    REQUIRE(!delta.entityUpserts.empty());
+    REQUIRE(std::find(
+                delta.removedEntityIds.begin(),
+                delta.removedEntityIds.end(),
+                visibleHostile) != delta.removedEntityIds.end());
+    const std::vector<std::uint8_t> deltaBytes =
+        EncodeScopedViewDelta(delta);
+    REQUIRE(!deltaBytes.empty());
+    REQUIRE(deltaBytes.size() < changedKeyframeBytes.size());
+    ScopedViewDelta decodedDelta{};
+    REQUIRE(DecodeScopedViewDelta(deltaBytes, decodedDelta) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedDelta == delta);
+    ScopedViewKeyframe appliedKeyframe{};
+    REQUIRE(ApplyScopedViewDelta(
+        keyframe, decodedDelta, appliedKeyframe, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(appliedKeyframe == changedKeyframe);
+    ScopedViewKeyframe wrongBase = keyframe;
+    wrongBase.snapshotId = 9;
+    REQUIRE(!ApplyScopedViewDelta(
+        wrongBase, decodedDelta, appliedKeyframe, &rejection));
+    REQUIRE(rejection == "NET_DELTA_BASE_MISSING");
+    ScopedViewDelta wrongDigest = decodedDelta;
+    wrongDigest.scopedDigest ^= 1;
+    REQUIRE(!ApplyScopedViewDelta(
+        keyframe, wrongDigest, appliedKeyframe, &rejection));
+    REQUIRE(rejection == "NET_DELTA_DIGEST_MISMATCH");
+    malformed = deltaBytes;
+    malformed[malformed.size() - 1] ^= 1;
+    REQUIRE(DecodeScopedViewDelta(malformed, decodedDelta) ==
+            DecodeStatus::IntegrityMismatch);
+
     malformed = keyframeBytes;
     malformed.pop_back();
     REQUIRE(DecodeScopedViewKeyframe(malformed, decodedKeyframe) ==

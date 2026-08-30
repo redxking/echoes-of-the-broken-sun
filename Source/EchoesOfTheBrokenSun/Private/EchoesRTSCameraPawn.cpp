@@ -194,6 +194,24 @@ void AEchoesRTSCameraPawn::BeginPlay()
             TEXT("[ECHOES_FUTURE_WELL_ART_REVIEW_CAMERA] previewTile=(10,10) zoom=1350 editorOnly=true"));
         return;
     }
+    if (FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkVisualReview")))
+    {
+        bArtReviewMode = true;
+        SetActorLocation(FVector(4000.0f, 4000.0f, 100.0f));
+        SpringArm->TargetArmLength = 2600.0f;
+        SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
+        SpringArm->bEnableCameraLag = false;
+        Camera->SetFieldOfView(52.0f);
+        Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+        Camera->PostProcessSettings.AutoExposureBias = 0.10f;
+        Camera->PostProcessBlendWeight = 1.0f;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_VISUAL_REVIEW_CAMERA] scopedSeat=1 centerTile=(52,52) zoom=2600 editorOnly=true"));
+        return;
+    }
     if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
     {
         bArtReviewMode = true;

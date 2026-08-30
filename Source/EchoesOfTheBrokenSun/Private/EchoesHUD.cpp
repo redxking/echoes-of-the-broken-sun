@@ -142,6 +142,52 @@ void AEchoesHUD::DrawHUD()
     const FLinearColor SecondaryColor =
         bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
 
+    if (Canvas != nullptr && EchoesController != nullptr &&
+        EchoesController->IsNetworkCompatibilityAccepted() &&
+        !EchoesController->IsNetworkMatchStarted())
+    {
+        const float LobbyWidth = FMath::Min(Canvas->ClipX - 80.0f, 720.0f);
+        const float LobbyHeight = 250.0f;
+        const float LobbyX = (Canvas->ClipX - LobbyWidth) * 0.5f;
+        const float LobbyY = (Canvas->ClipY - LobbyHeight) * 0.5f;
+        DrawRect(PanelColor, LobbyX, LobbyY, LobbyWidth, LobbyHeight);
+        DrawText(
+            TEXT("ONLINE LOBBY // GLASS SCAR"),
+            AccentColor,
+            LobbyX + 32.0f,
+            LobbyY + 32.0f,
+            GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
+            1.15f * HudScale,
+            false);
+        DrawText(
+            FString::Printf(
+                TEXT("Connection-bound seat %u // exact build, rules, map, and settings admitted"),
+                EchoesController->GetNetworkSeat()),
+            FLinearColor::White,
+            LobbyX + 32.0f,
+            LobbyY + 94.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.95f * HudScale,
+            false);
+        DrawText(
+            TEXT("The authority remains paused until this seat is ready."),
+            SecondaryColor,
+            LobbyX + 32.0f,
+            LobbyY + 128.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.92f * HudScale,
+            false);
+        DrawText(
+            TEXT("[ENTER]  READY AND START MATCH"),
+            AccentColor,
+            LobbyX + 32.0f,
+            LobbyY + 184.0f,
+            GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
+            1.0f * HudScale,
+            false);
+        return;
+    }
+
     if (EchoesController != nullptr && EchoesController->IsTitleScreenVisible())
     {
         DrawTitleScreen(EchoesController, Settings);
@@ -261,6 +307,25 @@ void AEchoesHUD::DrawHUD()
                     TEXT("RESEARCH  %d/2 complete     [Shift+R] next from selected production structure     [K/L] save/load"),
                     Completed);
             }
+        }
+    }
+    else if (EchoesController != nullptr)
+    {
+        if (const echoes::sim::net::ScopedViewKeyframe* NetworkView =
+                EchoesController->GetNetworkScopedView())
+        {
+            ResourceLine = FString::Printf(
+                TEXT("Matter  %d     Dawnshards  %d     Logistics  %d/%d     NETWORK ACTIVE     Tick  %llu     Snapshot  %llu"),
+                NetworkView->resources.material,
+                NetworkView->resources.dawnshards,
+                NetworkView->populationUsed,
+                NetworkView->populationCapacity,
+                static_cast<unsigned long long>(
+                    NetworkView->simulationTick),
+                static_cast<unsigned long long>(NetworkView->snapshotId));
+            ResearchLine = FString::Printf(
+                TEXT("REMOTE BATTLEFIELD  %d scoped entities     full state and base-linked deltas only"),
+                EchoesController->GetNetworkPresentedEntityCount());
         }
     }
     DrawText(
@@ -399,6 +464,13 @@ void AEchoesHUD::DrawHUD()
                 *EchoesController->GetFormationLabel(),
                 *EchoesController->GetFutureWellChoiceLabel());
         }
+        if (const echoes::sim::net::ScopedViewKeyframe* RemoteView =
+                EchoesController->GetNetworkScopedView())
+        {
+            SelectionLine = FString::Printf(
+                TEXT("AUTHORITY SNAPSHOT  %llu     Local selection and order submission disabled"),
+                static_cast<unsigned long long>(RemoteView->snapshotId));
+        }
     }
     DrawText(
         SelectionLine,
@@ -409,18 +481,32 @@ void AEchoesHUD::DrawHUD()
         1.0f * HudScale,
         false);
 
+    const echoes::sim::net::ScopedViewKeyframe* NetworkView =
+        EchoesController != nullptr
+            ? EchoesController->GetNetworkScopedView()
+            : nullptr;
+    const bool bNetworkRemoteView = NetworkView != nullptr;
     DrawText(
-        TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order"),
+        bNetworkRemoteView
+            ? TEXT("REMOTE VIEW  WASD / edge: pan  Wheel: zoom     Order input is not enabled in this transport slice")
+            : TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order"),
         SecondaryColor,
         TextX,
         HudY(90.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);
+    const bool bKharuunControls =
+        NetworkView != nullptr
+            ? NetworkView->faction ==
+                  echoes::sim::Faction::KharuunAssemblies
+            : Bridge != nullptr &&
+                  Bridge->GetLocalFaction() ==
+                      echoes::sim::Faction::KharuunAssemblies;
     const FString FactionControlLine =
-        Bridge != nullptr &&
-                Bridge->GetLocalFaction() ==
-                    echoes::sim::Faction::KharuunAssemblies
+        bNetworkRemoteView
+            ? TEXT("NETWORK COMMAND ADAPTERS  pending qualification // scoped battlefield observation only")
+        : bKharuunControls
             ? TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [F3] Waystone  [F4/F5] Warform  [F6] Cover")
             : TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [\\] Bulwark  [=] Relay  [B/N/M] Build");
     DrawText(
@@ -431,24 +517,35 @@ void AEchoesHUD::DrawHUD()
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);
+    const FString GroupControlLine = bNetworkRemoteView
+        ? FString::Printf(
+              TEXT("Seat %u  //  two-Hz scoped state  //  base-linked delta recovery  //  hidden authority state excluded"),
+              EchoesController->GetNetworkSeat())
+        : FString::Printf(
+              TEXT("[Tab] Next owned    [Backspace] Previous    [F7] Combat force    [F8] Formation %s    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
+              EchoesController != nullptr
+                  ? *EchoesController->GetFormationLabel()
+                  : TEXT("BOX"));
     DrawText(
-        FString::Printf(
-            TEXT("[Tab] Next owned    [Backspace] Previous    [F7] Combat force    [F8] Formation %s    [1-0] Recall    [G + 1-0] Assign    [F2] Tech    [P] Pause"),
-            EchoesController != nullptr
-                ? *EchoesController->GetFormationLabel()
-                : TEXT("BOX")),
+        GroupControlLine,
         SecondaryColor,
         TextX,
         HudY(136.0f),
         GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
         0.86f * HudScale,
         false);
+    const FString FactionStatusLine = bNetworkRemoteView
+        ? FString::Printf(
+              TEXT("Connection-bound local seat: %s     Opponent: %s"),
+              *EchoesController->GetLocalFactionLabel(),
+              *EchoesController->GetOpponentFactionLabel())
+        : FString::Printf(
+              TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Local: %s"),
+              EchoesController != nullptr
+                  ? *EchoesController->GetLocalFactionLabel()
+                  : TEXT("MERIDIAN COMPACT"));
     DrawText(
-        FString::Printf(
-            TEXT("[Z] Harvest    [C] Preserve    [V] Reshape    Local: %s"),
-            EchoesController != nullptr
-                ? *EchoesController->GetLocalFactionLabel()
-                : TEXT("MERIDIAN COMPACT")),
+        FactionStatusLine,
         SecondaryColor,
         TextX,
         HudY(159.0f),

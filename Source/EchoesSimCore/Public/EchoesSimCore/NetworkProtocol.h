@@ -16,6 +16,7 @@ inline constexpr std::uint32_t kPlayerViewSchemaVersion = 1;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;
 inline constexpr std::size_t kMaximumScopedKeyframeBytes = 256 * 1024;
+inline constexpr std::size_t kMaximumScopedDeltaBytes = 256 * 1024;
 inline constexpr std::size_t kMaximumScopedEntities = 4096;
 inline constexpr std::size_t kMaximumScopedTiles = 256 * 256;
 inline constexpr std::size_t kMaximumVibrationSignatures = 1024;
@@ -26,6 +27,7 @@ enum class PacketKind : std::uint8_t {
     CompatibilityHello = 1,
     CommandRequest = 2,
     ScopedViewKeyframe = 3,
+    ScopedViewDelta = 4,
 };
 
 enum class DecodeStatus : std::uint8_t {
@@ -185,6 +187,38 @@ struct ScopedViewKeyframe final {
                            const ScopedViewKeyframe&) = default;
 };
 
+struct ScopedTileChange final {
+    std::uint32_t index = 0;
+    ScopedTileState state{};
+
+    friend bool operator==(const ScopedTileChange&,
+                           const ScopedTileChange&) = default;
+};
+
+struct ScopedViewDelta final {
+    std::uint32_t protocolVersion = kProtocolVersion;
+    std::uint64_t snapshotId = 0;
+    std::uint64_t baseSnapshotId = 0;
+    Tick simulationTick = 0;
+    std::uint32_t playerViewSchemaVersion = kPlayerViewSchemaVersion;
+    std::uint64_t lastAcceptedSequence = 0;
+    std::int32_t mapWidthTiles = 0;
+    std::int32_t mapHeightTiles = 0;
+    PlayerId player = 0;
+    Faction faction = Faction::MeridianCompact;
+    ResourcePool resources{};
+    std::int32_t populationUsed = 0;
+    std::int32_t populationCapacity = 0;
+    std::vector<ScopedTileChange> tileChanges{};
+    std::vector<ScopedEntityState> entityUpserts{};
+    std::vector<EntityId> removedEntityIds{};
+    std::vector<VibrationSignature> vibrationSignatures{};
+    std::uint64_t scopedDigest = 0;
+
+    friend bool operator==(const ScopedViewDelta&,
+                           const ScopedViewDelta&) = default;
+};
+
 // Materializes only information already admitted by PlayerView. Hidden entities,
 // authoritative random state, opponent internals, and full-state checksums are
 // unavailable at this boundary.
@@ -199,5 +233,21 @@ EncodeScopedViewKeyframe(const ScopedViewKeyframe& keyframe);
 [[nodiscard]] ECHOESSIMCORE_API DecodeStatus DecodeScopedViewKeyframe(
     std::span<const std::uint8_t> bytes,
     ScopedViewKeyframe& keyframe);
+
+[[nodiscard]] ECHOESSIMCORE_API bool BuildScopedViewDelta(
+    const ScopedViewKeyframe& base,
+    const ScopedViewKeyframe& current,
+    ScopedViewDelta& delta,
+    std::string* error = nullptr);
+[[nodiscard]] ECHOESSIMCORE_API std::vector<std::uint8_t>
+EncodeScopedViewDelta(const ScopedViewDelta& delta);
+[[nodiscard]] ECHOESSIMCORE_API DecodeStatus DecodeScopedViewDelta(
+    std::span<const std::uint8_t> bytes,
+    ScopedViewDelta& delta);
+[[nodiscard]] ECHOESSIMCORE_API bool ApplyScopedViewDelta(
+    const ScopedViewKeyframe& base,
+    const ScopedViewDelta& delta,
+    ScopedViewKeyframe& current,
+    std::string* error = nullptr);
 
 }  // namespace echoes::sim::net

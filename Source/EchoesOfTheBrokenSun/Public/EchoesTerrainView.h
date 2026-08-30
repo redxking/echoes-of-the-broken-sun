@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesTerrainView.generated.h"
 
@@ -26,6 +27,12 @@ public:
         const echoes::sim::Simulation& Simulation,
         float TileWorldSize);
     bool SyncTerrain(const echoes::sim::Simulation& Simulation);
+    bool InitializeScopedTerrain(
+        int32 InMapWidthTiles,
+        int32 InMapHeightTiles,
+        float TileWorldSize);
+    bool SyncScopedTerrain(
+        const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
     [[nodiscard]] int32 GetBlockedTileCount() const { return BlockedTileCount; }
     [[nodiscard]] int32 GetScarredTileCount() const { return ScarredTileCount; }

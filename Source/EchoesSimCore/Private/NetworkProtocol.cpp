@@ -1,5 +1,6 @@
 #include "EchoesSimCore/NetworkProtocol.h"
 
+#include <algorithm>
 #include <bit>
 #include <limits>
 
@@ -18,6 +19,8 @@ constexpr std::size_t kCommandPacketBytes =
     4 * sizeof(std::uint8_t) + kIntegrityBytes;
 constexpr std::size_t kScopedEntityBytes = 27;
 constexpr std::size_t kScopedKeyframeMinimumBytes = 90;
+constexpr std::size_t kScopedTileChangeBytes = 5;
+constexpr std::size_t kScopedDeltaMinimumBytes = 102;
 
 class Writer final {
 public:
@@ -904,6 +907,511 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
     }
     keyframe = std::move(decoded);
     return DecodeStatus::Ok;
+}
+
+bool BuildScopedViewDelta(const ScopedViewKeyframe& base,
+                          const ScopedViewKeyframe& current,
+                          ScopedViewDelta& delta,
+                          std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    ScopedViewKeyframe verifiedBase{};
+    ScopedViewKeyframe verifiedCurrent{};
+    const std::vector<std::uint8_t> baseBytes =
+        EncodeScopedViewKeyframe(base);
+    const std::vector<std::uint8_t> currentBytes =
+        EncodeScopedViewKeyframe(current);
+    if (baseBytes.empty() || currentBytes.empty() ||
+        DecodeScopedViewKeyframe(baseBytes, verifiedBase) != DecodeStatus::Ok ||
+        DecodeScopedViewKeyframe(currentBytes, verifiedCurrent) !=
+            DecodeStatus::Ok ||
+        verifiedBase != base || verifiedCurrent != current ||
+        current.snapshotId <= base.snapshotId ||
+        current.simulationTick < base.simulationTick ||
+        current.protocolVersion != base.protocolVersion ||
+        current.playerViewSchemaVersion != base.playerViewSchemaVersion ||
+        current.mapWidthTiles != base.mapWidthTiles ||
+        current.mapHeightTiles != base.mapHeightTiles ||
+        current.player != base.player || current.faction != base.faction) {
+        if (error != nullptr) {
+            *error = "NET_DELTA_BASE_INCOMPATIBLE";
+        }
+        return false;
+    }
+
+    ScopedViewDelta built{};
+    built.snapshotId = current.snapshotId;
+    built.baseSnapshotId = base.snapshotId;
+    built.simulationTick = current.simulationTick;
+    built.lastAcceptedSequence = current.lastAcceptedSequence;
+    built.mapWidthTiles = current.mapWidthTiles;
+    built.mapHeightTiles = current.mapHeightTiles;
+    built.player = current.player;
+    built.faction = current.faction;
+    built.resources = current.resources;
+    built.populationUsed = current.populationUsed;
+    built.populationCapacity = current.populationCapacity;
+    built.vibrationSignatures = current.vibrationSignatures;
+    built.scopedDigest = current.scopedDigest;
+
+    for (std::size_t index = 0; index < current.tiles.size(); ++index) {
+        if (current.tiles[index] != base.tiles[index]) {
+            built.tileChanges.push_back(
+                {static_cast<std::uint32_t>(index), current.tiles[index]});
+        }
+    }
+
+    std::size_t baseIndex = 0;
+    std::size_t currentIndex = 0;
+    while (baseIndex < base.entities.size() ||
+           currentIndex < current.entities.size()) {
+        if (currentIndex >= current.entities.size() ||
+            (baseIndex < base.entities.size() &&
+             base.entities[baseIndex].id < current.entities[currentIndex].id)) {
+            built.removedEntityIds.push_back(base.entities[baseIndex].id);
+            ++baseIndex;
+        } else if (baseIndex >= base.entities.size() ||
+                   current.entities[currentIndex].id <
+                       base.entities[baseIndex].id) {
+            built.entityUpserts.push_back(current.entities[currentIndex]);
+            ++currentIndex;
+        } else {
+            if (base.entities[baseIndex] != current.entities[currentIndex]) {
+                built.entityUpserts.push_back(current.entities[currentIndex]);
+            }
+            ++baseIndex;
+            ++currentIndex;
+        }
+    }
+
+    const std::vector<std::uint8_t> encoded = EncodeScopedViewDelta(built);
+    ScopedViewDelta finalized{};
+    if (encoded.empty() ||
+        DecodeScopedViewDelta(encoded, finalized) != DecodeStatus::Ok) {
+        if (error != nullptr) {
+            *error = "NET_DELTA_ENCODING_FAILED";
+        }
+        return false;
+    }
+    delta = std::move(finalized);
+    return true;
+}
+
+std::vector<std::uint8_t> EncodeScopedViewDelta(
+    const ScopedViewDelta& delta) {
+    std::size_t tileCount = 0;
+    if (delta.protocolVersion != kProtocolVersion ||
+        delta.playerViewSchemaVersion != kPlayerViewSchemaVersion ||
+        delta.snapshotId == 0 || delta.baseSnapshotId == 0 ||
+        delta.snapshotId <= delta.baseSnapshotId ||
+        delta.mapWidthTiles <= 0 || delta.mapHeightTiles <= 0 ||
+        delta.mapWidthTiles > 256 || delta.mapHeightTiles > 256 ||
+        !IsValidScopedPlayer(delta.player) ||
+        !IsValidFactionEncoding(static_cast<std::uint8_t>(delta.faction)) ||
+        delta.resources.material < 0 || delta.resources.dawnshards < 0 ||
+        delta.populationUsed < 0 || delta.populationCapacity < 0 ||
+        delta.scopedDigest == 0 ||
+        delta.entityUpserts.size() > kMaximumScopedEntities ||
+        delta.removedEntityIds.size() > kMaximumScopedEntities ||
+        delta.vibrationSignatures.size() > kMaximumVibrationSignatures ||
+        !CheckedMultiplySize(
+            static_cast<std::size_t>(delta.mapWidthTiles),
+            static_cast<std::size_t>(delta.mapHeightTiles), tileCount) ||
+        tileCount > kMaximumScopedTiles ||
+        delta.tileChanges.size() > tileCount) {
+        return {};
+    }
+
+    Writer writer;
+    WriteHeader(writer, PacketKind::ScopedViewDelta);
+    writer.U32(delta.protocolVersion);
+    writer.U64(delta.snapshotId);
+    writer.U64(delta.baseSnapshotId);
+    writer.U64(delta.simulationTick);
+    writer.U32(delta.playerViewSchemaVersion);
+    writer.U64(delta.lastAcceptedSequence);
+    writer.I32(delta.mapWidthTiles);
+    writer.I32(delta.mapHeightTiles);
+    writer.U8(delta.player);
+    writer.U8(static_cast<std::uint8_t>(delta.faction));
+    writer.I32(delta.resources.material);
+    writer.I32(delta.resources.dawnshards);
+    writer.I32(delta.populationUsed);
+    writer.I32(delta.populationCapacity);
+    writer.U32(static_cast<std::uint32_t>(delta.tileChanges.size()));
+    writer.U32(static_cast<std::uint32_t>(delta.entityUpserts.size()));
+    writer.U32(static_cast<std::uint32_t>(delta.removedEntityIds.size()));
+    writer.U32(static_cast<std::uint32_t>(
+        delta.vibrationSignatures.size()));
+
+    std::uint32_t priorTileIndex = 0;
+    bool hasPriorTile = false;
+    for (const ScopedTileChange& change : delta.tileChanges) {
+        const ScopedTileState& tile = change.state;
+        if (change.index >= tileCount ||
+            (hasPriorTile && change.index <= priorTileIndex) ||
+            !IsValidVisibilityEncoding(
+                static_cast<std::uint8_t>(tile.visibility)) ||
+            !IsValidTerrainEncoding(static_cast<std::uint8_t>(tile.terrain)) ||
+            (tile.visibility == Visibility::Unexplored &&
+             (tile.terrain != Terrain::Blocked || tile.passable))) {
+            return {};
+        }
+        priorTileIndex = change.index;
+        hasPriorTile = true;
+        writer.U32(change.index);
+        writer.U8(
+            static_cast<std::uint8_t>(tile.visibility) |
+            (static_cast<std::uint8_t>(tile.terrain) << 2) |
+            (tile.passable ? 0x10U : 0U));
+    }
+
+    EntityId priorEntity = 0;
+    for (const ScopedEntityState& entity : delta.entityUpserts) {
+        if (entity.id == 0 || entity.id <= priorEntity ||
+            !IsValidScopedOwner(entity.owner) ||
+            !IsValidFactionEncoding(static_cast<std::uint8_t>(entity.faction)) ||
+            !IsValidEntityTypeEncoding(static_cast<std::uint8_t>(entity.type)) ||
+            entity.hitPoints <= 0 || entity.maxHitPoints <= 0 ||
+            entity.hitPoints > entity.maxHitPoints ||
+            !IsValidWellChoiceEncoding(
+                static_cast<std::uint8_t>(entity.wellChoice)) ||
+            !IsValidWaystoneModeEncoding(
+                static_cast<std::uint8_t>(entity.waystoneMode)) ||
+            !IsValidWarformAdaptationEncoding(
+                static_cast<std::uint8_t>(entity.warformAdaptation))) {
+            return {};
+        }
+        priorEntity = entity.id;
+        writer.U32(entity.id);
+        writer.U8(entity.owner);
+        writer.U8(static_cast<std::uint8_t>(entity.faction));
+        writer.U8(static_cast<std::uint8_t>(entity.type));
+        writer.I32(entity.position.x.Raw());
+        writer.I32(entity.position.y.Raw());
+        writer.I32(entity.hitPoints);
+        writer.I32(entity.maxHitPoints);
+        writer.U8((entity.completed ? 0x01U : 0U) |
+                  (entity.deployed ? 0x02U : 0U) |
+                  (entity.aegisPowered ? 0x04U : 0U));
+        writer.U8(static_cast<std::uint8_t>(entity.wellChoice));
+        writer.U8(static_cast<std::uint8_t>(entity.waystoneMode));
+        writer.U8(static_cast<std::uint8_t>(entity.warformAdaptation));
+    }
+
+    EntityId priorRemoved = 0;
+    for (const EntityId removed : delta.removedEntityIds) {
+        const auto matchingUpsert = std::lower_bound(
+            delta.entityUpserts.begin(),
+            delta.entityUpserts.end(),
+            removed,
+            [](const ScopedEntityState& entity, EntityId id) {
+                return entity.id < id;
+            });
+        if (removed == 0 || removed <= priorRemoved ||
+            (matchingUpsert != delta.entityUpserts.end() &&
+             matchingUpsert->id == removed)) {
+            return {};
+        }
+        priorRemoved = removed;
+        writer.U32(removed);
+    }
+
+    Vec2 priorSignature = Vec2::FromRaw(-1, -1);
+    for (const VibrationSignature& signature :
+         delta.vibrationSignatures) {
+        const Vec2 position = signature.approximatePosition;
+        if (position.x.Raw() < 0 || position.y.Raw() < 0 ||
+            position.x.Raw() >= delta.mapWidthTiles * kFixedScale ||
+            position.y.Raw() >= delta.mapHeightTiles * kFixedScale ||
+            (priorSignature.x.Raw() >= 0 &&
+             (position.x.Raw() < priorSignature.x.Raw() ||
+              (position.x.Raw() == priorSignature.x.Raw() &&
+               position.y.Raw() <= priorSignature.y.Raw())))) {
+            return {};
+        }
+        priorSignature = position;
+        writer.I32(position.x.Raw());
+        writer.I32(position.y.Raw());
+    }
+    writer.U64(delta.scopedDigest);
+    AppendIntegrity(writer);
+    std::vector<std::uint8_t> encoded = std::move(writer).Finish();
+    if (encoded.size() > kMaximumScopedDeltaBytes) {
+        return {};
+    }
+    return encoded;
+}
+
+DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
+                                   ScopedViewDelta& delta) {
+    const DecodeStatus packetStatus = ValidateVariablePacket(
+        bytes, kScopedDeltaMinimumBytes, kMaximumScopedDeltaBytes);
+    if (packetStatus != DecodeStatus::Ok) {
+        return packetStatus;
+    }
+    Reader reader(bytes.first(bytes.size() - kIntegrityBytes));
+    const DecodeStatus headerStatus =
+        ReadHeader(reader, PacketKind::ScopedViewDelta);
+    if (headerStatus != DecodeStatus::Ok) {
+        return headerStatus;
+    }
+
+    ScopedViewDelta decoded{};
+    std::uint8_t faction = 0;
+    std::uint32_t tileChangeCount = 0;
+    std::uint32_t upsertCount = 0;
+    std::uint32_t removedCount = 0;
+    std::uint32_t signatureCount = 0;
+    if (!reader.U32(decoded.protocolVersion) ||
+        !reader.U64(decoded.snapshotId) ||
+        !reader.U64(decoded.baseSnapshotId) ||
+        !reader.U64(decoded.simulationTick) ||
+        !reader.U32(decoded.playerViewSchemaVersion) ||
+        !reader.U64(decoded.lastAcceptedSequence) ||
+        !reader.I32(decoded.mapWidthTiles) ||
+        !reader.I32(decoded.mapHeightTiles) || !reader.U8(decoded.player) ||
+        !reader.U8(faction) || !reader.I32(decoded.resources.material) ||
+        !reader.I32(decoded.resources.dawnshards) ||
+        !reader.I32(decoded.populationUsed) ||
+        !reader.I32(decoded.populationCapacity) ||
+        !reader.U32(tileChangeCount) || !reader.U32(upsertCount) ||
+        !reader.U32(removedCount) || !reader.U32(signatureCount)) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    decoded.faction = static_cast<Faction>(faction);
+    std::size_t tileCount = 0;
+    std::size_t tileChangeBytes = 0;
+    std::size_t upsertBytes = 0;
+    std::size_t removedBytes = 0;
+    std::size_t signatureBytes = 0;
+    if (decoded.protocolVersion != kProtocolVersion ||
+        decoded.playerViewSchemaVersion != kPlayerViewSchemaVersion ||
+        decoded.snapshotId == 0 || decoded.baseSnapshotId == 0 ||
+        decoded.snapshotId <= decoded.baseSnapshotId ||
+        decoded.mapWidthTiles <= 0 || decoded.mapHeightTiles <= 0 ||
+        decoded.mapWidthTiles > 256 || decoded.mapHeightTiles > 256 ||
+        !IsValidScopedPlayer(decoded.player) ||
+        !IsValidFactionEncoding(faction) || decoded.resources.material < 0 ||
+        decoded.resources.dawnshards < 0 || decoded.populationUsed < 0 ||
+        decoded.populationCapacity < 0 ||
+        !CheckedMultiplySize(
+            static_cast<std::size_t>(decoded.mapWidthTiles),
+            static_cast<std::size_t>(decoded.mapHeightTiles), tileCount) ||
+        tileCount > kMaximumScopedTiles || tileChangeCount > tileCount ||
+        upsertCount > kMaximumScopedEntities ||
+        removedCount > kMaximumScopedEntities ||
+        signatureCount > kMaximumVibrationSignatures ||
+        !CheckedMultiplySize(
+            tileChangeCount, kScopedTileChangeBytes, tileChangeBytes) ||
+        !CheckedMultiplySize(upsertCount, kScopedEntityBytes, upsertBytes) ||
+        !CheckedMultiplySize(removedCount, 4, removedBytes) ||
+        !CheckedMultiplySize(signatureCount, 8, signatureBytes)) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    const std::size_t expectedVariableBytes =
+        tileChangeBytes + upsertBytes + removedBytes + signatureBytes + 8;
+    if (expectedVariableBytes != reader.Remaining()) {
+        return DecodeStatus::InvalidEncoding;
+    }
+
+    decoded.tileChanges.reserve(tileChangeCount);
+    std::uint32_t priorTileIndex = 0;
+    bool hasPriorTile = false;
+    for (std::uint32_t index = 0; index < tileChangeCount; ++index) {
+        ScopedTileChange change{};
+        std::uint8_t packed = 0;
+        if (!reader.U32(change.index) || !reader.U8(packed) ||
+            change.index >= tileCount ||
+            (hasPriorTile && change.index <= priorTileIndex) ||
+            (packed & 0xe0U) != 0 ||
+            !IsValidVisibilityEncoding(packed & 0x03U) ||
+            !IsValidTerrainEncoding((packed >> 2) & 0x03U)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        change.state = {
+            static_cast<Visibility>(packed & 0x03U),
+            static_cast<Terrain>((packed >> 2) & 0x03U),
+            (packed & 0x10U) != 0};
+        if (change.state.visibility == Visibility::Unexplored &&
+            (change.state.terrain != Terrain::Blocked ||
+             change.state.passable)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorTileIndex = change.index;
+        hasPriorTile = true;
+        decoded.tileChanges.push_back(change);
+    }
+
+    decoded.entityUpserts.reserve(upsertCount);
+    EntityId priorEntity = 0;
+    for (std::uint32_t index = 0; index < upsertCount; ++index) {
+        ScopedEntityState entity{};
+        std::uint8_t factionValue = 0;
+        std::uint8_t type = 0;
+        std::uint8_t flags = 0;
+        std::uint8_t wellChoice = 0;
+        std::uint8_t waystoneMode = 0;
+        std::uint8_t adaptation = 0;
+        std::int32_t positionX = 0;
+        std::int32_t positionY = 0;
+        if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
+            !reader.U8(factionValue) || !reader.U8(type) ||
+            !reader.I32(positionX) || !reader.I32(positionY) ||
+            !reader.I32(entity.hitPoints) ||
+            !reader.I32(entity.maxHitPoints) || !reader.U8(flags) ||
+            !reader.U8(wellChoice) || !reader.U8(waystoneMode) ||
+            !reader.U8(adaptation) || entity.id == 0 ||
+            entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
+            !IsValidFactionEncoding(factionValue) ||
+            !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
+            entity.hitPoints <= 0 || entity.maxHitPoints <= 0 ||
+            entity.hitPoints > entity.maxHitPoints ||
+            !IsValidWellChoiceEncoding(wellChoice) ||
+            !IsValidWaystoneModeEncoding(waystoneMode) ||
+            !IsValidWarformAdaptationEncoding(adaptation)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorEntity = entity.id;
+        entity.faction = static_cast<Faction>(factionValue);
+        entity.type = static_cast<EntityType>(type);
+        entity.position = Vec2::FromRaw(positionX, positionY);
+        entity.completed = (flags & 0x01U) != 0;
+        entity.deployed = (flags & 0x02U) != 0;
+        entity.aegisPowered = (flags & 0x04U) != 0;
+        entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+        entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
+        entity.warformAdaptation =
+            static_cast<WarformAdaptation>(adaptation);
+        decoded.entityUpserts.push_back(entity);
+    }
+
+    decoded.removedEntityIds.reserve(removedCount);
+    EntityId priorRemoved = 0;
+    for (std::uint32_t index = 0; index < removedCount; ++index) {
+        EntityId removed = 0;
+        if (!reader.U32(removed)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        const auto matchingUpsert = std::lower_bound(
+            decoded.entityUpserts.begin(),
+            decoded.entityUpserts.end(),
+            removed,
+            [](const ScopedEntityState& entity, EntityId id) {
+                return entity.id < id;
+            });
+        if (removed == 0 || removed <= priorRemoved ||
+            (matchingUpsert != decoded.entityUpserts.end() &&
+             matchingUpsert->id == removed)) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorRemoved = removed;
+        decoded.removedEntityIds.push_back(removed);
+    }
+
+    decoded.vibrationSignatures.reserve(signatureCount);
+    Vec2 priorSignature = Vec2::FromRaw(-1, -1);
+    for (std::uint32_t index = 0; index < signatureCount; ++index) {
+        std::int32_t x = 0;
+        std::int32_t y = 0;
+        if (!reader.I32(x) || !reader.I32(y) || x < 0 || y < 0 ||
+            x >= decoded.mapWidthTiles * kFixedScale ||
+            y >= decoded.mapHeightTiles * kFixedScale ||
+            (priorSignature.x.Raw() >= 0 &&
+             (x < priorSignature.x.Raw() ||
+              (x == priorSignature.x.Raw() &&
+               y <= priorSignature.y.Raw())))) {
+            return DecodeStatus::InvalidEncoding;
+        }
+        priorSignature = Vec2::FromRaw(x, y);
+        decoded.vibrationSignatures.push_back({priorSignature});
+    }
+    if (!reader.U64(decoded.scopedDigest) || reader.Remaining() != 0) {
+        return DecodeStatus::InvalidEncoding;
+    }
+    delta = std::move(decoded);
+    return DecodeStatus::Ok;
+}
+
+bool ApplyScopedViewDelta(const ScopedViewKeyframe& base,
+                          const ScopedViewDelta& delta,
+                          ScopedViewKeyframe& current,
+                          std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (base.snapshotId == 0 || delta.baseSnapshotId != base.snapshotId ||
+        delta.snapshotId <= delta.baseSnapshotId ||
+        delta.simulationTick < base.simulationTick ||
+        delta.protocolVersion != base.protocolVersion ||
+        delta.playerViewSchemaVersion != base.playerViewSchemaVersion ||
+        delta.mapWidthTiles != base.mapWidthTiles ||
+        delta.mapHeightTiles != base.mapHeightTiles ||
+        delta.player != base.player || delta.faction != base.faction) {
+        if (error != nullptr) {
+            *error = "NET_DELTA_BASE_MISSING";
+        }
+        return false;
+    }
+
+    ScopedViewKeyframe applied = base;
+    applied.snapshotId = delta.snapshotId;
+    applied.simulationTick = delta.simulationTick;
+    applied.lastAcceptedSequence = delta.lastAcceptedSequence;
+    applied.resources = delta.resources;
+    applied.populationUsed = delta.populationUsed;
+    applied.populationCapacity = delta.populationCapacity;
+    applied.vibrationSignatures = delta.vibrationSignatures;
+    for (const ScopedTileChange& change : delta.tileChanges) {
+        if (change.index >= applied.tiles.size()) {
+            if (error != nullptr) {
+                *error = "NET_DELTA_TILE_INVALID";
+            }
+            return false;
+        }
+        applied.tiles[change.index] = change.state;
+    }
+    for (const EntityId removed : delta.removedEntityIds) {
+        const auto found = std::lower_bound(
+            applied.entities.begin(), applied.entities.end(), removed,
+            [](const ScopedEntityState& entity, EntityId id) {
+                return entity.id < id;
+            });
+        if (found == applied.entities.end() || found->id != removed) {
+            if (error != nullptr) {
+                *error = "NET_DELTA_REMOVAL_INVALID";
+            }
+            return false;
+        }
+        applied.entities.erase(found);
+    }
+    for (const ScopedEntityState& upsert : delta.entityUpserts) {
+        const auto found = std::lower_bound(
+            applied.entities.begin(), applied.entities.end(), upsert.id,
+            [](const ScopedEntityState& entity, EntityId id) {
+                return entity.id < id;
+            });
+        if (found != applied.entities.end() && found->id == upsert.id) {
+            *found = upsert;
+        } else {
+            applied.entities.insert(found, upsert);
+        }
+    }
+
+    const std::vector<std::uint8_t> encoded =
+        EncodeScopedViewKeyframe(applied);
+    ScopedViewKeyframe finalized{};
+    if (encoded.empty() ||
+        DecodeScopedViewKeyframe(encoded, finalized) != DecodeStatus::Ok ||
+        finalized.scopedDigest != delta.scopedDigest) {
+        if (error != nullptr) {
+            *error = "NET_DELTA_DIGEST_MISMATCH";
+        }
+        return false;
+    }
+    current = std::move(finalized);
+    return true;
 }
 
 }  // namespace echoes::sim::net

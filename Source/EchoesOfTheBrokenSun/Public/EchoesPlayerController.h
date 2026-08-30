@@ -11,6 +11,11 @@
 #include "EchoesPlayerController.generated.h"
 
 class AEchoesEntityView;
+class AEchoesFogView;
+class AEchoesTerrainView;
+class AStaticMeshActor;
+class ADirectionalLight;
+class ASkyLight;
 enum class EEchoesCommandMarkerType : uint8;
 class UEchoesSimulationSubsystem;
 
@@ -25,6 +30,7 @@ public:
     AEchoesPlayerController();
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void PlayerTick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
 
@@ -176,6 +182,30 @@ public:
     {
         return CampaignCommitStatus;
     }
+    [[nodiscard]] const echoes::sim::net::ScopedViewKeyframe*
+    GetNetworkScopedView() const
+    {
+        return NetworkViewState.Current().has_value()
+                   ? &*NetworkViewState.Current()
+                   : nullptr;
+    }
+    [[nodiscard]] bool IsNetworkRemoteBattlefieldReady() const
+    {
+        return bNetworkRemoteBattlefieldReady;
+    }
+    [[nodiscard]] bool IsNetworkCompatibilityAccepted() const
+    {
+        return bNetworkCompatibilityAccepted;
+    }
+    [[nodiscard]] bool IsNetworkMatchStarted() const
+    {
+        return bNetworkMatchStarted;
+    }
+    [[nodiscard]] uint8 GetNetworkSeat() const { return NetworkSeat; }
+    [[nodiscard]] int32 GetNetworkPresentedEntityCount() const
+    {
+        return NetworkEntityViews.Num();
+    }
 
 private:
     UFUNCTION(Server, Reliable)
@@ -189,12 +219,16 @@ private:
     UFUNCTION(Client, Reliable)
     void ClientReceiveScopedKeyframe(const TArray<uint8>& Packet);
 
+    UFUNCTION(Client, Unreliable)
+    void ClientReceiveScopedDelta(const TArray<uint8>& Packet);
+
     UFUNCTION(Server, Reliable)
     void ServerSetNetworkReady();
 
     UFUNCTION(Client, Reliable)
     void ClientReceiveNetworkLobbyState(
         bool bStarted,
+        uint8 AssignedSeat,
         uint64 AuthorityTick,
         uint8 InputDelayTicks);
 
@@ -229,6 +263,14 @@ private:
     void SubmitNetworkCompatibilityHello();
     void BeginNetworkMatch();
     void SendScopedKeyframe();
+    void SendScopedUpdate();
+    bool BuildNextScopedKeyframe(
+        echoes::sim::net::ScopedViewKeyframe& OutKeyframe,
+        FString& OutError);
+    void RequestScopedKeyframeRecovery(const FString& Reason);
+    bool SyncNetworkPresentation(
+        const echoes::sim::net::ScopedViewKeyframe& Keyframe);
+    void DestroyNetworkPresentation();
     void QueueNetworkSmokeHostCommand();
     void VerifyRemoteCommandExecution();
     void TryFinishNetworkClientSmoke();
@@ -374,11 +416,21 @@ private:
     bool bNetworkSmokeCompletionSent = false;
     bool bNetworkCommandExecutionVerified = false;
     bool bNetworkHostExecutionVerified = false;
+    bool bNetworkRemoteBattlefieldReady = false;
+    bool bNetworkDroppedFirstDeltaForSmoke = false;
     uint64 LastNetworkSnapshotId = 0;
     uint64 LastAcknowledgedNetworkSnapshotId = 0;
     uint64 NetworkSnapshotAcknowledgementCount = 0;
     echoes::network::ScopedViewState NetworkViewState{};
+    std::optional<echoes::sim::net::ScopedViewKeyframe>
+        LastSentNetworkKeyframe{};
     TMap<uint64, uint64> PendingNetworkSnapshotDigests;
+    TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> NetworkEntityViews;
+    TWeakObjectPtr<AEchoesFogView> NetworkFogView;
+    TWeakObjectPtr<AEchoesTerrainView> NetworkTerrainView;
+    TWeakObjectPtr<AStaticMeshActor> NetworkGroundView;
+    TWeakObjectPtr<ADirectionalLight> NetworkDirectionalLight;
+    TWeakObjectPtr<ASkyLight> NetworkSkyLight;
     echoes::sim::net::CommandAdmissionContext NetworkCommandContext{};
     echoes::sim::net::CommandRequest PendingRemoteCommand{};
     echoes::sim::Vec2 PendingRemoteInitialPosition{};
@@ -390,6 +442,9 @@ private:
     FTimerHandle NetworkKeyframeTimer;
     FTimerHandle NetworkClientExitTimer;
     FTimerHandle NetworkServerExitTimer;
+    double LastScopedRecoveryRequestClientSeconds = -1000.0;
+    double LastScopedRecoveryRequestServerSeconds = -1000.0;
+    echoes::network::CommandRateLimiter NetworkCommandRateLimiter{};
     bool bCampaignSuccess = false;
     echoes::sim::FutureWellChoice CampaignConsequence =
         echoes::sim::FutureWellChoice::Dormant;

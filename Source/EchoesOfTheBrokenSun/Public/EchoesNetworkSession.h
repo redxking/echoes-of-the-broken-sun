@@ -11,14 +11,32 @@ namespace echoes::network {
 [[nodiscard]] ECHOESOFTHEBROKENSUN_API sim::net::CompatibilityManifest
 BuildCompatibilityManifest(const sim::Simulation* simulation = nullptr);
 
+/** Fixed-window per-connection command budget for the current transport slice. */
+class ECHOESOFTHEBROKENSUN_API CommandRateLimiter final
+{
+public:
+    static constexpr std::uint32_t MaximumCommandsPerWindow = 8;
+    static constexpr double WindowSeconds = 1.0;
+
+    [[nodiscard]] bool TryConsume(double nowSeconds);
+    [[nodiscard]] std::uint32_t CurrentCount() const { return currentCount_; }
+
+private:
+    double windowStartSeconds_ = -1.0;
+    std::uint32_t currentCount_ = 0;
+};
+
 enum class ScopedViewAcceptance : std::uint8_t
 {
     AcceptedFirst = 0,
     AcceptedNext,
     AcceptedRecovery,
+    AcceptedDelta,
     InvalidSnapshot,
     PlayerChanged,
     StaleOrDuplicate,
+    BaseMissing,
+    DeltaRejected,
 };
 
 /** Client-owned, visibility-scoped authoritative state with monotonic lineage. */
@@ -27,6 +45,9 @@ class ECHOESOFTHEBROKENSUN_API ScopedViewState final
 public:
     [[nodiscard]] ScopedViewAcceptance Accept(
         const sim::net::ScopedViewKeyframe& keyframe);
+    [[nodiscard]] ScopedViewAcceptance AcceptDelta(
+        const sim::net::ScopedViewDelta& delta,
+        std::string* error = nullptr);
     [[nodiscard]] const std::optional<sim::net::ScopedViewKeyframe>& Current()
         const
     {

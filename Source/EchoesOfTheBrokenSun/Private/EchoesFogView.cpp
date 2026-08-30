@@ -2,6 +2,7 @@
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
@@ -72,19 +73,36 @@ bool AEchoesFogView::InitializeFog(
     echoes::sim::PlayerId Player,
     float TileWorldSize)
 {
-    if (CubeMesh == nullptr || BasicMaterial == nullptr ||
-        Simulation.FindPlayer(Player) == nullptr || TileWorldSize <= 0.0f)
+    if (Simulation.FindPlayer(Player) == nullptr ||
+        !InitializeScopedFog(
+            Simulation.Config().mapWidthTiles,
+            Simulation.Config().mapHeightTiles,
+            TileWorldSize))
     {
         return false;
     }
 
     PlayerId = Player;
-    MapWidthTiles = Simulation.Config().mapWidthTiles;
-    MapHeightTiles = Simulation.Config().mapHeightTiles;
+    return SyncVisibility(Simulation);
+}
+
+bool AEchoesFogView::InitializeScopedFog(
+    int32 InMapWidthTiles,
+    int32 InMapHeightTiles,
+    float TileWorldSize)
+{
+    if (CubeMesh == nullptr || BasicMaterial == nullptr ||
+        InMapWidthTiles <= 0 || InMapHeightTiles <= 0 ||
+        InMapWidthTiles > 256 || InMapHeightTiles > 256 ||
+        TileWorldSize <= 0.0f)
+    {
+        return false;
+    }
+    MapWidthTiles = InMapWidthTiles;
+    MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
     const int32 TileCount = MapWidthTiles * MapHeightTiles;
     CachedVisibility.Init(255, TileCount);
-
     UnexploredTiles->SetStaticMesh(CubeMesh);
     ExploredTiles->SetStaticMesh(CubeMesh);
     UnexploredMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
@@ -101,21 +119,80 @@ bool AEchoesFogView::InitializeFog(
         FLinearColor(0.018f, 0.032f, 0.052f));
     UnexploredTiles->SetMaterial(0, UnexploredMaterial);
     ExploredTiles->SetMaterial(0, ExploredMaterial);
-
     UnexploredTiles->ClearInstances();
     ExploredTiles->ClearInstances();
     UnexploredTiles->PreAllocateInstancesMemory(TileCount);
     ExploredTiles->PreAllocateInstancesMemory(TileCount);
     const FTransform Hidden = HiddenTransform();
+    for (int32 TileIndex = 0; TileIndex < TileCount; ++TileIndex)
+    {
+        UnexploredTiles->AddInstance(Hidden, false);
+        ExploredTiles->AddInstance(Hidden, false);
+    }
+    return true;
+}
+
+bool AEchoesFogView::SyncScopedVisibility(
+    const std::vector<echoes::sim::net::ScopedTileState>& Tiles)
+{
+    if (Tiles.size() != static_cast<std::size_t>(
+            MapWidthTiles * MapHeightTiles) ||
+        CachedVisibility.Num() != MapWidthTiles * MapHeightTiles ||
+        UnexploredTiles->GetInstanceCount() != CachedVisibility.Num() ||
+        ExploredTiles->GetInstanceCount() != CachedVisibility.Num())
+    {
+        return false;
+    }
+    UnexploredTileCount = 0;
+    ExploredTileCount = 0;
+    VisibleTileCount = 0;
+    bool bChanged = false;
+    const FTransform Hidden = HiddenTransform();
     for (int32 TileY = 0; TileY < MapHeightTiles; ++TileY)
     {
         for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
         {
-            UnexploredTiles->AddInstance(Hidden, false);
-            ExploredTiles->AddInstance(Hidden, false);
+            const int32 TileIndex = TileY * MapWidthTiles + TileX;
+            const echoes::sim::Visibility Visibility =
+                Tiles[static_cast<std::size_t>(TileIndex)].visibility;
+            const uint8 Encoded = static_cast<uint8>(Visibility);
+            UnexploredTileCount +=
+                Visibility == echoes::sim::Visibility::Unexplored ? 1 : 0;
+            ExploredTileCount +=
+                Visibility == echoes::sim::Visibility::Explored ? 1 : 0;
+            VisibleTileCount +=
+                Visibility == echoes::sim::Visibility::Visible ? 1 : 0;
+            if (CachedVisibility[TileIndex] == Encoded)
+            {
+                continue;
+            }
+            CachedVisibility[TileIndex] = Encoded;
+            const FTransform VisibleTransform = TileTransform(TileX, TileY);
+            UnexploredTiles->UpdateInstanceTransform(
+                TileIndex,
+                Visibility == echoes::sim::Visibility::Unexplored
+                    ? VisibleTransform
+                    : Hidden,
+                false,
+                false,
+                true);
+            ExploredTiles->UpdateInstanceTransform(
+                TileIndex,
+                Visibility == echoes::sim::Visibility::Explored
+                    ? VisibleTransform
+                    : Hidden,
+                false,
+                false,
+                true);
+            bChanged = true;
         }
     }
-    return SyncVisibility(Simulation);
+    if (bChanged)
+    {
+        UnexploredTiles->MarkRenderStateDirty();
+        ExploredTiles->MarkRenderStateDirty();
+    }
+    return true;
 }
 
 bool AEchoesFogView::SyncVisibility(

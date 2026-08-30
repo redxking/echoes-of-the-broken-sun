@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesFogView.generated.h"
 
@@ -28,6 +29,12 @@ public:
         echoes::sim::PlayerId Player,
         float TileWorldSize);
     bool SyncVisibility(const echoes::sim::Simulation& Simulation);
+    bool InitializeScopedFog(
+        int32 InMapWidthTiles,
+        int32 InMapHeightTiles,
+        float TileWorldSize);
+    bool SyncScopedVisibility(
+        const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
     [[nodiscard]] int32 GetUnexploredTileCount() const
     {

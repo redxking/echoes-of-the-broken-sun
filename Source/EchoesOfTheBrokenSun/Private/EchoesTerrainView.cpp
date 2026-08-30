@@ -82,18 +82,33 @@ bool AEchoesTerrainView::InitializeTerrain(
     const echoes::sim::Simulation& Simulation,
     float TileWorldSize)
 {
-    if (BlockedMesh == nullptr || ScarredMesh == nullptr ||
-        AuthoredSurfaceMaterial == nullptr || TileWorldSize <= 0.0f)
+    if (!InitializeScopedTerrain(
+            Simulation.Config().mapWidthTiles,
+            Simulation.Config().mapHeightTiles,
+            TileWorldSize))
     {
         return false;
     }
+    return SyncTerrain(Simulation);
+}
 
-    MapWidthTiles = Simulation.Config().mapWidthTiles;
-    MapHeightTiles = Simulation.Config().mapHeightTiles;
+bool AEchoesTerrainView::InitializeScopedTerrain(
+    int32 InMapWidthTiles,
+    int32 InMapHeightTiles,
+    float TileWorldSize)
+{
+    if (BlockedMesh == nullptr || ScarredMesh == nullptr ||
+        AuthoredSurfaceMaterial == nullptr || InMapWidthTiles <= 0 ||
+        InMapHeightTiles <= 0 || InMapWidthTiles > 256 ||
+        InMapHeightTiles > 256 || TileWorldSize <= 0.0f)
+    {
+        return false;
+    }
+    MapWidthTiles = InMapWidthTiles;
+    MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
     const int32 TileCount = MapWidthTiles * MapHeightTiles;
     CachedTerrain.Init(255, TileCount);
-
     BlockedTiles->SetStaticMesh(BlockedMesh);
     ScarredTiles->SetStaticMesh(ScarredMesh);
     BlockedMaterials.Reset();
@@ -153,7 +168,66 @@ bool AEchoesTerrainView::InitializeTerrain(
         BlockedTiles->AddInstance(Hidden, false);
         ScarredTiles->AddInstance(Hidden, false);
     }
-    return SyncTerrain(Simulation);
+    return true;
+}
+
+bool AEchoesTerrainView::SyncScopedTerrain(
+    const std::vector<echoes::sim::net::ScopedTileState>& Tiles)
+{
+    const int32 TileCount = MapWidthTiles * MapHeightTiles;
+    if (Tiles.size() != static_cast<std::size_t>(TileCount) ||
+        CachedTerrain.Num() != TileCount ||
+        BlockedTiles->GetInstanceCount() != TileCount ||
+        ScarredTiles->GetInstanceCount() != TileCount)
+    {
+        return false;
+    }
+    BlockedTileCount = 0;
+    ScarredTileCount = 0;
+    bool bChanged = false;
+    const FTransform Hidden = HiddenTransform();
+    for (int32 TileY = 0; TileY < MapHeightTiles; ++TileY)
+    {
+        for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
+        {
+            const int32 TileIndex = TileY * MapWidthTiles + TileX;
+            const echoes::sim::Terrain Terrain =
+                Tiles[static_cast<std::size_t>(TileIndex)].terrain;
+            BlockedTileCount +=
+                Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
+            ScarredTileCount +=
+                Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
+            const uint8 Encoded = static_cast<uint8>(Terrain);
+            if (CachedTerrain[TileIndex] == Encoded)
+            {
+                continue;
+            }
+            CachedTerrain[TileIndex] = Encoded;
+            BlockedTiles->UpdateInstanceTransform(
+                TileIndex,
+                Terrain == echoes::sim::Terrain::Blocked
+                    ? TileTransform(TileX, TileY, Terrain)
+                    : Hidden,
+                false,
+                false,
+                true);
+            ScarredTiles->UpdateInstanceTransform(
+                TileIndex,
+                Terrain == echoes::sim::Terrain::Scarred
+                    ? TileTransform(TileX, TileY, Terrain)
+                    : Hidden,
+                false,
+                false,
+                true);
+            bChanged = true;
+        }
+    }
+    if (bChanged)
+    {
+        BlockedTiles->MarkRenderStateDirty();
+        ScarredTiles->MarkRenderStateDirty();
+    }
+    return true;
 }
 
 bool AEchoesTerrainView::SyncTerrain(

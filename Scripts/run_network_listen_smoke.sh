@@ -8,6 +8,7 @@ project="$project_root/EchoesOfTheBrokenSun.uproject"
 port="${ECHOES_NETWORK_PORT:-7797}"
 server_log="${ECHOES_NETWORK_SERVER_LOG:-$project_root/BuildArtifacts/NetworkListenServer.log}"
 client_log="${ECHOES_NETWORK_CLIENT_LOG:-$project_root/BuildArtifacts/NetworkListenClient.log}"
+fault_mode="${ECHOES_NETWORK_FAULT_MODE:-none}"
 
 if [[ ! -x "$editor" ]]; then
   print -u2 "Unreal Editor is not available at: $editor"
@@ -15,6 +16,10 @@ if [[ ! -x "$editor" ]]; then
 fi
 if [[ "$port" != <-> || "$port" -lt 1024 || "$port" -gt 65535 ]]; then
   print -u2 "ECHOES_NETWORK_PORT must be an integer from 1024 through 65535."
+  exit 2
+fi
+if [[ "$fault_mode" != "none" && "$fault_mode" != "drop-first-delta" ]]; then
+  print -u2 "ECHOES_NETWORK_FAULT_MODE must be none or drop-first-delta."
   exit 2
 fi
 
@@ -59,9 +64,15 @@ if [[ "$server_ready" != true ]]; then
   exit 3
 fi
 
+client_fault_args=()
+if [[ "$fault_mode" == "drop-first-delta" ]]; then
+  client_fault_args+=("-EchoesNetworkDropFirstDelta")
+fi
+
 "$editor" "$project" "127.0.0.1:${port}" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
-  -EchoesNetworkClientSmoke -AbsLog="$client_log" &
+  -EchoesNetworkClientSmoke "${client_fault_args[@]}" \
+  -AbsLog="$client_log" &
 client_pid=$!
 
 client_passed=false
@@ -94,8 +105,9 @@ required_server_markers=(
   '\[ECHOES_NETWORK_MATCH_STARTED\] player=1 authorityTick=0 inputDelayTicks=3 readyGate=true'
   '\[ECHOES_NETWORK_HOST_COMMAND_QUEUED\] player=0 .* assignedExecuteTick=3 authorityTick=0 delayTicks=3'
   '\[ECHOES_NETWORK_KEYFRAME_SENT\] player=1 .* hiddenAuthorityExcluded=true'
-  '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 snapshot=2 .* lineageExact=true'
-  '\[ECHOES_NETWORK_COMMAND_ADMISSION\] player=1 status=NET_CMD_ACCEPTED .* requestedExecuteTick=0 assignedExecuteTick=3 .* serverTick=0 authorityAssigned=true'
+  '\[ECHOES_NETWORK_DELTA_SENT\] player=1 .* base=.* hiddenAuthorityExcluded=true'
+  '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 .* lineageExact=true'
+  '\[ECHOES_NETWORK_COMMAND_ADMISSION\] player=1 status=NET_CMD_ACCEPTED .* requestedExecuteTick=0 assignedExecuteTick=.* serverTick=.* authorityAssigned=true'
   '\[ECHOES_NETWORK_COMMAND_EXECUTION\] executed=true'
   '\[ECHOES_NETWORK_HOST_COMMAND_EXECUTION\] executed=true .* delayTicks=3'
   '\[ECHOES_NETWORK_SERVER_SMOKE_PASSED\] .* separateProcess=true readyGate=true periodicState=true hostRemoteDelayParity=true authorityAssignedCommands=true connectionBound=true hiddenAuthorityExcluded=true'
@@ -103,9 +115,10 @@ required_server_markers=(
 required_client_markers=(
   '\[ECHOES_NETWORK_HELLO_SENT\]'
   '\[ECHOES_NETWORK_COMPATIBILITY_RESULT\] accepted=true reason=NET_COMPATIBLE'
-  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=false authorityTick=0 inputDelayTicks=3'
-  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=true authorityTick=0 inputDelayTicks=3'
+  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=false seat=1 authorityTick=0 inputDelayTicks=3'
+  '\[ECHOES_NETWORK_LOBBY_RESULT\] compatible=true started=true seat=1 authorityTick=0 inputDelayTicks=3'
   '\[ECHOES_NETWORK_KEYFRAME_RECEIVED\] player=1 .* hiddenAuthorityExcluded=true'
+  '\[ECHOES_NETWORK_PRESENTATION_SYNCED\] .* ground=true terrain=true fog=true lighting=true scopedOnly=true rendered=true'
   '\[ECHOES_NETWORK_COMMAND_SENT\] .* requestedExecuteTick=0 .* authorityAssignsTick=true'
   '\[ECHOES_NETWORK_COMMAND_RESULT\] status=NET_CMD_ACCEPTED'
   '\[ECHOES_NETWORK_EXECUTION_RESULT\] executed=true'
@@ -118,11 +131,42 @@ for marker in "${required_server_markers[@]}"; do
   fi
 done
 
-if [[ "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_SENT\]' "$server_log")" -lt 2 ||
-      "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\]' "$server_log")" -lt 2 ||
-      "$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_RECEIVED\]' "$client_log")" -lt 2 ]]; then
-  print -u2 "Network smoke did not prove repeated scoped-state delivery and acknowledgement."
+server_ack_count="$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\]' "$server_log" || true)"
+client_keyframe_count="$(/usr/bin/grep -c '\[ECHOES_NETWORK_KEYFRAME_RECEIVED\]' "$client_log" || true)"
+client_delta_count="$(/usr/bin/grep -c '\[ECHOES_NETWORK_DELTA_RECEIVED\]' "$client_log" || true)"
+if [[ "$server_ack_count" -lt 2 ||
+      "$((client_keyframe_count + client_delta_count))" -lt 2 ]]; then
+  print -u2 "Network smoke did not prove repeated keyframe/delta delivery and acknowledgement."
   exit 6
+fi
+if [[ "$fault_mode" == "none" && "$client_delta_count" -lt 1 ]]; then
+  print -u2 "Normal network smoke did not prove accepted base-linked delta delivery."
+  exit 6
+fi
+
+admission_line="$(/usr/bin/grep '\[ECHOES_NETWORK_COMMAND_ADMISSION\] player=1 status=NET_CMD_ACCEPTED' "$server_log" | /usr/bin/tail -1)"
+assigned_tick="$(print -r -- "$admission_line" | /usr/bin/sed -E 's/.*assignedExecuteTick=([0-9]+).*/\1/')"
+server_tick="$(print -r -- "$admission_line" | /usr/bin/sed -E 's/.*serverTick=([0-9]+).*/\1/')"
+if [[ "$assigned_tick" != <-> || "$server_tick" != <-> ||
+      "$assigned_tick" -ne "$((server_tick + 3))" ]]; then
+  print -u2 "Remote command was not assigned exactly three ticks from authoritative receipt."
+  exit 6
+fi
+
+if [[ "$fault_mode" == "drop-first-delta" ]]; then
+  fault_markers=(
+    '\[ECHOES_NETWORK_DELTA_DROPPED\] injected=true'
+    '\[ECHOES_NETWORK_DELTA_REJECTED\] .* reason=NET_DELTA_BASE_MISSING'
+    '\[ECHOES_NETWORK_KEYFRAME_RECOVERY_REQUESTED\] .* reason=NET_DELTA_BASE_MISSING rateLimited=true'
+    '\[ECHOES_NETWORK_KEYFRAME_REQUESTED\] player=1 .* recovery=fullKeyframe'
+    '\[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED\] player=1 snapshot=.* retired=3 pendingSnapshots=0 lineageExact=true'
+  )
+  for marker in "${fault_markers[@]}"; do
+    if ! /usr/bin/grep -Eq "$marker" "$server_log" "$client_log"; then
+      print -u2 "Fault-recovery marker missing: $marker"
+      exit 6
+    fi
+  done
 fi
 for marker in "${required_client_markers[@]}"; do
   if ! /usr/bin/grep -Eq "$marker" "$client_log"; then
@@ -131,8 +175,14 @@ for marker in "${required_client_markers[@]}"; do
   fi
 done
 
-if /usr/bin/grep -Eq '\[ECHOES_NETWORK_.*(FAILED|REJECTED)\]|Fatal error:|Assertion failed:|Ensure condition failed:|SIGSEGV:|=== Critical error:' "$server_log" "$client_log"; then
+failure_pattern='\[ECHOES_NETWORK_.*(FAILED|REJECTED)\]|Fatal error:|Assertion failed:|Ensure condition failed:|SIGSEGV:|=== Critical error:'
+failure_lines="$(/usr/bin/grep -E "$failure_pattern" "$server_log" "$client_log" || true)"
+if [[ "$fault_mode" == "drop-first-delta" ]]; then
+  failure_lines="$(print -r -- "$failure_lines" | /usr/bin/grep -v '\[ECHOES_NETWORK_DELTA_REJECTED\].*NET_DELTA_BASE_MISSING' || true)"
+fi
+if [[ -n "$failure_lines" ]]; then
   print -u2 "Network smoke reported a controlled failure or fatal marker."
+  print -u2 "$failure_lines"
   exit 7
 fi
 
@@ -148,6 +198,6 @@ fi
 server_pid=""
 trap - EXIT INT TERM
 
-print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, explicit ready/start, matched three-tick host/remote authority scheduling, repeated visibility-scoped keyframes with exact acknowledgements, and authoritative execution."
+print "Separate-process Unreal listen-server smoke passed: connection-bound seat 1, exact compatibility admission, explicit ready/start, matched three-tick host/remote authority scheduling, rendered scoped client state, base-linked deltas with exact acknowledgements, authoritative execution, and fault mode $fault_mode."
 print "Server evidence log: $server_log"
 print "Client evidence log: $client_log"

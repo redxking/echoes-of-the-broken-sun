@@ -1,13 +1,16 @@
 #include "EchoesNetworkSession.h"
 
+#include <cmath>
+
 namespace echoes::network {
 namespace {
 
+// SHA-256("EchoesOfTheBrokenSun:0.80.0:protocol-1:snapshot-20:view-1").
 constexpr sim::net::Digest256 BuildId{
-    0x00, 0xd1, 0x1e, 0x70, 0x73, 0x96, 0x34, 0x0f,
-    0xa2, 0xd6, 0xd3, 0x56, 0xf8, 0x67, 0x28, 0x76,
-    0x4a, 0x67, 0xb3, 0xc1, 0x49, 0xa0, 0x02, 0xb7,
-    0x41, 0x29, 0xfc, 0xc9, 0x52, 0x26, 0x29, 0xc6};
+    0xeb, 0xd8, 0x53, 0xe6, 0xe1, 0x8e, 0x85, 0x8e,
+    0x19, 0x10, 0x28, 0x56, 0xc6, 0x74, 0xdb, 0xe6,
+    0xcd, 0xf7, 0x5f, 0x13, 0x6f, 0x66, 0xd8, 0x81,
+    0x7a, 0x71, 0xc6, 0x61, 0xd1, 0x93, 0x4a, 0x32};
 constexpr sim::net::Digest256 CanonicalRulesPack{
     0x10, 0x0f, 0x1f, 0xcd, 0x18, 0x4c, 0xf9, 0x4f,
     0xe9, 0xb2, 0x1d, 0x3f, 0x59, 0x17, 0x14, 0xa2,
@@ -43,6 +46,27 @@ sim::net::CompatibilityManifest BuildCompatibilityManifest(
     return manifest;
 }
 
+bool CommandRateLimiter::TryConsume(double nowSeconds)
+{
+    if (!std::isfinite(nowSeconds) || nowSeconds < 0.0 ||
+        (windowStartSeconds_ >= 0.0 && nowSeconds < windowStartSeconds_))
+    {
+        return false;
+    }
+    if (windowStartSeconds_ < 0.0 ||
+        nowSeconds - windowStartSeconds_ >= WindowSeconds)
+    {
+        windowStartSeconds_ = nowSeconds;
+        currentCount_ = 0;
+    }
+    if (currentCount_ >= MaximumCommandsPerWindow)
+    {
+        return false;
+    }
+    ++currentCount_;
+    return true;
+}
+
 ScopedViewAcceptance ScopedViewState::Accept(
     const sim::net::ScopedViewKeyframe& keyframe)
 {
@@ -74,6 +98,38 @@ ScopedViewAcceptance ScopedViewState::Accept(
     return result;
 }
 
+ScopedViewAcceptance ScopedViewState::AcceptDelta(
+    const sim::net::ScopedViewDelta& delta,
+    std::string* error)
+{
+    if (error != nullptr)
+    {
+        error->clear();
+    }
+    if (!current_.has_value() ||
+        delta.baseSnapshotId != current_->snapshotId)
+    {
+        if (error != nullptr)
+        {
+            *error = "NET_DELTA_BASE_MISSING";
+        }
+        return ScopedViewAcceptance::BaseMissing;
+    }
+    if (delta.player != current_->player)
+    {
+        return ScopedViewAcceptance::PlayerChanged;
+    }
+    sim::net::ScopedViewKeyframe applied{};
+    if (!sim::net::ApplyScopedViewDelta(
+            *current_, delta, applied, error))
+    {
+        return ScopedViewAcceptance::DeltaRejected;
+    }
+    current_ = std::move(applied);
+    ++acceptedCount_;
+    return ScopedViewAcceptance::AcceptedDelta;
+}
+
 const char* StableId(ScopedViewAcceptance acceptance)
 {
     switch (acceptance)
@@ -84,12 +140,18 @@ const char* StableId(ScopedViewAcceptance acceptance)
             return "NET_VIEW_ACCEPTED_NEXT";
         case ScopedViewAcceptance::AcceptedRecovery:
             return "NET_VIEW_ACCEPTED_RECOVERY";
+        case ScopedViewAcceptance::AcceptedDelta:
+            return "NET_VIEW_ACCEPTED_DELTA";
         case ScopedViewAcceptance::InvalidSnapshot:
             return "NET_VIEW_INVALID_SNAPSHOT";
         case ScopedViewAcceptance::PlayerChanged:
             return "NET_VIEW_PLAYER_CHANGED";
         case ScopedViewAcceptance::StaleOrDuplicate:
             return "NET_VIEW_STALE_OR_DUPLICATE";
+        case ScopedViewAcceptance::BaseMissing:
+            return "NET_VIEW_BASE_MISSING";
+        case ScopedViewAcceptance::DeltaRejected:
+            return "NET_VIEW_DELTA_REJECTED";
     }
     return "NET_VIEW_UNKNOWN";
 }

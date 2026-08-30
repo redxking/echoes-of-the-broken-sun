@@ -44,6 +44,25 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                  StableId(CompatibilityStatus::MapPackMismatch) ==
                      "NET_MAP_PACK_MISMATCH");
 
+    echoes::network::CommandRateLimiter RateLimiter;
+    bool bInitialCommandBudgetAccepted = true;
+    for (std::uint32_t Index = 0;
+         Index < echoes::network::CommandRateLimiter::MaximumCommandsPerWindow;
+         ++Index)
+    {
+        bInitialCommandBudgetAccepted &= RateLimiter.TryConsume(10.0);
+    }
+    TestTrue(TEXT("Per-connection command budget accepts eight requests"),
+             bInitialCommandBudgetAccepted &&
+                 RateLimiter.CurrentCount() == 8);
+    TestFalse(TEXT("Per-connection command budget rejects the ninth request"),
+              RateLimiter.TryConsume(10.5));
+    TestFalse(TEXT("Per-connection command budget rejects regressive time"),
+              RateLimiter.TryConsume(9.0));
+    TestTrue(TEXT("Per-connection command budget reopens after one second"),
+             RateLimiter.TryConsume(11.0) &&
+                 RateLimiter.CurrentCount() == 1);
+
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
     SimulationConfig RuntimeConfig{16, 16, 20, 77};
@@ -153,6 +172,79 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
              DecodeScopedViewKeyframe(
                  KeyframeBytes, DecodedKeyframe) ==
                  DecodeStatus::IntegrityMismatch);
+
+    ScopedViewKeyframe DeltaTarget = Keyframe;
+    ++DeltaTarget.snapshotId;
+    ++DeltaTarget.simulationTick;
+    ++DeltaTarget.resources.material;
+    TestTrue(TEXT("Delta fixture contains a scoped entity"),
+             !DeltaTarget.entities.empty());
+    if (DeltaTarget.entities.empty())
+    {
+        return false;
+    }
+    DeltaTarget.entities.front().position = Vec2::FromRaw(
+        DeltaTarget.entities.front().position.x.Raw() + 1,
+        DeltaTarget.entities.front().position.y.Raw());
+    const std::vector<std::uint8_t> DeltaTargetBytes =
+        EncodeScopedViewKeyframe(DeltaTarget);
+    TestTrue(TEXT("Delta target canonicalizes as a full scoped state"),
+             !DeltaTargetBytes.empty() &&
+                 DecodeScopedViewKeyframe(
+                     DeltaTargetBytes, DeltaTarget) == DecodeStatus::Ok);
+
+    ScopedViewDelta Delta{};
+    TestTrue(TEXT("Unreal builds a base-identified scoped delta"),
+             BuildScopedViewDelta(
+                 Keyframe, DeltaTarget, Delta, &Rejection) &&
+                 Delta.baseSnapshotId == Keyframe.snapshotId &&
+                 Delta.snapshotId == DeltaTarget.snapshotId &&
+                 !Delta.entityUpserts.empty());
+    const std::vector<std::uint8_t> DeltaBytes =
+        EncodeScopedViewDelta(Delta);
+    ScopedViewDelta DecodedDelta{};
+    TestTrue(TEXT("Scoped delta round-trips canonically and is compact"),
+             !DeltaBytes.empty() &&
+                 DeltaBytes.size() < DeltaTargetBytes.size() &&
+                 DecodeScopedViewDelta(
+                     DeltaBytes, DecodedDelta) == DecodeStatus::Ok &&
+                 DecodedDelta == Delta);
+    ScopedViewKeyframe AppliedDelta{};
+    TestTrue(TEXT("Scoped delta reconstructs the exact target digest"),
+             ApplyScopedViewDelta(
+                 Keyframe, DecodedDelta, AppliedDelta, &Rejection) &&
+                 Rejection.empty() && AppliedDelta == DeltaTarget);
+
+    echoes::network::ScopedViewState DeltaClientView;
+    TestTrue(TEXT("Client state accepts the delta only after its exact base"),
+             DeltaClientView.Accept(Keyframe) ==
+                     echoes::network::ScopedViewAcceptance::AcceptedFirst &&
+                 DeltaClientView.AcceptDelta(DecodedDelta, &Rejection) ==
+                     echoes::network::ScopedViewAcceptance::AcceptedDelta &&
+                 Rejection.empty() && DeltaClientView.AcceptedCount() == 2 &&
+                 DeltaClientView.Current().has_value() &&
+                 *DeltaClientView.Current() == DeltaTarget);
+    const ScopedViewKeyframe AcceptedDeltaState =
+        *DeltaClientView.Current();
+    TestTrue(TEXT("Client state rejects a delta whose base is no longer current"),
+             DeltaClientView.AcceptDelta(DecodedDelta, &Rejection) ==
+                     echoes::network::ScopedViewAcceptance::BaseMissing &&
+                 Rejection == "NET_DELTA_BASE_MISSING" &&
+                 DeltaClientView.AcceptedCount() == 2 &&
+                 *DeltaClientView.Current() == AcceptedDeltaState);
+    ScopedViewDelta WrongDeltaDigest = DecodedDelta;
+    WrongDeltaDigest.scopedDigest ^= 1;
+    echoes::network::ScopedViewState DigestClientView;
+    TestTrue(TEXT("Client state rejects a delta digest mismatch without mutation"),
+             DigestClientView.Accept(Keyframe) ==
+                     echoes::network::ScopedViewAcceptance::AcceptedFirst &&
+                 DigestClientView.AcceptDelta(
+                     WrongDeltaDigest, &Rejection) ==
+                     echoes::network::ScopedViewAcceptance::DeltaRejected &&
+                 Rejection == "NET_DELTA_DIGEST_MISMATCH" &&
+                 DigestClientView.AcceptedCount() == 1 &&
+                 DigestClientView.Current().has_value() &&
+                 *DigestClientView.Current() == Keyframe);
 
     echoes::network::ScopedViewState ClientView;
     TestTrue(TEXT("Client view accepts the first authoritative keyframe"),

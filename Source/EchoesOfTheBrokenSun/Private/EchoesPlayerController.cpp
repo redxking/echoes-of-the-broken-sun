@@ -2,6 +2,7 @@
 
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
+#include "EchoesFogView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
 #include "EchoesNetworkSession.h"
@@ -10,12 +11,23 @@
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTechnologyPanelLayout.h"
+#include "EchoesTerrainView.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Engine/DirectionalLight.h"
 #include "Engine/EngineTypes.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Engine/SkyLight.h"
 #include "Engine/World.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/PlatformTime.h"
 #include "InputCoreTypes.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
 
@@ -27,6 +39,7 @@ namespace
 constexpr float DragSelectionThresholdPixels = 8.0f;
 constexpr float FormationSpacingWorldUnits = 150.0f;
 constexpr int32 ControlGroupCount = 10;
+constexpr float NetworkTileWorldSize = 200.0f;
 
 [[nodiscard]] FString FactionDisplayName(echoes::sim::Faction Faction)
 {
@@ -79,6 +92,13 @@ void AEchoesPlayerController::BeginPlay()
             this,
             &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
     }
+}
+
+void AEchoesPlayerController::EndPlay(
+    const EEndPlayReason::Type EndPlayReason)
+{
+    DestroyNetworkPresentation();
+    Super::EndPlay(EndPlayReason);
 }
 
 void AEchoesPlayerController::ConfigureNetworkSeat(uint8 Seat)
@@ -195,7 +215,8 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
 
     bNetworkCompatibilityAccepted = true;
     ClientReceiveCompatibilityResult(true, TEXT("NET_COMPATIBLE"));
-    ClientReceiveNetworkLobbyState(false, Simulation->CurrentTick(), 3);
+    ClientReceiveNetworkLobbyState(
+        false, NetworkSeat, Simulation->CurrentTick(), 3);
     UE_LOG(
         LogEchoes,
         Display,
@@ -216,7 +237,18 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             Display,
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=true reason=%s"),
             *StableReason);
-        ServerSetNetworkReady();
+        if (bNetworkClientSmoke ||
+            FParse::Param(
+                FCommandLine::Get(), TEXT("EchoesNetworkVisualReview")))
+        {
+            ServerSetNetworkReady();
+        }
+        else
+        {
+            SetStatusMessage(
+                TEXT("ONLINE LOBBY — compatibility accepted. Press Enter when ready."),
+                3600.0f);
+        }
     }
     else
     {
@@ -269,7 +301,8 @@ void AEchoesPlayerController::BeginNetworkMatch()
         QueueNetworkSmokeHostCommand();
     }
     Bridge->SetScenarioPaused(false);
-    ClientReceiveNetworkLobbyState(true, Simulation->CurrentTick(), 3);
+    ClientReceiveNetworkLobbyState(
+        true, NetworkSeat, Simulation->CurrentTick(), 3);
     UE_LOG(
         LogEchoes,
         Display,
@@ -280,29 +313,44 @@ void AEchoesPlayerController::BeginNetworkMatch()
     GetWorldTimerManager().SetTimer(
         NetworkKeyframeTimer,
         this,
-        &AEchoesPlayerController::SendScopedKeyframe,
+        &AEchoesPlayerController::SendScopedUpdate,
         0.5f,
         true);
 }
 
 void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
     bool bStarted,
+    uint8 AssignedSeat,
     uint64 AuthorityTick,
     uint8 InputDelayTicks)
 {
+    if (AssignedSeat >= echoes::sim::kMaximumPlayers)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_LOBBY_REJECTED] reason=NET_VIEW_INVALID_PLAYER player=%u"),
+            AssignedSeat);
+        return;
+    }
+    NetworkSeat = AssignedSeat;
     bNetworkMatchStarted = bStarted;
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_LOBBY_RESULT] compatible=%s started=%s authorityTick=%llu inputDelayTicks=%u"),
+        TEXT("[ECHOES_NETWORK_LOBBY_RESULT] compatible=%s started=%s seat=%u authorityTick=%llu inputDelayTicks=%u"),
         bNetworkCompatibilityAccepted ? TEXT("true") : TEXT("false"),
         bStarted ? TEXT("true") : TEXT("false"),
+        NetworkSeat,
         static_cast<unsigned long long>(AuthorityTick),
         InputDelayTicks);
 }
 
-void AEchoesPlayerController::SendScopedKeyframe()
+bool AEchoesPlayerController::BuildNextScopedKeyframe(
+    echoes::sim::net::ScopedViewKeyframe& OutKeyframe,
+    FString& OutError)
 {
+    OutError.Reset();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -311,7 +359,13 @@ void AEchoesPlayerController::SendScopedKeyframe()
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
     if (!HasAuthority() || !bNetworkMatchStarted || Simulation == nullptr)
     {
-        return;
+        OutError = TEXT("NET_AUTHORITY_NOT_READY");
+        return false;
+    }
+    if (LastNetworkSnapshotId == std::numeric_limits<uint64>::max())
+    {
+        OutError = TEXT("NET_SNAPSHOT_ID_EXHAUSTED");
+        return false;
     }
     const std::optional<echoes::sim::PlayerView> View =
         Simulation->CreatePlayerView(NetworkSeat);
@@ -320,32 +374,23 @@ void AEchoesPlayerController::SendScopedKeyframe()
     if (!View.has_value() ||
         !echoes::sim::net::BuildScopedViewKeyframe(
             *View,
-            ++LastNetworkSnapshotId,
+            LastNetworkSnapshotId + 1,
             NetworkCommandContext.lastAcceptedSequence,
             Keyframe,
             &KeyframeError))
     {
-        UE_LOG(
-            LogEchoes,
-            Error,
-            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=%s"),
-            NetworkSeat,
-            KeyframeError.empty()
-                ? TEXT("NET_PLAYER_VIEW_UNAVAILABLE")
-                : UTF8_TO_TCHAR(KeyframeError.c_str()));
-        return;
+        OutError = KeyframeError.empty()
+            ? TEXT("NET_PLAYER_VIEW_UNAVAILABLE")
+            : FString(UTF8_TO_TCHAR(KeyframeError.c_str()));
+        return false;
     }
-    const std::vector<std::uint8_t> Encoded =
-        echoes::sim::net::EncodeScopedViewKeyframe(Keyframe);
-    if (Encoded.empty())
-    {
-        UE_LOG(
-            LogEchoes,
-            Error,
-            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=NET_KEYFRAME_ENCODING_FAILED"),
-            NetworkSeat);
-        return;
-    }
+    LastNetworkSnapshotId = Keyframe.snapshotId;
+    OutKeyframe = std::move(Keyframe);
+    return true;
+}
+
+void AEchoesPlayerController::SendScopedKeyframe()
+{
     if (PendingNetworkSnapshotDigests.Num() >= 8)
     {
         GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
@@ -359,8 +404,32 @@ void AEchoesPlayerController::SendScopedKeyframe()
             FText::FromString(TEXT("NET_SNAPSHOT_ACK_WINDOW_EXHAUSTED")));
         return;
     }
+    echoes::sim::net::ScopedViewKeyframe Keyframe{};
+    FString KeyframeError;
+    if (!BuildNextScopedKeyframe(Keyframe, KeyframeError))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=%s"),
+            NetworkSeat,
+            *KeyframeError);
+        return;
+    }
+    const std::vector<std::uint8_t> Encoded =
+        echoes::sim::net::EncodeScopedViewKeyframe(Keyframe);
+    if (Encoded.empty())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_FAILED] player=%u reason=NET_KEYFRAME_ENCODING_FAILED"),
+            NetworkSeat);
+        return;
+    }
     PendingNetworkSnapshotDigests.Add(
         Keyframe.snapshotId, Keyframe.scopedDigest);
+    LastSentNetworkKeyframe = Keyframe;
     ClientReceiveScopedKeyframe(echoes::network::ToByteArray(Encoded));
     UE_LOG(
         LogEchoes,
@@ -374,6 +443,89 @@ void AEchoesPlayerController::SendScopedKeyframe()
         static_cast<int32>(Keyframe.entities.size()),
         static_cast<int32>(Keyframe.tiles.size()),
         static_cast<unsigned long long>(Keyframe.scopedDigest));
+}
+
+void AEchoesPlayerController::SendScopedUpdate()
+{
+    if (!LastSentNetworkKeyframe.has_value())
+    {
+        SendScopedKeyframe();
+        return;
+    }
+    if (PendingNetworkSnapshotDigests.Num() >= 8)
+    {
+        SendScopedKeyframe();
+        return;
+    }
+    echoes::sim::net::ScopedViewKeyframe Current{};
+    FString KeyframeError;
+    if (!BuildNextScopedKeyframe(Current, KeyframeError))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_DELTA_FAILED] player=%u reason=%s"),
+            NetworkSeat,
+            *KeyframeError);
+        return;
+    }
+    echoes::sim::net::ScopedViewDelta Delta{};
+    std::string DeltaError;
+    const bool bDeltaBuilt = echoes::sim::net::BuildScopedViewDelta(
+        *LastSentNetworkKeyframe, Current, Delta, &DeltaError);
+    const std::vector<std::uint8_t> DeltaBytes =
+        bDeltaBuilt
+            ? echoes::sim::net::EncodeScopedViewDelta(Delta)
+            : std::vector<std::uint8_t>{};
+    const std::vector<std::uint8_t> KeyframeBytes =
+        echoes::sim::net::EncodeScopedViewKeyframe(Current);
+    if (KeyframeBytes.empty())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_DELTA_FAILED] player=%u reason=NET_KEYFRAME_ENCODING_FAILED"),
+            NetworkSeat);
+        return;
+    }
+    PendingNetworkSnapshotDigests.Add(
+        Current.snapshotId, Current.scopedDigest);
+    LastSentNetworkKeyframe = Current;
+    if (DeltaBytes.empty() || DeltaBytes.size() >= KeyframeBytes.size())
+    {
+        ClientReceiveScopedKeyframe(
+            echoes::network::ToByteArray(KeyframeBytes));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_SENT] player=%u snapshot=%llu previous=%llu tick=%llu bytes=%d entities=%d tiles=%d digest=%llu fallback=%s hiddenAuthorityExcluded=true"),
+            NetworkSeat,
+            static_cast<unsigned long long>(Current.snapshotId),
+            static_cast<unsigned long long>(Current.snapshotId - 1),
+            static_cast<unsigned long long>(Current.simulationTick),
+            static_cast<int32>(KeyframeBytes.size()),
+            static_cast<int32>(Current.entities.size()),
+            static_cast<int32>(Current.tiles.size()),
+            static_cast<unsigned long long>(Current.scopedDigest),
+            DeltaError.empty() ? TEXT("deltaNotSmaller")
+                               : UTF8_TO_TCHAR(DeltaError.c_str()));
+        return;
+    }
+    ClientReceiveScopedDelta(echoes::network::ToByteArray(DeltaBytes));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_DELTA_SENT] player=%u snapshot=%llu base=%llu tick=%llu bytes=%d fullBytes=%d tileChanges=%d upserts=%d removals=%d digest=%llu hiddenAuthorityExcluded=true"),
+        NetworkSeat,
+        static_cast<unsigned long long>(Delta.snapshotId),
+        static_cast<unsigned long long>(Delta.baseSnapshotId),
+        static_cast<unsigned long long>(Delta.simulationTick),
+        static_cast<int32>(DeltaBytes.size()),
+        static_cast<int32>(KeyframeBytes.size()),
+        static_cast<int32>(Delta.tileChanges.size()),
+        static_cast<int32>(Delta.entityUpserts.size()),
+        static_cast<int32>(Delta.removedEntityIds.size()),
+        static_cast<unsigned long long>(Delta.scopedDigest));
 }
 
 void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
@@ -392,7 +544,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
             Error,
             TEXT("[ECHOES_NETWORK_KEYFRAME_REJECTED] reason=%s"),
             *Reason);
-        ServerRequestScopedKeyframe(LastNetworkSnapshotId);
+        RequestScopedKeyframeRecovery(Reason);
         return;
     }
     if (Keyframe.player >= echoes::sim::kMaximumPlayers)
@@ -452,6 +604,14 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
     }
     ServerAcknowledgeScopedKeyframe(
         Keyframe.snapshotId, Keyframe.scopedDigest);
+    if (!SyncNetworkPresentation(Keyframe))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_PRESENTATION_FAILED] snapshot=%llu source=keyframe"),
+            static_cast<unsigned long long>(Keyframe.snapshotId));
+    }
     UE_LOG(
         LogEchoes,
         Display,
@@ -525,6 +685,376 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
         static_cast<int32>(Encoded.size()));
 }
 
+void AEchoesPlayerController::ClientReceiveScopedDelta_Implementation(
+    const TArray<uint8>& Packet)
+{
+    if (FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkDropFirstDelta")) &&
+        !bNetworkDroppedFirstDeltaForSmoke)
+    {
+        bNetworkDroppedFirstDeltaForSmoke = true;
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_DROPPED] injected=true bytes=%d acceptedSnapshot=%llu"),
+            Packet.Num(),
+            static_cast<unsigned long long>(LastNetworkSnapshotId));
+        return;
+    }
+    echoes::sim::net::ScopedViewDelta Delta{};
+    const echoes::sim::net::DecodeStatus Decode =
+        echoes::sim::net::DecodeScopedViewDelta(
+            echoes::network::AsByteSpan(Packet), Delta);
+    if (Decode != echoes::sim::net::DecodeStatus::Ok)
+    {
+        RequestScopedKeyframeRecovery(
+            FString(UTF8_TO_TCHAR(
+                echoes::sim::net::StableId(Decode).data())));
+        return;
+    }
+    std::string ApplyError;
+    const echoes::network::ScopedViewAcceptance Acceptance =
+        NetworkViewState.AcceptDelta(Delta, &ApplyError);
+    if (Acceptance != echoes::network::ScopedViewAcceptance::AcceptedDelta)
+    {
+        const FString Reason = ApplyError.empty()
+            ? FString(UTF8_TO_TCHAR(
+                  echoes::network::StableId(Acceptance)))
+            : FString(UTF8_TO_TCHAR(ApplyError.c_str()));
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_DELTA_REJECTED] snapshot=%llu base=%llu acceptedSnapshot=%llu reason=%s"),
+            static_cast<unsigned long long>(Delta.snapshotId),
+            static_cast<unsigned long long>(Delta.baseSnapshotId),
+            static_cast<unsigned long long>(LastNetworkSnapshotId),
+            *Reason);
+        RequestScopedKeyframeRecovery(Reason);
+        return;
+    }
+    const echoes::sim::net::ScopedViewKeyframe* Current =
+        GetNetworkScopedView();
+    if (Current == nullptr)
+    {
+        RequestScopedKeyframeRecovery(TEXT("NET_VIEW_UNAVAILABLE"));
+        return;
+    }
+    const uint64 PreviousSnapshotId = LastNetworkSnapshotId;
+    LastNetworkSnapshotId = Current->snapshotId;
+    ServerAcknowledgeScopedKeyframe(
+        Current->snapshotId, Current->scopedDigest);
+    if (!SyncNetworkPresentation(*Current))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_PRESENTATION_FAILED] snapshot=%llu source=delta"),
+            static_cast<unsigned long long>(Current->snapshotId));
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_DELTA_RECEIVED] player=%u snapshot=%llu base=%llu previous=%llu tick=%llu bytes=%d tileChanges=%d upserts=%d removals=%d digest=%llu lineage=NET_VIEW_ACCEPTED_DELTA hiddenAuthorityExcluded=true"),
+        Current->player,
+        static_cast<unsigned long long>(Current->snapshotId),
+        static_cast<unsigned long long>(Delta.baseSnapshotId),
+        static_cast<unsigned long long>(PreviousSnapshotId),
+        static_cast<unsigned long long>(Current->simulationTick),
+        Packet.Num(),
+        static_cast<int32>(Delta.tileChanges.size()),
+        static_cast<int32>(Delta.entityUpserts.size()),
+        static_cast<int32>(Delta.removedEntityIds.size()),
+        static_cast<unsigned long long>(Current->scopedDigest));
+    TryFinishNetworkClientSmoke();
+}
+
+void AEchoesPlayerController::RequestScopedKeyframeRecovery(
+    const FString& Reason)
+{
+    const double Now = FPlatformTime::Seconds();
+    if (Now - LastScopedRecoveryRequestClientSeconds < 1.0)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_REQUEST_THROTTLED] acceptedSnapshot=%llu reason=%s"),
+            static_cast<unsigned long long>(LastNetworkSnapshotId),
+            *Reason);
+        return;
+    }
+    LastScopedRecoveryRequestClientSeconds = Now;
+    ServerRequestScopedKeyframe(LastNetworkSnapshotId);
+    UE_LOG(
+        LogEchoes,
+        Warning,
+        TEXT("[ECHOES_NETWORK_KEYFRAME_RECOVERY_REQUESTED] acceptedSnapshot=%llu reason=%s rateLimited=true"),
+        static_cast<unsigned long long>(LastNetworkSnapshotId),
+        *Reason);
+}
+
+bool AEchoesPlayerController::SyncNetworkPresentation(
+    const echoes::sim::net::ScopedViewKeyframe& Keyframe)
+{
+    UWorld* World = GetWorld();
+    if (GetNetMode() != NM_Client || World == nullptr ||
+        Keyframe.mapWidthTiles <= 0 || Keyframe.mapHeightTiles <= 0)
+    {
+        return GetNetMode() != NM_Client;
+    }
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    if (!NetworkDirectionalLight.IsValid() || !NetworkSkyLight.IsValid())
+    {
+        ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(
+            FVector(0.0f, 0.0f, 1800.0f),
+            FRotator(-55.0f, -35.0f, 0.0f),
+            SpawnParameters);
+        ASkyLight* Sky = World->SpawnActor<ASkyLight>(
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            SpawnParameters);
+        UDirectionalLightComponent* SunComponent =
+            Sun != nullptr
+                ? Cast<UDirectionalLightComponent>(Sun->GetLightComponent())
+                : nullptr;
+        if (Sun == nullptr || Sky == nullptr || SunComponent == nullptr)
+        {
+            if (Sun != nullptr)
+            {
+                Sun->Destroy();
+            }
+            if (Sky != nullptr)
+            {
+                Sky->Destroy();
+            }
+            return false;
+        }
+        SunComponent->SetIntensity(12.0f);
+        SunComponent->SetLightColor(FLinearColor(1.0f, 0.86f, 0.72f));
+        Sky->GetLightComponent()->SetIntensity(1.1f);
+        Sun->Tags.Add(TEXT("EchoesNetworkPresentationLight"));
+        Sky->Tags.Add(TEXT("EchoesNetworkPresentationLight"));
+        NetworkDirectionalLight = Sun;
+        NetworkSkyLight = Sky;
+    }
+
+    if (!NetworkGroundView.IsValid())
+    {
+        AStaticMeshActor* Ground = World->SpawnActor<AStaticMeshActor>(
+            AStaticMeshActor::StaticClass(),
+            FVector(0.0f, 0.0f, -18.0f),
+            FRotator::ZeroRotator,
+            SpawnParameters);
+        UStaticMesh* Cube = LoadObject<UStaticMesh>(
+            nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+        UMaterialInterface* Surface = LoadObject<UMaterialInterface>(
+            nullptr,
+            TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
+        if (Ground == nullptr || Cube == nullptr || Surface == nullptr)
+        {
+            if (Ground != nullptr)
+            {
+                Ground->Destroy();
+            }
+            return false;
+        }
+        UStaticMeshComponent* Mesh = Ground->GetStaticMeshComponent();
+        Mesh->SetMobility(EComponentMobility::Movable);
+        Mesh->SetStaticMesh(Cube);
+        Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+        Mesh->SetGenerateOverlapEvents(false);
+        Mesh->SetCastShadow(false);
+        Mesh->SetReceivesDecals(true);
+        UMaterialInstanceDynamic* Material =
+            UMaterialInstanceDynamic::Create(Surface, Ground);
+        if (Material == nullptr)
+        {
+            Ground->Destroy();
+            return false;
+        }
+        Material->SetVectorParameterValue(
+            TEXT("Color"), FLinearColor(0.035f, 0.018f, 0.020f));
+        Material->SetScalarParameterValue(TEXT("Metallic"), 0.18f);
+        Material->SetScalarParameterValue(TEXT("Roughness"), 0.72f);
+        Material->SetScalarParameterValue(TEXT("EmissiveStrength"), 0.0f);
+        Mesh->SetMaterial(0, Material);
+        Ground->SetActorScale3D(FVector(
+            static_cast<float>(Keyframe.mapWidthTiles) *
+                NetworkTileWorldSize / 100.0f,
+            static_cast<float>(Keyframe.mapHeightTiles) *
+                NetworkTileWorldSize / 100.0f,
+            0.12f));
+        Ground->Tags.Add(TEXT("EchoesNetworkGround"));
+        NetworkGroundView = Ground;
+    }
+    if (!NetworkTerrainView.IsValid())
+    {
+        AEchoesTerrainView* Terrain = World->SpawnActor<AEchoesTerrainView>(
+            AEchoesTerrainView::StaticClass(),
+            FTransform::Identity,
+            SpawnParameters);
+        if (Terrain == nullptr ||
+            !Terrain->InitializeScopedTerrain(
+                Keyframe.mapWidthTiles,
+                Keyframe.mapHeightTiles,
+                NetworkTileWorldSize))
+        {
+            if (Terrain != nullptr)
+            {
+                Terrain->Destroy();
+            }
+            return false;
+        }
+        NetworkTerrainView = Terrain;
+    }
+    if (!NetworkFogView.IsValid())
+    {
+        AEchoesFogView* Fog = World->SpawnActor<AEchoesFogView>(
+            AEchoesFogView::StaticClass(),
+            FTransform::Identity,
+            SpawnParameters);
+        if (Fog == nullptr ||
+            !Fog->InitializeScopedFog(
+                Keyframe.mapWidthTiles,
+                Keyframe.mapHeightTiles,
+                NetworkTileWorldSize))
+        {
+            if (Fog != nullptr)
+            {
+                Fog->Destroy();
+            }
+            return false;
+        }
+        NetworkFogView = Fog;
+    }
+    if (!NetworkTerrainView->SyncScopedTerrain(Keyframe.tiles) ||
+        !NetworkFogView->SyncScopedVisibility(Keyframe.tiles))
+    {
+        return false;
+    }
+
+    TSet<uint32> LiveEntityIds;
+    LiveEntityIds.Reserve(static_cast<int32>(Keyframe.entities.size()));
+    for (const echoes::sim::net::ScopedEntityState& Scoped :
+         Keyframe.entities)
+    {
+        LiveEntityIds.Add(Scoped.id);
+        AEchoesEntityView* View = nullptr;
+        if (TWeakObjectPtr<AEchoesEntityView>* Existing =
+                NetworkEntityViews.Find(Scoped.id))
+        {
+            View = Existing->Get();
+        }
+        const bool bNewView = View == nullptr;
+        if (bNewView)
+        {
+            View = World->SpawnActor<AEchoesEntityView>(
+                AEchoesEntityView::StaticClass(),
+                FTransform::Identity,
+                SpawnParameters);
+            if (View == nullptr)
+            {
+                return false;
+            }
+            View->Tags.Add(TEXT("EchoesNetworkEntityView"));
+            NetworkEntityViews.Add(Scoped.id, View);
+        }
+        echoes::sim::Entity State{};
+        State.id = Scoped.id;
+        State.owner = Scoped.owner;
+        State.faction = Scoped.faction;
+        State.type = Scoped.type;
+        State.position = Scoped.position;
+        State.hitPoints = Scoped.hitPoints;
+        State.maxHitPoints = Scoped.maxHitPoints;
+        State.completed = Scoped.completed;
+        State.wellChoice = Scoped.wellChoice;
+        State.deployed = Scoped.deployed;
+        State.waystoneMode = Scoped.waystoneMode;
+        State.warformAdaptation = Scoped.warformAdaptation;
+        State.aegisPowered = Scoped.aegisPowered;
+        View->ApplyAuthoritativeState(State, bNewView);
+    }
+    TArray<uint32> RemovedEntityIds;
+    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
+         NetworkEntityViews)
+    {
+        if (!LiveEntityIds.Contains(Pair.Key))
+        {
+            if (AEchoesEntityView* View = Pair.Value.Get())
+            {
+                View->Destroy();
+            }
+            RemovedEntityIds.Add(Pair.Key);
+        }
+    }
+    for (const uint32 Removed : RemovedEntityIds)
+    {
+        NetworkEntityViews.Remove(Removed);
+    }
+    const bool bFirstPresentation = !bNetworkRemoteBattlefieldReady;
+    bNetworkRemoteBattlefieldReady = true;
+    if (bFirstPresentation)
+    {
+        SetStatusMessage(
+            TEXT("REMOTE BATTLEFIELD — visibility-scoped authoritative state active."),
+            3600.0f);
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_PRESENTATION_SYNCED] snapshot=%llu tick=%llu entities=%d tiles=%d removed=%d ground=true terrain=true fog=true lighting=true scopedOnly=true rendered=true"),
+        static_cast<unsigned long long>(Keyframe.snapshotId),
+        static_cast<unsigned long long>(Keyframe.simulationTick),
+        NetworkEntityViews.Num(),
+        static_cast<int32>(Keyframe.tiles.size()),
+        RemovedEntityIds.Num());
+    return true;
+}
+
+void AEchoesPlayerController::DestroyNetworkPresentation()
+{
+    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
+         NetworkEntityViews)
+    {
+        if (AEchoesEntityView* View = Pair.Value.Get())
+        {
+            View->Destroy();
+        }
+    }
+    NetworkEntityViews.Reset();
+    if (AEchoesFogView* Fog = NetworkFogView.Get())
+    {
+        Fog->Destroy();
+    }
+    if (AEchoesTerrainView* Terrain = NetworkTerrainView.Get())
+    {
+        Terrain->Destroy();
+    }
+    if (AStaticMeshActor* Ground = NetworkGroundView.Get())
+    {
+        Ground->Destroy();
+    }
+    if (ADirectionalLight* Sun = NetworkDirectionalLight.Get())
+    {
+        Sun->Destroy();
+    }
+    if (ASkyLight* Sky = NetworkSkyLight.Get())
+    {
+        Sky->Destroy();
+    }
+    NetworkFogView.Reset();
+    NetworkTerrainView.Reset();
+    NetworkGroundView.Reset();
+    NetworkDirectionalLight.Reset();
+    NetworkSkyLight.Reset();
+    bNetworkRemoteBattlefieldReady = false;
+}
+
 void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
     uint64 SnapshotId,
     uint64 ScopedDigest)
@@ -544,22 +1074,44 @@ void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
             static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId));
         return;
     }
-    PendingNetworkSnapshotDigests.Remove(SnapshotId);
+    int32 RetiredSnapshotCount = 0;
+    for (auto It = PendingNetworkSnapshotDigests.CreateIterator(); It; ++It)
+    {
+        if (It.Key() <= SnapshotId)
+        {
+            It.RemoveCurrent();
+            ++RetiredSnapshotCount;
+        }
+    }
     LastAcknowledgedNetworkSnapshotId = SnapshotId;
     ++NetworkSnapshotAcknowledgementCount;
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED] player=%u snapshot=%llu digest=%llu acknowledgements=%llu lineageExact=true"),
+        TEXT("[ECHOES_NETWORK_KEYFRAME_ACKNOWLEDGED] player=%u snapshot=%llu digest=%llu acknowledgements=%llu retired=%d pendingSnapshots=%d lineageExact=true"),
         NetworkSeat,
         static_cast<unsigned long long>(SnapshotId),
         static_cast<unsigned long long>(ScopedDigest),
-        static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
+        static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount),
+        RetiredSnapshotCount,
+        PendingNetworkSnapshotDigests.Num());
 }
 
 void AEchoesPlayerController::ServerRequestScopedKeyframe_Implementation(
     uint64 LastAcceptedSnapshotId)
 {
+    const double Now = FPlatformTime::Seconds();
+    if (Now - LastScopedRecoveryRequestServerSeconds < 1.0)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_KEYFRAME_REQUEST_REJECTED] player=%u lastAccepted=%llu reason=NET_RECOVERY_RATE_LIMITED"),
+            NetworkSeat,
+            static_cast<unsigned long long>(LastAcceptedSnapshotId));
+        return;
+    }
+    LastScopedRecoveryRequestServerSeconds = Now;
     UE_LOG(
         LogEchoes,
         Warning,
@@ -577,13 +1129,34 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    if (!bNetworkCompatibilityAccepted || Bridge == nullptr)
+    if (!bNetworkCompatibilityAccepted || !bNetworkMatchStarted ||
+        Bridge == nullptr)
     {
         ClientReceiveCommandAdmission(
             static_cast<uint8>(
                 echoes::sim::net::CommandAdmissionStatus::InvalidSeat),
             0,
-            TEXT("NET_COMPATIBILITY_REQUIRED"));
+            !bNetworkCompatibilityAccepted
+                ? TEXT("NET_COMPATIBILITY_REQUIRED")
+                : TEXT("NET_MATCH_NOT_STARTED"));
+        return;
+    }
+    const double CommandNow = FPlatformTime::Seconds();
+    if (!NetworkCommandRateLimiter.TryConsume(CommandNow))
+    {
+        ClientReceiveCommandAdmission(
+            static_cast<uint8>(
+                echoes::sim::net::CommandAdmissionStatus::CommandRejected),
+            Bridge->GetSimulation() != nullptr
+                ? Bridge->GetSimulation()->CurrentTick()
+                : 0,
+            TEXT("NET_COMMAND_RATE_LIMITED"));
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_COMMAND_RATE_LIMITED] player=%u commands=%u windowSeconds=1 limit=8"),
+            NetworkSeat,
+            NetworkCommandRateLimiter.CurrentCount());
         return;
     }
     echoes::sim::net::CommandRequest Request{};
@@ -1039,6 +1612,14 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
 
 FString AEchoesPlayerController::GetLocalFactionLabel() const
 {
+    if (GetNetMode() == NM_Client)
+    {
+        if (const echoes::sim::net::ScopedViewKeyframe* NetworkView =
+                GetNetworkScopedView())
+        {
+            return FactionDisplayName(NetworkView->faction);
+        }
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1051,6 +1632,18 @@ FString AEchoesPlayerController::GetLocalFactionLabel() const
 
 FString AEchoesPlayerController::GetOpponentFactionLabel() const
 {
+    if (GetNetMode() == NM_Client)
+    {
+        if (const echoes::sim::net::ScopedViewKeyframe* NetworkView =
+                GetNetworkScopedView())
+        {
+            return FactionDisplayName(
+                NetworkView->faction ==
+                        echoes::sim::Faction::KharuunAssemblies
+                    ? echoes::sim::Faction::MeridianCompact
+                    : echoes::sim::Faction::KharuunAssemblies);
+        }
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -1984,7 +2577,15 @@ void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
 
 void AEchoesPlayerController::ConfirmPrimaryAction()
 {
-    if (bTitleScreenVisible)
+    if (GetNetMode() == NM_Client && bNetworkCompatibilityAccepted &&
+        !bNetworkMatchStarted)
+    {
+        ServerSetNetworkReady();
+        SetStatusMessage(
+            TEXT("ONLINE LOBBY — ready submitted; waiting for authority start."),
+            3600.0f);
+    }
+    else if (bTitleScreenVisible)
     {
         ConfirmTitleScreen();
     }
