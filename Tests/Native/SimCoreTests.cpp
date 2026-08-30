@@ -1,4 +1,5 @@
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesSimCore/NetworkProtocol.h"
 
 #include <algorithm>
 #include <functional>
@@ -71,6 +72,26 @@ void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
     REQUIRE(bytes.size() >= 8);
     WriteU64(bytes, bytes.size() - 8,
              SnapshotIntegrity(bytes, bytes.size() - 8));
+}
+
+std::uint32_t NetworkCrc32(const std::vector<std::uint8_t>& bytes,
+                           std::size_t length) {
+    std::uint32_t crc = 0xffffffffU;
+    for (std::size_t index = 0; index < length; ++index) {
+        crc ^= bytes[index];
+        for (std::uint8_t bit = 0; bit < 8; ++bit) {
+            const std::uint32_t mask =
+                0U - static_cast<std::uint32_t>(crc & 1U);
+            crc = (crc >> 1) ^ (0xedb88320U & mask);
+        }
+    }
+    return ~crc;
+}
+
+void ResignNetworkPacket(std::vector<std::uint8_t>& bytes) {
+    REQUIRE(bytes.size() >= 4);
+    WriteU32(bytes, bytes.size() - 4,
+             NetworkCrc32(bytes, bytes.size() - 4));
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
@@ -2639,6 +2660,231 @@ void TestFactionResearchProgressionAndPersistence() {
             ResearchType::None);
 }
 
+void TestNetworkProtocolAdmissionAndHardening() {
+    using namespace echoes::sim::net;
+
+    CompatibilityManifest authority{};
+    authority.simulationRulesVersion = DefaultSimulationRules().version;
+    authority.serializationFeatureFlags = 0x0102030405060708ULL;
+    for (std::size_t index = 0; index < kDigestBytes; ++index) {
+        authority.buildIdSha256[index] = static_cast<std::uint8_t>(index);
+        authority.rulesPackSha256[index] =
+            static_cast<std::uint8_t>(index + 32);
+        authority.mapPackSha256[index] =
+            static_cast<std::uint8_t>(index + 64);
+        authority.matchSettingsSha256[index] =
+            static_cast<std::uint8_t>(index + 96);
+    }
+
+    const std::vector<std::uint8_t> hello =
+        EncodeCompatibilityHello(authority);
+    REQUIRE(hello.size() < kMaximumPacketBytes);
+    REQUIRE(hello == EncodeCompatibilityHello(authority));
+    CompatibilityManifest decodedManifest{};
+    REQUIRE(DecodeCompatibilityHello(hello, decodedManifest) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedManifest == authority);
+    REQUIRE(CheckCompatibility(authority, decodedManifest) ==
+            CompatibilityStatus::Accepted);
+    REQUIRE(StableId(CompatibilityStatus::Accepted) == "NET_COMPATIBLE");
+
+    CompatibilityManifest mismatch = authority;
+    mismatch.protocolVersion += 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::ProtocolMismatch);
+    mismatch = authority;
+    mismatch.snapshotVersion += 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::SnapshotSchemaMismatch);
+    mismatch = authority;
+    mismatch.simulationRulesVersion += 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::SimulationRulesMismatch);
+    mismatch = authority;
+    mismatch.playerViewSchemaVersion += 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::PlayerViewSchemaMismatch);
+    mismatch = authority;
+    mismatch.buildIdSha256[0] ^= 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::BuildMismatch);
+    mismatch = authority;
+    mismatch.rulesPackSha256[0] ^= 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::RulesPackMismatch);
+    mismatch = authority;
+    mismatch.mapPackSha256[0] ^= 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::MapPackMismatch);
+    mismatch = authority;
+    mismatch.serializationFeatureFlags ^= 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::SerializationFeaturesMismatch);
+    mismatch = authority;
+    mismatch.matchSettingsSha256[0] ^= 1;
+    REQUIRE(CheckCompatibility(authority, mismatch) ==
+            CompatibilityStatus::MatchSettingsMismatch);
+
+    std::vector<std::uint8_t> malformed = hello;
+    malformed.pop_back();
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::LengthMismatch);
+    malformed = hello;
+    malformed.push_back(0);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::LengthMismatch);
+    malformed = hello;
+    malformed[12] ^= 1;
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::IntegrityMismatch);
+    malformed = hello;
+    malformed[0] ^= 1;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::BadMagic);
+    malformed = hello;
+    malformed[4] += 1;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::UnsupportedEnvelopeVersion);
+    malformed = hello;
+    malformed[6] = static_cast<std::uint8_t>(PacketKind::CommandRequest);
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::WrongPacketKind);
+    malformed = hello;
+    malformed[7] = 1;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::ReservedFieldNonzero);
+    malformed.assign(kMaximumPacketBytes + 1, 0);
+    REQUIRE(DecodeCompatibilityHello(malformed, decodedManifest) ==
+            DecodeStatus::PacketTooLarge);
+
+    CommandRequest request{};
+    request.sequence = 7;
+    request.executeTick = 12;
+    request.type = CommandType::Build;
+    request.actor = 44;
+    request.target = 55;
+    request.position = Vec2::FromRaw(-123456, 987654);
+    request.buildType = EntityType::UtilityStructure;
+    request.wellChoice = FutureWellChoice::Preserve;
+    request.warformAdaptation = WarformAdaptation::Carapace;
+    request.researchType = ResearchType::MeridianHorizonLattice;
+    const std::vector<std::uint8_t> commandBytes =
+        EncodeCommandRequest(request);
+    REQUIRE(commandBytes.size() < kMaximumPacketBytes);
+    REQUIRE(commandBytes == EncodeCommandRequest(request));
+    CommandRequest decodedRequest{};
+    REQUIRE(DecodeCommandRequest(commandBytes, decodedRequest) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedRequest == request);
+
+    malformed = commandBytes;
+    malformed[24] = 0xff;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCommandRequest(malformed, decodedRequest) ==
+            DecodeStatus::InvalidEncoding);
+    malformed = commandBytes;
+    malformed[25] = 0;
+    malformed[26] = 0;
+    malformed[27] = 0;
+    malformed[28] = 0;
+    ResignNetworkPacket(malformed);
+    REQUIRE(DecodeCommandRequest(malformed, decodedRequest) ==
+            DecodeStatus::InvalidEncoding);
+    malformed = commandBytes;
+    malformed[malformed.size() - 1] ^= 1;
+    REQUIRE(DecodeCommandRequest(malformed, decodedRequest) ==
+            DecodeStatus::IntegrityMismatch);
+
+    Simulation simulation({16, 16, 20, 31});
+    AddTwoPlayers(simulation);
+    const EntityId remoteWorker = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Worker,
+        Vec2::FromTiles(10, 10));
+    REQUIRE(remoteWorker != 0);
+    const EntityId localWorker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(2, 2));
+    REQUIRE(localWorker != 0);
+
+    CommandAdmissionContext context{};
+    context.player = 1;
+    context.minimumInputDelayTicks = 2;
+    context.maximumLeadTicks = 8;
+    CommandRequest remoteMove{};
+    remoteMove.sequence = 1;
+    remoteMove.executeTick = 2;
+    remoteMove.type = CommandType::Move;
+    remoteMove.actor = remoteWorker;
+    remoteMove.position = Vec2::FromTiles(11, 10);
+    std::string rejection;
+    REQUIRE(AdmitCommandRequest(remoteMove, context, simulation, &rejection) ==
+            CommandAdmissionStatus::Accepted);
+    REQUIRE(rejection.empty());
+    REQUIRE(context.hasAcceptedSequence);
+    REQUIRE(context.lastAcceptedSequence == 1);
+    REQUIRE(simulation.CommandLog().back().player == 1);
+    REQUIRE(simulation.CommandLog().back().sequence == 1);
+    REQUIRE(StableId(CommandAdmissionStatus::Accepted) ==
+            "NET_CMD_ACCEPTED");
+
+    REQUIRE(AdmitCommandRequest(remoteMove, context, simulation, &rejection) ==
+            CommandAdmissionStatus::SequenceUnexpected);
+    CommandRequest tooEarly = remoteMove;
+    tooEarly.sequence = 2;
+    tooEarly.executeTick = 1;
+    REQUIRE(AdmitCommandRequest(tooEarly, context, simulation, &rejection) ==
+            CommandAdmissionStatus::TickTooEarly);
+    CommandRequest tooLate = tooEarly;
+    tooLate.executeTick = 9;
+    REQUIRE(AdmitCommandRequest(tooLate, context, simulation, &rejection) ==
+            CommandAdmissionStatus::TickTooLate);
+
+    CommandAdmissionContext invalidSeat = context;
+    invalidSeat.player = 3;
+    REQUIRE(AdmitCommandRequest(tooEarly, invalidSeat, simulation, &rejection) ==
+            CommandAdmissionStatus::InvalidSeat);
+    CommandRequest foreignActor = remoteMove;
+    foreignActor.sequence = 2;
+    foreignActor.executeTick = 3;
+    foreignActor.actor = localWorker;
+    REQUIRE(AdmitCommandRequest(foreignActor, context, simulation,
+                                &rejection) ==
+            CommandAdmissionStatus::ActorNotOwned);
+    REQUIRE(context.lastAcceptedSequence == 1);
+    CommandAdmissionContext invalidRange = context;
+    invalidRange.minimumInputDelayTicks = 9;
+    invalidRange.maximumLeadTicks = 8;
+    REQUIRE(AdmitCommandRequest(tooEarly, invalidRange, simulation,
+                                &rejection) ==
+            CommandAdmissionStatus::TickRangeInvalid);
+    simulation.Step();
+    invalidRange.minimumInputDelayTicks = 0;
+    invalidRange.maximumLeadTicks = std::numeric_limits<Tick>::max();
+    REQUIRE(AdmitCommandRequest(tooEarly, invalidRange, simulation,
+                                &rejection) ==
+            CommandAdmissionStatus::TickRangeInvalid);
+
+    CommandRequest simulationRejected = remoteMove;
+    simulationRejected.sequence = 2;
+    simulationRejected.executeTick = 3;
+    simulationRejected.type = static_cast<CommandType>(0xff);
+    const std::size_t logSizeBeforeRejection = simulation.CommandLog().size();
+    REQUIRE(AdmitCommandRequest(simulationRejected, context, simulation,
+                                &rejection) ==
+            CommandAdmissionStatus::CommandRejected);
+    REQUIRE(!rejection.empty());
+    REQUIRE(context.lastAcceptedSequence == 1);
+    REQUIRE(simulation.CommandLog().size() == logSizeBeforeRejection);
+
+    simulation.Step(20);
+    REQUIRE(simulation.FindEntity(remoteWorker)->position ==
+            Vec2::FromTiles(11, 10));
+}
+
 }  // namespace
 
 int main() {
@@ -2686,6 +2932,8 @@ int main() {
          TestPoweredAegisNetworkAndCounterplay},
         {"faction research progression and persistence",
          TestFactionResearchProgressionAndPersistence},
+        {"network protocol admission and hardening",
+         TestNetworkProtocolAdmissionAndHardening},
     };
 
     std::size_t passed = 0;

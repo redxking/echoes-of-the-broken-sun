@@ -17,6 +17,7 @@ common_flags=(
 )
 sources=(
     "${project_dir}/Source/EchoesSimCore/Private/Simulation.cpp"
+    "${project_dir}/Source/EchoesSimCore/Private/NetworkProtocol.cpp"
     "${project_dir}/Tests/Native/SimCoreTests.cpp"
 )
 
