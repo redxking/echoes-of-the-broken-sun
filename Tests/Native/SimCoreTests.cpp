@@ -68,6 +68,16 @@ void WriteU64(std::vector<std::uint8_t>& bytes,
     }
 }
 
+std::uint32_t ReadU32(const std::vector<std::uint8_t>& bytes,
+                      std::size_t offset) {
+    REQUIRE(offset + 4 <= bytes.size());
+    std::uint32_t value = 0;
+    for (std::uint32_t shift = 0; shift < 32; shift += 8) {
+        value |= static_cast<std::uint32_t>(bytes[offset++]) << shift;
+    }
+    return value;
+}
+
 void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
     REQUIRE(bytes.size() >= 8);
     WriteU64(bytes, bytes.size() - 8,
@@ -95,12 +105,42 @@ void ResignNetworkPacket(std::vector<std::uint8_t>& bytes) {
 }
 
 std::size_t SnapshotEntityCountOffset(std::size_t mapTileCount) {
-    // Snapshot v20 header/rules/research/player/sequence fields plus terrain and four fog grids.
+    // Snapshot v21 header/rules/research/player/sequence fields plus terrain and four fog grids.
     return 1862 + 5 * mapTileCount;
 }
 
 std::size_t SnapshotFirstEntityOffset(std::size_t mapTileCount) {
     return SnapshotEntityCountOffset(mapTileCount) + 4;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV21ToV20(
+    const std::vector<std::uint8_t>& current,
+    std::size_t mapTileCount) {
+    constexpr std::size_t kV21EntityBytes = 210;
+    constexpr std::size_t kWellActivationOffset = 104;
+    constexpr std::size_t kWellActivationBytes = 8;
+    REQUIRE(ReadU32(current, 4) == 21);
+    const std::size_t firstEntity = SnapshotFirstEntityOffset(mapTileCount);
+    const std::uint32_t entityCount =
+        ReadU32(current, SnapshotEntityCountOffset(mapTileCount));
+    REQUIRE(firstEntity +
+                static_cast<std::size_t>(entityCount) * kV21EntityBytes + 8 <=
+            current.size());
+
+    std::vector<std::uint8_t> legacy = current;
+    for (std::uint32_t index = entityCount; index > 0; --index) {
+        const std::size_t activation =
+            firstEntity +
+            static_cast<std::size_t>(index - 1) * kV21EntityBytes +
+            kWellActivationOffset;
+        legacy.erase(
+            legacy.begin() + static_cast<std::ptrdiff_t>(activation),
+            legacy.begin() + static_cast<std::ptrdiff_t>(
+                                 activation + kWellActivationBytes));
+    }
+    WriteU32(legacy, 4, 20);
+    ResignSnapshot(legacy);
+    return legacy;
 }
 
 void AddTwoPlayers(Simulation& simulation,
@@ -969,6 +1009,7 @@ void TestFutureWellChoices() {
         harvest.Step();
         REQUIRE(harvest.FindPlayer(0)->resources.dawnshards == 350);
         REQUIRE(harvest.FindEntity(well)->wellChoice == FutureWellChoice::Harvest);
+        REQUIRE(harvest.FindEntity(well)->wellActivationTick == 1);
         REQUIRE(harvest.TerrainAt(7, 7) == Terrain::Scarred);
         REQUIRE(harvest.ValidatePlacement(0, EntityType::Barracks,
                                           Vec2::FromTiles(8, 8)) ==
@@ -988,6 +1029,7 @@ void TestFutureWellChoices() {
         preserve.Step(20);
         REQUIRE(preserve.FindPlayer(0)->resources.dawnshards == 6);
         REQUIRE(preserve.FindEntity(well)->wellChoice == FutureWellChoice::Preserve);
+        REQUIRE(preserve.FindEntity(well)->wellActivationTick == 1);
         REQUIRE(preserve.VisibilityAt(0, Vec2::FromTiles(18, 10)) ==
                 Visibility::Visible);
     }
@@ -1024,6 +1066,7 @@ void TestFutureWellChoices() {
         REQUIRE(reshape.FindPlayer(0)->resources.dawnshards == 100);
         const Entity* reshapedWell = reshape.FindEntity(well);
         REQUIRE(reshapedWell->wellChoice == FutureWellChoice::Reshape);
+        REQUIRE(reshapedWell->wellActivationTick == 2);
         REQUIRE(reshapedWell->reshapeUntilTick >= 40 &&
                 reshapedWell->reshapeUntilTick <= 60);
         REQUIRE(reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
@@ -1083,6 +1126,86 @@ void TestSnapshotAndReplay() {
     REQUIRE(reproduced.has_value());
     REQUIRE(reproduced->CurrentTick() == scenario.simulation.CurrentTick());
     REQUIRE(reproduced->StateChecksum() == scenario.simulation.StateChecksum());
+}
+
+void TestFutureWellSnapshotMigrationAndReplay() {
+    constexpr std::size_t kEntityBytes = 210;
+    constexpr std::size_t kWellActivationOffset = 104;
+    constexpr std::size_t kMapTiles = 20U * 20U;
+
+    Simulation simulation({20, 20, 20, 0x4d3132534e4150ULL});
+    REQUIRE(simulation.AddPlayer(
+        0, Faction::MeridianCompact, {500, 100}));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(5, 6));
+    const EntityId activatedWell =
+        simulation.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    const EntityId dormantWell =
+        simulation.SpawnFutureWell(Vec2::FromTiles(14, 14));
+    REQUIRE(worker != 0 && activatedWell != 0 && dormantWell != 0);
+
+    simulation.CaptureReplayBaseline();
+    Command preserve =
+        MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    preserve.target = activatedWell;
+    preserve.wellChoice = FutureWellChoice::Preserve;
+    REQUIRE(simulation.QueueCommand(preserve));
+    simulation.Step(6);
+    REQUIRE(simulation.FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(simulation.FindEntity(dormantWell)->wellActivationTick == 0);
+
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    REQUIRE(ReadU32(snapshot, 4) == 21);
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(restored->FindEntity(dormantWell)->wellActivationTick == 0);
+
+    const ReplayRecord replay = simulation.ExportReplay();
+    REQUIRE(replay.version == 21);
+    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 21);
+    std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(replayed->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+
+    const std::vector<std::uint8_t> legacy =
+        ConvertSnapshotV21ToV20(snapshot, kMapTiles);
+    REQUIRE(ReadU32(legacy, 4) == 20);
+    std::optional<Simulation> migrated =
+        Simulation::LoadSnapshot(legacy, &error);
+    REQUIRE(migrated.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(migrated->FindEntity(activatedWell)->wellActivationTick ==
+            migrated->CurrentTick());
+    REQUIRE(migrated->FindEntity(dormantWell)->wellActivationTick == 0);
+    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 21);
+
+    const std::size_t firstEntity = SnapshotFirstEntityOffset(kMapTiles);
+    std::vector<std::uint8_t> futureActivation = snapshot;
+    WriteU64(
+        futureActivation,
+        firstEntity + kEntityBytes + kWellActivationOffset,
+        simulation.CurrentTick() + 1);
+    ResignSnapshot(futureActivation);
+    REQUIRE(!Simulation::LoadSnapshot(futureActivation, &error).has_value());
+    REQUIRE(error == "snapshot entity state is invalid");
+
+    std::vector<std::uint8_t> dormantActivation = snapshot;
+    WriteU64(
+        dormantActivation,
+        firstEntity + 2 * kEntityBytes + kWellActivationOffset,
+        1);
+    ResignSnapshot(dormantActivation);
+    REQUIRE(!Simulation::LoadSnapshot(dormantActivation, &error).has_value());
+    REQUIRE(error == "snapshot entity state is invalid");
 }
 
 void TestNumericAndPublicInputHardening() {
@@ -2431,7 +2554,7 @@ void TestPoweredAegisNetworkAndCounterplay() {
             !restored->FindEntity(publicKharuunInterface)->aegisPowered);
 
     std::vector<std::uint8_t> forgedPower = poweredSnapshot;
-    constexpr std::size_t kSerializedEntitySize = 202;
+    constexpr std::size_t kSerializedEntitySize = 210;
     constexpr std::size_t kAegisEntityIndex = 3;
     const std::size_t aegisPowerOffset =
         SnapshotFirstEntityOffset(64U * 64U) +
@@ -3135,6 +3258,8 @@ int main() {
          TestFourPlayerVisibilitySnapshotAndOutcome},
         {"Future Well choices", TestFutureWellChoices},
         {"snapshot and replay", TestSnapshotAndReplay},
+        {"Future Well snapshot migration and replay",
+         TestFutureWellSnapshotMigrationAndReplay},
         {"numeric and public input hardening", TestNumericAndPublicInputHardening},
         {"sequence and build hardening", TestSequenceAndBuildHardening},
         {"snapshot adversarial bounds and id exhaustion",

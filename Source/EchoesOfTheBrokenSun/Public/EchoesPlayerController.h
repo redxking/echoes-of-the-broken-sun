@@ -137,6 +137,11 @@ public:
         echoes::sim::FutureWellChoice Consequence,
         echoes::sim::FutureWellChoice RecordedConsequence,
         EEchoesCampaignCommitStatus CommitStatus);
+    void NotifyFutureThatWonFinished(
+        bool bSuccess,
+        echoes::sim::FutureWellChoice Consequence,
+        echoes::sim::FutureWellChoice RecordedConsequence,
+        EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
@@ -491,6 +496,7 @@ private:
     bool TraceCommandTarget(FHitResult& OutHitResult);
     void NudgeKeyboardTarget(const FVector2D& Direction);
     void IssueContextOrder(const FHitResult& HitResult, bool bPointerSource);
+    void SynchronizeBoundCampaignProtocol();
     void SetFutureWellChoice(echoes::sim::FutureWellChoice Choice);
     void BuildAtCursor(echoes::sim::EntityType BuildingType);
     void ProduceUnit(echoes::sim::EntityType UnitType);

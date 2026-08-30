@@ -13,6 +13,7 @@ constexpr int32 HeaderSize = 12;
 constexpr int32 RecordSize = 24;
 constexpr int32 ChecksumSize = 4;
 constexpr uint8 AllWellChoicesMask = 0x07;
+constexpr uint32 FutureThatWonMinimumSnapshotVersion = 21;
 constexpr uint8 PrologueCompletionFacts =
     static_cast<uint8>(EEchoesCampaignDecisionFact::ArchiveRecovered) |
     static_cast<uint8>(EEchoesCampaignDecisionFact::CarrierEvacuated) |
@@ -90,6 +91,15 @@ constexpr uint8 NoNeutralLedgerCompletionFacts =
     static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::OruunSurvived) |
     static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::LocalCoreSurvived) |
     static_cast<uint8>(EEchoesNoNeutralLedgerCompletionFact::PriorLedgerConsumed);
+constexpr uint8 FutureThatWonCompletionFacts =
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::PriorElevenRecordLedgerConsumed) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::RecordedLumeProtocolBound) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::BothRecordedDistrictInputsVerified) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::IndependentPublicReadbackEstablished) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::RecordedProtocolActivated) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::StabilityWindowHeld) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::BothDistrictReadbacksObserved) |
+    static_cast<uint8>(EEchoesFutureThatWonCompletionFact::LocalCoreSurvived);
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -197,7 +207,8 @@ bool ValidateRecord(
         Record.Mission != EEchoesCampaignMissionId::TheShapeBesideUs &&
         Record.Mission != EEchoesCampaignMissionId::ReserveAuthority &&
         Record.Mission != EEchoesCampaignMissionId::ChoirAtLumeReach &&
-        Record.Mission != EEchoesCampaignMissionId::NoNeutralLedger)
+        Record.Mission != EEchoesCampaignMissionId::NoNeutralLedger &&
+        Record.Mission != EEchoesCampaignMissionId::TheFutureThatWon)
     {
         OutError = TEXT("[CAMPAIGN_UNKNOWN_MISSION] The campaign record names an unsupported mission.");
         return false;
@@ -216,10 +227,11 @@ bool ValidateRecord(
         OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The Lume Reach record must preserve all three offered Well protocols.");
         return false;
     }
-    if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger &&
+    if ((Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
+         Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon) &&
         Record.AvailableWellChoices != SelectedChoice)
     {
-        OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The alliance record must retain only the recorded Lume protocol that was applied.");
+        OutError = TEXT("[CAMPAIGN_INVALID_WELL_DECISION] The downstream receipt must retain only the recorded Lume protocol that was applied.");
         return false;
     }
     const uint8 RequiredFacts =
@@ -243,7 +255,9 @@ bool ValidateRecord(
             ? ReserveAuthorityCommonCompletionFacts
         : Record.Mission == EEchoesCampaignMissionId::ChoirAtLumeReach
             ? ChoirAtLumeReachCompletionFacts
-            : NoNeutralLedgerCompletionFacts;
+        : Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger
+            ? NoNeutralLedgerCompletionFacts
+            : FutureThatWonCompletionFacts;
     const uint8 ReserveDistricts =
         Record.VerifiedFacts & ReserveAuthorityDistrictFacts;
     const bool bValidReserveAllocation =
@@ -281,6 +295,16 @@ bool ValidateRecord(
         OutError = TEXT("[CAMPAIGN_INVALID_PROVENANCE] The record lacks deterministic completion provenance.");
         return false;
     }
+    if (Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon &&
+        (Record.SimulationSnapshotVersion <
+             FutureThatWonMinimumSnapshotVersion ||
+         Record.SimulationSnapshotVersion > echoes::sim::kSnapshotVersion))
+    {
+        OutError = FString::Printf(
+            TEXT("[CAMPAIGN_SNAPSHOT_VERSION_REQUIRED] Mission 12 requires activation provenance from snapshot schema 21 through supported schema %u."),
+            echoes::sim::kSnapshotVersion);
+        return false;
+    }
     return true;
 }
 
@@ -290,21 +314,33 @@ bool ValidateNoNeutralLedgerSequence(
 {
     const FEchoesCampaignDecisionRecord* Alliance =
         Progress.FindDecision(EEchoesCampaignMissionId::NoNeutralLedger);
-    if (Alliance == nullptr)
+    const FEchoesCampaignDecisionRecord* Restoration =
+        Progress.FindDecision(EEchoesCampaignMissionId::TheFutureThatWon);
+    if (Alliance == nullptr && Restoration == nullptr)
     {
         return true;
     }
-    if (Progress.Decisions.Num() != 11)
+    if (Alliance == nullptr)
     {
-        OutError = TEXT("[CAMPAIGN_ALLIANCE_LEDGER_INVALID] Mission 11 requires exactly ten prior records and one alliance record.");
+        OutError = TEXT("[CAMPAIGN_RESTORATION_LEDGER_INVALID] Mission 12 requires the accepted Mission 11 receipt.");
         return false;
     }
-    for (int32 Index = 0; Index < 11; ++Index)
+    const int32 ExpectedRecords = Restoration != nullptr ? 12 : 11;
+    if (Progress.Decisions.Num() != ExpectedRecords)
+    {
+        OutError = Restoration != nullptr
+            ? TEXT("[CAMPAIGN_RESTORATION_LEDGER_INVALID] Mission 12 requires exactly eleven prior records and one restoration record.")
+            : TEXT("[CAMPAIGN_ALLIANCE_LEDGER_INVALID] Mission 11 requires exactly ten prior records and one alliance record.");
+        return false;
+    }
+    for (int32 Index = 0; Index < ExpectedRecords; ++Index)
     {
         if (static_cast<uint8>(Progress.Decisions[Index].Mission) !=
             static_cast<uint8>(Index + 1))
         {
-            OutError = TEXT("[CAMPAIGN_ALLIANCE_LEDGER_ORDER] Mission 11 requires the exact ordered M01-M10 record chain.");
+            OutError = Restoration != nullptr
+                ? TEXT("[CAMPAIGN_RESTORATION_LEDGER_ORDER] Mission 12 requires the exact ordered M01-M11 record chain.")
+                : TEXT("[CAMPAIGN_ALLIANCE_LEDGER_ORDER] Mission 11 requires the exact ordered M01-M10 record chain.");
             return false;
         }
     }
@@ -322,6 +358,14 @@ bool ValidateNoNeutralLedgerSequence(
         Alliance->AvailableWellChoices != ChoiceMask(Lume.WellChoice))
     {
         OutError = TEXT("[CAMPAIGN_ALLIANCE_LUME_PROTOCOL] Mission 11 does not retain the independently recorded Mission 10 protocol.");
+        return false;
+    }
+    if (Restoration != nullptr &&
+        (Restoration->WellChoice != Alliance->WellChoice ||
+         Restoration->AvailableWellChoices !=
+             ChoiceMask(Alliance->WellChoice)))
+    {
+        OutError = TEXT("[CAMPAIGN_RESTORATION_LUME_PROTOCOL] Mission 12 does not retain the exact Mission 11 protocol receipt.");
         return false;
     }
     return true;
@@ -381,7 +425,8 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
         OutFeedback = TEXT("[CAMPAIGN_RECORD_LIMIT] The campaign ledger cannot accept another decision.");
         return EEchoesCampaignCommitStatus::StorageFailure;
     }
-    if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger)
+    if (Record.Mission == EEchoesCampaignMissionId::NoNeutralLedger ||
+        Record.Mission == EEchoesCampaignMissionId::TheFutureThatWon)
     {
         FEchoesCampaignProgress Candidate = *this;
         Candidate.Decisions.Add(Record);

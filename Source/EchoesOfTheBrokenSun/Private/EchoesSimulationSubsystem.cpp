@@ -39,12 +39,16 @@ constexpr int32 ShapeBesideUsSiteRadiusTiles = 3;
 constexpr int32 ReserveAuthoritySiteRadiusTiles = 3;
 constexpr int32 ChoirAtLumeReachSiteRadiusTiles = 3;
 constexpr int32 NoNeutralLedgerSiteRadiusTiles = 3;
+constexpr int32 FutureThatWonSiteRadiusTiles = 3;
 constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
 constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '0', 'Q'};
 constexpr uint8 NoNeutralLedgerQuickSaveEnvelopeVersion = 1;
 constexpr uint8 NoNeutralLedgerQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '1', 'Q'};
+constexpr uint8 FutureThatWonQuickSaveEnvelopeVersion = 1;
+constexpr uint8 FutureThatWonQuickSaveMagic[] = {
+    'E', 'C', 'H', 'O', 'M', '1', '2', 'Q'};
 
 using echoes::sim::EntityId;
 using echoes::sim::EntityType;
@@ -78,6 +82,21 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
         (static_cast<uint32>(Bytes[Offset + 3]) << 24U);
     Offset += 4;
     return true;
+}
+
+[[nodiscard]] bool UsesCurrentSnapshotSchema(
+    const TArray<uint8>& SnapshotBytes)
+{
+    if (SnapshotBytes.Num() < 8 || SnapshotBytes[0] != 'E' ||
+        SnapshotBytes[1] != 'B' || SnapshotBytes[2] != 'S' ||
+        SnapshotBytes[3] != 'N')
+    {
+        return false;
+    }
+    int32 Offset = 4;
+    uint32 Version = 0;
+    return ReadUint32LittleEndian(SnapshotBytes, Offset, Version) &&
+        Version == echoes::sim::kSnapshotVersion;
 }
 
 [[nodiscard]] bool BuildChoirAtLumeReachQuickSaveEnvelope(
@@ -364,6 +383,178 @@ void AppendUint32LittleEndian(TArray<uint8>& Bytes, uint32 Value)
     OutSnapshotBytes.Append(
         Envelope.GetData() + Offset,
         static_cast<int32>(SnapshotLength));
+    return true;
+}
+
+[[nodiscard]] bool BuildFutureThatWonQuickSaveEnvelope(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& SnapshotBytes,
+    TArray<uint8>& OutEnvelope,
+    FString& OutError)
+{
+    OutEnvelope.Reset();
+    OutError.Reset();
+    if ((CampaignProgress.Decisions.Num() != 11 &&
+         CampaignProgress.Decisions.Num() != 12) ||
+        SnapshotBytes.IsEmpty() ||
+        !UsesCurrentSnapshotSchema(SnapshotBytes))
+    {
+        OutError = TEXT(
+            "Mission 12 checkpoints require an active eleven-record ledger and a schema-21 snapshot.");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteLedger;
+    PrerequisiteLedger.Decisions.Reserve(11);
+    for (int32 Index = 0; Index < 11; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "Mission 12 checkpoints require the canonical M01-M11 prerequisite projection.");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(
+            CampaignProgress.Decisions[Index]);
+    }
+
+    TArray<uint8> LedgerBytes;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, LedgerBytes, OutError) ||
+        LedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("The active campaign ledger could not be encoded.");
+        }
+        return false;
+    }
+
+    const uint64 EnvelopeSize =
+        static_cast<uint64>(UE_ARRAY_COUNT(FutureThatWonQuickSaveMagic)) +
+        2ULL + 8ULL + static_cast<uint64>(LedgerBytes.Num()) +
+        static_cast<uint64>(SnapshotBytes.Num());
+    if (EnvelopeSize > static_cast<uint64>(MAX_int32))
+    {
+        OutError = TEXT("The Mission 12 checkpoint envelope is too large.");
+        return false;
+    }
+
+    OutEnvelope.Reserve(static_cast<int32>(EnvelopeSize));
+    OutEnvelope.Append(
+        FutureThatWonQuickSaveMagic,
+        UE_ARRAY_COUNT(FutureThatWonQuickSaveMagic));
+    OutEnvelope.Add(FutureThatWonQuickSaveEnvelopeVersion);
+    OutEnvelope.Add(static_cast<uint8>(
+        EEchoesOperationMode::CampaignFutureThatWon));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(LedgerBytes.Num()));
+    AppendUint32LittleEndian(
+        OutEnvelope, static_cast<uint32>(SnapshotBytes.Num()));
+    OutEnvelope.Append(LedgerBytes);
+    OutEnvelope.Append(SnapshotBytes);
+    return true;
+}
+
+[[nodiscard]] bool ExtractFutureThatWonQuickSaveSnapshot(
+    const FEchoesCampaignProgress& CampaignProgress,
+    const TArray<uint8>& Envelope,
+    TArray<uint8>& OutSnapshotBytes,
+    FString& OutError)
+{
+    OutSnapshotBytes.Reset();
+    OutError.Reset();
+    constexpr int32 FixedHeaderSize =
+        UE_ARRAY_COUNT(FutureThatWonQuickSaveMagic) + 2 + 8;
+    if (Envelope.Num() < FixedHeaderSize ||
+        FMemory::Memcmp(
+            Envelope.GetData(),
+            FutureThatWonQuickSaveMagic,
+            UE_ARRAY_COUNT(FutureThatWonQuickSaveMagic)) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint is missing the Mission 12 operation-and-ledger envelope");
+        return false;
+    }
+
+    int32 Offset = UE_ARRAY_COUNT(FutureThatWonQuickSaveMagic);
+    if (Envelope[Offset++] != FutureThatWonQuickSaveEnvelopeVersion)
+    {
+        OutError = TEXT(
+            "checkpoint uses an unsupported Mission 12 envelope version");
+        return false;
+    }
+    if (Envelope[Offset++] != static_cast<uint8>(
+            EEchoesOperationMode::CampaignFutureThatWon))
+    {
+        OutError = TEXT(
+            "checkpoint operation binding is not The Future That Won");
+        return false;
+    }
+
+    uint32 LedgerLength = 0;
+    uint32 SnapshotLength = 0;
+    if (!ReadUint32LittleEndian(Envelope, Offset, LedgerLength) ||
+        !ReadUint32LittleEndian(Envelope, Offset, SnapshotLength) ||
+        LedgerLength == 0 || SnapshotLength == 0 ||
+        static_cast<uint64>(Offset) + static_cast<uint64>(LedgerLength) +
+                static_cast<uint64>(SnapshotLength) !=
+            static_cast<uint64>(Envelope.Num()))
+    {
+        OutError = TEXT("checkpoint Mission 12 envelope lengths are invalid");
+        return false;
+    }
+
+    if (CampaignProgress.Decisions.Num() != 11 &&
+        CampaignProgress.Decisions.Num() != 12)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding requires eleven prerequisites and an optional Mission 12 receipt");
+        return false;
+    }
+    FEchoesCampaignProgress PrerequisiteLedger;
+    PrerequisiteLedger.Decisions.Reserve(11);
+    for (int32 Index = 0; Index < 11; ++Index)
+    {
+        if (!CampaignProgress.Decisions.IsValidIndex(Index) ||
+            static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+                static_cast<uint8>(Index + 1))
+        {
+            OutError = TEXT(
+                "checkpoint ledger binding does not contain the canonical M01-M11 projection");
+            return false;
+        }
+        PrerequisiteLedger.Decisions.Add(CampaignProgress.Decisions[Index]);
+    }
+
+    TArray<uint8> ActiveLedgerBytes;
+    FString LedgerError;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteLedger, ActiveLedgerBytes, LedgerError) ||
+        ActiveLedgerBytes.Num() != static_cast<int32>(LedgerLength) ||
+        FMemory::Memcmp(
+            Envelope.GetData() + Offset,
+            ActiveLedgerBytes.GetData(),
+            LedgerLength) != 0)
+    {
+        OutError = TEXT(
+            "checkpoint ledger binding does not match the active eleven-record campaign");
+        return false;
+    }
+
+    Offset += static_cast<int32>(LedgerLength);
+    OutSnapshotBytes.Append(
+        Envelope.GetData() + Offset,
+        static_cast<int32>(SnapshotLength));
+    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    {
+        OutSnapshotBytes.Reset();
+        OutError = TEXT(
+            "Mission 12 checkpoints require snapshot schema 21 continuity state");
+        return false;
+    }
     return true;
 }
 
@@ -654,6 +845,14 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     NoNeutralMeridianEvidenceInterfaceId = 0;
     NoNeutralKharuunEvidenceInterfaceId = 0;
     NoNeutralWellId = 0;
+    FutureWonOruunId = 0;
+    FutureWonVerifierId = 0;
+    FutureWonFirstDistrictInterfaceId = 0;
+    FutureWonSecondDistrictInterfaceId = 0;
+    FutureWonMeridianReadbackInterfaceId = 0;
+    FutureWonKharuunReadbackInterfaceId = 0;
+    FutureWonDemonstratorInterfaceId = 0;
+    FutureWonWellId = 0;
     CampaignProgress = FEchoesCampaignProgress{};
     CampaignBackupProgress = FEchoesCampaignProgress{};
     bCampaignBackupAvailable = false;
@@ -766,6 +965,8 @@ FString UEchoesSimulationSubsystem::GetOperationLabel() const
             return TEXT("THE CHOIR AT LUME REACH");
         case EEchoesOperationMode::CampaignNoNeutralLedger:
             return TEXT("NO NEUTRAL LEDGER");
+        case EEchoesOperationMode::CampaignFutureThatWon:
+            return TEXT("THE FUTURE THAT WON");
         default:
             return TEXT("GLASS SCAR");
     }
@@ -877,6 +1078,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             LogEchoes,
             Error,
             TEXT("[ECHOES_NO_NEUTRAL_LEDGER_LOCKED] reason=exact ordered ten-record campaign required"));
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon &&
+        !IsFutureThatWonUnlocked())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_FUTURE_THAT_WON_LOCKED] reason=exact ordered eleven-record campaign required"));
         return false;
     }
 
@@ -1013,7 +1224,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     const FutureWellChoice SevenAccountsBranch = GetRecordedPrologueChoice();
     const bool bLumeReach =
         SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach ||
-        SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger;
+        SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger ||
+        SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon;
     const int32 BaseGlassScarBlockedTiles = bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : ConfigureGlassScar(*Simulation);
@@ -1082,6 +1294,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         : SelectedOperation ==
                   EEchoesOperationMode::CampaignNoNeutralLedger
             ? Faction::KharuunAssemblies
+        : SelectedOperation ==
+                  EEchoesOperationMode::CampaignFutureThatWon
+            ? Faction::KharuunAssemblies
             : LocalFaction;
     const Faction ScenarioOpponentFaction =
         ScenarioLocalFaction == Faction::MeridianCompact
@@ -1119,6 +1334,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                         EEchoesOperationMode::CampaignChoirAtLumeReach ||
                     SelectedOperation ==
                         EEchoesOperationMode::CampaignNoNeutralLedger
+                    || SelectedOperation ==
+                        EEchoesOperationMode::CampaignFutureThatWon
                 ? ResourcePool{1000, 500}
                 : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
@@ -1182,6 +1399,14 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     NoNeutralMeridianEvidenceInterfaceId = 0;
     NoNeutralKharuunEvidenceInterfaceId = 0;
     NoNeutralWellId = 0;
+    FutureWonOruunId = 0;
+    FutureWonVerifierId = 0;
+    FutureWonFirstDistrictInterfaceId = 0;
+    FutureWonSecondDistrictInterfaceId = 0;
+    FutureWonMeridianReadbackInterfaceId = 0;
+    FutureWonKharuunReadbackInterfaceId = 0;
+    FutureWonDemonstratorInterfaceId = 0;
+    FutureWonWellId = 0;
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -1241,6 +1466,19 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                      NoNeutralWaystoneId == 0)
             {
                 NoNeutralWaystoneId = Spawned;
+            }
+        }
+        if (SelectedOperation ==
+                EEchoesOperationMode::CampaignFutureThatWon &&
+            Owner == LocalPlayerId && Type == EntityType::ScoutUnit)
+        {
+            if (FutureWonOruunId == 0)
+            {
+                FutureWonOruunId = Spawned;
+            }
+            else if (FutureWonVerifierId == 0)
+            {
+                FutureWonVerifierId = Spawned;
             }
         }
         return Spawned;
@@ -1741,6 +1979,58 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+            FutureWonVerifierId = SpawnUnit(
+                LocalPlayerId,
+                Faction::KharuunAssemblies,
+                EntityType::ScoutUnit,
+                18,
+                22);
+            FutureWonFirstDistrictInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.FirstDistrictInputSite);
+            FutureWonSecondDistrictInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.SecondDistrictInputSite);
+            FutureWonMeridianReadbackInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.MeridianReadbackSite);
+            FutureWonKharuunReadbackInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::KharuunAssemblies,
+                    Plan.KharuunReadbackSite);
+            FutureWonDemonstratorInterfaceId =
+                Simulation->SpawnPublicInterface(
+                    Faction::MeridianCompact,
+                    Plan.RestorationDemonstratorSite);
+            bSpawnSucceeded &=
+                FutureWonFirstDistrictInterfaceId != 0 &&
+                FutureWonSecondDistrictInterfaceId != 0 &&
+                FutureWonMeridianReadbackInterfaceId != 0 &&
+                FutureWonKharuunReadbackInterfaceId != 0 &&
+                FutureWonDemonstratorInterfaceId != 0;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_FUTURE_THAT_WON_SPAWN] planKey=%u oruun=%u verifier=%u districtReadbacks=%u:%u evidenceReadbacks=%u:%u demonstrator=%u protocol=%u publicInterfacesNeutral=true success=%s"),
+                Plan.StablePlanKey,
+                FutureWonOruunId,
+                FutureWonVerifierId,
+                FutureWonFirstDistrictInterfaceId,
+                FutureWonSecondDistrictInterfaceId,
+                FutureWonMeridianReadbackInterfaceId,
+                FutureWonKharuunReadbackInterfaceId,
+                FutureWonDemonstratorInterfaceId,
+                static_cast<uint8>(Plan.RecordedProtocol),
+                bSpawnSucceeded ? TEXT("true") : TEXT("false"));
+        }
+
         if (bUseResearchInterruptionPresentation)
         {
             constexpr int32 InterruptionAttackerCount = 32;
@@ -1782,6 +2072,15 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         if (bLumeReach)
         {
             if (SelectedOperation ==
+                EEchoesOperationMode::CampaignFutureThatWon)
+            {
+                const FEchoesFutureThatWonPlan Plan =
+                    GetFutureThatWonPlan();
+                FutureWonWellId = Simulation->SpawnFutureWell(
+                    Plan.FutureWellSite);
+                bSpawnSucceeded &= FutureWonWellId != 0;
+            }
+            else if (SelectedOperation ==
                 EEchoesOperationMode::CampaignNoNeutralLedger)
             {
                 const FEchoesNoNeutralLedgerPlan Plan =
@@ -2308,6 +2607,30 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         return false;
     }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon &&
+        (FutureWonOruunId == 0 || FutureWonVerifierId == 0 ||
+         FutureWonFirstDistrictInterfaceId == 0 ||
+         FutureWonSecondDistrictInterfaceId == 0 ||
+         FutureWonMeridianReadbackInterfaceId == 0 ||
+         FutureWonKharuunReadbackInterfaceId == 0 ||
+         FutureWonDemonstratorInterfaceId == 0 || FutureWonWellId == 0))
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_FUTURE_THAT_WON_INIT_FAILED] reason=mission entities unavailable oruun=%u verifier=%u districts=%u:%u evidence=%u:%u demonstrator=%u well=%u"),
+            FutureWonOruunId,
+            FutureWonVerifierId,
+            FutureWonFirstDistrictInterfaceId,
+            FutureWonSecondDistrictInterfaceId,
+            FutureWonMeridianReadbackInterfaceId,
+            FutureWonKharuunReadbackInterfaceId,
+            FutureWonDemonstratorInterfaceId,
+            FutureWonWellId);
+        Simulation.Reset();
+        return false;
+    }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
         UE_LOG(
@@ -2327,6 +2650,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     if (bLumeReach)
     {
         if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_LUME_RESTORATION_TERRAIN_READY] blocked=%d publicGates=3 demonstrator=(%d,%d) well=(%d,%d) inheritedBranch=%u planKey=%u"),
+                GlassScarBlockedTiles,
+                Plan.RestorationDemonstratorSite.x.FloorToInt(),
+                Plan.RestorationDemonstratorSite.y.FloorToInt(),
+                Plan.FutureWellSite.x.FloorToInt(),
+                Plan.FutureWellSite.y.FloorToInt(),
+                static_cast<uint8>(SevenAccountsBranch),
+                Plan.StablePlanKey);
+        }
+        else if (SelectedOperation ==
             EEchoesOperationMode::CampaignNoNeutralLedger)
         {
             const FEchoesNoNeutralLedgerPlan Plan =
@@ -2618,6 +2957,36 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 NoNeutralWellId,
                 GlassScarBlockedTiles);
         }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_FUTURE_THAT_WON_READY] planKey=%u founding=%u route=%s districtA=%s districtB=%s deferred=%s recordedProtocol=%u protocol=%s oruun=%u verifier=%u districtReadbacks=%u:%u evidenceReadbacks=%u:%u demonstrator=%u well=%u stabilityTicks=%llu inheritedRecords=11 localFaction=KharuunAssemblies rhysePresence=attributablePublicApparatusOnly meridianPresence=neutralPublicInterfacesOnly mixedFactionCommand=false civilianCountsUnmodeled=true populationRestorationUnproven=true permanentFutureUnproven=true blocked=%d"),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                Plan.RouteStableName,
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.FirstContributingDistrict),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.SecondContributingDistrict),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Plan.ProtocolStableName,
+                FutureWonOruunId,
+                FutureWonVerifierId,
+                FutureWonFirstDistrictInterfaceId,
+                FutureWonSecondDistrictInterfaceId,
+                FutureWonMeridianReadbackInterfaceId,
+                FutureWonKharuunReadbackInterfaceId,
+                FutureWonDemonstratorInterfaceId,
+                FutureWonWellId,
+                static_cast<unsigned long long>(Plan.StabilityWindowTicks),
+                GlassScarBlockedTiles);
+        }
         const int32 PoweredAegisCount = static_cast<int32>(std::count_if(
             Simulation->Entities().begin(),
             Simulation->Entities().end(),
@@ -2762,6 +3131,14 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     NoNeutralMeridianEvidenceInterfaceId = 0;
     NoNeutralKharuunEvidenceInterfaceId = 0;
     NoNeutralWellId = 0;
+    FutureWonOruunId = 0;
+    FutureWonVerifierId = 0;
+    FutureWonFirstDistrictInterfaceId = 0;
+    FutureWonSecondDistrictInterfaceId = 0;
+    FutureWonMeridianReadbackInterfaceId = 0;
+    FutureWonKharuunReadbackInterfaceId = 0;
+    FutureWonDemonstratorInterfaceId = 0;
+    FutureWonWellId = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
 }
 
@@ -2862,6 +3239,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies)
     {
         OutFeedback = TEXT("[FACTION_NO_NEUTRAL_LEDGER_LOCKED] Oruun and the ledger witness deploy under Kharuun authority; Meridian and Choir contributions remain public interfaces, not commandable forces.");
+        return false;
+    }
+    if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon &&
+        NewFaction != Faction::KharuunAssemblies)
+    {
+        OutFeedback = TEXT("[FACTION_FUTURE_THAT_WON_LOCKED] Oruun and the independent verifier deploy under Kharuun authority; Rhyse's demonstrator and Meridian readbacks remain public, non-commandable interfaces.");
         return false;
     }
     if (NewFaction == LocalFaction)
@@ -2991,6 +3375,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Choir at Lume Reach with the exact ten-record ledger before No Neutral Ledger.");
         return false;
     }
+    if (NewOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon &&
+        !IsFutureThatWonUnlocked())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete No Neutral Ledger with the exact eleven-record ledger before The Future That Won.");
+        return false;
+    }
     if (NewOperation == SelectedOperation)
     {
         OutFeedback = FString::Printf(TEXT("OPERATION: %s already selected."), *GetOperationLabel());
@@ -3057,6 +3448,11 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     {
         LocalFaction = Faction::KharuunAssemblies;
     }
+    else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        LocalFaction = Faction::KharuunAssemblies;
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -3095,6 +3491,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignNoNeutralLedger
                 ? TEXT(" — Oruun's Kharuun force is locked; Meridian evidence and local Choir contact remain public, non-commandable interfaces.")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignFutureThatWon
+                ? TEXT(" — Oruun and the independent verifier are locked under Kharuun authority; Rhyse's apparatus remains public and non-commandable.")
                 : TEXT("."));
         UE_LOG(
             LogEchoes,
@@ -3129,6 +3528,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             : SelectedOperation ==
                       EEchoesOperationMode::CampaignNoNeutralLedger
                 ? TEXT("NoNeutralLedger")
+            : SelectedOperation ==
+                      EEchoesOperationMode::CampaignFutureThatWon
+                ? TEXT("TheFutureThatWon")
                 : TEXT("GlassScar"),
             bHadScenario ? TEXT("true") : TEXT("false"),
             bWasPaused ? TEXT("true") : TEXT("false"));
@@ -3358,7 +3760,9 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
         SelectedOperation ==
             EEchoesOperationMode::CampaignChoirAtLumeReach ||
         SelectedOperation ==
-            EEchoesOperationMode::CampaignNoNeutralLedger)
+            EEchoesOperationMode::CampaignNoNeutralLedger ||
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon)
     {
         TArray<uint8> LedgerBytes;
         FString LedgerError;
@@ -3391,7 +3795,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 : SelectedOperation ==
                         EEchoesOperationMode::CampaignChoirAtLumeReach
                     ? TEXT("EchoesQuickSaveTheChoirAtLumeReach")
-                    : TEXT("EchoesQuickSaveNoNeutralLedger");
+                : SelectedOperation ==
+                        EEchoesOperationMode::CampaignNoNeutralLedger
+                    ? TEXT("EchoesQuickSaveNoNeutralLedger")
+                    : TEXT("EchoesQuickSaveTheFutureThatWon");
             return FPaths::Combine(
                 FPaths::ProjectSavedDir(),
                 TEXT("SaveGames"),
@@ -3418,7 +3825,10 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             : SelectedOperation ==
                     EEchoesOperationMode::CampaignChoirAtLumeReach
                 ? TEXT("EchoesQuickSaveTheChoirAtLumeReach-InvalidLedger.bin")
-                : TEXT("EchoesQuickSaveNoNeutralLedger-InvalidLedger.bin"));
+            : SelectedOperation ==
+                    EEchoesOperationMode::CampaignNoNeutralLedger
+                ? TEXT("EchoesQuickSaveNoNeutralLedger-InvalidLedger.bin")
+                : TEXT("EchoesQuickSaveTheFutureThatWon-InvalidLedger.bin"));
     }
     return GetQuickSavePath();
 }
@@ -4191,6 +4601,74 @@ UEchoesSimulationSubsystem::CommitNoNeutralLedgerCompletion(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+EEchoesCampaignCommitStatus
+UEchoesSimulationSubsystem::CommitFutureThatWonCompletion(
+    echoes::sim::FutureWellChoice& OutRecordedProtocol,
+    FString& OutFeedback)
+{
+    const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+    OutRecordedProtocol = Plan.RecordedProtocol;
+    if (!bCampaignProgressAvailable || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[CAMPAIGN_LEDGER_UNAVAILABLE] Mission completion is valid, but campaign progress could not be saved.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    if (SelectedOperation !=
+            EEchoesOperationMode::CampaignFutureThatWon ||
+        GetFutureThatWonPhase() != EEchoesFutureThatWonPhase::Complete ||
+        !IsFutureThatWonUnlocked() ||
+        Plan.RecordedProtocol == FutureWellChoice::Dormant)
+    {
+        OutFeedback = TEXT("[CAMPAIGN_COMPLETION_UNVERIFIED] No completed authoritative The Future That Won operation can be recorded.");
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+
+    FEchoesCampaignDecisionRecord Record;
+    Record.Mission = EEchoesCampaignMissionId::TheFutureThatWon;
+    Record.WellChoice = Plan.RecordedProtocol;
+    Record.AvailableWellChoices = WellChoiceMask(Plan.RecordedProtocol);
+    Record.VerifiedFacts =
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::PriorElevenRecordLedgerConsumed) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::RecordedLumeProtocolBound) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::BothRecordedDistrictInputsVerified) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::IndependentPublicReadbackEstablished) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::RecordedProtocolActivated) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::StabilityWindowHeld) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::BothDistrictReadbacksObserved) |
+        static_cast<uint8>(EEchoesFutureThatWonCompletionFact::LocalCoreSurvived);
+    Record.SimulationSnapshotVersion = echoes::sim::kSnapshotVersion;
+    Record.CompletionTick = Simulation->CurrentTick();
+    Record.FinalStateChecksum = Simulation->StateChecksum();
+
+    FEchoesCampaignProgress Candidate = CampaignProgress;
+    const EEchoesCampaignCommitStatus Status =
+        Candidate.AppendDecision(Record, OutFeedback);
+    if (Status == EEchoesCampaignCommitStatus::StorageFailure)
+    {
+        return Status;
+    }
+    if (const FEchoesCampaignDecisionRecord* Existing =
+            Candidate.FindDecision(Record.Mission))
+    {
+        OutRecordedProtocol = Existing->WellChoice;
+    }
+    if (Status != EEchoesCampaignCommitStatus::Added)
+    {
+        return Status;
+    }
+    FString SaveFeedback;
+    if (!FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignProgressPath, Candidate, SaveFeedback))
+    {
+        OutFeedback = SaveFeedback;
+        return EEchoesCampaignCommitStatus::StorageFailure;
+    }
+    CampaignProgress = MoveTemp(Candidate);
+    RefreshCampaignBackupState();
+    OutFeedback = SaveFeedback;
+    return EEchoesCampaignCommitStatus::Added;
+}
+
 void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 {
     if (!bPrologueCompletionPresentationScenario ||
@@ -4368,6 +4846,22 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         }
     }
     else if (SelectedOperation ==
+             EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        FString EnvelopeError;
+        if (!BuildFutureThatWonQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation ==
              EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         FString EnvelopeError;
@@ -4424,6 +4918,17 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
                  EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
+            CampaignProgress,
+            VerificationBytes,
+            VerificationSnapshotBytes,
+            EnvelopeError);
+        VerificationPayload = &VerificationSnapshotBytes;
+    }
+    else if (bVerificationRead &&
+             SelectedOperation ==
+                 EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
             CampaignProgress,
             VerificationBytes,
             VerificationSnapshotBytes,
@@ -4487,7 +4992,9 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         SelectedOperation ==
                 EEchoesOperationMode::CampaignChoirAtLumeReach ||
             SelectedOperation ==
-                EEchoesOperationMode::CampaignNoNeutralLedger
+                EEchoesOperationMode::CampaignNoNeutralLedger ||
+            SelectedOperation ==
+                EEchoesOperationMode::CampaignFutureThatWon
             ? TEXT("true")
             : TEXT("false"));
     return true;
@@ -4536,6 +5043,19 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                  EEchoesOperationMode::CampaignNoNeutralLedger)
         {
             if (!ExtractNoNeutralLedgerQuickSaveSnapshot(
+                    CampaignProgress,
+                    Bytes,
+                    SnapshotBytes,
+                    OutFailure))
+            {
+                return false;
+            }
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (SelectedOperation ==
+                 EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            if (!ExtractFutureThatWonQuickSaveSnapshot(
                     CampaignProgress,
                     Bytes,
                     SnapshotBytes,
@@ -4863,6 +5383,85 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             {
                 OutFailure = TEXT(
                     "snapshot does not match the active No Neutral Ledger composition");
+                return false;
+            }
+        }
+        if (SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+            const echoes::sim::Entity* Oruun =
+                Candidate->FindEntity(FutureWonOruunId);
+            const echoes::sim::Entity* Verifier =
+                Candidate->FindEntity(FutureWonVerifierId);
+            const echoes::sim::Entity* FirstDistrict =
+                Candidate->FindEntity(FutureWonFirstDistrictInterfaceId);
+            const echoes::sim::Entity* SecondDistrict =
+                Candidate->FindEntity(FutureWonSecondDistrictInterfaceId);
+            const echoes::sim::Entity* MeridianReadback =
+                Candidate->FindEntity(
+                    FutureWonMeridianReadbackInterfaceId);
+            const echoes::sim::Entity* KharuunReadback =
+                Candidate->FindEntity(
+                    FutureWonKharuunReadbackInterfaceId);
+            const echoes::sim::Entity* Demonstrator =
+                Candidate->FindEntity(FutureWonDemonstratorInterfaceId);
+            const echoes::sim::Entity* Well =
+                Candidate->FindEntity(FutureWonWellId);
+            const auto IsKharuunScout = [](const echoes::sim::Entity* Entity)
+            {
+                return Entity != nullptr &&
+                       Entity->owner == LocalPlayerId &&
+                       Entity->faction == Faction::KharuunAssemblies &&
+                       Entity->type == EntityType::ScoutUnit;
+            };
+            const bool bValidWell =
+                Well != nullptr && Well->type == EntityType::FutureWell &&
+                (Well->owner == echoes::sim::kNeutralPlayer ||
+                 Well->owner == LocalPlayerId) &&
+                Well->position == Plan.FutureWellSite &&
+                (Well->wellChoice == FutureWellChoice::Dormant ||
+                 Well->wellChoice == Plan.RecordedProtocol);
+            TSet<EntityId> CompositionIds;
+            CompositionIds.Reserve(8);
+            CompositionIds.Add(FutureWonOruunId);
+            CompositionIds.Add(FutureWonVerifierId);
+            CompositionIds.Add(FutureWonFirstDistrictInterfaceId);
+            CompositionIds.Add(FutureWonSecondDistrictInterfaceId);
+            CompositionIds.Add(FutureWonMeridianReadbackInterfaceId);
+            CompositionIds.Add(FutureWonKharuunReadbackInterfaceId);
+            CompositionIds.Add(FutureWonDemonstratorInterfaceId);
+            CompositionIds.Add(FutureWonWellId);
+            if (!IsKharuunScout(Oruun) || !IsKharuunScout(Verifier) ||
+                !IsPublicInterface(
+                    FirstDistrict,
+                    Faction::MeridianCompact,
+                    Plan.FirstDistrictInputSite,
+                    true) ||
+                !IsPublicInterface(
+                    SecondDistrict,
+                    Faction::MeridianCompact,
+                    Plan.SecondDistrictInputSite,
+                    true) ||
+                !IsPublicInterface(
+                    MeridianReadback,
+                    Faction::MeridianCompact,
+                    Plan.MeridianReadbackSite,
+                    true) ||
+                !IsPublicInterface(
+                    KharuunReadback,
+                    Faction::KharuunAssemblies,
+                    Plan.KharuunReadbackSite,
+                    false) ||
+                !IsPublicInterface(
+                    Demonstrator,
+                    Faction::MeridianCompact,
+                    Plan.RestorationDemonstratorSite,
+                    true) ||
+                !bValidWell || CompositionIds.Num() != 8)
+            {
+                OutFailure = TEXT(
+                    "snapshot does not match the active The Future That Won composition");
                 return false;
             }
         }
@@ -5194,6 +5793,54 @@ bool UEchoesSimulationSubsystem::IsNoNeutralLedgerUnlocked() const
         Plan);
 }
 
+bool UEchoesSimulationSubsystem::IsFutureThatWonUnlocked() const
+{
+    if (CampaignProgress.Decisions.Num() < 11 ||
+        CampaignProgress.Decisions.Num() > 12)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < 11; ++Index)
+    {
+        if (static_cast<uint8>(CampaignProgress.Decisions[Index].Mission) !=
+            static_cast<uint8>(Index + 1))
+        {
+            return false;
+        }
+    }
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Lume =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    const FEchoesCampaignDecisionRecord* Alliance =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::NoNeutralLedger);
+    if (Prologue == nullptr || Reserve == nullptr || Lume == nullptr ||
+        Alliance == nullptr || Alliance->WellChoice != Lume->WellChoice)
+    {
+        return false;
+    }
+    for (int32 Index = 1; Index <= 8; ++Index)
+    {
+        if (CampaignProgress.Decisions[Index].WellChoice !=
+            Prologue->WellChoice)
+        {
+            return false;
+        }
+    }
+    FEchoesFutureThatWonPlan Plan;
+    return FEchoesFutureThatWonMissionModel::TryPlanForLedger(
+        Prologue->WellChoice,
+        Reserve->VerifiedFacts,
+        Alliance->WellChoice,
+        Plan);
+}
+
 FutureWellChoice UEchoesSimulationSubsystem::GetRecordedPrologueChoice() const
 {
     const FEchoesCampaignDecisionRecord* Record =
@@ -5321,6 +5968,31 @@ UEchoesSimulationSubsystem::GetNoNeutralLedgerPlan() const
             Prologue->WellChoice,
             Reserve->VerifiedFacts,
             Lume->WellChoice,
+            Plan))
+    {
+        return {};
+    }
+    return Plan;
+}
+
+FEchoesFutureThatWonPlan
+UEchoesSimulationSubsystem::GetFutureThatWonPlan() const
+{
+    FEchoesFutureThatWonPlan Plan;
+    const FEchoesCampaignDecisionRecord* Prologue =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* Reserve =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::ReserveAuthority);
+    const FEchoesCampaignDecisionRecord* Alliance =
+        CampaignProgress.FindDecision(
+            EEchoesCampaignMissionId::NoNeutralLedger);
+    if (Prologue == nullptr || Reserve == nullptr || Alliance == nullptr ||
+        !FEchoesFutureThatWonMissionModel::TryPlanForLedger(
+            Prologue->WellChoice,
+            Reserve->VerifiedFacts,
+            Alliance->WellChoice,
             Plan))
     {
         return {};
@@ -6092,6 +6764,157 @@ UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
     return FEchoesNoNeutralLedgerMissionModel::DeterminePhase(Facts);
 }
 
+EEchoesFutureThatWonPhase
+UEchoesSimulationSubsystem::GetFutureThatWonPhase() const
+{
+    FEchoesFutureThatWonMissionFacts Facts;
+    Facts.bOperationActive =
+        SelectedOperation ==
+            EEchoesOperationMode::CampaignFutureThatWon &&
+        bScenarioReady && Simulation.IsValid();
+    if (!Facts.bOperationActive)
+    {
+        return EEchoesFutureThatWonPhase::Inactive;
+    }
+
+    const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
+    const echoes::sim::Entity* Oruun =
+        Simulation->FindEntity(FutureWonOruunId);
+    const echoes::sim::Entity* Verifier =
+        Simulation->FindEntity(FutureWonVerifierId);
+    const echoes::sim::Entity* FirstDistrict =
+        Simulation->FindEntity(FutureWonFirstDistrictInterfaceId);
+    const echoes::sim::Entity* SecondDistrict =
+        Simulation->FindEntity(FutureWonSecondDistrictInterfaceId);
+    const echoes::sim::Entity* MeridianReadback =
+        Simulation->FindEntity(FutureWonMeridianReadbackInterfaceId);
+    const echoes::sim::Entity* KharuunReadback =
+        Simulation->FindEntity(FutureWonKharuunReadbackInterfaceId);
+    const echoes::sim::Entity* Demonstrator =
+        Simulation->FindEntity(FutureWonDemonstratorInterfaceId);
+    const echoes::sim::Entity* Well =
+        Simulation->FindEntity(FutureWonWellId);
+
+    Facts.bOruunIntact = Oruun != nullptr && Oruun->hitPoints > 0;
+    Facts.bVerifierIntact =
+        Verifier != nullptr && Verifier->hitPoints > 0;
+    Facts.bFutureWellIntact =
+        Well != nullptr && Well->hitPoints > 0 &&
+        Well->type == EntityType::FutureWell &&
+        Well->position == Plan.FutureWellSite;
+    const bool bFirstDistrictAvailable = IsPublicInterface(
+        FirstDistrict,
+        Faction::MeridianCompact,
+        Plan.FirstDistrictInputSite,
+        true);
+    const bool bSecondDistrictAvailable = IsPublicInterface(
+        SecondDistrict,
+        Faction::MeridianCompact,
+        Plan.SecondDistrictInputSite,
+        true);
+    const bool bMeridianReadbackAvailable = IsPublicInterface(
+        MeridianReadback,
+        Faction::MeridianCompact,
+        Plan.MeridianReadbackSite,
+        true);
+    const bool bKharuunReadbackAvailable = IsPublicInterface(
+        KharuunReadback,
+        Faction::KharuunAssemblies,
+        Plan.KharuunReadbackSite,
+        false);
+    const bool bDemonstratorAvailable = IsPublicInterface(
+        Demonstrator,
+        Faction::MeridianCompact,
+        Plan.RestorationDemonstratorSite,
+        true);
+    Facts.bPublicInterfacesIntact =
+        bFirstDistrictAvailable && bSecondDistrictAvailable &&
+        bMeridianReadbackAvailable && bKharuunReadbackAvailable &&
+        bDemonstratorAvailable;
+
+    EntityId FirstInputLink = 0;
+    EntityId SecondInputLink = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure)
+        {
+            if (FirstInputLink == 0 &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.FirstDistrictInputSite,
+                    FutureThatWonSiteRadiusTiles))
+            {
+                FirstInputLink = Entity.id;
+            }
+            if (SecondInputLink == 0 && Entity.id != FirstInputLink &&
+                IsWithinTiles(
+                    Entity.position,
+                    Plan.SecondDistrictInputSite,
+                    FutureThatWonSiteRadiusTiles))
+            {
+                SecondInputLink = Entity.id;
+            }
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.type == EntityType::CommandCore)
+        {
+            Facts.bLocalCoreIntact = true;
+        }
+    }
+    Facts.bFirstRecordedInputVerified =
+        bFirstDistrictAvailable && FirstInputLink != 0;
+    Facts.bSecondRecordedInputVerified =
+        bSecondDistrictAvailable && SecondInputLink != 0;
+    Facts.bRecordedProtocolBound =
+        Facts.bFutureWellIntact && Well->owner == LocalPlayerId &&
+        Well->wellChoice == Plan.RecordedProtocol &&
+        Well->wellActivationTick != 0;
+    Facts.bConflictingProtocolBound =
+        Facts.bFutureWellIntact &&
+        Well->wellChoice != FutureWellChoice::Dormant &&
+        Well->wellChoice != Plan.RecordedProtocol;
+    const bool bCurrentIndependentReadback =
+        Facts.bOruunIntact && Facts.bVerifierIntact &&
+        bMeridianReadbackAvailable && bKharuunReadbackAvailable &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.KharuunReadbackSite,
+            FutureThatWonSiteRadiusTiles) &&
+        IsWithinTiles(
+            Verifier->position,
+            Plan.MeridianReadbackSite,
+            FutureThatWonSiteRadiusTiles);
+    Facts.bIndependentPublicReadbackEstablished =
+        Facts.bRecordedProtocolBound || bCurrentIndependentReadback;
+    Facts.bStabilityWindowHeld =
+        Facts.bRecordedProtocolBound &&
+        Simulation->CurrentTick() >= Well->wellActivationTick &&
+        Simulation->CurrentTick() - Well->wellActivationTick >=
+            Plan.StabilityWindowTicks;
+    Facts.bFirstDistrictReadbackObserved =
+        Facts.bStabilityWindowHeld && Facts.bOruunIntact &&
+        IsWithinTiles(
+            Oruun->position,
+            Plan.FirstDistrictInputSite,
+            FutureThatWonSiteRadiusTiles);
+    Facts.bSecondDistrictReadbackObserved =
+        Facts.bStabilityWindowHeld && Facts.bVerifierIntact &&
+        IsWithinTiles(
+            Verifier->position,
+            Plan.SecondDistrictInputSite,
+            FutureThatWonSiteRadiusTiles);
+    Facts.bReshapeWindowExpired =
+        Facts.bRecordedProtocolBound &&
+        Plan.RecordedProtocol == FutureWellChoice::Reshape &&
+        Well->reshapeUntilTick == 0 && !Facts.bStabilityWindowHeld;
+    Facts.bSkirmishStillOngoing =
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+    return FEchoesFutureThatWonMissionModel::DeterminePhase(Facts);
+}
+
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 {
@@ -6124,6 +6947,7 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.ChoirAtLumeReachPhase = GetChoirAtLumeReachPhase();
     Snapshot.ChoirAtLumeReachPriorBranch = GetRecordedPrologueChoice();
     Snapshot.NoNeutralLedgerPhase = GetNoNeutralLedgerPhase();
+    Snapshot.FutureThatWonPhase = GetFutureThatWonPhase();
     Snapshot.ArchiveCarrierId = ArchiveCarrierId;
     Snapshot.MemoryBearerId = MemoryBearerId;
     Snapshot.MigrationWaystoneId = MigrationWaystoneId;
@@ -6160,6 +6984,19 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.NoNeutralKharuunEvidenceInterfaceId =
         NoNeutralKharuunEvidenceInterfaceId;
     Snapshot.NoNeutralWellId = NoNeutralWellId;
+    Snapshot.FutureWonOruunId = FutureWonOruunId;
+    Snapshot.FutureWonVerifierId = FutureWonVerifierId;
+    Snapshot.FutureWonFirstDistrictInterfaceId =
+        FutureWonFirstDistrictInterfaceId;
+    Snapshot.FutureWonSecondDistrictInterfaceId =
+        FutureWonSecondDistrictInterfaceId;
+    Snapshot.FutureWonMeridianReadbackInterfaceId =
+        FutureWonMeridianReadbackInterfaceId;
+    Snapshot.FutureWonKharuunReadbackInterfaceId =
+        FutureWonKharuunReadbackInterfaceId;
+    Snapshot.FutureWonDemonstratorInterfaceId =
+        FutureWonDemonstratorInterfaceId;
+    Snapshot.FutureWonWellId = FutureWonWellId;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         GetSevenAccountsRoute();
     const FEchoesUnburiedRoadRoute UnburiedRoadRoute =
@@ -6178,6 +7015,8 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         GetChoirAtLumeReachPlan();
     const FEchoesNoNeutralLedgerPlan NoNeutralPlan =
         GetNoNeutralLedgerPlan();
+    const FEchoesFutureThatWonPlan FutureWonPlan =
+        GetFutureThatWonPlan();
     const bool bFirstNoNeutralPublicDistrictAvailable =
         IsPublicInterface(
             Simulation->FindEntity(NoNeutralFirstDistrictInterfaceId),
@@ -6207,6 +7046,37 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
         bSecondNoNeutralPublicDistrictAvailable &&
         bNoNeutralMeridianEvidenceAvailable &&
         bNoNeutralKharuunEvidenceAvailable;
+    const bool bFirstFutureWonDistrictAvailable = IsPublicInterface(
+        Simulation->FindEntity(FutureWonFirstDistrictInterfaceId),
+        Faction::MeridianCompact,
+        FutureWonPlan.FirstDistrictInputSite,
+        true);
+    const bool bSecondFutureWonDistrictAvailable = IsPublicInterface(
+        Simulation->FindEntity(FutureWonSecondDistrictInterfaceId),
+        Faction::MeridianCompact,
+        FutureWonPlan.SecondDistrictInputSite,
+        true);
+    const bool bFutureWonMeridianReadbackAvailable = IsPublicInterface(
+        Simulation->FindEntity(FutureWonMeridianReadbackInterfaceId),
+        Faction::MeridianCompact,
+        FutureWonPlan.MeridianReadbackSite,
+        true);
+    const bool bFutureWonKharuunReadbackAvailable = IsPublicInterface(
+        Simulation->FindEntity(FutureWonKharuunReadbackInterfaceId),
+        Faction::KharuunAssemblies,
+        FutureWonPlan.KharuunReadbackSite,
+        false);
+    const bool bFutureWonDemonstratorAvailable = IsPublicInterface(
+        Simulation->FindEntity(FutureWonDemonstratorInterfaceId),
+        Faction::MeridianCompact,
+        FutureWonPlan.RestorationDemonstratorSite,
+        true);
+    Snapshot.bFutureWonPublicInterfacesIntact =
+        bFirstFutureWonDistrictAvailable &&
+        bSecondFutureWonDistrictAvailable &&
+        bFutureWonMeridianReadbackAvailable &&
+        bFutureWonKharuunReadbackAvailable &&
+        bFutureWonDemonstratorAvailable;
     Snapshot.NoNeutralFoundingDoctrine =
         NoNeutralPlan.FoundingDoctrine;
     Snapshot.NoNeutralLumeProtocol = NoNeutralPlan.LumeProtocol;
@@ -6215,6 +7085,15 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.NoNeutralSecondDistrict =
         NoNeutralPlan.SecondContributingDistrict;
     Snapshot.NoNeutralDeferredDistrict = NoNeutralPlan.DeferredDistrict;
+    Snapshot.FutureWonFoundingDoctrine =
+        FutureWonPlan.FoundingDoctrine;
+    Snapshot.FutureWonRecordedProtocol =
+        FutureWonPlan.RecordedProtocol;
+    Snapshot.FutureWonFirstDistrict =
+        FutureWonPlan.FirstContributingDistrict;
+    Snapshot.FutureWonSecondDistrict =
+        FutureWonPlan.SecondContributingDistrict;
+    Snapshot.FutureWonDeferredDistrict = FutureWonPlan.DeferredDistrict;
     Snapshot.ChoirAtLumeReachDeferredDistrict = ChoirPlan.DeferredDistrict;
     Snapshot.ReserveAuthorityRecommendedDistrict =
         ReservePlan.RecommendedFirstDistrict;
@@ -6354,6 +7233,30 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 NoNeutralLedgerSiteRadiusTiles))
         {
             Snapshot.bNoNeutralSecondDistrictIntegrated = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure &&
+            bFirstFutureWonDistrictAvailable &&
+            IsWithinTiles(
+                Entity.position,
+                FutureWonPlan.FirstDistrictInputSite,
+                FutureThatWonSiteRadiusTiles))
+        {
+            Snapshot.bFutureWonFirstInputVerified = true;
+        }
+        if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
+            Entity.completed &&
+            Entity.faction == Faction::KharuunAssemblies &&
+            Entity.type == EntityType::UtilityStructure &&
+            bSecondFutureWonDistrictAvailable &&
+            IsWithinTiles(
+                Entity.position,
+                FutureWonPlan.SecondDistrictInputSite,
+                FutureThatWonSiteRadiusTiles))
+        {
+            Snapshot.bFutureWonSecondInputVerified = true;
         }
         if (Entity.id == LifeSupportDistrictId)
         {
@@ -6502,6 +7405,33 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
                 Snapshot.bNoNeutralProtocolApplied &&
                 NoNeutralPlan.LumeProtocol == FutureWellChoice::Reshape &&
                 Entity.reshapeUntilTick == 0;
+        }
+        if (Entity.id == FutureWonWellId)
+        {
+            Snapshot.bFutureWonProtocolBound =
+                Entity.owner == LocalPlayerId &&
+                Entity.wellChoice == FutureWonPlan.RecordedProtocol &&
+                Entity.wellActivationTick != 0;
+            Snapshot.FutureWonActivationTick = Entity.wellActivationTick;
+            if (Entity.wellActivationTick != 0 &&
+                MAX_uint64 - Entity.wellActivationTick >=
+                    FutureWonPlan.StabilityWindowTicks)
+            {
+                Snapshot.FutureWonStabilityEndTick =
+                    Entity.wellActivationTick +
+                    FutureWonPlan.StabilityWindowTicks;
+            }
+            Snapshot.bFutureWonStabilityWindowHeld =
+                Snapshot.bFutureWonProtocolBound &&
+                Simulation->CurrentTick() >= Entity.wellActivationTick &&
+                Simulation->CurrentTick() - Entity.wellActivationTick >=
+                    FutureWonPlan.StabilityWindowTicks;
+            Snapshot.bFutureWonReshapeWindowExpired =
+                Snapshot.bFutureWonProtocolBound &&
+                FutureWonPlan.RecordedProtocol ==
+                    FutureWellChoice::Reshape &&
+                Entity.reshapeUntilTick == 0 &&
+                !Snapshot.bFutureWonStabilityWindowHeld;
         }
         if (Entity.owner == LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::CommandCore)
@@ -6652,6 +7582,39 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     Snapshot.bNoNeutralReshapeWindowExpired =
         Snapshot.bNoNeutralReshapeWindowExpired &&
         !Snapshot.bNoNeutralCoalitionRallied;
+    const echoes::sim::Entity* FutureWonOruun =
+        Simulation->FindEntity(FutureWonOruunId);
+    const echoes::sim::Entity* FutureWonVerifier =
+        Simulation->FindEntity(FutureWonVerifierId);
+    const bool bCurrentFutureWonReadback =
+        bFutureWonMeridianReadbackAvailable &&
+        bFutureWonKharuunReadbackAvailable &&
+        FutureWonOruun != nullptr && FutureWonOruun->hitPoints > 0 &&
+        FutureWonVerifier != nullptr && FutureWonVerifier->hitPoints > 0 &&
+        IsWithinTiles(
+            FutureWonOruun->position,
+            FutureWonPlan.KharuunReadbackSite,
+            FutureThatWonSiteRadiusTiles) &&
+        IsWithinTiles(
+            FutureWonVerifier->position,
+            FutureWonPlan.MeridianReadbackSite,
+            FutureThatWonSiteRadiusTiles);
+    Snapshot.bFutureWonIndependentReadbackEstablished =
+        Snapshot.bFutureWonProtocolBound || bCurrentFutureWonReadback;
+    Snapshot.bFutureWonFirstDistrictReadbackObserved =
+        Snapshot.bFutureWonStabilityWindowHeld &&
+        FutureWonOruun != nullptr && FutureWonOruun->hitPoints > 0 &&
+        IsWithinTiles(
+            FutureWonOruun->position,
+            FutureWonPlan.FirstDistrictInputSite,
+            FutureThatWonSiteRadiusTiles);
+    Snapshot.bFutureWonSecondDistrictReadbackObserved =
+        Snapshot.bFutureWonStabilityWindowHeld &&
+        FutureWonVerifier != nullptr && FutureWonVerifier->hitPoints > 0 &&
+        IsWithinTiles(
+            FutureWonVerifier->position,
+            FutureWonPlan.SecondDistrictInputSite,
+            FutureThatWonSiteRadiusTiles);
     return Snapshot;
 }
 
@@ -7350,6 +8313,72 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         CampaignFeedback.IsEmpty()
                             ? TEXT("not-applicable")
                             : *CampaignFeedback);
+                }
+            }
+            else if (SelectedOperation ==
+                         EEchoesOperationMode::CampaignFutureThatWon &&
+                     !bMatchResultReported)
+            {
+                const EEchoesFutureThatWonPhase RestorationPhase =
+                    GetFutureThatWonPhase();
+                const bool bRestorationFinished =
+                    RestorationPhase ==
+                        EEchoesFutureThatWonPhase::Complete ||
+                    RestorationPhase == EEchoesFutureThatWonPhase::Failed;
+                if (bRestorationFinished)
+                {
+                    bMatchResultReported = true;
+                    bSimulationPaused = true;
+                    const FEchoesFutureThatWonPlan Plan =
+                        GetFutureThatWonPlan();
+                    FutureWellChoice RecordedProtocol =
+                        Plan.RecordedProtocol;
+                    FString CampaignFeedback;
+                    const EEchoesCampaignCommitStatus CampaignStatus =
+                        RestorationPhase ==
+                                EEchoesFutureThatWonPhase::Complete
+                            ? CommitFutureThatWonCompletion(
+                                  RecordedProtocol,
+                                  CampaignFeedback)
+                            : EEchoesCampaignCommitStatus::NotApplicable;
+                    if (AEchoesPlayerController* Controller =
+                            Cast<AEchoesPlayerController>(
+                                GetWorld()->GetFirstPlayerController()))
+                    {
+                        Controller->NotifyFutureThatWonFinished(
+                            RestorationPhase ==
+                                EEchoesFutureThatWonPhase::Complete,
+                            Plan.RecordedProtocol,
+                            RecordedProtocol,
+                            CampaignStatus);
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_FUTURE_THAT_WON_FINISHED] result=%s phase=%s planKey=%u founding=%u districtA=%u districtB=%u deferred=%u protocol=%u recordedProtocol=%u campaignStatus=%u tick=%llu detail=%s stabilityTicks=%llu inheritedRecords=11 localAuthority=KharuunAssemblies rhysePresence=attributablePublicApparatusOnly mixedFactionCommand=false civilianCountsUnmodeled=true populationRestorationUnproven=true permanentFutureUnproven=true ethicalJustificationUnproven=true"),
+                        RestorationPhase ==
+                                EEchoesFutureThatWonPhase::Complete
+                            ? TEXT("success")
+                            : TEXT("failure"),
+                        FEchoesFutureThatWonMissionModel::StableName(
+                            RestorationPhase),
+                        Plan.StablePlanKey,
+                        static_cast<uint8>(Plan.FoundingDoctrine),
+                        static_cast<uint8>(
+                            Plan.FirstContributingDistrict),
+                        static_cast<uint8>(
+                            Plan.SecondContributingDistrict),
+                        static_cast<uint8>(Plan.DeferredDistrict),
+                        static_cast<uint8>(Plan.RecordedProtocol),
+                        static_cast<uint8>(RecordedProtocol),
+                        static_cast<uint8>(CampaignStatus),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()),
+                        CampaignFeedback.IsEmpty()
+                            ? TEXT("not-applicable")
+                            : *CampaignFeedback,
+                        static_cast<unsigned long long>(
+                            Plan.StabilityWindowTicks));
                 }
             }
             else if (SelectedOperation == EEchoesOperationMode::Skirmish &&
@@ -8250,6 +9279,22 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     return false;
                 }
             }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignFutureThatWon)
+            {
+                const FEchoesFutureThatWonPlan Plan =
+                    GetFutureThatWonPlan();
+                if (GetFutureThatWonPhase() !=
+                        EEchoesFutureThatWonPhase::BindRecordedProtocol ||
+                    TargetId != FutureWonWellId ||
+                    WellChoice != Plan.RecordedProtocol)
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[FUTURE_THAT_WON_PROTOCOL_REQUIRED] Establish independent readback and verify both recorded district inputs, then bind only the recorded %s protocol."),
+                        Plan.ProtocolDisplayName);
+                    return false;
+                }
+            }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
                 Target->wellChoice != FutureWellChoice::Dormant ||
@@ -8347,6 +9392,40 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = FString::Printf(
                         TEXT("[NO_NEUTRAL_LEDGER_DISTRICT_SITE] Place a Listening Spine within %d tiles of either outstanding recorded district interface."),
                         NoNeutralLedgerSiteRadiusTiles);
+                    return false;
+                }
+            }
+            if (SelectedOperation ==
+                    EEchoesOperationMode::CampaignFutureThatWon &&
+                BuildType == EntityType::UtilityStructure)
+            {
+                const FEchoesFutureThatWonPlan Plan =
+                    GetFutureThatWonPlan();
+                const FEchoesObjectiveSnapshot Objective =
+                    GetLocalObjectiveSnapshot();
+                if (GetFutureThatWonPhase() !=
+                    EEchoesFutureThatWonPhase::VerifyRecordedInputs)
+                {
+                    OutFeedback = TEXT("[FUTURE_THAT_WON_READBACK_REQUIRED] Position Oruun and the independent verifier at the two public evidence readbacks before linking the recorded district inputs.");
+                    return false;
+                }
+                const bool bFirstOutstanding =
+                    !Objective.bFutureWonFirstInputVerified &&
+                    IsWithinTiles(
+                        Position,
+                        Plan.FirstDistrictInputSite,
+                        FutureThatWonSiteRadiusTiles);
+                const bool bSecondOutstanding =
+                    !Objective.bFutureWonSecondInputVerified &&
+                    IsWithinTiles(
+                        Position,
+                        Plan.SecondDistrictInputSite,
+                        FutureThatWonSiteRadiusTiles);
+                if (!bFirstOutstanding && !bSecondOutstanding)
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[FUTURE_THAT_WON_DISTRICT_SITE] Place a Kharuun Listening Spine within %d tiles of either outstanding recorded district input."),
+                        FutureThatWonSiteRadiusTiles);
                     return false;
                 }
             }

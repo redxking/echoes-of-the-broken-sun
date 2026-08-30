@@ -486,6 +486,11 @@ void AEchoesGameMode::BeginPlay()
         FParse::Param(
             FCommandLine::Get(),
             TEXT("EchoesCampaignNoNeutralLedger"));
+    const bool bCampaignFutureThatWon =
+        !bStressScenario &&
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesCampaignFutureThatWon"));
     const int32 CampaignOperationCount =
         (bCampaignPrologue ? 1 : 0) +
         (bCampaignSevenAccounts ? 1 : 0) +
@@ -497,7 +502,8 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignShapeBesideUs ? 1 : 0) +
         (bCampaignReserveAuthority ? 1 : 0) +
         (bCampaignChoirAtLumeReach ? 1 : 0) +
-        (bCampaignNoNeutralLedger ? 1 : 0);
+        (bCampaignNoNeutralLedger ? 1 : 0) +
+        (bCampaignFutureThatWon ? 1 : 0);
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -510,7 +516,9 @@ void AEchoesGameMode::BeginPlay()
     if (CampaignOperationCount == 1)
     {
         const EEchoesOperationMode RequestedOperation =
-            bCampaignNoNeutralLedger
+            bCampaignFutureThatWon
+                ? EEchoesOperationMode::CampaignFutureThatWon
+            : bCampaignNoNeutralLedger
                 ? EEchoesOperationMode::CampaignNoNeutralLedger
             : bCampaignChoirAtLumeReach
                 ? EEchoesOperationMode::CampaignChoirAtLumeReach
@@ -540,7 +548,9 @@ void AEchoesGameMode::BeginPlay()
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_OPERATION_REQUEST_REJECTED] operation=%s detail=%s"),
-                bCampaignNoNeutralLedger
+                bCampaignFutureThatWon
+                    ? TEXT("TheFutureThatWon")
+                : bCampaignNoNeutralLedger
                     ? TEXT("NoNeutralLedger")
                 : bCampaignChoirAtLumeReach
                     ? TEXT("ChoirAtLumeReach")
@@ -569,7 +579,9 @@ void AEchoesGameMode::BeginPlay()
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_REQUESTED] operation=%s accepted=true"),
-            bCampaignNoNeutralLedger
+            bCampaignFutureThatWon
+                ? TEXT("TheFutureThatWon")
+            : bCampaignNoNeutralLedger
                 ? TEXT("NoNeutralLedger")
             : bCampaignChoirAtLumeReach
                 ? TEXT("ChoirAtLumeReach")

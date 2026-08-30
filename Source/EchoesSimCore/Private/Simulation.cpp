@@ -23,7 +23,9 @@ constexpr std::uint32_t kMaximumTicksPerSecond = 1000;
 constexpr Tick kMaximumSupportedTick = std::numeric_limits<Tick>::max() / 2;
 constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
-constexpr std::size_t kSerializedEntityBytes = 202;
+constexpr std::uint32_t kLegacySnapshotVersion = 20;
+constexpr std::size_t kLegacySerializedEntityBytes = 202;
+constexpr std::size_t kSerializedEntityBytes = 210;
 constexpr std::size_t kSerializedCommandBytes = 38;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
 constexpr std::int32_t kMaximumMapDimension =
@@ -2962,6 +2964,10 @@ void Simulation::ProcessFutureWell(Entity& worker) {
             worker.order = {};
             return;
     }
+    // Commands execute at currentTick_ and Step advances immediately after
+    // processing. Record the completed activation boundary, not the command's
+    // pre-step tick, so a saved state always satisfies activation <= current.
+    well->wellActivationTick = currentTick_ + 1;
     worker.order = {};
 }
 
@@ -4449,6 +4455,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(entity.order.buildType));
         writer.U8(static_cast<std::uint8_t>(entity.order.wellChoice));
         writer.U8(static_cast<std::uint8_t>(entity.wellChoice));
+        writer.U64(entity.wellActivationTick);
         writer.U64(entity.reshapeUntilTick);
         writer.U8(entity.reshapeVariant);
         writer.U8(static_cast<std::uint8_t>(entity.productionType));
@@ -4535,7 +4542,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version != kSnapshotVersion) {
+    if (version != kSnapshotVersion && version != kLegacySnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
     }
@@ -4741,10 +4748,14 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             return std::nullopt;
         }
     }
+    const std::size_t serializedEntityBytes =
+        version == kLegacySnapshotVersion
+            ? kLegacySerializedEntityBytes
+            : kSerializedEntityBytes;
     std::uint32_t entityCount = 0;
     if (!reader.U32(entityCount) || entityCount > kMaximumSerializedEntities ||
         static_cast<std::size_t>(entityCount) >
-            reader.Remaining() / kSerializedEntityBytes) {
+            reader.Remaining() / serializedEntityBytes) {
         SetError(error, "snapshot entity count is invalid");
         return std::nullopt;
     }
@@ -4796,6 +4807,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(orderAnchorRawY) || !reader.I32(orderRawX) ||
             !reader.I32(orderRawY) || !reader.U8(orderBuildType) ||
             !reader.U8(orderWellChoice) || !reader.U8(wellChoice) ||
+            (version != kLegacySnapshotVersion &&
+             !reader.U64(entity.wellActivationTick)) ||
             !reader.U64(entity.reshapeUntilTick) ||
             !reader.U8(entity.reshapeVariant) || !reader.U8(productionType) ||
             !reader.I32(entity.productionProgress) ||
@@ -4820,6 +4833,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U8(aegisPowered)) {
             SetError(error, "snapshot entity data is truncated");
             return std::nullopt;
+        }
+        if (version == kLegacySnapshotVersion &&
+            wellChoice !=
+                static_cast<std::uint8_t>(FutureWellChoice::Dormant)) {
+            // Version 20 did not retain the exact activation boundary. Its
+            // current tick is a conservative migration point; Mission 12
+            // checkpoints require a native version-21 payload and never use
+            // this derived value as continuity evidence.
+            entity.wellActivationTick = simulation.currentTick_;
         }
         const bool neutralPublicInterface =
             entity.owner == kNeutralPlayer &&
@@ -4890,6 +4912,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 (productionType == static_cast<std::uint8_t>(EntityType::Soldier) ||
                  productionType == static_cast<std::uint8_t>(EntityType::HeavyUnit) ||
                  productionType == static_cast<std::uint8_t>(EntityType::ScoutUnit))))) ||
+            entity.wellActivationTick > kMaximumSupportedTick ||
+            (wellChoice ==
+                 static_cast<std::uint8_t>(FutureWellChoice::Dormant) &&
+             entity.wellActivationTick != 0) ||
+            (wellChoice !=
+                 static_cast<std::uint8_t>(FutureWellChoice::Dormant) &&
+             (type != static_cast<std::uint8_t>(EntityType::FutureWell) ||
+              entity.wellActivationTick == 0 ||
+              entity.wellActivationTick > simulation.currentTick_)) ||
             entity.reshapeUntilTick > kMaximumSupportedTick ||
             (wellChoice != static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
              entity.reshapeUntilTick != 0) ||

@@ -5,6 +5,7 @@
 #include "EchoesCampaignProgress.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesCityReserveMissionModel.h"
+#include "EchoesFutureThatWonMissionModel.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesNoNeutralLedgerMissionModel.h"
 #include "EchoesPrologueMissionModel.h"
@@ -177,6 +178,37 @@ struct FEchoesObjectiveSnapshot final
     bool bNoNeutralProtocolApplied = false;
     bool bNoNeutralCoalitionRallied = false;
     bool bNoNeutralReshapeWindowExpired = false;
+    EEchoesFutureThatWonPhase FutureThatWonPhase =
+        EEchoesFutureThatWonPhase::Inactive;
+    echoes::sim::FutureWellChoice FutureWonFoundingDoctrine =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice FutureWonRecordedProtocol =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesCityDistrict FutureWonFirstDistrict =
+        EEchoesCityDistrict::LifeSupport;
+    EEchoesCityDistrict FutureWonSecondDistrict =
+        EEchoesCityDistrict::Transit;
+    EEchoesCityDistrict FutureWonDeferredDistrict =
+        EEchoesCityDistrict::Archive;
+    echoes::sim::EntityId FutureWonOruunId = 0;
+    echoes::sim::EntityId FutureWonVerifierId = 0;
+    echoes::sim::EntityId FutureWonFirstDistrictInterfaceId = 0;
+    echoes::sim::EntityId FutureWonSecondDistrictInterfaceId = 0;
+    echoes::sim::EntityId FutureWonMeridianReadbackInterfaceId = 0;
+    echoes::sim::EntityId FutureWonKharuunReadbackInterfaceId = 0;
+    echoes::sim::EntityId FutureWonDemonstratorInterfaceId = 0;
+    echoes::sim::EntityId FutureWonWellId = 0;
+    bool bFutureWonPublicInterfacesIntact = false;
+    bool bFutureWonIndependentReadbackEstablished = false;
+    bool bFutureWonFirstInputVerified = false;
+    bool bFutureWonSecondInputVerified = false;
+    bool bFutureWonProtocolBound = false;
+    bool bFutureWonStabilityWindowHeld = false;
+    bool bFutureWonFirstDistrictReadbackObserved = false;
+    bool bFutureWonSecondDistrictReadbackObserved = false;
+    bool bFutureWonReshapeWindowExpired = false;
+    uint64 FutureWonActivationTick = 0;
+    uint64 FutureWonStabilityEndTick = 0;
 };
 
 /**
@@ -325,6 +357,9 @@ public:
     [[nodiscard]] EEchoesNoNeutralLedgerPhase
     GetNoNeutralLedgerPhase() const;
     [[nodiscard]] bool IsNoNeutralLedgerUnlocked() const;
+    [[nodiscard]] EEchoesFutureThatWonPhase
+    GetFutureThatWonPhase() const;
+    [[nodiscard]] bool IsFutureThatWonUnlocked() const;
     [[nodiscard]] echoes::sim::FutureWellChoice GetRecordedPrologueChoice() const;
     [[nodiscard]] FEchoesSevenAccountsRoute GetSevenAccountsRoute() const;
     [[nodiscard]] FEchoesCityReserveGrid GetCityReserveGrid() const;
@@ -344,6 +379,8 @@ public:
     GetChoirAtLumeReachPlan() const;
     [[nodiscard]] FEchoesNoNeutralLedgerPlan
     GetNoNeutralLedgerPlan() const;
+    [[nodiscard]] FEchoesFutureThatWonPlan
+    GetFutureThatWonPlan() const;
     [[nodiscard]] echoes::sim::EntityId GetCityDistrictId(
         EEchoesCityDistrict District) const;
     [[nodiscard]] echoes::sim::EntityId GetMemoryBearerId() const
@@ -433,6 +470,9 @@ private:
         echoes::sim::FutureWellChoice& OutRecordedChoice,
         FString& OutFeedback);
     EEchoesCampaignCommitStatus CommitNoNeutralLedgerCompletion(
+        echoes::sim::FutureWellChoice& OutRecordedProtocol,
+        FString& OutFeedback);
+    EEchoesCampaignCommitStatus CommitFutureThatWonCompletion(
         echoes::sim::FutureWellChoice& OutRecordedProtocol,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
@@ -532,6 +572,14 @@ private:
     echoes::sim::EntityId NoNeutralMeridianEvidenceInterfaceId = 0;
     echoes::sim::EntityId NoNeutralKharuunEvidenceInterfaceId = 0;
     echoes::sim::EntityId NoNeutralWellId = 0;
+    echoes::sim::EntityId FutureWonOruunId = 0;
+    echoes::sim::EntityId FutureWonVerifierId = 0;
+    echoes::sim::EntityId FutureWonFirstDistrictInterfaceId = 0;
+    echoes::sim::EntityId FutureWonSecondDistrictInterfaceId = 0;
+    echoes::sim::EntityId FutureWonMeridianReadbackInterfaceId = 0;
+    echoes::sim::EntityId FutureWonKharuunReadbackInterfaceId = 0;
+    echoes::sim::EntityId FutureWonDemonstratorInterfaceId = 0;
+    echoes::sim::EntityId FutureWonWellId = 0;
     FEchoesCampaignProgress CampaignProgress;
     FEchoesCampaignProgress CampaignBackupProgress;
     bool bCampaignProgressAvailable = false;

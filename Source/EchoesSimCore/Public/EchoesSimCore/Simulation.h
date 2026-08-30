@@ -30,8 +30,8 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 20;
-inline constexpr std::uint32_t kReplayVersion = 20;
+inline constexpr std::uint32_t kSnapshotVersion = 21;
+inline constexpr std::uint32_t kReplayVersion = 21;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -506,6 +506,10 @@ struct Entity final {
     std::int32_t constructionRequired = 0;
     Order order{};
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
+    // The first completed protocol tick. This is authoritative, monotonic,
+    // and lets downstream scenarios measure an intact activation interval
+    // without relying on presentation or subsystem-only timers.
+    Tick wellActivationTick = 0;
     Tick reshapeUntilTick = 0;
     std::uint8_t reshapeVariant = 0;
     EntityType productionType = EntityType::Worker;

@@ -3062,6 +3062,7 @@ void AEchoesPlayerController::PresentTitleScreen()
         SetStatusMessage(TEXT("[TITLE_SIM_NOT_READY] The operation is unavailable."));
         return;
     }
+    SynchronizeBoundCampaignProtocol();
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
@@ -3119,7 +3120,10 @@ void AEchoesPlayerController::PresentTitleScreen()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignChoirAtLumeReach
                 ? TEXT("Oruun's Kharuun listening force deployed; Mara is liaison-only; ")
-                : TEXT("Oruun's Kharuun ledger force deployed; Meridian and Choir interfaces remain public and non-commandable; ")),
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignNoNeutralLedger
+                ? TEXT("Oruun's Kharuun ledger force deployed; Meridian and Choir interfaces remain public and non-commandable; ")
+                : TEXT("Oruun and an independent verifier deployed under Kharuun authority; Rhyse's restoration demonstrator remains public and non-commandable; ")),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3157,6 +3161,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignNoNeutralLedger
             ? TEXT("NoNeutralLedger")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignFutureThatWon
+            ? TEXT("TheFutureThatWon")
             : TEXT("GlassScar"),
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
@@ -3189,6 +3196,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
         SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Mission briefing is unavailable."));
         return;
     }
+    SynchronizeBoundCampaignProtocol();
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
@@ -3236,6 +3244,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
     const bool bNoNeutralLedger =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignNoNeutralLedger;
+    const bool bFutureThatWon =
+        Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignFutureThatWon;
     SetStatusMessage(
         bPrologue
             ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
@@ -3259,6 +3270,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("THE CHOIR AT LUME REACH — establish contact with Oruun, root the Waystone at the deferred liability, raise both Listening Spines, commit this operation's Future Well, then reach its branch resolution. Mara remains an off-map liaison; the local Choir is not commandable. Enter deploys Kharuun authority.")
         : bNoNeutralLedger
             ? TEXT("NO NEUTRAL LEDGER — secure the inherited route, integrate the two powered district systems, attest the public Meridian and Kharuun evidence channels, apply the exact recorded Lume protocol, then rally Oruun and the ledger witness. Only Oruun's Kharuun force is commandable. Enter deploys Kharuun authority.")
+        : bFutureThatWon
+            ? TEXT("THE FUTURE THAT WON — establish two-person public readback, link both recorded district inputs, activate only the recorded Lume protocol, hold the bounded stability window, then observe both district readbacks. Rhyse is represented only by attributable public apparatus. Enter deploys Kharuun authority.")
             : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
         3600.0f);
     UE_LOG(
@@ -3276,11 +3289,12 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bReserveAuthority ? TEXT("ReserveAuthority")
         : bChoirAtLumeReach ? TEXT("ChoirAtLumeReach")
         : bNoNeutralLedger ? TEXT("NoNeutralLedger")
+        : bFutureThatWon ? TEXT("TheFutureThatWon")
         : TEXT("GlassScar"),
         (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
          bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach ||
-         bNoNeutralLedger)
+         bNoNeutralLedger || bFutureThatWon)
             ? TEXT("false")
             : TEXT("true"));
 }
@@ -3300,6 +3314,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
         SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Deployment could not begin."));
         return;
     }
+    SynchronizeBoundCampaignProtocol();
     bMissionBriefingVisible = false;
     Bridge->SetScenarioPaused(false);
     SetIgnoreMoveInput(false);
@@ -3491,6 +3506,36 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
                 Plan.RallySite.y.FloorToInt()),
             28.0f);
     }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        const FEchoesFutureThatWonPlan Plan =
+            Bridge->GetFutureThatWonPlan();
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("MISSION 12 — READBACK %d,%d + %d,%d > KHARUUN LINKS NEAR %s %d,%d + %s %d,%d > RECORDED %s WELL %d,%d > HOLD %llu TICKS > OBSERVE %d,%d + %d,%d"),
+                Plan.KharuunReadbackSite.x.FloorToInt(),
+                Plan.KharuunReadbackSite.y.FloorToInt(),
+                Plan.MeridianReadbackSite.x.FloorToInt(),
+                Plan.MeridianReadbackSite.y.FloorToInt(),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.FirstContributingDistrict),
+                Plan.FirstDistrictInputSite.x.FloorToInt(),
+                Plan.FirstDistrictInputSite.y.FloorToInt(),
+                FEchoesCityReserveMissionModel::DistrictDisplayName(
+                    Plan.SecondContributingDistrict),
+                Plan.SecondDistrictInputSite.x.FloorToInt(),
+                Plan.SecondDistrictInputSite.y.FloorToInt(),
+                Plan.ProtocolDisplayName,
+                Plan.FutureWellSite.x.FloorToInt(),
+                Plan.FutureWellSite.y.FloorToInt(),
+                static_cast<unsigned long long>(Plan.StabilityWindowTicks),
+                Plan.FirstDistrictInputSite.x.FloorToInt(),
+                Plan.FirstDistrictInputSite.y.FloorToInt(),
+                Plan.SecondDistrictInputSite.x.FloorToInt(),
+                Plan.SecondDistrictInputSite.y.FloorToInt()),
+            32.0f);
+    }
     else
     {
         SetStatusMessage(
@@ -3581,6 +3626,12 @@ void AEchoesPlayerController::CyclePlayableFaction()
         EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         SetStatusMessage(TEXT("FACTION LOCKED: No Neutral Ledger follows Oruun's Kharuun ledger force. Meridian district systems and the Hollow Choir are public interfaces, not commandable factions."));
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        SetStatusMessage(TEXT("FACTION LOCKED: The Future That Won follows Oruun and an independent verifier under Kharuun authority. Rhyse's demonstrator and Meridian readbacks are public interfaces, not commandable factions."));
         return;
     }
     const echoes::sim::Faction NewFaction =
@@ -3691,12 +3742,19 @@ void AEchoesPlayerController::CycleOperation()
     {
         NewOperation = EEchoesOperationMode::CampaignNoNeutralLedger;
     }
+    else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignNoNeutralLedger &&
+             Bridge->IsFutureThatWonUnlocked())
+    {
+        NewOperation = EEchoesOperationMode::CampaignFutureThatWon;
+    }
     FString Feedback;
     if (!Bridge->SelectOperationMode(NewOperation, Feedback))
     {
         SetStatusMessage(Feedback);
         return;
     }
+    SynchronizeBoundCampaignProtocol();
     ClearSelection();
     ClearControlGroups();
     bSelectionButtonDown = false;
@@ -4933,6 +4991,87 @@ void AEchoesPlayerController::NotifyNoNeutralLedgerFinished(
         static_cast<uint8>(CommitStatus));
 }
 
+void AEchoesPlayerController::NotifyFutureThatWonFinished(
+    bool bSuccess,
+    echoes::sim::FutureWellChoice Consequence,
+    echoes::sim::FutureWellChoice RecordedConsequence,
+    EEchoesCampaignCommitStatus CommitStatus)
+{
+    ClearSelection();
+    bControlGroupAssignmentArmed = false;
+    bSelectionButtonDown = false;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = true;
+    bCampaignResult = true;
+    bCampaignSuccess = bSuccess;
+    PresentedCampaignOperation =
+        EEchoesOperationMode::CampaignFutureThatWon;
+    CampaignConsequence = Consequence;
+    RecordedCampaignConsequence = RecordedConsequence;
+    CampaignCommitStatus = CommitStatus;
+    FutureWellChoice = Consequence;
+    PresentedMatchOutcome = bSuccess
+        ? echoes::sim::MatchOutcome::Player0Victory
+        : echoes::sim::MatchOutcome::Player1Victory;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+
+    FString ResultMessage =
+        TEXT("MISSION FAILED — Oruun, the independent verifier, the local Core, the Future Well, or one of the public readback interfaces was lost before the bounded demonstration completed. No restoration record was committed. Press R to replay.");
+    if (bSuccess)
+    {
+        ResultMessage = FString::Printf(
+            TEXT("MISSION COMPLETE — the recorded %s protocol held through the bounded local stability window and both district readbacks were observed. This records one local protocol/readback result; it does not establish civilian counts, population restoration, a permanent future, trust, consent, or ethical justification."),
+            *GetFutureWellChoiceLabel());
+        if (CommitStatus == EEchoesCampaignCommitStatus::Added)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger committed. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::AlreadyRecorded)
+        {
+            ResultMessage +=
+                TEXT(" Campaign ledger already contains this bounded demonstration record. Press R to replay.");
+        }
+        else if (CommitStatus ==
+                 EEchoesCampaignCommitStatus::ReplayConflict)
+        {
+            const TCHAR* RecordedLabel =
+                RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Harvest
+                    ? TEXT("Harvest")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Preserve
+                    ? TEXT("Preserve")
+                : RecordedConsequence ==
+                        echoes::sim::FutureWellChoice::Reshape
+                    ? TEXT("Reshape")
+                    : TEXT("Dormant");
+            ResultMessage += FString::Printf(
+                TEXT(" The earlier irreversible record retains %s; it was not rewritten. Press R to replay."),
+                RecordedLabel);
+        }
+        else
+        {
+            ResultMessage +=
+                TEXT(" Campaign progress was not saved. Press R to replay.");
+        }
+    }
+    SetStatusMessage(ResultMessage, 3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_RESULT_PRESENTED] mission=TheFutureThatWon success=%s consequence=%u recordedConsequence=%u campaignStatus=%u keyboardRestart=true claimBoundary=boundedLocalProtocolReadbackOnly commandAuthority=Kharuun rhysePresence=attributablePublicApparatusOnly mixedFactionCommand=false civilianCountsUnmodeled=true populationRestorationUnproven=true permanentFutureUnproven=true trustUnproven=true consentUnproven=true ethicalJustificationUnproven=true"),
+        bSuccess ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(Consequence),
+        static_cast<uint8>(RecordedConsequence),
+        static_cast<uint8>(CommitStatus));
+}
+
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
@@ -5978,6 +6117,7 @@ void AEchoesPlayerController::IssueContextOrder(
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
+    SynchronizeBoundCampaignProtocol();
 
     const echoes::sim::Entity* TargetEntity =
         TargetView != nullptr
@@ -8465,6 +8605,7 @@ void AEchoesPlayerController::RestartScenario()
     bControlGroupAssignmentArmed = false;
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
+        SynchronizeBoundCampaignProtocol();
         bRuntimeStateKnown = true;
         bTitleScreenVisible = false;
         bPauseMenuVisible = false;
@@ -8512,12 +8653,39 @@ void AEchoesPlayerController::RestartScenario()
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignNoNeutralLedger
                 ? TEXT("MISSION RESTARTED — Oruun's coalition admission route returns to its deterministic ten-record initial state.")
+            : Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignFutureThatWon
+                ? TEXT("MISSION RESTARTED — Oruun and the independent verifier return to the deterministic eleven-record restoration-demonstrator state.")
                 : TEXT("MATCH RESTARTED — deterministic initial state restored."));
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RESULT_RESTARTED] outcome=0"));
     }
     else
     {
         NotifyRuntimeFailure(TEXT("ECHOES_MATCH_RESTART_FAILED"));
+    }
+}
+
+void AEchoesPlayerController::SynchronizeBoundCampaignProtocol()
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr)
+    {
+        return;
+    }
+    if (Bridge->GetOperationMode() ==
+        EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        FutureWellChoice =
+            Bridge->GetNoNeutralLedgerPlan().LumeProtocol;
+    }
+    else if (Bridge->GetOperationMode() ==
+             EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        FutureWellChoice =
+            Bridge->GetFutureThatWonPlan().RecordedProtocol;
     }
 }
 
@@ -8544,6 +8712,20 @@ void AEchoesPlayerController::SetFutureWellChoice(
                 TEXT("No Neutral Ledger admits only the recorded %s protocol. Right-click the Lume Well with a worker after both evidence channels attest."),
                 Plan.ProtocolDisplayName),
             7.0f);
+        return;
+    }
+    if (Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        const FEchoesFutureThatWonPlan Plan =
+            Bridge->GetFutureThatWonPlan();
+        FutureWellChoice = Plan.RecordedProtocol;
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("The Future That Won admits only the recorded %s protocol. Right-click the Future Well with a worker after independent readback and both district inputs are verified."),
+                Plan.ProtocolDisplayName),
+            8.0f);
         return;
     }
     FutureWellChoice = Choice;

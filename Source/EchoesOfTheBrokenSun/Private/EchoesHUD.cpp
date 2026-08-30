@@ -506,6 +506,20 @@ void AEchoesHUD::DrawHUD()
                 Plan.RouteDisplayName,
                 Plan.ProtocolDisplayName);
         }
+        else if (Bridge != nullptr &&
+                 Bridge->GetOperationMode() ==
+                     EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan =
+                Bridge->GetFutureThatWonPlan();
+            SelectionLine = FString::Printf(
+                TEXT("Selected  %d%s     Formation  %s     Restoration plan  %02u     Recorded protocol  %s"),
+                SelectedIds.Num(),
+                *SelectedType,
+                *EchoesController->GetFormationLabel(),
+                Plan.StablePlanKey,
+                Plan.ProtocolDisplayName);
+        }
         else
         {
             SelectionLine = FString::Printf(
@@ -1259,6 +1273,9 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bNoNeutralLedger = Bridge != nullptr &&
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignNoNeutralLedger;
+    const bool bFutureThatWon = Bridge != nullptr &&
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignFutureThatWon;
     const bool bCanStartNewCampaign = Bridge != nullptr &&
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     const bool bCanRestoreCampaign = Bridge != nullptr &&
@@ -1302,6 +1319,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bReserveAuthority ? TEXT("RESERVE AUTHORITY")
              : bChoirAtLumeReach ? TEXT("THE CHOIR AT LUME REACH")
              : bNoNeutralLedger ? TEXT("NO NEUTRAL LEDGER")
+             : bFutureThatWon ? TEXT("THE FUTURE THAT WON")
                               : TEXT("GLASS SCAR"), Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
@@ -1345,6 +1363,10 @@ void AEchoesHUD::DrawTitleScreen(
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 11  //  %s  //  ORUUN + LEDGER WITNESS"),
                   *LocalFaction)
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("CAMPAIGN MISSION 12  //  %s  //  ORUUN + INDEPENDENT VERIFIER"),
+                  *LocalFaction)
         : FString::Printf(
               TEXT("SINGLE-PLAYER SKIRMISH  //  %s  //  FUTURE WELL CONTEST"),
               *LocalFaction);
@@ -1373,6 +1395,8 @@ void AEchoesHUD::DrawTitleScreen(
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 10")
     : bNoNeutralLedger
         ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 11")
+    : bFutureThatWon
+        ? TEXT("[F9] CHANGE OPERATION  //  KHARUUN AUTHORITY  //  MISSION 12")
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
@@ -1425,6 +1449,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Nine consistent records carry Oruun to Lume Reach, where Mara serves as an off-map liaison to a public local contact.")
         : bNoNeutralLedger
             ? TEXT("Ten ordered records admit one local coalition route. Mission 01, Mission 09, and Mission 10 select its inherited geometry and protocol.")
+        : bFutureThatWon
+            ? TEXT("Eleven ordered records bind one local restoration demonstrator to the founding doctrine, recorded district pair, and exact Lume protocol.")
             : TEXT("Cross the shattered approaches, choose what the Well becomes,"),
              Body, Left + 48.0f, Top + 334.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -1455,6 +1481,8 @@ void AEchoesHUD::DrawTitleScreen(
             ? TEXT("Resolve the deferred liability, raise both Listening Spines, commit the Lume Well, then reach its branch resolution.")
         : bNoNeutralLedger
             ? TEXT("Secure the route, integrate both contributing districts, attest both public evidence channels, apply the recorded protocol, then rally.")
+        : bFutureThatWon
+            ? TEXT("Establish independent readback, verify both district inputs, activate the recorded protocol, hold stability, then observe both readbacks.")
             : TEXT("and break the opposing Command Core before your own line collapses."),
              Body, Left + 48.0f, Top + 362.0f * ContentScale,
              SmallFont, 0.96f * TextScale, false);
@@ -2428,6 +2456,121 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
+    if (Objective.OperationMode ==
+        EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        const FEchoesFutureThatWonPlan Plan =
+            Bridge->GetFutureThatWonPlan();
+        const bool bFailed =
+            Objective.FutureThatWonPhase ==
+            EEchoesFutureThatWonPhase::Failed;
+        const int32 InputCount =
+            (Objective.bFutureWonFirstInputVerified ? 1 : 0) +
+            (Objective.bFutureWonSecondInputVerified ? 1 : 0);
+        const bool bBothReadbacksObserved =
+            Objective.bFutureWonFirstDistrictReadbackObserved &&
+            Objective.bFutureWonSecondDistrictReadbackObserved;
+        const FString InputState = bFailed
+            ? TEXT("RECORDED INPUT LINE LOST")
+            : InputCount == 2
+                ? TEXT("RECORDED DISTRICTS 2/2 VERIFIED")
+            : Objective.bFutureWonIndependentReadbackEstablished
+                ? FString::Printf(
+                      TEXT("%d/2 — LINK NEAR %d,%d"),
+                      InputCount,
+                      !Objective.bFutureWonFirstInputVerified
+                          ? Plan.FirstDistrictInputSite.x.FloorToInt()
+                          : Plan.SecondDistrictInputSite.x.FloorToInt(),
+                      !Objective.bFutureWonFirstInputVerified
+                          ? Plan.FirstDistrictInputSite.y.FloorToInt()
+                          : Plan.SecondDistrictInputSite.y.FloorToInt())
+                : TEXT("WAITING — ESTABLISH READBACK");
+        const FString ReadbackState = bFailed
+            ? TEXT("PUBLIC APPARATUS LOST")
+            : Objective.bFutureWonProtocolBound
+                ? FString::Printf(
+                      TEXT("RECORDED %s ACTIVE"),
+                      Plan.ProtocolDisplayName)
+            : Objective.bFutureWonIndependentReadbackEstablished &&
+                    InputCount == 2
+                ? FString::Printf(
+                      TEXT("APPLY %s AT %d,%d"),
+                      Plan.ProtocolDisplayName,
+                      Plan.FutureWellSite.x.FloorToInt(),
+                      Plan.FutureWellSite.y.FloorToInt())
+                : FString::Printf(
+                      TEXT("ORUUN %d,%d + VERIFIER %d,%d"),
+                      Plan.KharuunReadbackSite.x.FloorToInt(),
+                      Plan.KharuunReadbackSite.y.FloorToInt(),
+                      Plan.MeridianReadbackSite.x.FloorToInt(),
+                      Plan.MeridianReadbackSite.y.FloorToInt());
+        const FString StabilityState = bFailed
+            ? TEXT("DEMONSTRATION CONTRACT LOST")
+            : bBothReadbacksObserved
+                ? TEXT("WINDOW HELD — BOTH READBACKS OBSERVED")
+            : Objective.bFutureWonStabilityWindowHeld
+                ? FString::Printf(
+                      TEXT("OBSERVE DISTRICTS %d,%d + %d,%d"),
+                      Plan.FirstDistrictInputSite.x.FloorToInt(),
+                      Plan.FirstDistrictInputSite.y.FloorToInt(),
+                      Plan.SecondDistrictInputSite.x.FloorToInt(),
+                      Plan.SecondDistrictInputSite.y.FloorToInt())
+            : Objective.bFutureWonProtocolBound
+                ? FString::Printf(
+                      TEXT("HOLD THROUGH T%llu"),
+                      static_cast<unsigned long long>(
+                          Objective.FutureWonStabilityEndTick))
+                : TEXT("WAITING — BIND RECORDED PROTOCOL");
+
+        DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+        DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
+        DrawText(TEXT("THE FUTURE THAT WON  //  MISSION 12"), Accent,
+                 Left + 18.0f, Top + 15.0f, SmallFont,
+                 0.90f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("01  RECORDED INPUTS   %s"), *InputState),
+            bFailed ? Failed : InputCount == 2 ? Complete : Active,
+            Left + 18.0f, Top + 52.0f, SmallFont,
+            0.70f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("02  PUBLIC READBACK   %s"), *ReadbackState),
+            bFailed ? Failed
+                    : Objective.bFutureWonProtocolBound ? Complete : Active,
+            Left + 18.0f, Top + 89.0f, SmallFont,
+            0.70f * TextScale, false);
+        DrawText(
+            FString::Printf(TEXT("03  STABILITY + OBS.  %s"), *StabilityState),
+            bFailed ? Failed : bBothReadbacksObserved ? Complete : Active,
+            Left + 18.0f, Top + 126.0f, SmallFont,
+            0.70f * TextScale, false);
+        if (!bLoggedObjectiveTrackerReady)
+        {
+            bLoggedObjectiveTrackerReady = true;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_FUTURE_THAT_WON_OBJECTIVES_READY] phase=%s plan=%u foundingDoctrine=%u districtPair=%u+%u deferred=%u protocol=%u oruun=%u verifier=%u districtInterfaces=%u:%u readbackInterfaces=%u:%u demonstrator=%u well=%u stabilityTicks=%llu reconstructable=true exactOrderedLedger=true commandAuthority=Kharuun rhysePresence=attributablePublicApparatusOnly mixedFactionCommand=false civilianCountsUnmodeled=true populationRestorationUnproven=true permanentFutureUnproven=true ethicalJustificationUnproven=true"),
+                FEchoesFutureThatWonMissionModel::StableName(
+                    Objective.FutureThatWonPhase),
+                Plan.StablePlanKey,
+                static_cast<uint8>(Plan.FoundingDoctrine),
+                static_cast<uint8>(Plan.FirstContributingDistrict),
+                static_cast<uint8>(Plan.SecondContributingDistrict),
+                static_cast<uint8>(Plan.DeferredDistrict),
+                static_cast<uint8>(Plan.RecordedProtocol),
+                Objective.FutureWonOruunId,
+                Objective.FutureWonVerifierId,
+                Objective.FutureWonFirstDistrictInterfaceId,
+                Objective.FutureWonSecondDistrictInterfaceId,
+                Objective.FutureWonMeridianReadbackInterfaceId,
+                Objective.FutureWonKharuunReadbackInterfaceId,
+                Objective.FutureWonDemonstratorInterfaceId,
+                Objective.FutureWonWellId,
+                static_cast<unsigned long long>(Plan.StabilityWindowTicks));
+        }
+        return;
+    }
+
     FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
@@ -2561,13 +2704,19 @@ void AEchoesHUD::DrawMatchResult(
     const bool bNoNeutralLedgerResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignNoNeutralLedger;
+    const bool bFutureThatWonResult = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() ==
+            EEchoesOperationMode::CampaignFutureThatWon;
     const bool bVictory = bCampaignResult
         ? EchoesController->WasCampaignSuccessful()
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
     const FString Result = bCampaignResult
-        ? bNoNeutralLedgerResult
+        ? bFutureThatWonResult
+            ? bVictory ? TEXT("RESTORATION PROTOCOL RECORDED")
+                       : TEXT("RESTORATION DEMONSTRATION FAILED")
+        : bNoNeutralLedgerResult
             ? bVictory ? TEXT("COALITION LEDGER COMMITTED")
                        : TEXT("COALITION ADMISSION FAILED")
         : bChoirAtLumeReachResult
@@ -2581,7 +2730,10 @@ void AEchoesHUD::DrawMatchResult(
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const FString Headline = bCampaignResult
-        ? bNoNeutralLedgerResult
+        ? bFutureThatWonResult
+            ? bVictory ? TEXT("THE RECORDED FUTURE HOLDS—HERE, FOR NOW")
+                       : TEXT("THE PUBLIC READBACK CANNOT CLOSE")
+        : bNoNeutralLedgerResult
             ? bVictory ? TEXT("THE RECORD HOLDS WITHOUT A NEUTRAL HAND")
                        : TEXT("THE COALITION LINE CANNOT BE ATTESTED")
         : bChoirAtLumeReachResult
@@ -2617,7 +2769,14 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
-        ? bNoNeutralLedgerResult
+        ? bFutureThatWonResult
+            ? bVictory
+                ? FString::Printf(
+                      TEXT("The recorded %s protocol held through the bounded local stability window and both district readbacks were observed. This does not establish civilian counts, population restoration, a permanent future, trust, consent, or ethical justification."),
+                      WellChoiceDisplayName(
+                          EchoesController->GetCampaignConsequence()))
+                : TEXT("Oruun, the independent verifier, the local Core, the Future Well, or a public readback interface was lost before the bounded demonstration completed.")
+        : bNoNeutralLedgerResult
             ? bVictory
                 ? FString::Printf(
                       TEXT("The inherited route, both contributing district systems, and both public evidence channels support the recorded %s protocol. This establishes one local coalition rally, not mixed-faction command, hidden authorship, casualty counts, or wider cause."),
@@ -2711,7 +2870,11 @@ void AEchoesHUD::DrawMatchResult(
         switch (EchoesController->GetCampaignCommitStatus())
         {
             case EEchoesCampaignCommitStatus::Added:
-                CampaignPersistenceLine = bNoNeutralLedgerResult
+                CampaignPersistenceLine = bFutureThatWonResult
+                    ? FString::Printf(
+                          TEXT("MISSION 12 RECORDED // %s local protocol/readback contract fixed."),
+                          RecordedChoice)
+                : bNoNeutralLedgerResult
                     ? FString::Printf(
                           TEXT("MISSION 11 RECORDED // %s local coalition rally fixed."),
                           RecordedChoice)
@@ -2800,7 +2963,11 @@ void AEchoesHUD::DrawMatchResult(
     DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     const FString FinalTickLine = bCampaignResult
-        ? bNoNeutralLedgerResult
+        ? bFutureThatWonResult
+            ? FString::Printf(
+                  TEXT("MISSION 12 — THE FUTURE THAT WON  //  FINAL TICK %llu"),
+                  static_cast<unsigned long long>(FinalTick))
+        : bNoNeutralLedgerResult
             ? FString::Printf(
                   TEXT("MISSION 11 — NO NEUTRAL LEDGER  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
@@ -3064,6 +3231,9 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bNoNeutralLedger = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignNoNeutralLedger;
+    const bool bFutureThatWon = BriefingBridge != nullptr &&
+        BriefingBridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignFutureThatWon;
     const FEchoesSevenAccountsRoute SevenAccountsRoute =
         BriefingBridge != nullptr
             ? BriefingBridge->GetSevenAccountsRoute()
@@ -3104,6 +3274,10 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetNoNeutralLedgerPlan()
             : FEchoesNoNeutralLedgerPlan{};
+    const FEchoesFutureThatWonPlan FutureThatWonPlan =
+        BriefingBridge != nullptr
+            ? BriefingBridge->GetFutureThatWonPlan()
+            : FEchoesFutureThatWonPlan{};
     const bool bLocalKharuun =
         LocalFaction == TEXT("KHARUUN ASSEMBLIES");
     const FString FactionSystems = bLocalKharuun
@@ -3156,6 +3330,10 @@ void AEchoesHUD::DrawMissionBriefing(
         : bNoNeutralLedger
             ? FString::Printf(
                   TEXT("NO NEUTRAL LEDGER  //  MISSION 11  //  %s"),
+                  *LocalFaction)
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("THE FUTURE THAT WON  //  MISSION 12  //  %s"),
                   *LocalFaction)
         : FString::Printf(
               TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
@@ -3216,6 +3394,11 @@ void AEchoesHUD::DrawMissionBriefing(
                   NoNeutralPlan.StablePlanKey,
                   NoNeutralPlan.RouteDisplayName,
                   NoNeutralPlan.ProtocolDisplayName)
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("Eleven exact ordered records admit plan %02u: two recorded district inputs and one bounded %s restoration demonstrator."),
+                  FutureThatWonPlan.StablePlanKey,
+                  FutureThatWonPlan.ProtocolDisplayName)
             : TEXT("A dormant Future Well lies inside the shattered crossing."),
              Body, TextLeft, Top + 148.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3255,6 +3438,11 @@ void AEchoesHUD::DrawMissionBriefing(
                       NoNeutralPlan.SecondContributingDistrict),
                   FEchoesCityReserveMissionModel::DistrictDisplayName(
                       NoNeutralPlan.DeferredDistrict))
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("Oruun and a Kharuun verifier remain commandable. Rhyse appears only as public apparatus; %s stays deferred without casualty or recovery inference."),
+                  FEchoesCityReserveMissionModel::DistrictDisplayName(
+                      FutureThatWonPlan.DeferredDistrict))
             : FString::Printf(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
@@ -3329,6 +3517,17 @@ void AEchoesHUD::DrawMissionBriefing(
                   NoNeutralPlan.FirstDistrictSite.y.FloorToInt(),
                   NoNeutralPlan.SecondDistrictSite.x.FloorToInt(),
                   NoNeutralPlan.SecondDistrictSite.y.FloorToInt())
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("01  Establish public readback with Oruun at %d,%d and the verifier at %d,%d; build [N] Kharuun links near inputs %d,%d and %d,%d."),
+                  FutureThatWonPlan.KharuunReadbackSite.x.FloorToInt(),
+                  FutureThatWonPlan.KharuunReadbackSite.y.FloorToInt(),
+                  FutureThatWonPlan.MeridianReadbackSite.x.FloorToInt(),
+                  FutureThatWonPlan.MeridianReadbackSite.y.FloorToInt(),
+                  FutureThatWonPlan.FirstDistrictInputSite.x.FloorToInt(),
+                  FutureThatWonPlan.FirstDistrictInputSite.y.FloorToInt(),
+                  FutureThatWonPlan.SecondDistrictInputSite.x.FloorToInt(),
+                  FutureThatWonPlan.SecondDistrictInputSite.y.FloorToInt())
             : TEXT("01  Secure and choose a protocol for the central Future Well."),
              Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
     DrawText(
@@ -3410,6 +3609,18 @@ void AEchoesHUD::DrawMissionBriefing(
                   NoNeutralPlan.FutureWellSite.y.FloorToInt(),
                   NoNeutralPlan.RallySite.x.FloorToInt(),
                   NoNeutralPlan.RallySite.y.FloorToInt())
+        : bFutureThatWon
+            ? FString::Printf(
+                  TEXT("02  Apply only recorded %s at %d,%d; hold %llu ticks; then observe district readbacks at %d,%d and %d,%d."),
+                  FutureThatWonPlan.ProtocolDisplayName,
+                  FutureThatWonPlan.FutureWellSite.x.FloorToInt(),
+                  FutureThatWonPlan.FutureWellSite.y.FloorToInt(),
+                  static_cast<unsigned long long>(
+                      FutureThatWonPlan.StabilityWindowTicks),
+                  FutureThatWonPlan.FirstDistrictInputSite.x.FloorToInt(),
+                  FutureThatWonPlan.FirstDistrictInputSite.y.FloorToInt(),
+                  FutureThatWonPlan.SecondDistrictInputSite.x.FloorToInt(),
+                  FutureThatWonPlan.SecondDistrictInputSite.y.FloorToInt())
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
                   *OpponentFaction),
@@ -3437,6 +3648,8 @@ void AEchoesHUD::DrawMissionBriefing(
                  ? TEXT("The prior branch shapes the approach and Mission 09 fixes the deferred liability. This mission's Lume Well is a new, separate irreversible decision.")
              : bNoNeutralLedger
                  ? TEXT("Mission 01 selects the route; Mission 09 selects the two contributing districts; Mission 10 fixes the only admissible Lume protocol. Missions 02–08 remain required evidence seals, not hidden branch variables.")
+             : bFutureThatWon
+                 ? TEXT("M01 fixes doctrine; M09 fixes the district pair; M10 fixes the protocol. M11 is the admission receipt, not another branch.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
              Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
@@ -3462,6 +3675,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("Victory is one anchored local contact and branch resolution. The Choir is not playable; no hidden authorship, unified identity, or wider cause is established.")
         : bNoNeutralLedger
             ? TEXT("Victory is one local Kharuun-authoritative coalition rally. Meridian and Choir interfaces remain public and non-commandable; no trust score, casualty total, hidden identity, authorship, or wider causation is inferred.")
+        : bFutureThatWon
+            ? TEXT("Victory proves one bounded local activation and paired readback—not population restoration, permanence, civilian counts, trust, consent, or moral justification.")
             : FactionSystems,
              Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
 
@@ -3495,6 +3710,8 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LISTENING FORCE")
         : bNoNeutralLedger
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + LEDGER WITNESS")
+        : bFutureThatWon
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN + VERIFIER")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
@@ -3717,7 +3934,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         Bridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignChoirAtLumeReach ||
         Bridge->GetOperationMode() ==
-            EEchoesOperationMode::CampaignNoNeutralLedger)
+            EEchoesOperationMode::CampaignNoNeutralLedger ||
+        Bridge->GetOperationMode() ==
+            EEchoesOperationMode::CampaignFutureThatWon)
     {
         const FEchoesObjectiveSnapshot Objective =
             Bridge->GetLocalObjectiveSnapshot();
@@ -4174,6 +4393,62 @@ void AEchoesHUD::DrawTacticalMinimap(
                     : Objective.bNoNeutralProtocolApplied
                         ? Border : WaitingColor);
         }
+        else if (Bridge->GetOperationMode() ==
+                 EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            const FEchoesFutureThatWonPlan Plan =
+                Bridge->GetFutureThatWonPlan();
+            const FLinearColor CompleteColor(0.25f, 1.0f, 0.66f);
+            const FLinearColor WaitingColor(0.48f, 0.55f, 0.62f);
+            const bool bInputsVerified =
+                Objective.bFutureWonFirstInputVerified &&
+                Objective.bFutureWonSecondInputVerified;
+            const bool bReadbacksObserved =
+                Objective.bFutureWonFirstDistrictReadbackObserved &&
+                Objective.bFutureWonSecondDistrictReadbackObserved;
+            DrawMissionSite(
+                Plan.KharuunReadbackSite,
+                TEXT("K"),
+                Objective.bFutureWonIndependentReadbackEstablished
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.MeridianReadbackSite,
+                TEXT("M"),
+                Objective.bFutureWonIndependentReadbackEstablished
+                    ? CompleteColor : Border);
+            DrawMissionSite(
+                Plan.FirstDistrictInputSite,
+                TEXT("1"),
+                Objective.bFutureWonFirstDistrictReadbackObserved
+                    ? CompleteColor
+                : Objective.bFutureWonFirstInputVerified
+                    ? Border
+                : Objective.bFutureWonIndependentReadbackEstablished
+                    ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.SecondDistrictInputSite,
+                TEXT("2"),
+                Objective.bFutureWonSecondDistrictReadbackObserved
+                    ? CompleteColor
+                : Objective.bFutureWonSecondInputVerified
+                    ? Border
+                : Objective.bFutureWonIndependentReadbackEstablished
+                    ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.RestorationDemonstratorSite,
+                TEXT("D"),
+                Objective.bFutureWonProtocolBound
+                    ? CompleteColor
+                    : bInputsVerified ? Border : WaitingColor);
+            DrawMissionSite(
+                Plan.FutureWellSite,
+                TEXT("W"),
+                bReadbacksObserved
+                    ? CompleteColor
+                : Objective.bFutureWonProtocolBound
+                    ? Border
+                    : bInputsVerified ? Border : WaitingColor);
+        }
     }
 
     DrawLine(Left, Top, Left + Size, Top, Border, 2.0f);
@@ -4213,6 +4488,9 @@ void AEchoesHUD::DrawTacticalMinimap(
         : Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignNoNeutralLedger
             ? TEXT("MISSION NAV  |  ROUTE + DISTRICTS + EVIDENCE + RALLY")
+        : Bridge->GetOperationMode() ==
+                EEchoesOperationMode::CampaignFutureThatWon
+            ? TEXT("MISSION NAV  |  M/K + 1/2 + D/W")
             : TEXT("TACTICAL OVERVIEW  |  fog-respecting"),
         Border,
         Left,

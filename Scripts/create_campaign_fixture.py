@@ -25,7 +25,7 @@ def main() -> int:
     parser.add_argument(
         "--through-mission",
         type=int,
-        choices=tuple(range(12)),
+        choices=tuple(range(13)),
         default=1,
     )
     args = parser.parse_args()
@@ -39,7 +39,7 @@ def main() -> int:
             CHOICES[args.choice],
             0x07,
             0x0F,
-            20,
+            21,
             120,
             0x7A11A2,
         ))
@@ -50,7 +50,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x0F,
-            20,
+            21,
             420,
             0x7A11A3,
         ))
@@ -61,7 +61,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x1F,
-            20,
+            21,
             720,
             0x7A11A4,
         ))
@@ -72,7 +72,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x1F,
-            20,
+            21,
             1040,
             0x7A11A5,
         ))
@@ -83,7 +83,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x3F,
-            20,
+            21,
             1340,
             0x7A11A6,
         ))
@@ -94,7 +94,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x3F,
-            20,
+            21,
             1640,
             0x7A11A7,
         ))
@@ -105,7 +105,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x3F,
-            20,
+            21,
             1940,
             0x7A11A8,
         ))
@@ -116,7 +116,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x3F,
-            20,
+            21,
             2240,
             0x7A11A9,
         ))
@@ -127,7 +127,7 @@ def main() -> int:
             CHOICES[args.choice],
             CHOICE_MASKS[args.choice],
             0x7B,
-            20,
+            21,
             2540,
             0x7A11AA,
         ))
@@ -138,7 +138,7 @@ def main() -> int:
             CHOICES[lume_choice],
             0x07,
             0xFF,
-            20,
+            21,
             2840,
             0x7A11AB,
         ))
@@ -149,9 +149,20 @@ def main() -> int:
             CHOICES[lume_choice],
             CHOICE_MASKS[lume_choice],
             0xFF,
-            20,
+            21,
             3140,
             0x7A11AC,
+        ))
+    if args.through_mission >= 12:
+        records.append(struct.pack(
+            "<BBBBIQQ",
+            12,
+            CHOICES[lume_choice],
+            CHOICE_MASKS[lume_choice],
+            0xFF,
+            21,
+            3440,
+            0x7A11AD,
         ))
     header = b"ECHOCPG1" + struct.pack("<HH", 1, len(records))
     payload = header + b"".join(records)

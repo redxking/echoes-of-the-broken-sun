@@ -299,9 +299,9 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(1));
     TestEqual(
-        TEXT("Simulation snapshot schema remains twenty"),
+        TEXT("Simulation snapshot schema advances to twenty-one"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(20));
+        static_cast<uint32>(21));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
