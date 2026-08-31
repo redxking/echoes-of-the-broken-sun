@@ -12,6 +12,12 @@ inline const FName& RootTag()
     return Tag;
 }
 
+inline const FName& SharedTag()
+{
+    static const FName Tag(TEXT("EchoesBattlefieldShared"));
+    return Tag;
+}
+
 inline const FName& FloorTag()
 {
     static const FName Tag(TEXT("EchoesBattlefieldFloor"));
@@ -27,6 +33,12 @@ inline const FName& SunTag()
 inline const FName& SkyTag()
 {
     static const FName Tag(TEXT("EchoesBattlefieldSky"));
+    return Tag;
+}
+
+inline const FName& WeatherTag()
+{
+    static const FName Tag(TEXT("EchoesBattlefieldWeather"));
     return Tag;
 }
 
@@ -78,6 +90,55 @@ inline const FName& TagForPreset(EEchoesSkirmishMapPreset Preset)
             return SorynConfluenceTag();
     }
     return GlassScarTag();
+}
+
+inline void RegisterSharedActorTags(
+    TArray<FName>& Tags,
+    const FName& RoleTag)
+{
+    Tags.AddUnique(RootTag());
+    Tags.AddUnique(SharedTag());
+    Tags.AddUnique(RoleTag);
+}
+
+inline void RegisterPresetActorTags(
+    TArray<FName>& Tags,
+    EEchoesSkirmishMapPreset Preset)
+{
+    Tags.AddUnique(RootTag());
+    Tags.AddUnique(TagForPreset(Preset));
+}
+
+inline bool HasPresetScope(const TArray<FName>& Tags)
+{
+    return Tags.Contains(GlassScarTag()) ||
+           Tags.Contains(CrownfallBasinTag()) ||
+           Tags.Contains(SorynConfluenceTag()) ||
+           Tags.Contains(LegacyGlassScarTag());
+}
+
+inline bool IsRegistered(const TArray<FName>& Tags)
+{
+    return Tags.Contains(RootTag()) || Tags.Contains(LegacyGlassScarTag());
+}
+
+inline bool IsShared(const TArray<FName>& Tags)
+{
+    return Tags.Contains(RootTag()) && Tags.Contains(SharedTag()) &&
+           !HasPresetScope(Tags);
+}
+
+inline bool ShouldShow(
+    const TArray<FName>& Tags,
+    EEchoesSkirmishMapPreset Preset)
+{
+    if (IsShared(Tags))
+    {
+        return true;
+    }
+    return Tags.Contains(TagForPreset(Preset)) ||
+           (Preset == EEchoesSkirmishMapPreset::GlassScar &&
+            Tags.Contains(LegacyGlassScarTag()));
 }
 
 inline const TCHAR* StableName(EEchoesSkirmishMapPreset Preset)
