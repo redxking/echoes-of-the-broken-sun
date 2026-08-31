@@ -3,6 +3,7 @@ set -euo pipefail
 
 zmodload zsh/parameter
 zmodload zsh/zselect
+zmodload -F zsh/files b:mkdir
 
 umask 077
 
@@ -24,6 +25,10 @@ cleanup_poll_ticks=5
 cleanup_remove_run_dir=false
 cleanup_started=false
 run_dir=""
+run_dir_cleanup_armed=false
+run_dir_ownership_resolved=true
+pending_signal_name=""
+pending_signal_status=0
 manifest=""
 server_log=""
 phase_one_log=""
@@ -49,7 +54,7 @@ invalid_pid=""
 invalid_job_id=""
 
 case "$lifecycle_self_test" in
-  ""|initialization-int|initialization-term|ordinary-exit|term-ignoring-child) ;;
+  ""|creation-window-int|creation-window-term|initialization-int|initialization-term|ordinary-exit|term-ignoring-child) ;;
   *)
     print -u2 "Unsupported reconnect lifecycle self-test scenario."
     exit 2
@@ -95,6 +100,76 @@ record_lifecycle_line() {
     print -r -- "$line" >> "$lifecycle_result_file" 2>/dev/null || true
   fi
   return 0
+}
+
+create_scoped_run_dir() {
+  local candidate
+  local creation_signal=""
+  local mkdir_status
+  local run_nonce
+  local -i attempt
+  case "$lifecycle_self_test" in
+    creation-window-int) creation_signal=INT ;;
+    creation-window-term) creation_signal=TERM ;;
+  esac
+  run_dir_ownership_resolved=false
+  for (( attempt = 0; attempt < 16; ++attempt )); do
+    printf -v run_nonce '%04x%04x%04x%04x%04x%04x%04x%04x' \
+      "$RANDOM" "$RANDOM" "$RANDOM" "$RANDOM" \
+      "$RANDOM" "$RANDOM" "$RANDOM" "$RANDOM"
+    run_dir="$evidence_root/run.$$.${run_nonce}"
+    if [[ -n "$creation_signal" ]]; then
+      record_lifecycle_line "lifecycle_self_test=$lifecycle_self_test"
+      record_lifecycle_line "run_dir_candidate=$run_dir"
+    fi
+    if [[ -n "$pending_signal_name" ]]; then
+      run_dir=""
+      run_dir_ownership_resolved=true
+      dispatch_pending_signal
+    fi
+    if builtin mkdir -m 0700 -- "$run_dir"; then
+      if [[ -n "$creation_signal" ]]; then
+        kill "-$creation_signal" "$$"
+        if [[ "$pending_signal_name" != "$creation_signal" ]]; then
+          run_dir_cleanup_armed=true
+          run_dir_ownership_resolved=true
+          print -u2 "Lifecycle creation-window signal was not deferred."
+          return 2
+        fi
+      fi
+      run_dir_cleanup_armed=true
+      run_dir_ownership_resolved=true
+      dispatch_pending_signal
+      return 0
+    else
+      mkdir_status=$?
+      candidate="$run_dir"
+      run_dir=""
+      run_dir_cleanup_armed=false
+      if [[ -n "$pending_signal_name" ]]; then
+        run_dir_ownership_resolved=true
+        dispatch_pending_signal
+      fi
+      if [[ -e "$candidate" || -L "$candidate" ]]; then
+        continue
+      fi
+      run_dir_ownership_resolved=true
+      dispatch_pending_signal
+      print -u2 "Could not create the reconnect evidence run directory."
+      return "$mkdir_status"
+    fi
+  done
+  run_dir_ownership_resolved=true
+  dispatch_pending_signal
+  print -u2 "Could not allocate a unique reconnect evidence run directory."
+  return 1
+}
+
+dispatch_pending_signal() {
+  if [[ -z "$pending_signal_name" ]]; then
+    return 0
+  fi
+  handle_signal "$pending_signal_name" "$pending_signal_status"
 }
 
 register_process() {
@@ -177,7 +252,17 @@ cleanup_registered_child() {
 }
 
 remove_scoped_run_dir() {
-  if [[ -z "$run_dir" || ! -e "$run_dir" ]]; then
+  if [[ "$run_dir_cleanup_armed" != true ]]; then
+    return 0
+  fi
+  if [[ -z "$run_dir" ]]; then
+    record_lifecycle_line "run_fixture_cleanup_refused=true"
+    return 1
+  fi
+  if [[ ! -e "$run_dir" && ! -L "$run_dir" ]]; then
+    run_dir_cleanup_armed=false
+    run_dir=""
+    record_lifecycle_line "run_fixture_absent=true"
     return 0
   fi
   if [[ -z "$evidence_root" || -L "$run_dir" ||
@@ -190,6 +275,7 @@ remove_scoped_run_dir() {
     record_lifecycle_line "run_fixture_removed=false"
     return 1
   fi
+  run_dir_cleanup_armed=false
   run_dir=""
   record_lifecycle_line "run_fixture_removed=true"
   return 0
@@ -228,9 +314,32 @@ handle_signal() {
   local exit_status="$2"
   local cleanup_status=0
   trap '' INT TERM
+  if [[ "$run_dir_ownership_resolved" != true ]]; then
+    if [[ -z "$pending_signal_name" ]]; then
+      pending_signal_name="$signal_name"
+      pending_signal_status="$exit_status"
+      record_lifecycle_line "creation_window_signal_deferred=$signal_name"
+    fi
+    return 0
+  fi
+  if [[ -n "$pending_signal_name" ]]; then
+    signal_name="$pending_signal_name"
+    exit_status="$pending_signal_status"
+    pending_signal_name=""
+    pending_signal_status=0
+  fi
   trap - EXIT
   cleanup_started=true
   set +e
+  if [[ "$lifecycle_self_test" == creation-window-int ||
+        "$lifecycle_self_test" == creation-window-term ]]; then
+    if [[ "$run_dir_cleanup_armed" == true &&
+          -d "$run_dir" && ! -L "$run_dir" ]]; then
+      record_lifecycle_line "creation_window_directory_observed=true"
+    else
+      record_lifecycle_line "creation_window_directory_observed=false"
+    fi
+  fi
   record_lifecycle_line "run_interrupted_utc=$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
   record_lifecycle_line "result=interrupted"
   record_lifecycle_line "signal=$signal_name"
@@ -278,9 +387,8 @@ trap 'handle_exit $?' EXIT
 trap 'handle_signal INT 130' INT
 trap 'handle_signal TERM 143' TERM
 
-mkdir -p "$evidence_root"
-run_dir="$(/usr/bin/mktemp -d "$evidence_root/run.XXXXXX")"
-/bin/chmod 0700 "$run_dir"
+/bin/mkdir -p "$evidence_root"
+create_scoped_run_dir
 case "$lifecycle_self_test" in
   initialization-int)
     kill -INT $$
@@ -314,7 +422,7 @@ invalid_user_dir="$run_dir/invalid-user"
 invalid_save_dir="$run_dir/invalid-saves"
 phase_two_user_dir="$run_dir/phase-two-user"
 phase_two_save_dir="$run_dir/phase-two-saves"
-mkdir -p \
+/bin/mkdir -p \
   "$server_user_dir" "$server_save_dir" \
   "$phase_one_user_dir" "$phase_one_save_dir" \
   "$invalid_user_dir" "$invalid_save_dir" \
