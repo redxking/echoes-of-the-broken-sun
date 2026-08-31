@@ -360,6 +360,275 @@ AEchoesEntityView::AEchoesEntityView()
     Tags.Add(TEXT("EchoesEntityView"));
 }
 
+void AEchoesEntityView::ActivateForEntity(
+    const echoes::sim::Entity& State,
+    bool bTeleport)
+{
+    if (!bPreparedForPool)
+    {
+        PrepareForPool();
+    }
+
+    bPreparedForPool = false;
+    SetActorEnableCollision(true);
+    BodyMesh->SetCollisionObjectType(ECC_WorldDynamic);
+    BodyMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+    BodyMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    BodyMesh->SetGenerateOverlapEvents(false);
+    BodyMesh->SetVisibility(true, true);
+    SetActorTickEnabled(true);
+
+    // Rebind while still hidden so no partially configured actor can be picked
+    // or rendered between pool ownership and authoritative activation.
+    ApplyAuthoritativeState(State, bTeleport);
+    SetActorHiddenInGame(false);
+}
+
+void AEchoesEntityView::PrepareForPool()
+{
+    SetSelected(false);
+    SetActorHiddenInGame(true);
+    SetActorTickEnabled(false);
+    SetActorEnableCollision(false);
+    BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+    BodyMesh->SetGenerateOverlapEvents(false);
+
+    EntityId = 0;
+    OwnerPlayerId = echoes::sim::kNeutralPlayer;
+    EntityFaction = echoes::sim::Faction::MeridianCompact;
+    EntityType = echoes::sim::EntityType::Worker;
+    WellChoice = echoes::sim::FutureWellChoice::Dormant;
+    FutureWellVisualChoice = echoes::sim::FutureWellChoice::Dormant;
+    HitPoints = 0;
+    MaxHitPoints = 0;
+    DisplayedHealthFraction = 0.0f;
+    HealthBarWidthScale = 0.9f;
+    HealthBarHeight = 92.0f;
+    BaseBodyColor = FLinearColor::White;
+    DamagePulseRemainingSeconds = 0.0f;
+    AuthoritativeWorldLocation = FVector::ZeroVector;
+    bHasAuthoritativeLocation = false;
+    bSelected = false;
+    bDeployed = false;
+    DeploymentFacing = echoes::sim::Vec2::FromRaw(
+        echoes::sim::kFixedScale,
+        0);
+    bRelaySupplyActive = false;
+    WaystoneMode = echoes::sim::WaystoneMode::NotWaystone;
+    WarformAdaptation = echoes::sim::WarformAdaptation::None;
+    PendingWarformAdaptation = echoes::sim::WarformAdaptation::None;
+    ChoirIdentityState = echoes::sim::ChoirIdentityState::NotChoir;
+    bTemporaryMineralCover = false;
+    bAegisPowered = false;
+    bUsingAuthoredRosterMesh = false;
+    bUsingAuthoredFutureWellMesh = false;
+    bUsingAuthoredResourceMesh = false;
+    FutureWellVisualTimeSeconds = 0.0f;
+    FutureWellCoreBaseScale = FVector::OneVector;
+    SelectionVFXBaseScale = FVector::OneVector;
+    SelectionVFXTimeSeconds = 0.0f;
+    SelectionVFXEmissiveStrength = 0.0f;
+    bSelectionReducedMotionApplied = false;
+    bSelectionReducedFlashingApplied = false;
+    const int32 MaterialSlotsToClear =
+        FMath::Max(ActiveBodyMaterialSlotCount, 4);
+    for (int32 MaterialIndex = 0;
+         MaterialIndex < MaterialSlotsToClear;
+         ++MaterialIndex)
+    {
+        BodyMesh->SetMaterial(MaterialIndex, nullptr);
+    }
+    ActiveBodyMaterialFamily = EBodyMaterialFamily::Basic;
+    ActiveBodyMaterialSlotCount = 0;
+    BodyMaterial = nullptr;
+    BodyMaterials.Reset();
+
+    ResetPresentationComponentsForPool();
+    ResetOwnedMaterialParameters();
+    SetActorTransform(FTransform::Identity, false, nullptr,
+                      ETeleportType::TeleportPhysics);
+    bPreparedForPool = true;
+}
+
+bool AEchoesEntityView::HasBodySelectionCollisionEnabled() const
+{
+    return GetActorEnableCollision() && BodyMesh != nullptr &&
+           BodyMesh->GetCollisionEnabled() == ECollisionEnabled::QueryOnly &&
+           BodyMesh->GetCollisionResponseToChannel(ECC_Visibility) == ECR_Block;
+}
+
+UMaterialInstanceDynamic* AEchoesEntityView::CreateOwnedMaterial(
+    UMaterialInterface* Parent)
+{
+    if (Parent == nullptr)
+    {
+        return nullptr;
+    }
+    UMaterialInstanceDynamic* Material =
+        UMaterialInstanceDynamic::Create(Parent, this);
+    if (Material != nullptr)
+    {
+        ++OwnedMIDCreationCount;
+    }
+    return Material;
+}
+
+void AEchoesEntityView::EnsureBodyMaterialSet(
+    EBodyMaterialFamily Family,
+    UMaterialInterface* Parent,
+    int32 MaterialCount)
+{
+    TArray<TObjectPtr<UMaterialInstanceDynamic>>* Cache = nullptr;
+    switch (Family)
+    {
+        case EBodyMaterialFamily::Basic:
+            Cache = &BasicBodyMaterialCache;
+            break;
+        case EBodyMaterialFamily::AuthoredSurface:
+            Cache = &AuthoredBodyMaterialCache;
+            break;
+        case EBodyMaterialFamily::AuthoredWorldSurface:
+            Cache = &WorldBodyMaterialCache;
+            break;
+    }
+    if (Cache == nullptr || Parent == nullptr || MaterialCount <= 0)
+    {
+        BodyMaterials.Reset();
+        BodyMaterial = nullptr;
+        ActiveBodyMaterialSlotCount = 0;
+        return;
+    }
+
+    while (Cache->Num() < MaterialCount)
+    {
+        Cache->Add(CreateOwnedMaterial(Parent));
+    }
+
+    const int32 SlotsToClear = FMath::Max(ActiveBodyMaterialSlotCount, 4);
+    for (int32 MaterialIndex = 0; MaterialIndex < SlotsToClear; ++MaterialIndex)
+    {
+        BodyMesh->SetMaterial(MaterialIndex, nullptr);
+    }
+    BodyMaterials.Reset(MaterialCount);
+    for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+    {
+        UMaterialInstanceDynamic* Material = (*Cache)[MaterialIndex];
+        BodyMaterials.Add(Material);
+        BodyMesh->SetMaterial(MaterialIndex, Material);
+    }
+    BodyMaterial = BodyMaterials.IsEmpty() ? nullptr : BodyMaterials[0];
+    ActiveBodyMaterialFamily = Family;
+    ActiveBodyMaterialSlotCount = MaterialCount;
+}
+
+void AEchoesEntityView::ResetOwnedMaterialParameters()
+{
+    const auto ResetMaterial = [](UMaterialInstanceDynamic* Material)
+    {
+        if (Material == nullptr)
+        {
+            return;
+        }
+        Material->SetVectorParameterValue(
+            EntityColorParameterName,
+            FLinearColor::White);
+        Material->SetScalarParameterValue(MetallicParameterName, 0.0f);
+        Material->SetScalarParameterValue(RoughnessParameterName, 0.5f);
+        Material->SetScalarParameterValue(EmissiveStrengthParameterName, 0.0f);
+    };
+    const auto ResetArray = [&ResetMaterial](
+                                const TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials)
+    {
+        for (UMaterialInstanceDynamic* Material : Materials)
+        {
+            ResetMaterial(Material);
+        }
+    };
+    ResetArray(BasicBodyMaterialCache);
+    ResetArray(AuthoredBodyMaterialCache);
+    ResetArray(WorldBodyMaterialCache);
+    ResetArray(FutureWellOrbitOuterMaterials);
+    ResetArray(FutureWellOrbitInnerMaterials);
+    ResetArray(FutureWellCoreMaterials);
+    ResetArray(FutureWellGroundGlyphAMaterials);
+    ResetArray(FutureWellGroundGlyphBMaterials);
+    for (UMaterialInstanceDynamic* Material : {
+             SilhouetteAccentMaterial,
+             RingMaterial,
+             HealthBarBackgroundMaterial,
+             HealthBarFillMaterial,
+             OwnerMarkerMaterial,
+             DeploymentCoverMaterial,
+             RelaySupplyFieldMaterial,
+             WaystoneStateFieldMaterial,
+             WarformStateFieldMaterial,
+             ChoirIdentityFieldMaterial,
+             AegisPowerFieldMaterial})
+    {
+        ResetMaterial(Material);
+    }
+}
+
+void AEchoesEntityView::ResetPresentationComponentsForPool()
+{
+    BodyMesh->SetRenderCustomDepth(false);
+    BodyMesh->SetCustomDepthStencilValue(0);
+    BodyMesh->SetCustomPrimitiveDataFloat(0, 0.0f);
+    BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+    BodyMesh->SetRelativeRotation(FRotator::ZeroRotator);
+    BodyMesh->SetRelativeScale3D(FVector::OneVector);
+
+    SilhouetteAccent->SetVisibility(false, true);
+    SilhouetteAccent->SetRenderCustomDepth(false);
+    SilhouetteAccent->SetCustomDepthStencilValue(0);
+    SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
+    SilhouetteAccent->SetRelativeRotation(FRotator::ZeroRotator);
+    SilhouetteAccent->SetRelativeScale3D(FVector::OneVector);
+
+    SelectionRing->SetVisibility(false, true);
+    SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
+    SelectionRing->SetRelativeRotation(FRotator::ZeroRotator);
+    SelectionRing->SetRelativeScale3D(FVector::OneVector);
+
+    for (UStaticMeshComponent* Component : {
+             HealthBarBackground,
+             HealthBarFill,
+             OwnerMarker,
+             DeploymentCover,
+             RelaySupplyField,
+             WaystoneStateField,
+             WarformStateField,
+             ChoirIdentityField,
+             AegisPowerField,
+             FutureWellOrbitOuter,
+             FutureWellOrbitInner,
+             FutureWellCore,
+             FutureWellGroundGlyphA,
+             FutureWellGroundGlyphB})
+    {
+        Component->SetVisibility(false, true);
+        Component->SetRelativeRotation(FRotator::ZeroRotator);
+        Component->SetRelativeScale3D(FVector::OneVector);
+    }
+    HealthBarBackground->SetRelativeLocation(FVector::ZeroVector);
+    HealthBarFill->SetRelativeLocation(FVector::ZeroVector);
+    OwnerMarker->SetRelativeLocation(FVector::ZeroVector);
+    OwnerMarker->SetStaticMesh(nullptr);
+    DeploymentCover->SetRelativeLocation(FVector::ZeroVector);
+    RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+    WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
+    WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+    ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
+    AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
+    FutureWellOrbitOuter->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellOrbitInner->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellCore->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellGroundGlyphA->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellGroundGlyphB->SetRelativeLocation(FVector::ZeroVector);
+}
+
 void AEchoesEntityView::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -988,8 +1257,6 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 
     if (BasicMaterial != nullptr)
     {
-        BodyMaterials.Reset();
-        BodyMaterial = nullptr;
         const bool bUsingAuthoredPresentationMesh =
             bUsingAuthoredRosterMesh || bUsingAuthoredFutureWellMesh ||
             bUsingAuthoredResourceMesh;
@@ -1001,98 +1268,69 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             : bUsingAuthoredPresentationMesh && AuthoredSurfaceMaterial != nullptr
                 ? AuthoredSurfaceMaterial
                 : BasicMaterial;
-        for (int32 MaterialIndex = 0;
-             MaterialIndex < BodyMaterialCount;
-             ++MaterialIndex)
-        {
-            UMaterialInstanceDynamic* Material =
-                UMaterialInstanceDynamic::Create(BodyParent, this);
-            BodyMaterials.Add(Material);
-            BodyMesh->SetMaterial(MaterialIndex, Material);
-        }
-        if (!BodyMaterials.IsEmpty())
-        {
-            BodyMaterial = BodyMaterials[0];
-        }
+        const EBodyMaterialFamily BodyFamily =
+            bUsingAuthoredResourceMesh
+                ? EBodyMaterialFamily::AuthoredWorldSurface
+            : bUsingAuthoredPresentationMesh
+                ? EBodyMaterialFamily::AuthoredSurface
+                : EBodyMaterialFamily::Basic;
+        EnsureBodyMaterialSet(BodyFamily, BodyParent, BodyMaterialCount);
         if (SilhouetteAccentMaterial == nullptr)
         {
             SilhouetteAccentMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+                CreateOwnedMaterial(BasicMaterial);
             SilhouetteAccent->SetMaterial(0, SilhouetteAccentMaterial);
         }
         if (RingMaterial == nullptr)
         {
-            RingMaterial = UMaterialInstanceDynamic::Create(
-                AuthoredPresentationVFXMaterial,
-                this);
-            RingMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.08f, 1.0f, 0.68f));
-            RingMaterial->SetScalarParameterValue(
-                EmissiveStrengthParameterName,
-                1.9f);
+            RingMaterial = CreateOwnedMaterial(AuthoredPresentationVFXMaterial);
             SelectionRing->SetMaterial(0, RingMaterial);
         }
         if (HealthBarBackgroundMaterial == nullptr)
         {
             HealthBarBackgroundMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            HealthBarBackgroundMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.008f, 0.012f, 0.018f));
+                CreateOwnedMaterial(BasicMaterial);
             HealthBarBackground->SetMaterial(0, HealthBarBackgroundMaterial);
         }
         if (HealthBarFillMaterial == nullptr)
         {
             HealthBarFillMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+                CreateOwnedMaterial(BasicMaterial);
             HealthBarFill->SetMaterial(0, HealthBarFillMaterial);
         }
         if (OwnerMarkerMaterial == nullptr)
         {
-            OwnerMarkerMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
+            OwnerMarkerMaterial = CreateOwnedMaterial(BasicMaterial);
             OwnerMarker->SetMaterial(0, OwnerMarkerMaterial);
         }
         if (DeploymentCoverMaterial == nullptr)
         {
             DeploymentCoverMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            DeploymentCoverMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.10f, 0.88f, 0.92f));
+                CreateOwnedMaterial(BasicMaterial);
             DeploymentCover->SetMaterial(0, DeploymentCoverMaterial);
         }
         if (RelaySupplyFieldMaterial == nullptr)
         {
             RelaySupplyFieldMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            RelaySupplyFieldMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.95f, 0.76f, 0.18f));
+                CreateOwnedMaterial(BasicMaterial);
             RelaySupplyField->SetMaterial(0, RelaySupplyFieldMaterial);
         }
         if (WaystoneStateFieldMaterial == nullptr)
         {
             WaystoneStateFieldMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            WaystoneStateFieldMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.58f, 0.22f, 0.92f));
+                CreateOwnedMaterial(BasicMaterial);
             WaystoneStateField->SetMaterial(0, WaystoneStateFieldMaterial);
         }
         if (WarformStateFieldMaterial == nullptr)
         {
             WarformStateFieldMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
-            WarformStateFieldMaterial->SetVectorParameterValue(
-                EntityColorParameterName,
-                FLinearColor(0.88f, 0.56f, 0.14f));
+                CreateOwnedMaterial(BasicMaterial);
             WarformStateField->SetMaterial(0, WarformStateFieldMaterial);
         }
         if (ChoirIdentityFieldMaterial == nullptr)
         {
             ChoirIdentityFieldMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+                CreateOwnedMaterial(BasicMaterial);
             ChoirIdentityField->SetMaterial(
                 0, ChoirIdentityFieldMaterial);
         }
@@ -1119,11 +1357,53 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         if (AegisPowerFieldMaterial == nullptr)
         {
             AegisPowerFieldMaterial =
-                UMaterialInstanceDynamic::Create(BasicMaterial, this);
+                CreateOwnedMaterial(BasicMaterial);
+            AegisPowerField->SetMaterial(0, AegisPowerFieldMaterial);
+        }
+        if (RingMaterial != nullptr)
+        {
+            RingMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.08f, 1.0f, 0.68f));
+            RingMaterial->SetScalarParameterValue(
+                EmissiveStrengthParameterName,
+                1.9f);
+        }
+        if (HealthBarBackgroundMaterial != nullptr)
+        {
+            HealthBarBackgroundMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.008f, 0.012f, 0.018f));
+        }
+        if (DeploymentCoverMaterial != nullptr)
+        {
+            DeploymentCoverMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.10f, 0.88f, 0.92f));
+        }
+        if (RelaySupplyFieldMaterial != nullptr)
+        {
+            RelaySupplyFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.95f, 0.76f, 0.18f));
+        }
+        if (WaystoneStateFieldMaterial != nullptr)
+        {
+            WaystoneStateFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.58f, 0.22f, 0.92f));
+        }
+        if (WarformStateFieldMaterial != nullptr)
+        {
+            WarformStateFieldMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(0.88f, 0.56f, 0.14f));
+        }
+        if (AegisPowerFieldMaterial != nullptr)
+        {
             AegisPowerFieldMaterial->SetVectorParameterValue(
                 EntityColorParameterName,
                 FLinearColor(0.98f, 0.84f, 0.18f));
-            AegisPowerField->SetMaterial(0, AegisPowerFieldMaterial);
         }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = bUsingAuthoredFutureWellMesh
@@ -1233,7 +1513,7 @@ void AEchoesEntityView::EnsureFutureWellMaterialSet(
         for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
         {
             UMaterialInstanceDynamic* Material =
-                UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+                CreateOwnedMaterial(AuthoredSurfaceMaterial);
             Materials.Add(Material);
         }
     }

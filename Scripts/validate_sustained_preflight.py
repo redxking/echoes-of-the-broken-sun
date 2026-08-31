@@ -202,6 +202,9 @@ def recompute_process_measurements(
     cpu = [row[2] for row in steady]
     all_rss = [row[1] for row in observations]
     all_cpu = [row[2] for row in observations]
+    ready_baseline_rss = observations[0][1]
+    active_window_rss_high_water = max(all_rss)
+    ready_to_high_water_growth = active_window_rss_high_water - ready_baseline_rss
     mean_elapsed = statistics.fmean(elapsed)
     mean_rss = statistics.fmean(rss)
     denominator = sum((value - mean_elapsed) ** 2 for value in elapsed)
@@ -225,6 +228,8 @@ def recompute_process_measurements(
         "structured_sustained_contract": True,
         "sampled_active_window_resident_memory_peak_mib_le_10240":
             max(all_rss) <= 10240.0,
+        "ready_baseline_to_active_window_rss_high_water_growth_mib_le_128":
+            ready_to_high_water_growth <= 128.0,
         "steady_window_growth_mib_le_64": window_growth <= 64.0,
         "steady_linear_growth_mib_per_hour_le_128": slope_per_hour <= 128.0,
     }
@@ -236,6 +241,11 @@ def recompute_process_measurements(
         "warmup_seconds": warmup_seconds,
         "sampled_active_window_resident_memory_mib": {
             "peak": round(max(all_rss), 6),
+            "ready_baseline": round(ready_baseline_rss, 6),
+            "active_window_high_water": round(active_window_rss_high_water, 6),
+            "ready_baseline_to_active_window_high_water_growth": round(
+                ready_to_high_water_growth, 6
+            ),
             "steady_mean": round(mean_rss, 6),
             "steady_p95": round(percentile(rss, 0.95), 6),
             "steady_peak": round(max(rss), 6),

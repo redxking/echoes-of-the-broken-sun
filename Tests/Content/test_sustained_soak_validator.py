@@ -19,7 +19,9 @@ READY = (
     "meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 "
     "team2=100 team3=100 commandCores=4 combatUnits=396 "
     "ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 "
-    "protectedCoreMask=15"
+    "protectedCoreMask=15 memoryPoolSchema=2 memoryTelemetryIntervalTicks=200 "
+    "entityFreeCapacity=512 effectsQuality=3 destructionCapacity=396 "
+    "initialCommandLog=396 commandCapacity=262144"
 )
 
 STABILIZED = (
@@ -34,15 +36,61 @@ STABILIZATION_RESET = (
 )
 
 
-def valid_log(duration_seconds: int = 10, qualified: bool = False) -> str:
-    lines = [STABILIZATION_RESET, STABILIZED, READY]
+def memory_line(
+    tick: int,
+    wall_ms: int,
+    cumulative_replacements: int,
+    command_log: int,
+) -> str:
+    destruction_created = min(cumulative_replacements, 2)
+    destruction_active = 0
+    destruction_free = destruction_created
+    destruction_reused = max(0, cumulative_replacements - destruction_created)
+    destruction_released = cumulative_replacements
+    return (
+        "[ECHOES_STRESS_SUSTAINED_MEMORY] schema=2 fixture=Stress400Sustained "
+        f"tick={tick} wall_ms={wall_ms} sequence={tick // 200} intervalTicks=200 "
+        "processUsedPhysicalBytes=536870912 processPeakUsedPhysicalBytes=536870912 "
+        "globalObjectSlots=100000 globalObjectClaimed=90000 gcCycles=0 "
+        "gcLastPreUsedPhysicalBytes=0 gcLastPostUsedPhysicalBytes=0 "
+        "gcLastUsedPhysicalDeltaBytes=0 gcLastObjectSlotDelta=0 "
+        "gcLastClaimedObjectSlotDelta=0 entityActive=401 entityFree=0 "
+        "entityFreeCapacity=512 entityCreated=401 "
+        f"entityReused={cumulative_replacements} "
+        f"entityReleased={cumulative_replacements} entityOverflow=0 "
+        f"effectsQuality=3 destructionActive={destruction_active} "
+        f"destructionFree={destruction_free} destructionCapacity=396 "
+        f"destructionCreated={destruction_created} "
+        f"destructionReused={destruction_reused} "
+        f"destructionActivated={cumulative_replacements} "
+        f"destructionReleased={destruction_released} "
+        "destructionOverflow=0 destructionCoalesced=0 entityMIDCreated=6035 "
+        f"destructionMIDCreated={destruction_created * 4} "
+        f"commandLog={command_log} commandLimit=262144 commandLogCapacity=512 "
+        "commandElementBytes=128 commandLogAllocatedBytes=65536 "
+        f"cumulativeReplacements={cumulative_replacements} "
+        "naturalGc=true forcedGc=false authoritative=false"
+    )
+
+
+def valid_log(
+    duration_seconds: int = 10,
+    qualified: bool = False,
+    replacement_seconds: tuple[int, ...] = (5,),
+) -> str:
+    lines = [
+        STABILIZATION_RESET,
+        STABILIZED,
+        READY,
+        memory_line(0, 0, 0, 396),
+    ]
     cumulative_losses = 0
     cumulative_replacements = 0
     cumulative_renewals = 0
     boundary_values: tuple[int, int, int, int, int] | None = None
     for second in range(1, duration_seconds + 1):
         tick = second * 20
-        interval_losses = 1 if second == 5 else 0
+        interval_losses = 1 if second in replacement_seconds else 0
         interval_replacements = interval_losses
         interval_renewals = 1 if second == 6 else 0
         cumulative_losses += interval_losses
@@ -70,6 +118,15 @@ def valid_log(duration_seconds: int = 10, qualified: bool = False) -> str:
             "projectedCommandCeiling=214796 commandSafetyReserve=47348 "
             "qualificationTicks=72000"
         )
+        if tick % 200 == 0:
+            lines.append(
+                memory_line(
+                    tick,
+                    second * 1000,
+                    cumulative_replacements,
+                    command_log,
+                )
+            )
         if tick == 72_000:
             boundary_values = (
                 checksum,
@@ -104,13 +161,110 @@ class SustainedSoakValidatorTests(unittest.TestCase):
         self.assertTrue(result["accepted"])
         self.assertEqual(result["final_tick"], 200)
         self.assertEqual(result["cumulative_replacements"], 1)
+        self.assertEqual(result["memory_telemetry_count"], 2)
         self.assertFalse(result["qualified_one_hour"])
 
     def test_valid_one_hour_boundary_is_accepted(self) -> None:
         result = validate_log(valid_log(3600, qualified=True), 3600)
         self.assertEqual(result["final_tick"], 72_000)
         self.assertEqual(result["heartbeat_count"], 3600)
+        self.assertEqual(result["memory_telemetry_count"], 361)
         self.assertTrue(result["qualified_one_hour"])
+
+    def test_memory_telemetry_is_exact_ordered_and_reconciled(self) -> None:
+        valid = valid_log()
+        memory_lines = [
+            line
+            for line in valid.splitlines()
+            if "[ECHOES_STRESS_SUSTAINED_MEMORY]" in line
+        ]
+        self.assertEqual(len(memory_lines), 2)
+        self.assert_rejected(valid.replace(memory_lines[0] + "\n", "", 1))
+        self.assert_rejected(
+            valid.replace(memory_lines[0], memory_lines[0] + "\n" + memory_lines[0], 1)
+        )
+        self.assert_rejected(valid.replace("schema=2", "schema=3", 1))
+        obsolete_actor_key = "validLevel" + "Actors"
+        self.assert_rejected(
+            valid.replace(
+                " commandLog=",
+                f" {obsolete_actor_key}=406 commandLog=",
+                1,
+            )
+        )
+        self.assert_rejected(valid.replace("entityReused=1", "entityReused=0", 1))
+        self.assert_rejected(
+            valid.replace("destructionOverflow=0", "destructionOverflow=1", 1)
+        )
+        self.assert_rejected(
+            valid.replace("commandLogAllocatedBytes=65536", "commandLogAllocatedBytes=1", 1)
+        )
+        lines = valid.splitlines()
+        heartbeat_index = next(
+            index
+            for index, line in enumerate(lines)
+            if "[ECHOES_STRESS_SUSTAINED_HEARTBEAT]" in line and "tick=200 " in line
+        )
+        memory_index = next(
+            index
+            for index, line in enumerate(lines)
+            if "[ECHOES_STRESS_SUSTAINED_MEMORY]" in line and "tick=200 " in line
+        )
+        lines[heartbeat_index], lines[memory_index] = (
+            lines[memory_index],
+            lines[heartbeat_index],
+        )
+        self.assert_rejected("\n".join(lines) + "\n")
+
+    def test_memory_telemetry_accepts_signed_natural_gc_deltas(self) -> None:
+        valid = valid_log()
+        valid = valid.replace("gcCycles=0", "gcCycles=1")
+        valid = valid.replace(
+            "gcLastPreUsedPhysicalBytes=0 gcLastPostUsedPhysicalBytes=0 "
+            "gcLastUsedPhysicalDeltaBytes=0 gcLastObjectSlotDelta=0 "
+            "gcLastClaimedObjectSlotDelta=0",
+            "gcLastPreUsedPhysicalBytes=550000000 "
+            "gcLastPostUsedPhysicalBytes=530000000 "
+            "gcLastUsedPhysicalDeltaBytes=-20000000 gcLastObjectSlotDelta=-200 "
+            "gcLastClaimedObjectSlotDelta=-400",
+        )
+        self.assertTrue(validate_log(valid, 10)["accepted"])
+        self.assert_rejected(
+            valid.replace(
+                "gcLastUsedPhysicalDeltaBytes=-20000000",
+                "gcLastUsedPhysicalDeltaBytes=-19999999",
+            )
+        )
+        positive = valid.replace(
+            "gcLastPreUsedPhysicalBytes=550000000 "
+            "gcLastPostUsedPhysicalBytes=530000000 "
+            "gcLastUsedPhysicalDeltaBytes=-20000000",
+            "gcLastPreUsedPhysicalBytes=530000000 "
+            "gcLastPostUsedPhysicalBytes=550000000 "
+            "gcLastUsedPhysicalDeltaBytes=20000000",
+        )
+        self.assertTrue(validate_log(positive, 10)["accepted"])
+        self.assert_rejected(
+            positive.replace(
+                "gcLastUsedPhysicalDeltaBytes=20000000",
+                "gcLastUsedPhysicalDeltaBytes=19999999",
+            )
+        )
+
+    def test_memory_telemetry_rejects_non_natural_or_forced_gc_claims(self) -> None:
+        valid = valid_log()
+        self.assert_rejected(valid.replace("naturalGc=true", "naturalGc=false", 1))
+        self.assert_rejected(valid.replace("forcedGc=false", "forcedGc=true", 1))
+
+    def test_post_warmup_pool_and_mid_plateau_is_required(self) -> None:
+        with self.assertRaisesRegex(
+            ValidationError,
+            "post-warmup destruction pool or MID count did not plateau",
+        ):
+            validate_log(
+                valid_log(130, replacement_seconds=(5, 125)),
+                130,
+            )
 
     def test_readiness_is_exact_and_precedes_heartbeats(self) -> None:
         valid = valid_log()

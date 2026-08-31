@@ -292,6 +292,10 @@ public:
     }
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FEchoesNetworkProtocolTest;
+#endif
+
     UFUNCTION(Server, Reliable)
     void ServerSubmitNetworkResumeCredential(const FString& Credential);
 
@@ -441,6 +445,10 @@ private:
         const echoes::sim::net::ScopedViewKeyframe& FinalView);
     bool SyncNetworkPresentation(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe);
+    [[nodiscard]] static echoes::sim::Entity BuildNetworkPresentationEntity(
+        const echoes::sim::net::ScopedEntityState& Scoped);
+    [[nodiscard]] AEchoesEntityView* AcquireNetworkEntityView();
+    void ReleaseNetworkEntityView(AEchoesEntityView* View);
     void DestroyNetworkPresentation();
     void QueueNetworkSmokeHostCommand();
     void VerifyRemoteCommandExecution();
@@ -641,6 +649,8 @@ private:
         LastSentNetworkKeyframe{};
     TMap<uint64, uint64> PendingNetworkSnapshotDigests;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> NetworkEntityViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesEntityView>> NetworkFreeEntityViews;
     TWeakObjectPtr<AEchoesFogView> NetworkFogView;
     TWeakObjectPtr<AEchoesTerrainView> NetworkTerrainView;
     TWeakObjectPtr<AStaticMeshActor> NetworkGroundView;

@@ -4,8 +4,12 @@
 
 #include "EchoesTestSaveEnvironment.h"
 
+#include "EchoesEntityView.h"
 #include "EchoesNetworkSession.h"
+#include "EchoesPlayerController.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "Engine/World.h"
+#include "Tests/AutomationCommon.h"
 
 #include <algorithm>
 
@@ -344,7 +348,101 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
              ClientView.Accept(WrongSeat) ==
                  echoes::network::ScopedViewAcceptance::PlayerChanged);
 
-    return true;
+    FTestWorldWrapper PresentationWorldWrapper;
+    if (!PresentationWorldWrapper.CreateTestWorld(EWorldType::Game))
+    {
+        PresentationWorldWrapper.ForwardErrorMessages(this);
+        AddError(TEXT("Could not create the network-presentation pooling world."));
+        return false;
+    }
+    UWorld* PresentationWorld = PresentationWorldWrapper.GetTestWorld();
+    AEchoesPlayerController* PresentationController =
+        PresentationWorld != nullptr
+            ? PresentationWorld->SpawnActor<AEchoesPlayerController>()
+            : nullptr;
+    if (TestNotNull(TEXT("Network-presentation controller spawns"),
+                    PresentationController))
+    {
+        ScopedEntityState PossibleChoir{};
+        PossibleChoir.id = 900001;
+        PossibleChoir.owner = 1;
+        PossibleChoir.faction = Faction::HollowChoir;
+        PossibleChoir.type = EntityType::Soldier;
+        PossibleChoir.position = Vec2::FromTiles(5, 5);
+        PossibleChoir.hitPoints = 70;
+        PossibleChoir.maxHitPoints = 90;
+        PossibleChoir.choirIdentityState = ChoirIdentityState::Possible;
+        PossibleChoir.choirIdentityResolveAtTick = 111;
+        PossibleChoir.choirIdentityNextAvailableTick = 222;
+        PossibleChoir.choirCoherenceNextChargeTick = 333;
+        const Entity PossiblePresentation =
+            PresentationController->BuildNetworkPresentationEntity(
+                PossibleChoir);
+        TestTrue(TEXT("Network mapping preserves all public Choir identity state"),
+                 PossiblePresentation.choirIdentityState ==
+                         PossibleChoir.choirIdentityState &&
+                     PossiblePresentation.choirIdentityResolveAtTick ==
+                         PossibleChoir.choirIdentityResolveAtTick &&
+                     PossiblePresentation.choirIdentityNextAvailableTick ==
+                         PossibleChoir.choirIdentityNextAvailableTick &&
+                     PossiblePresentation.choirCoherenceNextChargeTick ==
+                         PossibleChoir.choirCoherenceNextChargeTick);
+
+        AEchoesEntityView* FirstNetworkView =
+            PresentationController->AcquireNetworkEntityView();
+        if (TestNotNull(TEXT("Network pool acquires an entity view"),
+                        FirstNetworkView))
+        {
+            FirstNetworkView->ActivateForEntity(PossiblePresentation, true);
+            TestTrue(TEXT("Network activation renders the possible Choir identity"),
+                     FirstNetworkView->GetEntityId() == PossibleChoir.id &&
+                         FirstNetworkView->GetChoirIdentityState() ==
+                             ChoirIdentityState::Possible &&
+                         FirstNetworkView->IsChoirIdentityStateVisible());
+            const uint64 WarmMIDCount =
+                FirstNetworkView->GetOwnedMIDCreationCount();
+            PresentationController->ReleaseNetworkEntityView(FirstNetworkView);
+            TestTrue(TEXT("Network retirement fully clears identity before pooling"),
+                     FirstNetworkView->IsPreparedForPool() &&
+                         FirstNetworkView->GetEntityId() == 0 &&
+                         FirstNetworkView->GetChoirIdentityState() ==
+                             ChoirIdentityState::NotChoir &&
+                         !FirstNetworkView->IsChoirIdentityStateVisible());
+
+            ScopedEntityState ManifestChoir = PossibleChoir;
+            ManifestChoir.id = 900002;
+            ManifestChoir.choirIdentityState = ChoirIdentityState::Manifest;
+            ManifestChoir.choirIdentityResolveAtTick = 444;
+            ManifestChoir.choirIdentityNextAvailableTick = 555;
+            ManifestChoir.choirCoherenceNextChargeTick = 666;
+            const Entity ManifestPresentation =
+                PresentationController->BuildNetworkPresentationEntity(
+                    ManifestChoir);
+            AEchoesEntityView* ReusedNetworkView =
+                PresentationController->AcquireNetworkEntityView();
+            TestTrue(TEXT("Network acquisition deterministically reuses the retired view"),
+                     ReusedNetworkView == FirstNetworkView);
+            if (ReusedNetworkView != nullptr)
+            {
+                ReusedNetworkView->ActivateForEntity(
+                    ManifestPresentation, true);
+                TestTrue(TEXT("Network reuse rebinds the new scoped Choir identity"),
+                         ReusedNetworkView->GetEntityId() == ManifestChoir.id &&
+                             ReusedNetworkView->GetChoirIdentityState() ==
+                                 ChoirIdentityState::Manifest &&
+                             ReusedNetworkView->IsChoirIdentityStateVisible());
+                TestEqual(TEXT("Warmed network reuse creates no additional MIDs"),
+                          ReusedNetworkView->GetOwnedMIDCreationCount(),
+                          WarmMIDCount);
+                PresentationController->ReleaseNetworkEntityView(
+                    ReusedNetworkView);
+            }
+        }
+        PresentationController->DestroyNetworkPresentation();
+        PresentationController->Destroy();
+    }
+    PresentationWorldWrapper.ForwardErrorMessages(this);
+    return !HasAnyErrors() && !PresentationWorldWrapper.HasFailed();
 }
 
 #endif

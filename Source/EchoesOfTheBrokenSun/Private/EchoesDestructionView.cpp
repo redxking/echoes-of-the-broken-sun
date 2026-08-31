@@ -59,6 +59,9 @@ AEchoesDestructionView::AEchoesDestructionView()
     ShardB->SetRelativeLocation(FVector(-34.0f, -12.0f, 19.0f));
     ShardB->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
     Tags.Add(TEXT("EchoesDestructionView"));
+    SetActorEnableCollision(false);
+    SetActorHiddenInGame(true);
+    SetActorTickEnabled(false);
 }
 
 void AEchoesDestructionView::InitializeDestruction(
@@ -68,6 +71,9 @@ void AEchoesDestructionView::InitializeDestruction(
     bool bInReducedFlashing,
     float InLifetimeSeconds)
 {
+    SetActorHiddenInGame(true);
+    SetActorEnableCollision(false);
+    SetActorTickEnabled(false);
     bReducedMotion = bInReducedMotion;
     bReducedFlashing = bInReducedFlashing;
     ElapsedSeconds = 0.0f;
@@ -110,29 +116,50 @@ void AEchoesDestructionView::InitializeDestruction(
     CoreEmber->SetRelativeScale3D(FVector(1.0f));
     ShardA->SetRelativeLocation(FVector(38.0f, 8.0f, 16.0f));
     ShardB->SetRelativeLocation(FVector(-34.0f, -12.0f, 19.0f));
+    ShardA->SetRelativeRotation(FRotator::ZeroRotator);
+    ShardB->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
     BaseRingScale = ShockRing->GetRelativeScale3D();
     BaseCoreScale = CoreEmber->GetRelativeScale3D();
     BaseShardALocation = ShardA->GetRelativeLocation();
     BaseShardBLocation = ShardB->GetRelativeLocation();
 
-    RingMaterial = UMaterialInstanceDynamic::Create(VFXMaterial, this);
-    CoreMaterial = UMaterialInstanceDynamic::Create(VFXMaterial, this);
-    ShardAMaterial = UMaterialInstanceDynamic::Create(VFXMaterial, this);
-    ShardBMaterial = UMaterialInstanceDynamic::Create(VFXMaterial, this);
+    if (RingMaterial == nullptr)
+    {
+        RingMaterial = CreateOwnedMaterial();
+    }
+    if (CoreMaterial == nullptr)
+    {
+        CoreMaterial = CreateOwnedMaterial();
+    }
+    if (ShardAMaterial == nullptr)
+    {
+        ShardAMaterial = CreateOwnedMaterial();
+    }
+    if (ShardBMaterial == nullptr)
+    {
+        ShardBMaterial = CreateOwnedMaterial();
+    }
     ShockRing->SetMaterial(0, RingMaterial);
     CoreEmber->SetMaterial(0, CoreMaterial);
     ShardA->SetMaterial(0, ShardAMaterial);
     ShardB->SetMaterial(0, ShardBMaterial);
     ApplyAppearance(BaseColor, bReducedFlashing ? 1.15f : 3.6f);
+    bPresentationActive = true;
+    SetActorTickEnabled(true);
+    SetActorHiddenInGame(false);
 }
 
 void AEchoesDestructionView::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if (!bPresentationActive)
+    {
+        return;
+    }
     ElapsedSeconds += DeltaSeconds;
     if (ElapsedSeconds >= PresentationLifetimeSeconds)
     {
-        Destroy();
+        PrepareForPool();
         return;
     }
 
@@ -167,6 +194,69 @@ void AEchoesDestructionView::Tick(float DeltaSeconds)
                                        ? 1.15f
                                        : FMath::Lerp(3.6f, 1.25f, Alpha);
     ApplyAppearance(BaseColor, EmissiveStrength);
+}
+
+void AEchoesDestructionView::PrepareForPool()
+{
+    bPresentationActive = false;
+    SetActorHiddenInGame(true);
+    SetActorTickEnabled(false);
+    SetActorEnableCollision(false);
+    ElapsedSeconds = 0.0f;
+    PresentationLifetimeSeconds = 1.6f;
+    CurrentEmissiveStrength = 0.0f;
+    BaseColor = FLinearColor::White;
+    bReducedMotion = false;
+    bReducedFlashing = false;
+    CoalescedOverflowCount = 0;
+    SetActorScale3D(FVector::OneVector);
+    ShockRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 1.0f));
+    CoreEmber->SetRelativeScale3D(FVector::OneVector);
+    ShardA->SetRelativeLocation(FVector(38.0f, 8.0f, 16.0f));
+    ShardB->SetRelativeLocation(FVector(-34.0f, -12.0f, 19.0f));
+    ShardA->SetRelativeRotation(FRotator::ZeroRotator);
+    ShardB->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
+    BaseRingScale = ShockRing->GetRelativeScale3D();
+    BaseCoreScale = CoreEmber->GetRelativeScale3D();
+    BaseShardALocation = ShardA->GetRelativeLocation();
+    BaseShardBLocation = ShardB->GetRelativeLocation();
+    ApplyAppearance(FLinearColor::White, 0.0f);
+    SetActorLocationAndRotation(
+        FVector::ZeroVector,
+        FRotator::ZeroRotator,
+        false,
+        nullptr,
+        ETeleportType::TeleportPhysics);
+}
+
+void AEchoesDestructionView::RegisterOverflowCoalesced()
+{
+    if (!bPresentationActive)
+    {
+        return;
+    }
+    ++CoalescedOverflowCount;
+    const float CoalescedEmission = bReducedFlashing
+                                        ? 1.15f
+                                        : FMath::Max(
+                                              CurrentEmissiveStrength,
+                                              3.6f);
+    ApplyAppearance(BaseColor, CoalescedEmission);
+}
+
+UMaterialInstanceDynamic* AEchoesDestructionView::CreateOwnedMaterial()
+{
+    if (VFXMaterial == nullptr)
+    {
+        return nullptr;
+    }
+    UMaterialInstanceDynamic* Material =
+        UMaterialInstanceDynamic::Create(VFXMaterial, this);
+    if (Material != nullptr)
+    {
+        ++OwnedMIDCreationCount;
+    }
+    return Material;
 }
 
 void AEchoesDestructionView::ApplyAppearance(

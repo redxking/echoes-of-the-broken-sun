@@ -15,6 +15,7 @@ READY_MARKER = "[ECHOES_STRESS_SUSTAINED_READY]"
 STABILIZATION_RESET_MARKER = "[ECHOES_STRESS_SUSTAINED_STABILIZATION_RESET]"
 STABILIZED_MARKER = "[ECHOES_STRESS_SUSTAINED_STABILIZED]"
 HEARTBEAT_MARKER = "[ECHOES_STRESS_SUSTAINED_HEARTBEAT]"
+MEMORY_MARKER = "[ECHOES_STRESS_SUSTAINED_MEMORY]"
 QUALIFIED_MARKER = "[ECHOES_STRESS_SUSTAINED_QUALIFIED]"
 
 FORBIDDEN_MARKERS = (
@@ -74,6 +75,13 @@ READY_KEYS = {
     "views",
     "tickRate",
     "protectedCoreMask",
+    "memoryPoolSchema",
+    "memoryTelemetryIntervalTicks",
+    "entityFreeCapacity",
+    "effectsQuality",
+    "destructionCapacity",
+    "initialCommandLog",
+    "commandCapacity",
 }
 
 STABILIZATION_RESET_KEYS = {
@@ -135,6 +143,53 @@ HEARTBEAT_KEYS = {
     "projectedCommandCeiling",
     "commandSafetyReserve",
     "qualificationTicks",
+}
+
+MEMORY_KEYS = {
+    "schema",
+    "fixture",
+    "tick",
+    "wall_ms",
+    "sequence",
+    "intervalTicks",
+    "processUsedPhysicalBytes",
+    "processPeakUsedPhysicalBytes",
+    "globalObjectSlots",
+    "globalObjectClaimed",
+    "gcCycles",
+    "gcLastPreUsedPhysicalBytes",
+    "gcLastPostUsedPhysicalBytes",
+    "gcLastUsedPhysicalDeltaBytes",
+    "gcLastObjectSlotDelta",
+    "gcLastClaimedObjectSlotDelta",
+    "entityActive",
+    "entityFree",
+    "entityFreeCapacity",
+    "entityCreated",
+    "entityReused",
+    "entityReleased",
+    "entityOverflow",
+    "effectsQuality",
+    "destructionActive",
+    "destructionFree",
+    "destructionCapacity",
+    "destructionCreated",
+    "destructionReused",
+    "destructionActivated",
+    "destructionReleased",
+    "destructionOverflow",
+    "destructionCoalesced",
+    "entityMIDCreated",
+    "destructionMIDCreated",
+    "commandLog",
+    "commandLimit",
+    "commandLogCapacity",
+    "commandElementBytes",
+    "commandLogAllocatedBytes",
+    "cumulativeReplacements",
+    "naturalGc",
+    "forcedGc",
+    "authoritative",
 }
 
 QUALIFIED_KEYS = {
@@ -227,6 +282,13 @@ def _as_int(fields: dict[str, str], key: str) -> int:
     return value
 
 
+def _as_signed_int(fields: dict[str, str], key: str) -> int:
+    try:
+        return int(fields[key], 10)
+    except ValueError as exc:
+        raise ValidationError(f"field {key} is not a base-10 integer") from exc
+
+
 def _require_exact(fields: dict[str, str], expected: dict[str, object]) -> None:
     for key, value in expected.items():
         observed: object = fields[key] if isinstance(value, str) else _as_int(fields, key)
@@ -310,8 +372,25 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
     _require_exact(ready, EXACT_COMMON)
     _require_exact(
         ready,
-        {"tick": 0, "tickRate": 20, "protectedCoreMask": 15},
+        {
+            "tick": 0,
+            "tickRate": 20,
+            "protectedCoreMask": 15,
+            "memoryPoolSchema": 2,
+            "memoryTelemetryIntervalTicks": 200,
+            "entityFreeCapacity": 512,
+            "initialCommandLog": 396,
+            "commandCapacity": 262_144,
+        },
     )
+    effects_quality = _as_int(ready, "effectsQuality")
+    if effects_quality > 3:
+        raise ValidationError("readiness effects quality is outside 0 through 3")
+    expected_destruction_capacity = (
+        64 if effects_quality == 0 else 160 if effects_quality == 1 else 396
+    )
+    if _as_int(ready, "destructionCapacity") != expected_destruction_capacity:
+        raise ValidationError("readiness destruction capacity does not match effects quality")
     if _as_int(ready, "checksum") == 0:
         raise ValidationError("readiness checksum must be nonzero")
 
@@ -417,6 +496,230 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
     if previous_replacements == 0:
         raise ValidationError("no deterministic loss-and-replacement cycle was observed")
 
+    memory_records = _records(lines, MEMORY_MARKER, MEMORY_KEYS)
+    expected_memory_ticks = list(range(0, previous_tick + 1, 200))
+    if len(memory_records) != len(expected_memory_ticks):
+        raise ValidationError(
+            "memory telemetry count drifted: "
+            f"expected {len(expected_memory_ticks)}, observed {len(memory_records)}"
+        )
+    previous_memory: dict[str, int] | None = None
+    baseline_entity_mid_count: int | None = None
+    warm_plateau: tuple[int, int] | None = None
+    for position, (memory_index, memory) in enumerate(memory_records):
+        expected_tick = expected_memory_ticks[position]
+        _require_exact(
+            memory,
+            {
+                "schema": 2,
+                "fixture": "Stress400Sustained",
+                "tick": expected_tick,
+                "sequence": position,
+                "intervalTicks": 200,
+                "entityActive": 401,
+                "entityFree": 0,
+                "entityFreeCapacity": 512,
+                "entityCreated": 401,
+                "entityOverflow": 0,
+                "effectsQuality": effects_quality,
+                "destructionCapacity": expected_destruction_capacity,
+                "destructionOverflow": 0,
+                "destructionCoalesced": 0,
+                "commandLimit": 262_144,
+                "naturalGc": "true",
+                "forcedGc": "false",
+                "authoritative": "false",
+            },
+        )
+        if position == 0:
+            if memory_index <= ready_index or memory_index >= heartbeat_records[0][0]:
+                raise ValidationError(
+                    "tick-zero memory telemetry must follow readiness and precede heartbeats"
+                )
+        else:
+            heartbeat = heartbeat_by_tick.get(expected_tick)
+            if heartbeat is None:
+                raise ValidationError(
+                    f"memory telemetry tick {expected_tick} has no matching heartbeat"
+                )
+            if memory_index <= heartbeat_line_by_tick[expected_tick]:
+                raise ValidationError(
+                    f"memory telemetry tick {expected_tick} preceded its heartbeat"
+                )
+            if _as_int(memory, "wall_ms") != _as_int(heartbeat, "wall_ms"):
+                raise ValidationError(
+                    f"memory telemetry tick {expected_tick} wall time differs from heartbeat"
+                )
+            if _as_int(memory, "commandLog") != _as_int(heartbeat, "commandLog"):
+                raise ValidationError(
+                    f"memory telemetry tick {expected_tick} command log differs from heartbeat"
+                )
+            if _as_int(memory, "cumulativeReplacements") != _as_int(
+                heartbeat, "cumulativeReplacements"
+            ):
+                raise ValidationError(
+                    f"memory telemetry tick {expected_tick} replacement count differs from heartbeat"
+                )
+
+        wall_ms = _as_int(memory, "wall_ms")
+        if position == 0 and wall_ms != 0:
+            raise ValidationError("tick-zero memory telemetry wall time must be zero")
+        used_physical = _as_int(memory, "processUsedPhysicalBytes")
+        peak_used_physical = _as_int(memory, "processPeakUsedPhysicalBytes")
+        if used_physical == 0 or peak_used_physical == 0:
+            raise ValidationError("memory telemetry process counters must be nonzero")
+        if used_physical > peak_used_physical:
+            raise ValidationError("process used memory exceeds process peak memory")
+        global_slots = _as_int(memory, "globalObjectSlots")
+        global_claimed = _as_int(memory, "globalObjectClaimed")
+        if global_slots == 0 or global_claimed == 0 or global_claimed > global_slots:
+            raise ValidationError("global UObject slot accounting is invalid")
+
+        gc_cycles = _as_int(memory, "gcCycles")
+        gc_pre = _as_int(memory, "gcLastPreUsedPhysicalBytes")
+        gc_post = _as_int(memory, "gcLastPostUsedPhysicalBytes")
+        gc_used_delta = _as_signed_int(memory, "gcLastUsedPhysicalDeltaBytes")
+        gc_slot_delta = _as_signed_int(memory, "gcLastObjectSlotDelta")
+        gc_claimed_delta = _as_signed_int(memory, "gcLastClaimedObjectSlotDelta")
+        if gc_cycles == 0 and any(
+            value != 0
+            for value in (
+                gc_pre,
+                gc_post,
+                gc_used_delta,
+                gc_slot_delta,
+                gc_claimed_delta,
+            )
+        ):
+            raise ValidationError("GC detail counters changed before a natural GC cycle")
+        if gc_cycles > 0:
+            if gc_pre == 0 or gc_post == 0:
+                raise ValidationError(
+                    "natural GC memory telemetry is missing its pre/post counters"
+                )
+            if gc_used_delta != gc_post - gc_pre:
+                raise ValidationError(
+                    "natural GC used-memory delta does not reconcile with pre/post counters"
+                )
+
+        replacements = _as_int(memory, "cumulativeReplacements")
+        entity_reused = _as_int(memory, "entityReused")
+        entity_released = _as_int(memory, "entityReleased")
+        if entity_reused != replacements or entity_released != replacements:
+            raise ValidationError(
+                "entity retire/reuse counters do not exactly reconcile with replacements"
+            )
+        entity_mid_count = _as_int(memory, "entityMIDCreated")
+        if entity_mid_count == 0:
+            raise ValidationError("entity MID ownership evidence is empty")
+        if baseline_entity_mid_count is None:
+            baseline_entity_mid_count = entity_mid_count
+        elif entity_mid_count != baseline_entity_mid_count:
+            raise ValidationError("entity MID creation did not plateau at readiness")
+
+        destruction_active = _as_int(memory, "destructionActive")
+        destruction_free = _as_int(memory, "destructionFree")
+        destruction_created = _as_int(memory, "destructionCreated")
+        destruction_reused = _as_int(memory, "destructionReused")
+        destruction_activated = _as_int(memory, "destructionActivated")
+        destruction_released = _as_int(memory, "destructionReleased")
+        destruction_mid_count = _as_int(memory, "destructionMIDCreated")
+        if destruction_active + destruction_free != destruction_created:
+            raise ValidationError("destruction actor pool accounting is not closed")
+        if destruction_created > expected_destruction_capacity:
+            raise ValidationError("destruction actor pool exceeded its quality-tier capacity")
+        if destruction_activated != replacements:
+            raise ValidationError(
+                "destruction activation does not reconcile with authoritative replacements"
+            )
+        if destruction_activated != destruction_created + destruction_reused:
+            raise ValidationError("destruction acquire accounting is not closed")
+        if destruction_released != destruction_activated - destruction_active:
+            raise ValidationError("destruction release accounting is not closed")
+        if destruction_free != destruction_released - destruction_reused:
+            raise ValidationError("destruction free-pool accounting is not closed")
+        if destruction_mid_count != destruction_created * 4:
+            raise ValidationError("destruction MID ownership is not four per actor")
+
+        command_log = _as_int(memory, "commandLog")
+        if position == 0:
+            if command_log != _as_int(ready, "initialCommandLog") or replacements != 0:
+                raise ValidationError("tick-zero command or replacement baseline drifted")
+        command_capacity = _as_int(memory, "commandLogCapacity")
+        command_element_bytes = _as_int(memory, "commandElementBytes")
+        command_allocated_bytes = _as_int(memory, "commandLogAllocatedBytes")
+        if (
+            command_element_bytes == 0
+            or command_element_bytes > 4_096
+            or command_capacity < command_log
+            or command_capacity > 262_144
+            or command_allocated_bytes != command_capacity * command_element_bytes
+        ):
+            raise ValidationError("command-log allocation accounting is invalid")
+
+        current_memory = {
+            "wall_ms": wall_ms,
+            "peak": peak_used_physical,
+            "gc_cycles": gc_cycles,
+            "gc_pre": gc_pre,
+            "gc_post": gc_post,
+            "gc_used_delta": gc_used_delta,
+            "gc_slot_delta": gc_slot_delta,
+            "gc_claimed_delta": gc_claimed_delta,
+            "entity_reused": entity_reused,
+            "entity_released": entity_released,
+            "destruction_created": destruction_created,
+            "destruction_reused": destruction_reused,
+            "destruction_activated": destruction_activated,
+            "destruction_released": destruction_released,
+            "command_capacity": command_capacity,
+            "command_element_bytes": command_element_bytes,
+        }
+        if previous_memory is not None:
+            for key in (
+                "wall_ms",
+                "peak",
+                "gc_cycles",
+                "entity_reused",
+                "entity_released",
+                "destruction_created",
+                "destruction_reused",
+                "destruction_activated",
+                "destruction_released",
+                "command_capacity",
+            ):
+                if current_memory[key] < previous_memory[key]:
+                    raise ValidationError(f"memory telemetry counter {key} regressed")
+            if current_memory["command_element_bytes"] != previous_memory[
+                "command_element_bytes"
+            ]:
+                raise ValidationError("command element size changed during the run")
+            if current_memory["gc_cycles"] == previous_memory["gc_cycles"]:
+                for key in (
+                    "gc_pre",
+                    "gc_post",
+                    "gc_used_delta",
+                    "gc_slot_delta",
+                    "gc_claimed_delta",
+                ):
+                    if current_memory[key] != previous_memory[key]:
+                        raise ValidationError(
+                            "GC detail changed without a natural collection count change"
+                        )
+        previous_memory = current_memory
+
+        if expected_tick >= 2_400:
+            plateau = (
+                destruction_created,
+                destruction_mid_count,
+            )
+            if warm_plateau is None:
+                warm_plateau = plateau
+            elif plateau != warm_plateau:
+                raise ValidationError(
+                    "post-warmup destruction pool or MID count did not plateau"
+                )
+
     qualified_records = _records(lines, QUALIFIED_MARKER, QUALIFIED_KEYS)
     if len(qualified_records) > 1:
         raise ValidationError("multiple qualification markers were present")
@@ -440,8 +743,11 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
         if (
             72_000 not in heartbeat_by_tick
             or qualified_index <= heartbeat_line_by_tick[72_000]
+            or qualified_index <= memory_records[-1][0]
         ):
-            raise ValidationError("qualification was not emitted after its validated heartbeat")
+            raise ValidationError(
+                "qualification was not emitted after its validated heartbeat and memory telemetry"
+            )
         boundary = heartbeat_by_tick[72_000]
         for key in (
             "checksum",
@@ -460,6 +766,8 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
         "startup_stable_frames": stable_frames,
         "startup_stable_wall_us": stable_wall_us,
         "heartbeat_count": len(heartbeat_records),
+        "memory_telemetry_count": len(memory_records),
+        "final_memory_telemetry_tick": expected_memory_ticks[-1],
         "first_tick": 20,
         "final_tick": previous_tick,
         "final_wall_ms": previous_wall_ms,

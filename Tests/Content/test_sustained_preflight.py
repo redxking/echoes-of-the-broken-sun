@@ -19,6 +19,7 @@ from sustained_preflight_test_support import (  # noqa: E402
 from validate_sustained_preflight import (  # noqa: E402
     PREFLIGHT_SNAPSHOT_NAME,
     PreflightValidationError,
+    recompute_process_measurements,
     snapshot_verified_preflight,
     verify_preflight,
     verify_preflight_archive,
@@ -26,6 +27,38 @@ from validate_sustained_preflight import (  # noqa: E402
 
 
 class SustainedPreflightTests(unittest.TestCase):
+    def test_ready_to_high_water_growth_is_an_independent_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            samples = pathlib.Path(temporary) / "samples.csv"
+            samples.write_text(
+                "elapsed_seconds,rss_mib,cpu_percent\n"
+                + "".join(
+                    f"{second},{650.0 if second == 5 else 512.0:.3f},10.000\n"
+                    for second in range(0, 601, 5)
+                ),
+                encoding="utf-8",
+            )
+            measured = recompute_process_measurements(samples)
+            self.assertFalse(measured["all_measured_budgets_pass"])
+            self.assertFalse(
+                measured["budgets"][
+                    "ready_baseline_to_active_window_rss_high_water_growth_mib_le_128"
+                ]
+            )
+            self.assertTrue(
+                measured["budgets"][
+                    "sampled_active_window_resident_memory_peak_mib_le_10240"
+                ]
+            )
+            self.assertTrue(
+                measured["budgets"]["steady_window_growth_mib_le_64"]
+            )
+            self.assertTrue(
+                measured["budgets"][
+                    "steady_linear_growth_mib_per_hour_le_128"
+                ]
+            )
+
     def test_valid_preflight_is_recomputed_bound_and_snapshotted(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)

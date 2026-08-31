@@ -1551,6 +1551,32 @@ void AEchoesPlayerController::RequestScopedKeyframeRecovery(
         *Reason);
 }
 
+echoes::sim::Entity AEchoesPlayerController::BuildNetworkPresentationEntity(
+    const echoes::sim::net::ScopedEntityState& Scoped)
+{
+    echoes::sim::Entity State{};
+    State.id = Scoped.id;
+    State.owner = Scoped.owner;
+    State.faction = Scoped.faction;
+    State.type = Scoped.type;
+    State.position = Scoped.position;
+    State.hitPoints = Scoped.hitPoints;
+    State.maxHitPoints = Scoped.maxHitPoints;
+    State.completed = Scoped.completed;
+    State.wellChoice = Scoped.wellChoice;
+    State.deployed = Scoped.deployed;
+    State.waystoneMode = Scoped.waystoneMode;
+    State.warformAdaptation = Scoped.warformAdaptation;
+    State.aegisPowered = Scoped.aegisPowered;
+    State.choirIdentityState = Scoped.choirIdentityState;
+    State.choirIdentityResolveAtTick = Scoped.choirIdentityResolveAtTick;
+    State.choirIdentityNextAvailableTick =
+        Scoped.choirIdentityNextAvailableTick;
+    State.choirCoherenceNextChargeTick =
+        Scoped.choirCoherenceNextChargeTick;
+    return State;
+}
+
 bool AEchoesPlayerController::SyncNetworkPresentation(
     const echoes::sim::net::ScopedViewKeyframe& Keyframe)
 {
@@ -1698,62 +1724,73 @@ bool AEchoesPlayerController::SyncNetworkPresentation(
 
     TSet<uint32> LiveEntityIds;
     LiveEntityIds.Reserve(static_cast<int32>(Keyframe.entities.size()));
-    for (const echoes::sim::net::ScopedEntityState& Scoped :
-         Keyframe.entities)
+    for (const echoes::sim::net::ScopedEntityState& Scoped : Keyframe.entities)
     {
+        if (LiveEntityIds.Contains(Scoped.id))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_PRESENTATION_FAILED] reason=DUPLICATE_ENTITY_ID entity=%u snapshot=%llu"),
+                Scoped.id,
+                static_cast<unsigned long long>(Keyframe.snapshotId));
+            return false;
+        }
         LiveEntityIds.Add(Scoped.id);
-        AEchoesEntityView* View = nullptr;
-        if (TWeakObjectPtr<AEchoesEntityView>* Existing =
-                NetworkEntityViews.Find(Scoped.id))
-        {
-            View = Existing->Get();
-        }
-        const bool bNewView = View == nullptr;
-        if (bNewView)
-        {
-            View = World->SpawnActor<AEchoesEntityView>(
-                AEchoesEntityView::StaticClass(),
-                FTransform::Identity,
-                SpawnParameters);
-            if (View == nullptr)
-            {
-                return false;
-            }
-            View->Tags.Add(TEXT("EchoesNetworkEntityView"));
-            NetworkEntityViews.Add(Scoped.id, View);
-        }
-        echoes::sim::Entity State{};
-        State.id = Scoped.id;
-        State.owner = Scoped.owner;
-        State.faction = Scoped.faction;
-        State.type = Scoped.type;
-        State.position = Scoped.position;
-        State.hitPoints = Scoped.hitPoints;
-        State.maxHitPoints = Scoped.maxHitPoints;
-        State.completed = Scoped.completed;
-        State.wellChoice = Scoped.wellChoice;
-        State.deployed = Scoped.deployed;
-        State.waystoneMode = Scoped.waystoneMode;
-        State.warformAdaptation = Scoped.warformAdaptation;
-        State.aegisPowered = Scoped.aegisPowered;
-        View->ApplyAuthoritativeState(State, bNewView);
     }
+
+    // Retire in stable identity order before acquiring replacements so a
+    // visibility delta cannot create a transient spawn-before-retire spike.
     TArray<uint32> RemovedEntityIds;
     for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
          NetworkEntityViews)
     {
         if (!LiveEntityIds.Contains(Pair.Key))
         {
-            if (AEchoesEntityView* View = Pair.Value.Get())
-            {
-                View->Destroy();
-            }
             RemovedEntityIds.Add(Pair.Key);
         }
     }
+    RemovedEntityIds.Sort();
     for (const uint32 Removed : RemovedEntityIds)
     {
+        AEchoesEntityView* View = nullptr;
+        if (const TWeakObjectPtr<AEchoesEntityView>* Existing =
+                NetworkEntityViews.Find(Removed))
+        {
+            View = Existing->Get();
+        }
         NetworkEntityViews.Remove(Removed);
+        ReleaseNetworkEntityView(View);
+    }
+
+    for (const echoes::sim::net::ScopedEntityState& Scoped : Keyframe.entities)
+    {
+        AEchoesEntityView* View = nullptr;
+        if (TWeakObjectPtr<AEchoesEntityView>* Existing =
+                NetworkEntityViews.Find(Scoped.id))
+        {
+            View = Existing->Get();
+        }
+        const bool bAcquiredView = View == nullptr;
+        if (bAcquiredView)
+        {
+            View = AcquireNetworkEntityView();
+            if (View == nullptr)
+            {
+                return false;
+            }
+            NetworkEntityViews.Add(Scoped.id, View);
+        }
+        const echoes::sim::Entity State =
+            BuildNetworkPresentationEntity(Scoped);
+        if (bAcquiredView)
+        {
+            View->ActivateForEntity(State, true);
+        }
+        else
+        {
+            View->ApplyAuthoritativeState(State, false);
+        }
     }
     const bool bFirstPresentation = !bNetworkRemoteBattlefieldReady;
     bNetworkRemoteBattlefieldReady = true;
@@ -1766,13 +1803,65 @@ bool AEchoesPlayerController::SyncNetworkPresentation(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_PRESENTATION_SYNCED] snapshot=%llu tick=%llu entities=%d tiles=%d removed=%d ground=true terrain=true fog=true lighting=true scopedOnly=true rendered=true"),
+        TEXT("[ECHOES_NETWORK_PRESENTATION_SYNCED] snapshot=%llu tick=%llu entities=%d pooled=%d poolCapacity=%d tiles=%d removed=%d retireBeforeAcquire=true ground=true terrain=true fog=true lighting=true scopedOnly=true rendered=true"),
         static_cast<unsigned long long>(Keyframe.snapshotId),
         static_cast<unsigned long long>(Keyframe.simulationTick),
         NetworkEntityViews.Num(),
+        NetworkFreeEntityViews.Num(),
+        UEchoesSimulationSubsystem::GetEntityViewFreePoolCapacity(),
         static_cast<int32>(Keyframe.tiles.size()),
         RemovedEntityIds.Num());
     return true;
+}
+
+AEchoesEntityView* AEchoesPlayerController::AcquireNetworkEntityView()
+{
+    while (!NetworkFreeEntityViews.IsEmpty())
+    {
+        AEchoesEntityView* View =
+            NetworkFreeEntityViews.Pop(EAllowShrinking::No);
+        if (IsValid(View) && !View->IsActorBeingDestroyed())
+        {
+            return View;
+        }
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return nullptr;
+    }
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.ObjectFlags |= RF_Transient;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesEntityView* View = World->SpawnActor<AEchoesEntityView>(
+        AEchoesEntityView::StaticClass(),
+        FTransform::Identity,
+        SpawnParameters);
+    if (View != nullptr)
+    {
+        View->Tags.Add(TEXT("EchoesNetworkEntityView"));
+        View->PrepareForPool();
+    }
+    return View;
+}
+
+void AEchoesPlayerController::ReleaseNetworkEntityView(
+    AEchoesEntityView* View)
+{
+    if (!IsValid(View) || View->IsActorBeingDestroyed())
+    {
+        return;
+    }
+    View->PrepareForPool();
+    if (NetworkFreeEntityViews.Num() <
+        UEchoesSimulationSubsystem::GetEntityViewFreePoolCapacity())
+    {
+        NetworkFreeEntityViews.Add(View);
+        return;
+    }
+    View->Destroy();
 }
 
 void AEchoesPlayerController::DestroyNetworkPresentation()
@@ -1786,6 +1875,14 @@ void AEchoesPlayerController::DestroyNetworkPresentation()
         }
     }
     NetworkEntityViews.Reset();
+    for (AEchoesEntityView* View : NetworkFreeEntityViews)
+    {
+        if (IsValid(View) && !View->IsActorBeingDestroyed())
+        {
+            View->Destroy();
+        }
+    }
+    NetworkFreeEntityViews.Reset();
     if (AEchoesFogView* Fog = NetworkFogView.Get())
     {
         Fog->Destroy();

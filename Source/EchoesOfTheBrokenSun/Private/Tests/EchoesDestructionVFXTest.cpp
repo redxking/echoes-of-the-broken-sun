@@ -42,6 +42,7 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    FLinearColor MeridianDestructionColor = FLinearColor::Transparent;
     AEchoesDestructionView* Standard =
         World->SpawnActor<AEchoesDestructionView>();
     if (TestNotNull(TEXT("Standard destruction actor spawns"), Standard))
@@ -52,6 +53,7 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
             false,
             false,
             1.6f);
+        MeridianDestructionColor = Standard->GetBaseColor();
         TestTrue(TEXT("Standard destruction uses authored VFX assets"),
                  Standard->IsUsingAuthoredVFXAssets());
         TestTrue(TEXT("Standard destruction has no collision or overlaps"),
@@ -68,6 +70,38 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
                   Standard->GetShardALocation().Equals(ShardLocationBeforeTick));
         TestTrue(TEXT("Standard destruction uses one decaying emission envelope"),
                  Standard->GetCurrentEmissiveStrength() < EmissionBeforeTick);
+        const uint64 WarmMIDCount = Standard->GetOwnedMIDCreationCount();
+        TestEqual(TEXT("A destruction actor owns exactly four reusable MIDs"),
+                  WarmMIDCount,
+                  static_cast<uint64>(4));
+        Standard->RegisterOverflowCoalesced();
+        TestEqual(TEXT("Overflow coalescing is presentation-only state"),
+                  Standard->GetCoalescedOverflowCount(),
+                  static_cast<uint64>(1));
+        Standard->PrepareForPool();
+        TestFalse(TEXT("A pooled destruction actor is inactive"),
+                  Standard->IsPresentationActive());
+        TestTrue(TEXT("A pooled destruction actor is hidden"),
+                 Standard->IsHidden());
+        TestFalse(TEXT("A pooled destruction actor cannot tick"),
+                  Standard->IsActorTickEnabled());
+        TestEqual(TEXT("Pooling clears coalesced overflow state"),
+                  Standard->GetCoalescedOverflowCount(),
+                  static_cast<uint64>(0));
+        Standard->InitializeDestruction(
+            echoes::sim::Faction::HollowChoir,
+            echoes::sim::EntityType::CommandCore,
+            true,
+            true,
+            1.6f);
+        TestEqual(TEXT("Cross-faction reuse creates no additional MIDs"),
+                  Standard->GetOwnedMIDCreationCount(),
+                  WarmMIDCount);
+        TestTrue(TEXT("Cross-faction reuse applies the new accessibility state"),
+                 Standard->IsReducedMotionApplied() &&
+                     Standard->IsReducedFlashingApplied());
+        TestFalse(TEXT("Cross-faction reuse applies the new faction palette"),
+                  Standard->GetBaseColor().Equals(MeridianDestructionColor));
     }
 
     AEchoesDestructionView* Reduced =
@@ -118,7 +152,7 @@ bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
         TestFalse(
             TEXT("Choir destruction has a distinct phase-pink palette"),
             Standard != nullptr &&
-                Choir->GetBaseColor().Equals(Standard->GetBaseColor()));
+                Choir->GetBaseColor().Equals(MeridianDestructionColor));
         TestFalse(
             TEXT("Choir destruction does not inherit Kharuun orange"),
             Reduced != nullptr &&

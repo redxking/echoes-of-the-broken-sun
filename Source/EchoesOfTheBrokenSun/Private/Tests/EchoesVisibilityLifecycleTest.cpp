@@ -259,6 +259,8 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
 
     AEchoesEntityView* FirstView = Bridge->FindEntityView(TargetId);
     TWeakObjectPtr<AEchoesEntityView> FirstViewWeak = FirstView;
+    const FEchoesPresentationPoolStats PresentedPoolStats =
+        Bridge->GetPresentationPoolStats();
     TestNotNull(TEXT("First visible presentation actor is available"), FirstView);
     TestTrue(
         TEXT("Scouting expands the persistent explored map"),
@@ -287,9 +289,31 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         Bridge->GetSimulation()->VisibilityAt(
             UEchoesSimulationSubsystem::LocalPlayerId,
             TargetPosition) == echoes::sim::Visibility::Explored);
-    TestFalse(
-        TEXT("The removed presentation actor is no longer a valid object"),
+    TestTrue(
+        TEXT("The removed presentation actor remains available to the bounded pool"),
         FirstViewWeak.IsValid());
+    if (FirstViewWeak.IsValid())
+    {
+        TestTrue(TEXT("The pooled actor is fully prepared for reuse"),
+                 FirstViewWeak->IsPreparedForPool());
+        TestEqual(TEXT("The pooled actor retains no entity identity"),
+                  FirstViewWeak->GetEntityId(),
+                  static_cast<uint32>(0));
+        TestTrue(TEXT("The pooled actor is hidden"), FirstViewWeak->IsHidden());
+        TestFalse(TEXT("The pooled actor cannot tick"),
+                  FirstViewWeak->IsActorTickEnabled());
+        TestFalse(TEXT("The pooled actor cannot be selected by collision"),
+                  FirstViewWeak->HasBodySelectionCollisionEnabled());
+        TestFalse(TEXT("The pooled actor retains no selection"),
+                  FirstViewWeak->IsSelected());
+        TestFalse(TEXT("The pooled actor retains no damage pulse"),
+                  FirstViewWeak->IsDamagePulseActive());
+        TestFalse(TEXT("The pooled actor retains no Future Well presentation"),
+                  FirstViewWeak->IsFutureWellPresentationVisible());
+    }
+    TestTrue(
+        TEXT("Visibility retirement records a free pooled view"),
+        Bridge->GetPresentationPoolStats().FreeEntityViews > 0);
 
     if (!IssueMove(TEXT("Could not queue the visibility reentry movement"), RevealPoint))
     {
@@ -306,9 +330,15 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
 
     AEchoesEntityView* ReenteredView = Bridge->FindEntityView(TargetId);
     TestNotNull(TEXT("Reentered presentation actor is available"), ReenteredView);
+    const FEchoesPresentationPoolStats ReenteredPoolStats =
+        Bridge->GetPresentationPoolStats();
+    TestEqual(
+        TEXT("Visibility reentry does not allocate another entity actor"),
+        ReenteredPoolStats.EntityCreated,
+        PresentedPoolStats.EntityCreated);
     TestTrue(
-        TEXT("Visibility reentry uses a new disposable presentation actor"),
-        ReenteredView != FirstView);
+        TEXT("Visibility reentry records deterministic pool reuse"),
+        ReenteredPoolStats.EntityReused > PresentedPoolStats.EntityReused);
     if (ReenteredView != nullptr)
     {
         TestEqual(

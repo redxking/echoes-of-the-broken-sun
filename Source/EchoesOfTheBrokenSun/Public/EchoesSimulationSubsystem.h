@@ -23,6 +23,7 @@
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
+class AEchoesDestructionView;
 class AEchoesEntityView;
 class AEchoesFogView;
 class AEchoesTerrainView;
@@ -285,6 +286,30 @@ struct FEchoesObjectiveSnapshot final
     bool bBrokenSunResolutionContractFailed = false;
 };
 
+/** Scalar-only presentation-pool evidence; never participates in simulation. */
+struct FEchoesPresentationPoolStats final
+{
+    int32 ActiveEntityViews = 0;
+    int32 FreeEntityViews = 0;
+    int32 EntityFreeCapacity = 0;
+    int32 ActiveDestructionViews = 0;
+    int32 FreeDestructionViews = 0;
+    int32 DestructionCapacity = 0;
+    int32 LastDestructionOverflowSlot = -1;
+    uint64 EntityCreated = 0;
+    uint64 EntityReused = 0;
+    uint64 EntityReleased = 0;
+    uint64 EntityRetentionOverflow = 0;
+    uint64 DestructionCreated = 0;
+    uint64 DestructionReused = 0;
+    uint64 DestructionActivated = 0;
+    uint64 DestructionReleased = 0;
+    uint64 DestructionOverflow = 0;
+    uint64 DestructionCoalesced = 0;
+    uint64 EntityOwnedMIDCreated = 0;
+    uint64 DestructionOwnedMIDCreated = 0;
+};
+
 /**
  * Owns the deterministic simulation for the current game world.
  *
@@ -411,6 +436,10 @@ public:
     void SetNetworkHumanOpponent(bool bEnabled);
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
     [[nodiscard]] AEchoesEntityView* FindEntityView(uint32 EntityId) const;
+    [[nodiscard]] FEchoesPresentationPoolStats GetPresentationPoolStats() const;
+    [[nodiscard]] static int32 GetEntityViewFreePoolCapacity();
+    [[nodiscard]] static int32 GetDestructionPoolCapacityForEffectsQuality(
+        int32 EffectsQuality);
     [[nodiscard]] AEchoesFogView* GetFogView() const;
     [[nodiscard]] AEchoesTerrainView* GetTerrainView() const;
     [[nodiscard]] FVector SimToWorld(const echoes::sim::Vec2& Position) const;
@@ -575,6 +604,7 @@ private:
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FEchoesPrologueMissionTest;
     friend class FEchoesFreshCampaignJourneyTest;
+    friend class FEchoesPresentationPoolingTest;
 #endif
     [[nodiscard]] FString GetActiveQuickSavePath() const;
     void RefreshCampaignBackupState();
@@ -664,6 +694,23 @@ private:
     void FailSustainedStressContract(
         const TCHAR* Code,
         const FString& Detail);
+    [[nodiscard]] AEchoesEntityView* AcquireEntityView();
+    void ReleaseEntityView(AEchoesEntityView* View);
+    [[nodiscard]] AEchoesDestructionView* AcquireDestructionView(
+        uint64 SimulationTick,
+        uint32 RemovedEntityId);
+    void ReleaseDestructionView(AEchoesDestructionView* View);
+    void ReclaimFinishedDestructionViews();
+    void ResetDestructionViewsForScenario();
+    void DestroyPooledPresentationActors();
+    void EmitDestructionPresentation(
+        uint32 RemovedEntityId,
+        const FVector& WorldLocation,
+        echoes::sim::Faction Faction,
+        echoes::sim::EntityType EntityType);
+    void EmitRuntimeMemoryPoolTelemetry(uint64 Tick, uint64 WallMs);
+    void OnPreGarbageCollect();
+    void OnPostGarbageCollect();
     bool SyncEntityViews(bool bTeleportNewViews);
     bool SpawnFogView();
     bool SyncFogView();
@@ -675,6 +722,12 @@ private:
 
     TUniquePtr<echoes::sim::Simulation> Simulation;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> EntityViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesEntityView>> FreeEntityViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesDestructionView>> ActiveDestructionViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesDestructionView>> FreeDestructionViews;
     TWeakObjectPtr<AEchoesFogView> FogView;
     TWeakObjectPtr<AEchoesTerrainView> TerrainView;
     double FixedTimeAccumulator = 0.0;
@@ -735,6 +788,30 @@ private:
     std::array<int32, echoes::sim::kMaximumPlayers>
         SustainedStressRenewalCursorByPlayer{};
     double SustainedStressReadyWallSeconds = 0.0;
+    uint64 EntityViewCreatedCount = 0;
+    uint64 EntityViewReusedCount = 0;
+    uint64 EntityViewReleasedCount = 0;
+    uint64 EntityViewRetentionOverflowCount = 0;
+    uint64 DestructionViewCreatedCount = 0;
+    uint64 DestructionViewReusedCount = 0;
+    uint64 DestructionViewActivationCount = 0;
+    uint64 DestructionViewReleasedCount = 0;
+    uint64 DestructionViewOverflowCount = 0;
+    uint64 DestructionViewCoalescedCount = 0;
+    uint64 EntityViewOwnedMIDCreationCount = 0;
+    uint64 DestructionViewOwnedMIDCreationCount = 0;
+    int32 LastDestructionOverflowSlot = -1;
+    FDelegateHandle PreGarbageCollectHandle;
+    FDelegateHandle PostGarbageCollectHandle;
+    uint64 NaturalGarbageCollectionCount = 0;
+    uint64 LastGcPreUsedPhysicalBytes = 0;
+    uint64 LastGcPostUsedPhysicalBytes = 0;
+    int64 LastGcUsedPhysicalDeltaBytes = 0;
+    int32 LastGcPreObjectSlots = 0;
+    int32 LastGcPreClaimedObjectSlots = 0;
+    int64 LastGcObjectSlotDelta = 0;
+    int64 LastGcClaimedObjectSlotDelta = 0;
+    uint64 LastRuntimeMemoryTelemetryTick = MAX_uint64;
     bool bNetworkHumanOpponent = false;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;

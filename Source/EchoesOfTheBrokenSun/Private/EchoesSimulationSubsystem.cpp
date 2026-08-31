@@ -11,10 +11,12 @@
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesTerrainView.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Hash/xxhash.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformMemory.h"
 #include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
@@ -22,6 +24,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "UObject/UObjectArray.h"
+#include "UObject/UObjectGlobals.h"
 
 #include <algorithm>
 #include <cmath>
@@ -60,6 +64,13 @@ static_assert(
     SustainedStressProjectedCommandCeiling <
         echoes::sim::kMaximumCommandLogEntries,
     "The one-hour sustained fixture must retain deterministic command-log headroom.");
+constexpr int32 EntityViewFreePoolCapacity = 512;
+constexpr int32 DestructionViewLowEffectsCapacity = 64;
+constexpr int32 DestructionViewMediumEffectsCapacity = 160;
+constexpr int32 DestructionViewHighEffectsCapacity = 396;
+constexpr uint64 SustainedMemoryTelemetryIntervalTicks =
+    10U * PrototypeTicksPerSecond;
+constexpr uint32 SustainedMemoryTelemetrySchema = 2;
 constexpr int32 PrologueSiteRadiusTiles = 3;
 constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
@@ -1890,6 +1901,39 @@ enum class EQuickSaveContainerRead : uint8
 void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    FreeEntityViews.Reset();
+    ActiveDestructionViews.Reset();
+    FreeDestructionViews.Reset();
+    EntityViewCreatedCount = 0;
+    EntityViewReusedCount = 0;
+    EntityViewReleasedCount = 0;
+    EntityViewRetentionOverflowCount = 0;
+    DestructionViewCreatedCount = 0;
+    DestructionViewReusedCount = 0;
+    DestructionViewActivationCount = 0;
+    DestructionViewReleasedCount = 0;
+    DestructionViewOverflowCount = 0;
+    DestructionViewCoalescedCount = 0;
+    EntityViewOwnedMIDCreationCount = 0;
+    DestructionViewOwnedMIDCreationCount = 0;
+    LastDestructionOverflowSlot = -1;
+    NaturalGarbageCollectionCount = 0;
+    LastGcPreUsedPhysicalBytes = 0;
+    LastGcPostUsedPhysicalBytes = 0;
+    LastGcUsedPhysicalDeltaBytes = 0;
+    LastGcPreObjectSlots = 0;
+    LastGcPreClaimedObjectSlots = 0;
+    LastGcObjectSlotDelta = 0;
+    LastGcClaimedObjectSlotDelta = 0;
+    LastRuntimeMemoryTelemetryTick = MAX_uint64;
+    PreGarbageCollectHandle =
+        FCoreUObjectDelegates::GetPreGarbageCollectDelegate().AddUObject(
+            this,
+            &UEchoesSimulationSubsystem::OnPreGarbageCollect);
+    PostGarbageCollectHandle =
+        FCoreUObjectDelegates::GetPostGarbageCollect().AddUObject(
+            this,
+            &UEchoesSimulationSubsystem::OnPostGarbageCollect);
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
     bScenarioReady = false;
@@ -2031,7 +2075,20 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
 
 void UEchoesSimulationSubsystem::Deinitialize()
 {
+    if (PreGarbageCollectHandle.IsValid())
+    {
+        FCoreUObjectDelegates::GetPreGarbageCollectDelegate().Remove(
+            PreGarbageCollectHandle);
+        PreGarbageCollectHandle.Reset();
+    }
+    if (PostGarbageCollectHandle.IsValid())
+    {
+        FCoreUObjectDelegates::GetPostGarbageCollect().Remove(
+            PostGarbageCollectHandle);
+        PostGarbageCollectHandle.Reset();
+    }
     StopPrototypeScenario();
+    DestroyPooledPresentationActors();
     Super::Deinitialize();
 }
 
@@ -4871,6 +4928,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
 void UEchoesSimulationSubsystem::StopPrototypeScenario()
 {
     DestroyEntityViews();
+    ResetDestructionViewsForScenario();
     DestroyFogView();
     DestroyTerrainView();
     Simulation.Reset();
@@ -4926,6 +4984,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     SustainedStressStartupStableSeconds = 0.0;
     SustainedStressRenewalCursorByPlayer.fill(0);
     SustainedStressReadyWallSeconds = 0.0;
+    LastRuntimeMemoryTelemetryTick = MAX_uint64;
     ArchiveCarrierId = 0;
     MemoryBearerId = 0;
     MigrationWaystoneId = 0;
@@ -12366,6 +12425,10 @@ bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
             echoes::sim::kMaximumCommandLogEntries -
             SustainedStressProjectedCommandCeiling),
         static_cast<unsigned long long>(SustainedStressQualificationTicks));
+    if (Tick % SustainedMemoryTelemetryIntervalTicks == 0)
+    {
+        EmitRuntimeMemoryPoolTelemetry(Tick, WallMs);
+    }
     if (!bSustainedStressQualificationLogged &&
         Tick == SustainedStressQualificationTicks)
     {
@@ -12397,6 +12460,7 @@ bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
 
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
+    ReclaimFinishedDestructionViews();
     if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
@@ -12470,9 +12534,21 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_STRESS_SUSTAINED_READY] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 protectedCoreMask=15"),
+            TEXT("[ECHOES_STRESS_SUSTAINED_READY] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 protectedCoreMask=15 memoryPoolSchema=%u memoryTelemetryIntervalTicks=%llu entityFreeCapacity=%d effectsQuality=%d destructionCapacity=%d initialCommandLog=%llu commandCapacity=%llu"),
             static_cast<unsigned long long>(Simulation->CurrentTick()),
-            static_cast<unsigned long long>(Simulation->StateChecksum()));
+            static_cast<unsigned long long>(Simulation->StateChecksum()),
+            SustainedMemoryTelemetrySchema,
+            static_cast<unsigned long long>(
+                SustainedMemoryTelemetryIntervalTicks),
+            GetEntityViewFreePoolCapacity(),
+            UEchoesGameUserSettings::Get() != nullptr
+                ? UEchoesGameUserSettings::Get()->GetVisualEffectQuality()
+                : 3,
+            GetPresentationPoolStats().DestructionCapacity,
+            static_cast<unsigned long long>(Simulation->CommandLog().size()),
+            static_cast<unsigned long long>(
+                echoes::sim::kMaximumCommandLogEntries));
+        EmitRuntimeMemoryPoolTelemetry(0, 0);
         return;
     }
 
@@ -15277,6 +15353,418 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
     return true;
 }
 
+int32 UEchoesSimulationSubsystem::GetEntityViewFreePoolCapacity()
+{
+    return EntityViewFreePoolCapacity;
+}
+
+int32 UEchoesSimulationSubsystem::GetDestructionPoolCapacityForEffectsQuality(
+    int32 EffectsQuality)
+{
+    if (EffectsQuality <= 0)
+    {
+        return DestructionViewLowEffectsCapacity;
+    }
+    if (EffectsQuality == 1)
+    {
+        return DestructionViewMediumEffectsCapacity;
+    }
+    return DestructionViewHighEffectsCapacity;
+}
+
+FEchoesPresentationPoolStats
+UEchoesSimulationSubsystem::GetPresentationPoolStats() const
+{
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const int32 EffectsQuality =
+        Settings != nullptr ? Settings->GetVisualEffectQuality() : 3;
+    FEchoesPresentationPoolStats Stats;
+    Stats.ActiveEntityViews = EntityViews.Num();
+    Stats.FreeEntityViews = FreeEntityViews.Num();
+    Stats.EntityFreeCapacity = EntityViewFreePoolCapacity;
+    Stats.ActiveDestructionViews = ActiveDestructionViews.Num();
+    Stats.FreeDestructionViews = FreeDestructionViews.Num();
+    Stats.DestructionCapacity =
+        GetDestructionPoolCapacityForEffectsQuality(EffectsQuality);
+    Stats.LastDestructionOverflowSlot = LastDestructionOverflowSlot;
+    Stats.EntityCreated = EntityViewCreatedCount;
+    Stats.EntityReused = EntityViewReusedCount;
+    Stats.EntityReleased = EntityViewReleasedCount;
+    Stats.EntityRetentionOverflow = EntityViewRetentionOverflowCount;
+    Stats.DestructionCreated = DestructionViewCreatedCount;
+    Stats.DestructionReused = DestructionViewReusedCount;
+    Stats.DestructionActivated = DestructionViewActivationCount;
+    Stats.DestructionReleased = DestructionViewReleasedCount;
+    Stats.DestructionOverflow = DestructionViewOverflowCount;
+    Stats.DestructionCoalesced = DestructionViewCoalescedCount;
+    Stats.EntityOwnedMIDCreated = EntityViewOwnedMIDCreationCount;
+    Stats.DestructionOwnedMIDCreated = DestructionViewOwnedMIDCreationCount;
+    return Stats;
+}
+
+AEchoesEntityView* UEchoesSimulationSubsystem::AcquireEntityView()
+{
+    while (!FreeEntityViews.IsEmpty())
+    {
+        AEchoesEntityView* View = FreeEntityViews.Pop(EAllowShrinking::No);
+        if (IsValid(View) && !View->IsActorBeingDestroyed())
+        {
+            ++EntityViewReusedCount;
+            return View;
+        }
+    }
+    if (GetWorld() == nullptr)
+    {
+        return nullptr;
+    }
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesEntityView* View = GetWorld()->SpawnActor<AEchoesEntityView>(
+        AEchoesEntityView::StaticClass(),
+        FTransform::Identity,
+        SpawnParameters);
+    if (View != nullptr)
+    {
+        View->PrepareForPool();
+        ++EntityViewCreatedCount;
+    }
+    return View;
+}
+
+void UEchoesSimulationSubsystem::ReleaseEntityView(AEchoesEntityView* View)
+{
+    if (!IsValid(View) || View->IsActorBeingDestroyed())
+    {
+        return;
+    }
+    View->PrepareForPool();
+    ++EntityViewReleasedCount;
+    if (FreeEntityViews.Num() < EntityViewFreePoolCapacity)
+    {
+        FreeEntityViews.Add(View);
+        return;
+    }
+    ++EntityViewRetentionOverflowCount;
+    View->Destroy();
+}
+
+AEchoesDestructionView* UEchoesSimulationSubsystem::AcquireDestructionView(
+    uint64 SimulationTick,
+    uint32 RemovedEntityId)
+{
+    const int32 Capacity = GetPresentationPoolStats().DestructionCapacity;
+    while (ActiveDestructionViews.Num() + FreeDestructionViews.Num() >
+               Capacity &&
+           !FreeDestructionViews.IsEmpty())
+    {
+        AEchoesDestructionView* Excess =
+            FreeDestructionViews.Pop(EAllowShrinking::No);
+        if (IsValid(Excess) && !Excess->IsActorBeingDestroyed())
+        {
+            Excess->Destroy();
+        }
+    }
+    while (!FreeDestructionViews.IsEmpty())
+    {
+        AEchoesDestructionView* View =
+            FreeDestructionViews.Pop(EAllowShrinking::No);
+        if (IsValid(View) && !View->IsActorBeingDestroyed())
+        {
+            ++DestructionViewReusedCount;
+            return View;
+        }
+    }
+
+    if (ActiveDestructionViews.Num() + FreeDestructionViews.Num() >= Capacity)
+    {
+        ++DestructionViewOverflowCount;
+        if (!ActiveDestructionViews.IsEmpty())
+        {
+            const uint64 Mixed =
+                SimulationTick * 0x9E3779B97F4A7C15ULL ^
+                static_cast<uint64>(RemovedEntityId) * 0xBF58476D1CE4E5B9ULL;
+            LastDestructionOverflowSlot = static_cast<int32>(
+                Mixed % static_cast<uint64>(ActiveDestructionViews.Num()));
+            if (AEchoesDestructionView* Coalesced =
+                    ActiveDestructionViews[LastDestructionOverflowSlot])
+            {
+                Coalesced->RegisterOverflowCoalesced();
+                ++DestructionViewCoalescedCount;
+            }
+        }
+        return nullptr;
+    }
+
+    if (GetWorld() == nullptr)
+    {
+        return nullptr;
+    }
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.ObjectFlags |= RF_Transient;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesDestructionView* View =
+        GetWorld()->SpawnActor<AEchoesDestructionView>(
+            AEchoesDestructionView::StaticClass(),
+            FTransform::Identity,
+            SpawnParameters);
+    if (View == nullptr)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_DESTRUCTION_POOL_SPAWN_FAILED] tick=%llu entity=%u"),
+            static_cast<unsigned long long>(SimulationTick),
+            RemovedEntityId);
+        return nullptr;
+    }
+    View->PrepareForPool();
+    ++DestructionViewCreatedCount;
+    return View;
+}
+
+void UEchoesSimulationSubsystem::ReleaseDestructionView(
+    AEchoesDestructionView* View)
+{
+    if (!IsValid(View) || View->IsActorBeingDestroyed())
+    {
+        return;
+    }
+    View->PrepareForPool();
+    ++DestructionViewReleasedCount;
+    const int32 Capacity = GetPresentationPoolStats().DestructionCapacity;
+    if (FreeDestructionViews.Num() + ActiveDestructionViews.Num() < Capacity)
+    {
+        FreeDestructionViews.Add(View);
+        return;
+    }
+    View->Destroy();
+}
+
+void UEchoesSimulationSubsystem::ReclaimFinishedDestructionViews()
+{
+    for (int32 Index = ActiveDestructionViews.Num() - 1; Index >= 0; --Index)
+    {
+        AEchoesDestructionView* View = ActiveDestructionViews[Index];
+        if (!IsValid(View) || View->IsActorBeingDestroyed())
+        {
+            ActiveDestructionViews.RemoveAt(Index, 1, EAllowShrinking::No);
+            continue;
+        }
+        if (!View->IsPresentationActive())
+        {
+            ActiveDestructionViews.RemoveAt(Index, 1, EAllowShrinking::No);
+            ReleaseDestructionView(View);
+        }
+    }
+}
+
+void UEchoesSimulationSubsystem::ResetDestructionViewsForScenario()
+{
+    while (!ActiveDestructionViews.IsEmpty())
+    {
+        AEchoesDestructionView* View =
+            ActiveDestructionViews.Pop(EAllowShrinking::No);
+        ReleaseDestructionView(View);
+    }
+}
+
+void UEchoesSimulationSubsystem::DestroyPooledPresentationActors()
+{
+    UWorld* World = GetWorld();
+    const bool bCanExplicitlyDestroy =
+        World != nullptr && GEngine != nullptr &&
+        GEngine->GetWorldContextFromWorld(World) != nullptr;
+    const auto DestroyIfSafe = [bCanExplicitlyDestroy](AActor* Actor)
+    {
+        if (bCanExplicitlyDestroy && IsValid(Actor) &&
+            !Actor->IsActorBeingDestroyed())
+        {
+            Actor->Destroy();
+        }
+    };
+    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
+         EntityViews)
+    {
+        DestroyIfSafe(Pair.Value.Get());
+    }
+    EntityViews.Reset();
+    for (AEchoesEntityView* View : FreeEntityViews)
+    {
+        DestroyIfSafe(View);
+    }
+    FreeEntityViews.Reset();
+    for (AEchoesDestructionView* View : ActiveDestructionViews)
+    {
+        DestroyIfSafe(View);
+    }
+    ActiveDestructionViews.Reset();
+    for (AEchoesDestructionView* View : FreeDestructionViews)
+    {
+        DestroyIfSafe(View);
+    }
+    FreeDestructionViews.Reset();
+}
+
+void UEchoesSimulationSubsystem::EmitDestructionPresentation(
+    uint32 RemovedEntityId,
+    const FVector& WorldLocation,
+    echoes::sim::Faction Faction,
+    echoes::sim::EntityType EntityType)
+{
+    const uint64 Tick = Simulation.IsValid() ? Simulation->CurrentTick() : 0;
+    ++DestructionViewActivationCount;
+    if (AEchoesDestructionView* Destruction =
+            AcquireDestructionView(Tick, RemovedEntityId))
+    {
+        Destruction->SetActorLocationAndRotation(
+            WorldLocation,
+            FRotator::ZeroRotator,
+            false,
+            nullptr,
+            ETeleportType::TeleportPhysics);
+        const UEchoesGameUserSettings* Settings =
+            UEchoesGameUserSettings::Get();
+        const bool bReducedMotion =
+            Settings != nullptr && Settings->IsReducedMotionEnabled();
+        const bool bReducedFlashing =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        const uint64 MIDCountBefore = Destruction->GetOwnedMIDCreationCount();
+        Destruction->InitializeDestruction(
+            Faction,
+            EntityType,
+            bReducedMotion,
+            bReducedFlashing);
+        DestructionViewOwnedMIDCreationCount +=
+            Destruction->GetOwnedMIDCreationCount() - MIDCountBefore;
+        ActiveDestructionViews.Add(Destruction);
+    }
+
+    // Audio routing is independent of visual-pool capacity and overflow.
+    if (GetWorld() != nullptr)
+    {
+        if (UEchoesPresentationAudioSubsystem* Audio =
+                GetWorld()->GetSubsystem<UEchoesPresentationAudioSubsystem>())
+        {
+            Audio->PlayDestruction(Faction, WorldLocation);
+        }
+    }
+}
+
+void UEchoesSimulationSubsystem::OnPreGarbageCollect()
+{
+    const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
+    LastGcPreUsedPhysicalBytes = Memory.UsedPhysical;
+    LastGcPreObjectSlots = GUObjectArray.GetObjectArrayNum();
+    LastGcPreClaimedObjectSlots =
+        GUObjectArray.GetObjectArrayNumMinusAvailable();
+}
+
+void UEchoesSimulationSubsystem::OnPostGarbageCollect()
+{
+    const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
+    LastGcPostUsedPhysicalBytes = Memory.UsedPhysical;
+    LastGcUsedPhysicalDeltaBytes =
+        static_cast<int64>(LastGcPostUsedPhysicalBytes) -
+        static_cast<int64>(LastGcPreUsedPhysicalBytes);
+    LastGcObjectSlotDelta =
+        static_cast<int64>(GUObjectArray.GetObjectArrayNum()) -
+        static_cast<int64>(LastGcPreObjectSlots);
+    LastGcClaimedObjectSlotDelta =
+        static_cast<int64>(GUObjectArray.GetObjectArrayNumMinusAvailable()) -
+        static_cast<int64>(LastGcPreClaimedObjectSlots);
+    ++NaturalGarbageCollectionCount;
+}
+
+void UEchoesSimulationSubsystem::EmitRuntimeMemoryPoolTelemetry(
+    uint64 Tick,
+    uint64 WallMs)
+{
+    if (!bSustainedStressScenario || !Simulation.IsValid())
+    {
+        return;
+    }
+    if (LastRuntimeMemoryTelemetryTick != MAX_uint64 &&
+        (Tick <= LastRuntimeMemoryTelemetryTick ||
+         Tick - LastRuntimeMemoryTelemetryTick !=
+             SustainedMemoryTelemetryIntervalTicks))
+    {
+        FailSustainedStressContract(
+            TEXT("MEMORY_TELEMETRY_CADENCE_INVALID"),
+            FString::Printf(
+                TEXT("tick=%llu previous=%llu interval=%llu"),
+                static_cast<unsigned long long>(Tick),
+                static_cast<unsigned long long>(
+                    LastRuntimeMemoryTelemetryTick),
+                static_cast<unsigned long long>(
+                    SustainedMemoryTelemetryIntervalTicks)));
+        return;
+    }
+
+    const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
+    const int32 GlobalObjectSlots = GUObjectArray.GetObjectArrayNum();
+    const int32 GlobalObjectClaimed =
+        GUObjectArray.GetObjectArrayNumMinusAvailable();
+    const FEchoesPresentationPoolStats Pool = GetPresentationPoolStats();
+    const uint64 CommandLogCapacity = static_cast<uint64>(
+        Simulation->CommandLog().capacity());
+    const uint64 CommandLogAllocatedBytes =
+        CommandLogCapacity * sizeof(echoes::sim::Command);
+    const uint64 CommandElementBytes = sizeof(echoes::sim::Command);
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const int32 EffectsQuality =
+        Settings != nullptr ? Settings->GetVisualEffectQuality() : 3;
+    const uint64 Sequence = Tick / SustainedMemoryTelemetryIntervalTicks;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_STRESS_SUSTAINED_MEMORY] schema=%u fixture=Stress400Sustained tick=%llu wall_ms=%llu sequence=%llu intervalTicks=%llu processUsedPhysicalBytes=%llu processPeakUsedPhysicalBytes=%llu globalObjectSlots=%d globalObjectClaimed=%d gcCycles=%llu gcLastPreUsedPhysicalBytes=%llu gcLastPostUsedPhysicalBytes=%llu gcLastUsedPhysicalDeltaBytes=%lld gcLastObjectSlotDelta=%lld gcLastClaimedObjectSlotDelta=%lld entityActive=%d entityFree=%d entityFreeCapacity=%d entityCreated=%llu entityReused=%llu entityReleased=%llu entityOverflow=%llu effectsQuality=%d destructionActive=%d destructionFree=%d destructionCapacity=%d destructionCreated=%llu destructionReused=%llu destructionActivated=%llu destructionReleased=%llu destructionOverflow=%llu destructionCoalesced=%llu entityMIDCreated=%llu destructionMIDCreated=%llu commandLog=%llu commandLimit=%llu commandLogCapacity=%llu commandElementBytes=%llu commandLogAllocatedBytes=%llu cumulativeReplacements=%llu naturalGc=true forcedGc=false authoritative=false"),
+        SustainedMemoryTelemetrySchema,
+        static_cast<unsigned long long>(Tick),
+        static_cast<unsigned long long>(WallMs),
+        static_cast<unsigned long long>(Sequence),
+        static_cast<unsigned long long>(SustainedMemoryTelemetryIntervalTicks),
+        static_cast<unsigned long long>(Memory.UsedPhysical),
+        static_cast<unsigned long long>(Memory.PeakUsedPhysical),
+        GlobalObjectSlots,
+        GlobalObjectClaimed,
+        static_cast<unsigned long long>(NaturalGarbageCollectionCount),
+        static_cast<unsigned long long>(LastGcPreUsedPhysicalBytes),
+        static_cast<unsigned long long>(LastGcPostUsedPhysicalBytes),
+        static_cast<long long>(LastGcUsedPhysicalDeltaBytes),
+        static_cast<long long>(LastGcObjectSlotDelta),
+        static_cast<long long>(LastGcClaimedObjectSlotDelta),
+        Pool.ActiveEntityViews,
+        Pool.FreeEntityViews,
+        Pool.EntityFreeCapacity,
+        static_cast<unsigned long long>(Pool.EntityCreated),
+        static_cast<unsigned long long>(Pool.EntityReused),
+        static_cast<unsigned long long>(Pool.EntityReleased),
+        static_cast<unsigned long long>(Pool.EntityRetentionOverflow),
+        EffectsQuality,
+        Pool.ActiveDestructionViews,
+        Pool.FreeDestructionViews,
+        Pool.DestructionCapacity,
+        static_cast<unsigned long long>(Pool.DestructionCreated),
+        static_cast<unsigned long long>(Pool.DestructionReused),
+        static_cast<unsigned long long>(Pool.DestructionActivated),
+        static_cast<unsigned long long>(Pool.DestructionReleased),
+        static_cast<unsigned long long>(Pool.DestructionOverflow),
+        static_cast<unsigned long long>(Pool.DestructionCoalesced),
+        static_cast<unsigned long long>(Pool.EntityOwnedMIDCreated),
+        static_cast<unsigned long long>(Pool.DestructionOwnedMIDCreated),
+        static_cast<unsigned long long>(Simulation->CommandLog().size()),
+        static_cast<unsigned long long>(
+            echoes::sim::kMaximumCommandLogEntries),
+        static_cast<unsigned long long>(CommandLogCapacity),
+        static_cast<unsigned long long>(CommandElementBytes),
+        static_cast<unsigned long long>(CommandLogAllocatedBytes),
+        static_cast<unsigned long long>(
+            SustainedStressCumulativeReplacements));
+    LastRuntimeMemoryTelemetryTick = Tick;
+}
+
 bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
 {
     if (!Simulation.IsValid() || GetWorld() == nullptr)
@@ -15284,108 +15772,130 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
         return false;
     }
 
+    struct FVisibleBinding final
+    {
+        const echoes::sim::Entity* Entity = nullptr;
+        AEchoesEntityView* View = nullptr;
+        bool bAcquired = false;
+    };
+    struct FRemovedPresentation final
+    {
+        uint32 EntityId = 0;
+        FVector WorldLocation = FVector::ZeroVector;
+        echoes::sim::Faction Faction = echoes::sim::Faction::MeridianCompact;
+        echoes::sim::EntityType Type = echoes::sim::EntityType::Worker;
+    };
+
     bool bAllVisibleViewsReady = true;
     TSet<uint32> LiveEntityIds;
+    TArray<const echoes::sim::Entity*> VisibleEntities;
     LiveEntityIds.Reserve(static_cast<int32>(Simulation->Entities().size()));
+    VisibleEntities.Reserve(static_cast<int32>(Simulation->Entities().size()));
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
-        if (!Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id))
+        if (Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id))
         {
-            continue;
+            LiveEntityIds.Add(Entity.id);
+            VisibleEntities.Add(&Entity);
         }
-        LiveEntityIds.Add(Entity.id);
-        AEchoesEntityView* View = FindEntityView(Entity.id);
-        bool bNewView = false;
-        if (View == nullptr)
+    }
+
+    TArray<uint32> RemovedIds;
+    RemovedIds.Reserve(EntityViews.Num());
+    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
+         EntityViews)
+    {
+        if (!LiveEntityIds.Contains(Pair.Key))
         {
-            FActorSpawnParameters SpawnParameters;
-            SpawnParameters.SpawnCollisionHandlingOverride =
-                ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-            View = GetWorld()->SpawnActor<AEchoesEntityView>(
-                AEchoesEntityView::StaticClass(),
-                SimToWorld(Entity.position),
-                FRotator::ZeroRotator,
-                SpawnParameters);
-            if (View == nullptr)
+            RemovedIds.Add(Pair.Key);
+        }
+    }
+    RemovedIds.Sort();
+
+    TArray<FRemovedPresentation> RemovedPresentations;
+    RemovedPresentations.Reserve(RemovedIds.Num());
+    for (const uint32 RemovedId : RemovedIds)
+    {
+        AEchoesEntityView* View = FindEntityView(RemovedId);
+        if (View != nullptr)
+        {
+            const bool bAuthoritativelyRemoved =
+                !bTeleportNewViews &&
+                Simulation->FindEntity(RemovedId) == nullptr &&
+                View->GetEntityType() != echoes::sim::EntityType::ResourceNode &&
+                View->GetEntityType() != echoes::sim::EntityType::FutureWell &&
+                !View->IsTemporaryMineralCover();
+            if (bAuthoritativelyRemoved)
+            {
+                FRemovedPresentation& Presentation =
+                    RemovedPresentations.AddDefaulted_GetRef();
+                Presentation.EntityId = RemovedId;
+                Presentation.WorldLocation = View->GetActorLocation();
+                Presentation.Faction = View->GetEntityFaction();
+                Presentation.Type = View->GetEntityType();
+            }
+        }
+        EntityViews.Remove(RemovedId);
+        ReleaseEntityView(View);
+    }
+
+    // Acquire all missing actors only after every retired actor is available.
+    // This makes same-frame replacement reuse deterministic and prevents the
+    // old spawn-before-destroy allocation spike.
+    TArray<FVisibleBinding> Bindings;
+    Bindings.Reserve(VisibleEntities.Num());
+    for (const echoes::sim::Entity* Entity : VisibleEntities)
+    {
+        FVisibleBinding& Binding = Bindings.AddDefaulted_GetRef();
+        Binding.Entity = Entity;
+        Binding.View = FindEntityView(Entity->id);
+        if (Binding.View == nullptr)
+        {
+            Binding.View = AcquireEntityView();
+            Binding.bAcquired = true;
+            if (Binding.View == nullptr)
             {
                 UE_LOG(
                     LogEchoes,
                     Error,
                     TEXT("[ECHOES_VIEW_SPAWN_FAILED] entity=%u"),
-                    Entity.id);
+                    Entity->id);
                 bAllVisibleViewsReady = false;
                 continue;
             }
-            EntityViews.Add(Entity.id, View);
-            bNewView = true;
+            EntityViews.Add(Entity->id, Binding.View);
         }
-        View->ApplyAuthoritativeState(Entity, bTeleportNewViews || bNewView);
     }
 
-    TArray<uint32> RemovedIds;
-    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair : EntityViews)
+    for (const FVisibleBinding& Binding : Bindings)
     {
-        if (!LiveEntityIds.Contains(Pair.Key))
+        if (Binding.Entity == nullptr || Binding.View == nullptr)
         {
-            if (AEchoesEntityView* View = Pair.Value.Get())
-            {
-                const bool bAuthoritativelyRemoved =
-                    !bTeleportNewViews &&
-                    Simulation->FindEntity(Pair.Key) == nullptr &&
-                    View->GetEntityType() != echoes::sim::EntityType::ResourceNode &&
-                    View->GetEntityType() != echoes::sim::EntityType::FutureWell &&
-                    !View->IsTemporaryMineralCover();
-                if (bAuthoritativelyRemoved)
-                {
-                    FActorSpawnParameters SpawnParameters;
-                    SpawnParameters.ObjectFlags |= RF_Transient;
-                    SpawnParameters.SpawnCollisionHandlingOverride =
-                        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-                    if (AEchoesDestructionView* Destruction =
-                            GetWorld()->SpawnActor<AEchoesDestructionView>(
-                                View->GetActorLocation(),
-                                FRotator::ZeroRotator,
-                                SpawnParameters))
-                    {
-                        const UEchoesGameUserSettings* Settings =
-                            UEchoesGameUserSettings::Get();
-                        const bool bReducedMotion =
-                            Settings != nullptr && Settings->IsReducedMotionEnabled();
-                        const bool bReducedFlashing =
-                            Settings != nullptr && Settings->IsReducedFlashingEnabled();
-                        Destruction->InitializeDestruction(
-                            View->GetEntityFaction(),
-                            View->GetEntityType(),
-                            bReducedMotion,
-                            bReducedFlashing);
-                        if (UEchoesPresentationAudioSubsystem* Audio =
-                                GetWorld()->GetSubsystem<
-                                    UEchoesPresentationAudioSubsystem>())
-                        {
-                            Audio->PlayDestruction(
-                                View->GetEntityFaction(),
-                                View->GetActorLocation());
-                        }
-                        UE_LOG(
-                            LogEchoes,
-                            Display,
-                            TEXT("[ECHOES_DESTRUCTION_VFX] revision=destruction-vfx-v1 entity=%u authored=%s reducedMotion=%s reducedFlashing=%s collision=false navigation=false authoritative=false finalArt=false"),
-                            Pair.Key,
-                            Destruction->IsUsingAuthoredVFXAssets()
-                                ? TEXT("true")
-                                : TEXT("false"),
-                            bReducedMotion ? TEXT("true") : TEXT("false"),
-                            bReducedFlashing ? TEXT("true") : TEXT("false"));
-                    }
-                }
-                View->Destroy();
-            }
-            RemovedIds.Add(Pair.Key);
+            continue;
         }
+        const uint64 MIDCountBefore =
+            Binding.View->GetOwnedMIDCreationCount();
+        if (Binding.bAcquired)
+        {
+            Binding.View->ActivateForEntity(*Binding.Entity, true);
+        }
+        else
+        {
+            Binding.View->ApplyAuthoritativeState(
+                *Binding.Entity,
+                bTeleportNewViews);
+        }
+        EntityViewOwnedMIDCreationCount +=
+            Binding.View->GetOwnedMIDCreationCount() - MIDCountBefore;
     }
-    for (const uint32 RemovedId : RemovedIds)
+
+    for (const FRemovedPresentation& Presentation : RemovedPresentations)
     {
-        EntityViews.Remove(RemovedId);
+        EmitDestructionPresentation(
+            Presentation.EntityId,
+            Presentation.WorldLocation,
+            Presentation.Faction,
+            Presentation.Type);
     }
     return bAllVisibleViewsReady;
 }
@@ -15495,14 +16005,15 @@ void UEchoesSimulationSubsystem::DestroyFogView()
 
 void UEchoesSimulationSubsystem::DestroyEntityViews()
 {
-    for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair : EntityViews)
+    TArray<uint32> EntityIds;
+    EntityViews.GetKeys(EntityIds);
+    EntityIds.Sort();
+    for (const uint32 EntityId : EntityIds)
     {
-        if (AEchoesEntityView* View = Pair.Value.Get())
-        {
-            View->Destroy();
-        }
+        AEchoesEntityView* View = FindEntityView(EntityId);
+        EntityViews.Remove(EntityId);
+        ReleaseEntityView(View);
     }
-    EntityViews.Reset();
 }
 
 const echoes::sim::Simulation* UEchoesSimulationSubsystem::GetSimulation() const

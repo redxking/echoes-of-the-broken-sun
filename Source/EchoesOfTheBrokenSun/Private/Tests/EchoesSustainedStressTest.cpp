@@ -114,6 +114,16 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Sustained fixture starts with 396 bounded commands"),
               static_cast<int32>(Simulation->CommandLog().size()),
               396);
+    const FEchoesPresentationPoolStats ReadyPoolStats =
+        Bridge->GetPresentationPoolStats();
+    TestEqual(TEXT("Sustained readiness binds all 401 entity views"),
+              ReadyPoolStats.ActiveEntityViews,
+              401);
+    TestEqual(TEXT("Sustained readiness needs no spare entity view"),
+              ReadyPoolStats.FreeEntityViews,
+              0);
+    TestTrue(TEXT("Sustained readiness remains within the entity pool bound"),
+             ReadyPoolStats.EntityCreated <= 401);
 
     std::array<int32, echoes::sim::kMaximumPlayers> TeamCounts{};
     std::array<int32, echoes::sim::kMaximumPlayers> CoreCounts{};
@@ -260,6 +270,36 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Replacement retains all 401 authoritative entities"),
               static_cast<int32>(Simulation->Entities().size()),
               401);
+    const FEchoesPresentationPoolStats FirstWindowPoolStats =
+        Bridge->GetPresentationPoolStats();
+    TestEqual(TEXT("Replacement retains exactly 401 active views"),
+              FirstWindowPoolStats.ActiveEntityViews,
+              401);
+    TestEqual(TEXT("Same-frame retire-before-acquire leaves no spare view"),
+              FirstWindowPoolStats.FreeEntityViews,
+              0);
+    TestEqual(TEXT("Replacement creates no entity actors after readiness"),
+              FirstWindowPoolStats.EntityCreated,
+              ReadyPoolStats.EntityCreated);
+    TestEqual(TEXT("Every replacement reuses one retired entity actor"),
+              FirstWindowPoolStats.EntityReused - ReadyPoolStats.EntityReused,
+              Bridge->GetSustainedStressReplacementCount());
+    TestEqual(TEXT("Every replacement releases one retired entity actor"),
+              FirstWindowPoolStats.EntityReleased - ReadyPoolStats.EntityReleased,
+              Bridge->GetSustainedStressReplacementCount());
+    TestEqual(TEXT("Destruction activation follows authoritative replacement"),
+              FirstWindowPoolStats.DestructionActivated,
+              Bridge->GetSustainedStressReplacementCount());
+    TestTrue(TEXT("Destruction actors remain inside the selected quality bound"),
+             FirstWindowPoolStats.ActiveDestructionViews +
+                     FirstWindowPoolStats.FreeDestructionViews <=
+                 FirstWindowPoolStats.DestructionCapacity);
+    TestEqual(TEXT("Each created destruction actor owns four MIDs"),
+              FirstWindowPoolStats.DestructionOwnedMIDCreated,
+              FirstWindowPoolStats.DestructionCreated * 4);
+    TestEqual(TEXT("Entity MID creation plateaus after readiness"),
+              FirstWindowPoolStats.EntityOwnedMIDCreated,
+              ReadyPoolStats.EntityOwnedMIDCreated);
     const uint64 FirstChecksum = Simulation->StateChecksum();
     const uint64 FirstReplacementCount =
         Bridge->GetSustainedStressReplacementCount();
@@ -340,6 +380,20 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Restarted run reproduces the bounded command count"),
               static_cast<int32>(Simulation->CommandLog().size()),
               FirstCommandCount);
+    const FEchoesPresentationPoolStats RestartedPoolStats =
+        Bridge->GetPresentationPoolStats();
+    TestEqual(TEXT("Restart reuses the retained entity actor set"),
+              RestartedPoolStats.EntityCreated,
+              FirstWindowPoolStats.EntityCreated);
+    TestEqual(TEXT("Restart retains the destruction actor bound"),
+              RestartedPoolStats.DestructionCreated,
+              FirstWindowPoolStats.DestructionCreated);
+    TestEqual(TEXT("Restart retains the entity MID plateau"),
+              RestartedPoolStats.EntityOwnedMIDCreated,
+              FirstWindowPoolStats.EntityOwnedMIDCreated);
+    TestEqual(TEXT("Restart retains the destruction MID plateau"),
+              RestartedPoolStats.DestructionOwnedMIDCreated,
+              FirstWindowPoolStats.DestructionOwnedMIDCreated);
     ReplayError.clear();
     const echoes::sim::ReplayRecord RestartedSustainedReplay =
         Simulation->ExportReplay(&ReplayError);
@@ -394,13 +448,26 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Stop clears scenario readiness"),
               Bridge->IsScenarioReady());
     int32 RemainingViewCount = 0;
+    int32 PreparedViewCount = 0;
     for (TActorIterator<AEchoesEntityView> It(World); It; ++It)
     {
         ++RemainingViewCount;
+        PreparedViewCount += It->IsPreparedForPool() ? 1 : 0;
     }
-    TestEqual(TEXT("Stop releases every sustained entity view"),
-              RemainingViewCount,
+    const FEchoesPresentationPoolStats StoppedPoolStats =
+        Bridge->GetPresentationPoolStats();
+    TestEqual(TEXT("Stop clears every active sustained entity binding"),
+              StoppedPoolStats.ActiveEntityViews,
               0);
+    TestEqual(TEXT("Stop retains the bounded entity actor set for reuse"),
+              RemainingViewCount,
+              StoppedPoolStats.FreeEntityViews);
+    TestEqual(TEXT("Every retained entity actor is fully prepared"),
+              PreparedViewCount,
+              RemainingViewCount);
+    TestTrue(TEXT("Stopped entity pool remains within its hard capacity"),
+             StoppedPoolStats.FreeEntityViews <=
+                 StoppedPoolStats.EntityFreeCapacity);
 
     TestTrue(TEXT("Ordinary scenario starts after sustained teardown"),
              Bridge->StartPrototypeScenario());

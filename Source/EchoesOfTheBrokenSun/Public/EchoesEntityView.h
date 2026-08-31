@@ -22,6 +22,14 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
+    /** Fully reactivates a pooled actor for one authoritative entity. */
+    void ActivateForEntity(
+        const echoes::sim::Entity& State,
+        bool bTeleport = true);
+
+    /** Removes every identity-local presentation state before pooling. */
+    void PrepareForPool();
+
     void ApplyAuthoritativeState(
         const echoes::sim::Entity& State,
         bool bTeleport);
@@ -32,6 +40,12 @@ public:
     [[nodiscard]] echoes::sim::EntityType GetEntityType() const { return EntityType; }
     [[nodiscard]] echoes::sim::Faction GetEntityFaction() const { return EntityFaction; }
     [[nodiscard]] bool IsSelected() const { return bSelected; }
+    [[nodiscard]] bool IsPreparedForPool() const { return bPreparedForPool; }
+    [[nodiscard]] uint64 GetOwnedMIDCreationCount() const
+    {
+        return OwnedMIDCreationCount;
+    }
+    [[nodiscard]] bool HasBodySelectionCollisionEnabled() const;
     [[nodiscard]] bool IsUsingAuthoredSelectionVFX() const
     {
         return bUsingAuthoredSelectionVFX;
@@ -110,11 +124,26 @@ public:
     [[nodiscard]] FString GetDisplayName() const;
 
 private:
+    enum class EBodyMaterialFamily : uint8
+    {
+        Basic,
+        AuthoredSurface,
+        AuthoredWorldSurface,
+    };
+
     void ConfigureAppearance(const echoes::sim::Entity& State);
     void ConfigureFutureWellPresentation(const echoes::sim::Entity& State);
     void EnsureFutureWellMaterialSet(
         UStaticMeshComponent* Component,
         TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials);
+    void EnsureBodyMaterialSet(
+        EBodyMaterialFamily Family,
+        UMaterialInterface* Parent,
+        int32 MaterialCount);
+    [[nodiscard]] UMaterialInstanceDynamic* CreateOwnedMaterial(
+        UMaterialInterface* Parent);
+    void ResetOwnedMaterialParameters();
+    void ResetPresentationComponentsForPool();
     void SetBodyColor(const FLinearColor& Color);
     void UpdateHealthBar();
 
@@ -215,6 +244,15 @@ private:
     TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
 
     UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> BasicBodyMaterialCache;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> AuthoredBodyMaterialCache;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> WorldBodyMaterialCache;
+
+    UPROPERTY(Transient)
     TArray<TObjectPtr<UMaterialInstanceDynamic>> FutureWellOrbitOuterMaterials;
 
     UPROPERTY(Transient)
@@ -263,6 +301,10 @@ private:
     TObjectPtr<UMaterialInstanceDynamic> AegisPowerFieldMaterial;
 
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
+    EBodyMaterialFamily ActiveBodyMaterialFamily =
+        EBodyMaterialFamily::Basic;
+    int32 ActiveBodyMaterialSlotCount = 0;
+    uint64 OwnedMIDCreationCount = 0;
     uint32 EntityId = 0;
     uint8 OwnerPlayerId = echoes::sim::kNeutralPlayer;
     echoes::sim::Faction EntityFaction = echoes::sim::Faction::MeridianCompact;
@@ -305,4 +347,5 @@ private:
     bool bUsingAuthoredSelectionVFX = false;
     bool bSelectionReducedMotionApplied = false;
     bool bSelectionReducedFlashingApplied = false;
+    bool bPreparedForPool = false;
 };

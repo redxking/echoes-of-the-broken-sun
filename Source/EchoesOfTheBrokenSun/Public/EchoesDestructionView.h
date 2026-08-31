@@ -29,6 +29,12 @@ public:
         bool bInReducedFlashing,
         float InLifetimeSeconds = 1.6f);
 
+    /** Deactivates this presentation actor without destroying its components/MIDs. */
+    void PrepareForPool();
+
+    /** Coalesces a deterministic overflow event without changing authority/lifetime. */
+    void RegisterOverflowCoalesced();
+
     [[nodiscard]] bool IsReducedMotionApplied() const { return bReducedMotion; }
     [[nodiscard]] bool IsReducedFlashingApplied() const { return bReducedFlashing; }
     [[nodiscard]] bool HasCollisionDisabled() const;
@@ -45,9 +51,22 @@ public:
     {
         return PresentationLifetimeSeconds;
     }
+    [[nodiscard]] bool IsPresentationActive() const
+    {
+        return bPresentationActive;
+    }
+    [[nodiscard]] uint64 GetOwnedMIDCreationCount() const
+    {
+        return OwnedMIDCreationCount;
+    }
+    [[nodiscard]] uint64 GetCoalescedOverflowCount() const
+    {
+        return CoalescedOverflowCount;
+    }
 
 private:
     void ApplyAppearance(const FLinearColor& Color, float EmissiveStrength);
+    [[nodiscard]] UMaterialInstanceDynamic* CreateOwnedMaterial();
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|Destruction Feedback")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -98,4 +117,7 @@ private:
     float CurrentEmissiveStrength = 0.0f;
     bool bReducedMotion = false;
     bool bReducedFlashing = false;
+    bool bPresentationActive = false;
+    uint64 OwnedMIDCreationCount = 0;
+    uint64 CoalescedOverflowCount = 0;
 };
