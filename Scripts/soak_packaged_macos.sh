@@ -103,14 +103,17 @@ if ! /usr/bin/grep -q '\[ECHOES_STRESS_READY\] units=400 teams=4 entities=401 vi
   print -u2 "The soak did not reach the accepted four-team scale boundary. Inspect: $raw_log"
   exit 7
 fi
-if /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\]' "$raw_log" &&
-   ! /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\] attackMove=396 teams=4 executeTick=1' "$raw_log"; then
-  print -u2 "The soak reported an unexpected four-team broad-order fixture. Inspect: $raw_log"
+if ! /usr/bin/grep -q '\[ECHOES_STRESS_ORDERS_READY\] attackMove=396 teams=4 executeTick=1' "$raw_log"; then
+  print -u2 "The soak did not initialize the accepted four-team broad-order fixture. Inspect: $raw_log"
   exit 8
+fi
+if ! /usr/bin/grep -Eq '\[ECHOES_STRESS_COMBAT_ACTIVE\] tick=[0-9]+ damaged=[1-9][0-9]* destroyed=[0-9]+ remaining=[0-9]+ visibleViews=401' "$raw_log"; then
+  print -u2 "The soak did not observe active four-team combat. Inspect: $raw_log"
+  exit 9
 fi
 if /usr/bin/grep -Eq 'Fatal error:|Assertion failed:|GPU Crashed|Out of memory|Ran out of memory' "$raw_log"; then
   print -u2 "The soak log contains a rejected runtime failure. Inspect: $raw_log"
-  exit 9
+  exit 10
 fi
 
 package_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
@@ -225,11 +228,11 @@ result = {
     "budgets": budgets,
     "all_measured_budgets_pass": all(budgets.values()),
     "claim_boundary": (
-        "Local packaged Mac Development durability and process-memory observation "
-        "of the 400-unit/four-team visibility-scoped proxy fixture. The fixture "
-        "omits authored weather/effects, formations, and representative broad combat "
-        "orders. This is not clean-machine, networked, gameplay-completeness, or "
-        "release qualification."
+        "Local packaged Mac Development duration and process-memory observation of "
+        "the 400-unit/four-team visibility-scoped fixture with 396 deterministic "
+        "attack-move orders, active combat, and the procedural Glass Scar atmosphere. "
+        "The fixture omits final effects and formations. This is not clean-machine, "
+        "networked, gameplay-completeness, or release qualification."
     ),
 }
 
@@ -246,5 +249,5 @@ print "Runtime log: $raw_log"
 
 if ! /usr/bin/grep -q '"all_measured_budgets_pass": true' "$summary"; then
   print -u2 "The packaged soak completed, but one or more recorded budgets failed."
-  exit 9
+  exit 11
 fi

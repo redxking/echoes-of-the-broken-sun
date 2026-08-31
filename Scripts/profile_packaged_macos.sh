@@ -312,7 +312,7 @@ result = {
     "macos": macos_version,
     "resolution": {"width": observed_x, "height": observed_y},
     "display_mode": "fullscreen",
-    "scenario": "four-team-scale-400" if stress400 else "placeholder-startup-25",
+    "scenario": "four-team-scale-400" if stress400 else "standard-startup-32",
     "quality_preset": {
         "scalability_group_level": 1,
         "resolution_quality_percent": resolution_quality,
@@ -342,9 +342,10 @@ result = {
         "final effects or formations. It is "
         "not a soak test, clean-machine result, or release qualification."
         if stress400 else
-        "Local packaged Mac Development measurement of the current 25-entity "
-        "placeholder Glass Scar startup scene. It is not a 400-unit representative "
-        "combat/weather workload, a soak test, a clean-machine result, or release qualification."
+        "Local packaged Mac Development measurement of the current 32-entity, "
+        "14-visible-view Glass Scar startup scene with the procedural atmosphere "
+        "enabled. It is not a 400-unit workload, a long-duration test, a clean-machine "
+        "result, or release qualification."
     ),
 }
 
