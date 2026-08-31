@@ -2,6 +2,29 @@
 set -euo pipefail
 
 project_root="${0:A:h:h}"
+if ! /usr/bin/env -0 >/dev/null; then
+  print -u2 "Packaging could not enumerate the inherited process environment safely."
+  exit 2
+fi
+typeset -a inherited_git_environment_names=()
+while IFS= read -r -d $'\0' environment_record; do
+  environment_name="${environment_record%%=*}"
+  if [[ "$environment_name" == GIT_* ]]; then
+    inherited_git_environment_names+=("$environment_name")
+  fi
+done < <(/usr/bin/env -0)
+if (( ${#inherited_git_environment_names} > 0 )); then
+  inherited_git_environment_names=("${(@on)inherited_git_environment_names}")
+  print -u2 "Packaging refuses inherited Git or Git LFS environment variables before tool use: ${(j:, :)inherited_git_environment_names}"
+  exit 2
+fi
+export GIT_ATTR_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_SYSTEM=/dev/null
+export GIT_NO_REPLACE_OBJECTS=1
+export GIT_TERMINAL_PROMPT=0
+git_environment_policy="reject-all-inherited-GIT-prefix;controlled=GIT_ATTR_NOSYSTEM=1,GIT_CONFIG_GLOBAL=/dev/null,GIT_CONFIG_NOSYSTEM=1,GIT_CONFIG_SYSTEM=/dev/null,GIT_NO_REPLACE_OBJECTS=1,GIT_TERMINAL_PROMPT=0"
 approved_git_path="/opt/homebrew/bin/git"
 approved_git_version="git version 2.55.0"
 approved_git_resolved_path="/opt/homebrew/Cellar/git/2.55.0/bin/git"
@@ -55,6 +78,16 @@ git_lfs_restrictive_config_records() {
     /usr/bin/awk '/^FetchInclude=|^FetchExclude=/ { print }'
 }
 export PATH="${git_resolved_path:h}:${git_lfs_resolved_path:h}:$PATH"
+if ! source_top_level="$(git -C "$project_root" rev-parse --path-format=absolute --show-toplevel 2>/dev/null)"; then
+  print -u2 "Packaging could not resolve the canonical Git checkout top level."
+  exit 10
+fi
+source_top_level="${source_top_level:A}"
+if [[ "$source_top_level" != "$project_root" ]]; then
+  print -u2 "Packaging refuses a Git checkout redirected away from the intended source root."
+  print -u2 "Intended source root: $project_root; observed Git top level: $source_top_level"
+  exit 10
+fi
 approved_ue_root="/Users/Shared/Epic Games/UE_5.8"
 approved_ue_root="${approved_ue_root:A}"
 approved_developer_dir="/Applications/Xcode.app/Contents/Developer"
@@ -156,7 +189,7 @@ export PYTHONDONTWRITEBYTECODE=1
 
 read_remote_main() {
   local remote_record
-  remote_record="$(GIT_TERMINAL_PROMPT=0 git -C "$project_root" ls-remote --exit-code "$approved_origin_url" refs/heads/main 2>/dev/null)" || return 1
+  remote_record="$(git -C "$project_root" ls-remote --exit-code "$approved_origin_url" refs/heads/main 2>/dev/null)" || return 1
   print "${remote_record%%[[:space:]]*}"
 }
 
@@ -164,10 +197,14 @@ remote_commit="$(read_remote_main || print unknown)"
 
 verify_clean_pushed_source() {
   local phase="$1"
-  local observed_commit observed_tree observed_origin observed_remote
+  local observed_top_level observed_commit observed_tree observed_origin observed_remote
   local observed_status observed_status_sha256 observed_lfs_status observed_lfs_status_sha256
   local observed_index_concealment observed_origin_fetch_url observed_origin_push_url
   local observed_lfs_inventory observed_lfs_restrictive_config
+  observed_top_level="$(git -C "$project_root" rev-parse --path-format=absolute --show-toplevel 2>/dev/null || print unknown)"
+  if [[ "$observed_top_level" != unknown ]]; then
+    observed_top_level="${observed_top_level:A}"
+  fi
   observed_commit="$(git -C "$project_root" rev-parse --verify HEAD 2>/dev/null || print unknown)"
   observed_tree="$(git -C "$project_root" rev-parse --verify 'HEAD^{tree}' 2>/dev/null || print unknown)"
   observed_origin="$(git -C "$project_root" rev-parse --verify origin/main 2>/dev/null || print unknown)"
@@ -181,7 +218,8 @@ verify_clean_pushed_source() {
   observed_index_concealment="$(source_index_concealment_records 2>/dev/null || print index-state-unavailable)"
   observed_lfs_restrictive_config="$(git_lfs_restrictive_config_records 2>/dev/null || print lfs-config-unavailable)"
   observed_lfs_inventory="$(git_lfs ls-files -l 2>/dev/null || print lfs-inventory-unavailable)"
-  if [[ "$source_commit" == unknown || "$source_tree_hash" == unknown ||
+  if [[ "$observed_top_level" != "$project_root" ||
+        "$source_commit" == unknown || "$source_tree_hash" == unknown ||
         "$origin_commit" == unknown ||
         "$remote_commit" == unknown ||
         "$observed_commit" != "$source_commit" ||
@@ -198,6 +236,7 @@ verify_clean_pushed_source() {
         "$observed_status_sha256" != "$source_status_sha256" ||
         "$observed_lfs_status_sha256" != "$git_lfs_status_sha256" ]]; then
     print -u2 "Packaging requires an unchanged clean checkout at pushed origin/main ($phase)."
+    print -u2 "Intended source root: $project_root; observed Git top level: $observed_top_level."
     print -u2 "Expected source commit/tree: $source_commit/$source_tree_hash; observed HEAD/tree: $observed_commit/$observed_tree."
     print -u2 "Observed origin/main: $observed_origin; live remote main: $observed_remote; Git LFS status must also be clean."
     exit 9
@@ -596,6 +635,8 @@ application_executable_sha256="$(/usr/bin/shasum -a 256 "$binary" | /usr/bin/awk
   print "source_branch=$source_branch"
   print "source_checkout_path=$project_root"
   print "source_checkout_kind=dedicated-linked-worktree-detached-at-main"
+  print "source_top_level_binding=canonical-exact"
+  print "git_environment_policy=$git_environment_policy"
   print "origin_main=$origin_commit"
   print "remote_main=$remote_commit"
   print "source_tree=clean"
