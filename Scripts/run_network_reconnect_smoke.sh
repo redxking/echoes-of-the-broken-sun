@@ -58,11 +58,70 @@ mkdir -p \
 : > "$phase_one_log"
 : > "$invalid_log"
 : > "$phase_two_log"
+: > "$manifest"
 : > "$valid_credential_file"
 print -rn -- '00000000000000000000000000000000' > "$invalid_credential_file"
 /bin/chmod 0600 \
-  "$server_log" "$phase_one_log" "$invalid_log" "$phase_two_log" \
+  "$server_log" "$phase_one_log" "$invalid_log" "$phase_two_log" "$manifest" \
   "$valid_credential_file" "$invalid_credential_file"
+
+server_pid=""
+client_pid=""
+phase_one_pid=""
+invalid_pid=""
+
+cleanup_processes() {
+  local pid credential_file
+  for pid in "$client_pid" "$phase_one_pid" "$invalid_pid" "$server_pid"; do
+    if [[ -n "$pid" ]]; then
+      if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+      fi
+      wait "$pid" 2>/dev/null || true
+    fi
+  done
+  for credential_file in \
+      "$valid_credential_file" "$invalid_credential_file"; do
+    if [[ -e "$credential_file" ]]; then
+      /bin/rm -f -- "$credential_file"
+    fi
+  done
+}
+
+handle_signal() {
+  local signal_name="$1"
+  local exit_status="$2"
+  trap - EXIT INT TERM
+  {
+    print "run_interrupted_utc=$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
+    print "result=interrupted"
+    print "signal=$signal_name"
+  } >> "$manifest"
+  cleanup_processes
+  exit "$exit_status"
+}
+
+require_process_success() {
+  local process_variable="$1"
+  local role="$2"
+  local process_id="${(P)process_variable}"
+  local exit_status
+  if wait "$process_id" 2>/dev/null; then
+    exit_status=0
+  else
+    exit_status=$?
+  fi
+  typeset -g "$process_variable="
+  print "${role}_exit_status=$exit_status" >> "$manifest"
+  if (( exit_status != 0 )); then
+    print -u2 "The ${role} process exited with status ${exit_status}; expected 0."
+    exit 1
+  fi
+}
+
+trap cleanup_processes EXIT
+trap 'handle_signal INT 130' INT
+trap 'handle_signal TERM 143' TERM
 
 source_sha="$(git -C "$project_root" rev-parse HEAD)"
 source_branch="$(git -C "$project_root" branch --show-current)"
@@ -95,6 +154,9 @@ engine_version_sha256="$(/usr/bin/shasum -a 256 "$engine_version_file" | /usr/bi
   print "security_posture=development_loopback_only"
   print "process_model=separate_process_localhost"
   print "credential_transport=owner_only_one_use_file_then_reliable_rpc"
+  print "credential_path_swap_boundary=same_uid_concurrent_directory_mutation_out_of_scope"
+  print "required_process_exit_status=0"
+  print "socket_evidence_scope=authority_game_socket_before_clients_start"
   print "claim_boundary=no_identity_no_encryption_no_lan_wan_or_internet_readiness"
 } > "$manifest"
 /bin/chmod 0600 "$manifest"
@@ -137,28 +199,6 @@ assert_secret_absent_from_processes() {
   done
 }
 
-server_pid=""
-client_pid=""
-phase_one_pid=""
-invalid_pid=""
-
-cleanup_processes() {
-  local pid credential_file
-  for pid in "$client_pid" "$phase_one_pid" "$invalid_pid" "$server_pid"; do
-    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
-    fi
-  done
-  for credential_file in \
-      "$valid_credential_file" "$invalid_credential_file"; do
-    if [[ -e "$credential_file" ]]; then
-      /bin/rm -f -- "$credential_file"
-    fi
-  done
-}
-trap cleanup_processes EXIT INT TERM
-
 "$editor" "$project" "/Engine/Maps/Entry?listen" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
   -MULTIHOME=127.0.0.1 -port="$port" \
@@ -186,23 +226,29 @@ if [[ "$server_ready" != true ]]; then
   exit 3
 fi
 
-socket_evidence="$(/usr/sbin/lsof -nP -a -p "$server_pid" -iUDP:"$port" -Fn 2>/dev/null || true)"
-print -- "$socket_evidence" >> "$manifest"
-socket_endpoints=()
-for socket_line in "${(@f)socket_evidence}"; do
+authority_game_socket_evidence="$(/usr/sbin/lsof -nP -a -p "$server_pid" -iUDP:"$port" -Fn 2>/dev/null || true)"
+{
+  print "authority_game_socket_lsof_begin"
+  print -- "$authority_game_socket_evidence"
+  print "authority_game_socket_lsof_end"
+} >> "$manifest"
+authority_game_socket_endpoints=()
+for socket_line in "${(@f)authority_game_socket_evidence}"; do
   if [[ "$socket_line" == n* ]]; then
-    socket_endpoints+=("${socket_line#n}")
+    authority_game_socket_endpoints+=("${socket_line#n}")
   fi
 done
-if (( ${#socket_endpoints[@]} == 0 )); then
-  print -u2 "No bound UDP endpoint was retained for the authority process."
+if (( ${#authority_game_socket_endpoints[@]} == 0 )); then
+  print -u2 "No bound authority game socket was retained on the assigned UDP port."
   exit 3
 fi
-for socket_endpoint in "${socket_endpoints[@]}"; do
+print "authority_game_socket_count=${#authority_game_socket_endpoints[@]}" >> "$manifest"
+for socket_endpoint in "${authority_game_socket_endpoints[@]}"; do
   if [[ "$socket_endpoint" != "127.0.0.1:${port}" ]]; then
-    print -u2 "The authority exposed a UDP endpoint outside 127.0.0.1:${port}."
+    print -u2 "The authority game socket was not bound to 127.0.0.1:${port}."
     exit 3
   fi
+  print "authority_game_socket_endpoint=$socket_endpoint" >> "$manifest"
 done
 
 "$editor" "$project" "127.0.0.1:${port}" \
@@ -247,6 +293,7 @@ if [[ ! "$resume_token" =~ '^[0-9A-Fa-f]{32}$' ]]; then
 fi
 assert_secret_absent_from_processes \
   "$resume_token" "$server_pid" "$phase_one_pid"
+require_process_success phase_one_pid phase_one_client
 
 "$editor" "$project" "127.0.0.1:${port}" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
@@ -285,8 +332,7 @@ if [[ -e "$invalid_credential_file" ]]; then
   print -u2 "The rejected one-use credential file was not consumed."
   exit 6
 fi
-wait "$invalid_pid" 2>/dev/null || true
-invalid_pid=""
+require_process_success invalid_pid invalid_client
 
 "$editor" "$project" "127.0.0.1:${port}" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
@@ -397,16 +443,13 @@ if [[ "$disconnect_tick" != <-> || "$resume_tick" != <-> ||
 fi
 
 if [[ -n "$client_pid" ]]; then
-  wait "$client_pid" 2>/dev/null || true
-  client_pid=""
+  require_process_success client_pid phase_two_client
 fi
 if [[ -n "$phase_one_pid" ]]; then
-  wait "$phase_one_pid" 2>/dev/null || true
-  phase_one_pid=""
+  require_process_success phase_one_pid phase_one_client
 fi
 if [[ -n "$server_pid" ]]; then
-  wait "$server_pid" 2>/dev/null || true
-  server_pid=""
+  require_process_success server_pid authority
 fi
 
 server_hash="$(/usr/bin/shasum -a 256 "$server_log" | /usr/bin/awk '{print $1}')"
@@ -419,6 +462,8 @@ phase_two_hash="$(/usr/bin/shasum -a 256 "$phase_two_log" | /usr/bin/awk '{print
   print "credential_files_consumed=true"
   print "credential_absent_from_process_arguments=true"
   print "credential_absent_from_all_logs=true"
+  print "authority_game_socket_checked=true"
+  print "client_udp_sockets_inspected=false"
   print "server_log_sha256=$server_hash"
   print "phase_one_log_sha256=$phase_one_hash"
   print "invalid_log_sha256=$invalid_hash"
