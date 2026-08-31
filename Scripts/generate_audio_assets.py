@@ -191,10 +191,11 @@ def main() -> None:
     if len(imported) != 4 or any(not isinstance(asset, unreal.SoundWave) for asset in imported):
         raise RuntimeError("Presentation audio audit failed")
     unreal.log(
-        "[ECHOES_AUDIO_READY] "
+        "[ECHOES_AUDIO_ASSET_READY] "
         f"revision={AUDIO_REVISION} cues=4 sourceRate={SAMPLE_RATE} channels=1 "
-        "command2D=true destruction3D=true maxConcurrentBounded=true "
-        "runtimeAuthority=presentation thirdPartySamples=false finalAudio=false"
+        "sourcesOriginal=true thirdPartySamples=false "
+        "runtimeRoutingValidated=false runtimeConcurrencyValidated=false "
+        "finalAudio=false"
     )
 
 
