@@ -8,10 +8,12 @@
 #include "EchoesNetworkSession.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
 
 #include <algorithm>
+#include <limits>
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesNetworkProtocolTest,
@@ -363,6 +365,348 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
     if (TestNotNull(TEXT("Network-presentation controller spawns"),
                     PresentationController))
     {
+        UEchoesSimulationSubsystem* CommandBridge =
+            PresentationWorld->GetSubsystem<UEchoesSimulationSubsystem>();
+        FString FactionFeedback;
+        const bool bCommandScenarioReady =
+            TestNotNull(
+                TEXT("Protocol-admission world owns the simulation subsystem"),
+                CommandBridge) &&
+            TestTrue(
+                TEXT("Protocol-admission scenario starts"),
+                CommandBridge != nullptr &&
+                    CommandBridge->StartPrototypeScenario()) &&
+            TestTrue(
+                TEXT("Protocol-admission scenario deploys a local Cairnback"),
+                CommandBridge->SelectLocalFaction(
+                    Faction::KharuunAssemblies,
+                    FactionFeedback));
+        if (bCommandScenarioReady)
+        {
+            const Simulation* CommandSimulation =
+                CommandBridge->GetSimulation();
+            if (!TestNotNull(
+                    TEXT("Protocol-admission scenario exposes authority"),
+                    CommandSimulation))
+            {
+                CommandBridge->StopPrototypeScenario();
+                PresentationController->Destroy();
+                PresentationWorldWrapper.ForwardErrorMessages(this);
+                return false;
+            }
+            const auto Cairnback = std::find_if(
+                CommandSimulation->Entities().begin(),
+                CommandSimulation->Entities().end(),
+                [](const Entity& EntityState)
+                {
+                    return EntityState.owner ==
+                               UEchoesSimulationSubsystem::LocalPlayerId &&
+                           EntityState.faction ==
+                               Faction::KharuunAssemblies &&
+                           EntityState.type == EntityType::HeavyUnit;
+                });
+            const bool bCairnbackReady = TestTrue(
+                TEXT("Kharuun protocol fixture contains a local Cairnback"),
+                Cairnback != CommandSimulation->Entities().end());
+            if (bCairnbackReady)
+            {
+                const EntityId CairnbackId = Cairnback->id;
+                const Vec2 CairnbackPosition = Cairnback->position;
+                const std::int32_t CairnbackHitPoints = Cairnback->hitPoints;
+                const Tick CairnbackCooldown =
+                    Cairnback->mineralCoverCooldownUntilTick;
+                const PlayerState* LocalPlayer = CommandSimulation->FindPlayer(
+                    UEchoesSimulationSubsystem::LocalPlayerId);
+                if (!TestNotNull(
+                        TEXT("Kharuun protocol fixture retains the local player"),
+                        LocalPlayer))
+                {
+                    CommandBridge->StopPrototypeScenario();
+                    PresentationController->Destroy();
+                    PresentationWorldWrapper.ForwardErrorMessages(this);
+                    return false;
+                }
+                const ResourcePool LocalResources = LocalPlayer->resources;
+
+                const Tick InitialTick = CommandSimulation->CurrentTick();
+                const std::uint64_t InitialChecksum =
+                    CommandSimulation->StateChecksum();
+                const std::size_t InitialCommandLogSize =
+                    CommandSimulation->CommandLog().size();
+                const std::size_t InitialEntityCount =
+                    CommandSimulation->Entities().size();
+                const std::optional<std::uint64_t> InitialNextSequence =
+                    CommandSimulation->NextCommandSequence(
+                        UEchoesSimulationSubsystem::LocalPlayerId);
+                const bool bSequenceReady = TestTrue(
+                    TEXT("Protocol fixture exposes a usable semantic sequence"),
+                    InitialNextSequence.has_value() &&
+                        *InitialNextSequence > 0 &&
+                        *InitialNextSequence <
+                            std::numeric_limits<std::uint64_t>::max() - 1);
+                if (!bSequenceReady)
+                {
+                    CommandBridge->StopPrototypeScenario();
+                    PresentationController->Destroy();
+                    PresentationWorldWrapper.ForwardErrorMessages(this);
+                    return false;
+                }
+
+                std::vector<Terrain> InitialTerrain;
+                InitialTerrain.reserve(
+                    static_cast<std::size_t>(
+                        CommandSimulation->Config().mapWidthTiles) *
+                    CommandSimulation->Config().mapHeightTiles);
+                for (std::int32_t TileY = 0;
+                     TileY < CommandSimulation->Config().mapHeightTiles;
+                     ++TileY)
+                {
+                    for (std::int32_t TileX = 0;
+                         TileX < CommandSimulation->Config().mapWidthTiles;
+                         ++TileX)
+                    {
+                        InitialTerrain.push_back(
+                            CommandSimulation->TerrainAt(TileX, TileY));
+                    }
+                }
+
+                const Vec2 ExtremePositions[2]{
+                    Vec2::FromRaw(
+                        std::numeric_limits<std::int32_t>::min(),
+                        std::numeric_limits<std::int32_t>::max()),
+                    Vec2::FromRaw(
+                        std::numeric_limits<std::int32_t>::max(),
+                        std::numeric_limits<std::int32_t>::min())};
+                const Vec2 OfflineOutOfMapPositions[2]{
+                    Vec2::FromRaw(-1'000'000'000, 1'000'000'000),
+                    Vec2::FromRaw(1'000'000'000, -1'000'000'000)};
+                for (const Vec2 OfflinePosition : OfflineOutOfMapPositions)
+                {
+                    FString OfflineFeedback;
+                    TestFalse(
+                        TEXT("Offline mineral cover rejects a mixed out-of-map coordinate immediately"),
+                        CommandBridge->IssueMineralCover(
+                            CairnbackId,
+                            CommandBridge->SimToWorld(OfflinePosition),
+                            OfflineFeedback));
+                    TestTrue(
+                        TEXT("Offline mixed-coordinate rejection is terrain reason-coded"),
+                        OfflineFeedback.StartsWith(
+                            TEXT("[MINERAL_COVER_TERRAIN_INVALID]")));
+                    TestTrue(
+                        TEXT("Offline mixed-coordinate rejection leaves authority unchanged"),
+                        CommandSimulation->CurrentTick() == InitialTick &&
+                            CommandSimulation->StateChecksum() ==
+                                InitialChecksum &&
+                            CommandSimulation->CommandLog().size() ==
+                                InitialCommandLogSize &&
+                            CommandSimulation->NextCommandSequence(
+                                UEchoesSimulationSubsystem::LocalPlayerId) ==
+                                InitialNextSequence);
+                }
+
+                std::string SnapshotError;
+                std::optional<Simulation> Twin = Simulation::LoadSnapshot(
+                    CommandSimulation->SaveSnapshot(),
+                    &SnapshotError);
+                TestTrue(
+                    TEXT("Protocol fixture snapshot clones exactly before admission"),
+                    Twin.has_value() && SnapshotError.empty() &&
+                        Twin->StateChecksum() == InitialChecksum);
+
+                CommandBridge->SetNetworkHumanOpponent(true);
+                PresentationController->bNetworkCompatibilityAccepted = true;
+                PresentationController->bNetworkMatchStarted = true;
+                PresentationController->NetworkSeat =
+                    UEchoesSimulationSubsystem::LocalPlayerId;
+                PresentationController->NetworkCommandContext = {};
+                PresentationController->NetworkCommandContext.player =
+                    UEchoesSimulationSubsystem::LocalPlayerId;
+                PresentationController->NetworkCommandContext
+                    .minimumInputDelayTicks = 3;
+                PresentationController->NetworkCommandContext
+                    .maximumLeadTicks = 40;
+                PresentationController->NetworkCommandContext
+                    .hasAcceptedSequence = *InitialNextSequence > 1;
+                PresentationController->NetworkCommandContext
+                    .lastAcceptedSequence = *InitialNextSequence - 1;
+                PresentationController->LastAcceptedNetworkBatchId = 0;
+
+                for (std::size_t Index = 0; Index < 2; ++Index)
+                {
+                    CommandBatchRequest ExtremeBatch{};
+                    ExtremeBatch.clientBatchId = Index + 1;
+                    CommandIntent ExtremeIntent{};
+                    ExtremeIntent.type = CommandType::RaiseMineralCover;
+                    ExtremeIntent.actor = CairnbackId;
+                    ExtremeIntent.position = ExtremePositions[Index];
+                    ExtremeBatch.intents.push_back(ExtremeIntent);
+                    const std::vector<std::uint8_t> ExtremeBatchBytes =
+                        EncodeCommandBatchRequest(ExtremeBatch);
+                    CommandBatchRequest DecodedExtremeBatch{};
+                    const bool bBatchRoundTrip = TestTrue(
+                        TEXT("Mixed-extreme batch round-trips exactly through the wire codec"),
+                        !ExtremeBatchBytes.empty() &&
+                            DecodeCommandBatchRequest(
+                                ExtremeBatchBytes,
+                                DecodedExtremeBatch) == DecodeStatus::Ok &&
+                            DecodedExtremeBatch == ExtremeBatch &&
+                            EncodeCommandBatchRequest(DecodedExtremeBatch) ==
+                                ExtremeBatchBytes &&
+                            DecodedExtremeBatch.intents.front().position ==
+                                ExtremePositions[Index]);
+                    if (!bBatchRoundTrip)
+                    {
+                        continue;
+                    }
+
+                    PresentationController
+                        ->ServerSubmitNetworkCommandBatch_Implementation(
+                            echoes::network::ToByteArray(
+                                ExtremeBatchBytes));
+                    const std::uint64_t ExpectedSequence =
+                        *InitialNextSequence + Index;
+                    const bool bBookkeepingExact = TestTrue(
+                        TEXT("Server batch consumes canonical batch and semantic bookkeeping"),
+                        PresentationController
+                                ->GetLastAcceptedNetworkBatchId() ==
+                            Index + 1 &&
+                            PresentationController->NetworkCommandContext
+                                .hasAcceptedSequence &&
+                            PresentationController->NetworkCommandContext
+                                    .lastAcceptedSequence ==
+                                ExpectedSequence &&
+                            CommandSimulation->CommandLog().size() ==
+                                InitialCommandLogSize + Index + 1 &&
+                            CommandSimulation->NextCommandSequence(
+                                UEchoesSimulationSubsystem::LocalPlayerId) ==
+                                ExpectedSequence + 1 &&
+                            CommandSimulation->CurrentTick() == InitialTick);
+                    if (!bBookkeepingExact ||
+                        CommandSimulation->CommandLog().empty())
+                    {
+                        continue;
+                    }
+                    const Command& Admitted =
+                        CommandSimulation->CommandLog().back();
+                    TestTrue(
+                        TEXT("Authority preserves the exact mixed-extreme intent"),
+                        Admitted.type == CommandType::RaiseMineralCover &&
+                            Admitted.actor == CairnbackId &&
+                            Admitted.position == ExtremePositions[Index] &&
+                            Admitted.sequence == ExpectedSequence &&
+                            Admitted.executeTick == InitialTick + 3 &&
+                            CommandSimulation->ValidateMineralCover(
+                                UEchoesSimulationSubsystem::LocalPlayerId,
+                                CairnbackId,
+                                ExtremePositions[Index]) ==
+                                MineralCoverResult::InvalidPosition);
+                }
+                TestTrue(
+                    TEXT("Network batch exposes structural admission rather than semantic execution feedback"),
+                    PresentationController->GetStatusMessage().Contains(
+                        TEXT("authority accepted 1, rejected 0")));
+
+                if (Twin.has_value())
+                {
+                    for (std::size_t Index = InitialCommandLogSize;
+                         Index < CommandSimulation->CommandLog().size();
+                         ++Index)
+                    {
+                        std::string TwinRejection;
+                        TestTrue(
+                            TEXT("Snapshot twin accepts the same canonical command"),
+                            Twin->QueueCommand(
+                                CommandSimulation->CommandLog()[Index],
+                                &TwinRejection) &&
+                                TwinRejection.empty());
+                    }
+                    TestTrue(
+                        TEXT("Server and snapshot twin match after admission bookkeeping"),
+                        Twin->StateChecksum() ==
+                            CommandSimulation->StateChecksum());
+                    for (std::uint32_t StepIndex = 0;
+                         StepIndex < 4;
+                         ++StepIndex)
+                    {
+                        CommandBridge->Tick(1.0f / 20.0f);
+                        Twin->Step();
+                        TestTrue(
+                            TEXT("Server and snapshot twin remain exact through due execution"),
+                            Twin->CurrentTick() ==
+                                    CommandSimulation->CurrentTick() &&
+                                Twin->StateChecksum() ==
+                                    CommandSimulation->StateChecksum());
+                    }
+                }
+
+                const Entity* FinalCairnback =
+                    CommandSimulation->FindEntity(CairnbackId);
+                const PlayerState* FinalPlayer =
+                    CommandSimulation->FindPlayer(
+                        UEchoesSimulationSubsystem::LocalPlayerId);
+                const bool bTerrainUnchanged = [&]()
+                {
+                    std::size_t TerrainIndex = 0;
+                    for (std::int32_t TileY = 0;
+                         TileY <
+                             CommandSimulation->Config().mapHeightTiles;
+                         ++TileY)
+                    {
+                        for (std::int32_t TileX = 0;
+                             TileX <
+                                 CommandSimulation->Config().mapWidthTiles;
+                             ++TileX, ++TerrainIndex)
+                        {
+                            if (CommandSimulation->TerrainAt(TileX, TileY) !=
+                                InitialTerrain[TerrainIndex])
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }();
+                TestTrue(
+                    TEXT("Due mixed-extreme commands are deterministic gameplay no-ops"),
+                    CommandSimulation->CurrentTick() == InitialTick + 4 &&
+                        CommandSimulation->CommandLog().size() ==
+                            InitialCommandLogSize + 2 &&
+                        CommandSimulation->Entities().size() ==
+                            InitialEntityCount &&
+                        FinalCairnback != nullptr &&
+                        FinalCairnback->position == CairnbackPosition &&
+                        FinalCairnback->hitPoints == CairnbackHitPoints &&
+                        FinalCairnback->mineralCoverCooldownUntilTick ==
+                            CairnbackCooldown &&
+                        FinalPlayer != nullptr &&
+                        FinalPlayer->resources == LocalResources &&
+                        std::none_of(
+                            CommandSimulation->Entities().begin(),
+                            CommandSimulation->Entities().end(),
+                            [](const Entity& EntityState)
+                            {
+                                return EntityState.temporaryMineralCover;
+                            }) &&
+                        bTerrainUnchanged);
+                for (const Vec2 ExtremePosition : ExtremePositions)
+                {
+                    TestTrue(
+                        TEXT("Authoritative validator retains InvalidPosition after due execution"),
+                        CommandSimulation->ValidateMineralCover(
+                            UEchoesSimulationSubsystem::LocalPlayerId,
+                            CairnbackId,
+                            ExtremePosition) ==
+                            MineralCoverResult::InvalidPosition);
+                }
+                CommandBridge->SetNetworkHumanOpponent(false);
+            }
+        }
+        if (CommandBridge != nullptr && CommandBridge->IsScenarioReady())
+        {
+            CommandBridge->StopPrototypeScenario();
+        }
+
         ScopedEntityState PossibleChoir{};
         PossibleChoir.id = 900001;
         PossibleChoir.owner = 1;
