@@ -2662,6 +2662,183 @@ void TestCairnbackTemporaryMineralCover() {
         }));
 }
 
+void TestMineralCoverExtremeCoordinateDeterminism() {
+    using namespace echoes::sim::net;
+
+    Simulation valid({16, 16, 20, 0x45585452454d4543ULL});
+    AddTwoPlayers(valid, {0, 0}, {0, 100});
+    const EntityId validCairnback = valid.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    REQUIRE(validCairnback != 0);
+    valid.CaptureReplayBaseline();
+
+    CommandRequest validRequest{};
+    validRequest.sequence = 1;
+    validRequest.executeTick = 0;
+    validRequest.type = CommandType::RaiseMineralCover;
+    validRequest.actor = validCairnback;
+    validRequest.position = Vec2::FromTiles(9, 10);
+    const std::vector<std::uint8_t> validBytes =
+        EncodeCommandRequest(validRequest);
+    const std::vector<std::uint8_t> expectedValidBytes{
+        69, 66, 83, 80, 1, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+        36, 0, 0, 0, 40, 0, 0, 4, 0, 0, 0, 160, 60, 40, 216};
+    REQUIRE(validBytes == expectedValidBytes);
+    CommandAdmissionContext validContext{};
+    validContext.player = 1;
+    validContext.minimumInputDelayTicks = 0;
+    validContext.maximumLeadTicks = 0;
+    std::string rejection;
+    REQUIRE(AdmitCommandRequest(
+                validRequest, validContext, valid, &rejection) ==
+            CommandAdmissionStatus::Accepted);
+    REQUIRE(rejection.empty());
+    REQUIRE(valid.StateChecksum() == 17115559860080563393ULL);
+    valid.Step();
+    REQUIRE(valid.StateChecksum() == 15347868296104015380ULL);
+    REQUIRE(std::count_if(
+                valid.Entities().begin(), valid.Entities().end(),
+                [](const Entity& entity) {
+                    return entity.temporaryMineralCover;
+                }) == 1);
+
+    SimulationConfig config{16, 16, 20, 0x45585452454d4543ULL};
+    Simulation first(config);
+    Simulation second(config);
+    AddTwoPlayers(first, {0, 0}, {0, 100});
+    AddTwoPlayers(second, {0, 0}, {0, 100});
+    const EntityId firstCairnback = first.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    const EntityId secondCairnback = second.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(10, 10));
+    REQUIRE(firstCairnback != 0);
+    REQUIRE(firstCairnback == secondCairnback);
+
+    const Vec2 minimum = Vec2::FromRaw(
+        std::numeric_limits<std::int32_t>::min(),
+        std::numeric_limits<std::int32_t>::min());
+    const Vec2 maximum = Vec2::FromRaw(
+        std::numeric_limits<std::int32_t>::max(),
+        std::numeric_limits<std::int32_t>::max());
+    const Vec2 mixed = Vec2::FromRaw(
+        std::numeric_limits<std::int32_t>::min(),
+        std::numeric_limits<std::int32_t>::max());
+    for (const Vec2 position : {minimum, maximum, mixed}) {
+        REQUIRE(first.ValidateMineralCover(
+                    1, firstCairnback, position) ==
+                MineralCoverResult::InvalidPosition);
+        REQUIRE(second.ValidateMineralCover(
+                    1, secondCairnback, position) ==
+                MineralCoverResult::InvalidPosition);
+    }
+
+    CommandBatchRequest batch{};
+    batch.clientBatchId = 1;
+    CommandIntent intent{};
+    intent.type = CommandType::RaiseMineralCover;
+    intent.actor = firstCairnback;
+    intent.position = minimum;
+    batch.intents.push_back(intent);
+    const std::vector<std::uint8_t> batchBytes =
+        EncodeCommandBatchRequest(batch);
+    REQUIRE(!batchBytes.empty());
+    CommandBatchRequest decodedBatch{};
+    REQUIRE(DecodeCommandBatchRequest(batchBytes, decodedBatch) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedBatch == batch);
+    REQUIRE(EncodeCommandBatchRequest(decodedBatch) == batchBytes);
+
+    first.CaptureReplayBaseline();
+    second.CaptureReplayBaseline();
+    CommandRequest request{};
+    request.sequence = 1;
+    request.executeTick = 2;
+    request.type = CommandType::RaiseMineralCover;
+    request.actor = firstCairnback;
+    request.position = minimum;
+    const std::vector<std::uint8_t> requestBytes =
+        EncodeCommandRequest(request);
+    REQUIRE(!requestBytes.empty());
+    CommandRequest decodedRequest{};
+    REQUIRE(DecodeCommandRequest(requestBytes, decodedRequest) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedRequest == request);
+    REQUIRE(EncodeCommandRequest(decodedRequest) == requestBytes);
+
+    CommandAdmissionContext firstContext{};
+    firstContext.player = 1;
+    firstContext.minimumInputDelayTicks = 2;
+    firstContext.maximumLeadTicks = 2;
+    CommandAdmissionContext secondContext = firstContext;
+    REQUIRE(AdmitCommandRequest(
+                decodedRequest, firstContext, first, &rejection) ==
+            CommandAdmissionStatus::Accepted);
+    REQUIRE(rejection.empty());
+    REQUIRE(AdmitCommandRequest(
+                decodedRequest, secondContext, second, &rejection) ==
+            CommandAdmissionStatus::Accepted);
+    REQUIRE(rejection.empty());
+
+    Command maximumCommand = MakeCommand(
+        3, 1, 2, CommandType::RaiseMineralCover, firstCairnback);
+    maximumCommand.position = maximum;
+    REQUIRE(first.QueueCommand(maximumCommand, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(second.QueueCommand(maximumCommand, &rejection));
+    REQUIRE(rejection.empty());
+    Command mixedCommand = MakeCommand(
+        4, 1, 3, CommandType::RaiseMineralCover, firstCairnback);
+    mixedCommand.position = mixed;
+    REQUIRE(first.QueueCommand(mixedCommand, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(second.QueueCommand(mixedCommand, &rejection));
+    REQUIRE(rejection.empty());
+    REQUIRE(first.StateChecksum() == second.StateChecksum());
+
+    const std::size_t initialEntityCount = first.Entities().size();
+    const ResourcePool initialResources = first.FindPlayer(1)->resources;
+    const std::vector<std::uint8_t> pendingSnapshot = first.SaveSnapshot();
+    REQUIRE(second.SaveSnapshot() == pendingSnapshot);
+    std::string snapshotError;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(pendingSnapshot, &snapshotError);
+    REQUIRE(restored.has_value());
+    REQUIRE(snapshotError.empty());
+    REQUIRE(restored->StateChecksum() == first.StateChecksum());
+
+    for (std::uint32_t tick = 0; tick < 5; ++tick) {
+        first.Step();
+        second.Step();
+        restored->Step();
+        REQUIRE(first.StateChecksum() == second.StateChecksum());
+        REQUIRE(restored->StateChecksum() == first.StateChecksum());
+    }
+    REQUIRE(first.Entities().size() == initialEntityCount);
+    REQUIRE(first.FindPlayer(1)->resources == initialResources);
+    REQUIRE(first.FindEntity(firstCairnback) != nullptr);
+    REQUIRE(first.FindEntity(firstCairnback)
+                ->mineralCoverCooldownUntilTick == 0);
+    REQUIRE(std::none_of(
+        first.Entities().begin(), first.Entities().end(),
+        [](const Entity& entity) { return entity.temporaryMineralCover; }));
+    REQUIRE(first.TerrainAt(0, 0) == Terrain::Open);
+    REQUIRE(first.NextCommandSequence(1) == 4);
+
+    std::string replayError;
+    const ReplayRecord replay = first.ExportReplay(&replayError);
+    REQUIRE(replayError.empty());
+    REQUIRE(replay.commands.size() == 3);
+    std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &replayError);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayError.empty());
+    REQUIRE(replayed->StateChecksum() == first.StateChecksum());
+}
+
 void TestVibrationDetectionAndAnonymousSignatures() {
     SimulationConfig config{64, 64, 20, 0x56494252415445ULL};
     config.rules.vibrationDetection.signatureLingerTicks = 4;
@@ -3935,6 +4112,8 @@ int main() {
          TestWarformAdaptationAndMoltCounterplay},
         {"Cairnback temporary mineral cover",
          TestCairnbackTemporaryMineralCover},
+        {"mineral cover extreme-coordinate determinism",
+         TestMineralCoverExtremeCoordinateDeterminism},
         {"vibration detection and anonymous signatures",
          TestVibrationDetectionAndAnonymousSignatures},
         {"powered Aegis network and counterplay",
