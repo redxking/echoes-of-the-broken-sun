@@ -381,8 +381,27 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
-    const bool bStressScenario =
+    const bool bLegacyStressScenario =
         FParse::Param(FCommandLine::Get(), TEXT("EchoesStress400"));
+#if UE_BUILD_SHIPPING
+    const bool bSustainedStressScenario = false;
+#else
+    const bool bSustainedStressScenario =
+        FParse::Param(
+            FCommandLine::Get(),
+            TEXT("EchoesStress400Sustained"));
+#endif
+    if (bLegacyStressScenario && bSustainedStressScenario)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=CONFLICTING_FLAGS tick=0 detail=Choose exactly one stress fixture flag."));
+        CleanupPrototypeEnvironment();
+        return;
+    }
+    const bool bStressScenario =
+        bLegacyStressScenario || bSustainedStressScenario;
     FString RequestedFaction;
     if (!bStressScenario &&
         FParse::Value(
@@ -649,7 +668,9 @@ void AEchoesGameMode::BeginPlay()
                 ? TEXT("SevenAccountsOfRain")
                 : TEXT("WhatTheLedgerKeeps"));
     }
-    const bool bSimulationReady = bStressScenario
+    const bool bSimulationReady = bSustainedStressScenario
+                                      ? Bridge->StartSustainedStressScenario()
+                                  : bLegacyStressScenario
                                       ? Bridge->StartStressScenario()
                                       : Bridge->StartPrototypeScenario();
     if (!bSimulationReady)

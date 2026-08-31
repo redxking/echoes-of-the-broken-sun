@@ -175,6 +175,51 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         !Feedback.Contains(TEXT("prior-generation")) &&
             !Feedback.Contains(TEXT("staged")));
 
+    echoes::sim::SimulationConfig ProtectedConfig =
+        Bridge->GetSimulation()->Config();
+    ProtectedConfig.protectedCommandCorePlayerMask = 0x01;
+    echoes::sim::Simulation ProtectedSnapshotSimulation(ProtectedConfig);
+    TestTrue(
+        TEXT("A mask-bearing fixture snapshot has a compatible local player"),
+        ProtectedSnapshotSimulation.AddPlayer(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            Bridge->GetSimulation()
+                ->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)
+                ->faction,
+            {0, 0}));
+    const std::vector<uint8> ProtectedSnapshot =
+        ProtectedSnapshotSimulation.SaveSnapshot();
+    std::string ProtectedSnapshotError;
+    TestTrue(
+        TEXT("The deterministic core accepts the valid protected-core snapshot"),
+        echoes::sim::Simulation::LoadSnapshot(
+            ProtectedSnapshot,
+            &ProtectedSnapshotError).has_value() &&
+            ProtectedSnapshotError.empty());
+    TArray<uint8> ProtectedSnapshotBytes;
+    ProtectedSnapshotBytes.Append(
+        ProtectedSnapshot.data(),
+        static_cast<int32>(ProtectedSnapshot.size()));
+    const uint64 LiveTickBeforeProtectedLoad =
+        Bridge->GetSimulation()->CurrentTick();
+    const uint64 LiveChecksumBeforeProtectedLoad =
+        Bridge->GetSimulation()->StateChecksum();
+    TestTrue(
+        TEXT("The protected-core snapshot can be staged as an adversarial ordinary save"),
+        FFileHelper::SaveArrayToFile(ProtectedSnapshotBytes, *SavePath));
+    TestFalse(
+        TEXT("Ordinary quick load rejects a nonzero protected-core mask"),
+        Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("Protected-core rejection leaves live ordinary state unchanged"),
+        Bridge->GetSimulation()->CurrentTick() ==
+                LiveTickBeforeProtectedLoad &&
+            Bridge->GetSimulation()->StateChecksum() ==
+                LiveChecksumBeforeProtectedLoad);
+    TestTrue(
+        TEXT("The valid raw fixture is restored after the adversarial load check"),
+        FFileHelper::SaveArrayToFile(LegacySnapshotBytes, *SavePath));
+
     if (!TestTrue(TEXT("Scout reaches first checkpoint"),
                   MoveScout(echoes::sim::Vec2::FromTiles(18, 18))) ||
         !TestTrue(TEXT("First checkpoint commits"),

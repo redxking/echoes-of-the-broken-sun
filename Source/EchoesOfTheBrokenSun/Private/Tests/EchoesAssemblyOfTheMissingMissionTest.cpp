@@ -275,7 +275,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
               static_cast<uint16>(2));
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(22));
+              static_cast<uint32>(23));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(
@@ -592,7 +592,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
             },
             6000));
     TestTrue(
-        TEXT("The paired readback reconstructs through schema-22 quick load"),
+        TEXT("The paired readback reconstructs through schema-23 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -679,13 +679,13 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::AssemblyOfTheMissing);
     TestTrue(
-        TEXT("Mission 13 stores one protocol, all facts, and schema-22 provenance"),
+        TEXT("Mission 13 stores one protocol, all facts, and schema-23 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 AssemblyChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 22 &&
+            MissionRecord->SimulationSnapshotVersion == 23 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

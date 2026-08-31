@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesSnapshotMigrationTestHelpers.h"
 #include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -309,9 +310,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    TestEqual(TEXT("Mission 14 requires native snapshot schema 22"),
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 23"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(22));
+              static_cast<uint32>(23));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -663,6 +664,24 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         TEXT("The resolving identity writes a native bound checkpoint"),
         Bridge->QuickSaveScenario(Feedback) &&
             IFileManager::Get().FileExists(*QuickSavePath));
+    const uint64 V22ExpectedTick = Bridge->GetSimulation()->CurrentTick();
+    const uint64 V22ExpectedChecksum =
+        Bridge->GetSimulation()->StateChecksum();
+    TArray<uint8> V22Checkpoint;
+    TestTrue(
+        TEXT("The Mission 14 checkpoint can be converted to its genuine schema-22 shape"),
+        FFileHelper::LoadFileToArray(V22Checkpoint, *QuickSavePath) &&
+            EchoesSnapshotMigrationTestHelpers::
+                ConvertMission14EnvelopeSnapshotV23ToV22(V22Checkpoint) &&
+            EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
+                V22Checkpoint) == 22U &&
+            FFileHelper::SaveArrayToFile(V22Checkpoint, *QuickSavePath));
+    TestTrue(TEXT("Mission 14 loads a valid schema-22 checkpoint under schema 23"),
+             Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("Mission 14 schema migration preserves exact deterministic state"),
+        Bridge->GetSimulation()->CurrentTick() == V22ExpectedTick &&
+            Bridge->GetSimulation()->StateChecksum() == V22ExpectedChecksum);
     for (int32 TickIndex = 0; TickIndex < 7; ++TickIndex)
     {
         Bridge->Tick(0.05f);
@@ -678,6 +697,14 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->QuickSaveScenario(Feedback) &&
             IFileManager::Get().FileExists(
                 *(QuickSavePath + TEXT(".bak"))));
+    TArray<uint8> RetainedV22Backup;
+    TestTrue(
+        TEXT("The first schema-23 resave retains the valid schema-22 Mission 14 generation"),
+        FFileHelper::LoadFileToArray(
+            RetainedV22Backup,
+            *(QuickSavePath + TEXT(".bak"))) &&
+            EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
+                RetainedV22Backup) == 22U);
     TArray<uint8> CorruptedCheckpoint;
     TestTrue(
         TEXT("The primary Mission 14 envelope can be corrupted for recovery"),
@@ -775,7 +802,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Objective.SeveralVoicesPhaseAnchorId != 0 &&
             InitialCrisisRemaining > 0 && InitialCrisisRemaining <= 160);
     TestTrue(
-        TEXT("The crisis hold reconstructs through schema-22 quick load"),
+        TEXT("The crisis hold reconstructs through schema-23 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetSeveralVoicesOneCommandPhase() ==
@@ -918,13 +945,13 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::SeveralVoicesOneCommand);
     TestTrue(
-        TEXT("Mission 14 stores the protocol, all facts, and schema-22 provenance"),
+        TEXT("Mission 14 stores the protocol, all facts, and schema-23 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 SeveralVoicesChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 22 &&
+            MissionRecord->SimulationSnapshotVersion == 23 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

@@ -30,8 +30,9 @@ using PlayerId = std::uint8_t;
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
-inline constexpr std::uint32_t kSnapshotVersion = 22;
-inline constexpr std::uint32_t kReplayVersion = 22;
+inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
+inline constexpr std::uint32_t kSnapshotVersion = 23;
+inline constexpr std::uint32_t kReplayVersion = 23;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -610,6 +611,10 @@ struct SimulationConfig final {
     std::uint32_t ticksPerSecond = 20;
     std::uint64_t randomSeed = 1;
     SimulationRules rules = DefaultSimulationRules();
+    // Bit N makes player N's Command Core ineligible as an enemy target. The
+    // default remains zero so authored matches retain their normal outcome
+    // contract; deterministic endurance fixtures opt in explicitly.
+    std::uint8_t protectedCommandCorePlayerMask = 0;
 
     friend bool operator==(const SimulationConfig&,
                            const SimulationConfig&) = default;
@@ -705,6 +710,10 @@ public:
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
+    /** Terrain- and footprint-aware admission check for controlled spawning. */
+    [[nodiscard]] bool IsSpawnPositionAvailable(Faction faction,
+                                                EntityType type,
+                                                Vec2 position) const;
     [[nodiscard]] PlacementResult ValidatePlacement(PlayerId player,
                                                     EntityType buildingType,
                                                     Vec2 position,
@@ -772,7 +781,10 @@ public:
 
     // Capture after deterministic map/scenario setup and before player commands.
     void CaptureReplayBaseline();
-    [[nodiscard]] ReplayRecord ExportReplay() const;
+    // One-way runtime gate for fixtures whose out-of-band state transitions
+    // cannot be represented by the deterministic replay command stream.
+    void DisableReplayExport();
+    [[nodiscard]] ReplayRecord ExportReplay(std::string* error = nullptr) const;
     [[nodiscard]] static std::optional<Simulation> ReplayToEnd(
         const ReplayRecord& replay,
         std::string* error = nullptr);
@@ -841,6 +853,7 @@ private:
         const Entity& entity) const;
     [[nodiscard]] bool IsAegisPost(const Entity& entity) const;
     [[nodiscard]] bool IsAegisNetworkPowered(const Entity& aegis) const;
+    [[nodiscard]] bool IsProtectedCommandCore(const Entity& entity) const;
     [[nodiscard]] bool IsChoirIdentityUnit(const Entity& entity) const;
     [[nodiscard]] bool IsChoirCoherenceStructure(const Entity& entity) const;
     [[nodiscard]] EntityId InterceptingMineralCover(
@@ -920,6 +933,7 @@ private:
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
+    bool replayExportEnabled_ = true;
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
     std::array<bool, kMaximumPlayers> hasExecutedSequence_{};
     mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};

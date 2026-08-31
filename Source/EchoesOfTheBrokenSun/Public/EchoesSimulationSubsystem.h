@@ -314,6 +314,14 @@ public:
     /** Creates the opt-in 400-unit/four-team presentation scale scenario. */
     bool StartStressScenario();
 
+    /**
+     * Creates the non-Shipping, self-maintaining 400-owned-unit endurance
+     * fixture. Deterministic replacement is a subsystem qualification action,
+     * not a SimCore command-replay event; this fixture is excluded from save
+     * and replay qualification.
+     */
+    bool StartSustainedStressScenario();
+
     /** Stops the prototype and releases every disposable presentation view. */
     void StopPrototypeScenario();
 
@@ -409,6 +417,18 @@ public:
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
     [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
+    [[nodiscard]] bool IsSustainedStressScenario() const
+    {
+        return bSustainedStressScenario;
+    }
+    [[nodiscard]] bool HasSustainedStressFailed() const
+    {
+        return bSustainedStressFailed;
+    }
+    [[nodiscard]] uint64 GetSustainedStressReplacementCount() const
+    {
+        return SustainedStressCumulativeReplacements;
+    }
     [[nodiscard]] EEchoesOperationMode GetOperationMode() const
     {
         return SelectedOperation;
@@ -603,7 +623,9 @@ private:
         EEchoesFinalResolution& OutRecordedResolution,
         FString& OutFeedback);
     void AdvancePrologueCompletionPresentation();
-    bool StartScenario(bool bUseStressScenario);
+    bool StartScenario(
+        bool bUseStressScenario,
+        bool bUseSustainedStressScenario = false);
     bool ValidatePrototypeCommand(
         echoes::sim::CommandType CommandType,
         const echoes::sim::Entity& Actor,
@@ -625,6 +647,19 @@ private:
     void QueueOpponentCommands();
     void AuditSeveralVoicesOneCommandContractAfterFixedStep();
     void AuditBrokenSunContractAfterFixedStep();
+    [[nodiscard]] int64 GetSustainedStressCombatHitPoints() const;
+    [[nodiscard]] bool MaintainSustainedStressContractAfterFixedStep(
+        int64 CombatHitPointsBeforeStep);
+    [[nodiscard]] bool ValidateSustainedStressContract(
+        bool bRequireSynchronizedViews,
+        bool bRequireRecentActivity,
+        bool bEmitHeartbeat);
+    [[nodiscard]] bool FindSustainedStressReplacementPosition(
+        int32 SlotIndex,
+        echoes::sim::Vec2& OutPosition) const;
+    void FailSustainedStressContract(
+        const TCHAR* Code,
+        const FString& Detail);
     bool SyncEntityViews(bool bTeleportNewViews);
     bool SpawnFogView();
     bool SyncFogView();
@@ -669,6 +704,30 @@ private:
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;
+    bool bSustainedStressScenario = false;
+    bool bSustainedStressFailed = false;
+    bool bSustainedStressQualificationLogged = false;
+    FString SustainedStressFailureCode;
+    TArray<uint32> SustainedStressCombatEntityIds;
+    TArray<uint8> SustainedStressCombatOwners;
+    TArray<echoes::sim::Faction> SustainedStressCombatFactions;
+    TArray<echoes::sim::EntityType> SustainedStressCombatTypes;
+    TArray<echoes::sim::Vec2> SustainedStressCombatSpawnPositions;
+    std::array<echoes::sim::EntityId, echoes::sim::kMaximumPlayers>
+        SustainedStressCommandCoreIds{};
+    uint64 SustainedStressIntervalDamage = 0;
+    uint64 SustainedStressIntervalCombatLosses = 0;
+    uint64 SustainedStressCumulativeCombatLosses = 0;
+    uint64 SustainedStressIntervalReplacements = 0;
+    uint64 SustainedStressCumulativeReplacements = 0;
+    uint64 SustainedStressIntervalOrderRenewals = 0;
+    uint64 SustainedStressCumulativeOrderRenewals = 0;
+    uint64 SustainedStressLastActivityTick = 0;
+    uint64 SustainedStressLastHeartbeatTick = 0;
+    uint64 SustainedStressLastHeartbeatWallMs = 0;
+    std::array<int32, echoes::sim::kMaximumPlayers>
+        SustainedStressRenewalCursorByPlayer{};
+    double SustainedStressReadyWallSeconds = 0.0;
     bool bNetworkHumanOpponent = false;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;

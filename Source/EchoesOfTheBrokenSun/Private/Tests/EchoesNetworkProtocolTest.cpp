@@ -85,16 +85,23 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
 
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
+    constexpr Digest256 ExpectedBuildId{
+        0x2d, 0xf0, 0x78, 0xeb, 0xb4, 0x66, 0xe9, 0x52,
+        0xbb, 0xb5, 0x89, 0x7a, 0xb7, 0xc6, 0x63, 0x1b,
+        0xd8, 0x70, 0xb8, 0x28, 0x7d, 0x4e, 0x4e, 0x0f,
+        0xd5, 0xd2, 0x18, 0x2e, 0xc2, 0x2b, 0x6e, 0xb7};
+    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 23"),
+             ClientManifest.buildIdSha256 == ExpectedBuildId);
     SimulationConfig RuntimeConfig{16, 16, 20, 77};
     RuntimeConfig.rules.contentSha256 = ClientManifest.rulesPackSha256;
-    Simulation Simulation(RuntimeConfig);
+    Simulation RuntimeSimulation(RuntimeConfig);
     TestTrue(TEXT("Authority creates the remote seat"),
-             Simulation.AddPlayer(
+             RuntimeSimulation.AddPlayer(
                  1, Faction::KharuunAssemblies, {1000, 500}));
     TestTrue(TEXT("Authority creates the opposing seat"),
-             Simulation.AddPlayer(
+             RuntimeSimulation.AddPlayer(
                  0, Faction::MeridianCompact, {1000, 500}));
-    const EntityId Worker = Simulation.SpawnEntity(
+    const EntityId Worker = RuntimeSimulation.SpawnEntity(
         1, Faction::KharuunAssemblies, EntityType::Worker,
         Vec2::FromTiles(4, 4));
     TestTrue(TEXT("Authority creates the remote worker"), Worker != 0);
@@ -146,32 +153,47 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
     std::string Rejection;
     TestTrue(TEXT("Connection-bound seat supplies player identity at admission"),
              AdmitCommandRequest(
-                 DecodedRequest, Context, Simulation, &Rejection) ==
+                 DecodedRequest, Context, RuntimeSimulation, &Rejection) ==
                  CommandAdmissionStatus::Accepted);
     TestTrue(TEXT("Client packet cannot override server-derived player"),
-             !Simulation.CommandLog().empty() &&
-                 Simulation.CommandLog().back().player == 1);
+             !RuntimeSimulation.CommandLog().empty() &&
+                 RuntimeSimulation.CommandLog().back().player == 1);
     TestTrue(TEXT("Duplicate sequence fails before simulation mutation"),
              AdmitCommandRequest(
-                 DecodedRequest, Context, Simulation, &Rejection) ==
+                 DecodedRequest, Context, RuntimeSimulation, &Rejection) ==
                  CommandAdmissionStatus::SequenceUnexpected &&
-                 Simulation.CommandLog().size() == 1);
+                 RuntimeSimulation.CommandLog().size() == 1);
 
     const CompatibilityManifest ConfiguredManifest =
-        echoes::network::BuildCompatibilityManifest(&Simulation);
+        echoes::network::BuildCompatibilityManifest(&RuntimeSimulation);
     TestTrue(TEXT("Runtime and client construct one exact compatibility identity"),
              ConfiguredManifest == ClientManifest);
+    TestTrue(TEXT("Ordinary deterministic simulation admits network compatibility"),
+             echoes::network::SupportsNetworkSession(&RuntimeSimulation));
 
-    const EntityId HiddenLocalWorker = Simulation.SpawnEntity(
+    SimulationConfig ProtectedConfig = RuntimeConfig;
+    ProtectedConfig.protectedCommandCorePlayerMask = 0x01;
+    Simulation ProtectedSimulation(ProtectedConfig);
+    const CompatibilityManifest ProtectedManifest =
+        echoes::network::BuildCompatibilityManifest(&ProtectedSimulation);
+    TestFalse(TEXT("Protected-Core endurance fixture is categorically non-networked"),
+              echoes::network::SupportsNetworkSession(&ProtectedSimulation));
+    TestTrue(TEXT("Protected-Core fixture carries a rejecting match identity"),
+             ProtectedManifest.matchSettingsSha256 !=
+                     ClientManifest.matchSettingsSha256 &&
+                 CheckCompatibility(ProtectedManifest, ClientManifest) ==
+                     CompatibilityStatus::MatchSettingsMismatch);
+
+    const EntityId HiddenLocalWorker = RuntimeSimulation.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Worker,
         Vec2::FromTiles(14, 14));
-    const EntityId VisibleHostile = Simulation.SpawnEntity(
+    const EntityId VisibleHostile = RuntimeSimulation.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Soldier,
         Vec2::FromTiles(5, 4));
     TestTrue(TEXT("Authority creates scoped-state fixtures"),
              HiddenLocalWorker != 0 && VisibleHostile != 0);
     const std::optional<PlayerView> RemoteView =
-        Simulation.CreatePlayerView(1);
+        RuntimeSimulation.CreatePlayerView(1);
     TestTrue(TEXT("Authority materializes the admitted seat view"),
              RemoteView.has_value());
     if (!RemoteView.has_value())

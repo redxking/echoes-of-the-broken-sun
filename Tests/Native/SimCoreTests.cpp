@@ -122,6 +122,27 @@ std::size_t SnapshotV22FirstEntityOffset(std::size_t mapTileCount) {
     return SnapshotV22EntityCountOffset(mapTileCount) + 4;
 }
 
+std::size_t SnapshotV23EntityCountOffset(std::size_t mapTileCount) {
+    // Snapshot v23 adds the protected-Command-Core player mask.
+    return SnapshotV22EntityCountOffset(mapTileCount) + 1;
+}
+
+std::size_t SnapshotV23FirstEntityOffset(std::size_t mapTileCount) {
+    return SnapshotV23EntityCountOffset(mapTileCount) + 4;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV23ToV22(
+    const std::vector<std::uint8_t>& current) {
+    constexpr std::size_t kProtectionMaskOffset = 28;
+    REQUIRE(ReadU32(current, 4) == 23);
+    std::vector<std::uint8_t> prior = current;
+    prior.erase(prior.begin() +
+                static_cast<std::ptrdiff_t>(kProtectionMaskOffset));
+    WriteU32(prior, 4, 22);
+    ResignSnapshot(prior);
+    return prior;
+}
+
 std::vector<std::uint8_t> ConvertSnapshotV22ToV21(
     const std::vector<std::uint8_t>& current,
     std::size_t mapTileCount) {
@@ -356,6 +377,42 @@ void TestGatherDeliverBuildAndPlacement() {
     REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == 80);
 }
 
+void TestControlledSpawnAdmission() {
+    Simulation simulation({24, 24, 20, 0x535041574e41444dULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId existing = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 6));
+    REQUIRE(existing != 0);
+    REQUIRE(!simulation.IsSpawnPositionAvailable(
+        Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 6)));
+    REQUIRE(!simulation.IsSpawnPositionAvailable(
+        Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(0, 0)));
+    REQUIRE(simulation.SetTerrainTile(12, 12, Terrain::Blocked));
+    REQUIRE(!simulation.IsSpawnPositionAvailable(
+        Faction::KharuunAssemblies, EntityType::ScoutUnit,
+        Vec2::FromTiles(12, 12)));
+    REQUIRE(!simulation.IsSpawnPositionAvailable(
+        Faction::MeridianCompact, EntityType::ResourceNode,
+        Vec2::FromTiles(16, 16)));
+    REQUIRE(simulation.IsSpawnPositionAvailable(
+        Faction::HollowChoir, EntityType::HeavyUnit,
+        Vec2::FromTiles(18, 18)));
+
+    Simulation boundarySimulation({24, 24, 20, 0x535041574e424e44ULL});
+    REQUIRE(boundarySimulation.AddPlayer(
+        0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(boundarySimulation.SetTerrainTile(7, 5, Terrain::Blocked));
+    REQUIRE(boundarySimulation.ValidatePlacement(
+                0, EntityType::CommandCore, Vec2::FromTiles(6, 5)) ==
+            PlacementResult::Valid);
+    REQUIRE(boundarySimulation.IsSpawnPositionAvailable(
+        Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(6, 5)));
+}
+
 void TestCombatResolvesDeterministically() {
     Simulation simulation({20, 20, 20, 7});
     AddTwoPlayers(simulation, {0, 0}, {0, 0});
@@ -377,6 +434,190 @@ void TestCombatResolvesDeterministically() {
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints > 0);
     REQUIRE(simulation.FindEntity(kharuun)->hitPoints <
             simulation.FindEntity(kharuun)->maxHitPoints);
+}
+
+void TestProtectedCommandCoreContract() {
+    Simulation ordinary({24, 24, 20, 0x4f5244494e415259ULL});
+    AddTwoPlayers(ordinary, {0, 0}, {0, 0});
+    const EntityId ordinaryCore = ordinary.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId ordinaryAttacker = ordinary.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 8));
+    REQUIRE(ordinaryCore != 0 && ordinaryAttacker != 0);
+    const std::int32_t ordinaryCoreHealth =
+        ordinary.FindEntity(ordinaryCore)->hitPoints;
+    Command ordinaryAttack =
+        MakeCommand(0, 0, 1, CommandType::Attack, ordinaryAttacker);
+    ordinaryAttack.target = ordinaryCore;
+    REQUIRE(ordinary.QueueCommand(ordinaryAttack));
+    ordinary.Step(20);
+    REQUIRE(ordinary.FindEntity(ordinaryCore)->hitPoints < ordinaryCoreHealth);
+
+    SimulationConfig protectedConfig{24, 24, 20, 0x50524f5445435444ULL};
+    protectedConfig.protectedCommandCorePlayerMask = 0x02;
+    Simulation protectedSimulation(protectedConfig);
+    AddTwoPlayers(protectedSimulation, {0, 0}, {0, 0});
+    REQUIRE(protectedSimulation.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::CommandCore,
+                Vec2::FromTiles(3, 3)) != 0);
+    const EntityId protectedCore = protectedSimulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId attacker = protectedSimulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 8));
+    const EntityId eligibleEnemy = protectedSimulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(9, 8));
+    REQUIRE(protectedCore != 0 && attacker != 0 && eligibleEnemy != 0);
+    const std::int32_t protectedHealth =
+        protectedSimulation.FindEntity(protectedCore)->hitPoints;
+
+    Command direct = MakeCommand(0, 0, 1, CommandType::Attack, attacker);
+    direct.target = protectedCore;
+    REQUIRE(protectedSimulation.QueueCommand(direct));
+    protectedSimulation.Step();
+    REQUIRE(protectedSimulation.FindEntity(protectedCore)->hitPoints ==
+            protectedHealth);
+    REQUIRE(protectedSimulation.FindEntity(attacker)->order.type ==
+            OrderType::None);
+
+    Command advance = MakeCommand(
+        protectedSimulation.CurrentTick(), 0, 2, CommandType::AttackMove,
+        attacker);
+    advance.position = Vec2::FromTiles(14, 8);
+    REQUIRE(protectedSimulation.QueueCommand(advance));
+    protectedSimulation.Step();
+    REQUIRE(protectedSimulation.FindEntity(attacker)->order.type ==
+            OrderType::AttackMove);
+    REQUIRE(protectedSimulation.FindEntity(attacker)->order.target ==
+            eligibleEnemy);
+    REQUIRE(protectedSimulation.FindEntity(protectedCore)->hitPoints ==
+            protectedHealth);
+    REQUIRE(protectedSimulation.Outcome() == MatchOutcome::Ongoing);
+
+    const std::vector<std::uint8_t> protectedSnapshot =
+        protectedSimulation.SaveSnapshot();
+    REQUIRE(ReadU32(protectedSnapshot, 4) == 23);
+    REQUIRE(protectedSnapshot[28] == 0x02);
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(protectedSnapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->Config().protectedCommandCorePlayerMask == 0x02);
+    REQUIRE(restored->StateChecksum() == protectedSimulation.StateChecksum());
+
+    protectedSimulation.CaptureReplayBaseline();
+    Command stop = MakeCommand(
+        protectedSimulation.CurrentTick(), 0, 3, CommandType::Stop, attacker);
+    REQUIRE(protectedSimulation.QueueCommand(stop));
+    protectedSimulation.Step(4);
+    const ReplayRecord replay = protectedSimulation.ExportReplay();
+    REQUIRE(replay.version == 23);
+    std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(replayed->Config().protectedCommandCorePlayerMask == 0x02);
+    REQUIRE(replayed->StateChecksum() == protectedSimulation.StateChecksum());
+
+    protectedSimulation.DisableReplayExport();
+    const ReplayRecord rejectedReplay = protectedSimulation.ExportReplay(&error);
+    REQUIRE(error == "replay export is disabled");
+    REQUIRE(rejectedReplay.version == 0);
+    REQUIRE(rejectedReplay.initialSnapshot.empty());
+    REQUIRE(rejectedReplay.commands.empty());
+    REQUIRE(rejectedReplay.finalTick == 0);
+    REQUIRE(rejectedReplay.finalChecksum == 0);
+    protectedSimulation.CaptureReplayBaseline();
+    const ReplayRecord stillRejectedReplay =
+        protectedSimulation.ExportReplay(&error);
+    REQUIRE(stillRejectedReplay.version == 0);
+    REQUIRE(stillRejectedReplay.initialSnapshot.empty());
+    REQUIRE(error == "replay export is disabled");
+
+    ReplayRecord unsupportedReplay = replay;
+    unsupportedReplay.version = 22;
+    REQUIRE(!Simulation::ReplayToEnd(unsupportedReplay, &error).has_value());
+    REQUIRE(error == "replay version is unsupported");
+
+    SimulationConfig sameStateUnprotected = protectedConfig;
+    sameStateUnprotected.protectedCommandCorePlayerMask = 0;
+    Simulation protectedHash(protectedConfig);
+    Simulation unprotectedHash(sameStateUnprotected);
+    AddTwoPlayers(protectedHash, {0, 0}, {0, 0});
+    AddTwoPlayers(unprotectedHash, {0, 0}, {0, 0});
+    const auto SpawnHashFixture = [](Simulation& simulation) {
+        REQUIRE(simulation.SpawnEntity(
+                    0, Faction::MeridianCompact, EntityType::CommandCore,
+                    Vec2::FromTiles(3, 3)) != 0);
+        REQUIRE(simulation.SpawnEntity(
+                    1, Faction::KharuunAssemblies, EntityType::CommandCore,
+                    Vec2::FromTiles(8, 8)) != 0);
+        REQUIRE(simulation.SpawnEntity(
+                    0, Faction::MeridianCompact, EntityType::Soldier,
+                    Vec2::FromTiles(6, 8)) != 0);
+        REQUIRE(simulation.SpawnEntity(
+                    1, Faction::KharuunAssemblies, EntityType::Soldier,
+                    Vec2::FromTiles(9, 8)) != 0);
+    };
+    SpawnHashFixture(protectedHash);
+    SpawnHashFixture(unprotectedHash);
+    REQUIRE(protectedHash.Entities() == unprotectedHash.Entities());
+    REQUIRE(protectedHash.CurrentTick() == unprotectedHash.CurrentTick());
+    REQUIRE(protectedHash.StateChecksum() != unprotectedHash.StateChecksum());
+
+    Simulation retained({24, 24, 20, 0x52455441494e4544ULL});
+    AddTwoPlayers(retained, {0, 0}, {0, 0});
+    REQUIRE(retained.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::CommandCore,
+                Vec2::FromTiles(3, 3)) != 0);
+    const EntityId retainedCore = retained.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId retainedAttacker = retained.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(6, 8));
+    Command retainedAttack =
+        MakeCommand(0, 0, 1, CommandType::Attack, retainedAttacker);
+    retainedAttack.target = retainedCore;
+    REQUIRE(retained.QueueCommand(retainedAttack));
+    retained.Step();
+    REQUIRE(retained.FindEntity(retainedAttacker)->order.type ==
+            OrderType::Attack);
+    std::vector<std::uint8_t> promoted = retained.SaveSnapshot();
+    promoted[28] = 0x02;
+    ResignSnapshot(promoted);
+    std::optional<Simulation> protectedRetained =
+        Simulation::LoadSnapshot(promoted, &error);
+    REQUIRE(protectedRetained.has_value());
+    const std::int32_t healthBeforeProtectedStep =
+        protectedRetained->FindEntity(retainedCore)->hitPoints;
+    protectedRetained->Step();
+    REQUIRE(protectedRetained->FindEntity(retainedCore)->hitPoints ==
+            healthBeforeProtectedStep);
+    REQUIRE(protectedRetained->FindEntity(retainedAttacker)->order.type ==
+            OrderType::None);
+
+    bool rejectedInvalidMask = false;
+    try {
+        SimulationConfig invalid = protectedConfig;
+        invalid.protectedCommandCorePlayerMask = 0x10;
+        Simulation invalidSimulation(invalid);
+        (void)invalidSimulation;
+    } catch (const std::invalid_argument&) {
+        rejectedInvalidMask = true;
+    }
+    REQUIRE(rejectedInvalidMask);
+
+    std::vector<std::uint8_t> forgedMask = protectedSnapshot;
+    forgedMask[28] = 0x10;
+    ResignSnapshot(forgedMask);
+    REQUIRE(!Simulation::LoadSnapshot(forgedMask, &error).has_value());
+    REQUIRE(error == "snapshot protection mask is invalid");
 }
 
 void TestAttackMoveAcquiresResumesAndStops() {
@@ -1212,7 +1453,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(simulation.FindEntity(dormantWell)->wellActivationTick == 0);
 
     const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
-    REQUIRE(ReadU32(snapshot, 4) == 22);
+    REQUIRE(ReadU32(snapshot, 4) == 23);
     std::string error;
     std::optional<Simulation> restored =
         Simulation::LoadSnapshot(snapshot, &error);
@@ -1222,8 +1463,8 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(restored->FindEntity(dormantWell)->wellActivationTick == 0);
 
     const ReplayRecord replay = simulation.ExportReplay();
-    REQUIRE(replay.version == 22);
-    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 22);
+    REQUIRE(replay.version == 23);
+    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 23);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -1232,8 +1473,18 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
+    const std::vector<std::uint8_t> v22 = ConvertSnapshotV23ToV22(snapshot);
+    REQUIRE(ReadU32(v22, 4) == 22);
+    std::optional<Simulation> v22Migrated =
+        Simulation::LoadSnapshot(v22, &error);
+    REQUIRE(v22Migrated.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(v22Migrated->Config().protectedCommandCorePlayerMask == 0);
+    REQUIRE(v22Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(ReadU32(v22Migrated->SaveSnapshot(), 4) == 23);
+
     const std::vector<std::uint8_t> prior =
-        ConvertSnapshotV22ToV21(snapshot, kMapTiles);
+        ConvertSnapshotV22ToV21(v22, kMapTiles);
     REQUIRE(ReadU32(prior, 4) == 21);
     std::optional<Simulation> priorMigrated =
         Simulation::LoadSnapshot(prior, &error);
@@ -1243,7 +1494,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(error.empty());
     REQUIRE(priorMigrated->FindEntity(activatedWell)->wellActivationTick == 1);
     REQUIRE(priorMigrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 22);
+    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 23);
 
     const std::vector<std::uint8_t> legacy =
         ConvertSnapshotV21ToV20(prior, kMapTiles);
@@ -1255,9 +1506,9 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(migrated->FindEntity(activatedWell)->wellActivationTick ==
             migrated->CurrentTick());
     REQUIRE(migrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 22);
+    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 23);
 
-    const std::size_t firstEntity = SnapshotV22FirstEntityOffset(kMapTiles);
+    const std::size_t firstEntity = SnapshotV23FirstEntityOffset(kMapTiles);
     std::vector<std::uint8_t> futureActivation = snapshot;
     WriteU64(
         futureActivation,
@@ -1393,13 +1644,13 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     std::string error;
 
     std::vector<std::uint8_t> excessiveVision = baseline;
-    WriteU32(excessiveVision, SnapshotV22FirstEntityOffset(mapTiles) + 27, 50000);
+    WriteU32(excessiveVision, SnapshotV23FirstEntityOffset(mapTiles) + 27, 50000);
     ResignSnapshot(excessiveVision);
     REQUIRE(!Simulation::LoadSnapshot(excessiveVision, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 2406, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, 2407, std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -1413,13 +1664,13 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     Simulation empty({8, 8, 20, 1});
     REQUIRE(empty.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     std::vector<std::uint8_t> truncatedEntities = empty.SaveSnapshot();
-    WriteU32(truncatedEntities, SnapshotV22EntityCountOffset(mapTiles), 64 * 1024);
+    WriteU32(truncatedEntities, SnapshotV23EntityCountOffset(mapTiles), 64 * 1024);
     ResignSnapshot(truncatedEntities);
     REQUIRE(!Simulation::LoadSnapshot(truncatedEntities, &error).has_value());
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 2414, std::numeric_limits<std::uint32_t>::max());
+    WriteU32(exhaustedIds, 2415, std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -2627,7 +2878,7 @@ void TestPoweredAegisNetworkAndCounterplay() {
     constexpr std::size_t kAegisPowerFieldOffset = 209;
     constexpr std::size_t kAegisEntityIndex = 3;
     const std::size_t aegisPowerOffset =
-        SnapshotV22FirstEntityOffset(64U * 64U) +
+        SnapshotV23FirstEntityOffset(64U * 64U) +
         kAegisEntityIndex * kSerializedEntitySize +
         kAegisPowerFieldOffset;
     REQUIRE(forgedPower[aegisPowerOffset] == 1);
@@ -3024,7 +3275,7 @@ void TestHollowChoirIdentityReconciliationAndPersistence() {
             ChoirIdentityState::DualResolvePossible);
 
     std::vector<std::uint8_t> invalidIdentity = snapshot;
-    invalidIdentity[SnapshotV22FirstEntityOffset(32U * 32U) + 210] = 0xff;
+    invalidIdentity[SnapshotV23FirstEntityOffset(32U * 32U) + 210] = 0xff;
     ResignSnapshot(invalidIdentity);
     REQUIRE(!Simulation::LoadSnapshot(invalidIdentity, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
@@ -3598,7 +3849,10 @@ int main() {
         {"fixed tick movement", TestFixedTickMovement},
         {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
         {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},
+        {"controlled spawn admission", TestControlledSpawnAdmission},
         {"combat", TestCombatResolvesDeterministically},
+        {"protected Command Core deterministic contract",
+         TestProtectedCommandCoreContract},
         {"attack-move acquisition resume and stop",
          TestAttackMoveAcquiresResumesAndStops},
         {"hold position defends without chasing",

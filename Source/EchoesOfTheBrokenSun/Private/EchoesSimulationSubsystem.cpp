@@ -16,6 +16,7 @@
 #include "Hash/xxhash.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
+#include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
@@ -32,6 +33,28 @@ constexpr int32 PrototypeMapHeightTiles = 64;
 constexpr uint32 PrototypeTicksPerSecond = 20;
 constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
 constexpr int32 MaximumCatchUpTicksPerFrame = 8;
+constexpr uint64 SustainedStressQualificationSeconds = 60U * 60U;
+constexpr uint64 SustainedStressQualificationTicks =
+    SustainedStressQualificationSeconds * PrototypeTicksPerSecond;
+constexpr uint64 SustainedStressActivityWindowTicks =
+    5U * PrototypeTicksPerSecond;
+constexpr uint64 SustainedStressRenewalsPerHeartbeat = 4;
+static_assert(
+    SustainedStressRenewalsPerHeartbeat == echoes::sim::kMaximumPlayers,
+    "The renewal budget is one deterministic idle combatant per team and heartbeat.");
+constexpr uint64 SustainedStressMaximumOrderRenewals =
+    SustainedStressQualificationSeconds *
+    SustainedStressRenewalsPerHeartbeat;
+constexpr uint64 SustainedStressMaximumReplacementCommands = 200'000;
+constexpr uint64 SustainedStressInitialCommandCount = 396;
+constexpr uint64 SustainedStressProjectedCommandCeiling =
+    SustainedStressInitialCommandCount +
+    SustainedStressMaximumOrderRenewals +
+    SustainedStressMaximumReplacementCommands;
+static_assert(
+    SustainedStressProjectedCommandCeiling <
+        echoes::sim::kMaximumCommandLogEntries,
+    "The one-hour sustained fixture must retain deterministic command-log headroom.");
 constexpr int32 PrologueSiteRadiusTiles = 3;
 constexpr int32 SevenAccountsSiteRadiusTiles = 3;
 constexpr int32 UnburiedRoadSiteRadiusTiles = 3;
@@ -451,7 +474,22 @@ enum class EQuickSaveContainerRead : uint8
     int32 Offset = 4;
     uint32 Version = 0;
     return ReadUint32LittleEndian(SnapshotBytes, Offset, Version) &&
-        (Version == 21U || Version == echoes::sim::kSnapshotVersion);
+        Version >= 21U && Version <= echoes::sim::kSnapshotVersion;
+}
+
+[[nodiscard]] bool UsesSupportedChoirSnapshotSchema(
+    const TArray<uint8>& SnapshotBytes)
+{
+    if (SnapshotBytes.Num() < 8 || SnapshotBytes[0] != 'E' ||
+        SnapshotBytes[1] != 'B' || SnapshotBytes[2] != 'S' ||
+        SnapshotBytes[3] != 'N')
+    {
+        return false;
+    }
+    int32 Offset = 4;
+    uint32 Version = 0;
+    return ReadUint32LittleEndian(SnapshotBytes, Offset, Version) &&
+        Version >= 22U && Version <= echoes::sim::kSnapshotVersion;
 }
 
 [[nodiscard]] bool BuildChoirAtLumeReachQuickSaveEnvelope(
@@ -755,7 +793,7 @@ enum class EQuickSaveContainerRead : uint8
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 12 checkpoints require an active eleven-record ledger and a current schema-22 snapshot.");
+            "Mission 12 checkpoints require an active eleven-record ledger and a current schema-23 snapshot.");
         return false;
     }
 
@@ -907,7 +945,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 12 checkpoints require supported snapshot schema 21 or 22 continuity state");
+            "Mission 12 checkpoints require supported snapshot schema 21 through 23 continuity state");
         return false;
     }
     return true;
@@ -927,7 +965,7 @@ enum class EQuickSaveContainerRead : uint8
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 13 checkpoints require an active twelve-record ledger and a current schema-22 snapshot.");
+            "Mission 13 checkpoints require an active twelve-record ledger and a current schema-23 snapshot.");
         return false;
     }
 
@@ -1080,7 +1118,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 13 checkpoints require supported snapshot schema 21 or 22 continuity state");
+            "Mission 13 checkpoints require supported snapshot schema 21 through 23 continuity state");
         return false;
     }
     return true;
@@ -1103,7 +1141,7 @@ enum class EQuickSaveContainerRead : uint8
         (bCrisisContractFailed && !bCrisisHoldStarted))
     {
         OutError = TEXT(
-            "Mission 14 checkpoints require an active thirteen-record ledger and a native schema-22 snapshot.");
+            "Mission 14 checkpoints require an active thirteen-record ledger and a current schema-23 snapshot.");
         return false;
     }
 
@@ -1285,11 +1323,11 @@ enum class EQuickSaveContainerRead : uint8
     OutSnapshotBytes.Append(
         Envelope.GetData() + Offset,
         static_cast<int32>(SnapshotLength));
-    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    if (!UsesSupportedChoirSnapshotSchema(OutSnapshotBytes))
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 14 checkpoints require native snapshot schema 22 Hollow Choir state");
+            "Mission 14 checkpoints require supported snapshot schema 22 or 23 Hollow Choir state");
         return false;
     }
     OutCrisisHoldStarted = (CrisisFlags & 1U) != 0U;
@@ -1385,7 +1423,7 @@ enum class EQuickSaveContainerRead : uint8
         if (OutError.IsEmpty())
         {
             OutError = TEXT(
-                "Mission 15 checkpoints require a native schema-22 snapshot");
+                "Mission 15 checkpoints require a current schema-23 snapshot");
         }
         return false;
     }
@@ -1592,11 +1630,11 @@ enum class EQuickSaveContainerRead : uint8
     OutSnapshotBytes.Append(
         Envelope.GetData() + Offset,
         static_cast<int32>(SnapshotLength));
-    if (!UsesCurrentSnapshotSchema(OutSnapshotBytes))
+    if (!UsesSupportedChoirSnapshotSchema(OutSnapshotBytes))
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 15 checkpoints require native snapshot schema 22 state");
+            "Mission 15 checkpoints require supported snapshot schema 22 or 23 state");
         return false;
     }
     OutPendingResolution = Pending;
@@ -2016,6 +2054,27 @@ bool UEchoesSimulationSubsystem::StartStressScenario()
     return StartScenario(true);
 }
 
+bool UEchoesSimulationSubsystem::StartSustainedStressScenario()
+{
+#if UE_BUILD_SHIPPING
+    UE_LOG(
+        LogEchoes,
+        Error,
+        TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=SHIPPING_EXCLUDED tick=0 detail=The sustained fixture is compiled out of Shipping bootstrap."));
+    return false;
+#else
+    const bool bStarted = StartScenario(true, true);
+    if (!bStarted && !bSustainedStressFailed)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=START_REJECTED tick=0 detail=The sustained fixture could not initialize."));
+    }
+    return bStarted;
+#endif
+}
+
 echoes::sim::Vec2 UEchoesSimulationSubsystem::GetArchiveRecoverySite()
 {
     return Vec2::FromTiles(22, 18);
@@ -2097,10 +2156,43 @@ FEchoesCampaignJourney UEchoesSimulationSubsystem::GetCampaignJourney() const
     return Journey;
 }
 
-bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
+bool UEchoesSimulationSubsystem::StartScenario(
+    bool bUseStressScenario,
+    bool bUseSustainedStressScenario)
 {
+    if (bUseSustainedStressScenario && !bUseStressScenario)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=INVALID_MODE tick=0 detail=Sustained mode requires the stress fixture."));
+        return false;
+    }
+    if (bSustainedStressFailed)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=FAILURE_LATCHED tick=%llu detail=Stop or explicitly restart the failed fixture before starting it again."),
+            static_cast<unsigned long long>(
+                Simulation.IsValid() ? Simulation->CurrentTick() : 0));
+        return false;
+    }
     if (bScenarioReady && Simulation.IsValid())
     {
+        if (bStressScenario != bUseStressScenario ||
+            bSustainedStressScenario != bUseSustainedStressScenario)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_SIM_MODE_CONFLICT] activeStress=%s activeSustained=%s requestedStress=%s requestedSustained=%s"),
+                bStressScenario ? TEXT("true") : TEXT("false"),
+                bSustainedStressScenario ? TEXT("true") : TEXT("false"),
+                bUseStressScenario ? TEXT("true") : TEXT("false"),
+                bUseSustainedStressScenario ? TEXT("true") : TEXT("false"));
+            return false;
+        }
         UE_LOG(
             LogEchoes,
             Verbose,
@@ -2363,6 +2455,8 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     Config.mapHeightTiles = PrototypeMapHeightTiles;
     Config.ticksPerSecond = PrototypeTicksPerSecond;
     Config.randomSeed = PrototypeSeed;
+    Config.protectedCommandCorePlayerMask =
+        bUseSustainedStressScenario ? 0x0FU : 0U;
     FString RulesError;
     if (!Content->GetCatalog().BuildSimulationRules(
             Config.ticksPerSecond,
@@ -2558,7 +2652,9 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         (bUseStressScenario &&
          (!Simulation->AddPlayer(
               2,
-              Faction::KharuunAssemblies,
+              bUseSustainedStressScenario
+                  ? Faction::HollowChoir
+                  : Faction::KharuunAssemblies,
               ResourcePool{500, 30}) ||
           !Simulation->AddPlayer(
               3,
@@ -2639,6 +2735,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bBrokenSunResolutionHoldStarted = false;
     bBrokenSunResolutionContractFailed = false;
     BrokenSunResolutionStartTick = 0;
+    SustainedStressCombatEntityIds.Reset();
+    SustainedStressCombatOwners.Reset();
+    SustainedStressCombatFactions.Reset();
+    SustainedStressCombatTypes.Reset();
+    SustainedStressCombatSpawnPositions.Reset();
+    SustainedStressCommandCoreIds.fill(0);
     const auto SpawnUnit = [this, &bSpawnSucceeded](
                                uint8 Owner,
                                Faction UnitFaction,
@@ -2801,10 +2903,12 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         constexpr int32 GridX[10] = {3, 9, 15, 21, 27, 36, 42, 48, 54, 60};
         constexpr int32 GridY[10] = {3, 8, 13, 18, 23, 28, 36, 43, 50, 57};
         constexpr uint8 Owners[4] = {0, 1, 2, 3};
-        constexpr Faction Factions[4] = {
+        const Faction Factions[4] = {
             Faction::MeridianCompact,
             Faction::KharuunAssemblies,
-            Faction::KharuunAssemblies,
+            bUseSustainedStressScenario
+                ? Faction::HollowChoir
+                : Faction::KharuunAssemblies,
             Faction::MeridianCompact};
         constexpr int32 OffsetX[4] = {0, 1, 0, 1};
         constexpr int32 OffsetY[4] = {0, 0, 1, 1};
@@ -2822,12 +2926,30 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                                                       : TeamUnits % 3 == 2
                                                             ? EntityType::HeavyUnit
                                                             : EntityType::ScoutUnit;
-                    SpawnUnit(
+                    const EntityId Spawned = SpawnUnit(
                         Owners[Team],
                         Factions[Team],
                         Type,
                         GridX[Column] + OffsetX[Team],
                         GridY[Row] + OffsetY[Team]);
+                    if (bUseSustainedStressScenario)
+                    {
+                        if (Type == EntityType::CommandCore)
+                        {
+                            SustainedStressCommandCoreIds[Owners[Team]] = Spawned;
+                        }
+                        else
+                        {
+                            SustainedStressCombatEntityIds.Add(Spawned);
+                            SustainedStressCombatOwners.Add(Owners[Team]);
+                            SustainedStressCombatFactions.Add(Factions[Team]);
+                            SustainedStressCombatTypes.Add(Type);
+                            SustainedStressCombatSpawnPositions.Add(
+                                Vec2::FromTiles(
+                                    GridX[Column] + OffsetX[Team],
+                                    GridY[Row] + OffsetY[Team]));
+                        }
+                    }
                     ++TeamUnits;
                 }
             }
@@ -3560,6 +3682,13 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     }
 
     Simulation->CaptureReplayBaseline();
+    if (bUseSustainedStressScenario)
+    {
+        // Replacement is maintained by the non-shipping fixture rather than
+        // SimCore commands, so exporting a superficially valid replay would
+        // misrepresent what can be reproduced deterministically.
+        Simulation->DisableReplayExport();
+    }
     ProloguePresentationWorkerId = 0;
     ProloguePresentationWellId = 0;
     if (bUsePrologueCompletionPresentation)
@@ -3880,6 +4009,22 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = bUseStressScenario;
+    bSustainedStressScenario = bUseSustainedStressScenario;
+    bSustainedStressFailed = false;
+    bSustainedStressQualificationLogged = false;
+    SustainedStressFailureCode.Reset();
+    SustainedStressIntervalDamage = 0;
+    SustainedStressIntervalCombatLosses = 0;
+    SustainedStressCumulativeCombatLosses = 0;
+    SustainedStressIntervalReplacements = 0;
+    SustainedStressCumulativeReplacements = 0;
+    SustainedStressIntervalOrderRenewals = 0;
+    SustainedStressCumulativeOrderRenewals = 0;
+    SustainedStressLastActivityTick = 0;
+    SustainedStressLastHeartbeatTick = 0;
+    SustainedStressLastHeartbeatWallMs = 0;
+    SustainedStressRenewalCursorByPlayer.fill(0);
+    SustainedStressReadyWallSeconds = 0.0;
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
         ArchiveCarrierId == 0)
     {
@@ -4123,9 +4268,19 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         Simulation.Reset();
         bScenarioReady = false;
         bStressScenario = false;
+        bSustainedStressScenario = false;
         return false;
     }
     bScenarioReady = true;
+    if (bSustainedStressScenario &&
+        !ValidateSustainedStressContract(true, false, false))
+    {
+        DestroyEntityViews();
+        DestroyFogView();
+        DestroyTerrainView();
+        Simulation.Reset();
+        return false;
+    }
 
     if (bLumeReach)
     {
@@ -4681,7 +4836,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
                 TEXT("[ECHOES_POINTER_COMBAT_GUARD_PRESENTATION_READY] projectedLiveViews=true exactScreenCoordinates=true ordinaryControllerBindings=true controlledNonshipping=true"));
         }
     }
-    if (bStressScenario)
+    if (bStressScenario && !bSustainedStressScenario)
     {
         UE_LOG(
             LogEchoes,
@@ -4694,6 +4849,16 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
             TEXT("[ECHOES_STRESS_READY] units=400 teams=4 entities=%d visibleViews=%d"),
             static_cast<int32>(Simulation->Entities().size()),
             EntityViews.Num());
+    }
+    else if (bSustainedStressScenario)
+    {
+        SustainedStressReadyWallSeconds = FPlatformTime::Seconds();
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_SUSTAINED_READY] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 protectedCoreMask=15"),
+            static_cast<unsigned long long>(Simulation->CurrentTick()),
+            static_cast<unsigned long long>(Simulation->StateChecksum()));
     }
     return true;
 }
@@ -4731,6 +4896,28 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
+    bSustainedStressScenario = false;
+    bSustainedStressFailed = false;
+    bSustainedStressQualificationLogged = false;
+    SustainedStressFailureCode.Reset();
+    SustainedStressCombatEntityIds.Reset();
+    SustainedStressCombatOwners.Reset();
+    SustainedStressCombatFactions.Reset();
+    SustainedStressCombatTypes.Reset();
+    SustainedStressCombatSpawnPositions.Reset();
+    SustainedStressCommandCoreIds.fill(0);
+    SustainedStressIntervalDamage = 0;
+    SustainedStressIntervalCombatLosses = 0;
+    SustainedStressCumulativeCombatLosses = 0;
+    SustainedStressIntervalReplacements = 0;
+    SustainedStressCumulativeReplacements = 0;
+    SustainedStressIntervalOrderRenewals = 0;
+    SustainedStressCumulativeOrderRenewals = 0;
+    SustainedStressLastActivityTick = 0;
+    SustainedStressLastHeartbeatTick = 0;
+    SustainedStressLastHeartbeatWallMs = 0;
+    SustainedStressRenewalCursorByPlayer.fill(0);
+    SustainedStressReadyWallSeconds = 0.0;
     ArchiveCarrierId = 0;
     MemoryBearerId = 0;
     MigrationWaystoneId = 0;
@@ -4802,8 +4989,11 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
 bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
 {
     const bool bRestartStressScenario = bStressScenario;
+    const bool bRestartSustainedStressScenario = bSustainedStressScenario;
     StopPrototypeScenario();
-    const bool bRestarted = StartScenario(bRestartStressScenario);
+    const bool bRestarted = StartScenario(
+        bRestartStressScenario,
+        bRestartSustainedStressScenario);
     if (bRestarted)
     {
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_MATCH_RESTARTED]"));
@@ -6874,6 +7064,12 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         OutFeedback = TEXT("[SAVE_SIM_NOT_READY] No active scenario can be saved.");
         return false;
     }
+    if (bStressScenario)
+    {
+        OutFeedback = TEXT(
+            "[SAVE_STRESS_DISABLED] Stress fixtures cannot overwrite player checkpoints.");
+        return false;
+    }
 
     const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
     if (Snapshot.empty() || Snapshot.size() > MAX_int32)
@@ -7196,6 +7392,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
             Config.randomSeed != PrototypeSeed ||
+            Config.protectedCommandCorePlayerMask != 0 ||
             !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
             CandidateLocalPlayer == nullptr ||
             CandidateLocalPlayer->faction != LocalFaction)
@@ -7406,6 +7603,12 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         OutFeedback = TEXT("[LOAD_SIM_NOT_READY] Start a scenario before loading.");
         return false;
     }
+    if (bStressScenario)
+    {
+        OutFeedback = TEXT(
+            "[LOAD_STRESS_DISABLED] Stress fixtures cannot consume player checkpoints.");
+        return false;
+    }
 
     const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
@@ -7600,6 +7803,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
             Config.randomSeed != PrototypeSeed ||
+            Config.protectedCommandCorePlayerMask != 0 ||
             !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
             Candidate->FindPlayer(LocalPlayerId) == nullptr ||
             Candidate->FindPlayer(LocalPlayerId)->faction != LocalFaction)
@@ -8413,6 +8617,16 @@ void UEchoesSimulationSubsystem::SetScenarioPaused(bool bPaused)
     if (!bScenarioReady || !Simulation.IsValid() ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
+        return;
+    }
+    if (bSustainedStressScenario)
+    {
+        if (bPaused)
+        {
+            FailSustainedStressContract(
+                TEXT("PAUSE_REQUESTED"),
+                TEXT("The sustained qualification fixture cannot be paused."));
+        }
         return;
     }
     bSimulationPaused = bPaused;
@@ -11520,11 +11734,676 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
     return Snapshot;
 }
 
+int64 UEchoesSimulationSubsystem::GetSustainedStressCombatHitPoints() const
+{
+    if (!Simulation.IsValid())
+    {
+        return 0;
+    }
+    int64 Total = 0;
+    for (const uint32 EntityId : SustainedStressCombatEntityIds)
+    {
+        if (const echoes::sim::Entity* Entity = Simulation->FindEntity(EntityId))
+        {
+            Total += FMath::Max(0, Entity->hitPoints);
+        }
+    }
+    return Total;
+}
+
+void UEchoesSimulationSubsystem::FailSustainedStressContract(
+    const TCHAR* Code,
+    const FString& Detail)
+{
+    if (!bSustainedStressScenario || bSustainedStressFailed)
+    {
+        return;
+    }
+    bSustainedStressFailed = true;
+    bSimulationPaused = true;
+    bScenarioReady = false;
+    SustainedStressFailureCode = Code;
+    const uint64 Tick = Simulation.IsValid() ? Simulation->CurrentTick() : 0;
+    UE_LOG(
+        LogEchoes,
+        Error,
+        TEXT("[ECHOES_STRESS_SUSTAINED_FAILED] code=%s tick=%llu detail=%s"),
+        Code,
+        static_cast<unsigned long long>(Tick),
+        *Detail);
+}
+
+bool UEchoesSimulationSubsystem::FindSustainedStressReplacementPosition(
+    int32 SlotIndex,
+    Vec2& OutPosition) const
+{
+    if (!Simulation.IsValid() ||
+        !SustainedStressCombatSpawnPositions.IsValidIndex(SlotIndex) ||
+        !SustainedStressCombatFactions.IsValidIndex(SlotIndex) ||
+        !SustainedStressCombatTypes.IsValidIndex(SlotIndex))
+    {
+        return false;
+    }
+    const Vec2 Origin = SustainedStressCombatSpawnPositions[SlotIndex];
+    for (int32 Radius = 0; Radius <= 12; ++Radius)
+    {
+        for (int32 OffsetY = -Radius; OffsetY <= Radius; ++OffsetY)
+        {
+            for (int32 OffsetX = -Radius; OffsetX <= Radius; ++OffsetX)
+            {
+                if (Radius > 0 &&
+                    FMath::Abs(OffsetX) != Radius &&
+                    FMath::Abs(OffsetY) != Radius)
+                {
+                    continue;
+                }
+                const Vec2 Candidate = Vec2::FromTiles(
+                    Origin.x.FloorToInt() + OffsetX,
+                    Origin.y.FloorToInt() + OffsetY);
+                if (Simulation->IsSpawnPositionAvailable(
+                        SustainedStressCombatFactions[SlotIndex],
+                        SustainedStressCombatTypes[SlotIndex],
+                        Candidate))
+                {
+                    OutPosition = Candidate;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool UEchoesSimulationSubsystem::MaintainSustainedStressContractAfterFixedStep(
+    int64 CombatHitPointsBeforeStep)
+{
+    if (!bSustainedStressScenario)
+    {
+        return true;
+    }
+    if (!Simulation.IsValid() || bSustainedStressFailed)
+    {
+        return false;
+    }
+    if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        FailSustainedStressContract(
+            TEXT("TERMINAL_OUTCOME"),
+            TEXT("The deterministic match left the ongoing state."));
+        return false;
+    }
+    for (echoes::sim::PlayerId Player = 0;
+         Player < echoes::sim::kMaximumPlayers;
+         ++Player)
+    {
+        const echoes::sim::Entity* Core =
+            Simulation->FindEntity(SustainedStressCommandCoreIds[Player]);
+        if (Core == nullptr || Core->hitPoints <= 0 ||
+            Core->owner != Player ||
+            Core->type != EntityType::CommandCore)
+        {
+            FailSustainedStressContract(
+                TEXT("COMMAND_CORE_LOST"),
+                FString::Printf(TEXT("player=%u"), Player));
+            return false;
+        }
+    }
+
+    const int64 CombatHitPointsAfterStep =
+        GetSustainedStressCombatHitPoints();
+    if (CombatHitPointsBeforeStep > CombatHitPointsAfterStep)
+    {
+        SustainedStressIntervalDamage += static_cast<uint64>(
+            CombatHitPointsBeforeStep - CombatHitPointsAfterStep);
+        SustainedStressLastActivityTick = Simulation->CurrentTick();
+    }
+
+    const int32 SlotCount = SustainedStressCombatEntityIds.Num();
+    if (SlotCount != 396 ||
+        SustainedStressCombatOwners.Num() != SlotCount ||
+        SustainedStressCombatFactions.Num() != SlotCount ||
+        SustainedStressCombatTypes.Num() != SlotCount ||
+        SustainedStressCombatSpawnPositions.Num() != SlotCount)
+    {
+        FailSustainedStressContract(
+            TEXT("SLOT_TABLE_INVALID"),
+            FString::Printf(TEXT("slots=%d expected=396"), SlotCount));
+        return false;
+    }
+
+    constexpr Vec2 TeamDestinations[2][4] = {
+        {
+            Vec2::FromTiles(46, 46),
+            Vec2::FromTiles(18, 46),
+            Vec2::FromTiles(46, 18),
+            Vec2::FromTiles(18, 18),
+        },
+        {
+            Vec2::FromTiles(18, 18),
+            Vec2::FromTiles(46, 18),
+            Vec2::FromTiles(18, 46),
+            Vec2::FromTiles(46, 46),
+        }};
+    const int32 DestinationPhase = static_cast<int32>(
+        (Simulation->CurrentTick() / PrototypeTicksPerSecond + 1) % 2);
+    const auto QueueAttackMove = [this, &TeamDestinations, DestinationPhase](
+                                     int32 SlotIndex,
+                                     EntityId Actor,
+                                     echoes::sim::Tick ExecuteTick,
+                                     const TCHAR* FailureCode)
+    {
+        const uint8 Owner = SustainedStressCombatOwners[SlotIndex];
+        const std::optional<uint64> Sequence =
+            Simulation->NextCommandSequence(Owner);
+        if (!Sequence.has_value() ||
+            Simulation->CommandLog().size() >=
+                echoes::sim::kMaximumCommandLogEntries)
+        {
+            FailSustainedStressContract(
+                TEXT("COMMAND_CAPACITY_EXHAUSTED"),
+                FString::Printf(
+                    TEXT("slot=%d commands=%llu capacity=%llu"),
+                    SlotIndex,
+                    static_cast<unsigned long long>(
+                        Simulation->CommandLog().size()),
+                    static_cast<unsigned long long>(
+                        echoes::sim::kMaximumCommandLogEntries)));
+            return false;
+        }
+        echoes::sim::Command Command;
+        Command.executeTick = ExecuteTick;
+        Command.player = Owner;
+        Command.sequence = *Sequence;
+        Command.type = echoes::sim::CommandType::AttackMove;
+        Command.actor = Actor;
+        Command.position = TeamDestinations[DestinationPhase][Owner];
+        std::string Rejection;
+        if (!Simulation->QueueCommand(Command, &Rejection))
+        {
+            FailSustainedStressContract(
+                FailureCode,
+                FString::Printf(
+                    TEXT("slot=%d owner=%u reason=%s"),
+                    SlotIndex,
+                    Owner,
+                    UTF8_TO_TCHAR(Rejection.c_str())));
+            return false;
+        }
+        return true;
+    };
+    TSet<EntityId> OrderedThisStep;
+    TSet<uint8> OwnersOrderedThisStep;
+    for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
+    {
+        const echoes::sim::Entity* Existing = Simulation->FindEntity(
+            SustainedStressCombatEntityIds[SlotIndex]);
+        if (Existing != nullptr)
+        {
+            if (Existing->hitPoints <= 0 ||
+                Existing->owner != SustainedStressCombatOwners[SlotIndex] ||
+                Existing->faction != SustainedStressCombatFactions[SlotIndex] ||
+                Existing->type != SustainedStressCombatTypes[SlotIndex])
+            {
+                FailSustainedStressContract(
+                    TEXT("SLOT_IDENTITY_DRIFT"),
+                    FString::Printf(TEXT("slot=%d entity=%u"), SlotIndex,
+                                    Existing->id));
+                return false;
+            }
+            continue;
+        }
+
+        ++SustainedStressIntervalCombatLosses;
+        ++SustainedStressCumulativeCombatLosses;
+        SustainedStressLastActivityTick = Simulation->CurrentTick();
+        if (SustainedStressCumulativeReplacements >=
+            SustainedStressMaximumReplacementCommands)
+        {
+            FailSustainedStressContract(
+                TEXT("REPLACEMENT_BUDGET_EXHAUSTED"),
+                FString::Printf(
+                    TEXT("replacements=%llu budget=%llu"),
+                    static_cast<unsigned long long>(
+                        SustainedStressCumulativeReplacements),
+                    static_cast<unsigned long long>(
+                        SustainedStressMaximumReplacementCommands)));
+            return false;
+        }
+        Vec2 ReplacementPosition;
+        if (!FindSustainedStressReplacementPosition(
+                SlotIndex, ReplacementPosition))
+        {
+            FailSustainedStressContract(
+                TEXT("REPLACEMENT_POSITION_UNAVAILABLE"),
+                FString::Printf(TEXT("slot=%d"), SlotIndex));
+            return false;
+        }
+        const uint8 Owner = SustainedStressCombatOwners[SlotIndex];
+        const EntityId Replacement = Simulation->SpawnEntity(
+            Owner,
+            SustainedStressCombatFactions[SlotIndex],
+            SustainedStressCombatTypes[SlotIndex],
+            ReplacementPosition);
+        if (Replacement == 0)
+        {
+            FailSustainedStressContract(
+                TEXT("REPLACEMENT_SPAWN_REJECTED"),
+                FString::Printf(TEXT("slot=%d owner=%u"), SlotIndex, Owner));
+            return false;
+        }
+        if (!QueueAttackMove(
+                SlotIndex,
+                Replacement,
+                Simulation->CurrentTick() + 1,
+                TEXT("REPLACEMENT_ORDER_REJECTED")))
+        {
+            return false;
+        }
+        SustainedStressCombatEntityIds[SlotIndex] = Replacement;
+        OrderedThisStep.Add(Replacement);
+        OwnersOrderedThisStep.Add(Owner);
+        ++SustainedStressIntervalReplacements;
+        ++SustainedStressCumulativeReplacements;
+        SustainedStressLastActivityTick = Simulation->CurrentTick();
+    }
+    if ((Simulation->CurrentTick() + 1) % PrototypeTicksPerSecond == 0 &&
+        Simulation->CurrentTick() < SustainedStressQualificationTicks)
+    {
+        for (echoes::sim::PlayerId Player = 0;
+             Player < echoes::sim::kMaximumPlayers;
+             ++Player)
+        {
+            // Replacement orders for this step execute one tick later by
+            // contract. Do not queue a later sequence for an earlier tick.
+            if (OwnersOrderedThisStep.Contains(Player))
+            {
+                continue;
+            }
+            int32& Cursor = SustainedStressRenewalCursorByPlayer[Player];
+            Cursor = FMath::Clamp(Cursor, 0, SlotCount - 1);
+            for (int32 Attempt = 0; Attempt < SlotCount; ++Attempt)
+            {
+                const int32 SlotIndex = (Cursor + Attempt) % SlotCount;
+                if (SustainedStressCombatOwners[SlotIndex] != Player)
+                {
+                    continue;
+                }
+                const EntityId Actor = SustainedStressCombatEntityIds[SlotIndex];
+                const echoes::sim::Entity* Entity =
+                    Simulation->FindEntity(Actor);
+                if (Entity == nullptr || OrderedThisStep.Contains(Actor) ||
+                    Entity->order.type == echoes::sim::OrderType::AttackMove)
+                {
+                    continue;
+                }
+                if (SustainedStressCumulativeOrderRenewals >=
+                    SustainedStressMaximumOrderRenewals)
+                {
+                    FailSustainedStressContract(
+                        TEXT("ORDER_RENEWAL_BUDGET_EXHAUSTED"),
+                        FString::Printf(
+                            TEXT("renewals=%llu budget=%llu"),
+                            static_cast<unsigned long long>(
+                                SustainedStressCumulativeOrderRenewals),
+                            static_cast<unsigned long long>(
+                                SustainedStressMaximumOrderRenewals)));
+                    return false;
+                }
+                if (!QueueAttackMove(
+                        SlotIndex,
+                        Actor,
+                        Simulation->CurrentTick(),
+                        TEXT("ORDER_RENEWAL_REJECTED")))
+                {
+                    return false;
+                }
+                Cursor = (SlotIndex + 1) % SlotCount;
+                ++SustainedStressIntervalOrderRenewals;
+                ++SustainedStressCumulativeOrderRenewals;
+                break;
+            }
+        }
+    }
+    return ValidateSustainedStressContract(false, false, false);
+}
+
+bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
+    bool bRequireSynchronizedViews,
+    bool bRequireRecentActivity,
+    bool bEmitHeartbeat)
+{
+    if (!bSustainedStressScenario)
+    {
+        return true;
+    }
+    if (!Simulation.IsValid() || bSustainedStressFailed)
+    {
+        return false;
+    }
+
+    std::array<int32, echoes::sim::kMaximumPlayers> TeamCounts{};
+    std::array<int32, echoes::sim::kMaximumPlayers> TeamCoreCounts{};
+    std::array<int32, 3> FactionCounts{};
+    int32 SoldierCount = 0;
+    int32 HeavyCount = 0;
+    int32 ScoutCount = 0;
+    int32 OwnedEntityCount = 0;
+    int32 NeutralDormantWellCount = 0;
+    int32 DamagedCombatants = 0;
+    int32 ActiveAttackMoveOrders = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.owner < echoes::sim::kMaximumPlayers)
+        {
+            ++OwnedEntityCount;
+            ++TeamCounts[Entity.owner];
+            switch (Entity.faction)
+            {
+                case Faction::MeridianCompact: ++FactionCounts[0]; break;
+                case Faction::KharuunAssemblies: ++FactionCounts[1]; break;
+                case Faction::HollowChoir: ++FactionCounts[2]; break;
+            }
+            switch (Entity.type)
+            {
+                case EntityType::CommandCore:
+                    ++TeamCoreCounts[Entity.owner];
+                    break;
+                case EntityType::Soldier:
+                    ++SoldierCount;
+                    DamagedCombatants +=
+                        Entity.hitPoints < Entity.maxHitPoints ? 1 : 0;
+                    break;
+                case EntityType::HeavyUnit:
+                    ++HeavyCount;
+                    DamagedCombatants +=
+                        Entity.hitPoints < Entity.maxHitPoints ? 1 : 0;
+                    break;
+                case EntityType::ScoutUnit:
+                    ++ScoutCount;
+                    DamagedCombatants +=
+                        Entity.hitPoints < Entity.maxHitPoints ? 1 : 0;
+                    break;
+                default:
+                    FailSustainedStressContract(
+                        TEXT("UNEXPECTED_OWNED_TYPE"),
+                        FString::Printf(
+                            TEXT("entity=%u type=%u"),
+                            Entity.id,
+                            static_cast<uint8>(Entity.type)));
+                    return false;
+            }
+            ActiveAttackMoveOrders +=
+                Entity.type != EntityType::CommandCore &&
+                        Entity.order.type == echoes::sim::OrderType::AttackMove
+                    ? 1
+                    : 0;
+        }
+        else if (Entity.owner == echoes::sim::kNeutralPlayer &&
+                 Entity.type == EntityType::FutureWell &&
+                 Entity.wellChoice == FutureWellChoice::Dormant)
+        {
+            ++NeutralDormantWellCount;
+        }
+        else
+        {
+            FailSustainedStressContract(
+                TEXT("UNEXPECTED_NEUTRAL_ENTITY"),
+                FString::Printf(TEXT("entity=%u"), Entity.id));
+            return false;
+        }
+    }
+
+    int32 ActivePlayers = 0;
+    TSet<uint8> ActiveFactions;
+    constexpr Faction ExpectedFactions[4] = {
+        Faction::MeridianCompact,
+        Faction::KharuunAssemblies,
+        Faction::HollowChoir,
+        Faction::MeridianCompact};
+    for (echoes::sim::PlayerId Player = 0;
+         Player < echoes::sim::kMaximumPlayers;
+         ++Player)
+    {
+        const echoes::sim::PlayerState* State = Simulation->FindPlayer(Player);
+        if (State != nullptr)
+        {
+            ++ActivePlayers;
+            ActiveFactions.Add(static_cast<uint8>(State->faction));
+        }
+        if (State == nullptr || State->faction != ExpectedFactions[Player] ||
+            TeamCounts[Player] != 100 || TeamCoreCounts[Player] != 1)
+        {
+            FailSustainedStressContract(
+                TEXT("TEAM_COMPOSITION_DRIFT"),
+                FString::Printf(
+                    TEXT("player=%u count=%d cores=%d"),
+                    Player,
+                    TeamCounts[Player],
+                    TeamCoreCounts[Player]));
+            return false;
+        }
+    }
+    if (ActivePlayers != 4 || ActiveFactions.Num() != 3 ||
+        FactionCounts[0] != 200 || FactionCounts[1] != 100 ||
+        FactionCounts[2] != 100 || OwnedEntityCount != 400 ||
+        SoldierCount != 132 || HeavyCount != 132 || ScoutCount != 132 ||
+        NeutralDormantWellCount != 1 ||
+        Simulation->Entities().size() != 401 ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        FailSustainedStressContract(
+            TEXT("POPULATION_OR_FACTION_DRIFT"),
+            FString::Printf(
+                TEXT("players=%d factions=%d meridian=%d kharuun=%d choir=%d owned=%d soldiers=%d heavies=%d scouts=%d wells=%d entities=%llu outcome=%u"),
+                ActivePlayers,
+                ActiveFactions.Num(),
+                FactionCounts[0],
+                FactionCounts[1],
+                FactionCounts[2],
+                OwnedEntityCount,
+                SoldierCount,
+                HeavyCount,
+                ScoutCount,
+                NeutralDormantWellCount,
+                static_cast<unsigned long long>(Simulation->Entities().size()),
+                static_cast<uint8>(Simulation->Outcome())));
+        return false;
+    }
+    const uint64 ExpectedCommandCount =
+        SustainedStressInitialCommandCount +
+        SustainedStressCumulativeReplacements +
+        SustainedStressCumulativeOrderRenewals;
+    if (SustainedStressCumulativeCombatLosses !=
+            SustainedStressCumulativeReplacements ||
+        SustainedStressCumulativeReplacements >
+            SustainedStressMaximumReplacementCommands ||
+        SustainedStressCumulativeOrderRenewals >
+            SustainedStressMaximumOrderRenewals ||
+        ExpectedCommandCount > SustainedStressProjectedCommandCeiling ||
+        Simulation->CommandLog().size() != ExpectedCommandCount ||
+        Simulation->CommandLog().size() >=
+            echoes::sim::kMaximumCommandLogEntries)
+    {
+        FailSustainedStressContract(
+            TEXT("COMMAND_BUDGET_INVALID"),
+            FString::Printf(
+                TEXT("commands=%llu expected=%llu capacity=%llu losses=%llu replacements=%llu renewals=%llu projectedCeiling=%llu"),
+                static_cast<unsigned long long>(Simulation->CommandLog().size()),
+                static_cast<unsigned long long>(ExpectedCommandCount),
+                static_cast<unsigned long long>(
+                    echoes::sim::kMaximumCommandLogEntries),
+                static_cast<unsigned long long>(
+                    SustainedStressCumulativeCombatLosses),
+                static_cast<unsigned long long>(
+                    SustainedStressCumulativeReplacements),
+                static_cast<unsigned long long>(
+                    SustainedStressCumulativeOrderRenewals),
+                static_cast<unsigned long long>(
+                    SustainedStressProjectedCommandCeiling)));
+        return false;
+    }
+    if (bRequireSynchronizedViews)
+    {
+        if (EntityViews.Num() != 401)
+        {
+            FailSustainedStressContract(
+                TEXT("VIEW_COUNT_DRIFT"),
+                FString::Printf(TEXT("views=%d expected=401"), EntityViews.Num()));
+            return false;
+        }
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            const TWeakObjectPtr<AEchoesEntityView>* View =
+                EntityViews.Find(Entity.id);
+            if (View == nullptr || !View->IsValid() ||
+                !Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id))
+            {
+                FailSustainedStressContract(
+                    TEXT("VIEW_IDENTITY_DRIFT"),
+                    FString::Printf(TEXT("entity=%u"), Entity.id));
+                return false;
+            }
+        }
+        for (const TPair<uint32, TWeakObjectPtr<AEchoesEntityView>>& Pair :
+             EntityViews)
+        {
+            if (!Pair.Value.IsValid() ||
+                Simulation->FindEntity(Pair.Key) == nullptr)
+            {
+                FailSustainedStressContract(
+                    TEXT("STALE_VIEW"),
+                    FString::Printf(TEXT("entity=%u"), Pair.Key));
+                return false;
+            }
+        }
+    }
+    const uint64 CurrentTick = Simulation->CurrentTick();
+    const uint64 ActivityAgeTicks =
+        CurrentTick >= SustainedStressLastActivityTick
+            ? CurrentTick - SustainedStressLastActivityTick
+            : MAX_uint64;
+    if (bRequireRecentActivity &&
+        (ActivityAgeTicks > SustainedStressActivityWindowTicks ||
+         ActiveAttackMoveOrders == 0))
+    {
+        FailSustainedStressContract(
+            TEXT("ACTIVITY_STALLED"),
+            FString::Printf(
+                TEXT("activityAgeTicks=%llu activityWindowTicks=%llu intervalDamage=%llu intervalReplacements=%llu activeAttackMove=%d"),
+                static_cast<unsigned long long>(ActivityAgeTicks),
+                static_cast<unsigned long long>(
+                    SustainedStressActivityWindowTicks),
+                static_cast<unsigned long long>(SustainedStressIntervalDamage),
+                static_cast<unsigned long long>(
+                    SustainedStressIntervalReplacements),
+                ActiveAttackMoveOrders));
+        return false;
+    }
+    if (!bEmitHeartbeat)
+    {
+        return true;
+    }
+
+    const uint64 Tick = CurrentTick;
+    if (Tick == 0 || Tick % PrototypeTicksPerSecond != 0 ||
+        (SustainedStressLastHeartbeatTick != 0 &&
+         Tick - SustainedStressLastHeartbeatTick != PrototypeTicksPerSecond))
+    {
+        FailSustainedStressContract(
+            TEXT("HEARTBEAT_CADENCE_INVALID"),
+            FString::Printf(
+                TEXT("tick=%llu previous=%llu cadence=%u"),
+                static_cast<unsigned long long>(Tick),
+                static_cast<unsigned long long>(SustainedStressLastHeartbeatTick),
+                PrototypeTicksPerSecond));
+        return false;
+    }
+    uint64 WallMs = static_cast<uint64>(FMath::Max(
+        0.0,
+        (FPlatformTime::Seconds() - SustainedStressReadyWallSeconds) * 1000.0));
+    if (WallMs <= SustainedStressLastHeartbeatWallMs)
+    {
+        WallMs = SustainedStressLastHeartbeatWallMs + 1;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_STRESS_SUSTAINED_HEARTBEAT] fixture=Stress400Sustained tick=%llu wall_ms=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 soldiers=132 heavies=132 scouts=132 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 damagedCombatants=%d activeAttackMove=%d activityAgeTicks=%llu activityWindowTicks=%llu intervalDamage=%llu intervalCombatLosses=%llu cumulativeCombatLosses=%llu intervalReplacements=%llu cumulativeReplacements=%llu intervalOrderRenewals=%llu cumulativeOrderRenewals=%llu commandLog=%llu commandCapacity=%llu replacementBudget=%llu renewalBudget=%llu projectedCommandCeiling=%llu commandSafetyReserve=%llu qualificationTicks=%llu"),
+        static_cast<unsigned long long>(Tick),
+        static_cast<unsigned long long>(WallMs),
+        static_cast<unsigned long long>(Simulation->StateChecksum()),
+        DamagedCombatants,
+        ActiveAttackMoveOrders,
+        static_cast<unsigned long long>(ActivityAgeTicks),
+        static_cast<unsigned long long>(SustainedStressActivityWindowTicks),
+        static_cast<unsigned long long>(SustainedStressIntervalDamage),
+        static_cast<unsigned long long>(
+            SustainedStressIntervalCombatLosses),
+        static_cast<unsigned long long>(
+            SustainedStressCumulativeCombatLosses),
+        static_cast<unsigned long long>(SustainedStressIntervalReplacements),
+        static_cast<unsigned long long>(SustainedStressCumulativeReplacements),
+        static_cast<unsigned long long>(
+            SustainedStressIntervalOrderRenewals),
+        static_cast<unsigned long long>(
+            SustainedStressCumulativeOrderRenewals),
+        static_cast<unsigned long long>(Simulation->CommandLog().size()),
+        static_cast<unsigned long long>(echoes::sim::kMaximumCommandLogEntries),
+        static_cast<unsigned long long>(
+            SustainedStressMaximumReplacementCommands),
+        static_cast<unsigned long long>(SustainedStressMaximumOrderRenewals),
+        static_cast<unsigned long long>(
+            SustainedStressProjectedCommandCeiling),
+        static_cast<unsigned long long>(
+            echoes::sim::kMaximumCommandLogEntries -
+            SustainedStressProjectedCommandCeiling),
+        static_cast<unsigned long long>(SustainedStressQualificationTicks));
+    if (!bSustainedStressQualificationLogged &&
+        Tick == SustainedStressQualificationTicks)
+    {
+        bSustainedStressQualificationLogged = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_SUSTAINED_QUALIFIED] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing combatUnits=396 ownedEntities=400 entities=401 views=401 cumulativeCombatLosses=%llu cumulativeReplacements=%llu cumulativeOrderRenewals=%llu commandLog=%llu commandCapacity=%llu"),
+            static_cast<unsigned long long>(Tick),
+            static_cast<unsigned long long>(Simulation->StateChecksum()),
+            static_cast<unsigned long long>(
+                SustainedStressCumulativeCombatLosses),
+            static_cast<unsigned long long>(
+                SustainedStressCumulativeReplacements),
+            static_cast<unsigned long long>(
+                SustainedStressCumulativeOrderRenewals),
+            static_cast<unsigned long long>(Simulation->CommandLog().size()),
+            static_cast<unsigned long long>(
+                echoes::sim::kMaximumCommandLogEntries));
+    }
+    SustainedStressLastHeartbeatTick = Tick;
+    SustainedStressLastHeartbeatWallMs = WallMs;
+    SustainedStressIntervalDamage = 0;
+    SustainedStressIntervalCombatLosses = 0;
+    SustainedStressIntervalReplacements = 0;
+    SustainedStressIntervalOrderRenewals = 0;
+    return true;
+}
+
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
     if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
+        return;
+    }
+
+    if (bSustainedStressScenario &&
+        (!FMath::IsFinite(DeltaTime) || DeltaTime < 0.0F ||
+         DeltaTime > 0.25F))
+    {
+        FailSustainedStressContract(
+            TEXT("SIM_TIME_CLAMP"),
+            FString::Printf(
+                TEXT("rawDeltaSeconds=%.6f permittedMaximum=0.250000"),
+                static_cast<double>(DeltaTime)));
         return;
     }
 
@@ -11536,10 +12415,38 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
     while (FixedTimeAccumulator >= TickInterval &&
            TicksThisFrame < MaximumCatchUpTicksPerFrame)
     {
+        const int64 SustainedCombatHitPointsBeforeStep =
+            bSustainedStressScenario
+                ? GetSustainedStressCombatHitPoints()
+                : 0;
         QueueOpponentCommands();
         Simulation->Step();
+        if (bSustainedStressScenario &&
+            !MaintainSustainedStressContractAfterFixedStep(
+                SustainedCombatHitPointsBeforeStep))
+        {
+            FixedTimeAccumulator = 0.0;
+            break;
+        }
         FixedTimeAccumulator -= TickInterval;
         ++TicksThisFrame;
+        if (bSustainedStressScenario &&
+            Simulation->CurrentTick() % PrototypeTicksPerSecond == 0)
+        {
+            if (!SyncEntityViews(false) || !SyncTerrainView() || !SyncFogView())
+            {
+                FailSustainedStressContract(
+                    TEXT("VIEW_SYNC_FAILED"),
+                    TEXT("The exact heartbeat-boundary view sync failed."));
+                FixedTimeAccumulator = 0.0;
+                break;
+            }
+            if (!ValidateSustainedStressContract(true, true, true))
+            {
+                FixedTimeAccumulator = 0.0;
+                break;
+            }
+        }
         AuditSeveralVoicesOneCommandContractAfterFixedStep();
         AuditBrokenSunContractAfterFixedStep();
         if (SelectedOperation ==
@@ -11567,6 +12474,11 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         }
     }
 
+    if (bSustainedStressFailed)
+    {
+        return;
+    }
+
     if (FixedTimeAccumulator >= TickInterval)
     {
         FixedTimeAccumulator = FMath::Fmod(FixedTimeAccumulator, TickInterval);
@@ -11578,6 +12490,13 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 TEXT("[ECHOES_SIM_TIME_CLAMP] Frame delay exceeded the fixed-step catch-up budget; excess wall time was discarded."));
             bWarnedAboutTimeClamp = true;
         }
+        if (bSustainedStressScenario)
+        {
+            FailSustainedStressContract(
+                TEXT("SIM_TIME_CLAMP"),
+                TEXT("Fixed-step wall-time catch-up exceeded the permitted budget."));
+            return;
+        }
     }
 
     if (TicksThisFrame > 0)
@@ -11588,6 +12507,13 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 LogEchoes,
                 Error,
                 TEXT("[ECHOES_SIM_VIEW_SYNC_FAILED] A currently visible entity view could not be created; the prototype scenario was stopped."));
+            if (bSustainedStressScenario)
+            {
+                FailSustainedStressContract(
+                    TEXT("VIEW_SYNC_FAILED"),
+                    TEXT("The post-frame authoritative view sync failed."));
+                return;
+            }
             if (AEchoesPlayerController* Controller =
                     Cast<AEchoesPlayerController>(GetWorld()->GetFirstPlayerController()))
             {
@@ -12658,7 +13584,8 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         VibrationContacts);
                 }
             }
-            if (bStressScenario && !bLoggedStressCombat &&
+            if (bStressScenario && !bSustainedStressScenario &&
+                !bLoggedStressCombat &&
                 Simulation->CurrentTick() >= 20)
             {
                 int32 RemainingSoldiers = 0;

@@ -11,6 +11,10 @@ namespace echoes::network {
 [[nodiscard]] ECHOESOFTHEBROKENSUN_API sim::net::CompatibilityManifest
 BuildCompatibilityManifest(const sim::Simulation* simulation = nullptr);
 
+/** Protected-Core endurance fixtures are deterministic local diagnostics only. */
+[[nodiscard]] ECHOESOFTHEBROKENSUN_API bool SupportsNetworkSession(
+    const sim::Simulation* simulation);
+
 /** Fixed-window per-connection command budget for the current transport slice. */
 class ECHOESOFTHEBROKENSUN_API CommandRateLimiter final
 {

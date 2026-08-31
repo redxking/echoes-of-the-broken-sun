@@ -516,6 +516,18 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             false, TEXT("NET_AUTHORITY_NOT_READY"));
         return;
     }
+    if (!echoes::network::SupportsNetworkSession(Simulation))
+    {
+        constexpr const TCHAR* Reason = TEXT("NET_MATCH_SETTINGS_MISMATCH");
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_COMPATIBILITY_REJECTED] player=%u reason=%s"),
+            NetworkSeat,
+            Reason);
+        ClientReceiveCompatibilityResult(false, Reason);
+        return;
+    }
 
     echoes::sim::net::CompatibilityManifest Remote{};
     const echoes::sim::net::DecodeStatus Decode =

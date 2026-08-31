@@ -7,6 +7,7 @@
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerController.h"
+#include "EchoesSnapshotMigrationTestHelpers.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
@@ -845,6 +846,24 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("A pre-choice checkpoint preserves the exact approach"),
         Bridge->QuickSaveScenario(Feedback) &&
             IFileManager::Get().FileExists(*QuickSavePath));
+    const uint64 V22ExpectedTick = Bridge->GetSimulation()->CurrentTick();
+    const uint64 V22ExpectedChecksum =
+        Bridge->GetSimulation()->StateChecksum();
+    TArray<uint8> V22Checkpoint;
+    TestTrue(
+        TEXT("The Mission 15 checkpoint can be converted to its genuine schema-22 shape"),
+        FFileHelper::LoadFileToArray(V22Checkpoint, *QuickSavePath) &&
+            EchoesSnapshotMigrationTestHelpers::
+                ConvertMission15EnvelopeSnapshotV23ToV22(V22Checkpoint) &&
+            EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
+                V22Checkpoint) == 22U &&
+            FFileHelper::SaveArrayToFile(V22Checkpoint, *QuickSavePath));
+    TestTrue(TEXT("Mission 15 loads a valid schema-22 checkpoint under schema 23"),
+             Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("Mission 15 schema migration preserves exact deterministic state"),
+        Bridge->GetSimulation()->CurrentTick() == V22ExpectedTick &&
+            Bridge->GetSimulation()->StateChecksum() == V22ExpectedChecksum);
 
     TestTrue(
         TEXT("The Research Loom accepts Held Alternatives"),
@@ -995,6 +1014,14 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesFinalResolution::None &&
             Bridge->GetBrokenSunPhase() ==
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
+    TArray<uint8> RetainedV22Backup;
+    TestTrue(
+        TEXT("The first schema-23 resave retains the valid schema-22 Mission 15 generation"),
+        FFileHelper::LoadFileToArray(
+            RetainedV22Backup,
+            *(QuickSavePath + TEXT(".bak"))) &&
+            EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
+                RetainedV22Backup) == 22U);
     TestTrue(
         TEXT("The second identical press locks the ending for this operation"),
         Bridge->ChooseFinalResolution(
@@ -1178,7 +1205,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             MissionRecord->AvailableFinalResolutions ==
                 RuntimePlan.AvailableFinalResolutions &&
             MissionRecord->FinalPlanKey == RuntimePlan.StablePlanKey &&
-            MissionRecord->SimulationSnapshotVersion == 22 &&
+            MissionRecord->SimulationSnapshotVersion == 23 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

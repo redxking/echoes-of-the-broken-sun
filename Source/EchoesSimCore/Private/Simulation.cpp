@@ -14,7 +14,8 @@ constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 constexpr std::uint32_t kMaximumMapTiles = 4U * 1024U * 1024U;
 constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
-constexpr std::uint32_t kMaximumSerializedCommands = 256U * 1024U;
+constexpr std::uint32_t kMaximumSerializedCommands =
+    static_cast<std::uint32_t>(kMaximumCommandLogEntries);
 constexpr std::size_t kMaximumCachedPathFields = 128;
 constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
 constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
@@ -25,6 +26,7 @@ constexpr std::int32_t kMaximumVisionTiles = 256;
 constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::uint32_t kLegacySnapshotVersion = 20;
 constexpr std::uint32_t kPriorSnapshotVersion = 21;
+constexpr std::uint32_t kChoirSnapshotVersion = 22;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
@@ -34,6 +36,12 @@ constexpr std::size_t kSerializedCommandBytes = 38;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
+constexpr std::uint8_t kValidCommandCoreProtectionMask =
+    static_cast<std::uint8_t>((1U << kMaximumPlayers) - 1U);
+
+[[nodiscard]] bool HasChoirSnapshotSchema(std::uint32_t version) {
+    return version >= kChoirSnapshotVersion;
+}
 
 [[nodiscard]] std::int64_t Abs64(std::int64_t value) {
     return value < 0 ? -value : value;
@@ -908,7 +916,10 @@ Simulation::Simulation(SimulationConfig config)
         config_.mapHeightTiles > kMaximumMapDimension ||
         config_.ticksPerSecond == 0 ||
         config_.ticksPerSecond > kMaximumTicksPerSecond || tileCount <= 0 ||
-        tileCount > kMaximumMapTiles || !IsValidSimulationRules(config_.rules)) {
+        tileCount > kMaximumMapTiles ||
+        (config_.protectedCommandCorePlayerMask &
+         static_cast<std::uint8_t>(~kValidCommandCoreProtectionMask)) != 0 ||
+        !IsValidSimulationRules(config_.rules)) {
         throw std::invalid_argument("invalid deterministic simulation configuration");
     }
     terrain_.assign(static_cast<std::size_t>(tileCount), Terrain::Open);
@@ -1270,6 +1281,49 @@ bool Simulation::IsPositionPassable(Vec2 position) const {
     const std::int32_t tileY = position.y.FloorToInt();
     return TerrainAt(tileX, tileY) != Terrain::Blocked ||
            IsReshapedOpen(tileX, tileY);
+}
+
+bool Simulation::IsSpawnPositionAvailable(Faction faction,
+                                           EntityType type,
+                                           Vec2 position) const {
+    if (!IsValidFaction(faction) || !IsValidEntityType(type) ||
+        type == EntityType::ResourceNode || type == EntityType::FutureWell) {
+        return false;
+    }
+    const std::int32_t halfExtent = FootprintHalfExtentRaw(faction, type);
+    if (!IsInsideMap(position, halfExtent)) {
+        return false;
+    }
+    const std::int32_t minimumTileX =
+        (position.x.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maximumTileX =
+        (position.x.Raw() + halfExtent - 1) / kFixedScale;
+    const std::int32_t minimumTileY =
+        (position.y.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maximumTileY =
+        (position.y.Raw() + halfExtent - 1) / kFixedScale;
+    for (std::int32_t tileY = minimumTileY; tileY <= maximumTileY; ++tileY) {
+        for (std::int32_t tileX = minimumTileX; tileX <= maximumTileX; ++tileX) {
+            if (TerrainAt(tileX, tileY) == Terrain::Blocked &&
+                !IsReshapedOpen(tileX, tileY)) {
+                return false;
+            }
+        }
+    }
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints <= 0) {
+            continue;
+        }
+        const std::int32_t combinedExtent =
+            halfExtent + FootprintHalfExtentRaw(entity.faction, entity.type);
+        if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
+                  entity.position.x.Raw()) < combinedExtent &&
+            Abs64(static_cast<std::int64_t>(position.y.Raw()) -
+                  entity.position.y.Raw()) < combinedExtent) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool Simulation::IsBuilding(EntityType type) const {
@@ -2331,6 +2385,13 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
     return nearest;
 }
 
+bool Simulation::IsProtectedCommandCore(const Entity& entity) const {
+    return entity.type == EntityType::CommandCore &&
+           entity.owner < kMaximumPlayers &&
+           (config_.protectedCommandCorePlayerMask &
+            static_cast<std::uint8_t>(1U << entity.owner)) != 0;
+}
+
 EntityId Simulation::FindNearestVisibleEnemy(PlayerId player,
                                              Vec2 from,
                                              std::int32_t radiusRaw) const {
@@ -2340,7 +2401,8 @@ EntityId Simulation::FindNearestVisibleEnemy(PlayerId player,
         static_cast<std::uint64_t>(radiusRaw) * radiusRaw;
     for (const Entity& entity : entities_) {
         if (entity.owner == kNeutralPlayer || entity.owner == player ||
-            entity.hitPoints <= 0 || !IsEntityVisibleTo(player, entity.id)) {
+            entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
+            !IsEntityVisibleTo(player, entity.id)) {
             continue;
         }
         const std::uint64_t distance = DistanceSquaredRaw(from, entity.position);
@@ -2363,7 +2425,7 @@ EntityId Simulation::FindNearestVisibleEnemyInRange(
     std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
     for (const Entity& entity : entities_) {
         if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
-            entity.hitPoints <= 0 ||
+            entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(attacker.owner, entity.id) ||
             !InInteractionRange(attacker, entity, attacker.attackRangeRaw)) {
             continue;
@@ -2410,7 +2472,7 @@ EntityId Simulation::FindNearestVisiblePatrolEnemy(
         static_cast<std::uint64_t>(visionRaw) * visionRaw;
     for (const Entity& entity : entities_) {
         if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
-            entity.hitPoints <= 0 ||
+            entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(attacker.owner, entity.id) ||
             !IsInsidePatrolEnvelope(attacker.order, entity.position)) {
             continue;
@@ -2580,6 +2642,7 @@ void Simulation::ApplyCommand(const Command& command) {
             const Entity* target = FindEntity(command.target);
             if (actor->attackDamage > 0 && target != nullptr &&
                 target->owner != kNeutralPlayer && target->owner != command.player &&
+                !IsProtectedCommandCore(*target) &&
                 IsEntityVisibleTo(command.player, target->id)) {
                 actor->order.type = OrderType::Attack;
                 actor->order.target = target->id;
@@ -2921,6 +2984,7 @@ void Simulation::ProcessAttack(
     Entity* target = MutableEntity(attacker.order.target);
     if (target == nullptr || target->owner == kNeutralPlayer ||
         target->owner == attacker.owner ||
+        IsProtectedCommandCore(*target) ||
         !IsEntityVisibleTo(attacker.owner, target->id)) {
         attacker.order = {};
         return;
@@ -2948,6 +3012,7 @@ void Simulation::ProcessAttackMove(
                          : nullptr;
     if (target == nullptr || target->owner == kNeutralPlayer ||
         target->owner == attacker.owner ||
+        (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id)) {
         attacker.order.target = 0;
         target = nullptr;
@@ -2990,6 +3055,7 @@ void Simulation::ProcessHold(
                          : nullptr;
     if (target == nullptr || target->owner == kNeutralPlayer ||
         target->owner == attacker.owner ||
+        (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id) ||
         !InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
         attacker.order.target = 0;
@@ -3064,6 +3130,7 @@ void Simulation::ProcessPatrol(
                          : nullptr;
     if (target == nullptr || target->owner == kNeutralPlayer ||
         target->owner == attacker.owner ||
+        (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id) ||
         !IsInsidePatrolEnvelope(attacker.order, target->position)) {
         attacker.order.target = 0;
@@ -3337,7 +3404,8 @@ void Simulation::ProcessEntityOrders() {
     for (PendingDamage& damage : pendingDamage) {
         const Entity* attacker = FindEntity(damage.source);
         const Entity* target = FindEntity(damage.target);
-        if (attacker == nullptr || target == nullptr) {
+        if (attacker == nullptr || target == nullptr ||
+            IsProtectedCommandCore(*target)) {
             continue;
         }
         const EntityId cover = InterceptingMineralCover(*attacker, *target);
@@ -3393,7 +3461,8 @@ void Simulation::ProcessEntityOrders() {
             ++index;
         }
         if (Entity* mutableTarget = MutableEntity(targetId);
-            mutableTarget != nullptr) {
+            mutableTarget != nullptr &&
+            !IsProtectedCommandCore(*mutableTarget)) {
             mutableTarget->hitPoints -= static_cast<std::int32_t>(std::min<std::int64_t>(
                 totalDamage, std::numeric_limits<std::int32_t>::max()));
         }
@@ -3446,19 +3515,26 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::Build:
             case OrderType::Attack:
             case OrderType::FutureWell:
-                if (FindEntity(entity.order.target) == nullptr) {
+                if (const Entity* target = FindEntity(entity.order.target);
+                    target == nullptr ||
+                    (entity.order.type == OrderType::Attack &&
+                     IsProtectedCommandCore(*target))) {
                     entity.order = {};
                 }
                 break;
             case OrderType::AttackMove:
                 if (entity.order.target != 0 &&
-                    FindEntity(entity.order.target) == nullptr) {
+                    (FindEntity(entity.order.target) == nullptr ||
+                     IsProtectedCommandCore(
+                         *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
                 }
                 break;
             case OrderType::Hold:
                 if (entity.order.target != 0 &&
-                    FindEntity(entity.order.target) == nullptr) {
+                    (FindEntity(entity.order.target) == nullptr ||
+                     IsProtectedCommandCore(
+                         *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
                 }
                 break;
@@ -3469,7 +3545,9 @@ void Simulation::ClearInvalidOrders() {
                 break;
             case OrderType::Patrol:
                 if (entity.order.target != 0 &&
-                    FindEntity(entity.order.target) == nullptr) {
+                    (FindEntity(entity.order.target) == nullptr ||
+                     IsProtectedCommandCore(
+                         *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
                 }
                 break;
@@ -4016,6 +4094,12 @@ std::vector<Command> Simulation::GenerateAiCommands(
     const Tick currentTick_ = view.CurrentTick();
     const SimulationConfig& config_ = view.Config();
     const std::vector<Entity>& entities_ = view.Entities();
+    const auto IsProtectedCommandCore = [&](const Entity& entity) {
+        return entity.type == EntityType::CommandCore &&
+               entity.owner < kMaximumPlayers &&
+               (config_.protectedCommandCorePlayerMask &
+                static_cast<std::uint8_t>(1U << entity.owner)) != 0;
+    };
     const auto PopulationUsed = [&](PlayerId) { return view.PopulationUsed(); };
     const auto PopulationCapacity = [&](PlayerId) {
         return view.PopulationCapacity();
@@ -4370,6 +4454,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 for (const Entity& candidate : entities_) {
                     if (candidate.owner == kNeutralPlayer ||
                         candidate.owner == player || candidate.hitPoints <= 0 ||
+                        IsProtectedCommandCore(candidate) ||
                         !IsEntityVisibleTo(player, candidate.id)) {
                         continue;
                     }
@@ -4527,6 +4612,8 @@ std::vector<Command> Simulation::GenerateAiCommands(
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {
                 if (candidate.owner == kNeutralPlayer || candidate.owner == player ||
+                    candidate.hitPoints <= 0 ||
+                    IsProtectedCommandCore(candidate) ||
                     !IsEntityVisibleTo(player, candidate.id)) {
                     continue;
                 }
@@ -4628,6 +4715,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     writer.I32(config_.mapHeightTiles);
     writer.U32(config_.ticksPerSecond);
     writer.U64(config_.randomSeed);
+    writer.U8(config_.protectedCommandCorePlayerMask);
     writer.U32(config_.rules.version);
     writer.Bytes(config_.rules.contentSha256);
     for (const auto& faction : config_.rules.archetypes) {
@@ -4856,8 +4944,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version != kSnapshotVersion && version != kPriorSnapshotVersion &&
-        version != kLegacySnapshotVersion) {
+    if (version != kSnapshotVersion && version != kChoirSnapshotVersion &&
+        version != kPriorSnapshotVersion && version != kLegacySnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
     }
@@ -4866,13 +4954,26 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
+    if (version == kSnapshotVersion) {
+        if (!reader.U8(config.protectedCommandCorePlayerMask)) {
+            SetError(error, "snapshot protection mask is truncated");
+            return std::nullopt;
+        }
+    } else {
+        config.protectedCommandCorePlayerMask = 0;
+    }
+    if ((config.protectedCommandCorePlayerMask &
+         static_cast<std::uint8_t>(~kValidCommandCoreProtectionMask)) != 0) {
+        SetError(error, "snapshot protection mask is invalid");
+        return std::nullopt;
+    }
     if (!reader.U32(config.rules.version) ||
         !reader.Bytes(config.rules.contentSha256)) {
         SetError(error, "snapshot rules header is truncated");
         return std::nullopt;
     }
     const std::size_t serializedFactionCount =
-        version == kSnapshotVersion ? kFactionCount : kLegacyFactionCount;
+        HasChoirSnapshotSchema(version) ? kFactionCount : kLegacyFactionCount;
     for (std::size_t factionIndex = 0;
          factionIndex < serializedFactionCount;
          ++factionIndex) {
@@ -4939,7 +5040,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot authored rules are truncated");
         return std::nullopt;
     }
-    if (version == kSnapshotVersion &&
+    if (HasChoirSnapshotSchema(version) &&
         (!reader.U64(config.rules.choirIdentity.durationTicks) ||
          !reader.U64(config.rules.choirIdentity.cooldownTicks) ||
          !reader.I32(config.rules.choirIdentity.dawnCost) ||
@@ -4952,8 +5053,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     const std::size_t serializedResearchCount =
-        version == kSnapshotVersion ? kResearchTypeCount
-                                    : kLegacyResearchTypeCount;
+        HasChoirSnapshotSchema(version) ? kResearchTypeCount
+                                        : kLegacyResearchTypeCount;
     for (std::size_t researchIndex = 0;
          researchIndex < serializedResearchCount;
          ++researchIndex) {
@@ -4966,10 +5067,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(research.combatDamagePercent) ||
             !reader.I32(research.combatVisionPercent) ||
             faction > static_cast<std::uint8_t>(
-                version == kSnapshotVersion ? Faction::HollowChoir
-                                            : Faction::KharuunAssemblies) ||
+                HasChoirSnapshotSchema(version) ? Faction::HollowChoir
+                                                : Faction::KharuunAssemblies) ||
             prerequisite > static_cast<std::uint8_t>(
-                version == kSnapshotVersion
+                HasChoirSnapshotSchema(version)
                     ? ResearchType::ChoirSharedResolution
                     : ResearchType::KharuunAncestralEdge)) {
             SetError(error, "snapshot research rules are invalid");
@@ -5022,18 +5123,18 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.I32(player.researchRequired) ||
             !reader.U8(lastInterruptedResearch) || id != index || active > 1 ||
             faction > static_cast<std::uint8_t>(
-                version == kSnapshotVersion ? Faction::HollowChoir
-                                            : Faction::KharuunAssemblies) ||
+                HasChoirSnapshotSchema(version) ? Faction::HollowChoir
+                                                : Faction::KharuunAssemblies) ||
             activeResearch > static_cast<std::uint8_t>(
-                version == kSnapshotVersion
+                HasChoirSnapshotSchema(version)
                     ? ResearchType::ChoirSharedResolution
                     : ResearchType::KharuunAncestralEdge) ||
             lastInterruptedResearch > static_cast<std::uint8_t>(
-                version == kSnapshotVersion
+                HasChoirSnapshotSchema(version)
                     ? ResearchType::ChoirSharedResolution
                     : ResearchType::KharuunAncestralEdge) ||
             (player.completedResearchMask &
-             ~(version == kSnapshotVersion ? 0x7eU : 0x1eU)) != 0 ||
+             ~(HasChoirSnapshotSchema(version) ? 0x7eU : 0x1eU)) != 0 ||
             (active != 0 &&
              faction == static_cast<std::uint8_t>(Faction::HollowChoir) &&
              config.rules.version < 2) ||
@@ -5186,7 +5287,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             !reader.U8(mineralCoverUnderlyingTerrain) ||
             !reader.U64(entity.vibrationSignatureUntilTick) ||
             !reader.U8(aegisPowered) ||
-            (version == kSnapshotVersion &&
+            (HasChoirSnapshotSchema(version) &&
              (!reader.U8(choirIdentityState) ||
               !reader.U64(entity.choirIdentityResolveAtTick) ||
               !reader.U64(entity.choirIdentityNextAvailableTick) ||
@@ -5240,8 +5341,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              type == static_cast<std::uint8_t>(EntityType::UtilityStructure));
         if (entity.id == 0 || entity.id <= priorId ||
             faction > static_cast<std::uint8_t>(
-                version == kSnapshotVersion ? Faction::HollowChoir
-                                            : Faction::KharuunAssemblies) ||
+                HasChoirSnapshotSchema(version) ? Faction::HollowChoir
+                                                : Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             completed > 1 ||
             orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
@@ -5627,7 +5728,20 @@ void Simulation::CaptureReplayBaseline() {
     commandLog_.clear();
 }
 
-ReplayRecord Simulation::ExportReplay() const {
+void Simulation::DisableReplayExport() {
+    replayExportEnabled_ = false;
+}
+
+ReplayRecord Simulation::ExportReplay(std::string* error) const {
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (!replayExportEnabled_) {
+        SetError(error, "replay export is disabled");
+        ReplayRecord rejected{};
+        rejected.version = 0;
+        return rejected;
+    }
     ReplayRecord replay{};
     replay.initialSnapshot = replayInitialSnapshot_.empty() ? SaveSnapshot()
                                                             : replayInitialSnapshot_;
