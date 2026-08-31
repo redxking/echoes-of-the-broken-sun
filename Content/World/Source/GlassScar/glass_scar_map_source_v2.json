@@ -1,0 +1,320 @@
+{
+  "schema_id": "echoes.world.map-source.v2",
+  "schema_version": 2,
+  "map_id": "glass-scar",
+  "display_name": "Glass Scar",
+  "authority": "proposed-source-contract",
+  "runtime_binding": "none",
+  "base_descriptor": {
+    "path": "Content/World/Source/GlassScar/glass_scar_map_pack_v1.json",
+    "canonical_sha256": "6710b95a3a2e64acdfa044a1d0c302fff529daadd7d77d987d8c4e329098bf7d"
+  },
+  "canonicalization": {
+    "profile": "echoes-compiled-json-v1",
+    "algorithm": "sha256",
+    "encoding": "utf-8",
+    "object_keys": "lexicographic",
+    "arrays": "contract-ordered",
+    "whitespace": "none",
+    "terminal_newline": false,
+    "digest_scope": "exact-compiled-file-bytes",
+    "output_file": "glass_scar_compiled_map_pack_v1.json",
+    "digest_file": "glass_scar_compiled_map_pack_v1.sha256"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "coordinate_origin": "southwest",
+    "layout": "row-major-yx",
+    "index_formula": "y*width+x",
+    "movement_cost_semantics": "destination-tile-entry-cost",
+    "simulation_tile_centimeters": 100,
+    "presentation_tile_world_units": 200
+  },
+  "movement_classes": [
+    {
+      "id": "ground",
+      "ordinal": 0,
+      "bit": 0
+    }
+  ],
+  "height_bands": [
+    {
+      "id": "scar-depth",
+      "ordinal": 0,
+      "relative_level": -1
+    },
+    {
+      "id": "plain",
+      "ordinal": 1,
+      "relative_level": 0
+    }
+  ],
+  "regions": [
+    {
+      "id": "south-basin",
+      "ordinal": 1,
+      "rectangle": {"min_x": 0, "max_x": 63, "min_y": 0, "max_y": 29},
+      "seed_tile": [10, 10],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "plain"
+    },
+    {
+      "id": "north-basin",
+      "ordinal": 2,
+      "rectangle": {"min_x": 0, "max_x": 63, "min_y": 35, "max_y": 63},
+      "seed_tile": [54, 54],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "plain"
+    },
+    {
+      "id": "west-edge-corridor",
+      "ordinal": 3,
+      "rectangle": {"min_x": 0, "max_x": 7, "min_y": 30, "max_y": 34},
+      "seed_tile": [7, 32],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "ash-cut",
+      "ordinal": 4,
+      "rectangle": {"min_x": 12, "max_x": 15, "min_y": 30, "max_y": 34},
+      "seed_tile": [13, 32],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "buried-causeway",
+      "ordinal": 5,
+      "rectangle": {"min_x": 29, "max_x": 35, "min_y": 30, "max_y": 34},
+      "seed_tile": [32, 32],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "folded-verge",
+      "ordinal": 6,
+      "rectangle": {"min_x": 48, "max_x": 51, "min_y": 30, "max_y": 34},
+      "seed_tile": [49, 32],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "east-edge-corridor",
+      "ordinal": 7,
+      "rectangle": {"min_x": 56, "max_x": 63, "min_y": 30, "max_y": 34},
+      "seed_tile": [56, 32],
+      "movement_classes": ["ground"],
+      "base_move_cost": 10,
+      "height_band_id": "scar-depth"
+    }
+  ],
+  "blocked_zones": [
+    {
+      "id": "scar-west-shoulder",
+      "ordinal": 0,
+      "rectangle": {"min_x": 8, "max_x": 11, "min_y": 30, "max_y": 34},
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "scar-west-span",
+      "ordinal": 1,
+      "rectangle": {"min_x": 16, "max_x": 28, "min_y": 30, "max_y": 34},
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "scar-east-span",
+      "ordinal": 2,
+      "rectangle": {"min_x": 36, "max_x": 47, "min_y": 30, "max_y": 34},
+      "height_band_id": "scar-depth"
+    },
+    {
+      "id": "scar-east-shoulder",
+      "ordinal": 3,
+      "rectangle": {"min_x": 52, "max_x": 55, "min_y": 30, "max_y": 34},
+      "height_band_id": "scar-depth"
+    }
+  ],
+  "portals": [
+    {
+      "id": "west-edge-south",
+      "ordinal": 0,
+      "region_ids": ["south-basin", "west-edge-corridor"],
+      "edge_pairs": [
+        [[0, 29], [0, 30]],
+        [[1, 29], [1, 30]],
+        [[2, 29], [2, 30]],
+        [[3, 29], [3, 30]],
+        [[4, 29], [4, 30]],
+        [[5, 29], [5, 30]],
+        [[6, 29], [6, 30]],
+        [[7, 29], [7, 30]]
+      ]
+    },
+    {
+      "id": "west-edge-north",
+      "ordinal": 1,
+      "region_ids": ["west-edge-corridor", "north-basin"],
+      "edge_pairs": [
+        [[0, 34], [0, 35]],
+        [[1, 34], [1, 35]],
+        [[2, 34], [2, 35]],
+        [[3, 34], [3, 35]],
+        [[4, 34], [4, 35]],
+        [[5, 34], [5, 35]],
+        [[6, 34], [6, 35]],
+        [[7, 34], [7, 35]]
+      ]
+    },
+    {
+      "id": "ash-cut-south",
+      "ordinal": 2,
+      "region_ids": ["south-basin", "ash-cut"],
+      "edge_pairs": [
+        [[12, 29], [12, 30]],
+        [[13, 29], [13, 30]],
+        [[14, 29], [14, 30]],
+        [[15, 29], [15, 30]]
+      ]
+    },
+    {
+      "id": "ash-cut-north",
+      "ordinal": 3,
+      "region_ids": ["ash-cut", "north-basin"],
+      "edge_pairs": [
+        [[12, 34], [12, 35]],
+        [[13, 34], [13, 35]],
+        [[14, 34], [14, 35]],
+        [[15, 34], [15, 35]]
+      ]
+    },
+    {
+      "id": "buried-causeway-south",
+      "ordinal": 4,
+      "region_ids": ["south-basin", "buried-causeway"],
+      "edge_pairs": [
+        [[29, 29], [29, 30]],
+        [[30, 29], [30, 30]],
+        [[31, 29], [31, 30]],
+        [[32, 29], [32, 30]],
+        [[33, 29], [33, 30]],
+        [[34, 29], [34, 30]],
+        [[35, 29], [35, 30]]
+      ]
+    },
+    {
+      "id": "buried-causeway-north",
+      "ordinal": 5,
+      "region_ids": ["buried-causeway", "north-basin"],
+      "edge_pairs": [
+        [[29, 34], [29, 35]],
+        [[30, 34], [30, 35]],
+        [[31, 34], [31, 35]],
+        [[32, 34], [32, 35]],
+        [[33, 34], [33, 35]],
+        [[34, 34], [34, 35]],
+        [[35, 34], [35, 35]]
+      ]
+    },
+    {
+      "id": "folded-verge-south",
+      "ordinal": 6,
+      "region_ids": ["south-basin", "folded-verge"],
+      "edge_pairs": [
+        [[48, 29], [48, 30]],
+        [[49, 29], [49, 30]],
+        [[50, 29], [50, 30]],
+        [[51, 29], [51, 30]]
+      ]
+    },
+    {
+      "id": "folded-verge-north",
+      "ordinal": 7,
+      "region_ids": ["folded-verge", "north-basin"],
+      "edge_pairs": [
+        [[48, 34], [48, 35]],
+        [[49, 34], [49, 35]],
+        [[50, 34], [50, 35]],
+        [[51, 34], [51, 35]]
+      ]
+    },
+    {
+      "id": "east-edge-south",
+      "ordinal": 8,
+      "region_ids": ["south-basin", "east-edge-corridor"],
+      "edge_pairs": [
+        [[56, 29], [56, 30]],
+        [[57, 29], [57, 30]],
+        [[58, 29], [58, 30]],
+        [[59, 29], [59, 30]],
+        [[60, 29], [60, 30]],
+        [[61, 29], [61, 30]],
+        [[62, 29], [62, 30]],
+        [[63, 29], [63, 30]]
+      ]
+    },
+    {
+      "id": "east-edge-north",
+      "ordinal": 9,
+      "region_ids": ["east-edge-corridor", "north-basin"],
+      "edge_pairs": [
+        [[56, 34], [56, 35]],
+        [[57, 34], [57, 35]],
+        [[58, 34], [58, 35]],
+        [[59, 34], [59, 35]],
+        [[60, 34], [60, 35]],
+        [[61, 34], [61, 35]],
+        [[62, 34], [62, 35]],
+        [[63, 34], [63, 35]]
+      ]
+    }
+  ],
+  "objectives": [
+    {
+      "id": "future-well",
+      "ordinal": 0,
+      "type": "future-well",
+      "primary_tile": [32, 32],
+      "primary_region_id": "buried-causeway",
+      "fallback_policy": "first-passable-in-order",
+      "fallbacks": [
+        {"ordinal": 0, "tile": [31, 32], "region_id": "buried-causeway"},
+        {"ordinal": 1, "tile": [33, 32], "region_id": "buried-causeway"},
+        {"ordinal": 2, "tile": [32, 31], "region_id": "buried-causeway"},
+        {"ordinal": 3, "tile": [32, 33], "region_id": "buried-causeway"}
+      ]
+    }
+  ],
+  "camera_bounds": {
+    "coordinate_semantics": "half-open-tile-edges",
+    "min_x": 0,
+    "min_y": 0,
+    "max_x_exclusive": 64,
+    "max_y_exclusive": 64
+  },
+  "claim_boundary": {
+    "proposed_contract": true,
+    "compiled_fixture_is_source_data": true,
+    "not_evidence_for": [
+      "runtime-authority",
+      "runtime-consumption",
+      "network-compatibility",
+      "current-movement-costs",
+      "current-height-or-slope",
+      "current-region-or-portal-routing",
+      "objective-fallback-execution",
+      "camera-clamp-or-readability",
+      "unreal-navmesh",
+      "ai-or-formation-traversal",
+      "rendered-or-playable-map",
+      "packaged-or-performance-qualified",
+      "release-readiness"
+    ]
+  }
+}
