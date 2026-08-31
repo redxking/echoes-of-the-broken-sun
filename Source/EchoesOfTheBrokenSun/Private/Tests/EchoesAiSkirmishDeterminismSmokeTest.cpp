@@ -18,6 +18,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,8 @@ enum class ESmokeTermination : std::uint8_t
 {
     AuthoritativeOutcome,
     TickBudgetExhausted,
+    WallClockBudgetExhausted,
+    TickProgressFailure,
     QueueCapacityGuard,
     SetupFailure,
     ViewFailure,
@@ -96,6 +99,7 @@ struct FRunResult final
         echoes::sim::MatchOutcome::Ongoing;
     echoes::sim::Tick FinalTick = 0;
     std::uint64_t FinalChecksum = 0;
+    echoes::sim::ReplayRecord ExportedReplay{};
     bool bReplaySucceeded = false;
     echoes::sim::Tick ReplayTick = 0;
     std::uint64_t ReplayChecksum = 0;
@@ -144,6 +148,10 @@ private:
             return TEXT("authoritative_outcome");
         case ESmokeTermination::TickBudgetExhausted:
             return TEXT("tick_budget_exhausted");
+        case ESmokeTermination::WallClockBudgetExhausted:
+            return TEXT("wall_clock_budget_exhausted");
+        case ESmokeTermination::TickProgressFailure:
+            return TEXT("tick_progress_failure");
         case ESmokeTermination::QueueCapacityGuard:
             return TEXT("queue_capacity_guard");
         case ESmokeTermination::SetupFailure:
@@ -208,6 +216,49 @@ void AddCommand(FTraceHasher& Hasher, const echoes::sim::Command& Command)
         AddCommand(Hasher, Command);
     }
     return Hasher.Value();
+}
+
+[[nodiscard]] bool CanonicalCommandLess(
+    const echoes::sim::Command& Lhs,
+    const echoes::sim::Command& Rhs)
+{
+    return std::tie(
+               Lhs.executeTick,
+               Lhs.player,
+               Lhs.sequence,
+               Lhs.type,
+               Lhs.actor,
+               Lhs.target,
+               Lhs.position.x,
+               Lhs.position.y,
+               Lhs.buildType,
+               Lhs.wellChoice,
+               Lhs.warformAdaptation,
+               Lhs.researchType) <
+        std::tie(
+               Rhs.executeTick,
+               Rhs.player,
+               Rhs.sequence,
+               Rhs.type,
+               Rhs.actor,
+               Rhs.target,
+               Rhs.position.x,
+               Rhs.position.y,
+               Rhs.buildType,
+               Rhs.wellChoice,
+               Rhs.warformAdaptation,
+               Rhs.researchType);
+}
+
+[[nodiscard]] bool ReplayRecordsMatch(
+    const echoes::sim::ReplayRecord& Lhs,
+    const echoes::sim::ReplayRecord& Rhs)
+{
+    return Lhs.version == Rhs.version &&
+        Lhs.initialSnapshot == Rhs.initialSnapshot &&
+        Lhs.commands == Rhs.commands &&
+        Lhs.finalTick == Rhs.finalTick &&
+        Lhs.finalChecksum == Rhs.finalChecksum;
 }
 
 [[nodiscard]] std::uint64_t SampleTraceDigest(
@@ -560,9 +611,26 @@ void AppendStateSample(
     const FScenarioSpec& Spec)
 {
     const double StartedAt = FPlatformTime::Seconds();
+    const double DeadlineAt = StartedAt + RunWallClockBudgetSeconds;
     FRunResult Result;
     Result.InitialSnapshotTraceDigest =
         SnapshotTraceDigest(InitialSnapshot);
+    const auto HasWallClockBudget =
+        [&](const TCHAR* Phase)
+        {
+            if (FPlatformTime::Seconds() <= DeadlineAt)
+            {
+                return true;
+            }
+            Result.bCompleted = false;
+            Result.Termination =
+                ESmokeTermination::WallClockBudgetExhausted;
+            Result.Failure = FString::Printf(
+                TEXT("run exceeded the %.1f-second monotonic wall-clock budget during %s"),
+                RunWallClockBudgetSeconds,
+                Phase);
+            return false;
+        };
     auto Finish = [&]() mutable -> FRunResult
     {
         Result.WallClockSeconds = FPlatformTime::Seconds() - StartedAt;
@@ -570,6 +638,8 @@ void AppendStateSample(
             Result.WallClockSeconds > RunWallClockBudgetSeconds)
         {
             Result.bCompleted = false;
+            Result.Termination =
+                ESmokeTermination::WallClockBudgetExhausted;
             Result.Failure = FString::Printf(
                 TEXT("run exceeded the %.1f-second wall-clock acceptance budget"),
                 RunWallClockBudgetSeconds);
@@ -610,8 +680,8 @@ void AppendStateSample(
 
     Simulation.CaptureReplayBaseline();
     AppendStateSample(Simulation, Result.Samples);
-    const echoes::sim::Tick EndTick =
-        Simulation.CurrentTick() + SimulationTickBudget;
+    const echoes::sim::Tick StartTick = Simulation.CurrentTick();
+    echoes::sim::Tick StepAttempts = 0;
     std::uint64_t DecisionIndex = 0;
     const std::array<echoes::sim::PlayerId, 2> Players{{
         UEchoesSimulationSubsystem::LocalPlayerId,
@@ -621,8 +691,23 @@ void AppendStateSample(
         Spec.OpponentPersonality}};
 
     while (Simulation.Outcome() == echoes::sim::MatchOutcome::Ongoing &&
-           Simulation.CurrentTick() < EndTick)
+           StepAttempts < SimulationTickBudget)
     {
+        if (!HasWallClockBudget(TEXT("bounded simulation loop")))
+        {
+            break;
+        }
+        if (Simulation.CurrentTick() < StartTick ||
+            Simulation.CurrentTick() - StartTick != StepAttempts)
+        {
+            Result.Termination = ESmokeTermination::TickProgressFailure;
+            Result.Failure = FString::Printf(
+                TEXT("simulation tick diverged from bounded step count: start=%llu current=%llu attempts=%llu"),
+                static_cast<unsigned long long>(StartTick),
+                static_cast<unsigned long long>(Simulation.CurrentTick()),
+                static_cast<unsigned long long>(StepAttempts));
+            break;
+        }
         if (Simulation.CurrentTick() %
                 Simulation.Config().ticksPerSecond ==
             0)
@@ -641,6 +726,10 @@ void AppendStateSample(
                  ++PlayerIndex)
             {
                 const echoes::sim::PlayerId Player = Players[PlayerIndex];
+                if (!HasWallClockBudget(TEXT("AI decision generation")))
+                {
+                    break;
+                }
                 const std::optional<echoes::sim::PlayerView> View =
                     Simulation.CreatePlayerView(Player);
                 if (!View.has_value())
@@ -657,10 +746,19 @@ void AppendStateSample(
                     echoes::sim::Simulation::GenerateAiCommands(
                         *View,
                         Personalities[PlayerIndex]);
+                if (!HasWallClockBudget(TEXT("pure AI generator")))
+                {
+                    break;
+                }
                 const std::vector<echoes::sim::Command>
                     CompatibilityCommands = Simulation.GenerateAiCommands(
                         Player,
                         Personalities[PlayerIndex]);
+                if (!HasWallClockBudget(
+                        TEXT("compatibility AI generator")))
+                {
+                    break;
+                }
                 if (PureCommands != CompatibilityCommands)
                 {
                     ++Result.GeneratorMismatches;
@@ -693,6 +791,11 @@ void AppendStateSample(
                      CommandIndex < PureCommands.size();
                      ++CommandIndex)
                 {
+                    if (!HasWallClockBudget(
+                            TEXT("AI command validation and admission")))
+                    {
+                        break;
+                    }
                     const echoes::sim::Command& Command =
                         PureCommands[CommandIndex];
                     FString ValidationFailure;
@@ -745,7 +848,37 @@ void AppendStateSample(
             }
         }
 
+        if (!HasWallClockBudget(TEXT("simulation step")))
+        {
+            break;
+        }
+        const echoes::sim::Tick TickBeforeStep = Simulation.CurrentTick();
+        ++StepAttempts;
         Simulation.Step();
+        const echoes::sim::Tick TickAfterStep = Simulation.CurrentTick();
+        if (TickAfterStep <= TickBeforeStep)
+        {
+            Result.Termination = ESmokeTermination::TickProgressFailure;
+            Result.Failure = FString::Printf(
+                TEXT("simulation tick stalled or regressed: before=%llu after=%llu attempt=%llu"),
+                static_cast<unsigned long long>(TickBeforeStep),
+                static_cast<unsigned long long>(TickAfterStep),
+                static_cast<unsigned long long>(StepAttempts));
+            break;
+        }
+        if (TickAfterStep - TickBeforeStep != 1)
+        {
+            Result.Termination = ESmokeTermination::TickProgressFailure;
+            Result.Failure = FString::Printf(
+                TEXT("single simulation step advanced an unexpected tick count: before=%llu after=%llu"),
+                static_cast<unsigned long long>(TickBeforeStep),
+                static_cast<unsigned long long>(TickAfterStep));
+            break;
+        }
+        if (!HasWallClockBudget(TEXT("simulation step")))
+        {
+            break;
+        }
         if (Simulation.CurrentTick() %
                 Simulation.Config().ticksPerSecond ==
                 0 ||
@@ -800,27 +933,82 @@ void AppendStateSample(
             ? ESmokeTermination::TickBudgetExhausted
             : ESmokeTermination::AuthoritativeOutcome;
 
+    if (!HasWallClockBudget(TEXT("replay export")))
+    {
+        return Finish();
+    }
     std::string ReplayError;
     const echoes::sim::ReplayRecord Replay =
         Simulation.ExportReplay(&ReplayError);
-    if (!ReplayError.empty() ||
-        Replay.initialSnapshot != InitialSnapshot ||
-        Replay.commands.size() != Result.AdmittedCommands.size() ||
-        Replay.finalTick != Result.FinalTick ||
+    Result.ExportedReplay = Replay;
+    if (!HasWallClockBudget(TEXT("replay export")))
+    {
+        return Finish();
+    }
+    if (!ReplayError.empty())
+    {
+        Result.Termination = ESmokeTermination::ReplayFailure;
+        Result.Failure = FString::Printf(
+            TEXT("replay export failed: %s"),
+            UTF8_TO_TCHAR(ReplayError.c_str()));
+        return Finish();
+    }
+    if (Replay.version != echoes::sim::kReplayVersion)
+    {
+        Result.Termination = ESmokeTermination::ReplayFailure;
+        Result.Failure = FString::Printf(
+            TEXT("replay version differs: expected=%u actual=%u"),
+            static_cast<unsigned int>(echoes::sim::kReplayVersion),
+            static_cast<unsigned int>(Replay.version));
+        return Finish();
+    }
+    if (Replay.initialSnapshot != InitialSnapshot)
+    {
+        Result.Termination = ESmokeTermination::ReplayFailure;
+        Result.Failure = TEXT("replay baseline snapshot differs from the bounded-run input");
+        return Finish();
+    }
+
+    std::vector<echoes::sim::Command> ExpectedReplayCommands =
+        Result.AdmittedCommands;
+    std::sort(
+        ExpectedReplayCommands.begin(),
+        ExpectedReplayCommands.end(),
+        CanonicalCommandLess);
+    if (Replay.commands != ExpectedReplayCommands)
+    {
+        Result.Termination = ESmokeTermination::ReplayFailure;
+        Result.Failure = FString::Printf(
+            TEXT("replay command records differ: expected=%llu actual=%llu"),
+            static_cast<unsigned long long>(
+                ExpectedReplayCommands.size()),
+            static_cast<unsigned long long>(Replay.commands.size()));
+        return Finish();
+    }
+    if (Replay.finalTick != Result.FinalTick ||
         Replay.finalChecksum != Result.FinalChecksum)
     {
         Result.Termination = ESmokeTermination::ReplayFailure;
         Result.Failure = FString::Printf(
-            TEXT("replay export mismatch: %s"),
-            ReplayError.empty()
-                ? TEXT("record differs from bounded run")
-                : UTF8_TO_TCHAR(ReplayError.c_str()));
+            TEXT("replay terminal record differs: tick=%llu/%llu checksum=%llu/%llu"),
+            static_cast<unsigned long long>(Replay.finalTick),
+            static_cast<unsigned long long>(Result.FinalTick),
+            static_cast<unsigned long long>(Replay.finalChecksum),
+            static_cast<unsigned long long>(Result.FinalChecksum));
         return Finish();
     }
 
+    if (!HasWallClockBudget(TEXT("replay execution")))
+    {
+        return Finish();
+    }
     ReplayError.clear();
     const std::optional<echoes::sim::Simulation> Replayed =
         echoes::sim::Simulation::ReplayToEnd(Replay, &ReplayError);
+    if (!HasWallClockBudget(TEXT("replay execution")))
+    {
+        return Finish();
+    }
     if (!Replayed.has_value())
     {
         Result.Termination = ESmokeTermination::ReplayFailure;
@@ -902,6 +1090,11 @@ void AppendStateSample(
     bMatches &= Differ(
         First.FinalChecksum == Second.FinalChecksum,
         TEXT("final checksum"));
+    bMatches &= Differ(
+        ReplayRecordsMatch(
+            First.ExportedReplay,
+            Second.ExportedReplay),
+        TEXT("full exported replay record"));
     bMatches &= Differ(
         First.bReplaySucceeded == Second.bReplaySucceeded &&
             First.ReplayTick == Second.ReplayTick &&
@@ -1152,7 +1345,10 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
                 TEXT("samples=%llu sampleTraceDigest=%llu ")
                 TEXT("commandTraceDigest=%llu termination=%s outcome=%u ")
                 TEXT("finalTick=%llu finalChecksum=%llu replay=%s ")
-                TEXT("replayChecksum=%llu elapsedSeconds=%.6f ")
+                TEXT("replayVersion=%u replayCommands=%llu ")
+                TEXT("replayBaselineTraceDigest=%llu ")
+                TEXT("replayCommandTraceDigest=%llu replayChecksum=%llu ")
+                TEXT("elapsedSeconds=%.6f ")
                 TEXT("deterministicSmokeOnly=true seedMatrixQualified=false ")
                 TEXT("seatSymmetryQualified=false balanceQualified=false ")
                 TEXT("fairnessQualified=false gameplayQualityQualified=false"),
@@ -1189,6 +1385,13 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
                 static_cast<unsigned long long>(Run.FinalTick),
                 static_cast<unsigned long long>(Run.FinalChecksum),
                 Run.bReplaySucceeded ? TEXT("matched") : TEXT("failed"),
+                static_cast<unsigned int>(Run.ExportedReplay.version),
+                static_cast<unsigned long long>(
+                    Run.ExportedReplay.commands.size()),
+                static_cast<unsigned long long>(SnapshotTraceDigest(
+                    Run.ExportedReplay.initialSnapshot)),
+                static_cast<unsigned long long>(CommandTraceDigest(
+                    Run.ExportedReplay.commands)),
                 static_cast<unsigned long long>(Run.ReplayChecksum),
                 Run.WallClockSeconds));
             if (!Run.bCompleted)
