@@ -6,11 +6,17 @@ the structured projection of the authoritative Development Bible and the first
 authored Mission 01 presentation contract. Passing validation does not mean the
 runtime consumes the contract or that voice, localization, or cinematic assets
 exist.
+
+Branch editorial assurance is deterministic drift detection against one exact,
+reviewed Mission 01 projection plus a limited explicit-phrase guard. It is not
+general semantic moral-bias detection, and human editorial review remains
+mandatory before any prose change is accepted.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import re
@@ -81,6 +87,146 @@ EXPECTED_FACTIONS = {
     "kharuun_assemblies",
     "hollow_choir",
 }
+EXPECTED_CHARACTER_RELATIONSHIPS = {
+    "mara_vey": (
+        "meridian_compact",
+        (
+            "WhatTheLedgerKeeps",
+            "ACityOnReserve",
+            "ReserveAuthority",
+            "ChoirAtLumeReach",
+            "TheBrokenSun",
+        ),
+    ),
+    "oruun_of_seven_stones": (
+        "kharuun_assemblies",
+        (
+            "WhatTheLedgerKeeps",
+            "SevenAccountsOfRain",
+            "TheUnburiedRoad",
+            "TheShapeOfSilence",
+            "ChoirAtLumeReach",
+            "NoNeutralLedger",
+            "TheFutureThatWon",
+            "AssemblyOfTheMissing",
+            "TheBrokenSun",
+        ),
+    ),
+    "talar_venn": (
+        "meridian_compact",
+        (
+            "WhatTheLedgerKeeps",
+            "NamesWithoutBirths",
+            "TheShapeBesideUs",
+            "TheBrokenSun",
+        ),
+    ),
+    "neme": (
+        "hollow_choir",
+        ("TheShapeBesideUs", "SeveralVoicesOneCommand", "TheBrokenSun"),
+    ),
+    "cael_rhyse": ("meridian_compact", ("TheFutureThatWon",)),
+}
+EXPECTED_MISSION_RELATIONSHIPS = {
+    "WhatTheLedgerKeeps": (
+        "mara_vey",
+        "meridian_compact",
+        ("mara_vey", "talar_venn", "oruun_of_seven_stones"),
+    ),
+    "SevenAccountsOfRain": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones",),
+    ),
+    "ACityOnReserve": ("mara_vey", "meridian_compact", ("mara_vey",)),
+    "TheUnburiedRoad": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones",),
+    ),
+    "TermsOfContinuance": ("meridian_authority", "meridian_compact", ()),
+    "NamesWithoutBirths": (
+        "meridian_authority",
+        "meridian_compact",
+        ("talar_venn",),
+    ),
+    "TheShapeOfSilence": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones",),
+    ),
+    "TheShapeBesideUs": (
+        "meridian_authority",
+        "meridian_compact",
+        ("talar_venn", "neme"),
+    ),
+    "ReserveAuthority": ("mara_vey", "meridian_compact", ("mara_vey",)),
+    "ChoirAtLumeReach": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones", "mara_vey"),
+    ),
+    "NoNeutralLedger": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones",),
+    ),
+    "TheFutureThatWon": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones", "cael_rhyse"),
+    ),
+    "AssemblyOfTheMissing": (
+        "oruun_of_seven_stones",
+        "kharuun_assemblies",
+        ("oruun_of_seven_stones",),
+    ),
+    "SeveralVoicesOneCommand": (
+        "local_hollow_choir_authority",
+        "hollow_choir",
+        ("neme",),
+    ),
+    "TheBrokenSun": (
+        "local_hollow_choir_authority",
+        "hollow_choir",
+        ("neme", "mara_vey", "oruun_of_seven_stones", "talar_venn"),
+    ),
+}
+EXPECTED_SPEAKER_RECORDS = {
+    "spk_mara_vey": {
+        "display_name": "Mara Vey",
+        "faction_id": "meridian_compact",
+        "role_in_mission": "player_command_authority",
+        "command_authority": True,
+        "delivery_channel": "command_radio",
+        "physical_presence_status": "not_asserted_by_contract",
+        "voice_asset_status": "absent",
+    },
+    "spk_talar_venn": {
+        "display_name": "Talar Venn",
+        "faction_id": "meridian_compact",
+        "role_in_mission": "archive_recovery_requester",
+        "command_authority": False,
+        "delivery_channel": "operations_radio",
+        "physical_presence_status": "not_asserted_by_contract",
+        "voice_asset_status": "absent",
+    },
+    "spk_oruun_seven_stones": {
+        "display_name": "Oruun-of-Seven-Stones",
+        "faction_id": "kharuun_assemblies",
+        "role_in_mission": "birthing_cavern_interlocutor",
+        "command_authority": False,
+        "delivery_channel": "cross_faction_radio",
+        "physical_presence_status": "not_asserted_by_contract",
+        "voice_asset_status": "absent",
+    },
+}
+EXPECTED_CAMPAIGN_CANON_PROSE_SHA256 = (
+    "e90ae040771c81b0b59fa2b336fdf007ee4cfa79a202afbd05b88489a75923aa"
+)
+EXPECTED_M01_CANON_PROSE_SHA256 = (
+    "c487fad938e01f31e21f867840617819150a65d58a89a9fd6b0050436556209d"
+)
 EXPECTED_TRIGGER_SIGNALS = {
     "nar_m01_evt_operation_started": "operation_ready:CampaignPrologue:RecoverArchive",
     "nar_m01_evt_archive_recovered": "phase_entered:DecideFutureWell",
@@ -111,6 +257,110 @@ EXPECTED_BRANCH_ALIGNMENT = {
     "Preserve": "bounded_values_aligned_runtime_consumption_unimplemented",
     "Reshape": "requires_telegraph_and_expiry_warning_before_binding",
 }
+EXPECTED_REVIEWED_BRANCHES = {
+    "Harvest": {
+        "current_runtime_behavior": (
+            "Current source applies Harvest immediately, grants 500 Dawn, collapses "
+            "the Well permanently, and scars nearby open terrain."
+        ),
+        "design_target_tradeoff": (
+            "Target behavior adds a public 180-tick commitment before the same "
+            "irreversible collapse."
+        ),
+        "dialogue_line_ids": (
+            "nar_m01_line_mara_harvest_001",
+            "nar_m01_line_oruun_harvest_001",
+            "nar_m01_line_talar_harvest_001",
+        ),
+        "design_target_choice_ui_source_text": (
+            "Harvest: gain 500 Dawn after the public 180-tick commitment; the Well "
+            "collapses permanently."
+        ),
+    },
+    "Preserve": {
+        "current_runtime_behavior": (
+            "Current source keeps the Well intact and, while controlled, grants 15 "
+            "Dawn every 300 ticks plus faction-dependent intelligence within 1,400 cm."
+        ),
+        "design_target_tradeoff": (
+            "Target behavior retains the implemented cadence and makes continued "
+            "control, delayed value, and changing ownership explicit to the player."
+        ),
+        "dialogue_line_ids": (
+            "nar_m01_line_mara_preserve_001",
+            "nar_m01_line_oruun_preserve_001",
+            "nar_m01_line_talar_preserve_001",
+        ),
+        "design_target_choice_ui_source_text": (
+            "Preserve: keep the Well intact; while controlled, receive 15 Dawn every "
+            "300 ticks and faction-dependent intelligence within 1,400 cm."
+        ),
+    },
+    "Reshape": {
+        "current_runtime_behavior": (
+            "Current source spends 120 Dawn immediately, manifests the authored "
+            "terrain possibility for 1,800 ticks, and uses deterministic fallback "
+            "displacement at expiry."
+        ),
+        "design_target_tradeoff": (
+            "Target behavior adds a public 180-tick commitment and a pre-expiry "
+            "warning before the implemented deterministic fallback displacement."
+        ),
+        "dialogue_line_ids": (
+            "nar_m01_line_mara_reshape_001",
+            "nar_m01_line_oruun_reshape_001",
+            "nar_m01_line_talar_reshape_001",
+        ),
+        "design_target_choice_ui_source_text": (
+            "Reshape: spend 120 Dawn to manifest the map-authored possibility for "
+            "1,800 ticks after the public 180-tick commitment; expiration is warned "
+            "and uses authored fallback displacement."
+        ),
+    },
+}
+EXPECTED_REVIEWED_BRANCH_LINES = {
+    "nar_m01_line_mara_harvest_001": (
+        "spk_mara_vey",
+        "Harvest. Take the Dawn. The reserve gets time; the Well does not.",
+    ),
+    "nar_m01_line_oruun_harvest_001": (
+        "spk_oruun_seven_stones",
+        "The city gains time. The cavern loses a possibility. Record both.",
+    ),
+    "nar_m01_line_talar_harvest_001": (
+        "spk_talar_venn",
+        "Both are in the ledger.",
+    ),
+    "nar_m01_line_mara_preserve_001": (
+        "spk_mara_vey",
+        "Preserve. Keep the Well intact. We hold this ground without immediate "
+        "reserve relief.",
+    ),
+    "nar_m01_line_oruun_preserve_001": (
+        "spk_oruun_seven_stones",
+        "Possibility survives, and every force here has reason to keep fighting.",
+    ),
+    "nar_m01_line_talar_preserve_001": (
+        "spk_talar_venn",
+        "The delay and the open Well are recorded.",
+    ),
+    "nar_m01_line_mara_reshape_001": (
+        "spk_mara_vey",
+        "Reshape. We spend Dawn for a temporary option. Publish the expiry.",
+    ),
+    "nar_m01_line_oruun_reshape_001": (
+        "spk_oruun_seven_stones",
+        "Then no one mistakes a borrowed path for a permanent one.",
+    ),
+    "nar_m01_line_talar_reshape_001": (
+        "spk_talar_venn",
+        "Cost and expiry recorded. The carrier is ready.",
+    ),
+}
+BRANCH_EDITORIAL_ASSURANCE_SCOPE = (
+    "exact_reviewed_projection_drift_detection_plus_limited_explicit_lexical_guard_"
+    "with_mandatory_human_review"
+)
 EXPECTED_BRANCH_RUNTIME_FRAGMENTS = {
     "Harvest": ("Current source", "immediately", "500 Dawn", "collapses"),
     "Preserve": ("Current source", "15 Dawn", "300 ticks", "1,400 cm"),
@@ -142,7 +392,7 @@ FORBIDDEN_PRESENTATION_FRAGMENTS = (
     "$(",
     "`",
 )
-MORAL_RANKING_FRAGMENTS = (
+EXPLICIT_MORAL_RANKING_LEXEMES = (
     "good choice",
     "bad choice",
     "correct choice",
@@ -279,6 +529,29 @@ def _exact_keys(value: Any, expected: Iterable[str], path: str) -> dict[str, Any
 def _expect_exact(value: Any, expected: Any, path: str) -> None:
     if value != expected:
         raise NarrativeValidationError(f"{path}: expected {expected!r}, received {value!r}")
+
+
+def _canonical_projection_sha256(value: Any) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _expect_canonical_projection(
+    value: Any,
+    expected_sha256: str,
+    path: str,
+) -> None:
+    actual_sha256 = _canonical_projection_sha256(value)
+    if actual_sha256 != expected_sha256:
+        raise NarrativeValidationError(
+            f"{path}: reviewed canonical prose projection changed "
+            f"(expected sha256 {expected_sha256}, received {actual_sha256})"
+        )
 
 
 def _expect_unique_strings(value: Any, path: str, *, minimum: int = 0) -> list[str]:
@@ -460,13 +733,22 @@ def validate_campaign_canon(value: dict[str, Any]) -> dict[str, int]:
         if re.fullmatch(r"[a-z][a-z0-9_]*", character_id) is None or character_id in character_ids:
             raise NarrativeValidationError(f"{path}.id: invalid or duplicate character identifier")
         character_ids.add(character_id)
-        if character["faction_id"] not in EXPECTED_FACTIONS:
+        faction_id = _expect_string(character["faction_id"], f"{path}.faction_id")
+        if faction_id not in EXPECTED_FACTIONS:
             raise NarrativeValidationError(f"{path}.faction_id: unknown faction")
         _validate_source_text(character["arc"], f"{path}.arc")
         mission_ids = _expect_unique_strings(character["mission_ids"], f"{path}.mission_ids", minimum=1)
         if not set(mission_ids).issubset(known_mission_ids):
             raise NarrativeValidationError(f"{path}.mission_ids: unknown campaign mission reference")
         _validate_source_text(character["continuity_boundary"], f"{path}.continuity_boundary")
+        expected_relationship = EXPECTED_CHARACTER_RELATIONSHIPS.get(character_id)
+        if expected_relationship is None:
+            raise NarrativeValidationError(f"{path}.id: character is not in the reviewed relationship projection")
+        _expect_exact(
+            (faction_id, tuple(mission_ids)),
+            expected_relationship,
+            f"{path}.exact_character_relationship",
+        )
     _expect_exact(character_ids, EXPECTED_CHARACTER_IDS, "canon.characters[].id")
 
     missions = _expect_list(top["missions"], "canon.missions")
@@ -491,11 +773,17 @@ def validate_campaign_canon(value: dict[str, Any]) -> dict[str, int]:
         authority = _expect_string(mission["command_authority"], f"{path}.command_authority")
         if authority not in permitted_authorities:
             raise NarrativeValidationError(f"{path}.command_authority: unknown authority {authority!r}")
-        if mission["command_faction"] not in EXPECTED_FACTIONS:
+        command_faction = _expect_string(mission["command_faction"], f"{path}.command_faction")
+        if command_faction not in EXPECTED_FACTIONS:
             raise NarrativeValidationError(f"{path}.command_faction: unknown faction")
         participants = _expect_unique_strings(mission["named_participants"], f"{path}.named_participants")
         if not set(participants).issubset(character_ids):
             raise NarrativeValidationError(f"{path}.named_participants: unknown named character")
+        _expect_exact(
+            (authority, command_faction, tuple(participants)),
+            EXPECTED_MISSION_RELATIONSHIPS[mission["mission_id"]],
+            f"{path}.exact_mission_relationship",
+        )
         for key in ("continuity_input", "established_output", "prohibited_inferences"):
             entries = _expect_list(mission[key], f"{path}.{key}")
             if not entries:
@@ -512,6 +800,44 @@ def validate_campaign_canon(value: dict[str, Any]) -> dict[str, int]:
             "final_dialogue_cinematics_unqualified",
             f"{path}.narrative_presentation_status",
         )
+
+    campaign_canon_prose = {
+        "world": {
+            "crownfall_rule": world["crownfall_rule"],
+            "future_well_rule": world["future_well_rule"],
+            "factions": [
+                {
+                    "id": faction["id"],
+                    "canon": faction["canon"],
+                    "voice_rule": faction["voice_rule"],
+                    "prohibited_reduction": faction["prohibited_reduction"],
+                }
+                for faction in factions
+            ],
+        },
+        "characters": [
+            {
+                "id": character["id"],
+                "arc": character["arc"],
+                "continuity_boundary": character["continuity_boundary"],
+            }
+            for character in characters
+        ],
+        "missions": [
+            {
+                "mission_id": mission["mission_id"],
+                "continuity_input": mission["continuity_input"],
+                "established_output": mission["established_output"],
+                "prohibited_inferences": mission["prohibited_inferences"],
+            }
+            for mission in missions
+        ],
+    }
+    _expect_canonical_projection(
+        campaign_canon_prose,
+        EXPECTED_CAMPAIGN_CANON_PROSE_SHA256,
+        "canon.reviewed_canonical_prose",
+    )
     return {"missions": len(missions), "characters": len(characters), "factions": len(factions)}
 
 
@@ -583,6 +909,15 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
             raise NarrativeValidationError(f"mission.canon.{key}: expected at least {minimum} statements")
         for index, entry in enumerate(entries):
             _validate_source_text(entry, f"mission.canon.{key}[{index}]")
+    _expect_canonical_projection(
+        {
+            "purpose": canon_record["purpose"],
+            "canonical_facts": canon_record["canonical_facts"],
+            "prohibited_inferences": canon_record["prohibited_inferences"],
+        },
+        EXPECTED_M01_CANON_PROSE_SHA256,
+        "mission.canon.reviewed_canonical_prose",
+    )
 
     speakers = _expect_list(top["speakers"], "mission.speakers")
     if len(speakers) != 3:
@@ -611,6 +946,15 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
         speaker_channels[speaker_id] = channel
         _expect_exact(speaker["physical_presence_status"], "not_asserted_by_contract", f"{path}.physical_presence_status")
         _expect_exact(speaker["voice_asset_status"], "absent", f"{path}.voice_asset_status")
+        expected_speaker = EXPECTED_SPEAKER_RECORDS.get(speaker_id)
+        if expected_speaker is None:
+            raise NarrativeValidationError(f"{path}.id: speaker is not in the reviewed speaker projection")
+        for field, expected_value in expected_speaker.items():
+            _expect_exact(
+                speaker[field],
+                expected_value,
+                f"{path}.reviewed_speaker_mapping.{field}",
+            )
     _expect_exact(
         speaker_ids,
         {"spk_mara_vey", "spk_talar_venn", "spk_oruun_seven_stones"},
@@ -668,6 +1012,8 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
     line_ids: set[str] = set()
     voice_hook_ids: set[str] = set()
     line_triggers: dict[str, str] = {}
+    line_speakers: dict[str, str] = {}
+    line_source_texts: dict[str, str] = {}
     for index, raw_line in enumerate(lines):
         path = f"mission.lines[{index}]"
         line = _exact_keys(
@@ -687,12 +1033,14 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
         speaker_id = _expect_string(line["speaker_id"], f"{path}.speaker_id")
         if speaker_id not in speaker_ids:
             raise NarrativeValidationError(f"{path}.speaker_id: unresolved speaker reference")
+        line_speakers[line_id] = speaker_id
         trigger_id = _expect_string(line["trigger_id"], f"{path}.trigger_id")
         if trigger_id not in trigger_ids:
             raise NarrativeValidationError(f"{path}.trigger_id: unresolved trigger reference")
         line_triggers[line_id] = trigger_id
         _expect_exact(line["delivery_channel"], speaker_channels[speaker_id], f"{path}.delivery_channel")
         source_text = _validate_source_text(line["source_text"], f"{path}.source_text")
+        line_source_texts[line_id] = source_text
         _validate_placeholders(line["placeholders"], source_text, f"{path}.placeholders")
         _validate_text_budget(line["text_budget"], source_text, f"{path}.text_budget")
         subtitle = _exact_keys(line["subtitle"], {"enabled", "timing_status"}, f"{path}.subtitle")
@@ -706,6 +1054,17 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
         voice_hook_ids.add(voice_id)
         _expect_exact(voice_hook["asset_status"], "absent", f"{path}.voice_hook.asset_status")
         _expect_exact(line["binding_status"], "authored_unbound", f"{path}.binding_status")
+
+    for line_id, expected_projection in EXPECTED_REVIEWED_BRANCH_LINES.items():
+        actual_projection = (
+            line_speakers.get(line_id),
+            line_source_texts.get(line_id),
+        )
+        _expect_exact(
+            actual_projection,
+            expected_projection,
+            f"mission.reviewed_branch_lines.{line_id}",
+        )
 
     used_line_ids: set[str] = set()
     sequences = _expect_list(top["dialogue_sequences"], "mission.dialogue_sequences")
@@ -769,9 +1128,9 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
             ("design_target_tradeoff", target_tradeoff),
         ):
             folded_text = text.casefold()
-            if any(fragment in folded_text for fragment in MORAL_RANKING_FRAGMENTS):
+            if any(lexeme in folded_text for lexeme in EXPLICIT_MORAL_RANKING_LEXEMES):
                 raise NarrativeValidationError(
-                    f"{path}.{field_name}: moral ranking is prohibited"
+                    f"{path}.{field_name}: limited explicit moral-ranking lexical guard matched"
                 )
         for fragment in EXPECTED_BRANCH_RUNTIME_FRAGMENTS[choice]:
             if fragment.casefold() not in current_behavior.casefold():
@@ -793,6 +1152,17 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
             EXPECTED_BRANCH_ALIGNMENT[choice],
             f"{path}.runtime_alignment",
         )
+        reviewed_branch = EXPECTED_REVIEWED_BRANCHES[choice]
+        _expect_exact(
+            current_behavior,
+            reviewed_branch["current_runtime_behavior"],
+            f"{path}.reviewed_branch_projection.current_runtime_behavior",
+        )
+        _expect_exact(
+            target_tradeoff,
+            reviewed_branch["design_target_tradeoff"],
+            f"{path}.reviewed_branch_projection.design_target_tradeoff",
+        )
         _expect_exact(branch["trigger_id"], "nar_m01_evt_well_decision_committed", f"{path}.trigger_id")
         refs = _expect_unique_strings(branch["dialogue_line_ids"], f"{path}.dialogue_line_ids", minimum=1)
         if len(refs) != 3 or not set(refs).issubset(line_ids):
@@ -804,19 +1174,31 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
         branch_line_ids.update(refs)
         used_line_ids.update(refs)
         branch_line_counts.add(len(refs))
+        _expect_exact(
+            tuple(refs),
+            reviewed_branch["dialogue_line_ids"],
+            f"{path}.reviewed_branch_projection.dialogue_line_ids",
+        )
         _validate_localized_text(
             branch["design_target_choice_ui"],
             f"{path}.design_target_choice_ui",
             content_ids,
             loc_keys,
         )
+        _expect_exact(
+            branch["design_target_choice_ui"]["source_text"],
+            reviewed_branch["design_target_choice_ui_source_text"],
+            f"{path}.reviewed_branch_projection.design_target_choice_ui.source_text",
+        )
         _expect_exact(branch["binding_status"], "authored_unbound", f"{path}.binding_status")
     _expect_exact(branch_line_counts, {3}, "mission.branch_variants structural parity")
     branch_serialized = json.dumps(branches, sort_keys=True).casefold()
     if "dormant" in branch_serialized:
         raise NarrativeValidationError("mission.branch_variants: Dormant is not a terminal narrative branch")
-    if any(fragment in branch_serialized for fragment in MORAL_RANKING_FRAGMENTS):
-        raise NarrativeValidationError("mission.branch_variants: moral ranking language is prohibited")
+    if any(lexeme in branch_serialized for lexeme in EXPLICIT_MORAL_RANKING_LEXEMES):
+        raise NarrativeValidationError(
+            "mission.branch_variants: limited explicit moral-ranking lexical guard matched"
+        )
 
     results = _expect_list(top["result_variants"], "mission.result_variants")
     if len(results) != 4:

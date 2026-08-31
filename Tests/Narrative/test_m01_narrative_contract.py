@@ -107,6 +107,90 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             VALIDATOR.EXPECTED_RESOLUTIONS,
         )
 
+    def test_character_relationship_projection_is_exact(self) -> None:
+        actual = {
+            character["id"]: (
+                character["faction_id"],
+                tuple(character["mission_ids"]),
+            )
+            for character in self.canon["characters"]
+        }
+        self.assertEqual(actual, VALIDATOR.EXPECTED_CHARACTER_RELATIONSHIPS)
+
+    def test_character_faction_remap_to_valid_faction_is_rejected(self) -> None:
+        self.canon["characters"][0]["faction_id"] = "kharuun_assemblies"
+        self.assert_invalid_canon("exact_character_relationship")
+
+    def test_character_mission_remap_to_valid_mission_is_rejected(self) -> None:
+        self.canon["characters"][0]["mission_ids"][1] = "SevenAccountsOfRain"
+        self.assert_invalid_canon("exact_character_relationship")
+
+    def test_character_canon_prose_drift_is_rejected(self) -> None:
+        for field in ("arc", "continuity_boundary"):
+            with self.subTest(field=field):
+                candidate = copy.deepcopy(self.canon)
+                candidate["characters"][0][field] += " Unreviewed revision."
+                with self.assertRaisesRegex(
+                    VALIDATOR.NarrativeValidationError,
+                    "reviewed canonical prose projection changed",
+                ):
+                    VALIDATOR.validate_campaign_canon(candidate)
+
+    def test_world_and_faction_canon_prose_drift_is_rejected(self) -> None:
+        mutations = [
+            ("world", "crownfall_rule"),
+            ("world", "future_well_rule"),
+            ("faction", "canon"),
+            ("faction", "voice_rule"),
+            ("faction", "prohibited_reduction"),
+        ]
+        for record_type, field in mutations:
+            with self.subTest(record_type=record_type, field=field):
+                candidate = copy.deepcopy(self.canon)
+                if record_type == "world":
+                    candidate["world"][field] += " Unreviewed revision."
+                else:
+                    candidate["world"]["factions"][0][field] += " Unreviewed revision."
+                with self.assertRaisesRegex(
+                    VALIDATOR.NarrativeValidationError,
+                    "reviewed canonical prose projection changed",
+                ):
+                    VALIDATOR.validate_campaign_canon(candidate)
+
+    def test_mission_relationship_projection_is_exact(self) -> None:
+        actual = {
+            mission["mission_id"]: (
+                mission["command_authority"],
+                mission["command_faction"],
+                tuple(mission["named_participants"]),
+            )
+            for mission in self.canon["missions"]
+        }
+        self.assertEqual(actual, VALIDATOR.EXPECTED_MISSION_RELATIONSHIPS)
+
+    def test_mission_authority_remap_to_valid_character_is_rejected(self) -> None:
+        self.canon["missions"][1]["command_authority"] = "mara_vey"
+        self.assert_invalid_canon("exact_mission_relationship")
+
+    def test_mission_faction_remap_to_valid_faction_is_rejected(self) -> None:
+        self.canon["missions"][1]["command_faction"] = "meridian_compact"
+        self.assert_invalid_canon("exact_mission_relationship")
+
+    def test_mission_participant_remap_to_valid_character_is_rejected(self) -> None:
+        self.canon["missions"][1]["named_participants"] = ["mara_vey"]
+        self.assert_invalid_canon("exact_mission_relationship")
+
+    def test_mission_canon_prose_drift_is_rejected(self) -> None:
+        for field in ("continuity_input", "established_output", "prohibited_inferences"):
+            with self.subTest(field=field):
+                candidate = copy.deepcopy(self.canon)
+                candidate["missions"][1][field][0] += " Unreviewed revision."
+                with self.assertRaisesRegex(
+                    VALIDATOR.NarrativeValidationError,
+                    "reviewed canonical prose projection changed",
+                ):
+                    VALIDATOR.validate_campaign_canon(candidate)
+
     def test_unknown_fields_fail_closed(self) -> None:
         self.mission["unreviewed_runtime_path"] = "/Game/Narrative/M01"
         self.assert_invalid_mission("unknown fields: unreviewed_runtime_path")
@@ -164,6 +248,62 @@ class Mission01NarrativeContractTests(unittest.TestCase):
         self.assertTrue(canon["carrier_must_hold_recovery_during_well_commit"])
         self.assertFalse(canon["hostile_core_destruction_substitutes_for_evacuation"])
 
+    def test_m01_canon_prose_drift_is_rejected(self) -> None:
+        mutations = (
+            ("purpose", None),
+            ("canonical_facts", 0),
+            ("prohibited_inferences", 0),
+        )
+        for field, index in mutations:
+            with self.subTest(field=field):
+                candidate = copy.deepcopy(self.mission)
+                if index is None:
+                    candidate["canon"][field] += " Unreviewed revision."
+                else:
+                    candidate["canon"][field][index] += " Unreviewed revision."
+                with self.assertRaisesRegex(
+                    VALIDATOR.NarrativeValidationError,
+                    "reviewed canonical prose projection changed",
+                ):
+                    VALIDATOR.validate_mission_contract(candidate, self.canon)
+
+    def test_speaker_projection_is_exact(self) -> None:
+        actual = {
+            speaker["id"]: {
+                key: value
+                for key, value in speaker.items()
+                if key != "id"
+            }
+            for speaker in self.mission["speakers"]
+        }
+        self.assertEqual(actual, VALIDATOR.EXPECTED_SPEAKER_RECORDS)
+
+    def test_speaker_identity_swap_is_rejected(self) -> None:
+        first, second = self.mission["speakers"][:2]
+        first["id"], second["id"] = second["id"], first["id"]
+        first["command_authority"], second["command_authority"] = (
+            second["command_authority"],
+            first["command_authority"],
+        )
+        self.assert_invalid_mission("reviewed_speaker_mapping")
+
+    def test_speaker_relationship_field_remaps_are_rejected(self) -> None:
+        mutations = {
+            "display_name": "Mara Venn",
+            "faction_id": "kharuun_assemblies",
+            "role_in_mission": "archive_recovery_requester",
+            "delivery_channel": "operations_radio",
+        }
+        for field, replacement in mutations.items():
+            with self.subTest(field=field):
+                candidate = copy.deepcopy(self.mission)
+                candidate["speakers"][0][field] = replacement
+                with self.assertRaisesRegex(
+                    VALIDATOR.NarrativeValidationError,
+                    "reviewed_speaker_mapping",
+                ):
+                    VALIDATOR.validate_mission_contract(candidate, self.canon)
+
     def test_all_three_well_branches_have_equal_structure(self) -> None:
         branches = self.mission["branch_variants"]
         self.assertEqual(list(branches), VALIDATOR.EXPECTED_CHOICES)
@@ -177,11 +317,67 @@ class Mission01NarrativeContractTests(unittest.TestCase):
         )
         self.assert_invalid_mission("unknown fields: Dormant")
 
-    def test_moral_ranking_language_is_rejected(self) -> None:
+    def test_limited_explicit_moral_ranking_lexeme_is_rejected(self) -> None:
         self.mission["branch_variants"]["Harvest"]["design_target_tradeoff"] = (
             "Target behavior says Harvest is the correct choice after the 180-tick commitment."
         )
-        self.assert_invalid_mission("moral ranking")
+        self.assert_invalid_mission("limited explicit moral-ranking lexical guard")
+
+    def test_branch_editorial_assurance_scope_does_not_claim_semantic_detection(self) -> None:
+        self.assertEqual(
+            VALIDATOR.BRANCH_EDITORIAL_ASSURANCE_SCOPE,
+            "exact_reviewed_projection_drift_detection_plus_limited_explicit_lexical_"
+            "guard_with_mandatory_human_review",
+        )
+
+    def test_one_sided_branch_dialogue_rewrite_is_rejected_as_unreviewed_drift(self) -> None:
+        line = next(
+            line
+            for line in self.mission["lines"]
+            if line["id"] == "nar_m01_line_mara_harvest_001"
+        )
+        line["source_text"] = (
+            "Harvest settles the matter. Preserve and Reshape would only indulge doubt."
+        )
+        self.assert_invalid_mission("reviewed_branch_lines")
+
+    def test_branch_runtime_prose_drift_preserving_required_fragments_is_rejected(self) -> None:
+        self.mission["branch_variants"]["Harvest"]["current_runtime_behavior"] = (
+            "Current source immediately grants 500 Dawn and collapses the Well, "
+            "demonstrating the careless option."
+        )
+        self.assert_invalid_mission("reviewed_branch_projection.current_runtime_behavior")
+
+    def test_branch_target_prose_semantic_drift_is_rejected(self) -> None:
+        self.mission["branch_variants"]["Preserve"]["design_target_tradeoff"] = (
+            "Target behavior presents Preserve as the only responsible way forward."
+        )
+        self.assert_invalid_mission("reviewed_branch_projection.design_target_tradeoff")
+
+    def test_branch_choice_ui_prose_drift_is_rejected(self) -> None:
+        choice_ui = self.mission["branch_variants"]["Preserve"]["design_target_choice_ui"]
+        choice_ui["source_text"] = (
+            "Preserve: keep the Well intact and take the responsible path."
+        )
+        self.assert_invalid_mission("reviewed_branch_projection.design_target_choice_ui")
+
+    def test_cross_branch_line_reassignment_is_rejected(self) -> None:
+        branches = self.mission["branch_variants"]
+        branches["Harvest"]["dialogue_line_ids"], branches["Reshape"]["dialogue_line_ids"] = (
+            branches["Reshape"]["dialogue_line_ids"],
+            branches["Harvest"]["dialogue_line_ids"],
+        )
+        self.assert_invalid_mission("reviewed_branch_projection.dialogue_line_ids")
+
+    def test_branch_line_speaker_and_matching_channel_reassignment_is_rejected(self) -> None:
+        line = next(
+            line
+            for line in self.mission["lines"]
+            if line["id"] == "nar_m01_line_mara_harvest_001"
+        )
+        line["speaker_id"] = "spk_talar_venn"
+        line["delivery_channel"] = "operations_radio"
+        self.assert_invalid_mission("reviewed_branch_lines")
 
     def test_current_runtime_and_design_target_are_separate_and_exact(self) -> None:
         branches = self.mission["branch_variants"]
