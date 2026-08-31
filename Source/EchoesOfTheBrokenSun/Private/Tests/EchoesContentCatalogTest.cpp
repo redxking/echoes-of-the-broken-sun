@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesContentSubsystem.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -17,6 +19,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     FEchoesContentCatalog Catalog;
     FString Error;

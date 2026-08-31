@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignJourneyModel.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -14,6 +16,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesCampaignJourneyTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     constexpr EEchoesOperationMode ExpectedOperations[] = {
         EEchoesOperationMode::CampaignPrologue,

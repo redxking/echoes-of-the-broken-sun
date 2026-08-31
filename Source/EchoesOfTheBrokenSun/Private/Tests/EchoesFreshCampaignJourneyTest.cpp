@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
@@ -18,11 +19,8 @@
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "Engine/World.h"
-#include "HAL/PlatformProcess.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
-#include "Misc/CommandLine.h"
-#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
 
@@ -36,50 +34,6 @@ using echoes::sim::EntityType;
 using echoes::sim::FutureWellChoice;
 using echoes::sim::ResearchType;
 using echoes::sim::Vec2;
-
-struct FScopedFreshCampaignEnvironment final
-{
-    FScopedFreshCampaignEnvironment()
-    {
-        OriginalCommandLine = FCommandLine::Get();
-        Directory = FPaths::Combine(
-            FPlatformProcess::UserTempDir(),
-            FString::Printf(
-                TEXT("EchoesFreshCampaignJourney-%s"),
-                *FGuid::NewGuid().ToString(EGuidFormats::Digits)));
-        CampaignPath = FPaths::Combine(Directory, TEXT("Campaign.bin"));
-        QuickSavePath = FPaths::Combine(Directory, TEXT("QuickSave.bin"));
-        if (!IFileManager::Get().MakeDirectory(*Directory, true))
-        {
-            return;
-        }
-        const FString TestCommandLine = FString::Printf(
-            TEXT("-EchoesCampaignProgressPath=\"%s\" -EchoesQuickSavePath=\"%s\" %s"),
-            *CampaignPath,
-            *QuickSavePath,
-            *OriginalCommandLine);
-        FCommandLine::Set(*TestCommandLine);
-        bReady = true;
-    }
-
-    ~FScopedFreshCampaignEnvironment()
-    {
-        FCommandLine::Set(*OriginalCommandLine);
-        if (!Directory.IsEmpty())
-        {
-            IFileManager::Get().DeleteDirectory(
-                *Directory,
-                false,
-                true);
-        }
-    }
-
-    FString OriginalCommandLine;
-    FString Directory;
-    FString CampaignPath;
-    FString QuickSavePath;
-    bool bReady = false;
-};
 
 struct FFreshRouteSpec final
 {
@@ -239,10 +193,12 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
 
-    FScopedFreshCampaignEnvironment TestEnvironment;
+    FEchoesScopedTestSaveEnvironment TestEnvironment(
+        *this,
+        EEchoesTestSaveOverrideMode::ExactFiles);
     if (!TestTrue(
             TEXT("The journey owns isolated campaign and quick-save storage"),
-            TestEnvironment.bReady &&
+            TestEnvironment.IsReady() &&
                 !TestEnvironment.CampaignPath.IsEmpty() &&
                 !TestEnvironment.QuickSavePath.IsEmpty()))
     {

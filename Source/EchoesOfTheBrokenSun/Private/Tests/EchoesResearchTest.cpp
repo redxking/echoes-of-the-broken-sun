@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTechnologyPanelLayout.h"
@@ -19,6 +21,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesResearchTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
     TestEqual(TEXT("Research interruption uses snapshot schema 22"),
               echoes::sim::kSnapshotVersion, 22U);
     TestEqual(TEXT("Research interruption uses replay schema 22"),

@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesContactIndicatorLayoutTest,
     "Echoes.Runtime.Presentation.ContactIndicatorLayout",
@@ -12,6 +14,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesContactIndicatorLayoutTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     const FVector2D Viewport(1600.0f, 900.0f);
     const FEchoesContactIndicatorPlacement Center =

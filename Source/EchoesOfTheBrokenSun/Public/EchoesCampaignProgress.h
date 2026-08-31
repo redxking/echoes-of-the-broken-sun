@@ -253,6 +253,13 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesCampaignProgress final
 class ECHOESOFTHEBROKENSUN_API FEchoesCampaignProgressStore final
 {
 public:
+    /**
+     * Returns the directory that owns campaign and quick-save files.
+     * Non-shipping automation may redirect the directory without changing
+     * the production filenames or mission-specific slot families.
+     */
+    [[nodiscard]] static FString GetSaveGameDirectory();
+
     [[nodiscard]] static FString GetDefaultPath();
 
     static bool Encode(

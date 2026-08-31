@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
 #include "EchoesPointerCombatGuardReview.h"
@@ -17,6 +19,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     TestNotNull(TEXT("Engine is available"), GEngine);
     if (GEngine != nullptr)

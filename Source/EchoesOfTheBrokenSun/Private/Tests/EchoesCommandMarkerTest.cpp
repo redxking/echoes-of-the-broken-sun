@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "Components/StaticMeshComponent.h"
 #include "EchoesCommandMarkerView.h"
 #include "EchoesSimCore/Simulation.h"
@@ -19,6 +21,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesCommandMarkerTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))

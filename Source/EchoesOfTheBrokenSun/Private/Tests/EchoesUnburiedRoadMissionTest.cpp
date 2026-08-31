@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
@@ -110,6 +112,12 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
 
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
+
     const FEchoesUnburiedRoadRoute PreserveRoute =
         FEchoesUnburiedRoadMissionModel::RouteForChoice(
             echoes::sim::FutureWellChoice::Preserve);
@@ -160,8 +168,7 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     const FString QuickSavePath = FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
     FPreservedUnburiedRoadFile PreservedPrimary(CampaignPath);
     FPreservedUnburiedRoadFile PreservedBackup(CampaignPath + TEXT(".bak"));

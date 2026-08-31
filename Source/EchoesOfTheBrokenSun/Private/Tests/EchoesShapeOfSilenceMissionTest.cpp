@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
@@ -133,8 +135,7 @@ FString ShapeQuickSavePath(const FEchoesCampaignProgress& Progress)
         LedgerBytes.GetData(),
         LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         FString::Printf(
             TEXT("EchoesQuickSaveTheShapeOfSilence-%08X.bin"),
             Fingerprint));
@@ -151,6 +152,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     const FEchoesShapeOfSilencePlan HarvestPlan =
         FEchoesShapeOfSilenceMissionModel::PlanForChoice(

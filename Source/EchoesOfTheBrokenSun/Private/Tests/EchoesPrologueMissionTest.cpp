@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesPlayerController.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
@@ -49,6 +51,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

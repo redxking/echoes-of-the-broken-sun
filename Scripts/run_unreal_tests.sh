@@ -7,6 +7,111 @@ editor="$ue_root/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEdito
 project="$project_root/EchoesOfTheBrokenSun.uproject"
 report_dir="$project_root/BuildArtifacts/Automation"
 report="$report_dir/index.json"
+player_save_dir="$project_root/Saved/SaveGames"
+temporary_base="${TMPDIR:-/tmp}"
+suite_storage_root=""
+snapshot_root=""
+
+cleanup_temporary_roots() {
+  if [[ -n "$suite_storage_root" &&
+        -d "$suite_storage_root" &&
+        "${suite_storage_root:t}" == EchoesAutomationSuite.* ]]; then
+    rm -rf "$suite_storage_root"
+  fi
+  if [[ -n "$snapshot_root" &&
+        -d "$snapshot_root" &&
+        "${snapshot_root:t}" == EchoesSaveSnapshot.* ]]; then
+    rm -rf "$snapshot_root"
+  fi
+}
+trap cleanup_temporary_roots EXIT INT TERM
+
+suite_storage_root="$(mktemp -d "$temporary_base/EchoesAutomationSuite.XXXXXX")"
+snapshot_root="$(mktemp -d "$temporary_base/EchoesSaveSnapshot.XXXXXX")"
+before_manifest="$snapshot_root/before.manifest"
+after_manifest="$snapshot_root/after.manifest"
+
+snapshot_player_saves() {
+  local destination="$1"
+  python3 - "$player_save_dir" "$destination" <<'PY'
+import hashlib
+import json
+import os
+import stat
+import sys
+
+root, destination = sys.argv[1:]
+
+
+def signature(info):
+    return {
+        "device": info.st_dev,
+        "inode": info.st_ino,
+        "mode": info.st_mode,
+        "size": info.st_size,
+        "mtime_ns": info.st_mtime_ns,
+    }
+
+
+entries = []
+if not os.path.lexists(root):
+    entries.append({"path": "", "type": "root-absent"})
+else:
+    root_before = os.lstat(root)
+    if not stat.S_ISDIR(root_before.st_mode):
+        raise RuntimeError("Saved/SaveGames exists but is not a directory")
+
+    def walk(directory, relative_directory):
+        directory_before = os.lstat(directory)
+        entries.append({
+            "path": relative_directory,
+            "type": "directory",
+            **signature(directory_before),
+        })
+        children = sorted(
+            list(os.scandir(directory)),
+            key=lambda child: os.fsencode(child.name),
+        )
+        for child in children:
+            relative_path = os.path.join(relative_directory, child.name)
+            child_info = child.stat(follow_symlinks=False)
+            record = {"path": relative_path, **signature(child_info)}
+            if stat.S_ISLNK(child_info.st_mode):
+                record.update(type="symlink", target=os.readlink(child.path))
+                entries.append(record)
+            elif stat.S_ISDIR(child_info.st_mode):
+                walk(child.path, relative_path)
+            elif stat.S_ISREG(child_info.st_mode):
+                digest = hashlib.sha256()
+                with open(child.path, "rb") as source:
+                    for block in iter(lambda: source.read(1024 * 1024), b""):
+                        digest.update(block)
+                child_after = os.lstat(child.path)
+                if signature(child_info) != signature(child_after):
+                    raise RuntimeError(
+                        f"Save file changed while it was being hashed: {relative_path!r}"
+                    )
+                record.update(type="file", sha256=digest.hexdigest())
+                entries.append(record)
+            else:
+                record.update(type="other")
+                entries.append(record)
+        directory_after = os.lstat(directory)
+        if signature(directory_before) != signature(directory_after):
+            raise RuntimeError(
+                f"Save directory changed while it was being inventoried: {relative_directory!r}"
+            )
+
+    walk(root, "")
+    root_after = os.lstat(root)
+    if signature(root_before) != signature(root_after):
+        raise RuntimeError("Saved/SaveGames changed during snapshot collection")
+
+with open(destination, "w", encoding="utf-8", newline="\n") as output:
+    json.dump(entries, output, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    output.write("\n")
+PY
+}
 
 if [[ ! -x "$editor" ]]; then
   print -u2 "Unreal Editor is not available at: $editor"
@@ -15,12 +120,53 @@ fi
 
 mkdir -p "$project_root/BuildArtifacts"
 rm -rf "$report_dir"
+if ! snapshot_player_saves "$before_manifest"; then
+  print -u2 "[ECHOES_PLAYER_SAVE_SNAPSHOT_FAILED] Could not capture the pre-suite SaveGames manifest."
+  exit 9
+fi
 
+set +e
 "$editor" "$project" \
   -unattended -nop4 -nosplash -nullrhi \
+  -EchoesSaveGameDirectory="$suite_storage_root" \
   -ExecCmds="Automation RunTests Echoes; Quit" \
   -TestExit="Automation Test Queue Empty" \
   -ReportExportPath="$report_dir"
+editor_status=$?
+set -e
+
+if ! snapshot_player_saves "$after_manifest"; then
+  print -u2 "[ECHOES_PLAYER_SAVE_SNAPSHOT_FAILED] Could not capture the post-suite SaveGames manifest."
+  exit 9
+fi
+mkdir -p "$report_dir/SaveIsolation"
+cp "$before_manifest" "$report_dir/SaveIsolation/player-save-before.manifest"
+cp "$after_manifest" "$report_dir/SaveIsolation/player-save-after.manifest"
+
+if ! cmp -s "$before_manifest" "$after_manifest"; then
+  diff -u "$before_manifest" "$after_manifest" \
+    > "$report_dir/SaveIsolation/player-save-diff.txt" || true
+  print -u2 "[ECHOES_PLAYER_SAVE_GUARD_FAILED] Automation changed the real Saved/SaveGames tree."
+  print -u2 "No player files were deleted or restored; inspect the retained manifests and diff."
+  exit 7
+fi
+
+if [[ -n "$(find "$suite_storage_root" -mindepth 1 -print -quit)" ]]; then
+  find "$suite_storage_root" -mindepth 1 -print | LC_ALL=C sort \
+    > "$report_dir/SaveIsolation/scoped-storage-leftovers.txt"
+  print -u2 "[ECHOES_TEST_STORAGE_CLEANUP_FAILED] GUID-scoped automation storage was not empty after the suite."
+  exit 8
+fi
+
+print -r -- "realSaveGamesUnchanged=true" \
+  > "$report_dir/SaveIsolation/result.txt"
+print -r -- "scopedStorageEmpty=true" \
+  >> "$report_dir/SaveIsolation/result.txt"
+
+if (( editor_status != 0 )); then
+  print -u2 "Unreal Editor exited with status $editor_status."
+  exit "$editor_status"
+fi
 
 if [[ ! -f "$report" ]]; then
   for report_attempt in {1..240}; do
@@ -120,4 +266,5 @@ for expected_test in "${expected_tests[@]}"; do
 done
 
 print "Unreal automation passed: 47/47 Echoes tests, 0 warnings, 0 errors."
+print "Player SaveGames guard passed: sampled tree unchanged; scoped storage empty."
 print "Evidence report: $report"

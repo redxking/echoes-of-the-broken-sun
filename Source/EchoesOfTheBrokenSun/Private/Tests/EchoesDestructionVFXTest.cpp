@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesDestructionView.h"
 #include "EchoesEntityView.h"
 #include "EchoesSimulationSubsystem.h"
@@ -19,6 +21,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesDestructionVFXTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))

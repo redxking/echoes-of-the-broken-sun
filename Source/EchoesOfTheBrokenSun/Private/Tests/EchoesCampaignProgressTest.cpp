@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "HAL/FileManager.h"
 #include "Misc/Crc.h"
@@ -105,6 +107,12 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
 
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
+
     FEchoesCampaignProgress Progress;
     FString Feedback;
     const FEchoesCampaignDecisionRecord Preserve = MakeDecision(
@@ -207,8 +215,7 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
              Feedback.Contains(TEXT("UNVERIFIED_COMPLETION")));
 
     const FString TestPath = FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("Automation"),
+        TestSaveEnvironment.Directory,
         TEXT("EchoesCampaignProgressTest.bin"));
     FPreservedCampaignFile Primary(TestPath);
     FPreservedCampaignFile Backup(TestPath + TEXT(".bak"));

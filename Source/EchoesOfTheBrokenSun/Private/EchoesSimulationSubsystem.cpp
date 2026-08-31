@@ -5500,8 +5500,7 @@ bool UEchoesSimulationSubsystem::RestoreCampaignBackup(FString& OutFeedback)
 FString UEchoesSimulationSubsystem::GetQuickSavePath()
 {
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSave.bin"));
 }
 
@@ -5535,43 +5534,37 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 LedgerBytes.GetData(),
                 LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
             return FPaths::Combine(
-                FPaths::ProjectSavedDir(),
-                TEXT("SaveGames"),
+                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
                 FString::Printf(
                     TEXT("EchoesQuickSaveTheBrokenSun-%08X.bin"),
                     LedgerFingerprint));
         }
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             TEXT("EchoesQuickSaveTheBrokenSun-InvalidLedger.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
     {
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
     {
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
     {
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             TEXT("EchoesQuickSaveACityOnReserve.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
     {
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
     }
     if (SelectedOperation ==
@@ -5637,13 +5630,11 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                     ? TEXT("EchoesQuickSaveAssemblyOfTheMissing")
                     : TEXT("EchoesQuickSaveSeveralVoicesOneCommand");
             return FPaths::Combine(
-                FPaths::ProjectSavedDir(),
-                TEXT("SaveGames"),
+                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
                 FString::Printf(TEXT("%s-%08X.bin"), Prefix, LedgerFingerprint));
         }
         return FPaths::Combine(
-            FPaths::ProjectSavedDir(),
-            TEXT("SaveGames"),
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
             SelectedOperation ==
                     EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin")

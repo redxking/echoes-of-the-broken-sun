@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesNetworkSession.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 
@@ -17,6 +19,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
     using namespace echoes::sim;
     using namespace echoes::sim::net;
 

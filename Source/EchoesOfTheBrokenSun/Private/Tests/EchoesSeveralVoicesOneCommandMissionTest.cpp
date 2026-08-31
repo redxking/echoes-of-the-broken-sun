@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
@@ -144,8 +146,7 @@ FString SeveralVoicesQuickSavePath(
         LedgerBytes.GetData(),
         LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         FString::Printf(
             TEXT("EchoesQuickSaveSeveralVoicesOneCommand-%08X.bin"),
             Fingerprint));
@@ -163,6 +164,12 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
     using echoes::sim::ChoirIdentityState;
     using echoes::sim::CommandType;
     using echoes::sim::EntityType;

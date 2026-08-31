@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesFutureThatWonMissionModel.h"
 #include "EchoesPlayerController.h"
@@ -143,8 +145,7 @@ FString FutureThatWonQuickSavePath(
         LedgerBytes.GetData(),
         LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         FString::Printf(
             TEXT("EchoesQuickSaveTheFutureThatWon-%08X.bin"),
             Fingerprint));
@@ -161,6 +162,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     using echoes::sim::FutureWellChoice;
     using echoes::sim::Vec2;

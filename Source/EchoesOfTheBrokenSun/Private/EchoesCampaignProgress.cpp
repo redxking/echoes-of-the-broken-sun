@@ -5,7 +5,9 @@
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/Crc.h"
+#include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
 namespace
@@ -655,11 +657,32 @@ EEchoesCampaignCommitStatus FEchoesCampaignProgress::AppendDecision(
     return EEchoesCampaignCommitStatus::Added;
 }
 
+FString FEchoesCampaignProgressStore::GetSaveGameDirectory()
+{
+    FString Directory = FPaths::Combine(
+        FPaths::ProjectSavedDir(),
+        TEXT("SaveGames"));
+#if !UE_BUILD_SHIPPING
+    FString DirectoryOverride;
+    if (FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesSaveGameDirectory="),
+            DirectoryOverride) &&
+        !DirectoryOverride.IsEmpty())
+    {
+        Directory = DirectoryOverride;
+    }
+#endif
+    Directory = FPaths::ConvertRelativePathToFull(Directory);
+    FPaths::NormalizeDirectoryName(Directory);
+    FPaths::CollapseRelativeDirectories(Directory);
+    return Directory;
+}
+
 FString FEchoesCampaignProgressStore::GetDefaultPath()
 {
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        GetSaveGameDirectory(),
         TEXT("EchoesCampaignProgress.bin"));
 }
 

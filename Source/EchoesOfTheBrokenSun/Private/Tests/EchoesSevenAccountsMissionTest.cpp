@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSevenAccountsMissionModel.h"
@@ -99,6 +101,12 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
 
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
+
     FEchoesSevenAccountsMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission two"),
              FEchoesSevenAccountsMissionModel::DeterminePhase(Facts) ==
@@ -146,8 +154,7 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
     FPreservedSevenAccountsFile PreservedBackup(CampaignPath + TEXT(".bak"));
     FPreservedSevenAccountsFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
     const FString MissionQuickSavePath = FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
     FPreservedSevenAccountsFile PreservedQuickSave(MissionQuickSavePath);
     FPreservedSevenAccountsFile PreservedQuickSaveBackup(

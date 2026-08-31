@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesFormationLayout.h"
 #include "EchoesPlayerController.h"
 #include "Engine/World.h"
@@ -17,6 +19,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesFormationLayoutTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
 
     const FVector Anchor(1000.0f, 2000.0f, 40.0f);
     const FVector Forward(0.0f, 1.0f, 0.0f);

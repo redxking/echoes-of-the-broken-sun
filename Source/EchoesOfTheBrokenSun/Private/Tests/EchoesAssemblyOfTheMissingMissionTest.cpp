@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerController.h"
@@ -142,8 +144,7 @@ FString AssemblyQuickSavePath(const FEchoesCampaignProgress& Progress)
         LedgerBytes.GetData(),
         LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
     return FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         FString::Printf(
             TEXT("EchoesQuickSaveAssemblyOfTheMissing-%08X.bin"),
             Fingerprint));
@@ -161,6 +162,12 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     const FString& Parameters)
 {
     (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
     using echoes::sim::EntityType;
     using echoes::sim::Faction;
     using echoes::sim::FutureWellChoice;

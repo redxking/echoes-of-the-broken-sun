@@ -2,6 +2,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "EchoesTestSaveEnvironment.h"
+
 #include "EchoesCampaignProgress.h"
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesPlayerController.h"
@@ -88,6 +90,12 @@ bool FEchoesCityReserveMissionTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
 
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
+
     const FEchoesCityReserveGrid PreserveGrid =
         FEchoesCityReserveMissionModel::GridForChoice(
             echoes::sim::FutureWellChoice::Preserve);
@@ -146,8 +154,7 @@ bool FEchoesCityReserveMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     const FString QuickSavePath = FPaths::Combine(
-        FPaths::ProjectSavedDir(),
-        TEXT("SaveGames"),
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSaveACityOnReserve.bin"));
     FPreservedCityReserveFile PreservedPrimary(CampaignPath);
     FPreservedCityReserveFile PreservedBackup(CampaignPath + TEXT(".bak"));
