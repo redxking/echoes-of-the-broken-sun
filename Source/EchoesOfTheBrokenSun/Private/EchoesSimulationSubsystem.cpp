@@ -1015,7 +1015,7 @@ enum class EQuickSaveContainerRead : uint8
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 12 checkpoints require an active eleven-record ledger and a current schema-23 snapshot.");
+            "Mission 12 checkpoints require an active eleven-record ledger and a current schema-24 snapshot.");
         return false;
     }
 
@@ -1167,7 +1167,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 12 checkpoints require supported snapshot schema 21 through 23 continuity state");
+            "Mission 12 checkpoints require supported snapshot schema 21 through 24 continuity state");
         return false;
     }
     return true;
@@ -1187,7 +1187,7 @@ enum class EQuickSaveContainerRead : uint8
         !UsesCurrentSnapshotSchema(SnapshotBytes))
     {
         OutError = TEXT(
-            "Mission 13 checkpoints require an active twelve-record ledger and a current schema-23 snapshot.");
+            "Mission 13 checkpoints require an active twelve-record ledger and a current schema-24 snapshot.");
         return false;
     }
 
@@ -1340,7 +1340,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 13 checkpoints require supported snapshot schema 21 through 23 continuity state");
+            "Mission 13 checkpoints require supported snapshot schema 21 through 24 continuity state");
         return false;
     }
     return true;
@@ -1363,7 +1363,7 @@ enum class EQuickSaveContainerRead : uint8
         (bCrisisContractFailed && !bCrisisHoldStarted))
     {
         OutError = TEXT(
-            "Mission 14 checkpoints require an active thirteen-record ledger and a current schema-23 snapshot.");
+            "Mission 14 checkpoints require an active thirteen-record ledger and a current schema-24 snapshot.");
         return false;
     }
 
@@ -1549,7 +1549,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 14 checkpoints require supported snapshot schema 22 or 23 Hollow Choir state");
+            "Mission 14 checkpoints require supported snapshot schema 22 through 24 Hollow Choir state");
         return false;
     }
     OutCrisisHoldStarted = (CrisisFlags & 1U) != 0U;
@@ -1645,7 +1645,7 @@ enum class EQuickSaveContainerRead : uint8
         if (OutError.IsEmpty())
         {
             OutError = TEXT(
-                "Mission 15 checkpoints require a current schema-23 snapshot");
+                "Mission 15 checkpoints require a current schema-24 snapshot");
         }
         return false;
     }
@@ -1856,7 +1856,7 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutSnapshotBytes.Reset();
         OutError = TEXT(
-            "Mission 15 checkpoints require supported snapshot schema 22 or 23 state");
+            "Mission 15 checkpoints require supported snapshot schema 22 through 24 state");
         return false;
     }
     OutPendingResolution = Pending;
