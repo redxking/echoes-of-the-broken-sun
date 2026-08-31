@@ -602,10 +602,25 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                                 ExtremePositions[Index]) ==
                                 MineralCoverResult::InvalidPosition);
                 }
+                const std::optional<std::uint64_t>
+                    PostAdmissionNextSequence =
+                        CommandSimulation->NextCommandSequence(
+                            UEchoesSimulationSubsystem::LocalPlayerId);
                 TestTrue(
-                    TEXT("Network batch exposes structural admission rather than semantic execution feedback"),
-                    PresentationController->GetStatusMessage().Contains(
-                        TEXT("authority accepted 1, rejected 0")));
+                    TEXT("Direct server batches expose authority-side structural admission bookkeeping"),
+                    PresentationController->GetLastAcceptedNetworkBatchId() ==
+                            2 &&
+                        PresentationController->NetworkCommandContext
+                            .hasAcceptedSequence &&
+                        PresentationController->NetworkCommandContext
+                                .lastAcceptedSequence ==
+                            *InitialNextSequence + 1 &&
+                        CommandSimulation->CommandLog().size() ==
+                            InitialCommandLogSize + 2 &&
+                        PostAdmissionNextSequence.has_value() &&
+                        *PostAdmissionNextSequence ==
+                            *InitialNextSequence + 2 &&
+                        CommandSimulation->CurrentTick() == InitialTick);
 
                 if (Twin.has_value())
                 {
