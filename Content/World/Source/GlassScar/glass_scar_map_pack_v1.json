@@ -1,0 +1,175 @@
+{
+  "schema_id": "echoes.world.map-pack.v1",
+  "schema_version": 1,
+  "map_id": "glass-scar",
+  "display_name": "Glass Scar",
+  "authority": "non-authoritative-source-descriptor",
+  "runtime_binding": "none",
+  "source_snapshot": {
+    "git_commit": "7e95f50ab7dd1c2d335b70837b906e2cd8c72113",
+    "files": [
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Public/EchoesSkirmishSetup.h",
+        "sha256": "b1be786a06c4e96821d625d7fc4823dba47ff8d83532194cc9763ab8762a625f",
+        "role": "grid-dimensions"
+      },
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Private/EchoesSkirmishSetup.cpp",
+        "sha256": "c3e30f06a8a9abfd6033b5f7c1bec2841fd26594280e889cd392a1758eed3ab4",
+        "role": "base-topology-spawns-resources-objective"
+      },
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Private/EchoesSimulationSubsystem.cpp",
+        "sha256": "563f3b3f4f10e0b25723e9088b4992c44dbd73d5d9db1e8c2e60d2ff8fa8de44",
+        "role": "legacy-base-terrain-construction"
+      },
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Private/EchoesGameMode.cpp",
+        "sha256": "2e1165cc1feb75a8de8e30c67c5f575704c504e0eebbcff02a7766c9f6e8f3a2",
+        "role": "route-presentation-centers"
+      },
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Public/EchoesSimulationSubsystem.h",
+        "sha256": "6ec25ed394637092bb5f145dcbdb920aa0c438e21da49d893136c33c9d87f3d4",
+        "role": "presentation-tile-scale"
+      },
+      {
+        "path": "Source/EchoesOfTheBrokenSun/Private/EchoesContentSubsystem.cpp",
+        "sha256": "433c6c0d99cc061310e1a72229018b399afd97ee2c28c74676199b05903e8774",
+        "role": "simulation-centimeter-conversion"
+      }
+    ]
+  },
+  "canonicalization": {
+    "profile": "echoes-json-v1",
+    "algorithm": "sha256",
+    "encoding": "utf-8",
+    "object_keys": "lexicographic",
+    "arrays": "ordered",
+    "whitespace": "none",
+    "digest_file": "glass_scar_map_pack_v1.sha256"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "coordinate_origin": "southwest",
+    "simulation_tile_centimeters": 100,
+    "presentation_tile_world_units": 200,
+    "timing_status": "theoretical-only"
+  },
+  "terrain": {
+    "default_passable": true,
+    "glass_scar_bounds": {
+      "min_x": 8,
+      "max_x": 55,
+      "min_y": 30,
+      "max_y": 34
+    },
+    "blocked_rule": "inside-glass-scar-bounds-unless-inside-a-named-crossing"
+  },
+  "routes": [
+    {
+      "id": "ash-cut",
+      "display_name": "Ash Cut",
+      "ordinal": 0,
+      "crossing": {
+        "min_x": 12,
+        "max_x": 15,
+        "min_y": 30,
+        "max_y": 34
+      },
+      "reference_tile": [13, 32]
+    },
+    {
+      "id": "buried-causeway",
+      "display_name": "Buried Causeway",
+      "ordinal": 1,
+      "crossing": {
+        "min_x": 29,
+        "max_x": 35,
+        "min_y": 30,
+        "max_y": 34
+      },
+      "reference_tile": [32, 32]
+    },
+    {
+      "id": "folded-verge",
+      "display_name": "Folded Verge",
+      "ordinal": 2,
+      "crossing": {
+        "min_x": 48,
+        "max_x": 51,
+        "min_y": 30,
+        "max_y": 34
+      },
+      "reference_tile": [49, 32]
+    }
+  ],
+  "deployment": {
+    "local_spawns": [
+      [10, 10],
+      [14, 10],
+      [6, 17],
+      [8, 13],
+      [11, 14],
+      [14, 12],
+      [8, 8],
+      [12, 7],
+      [16, 10],
+      [7, 6],
+      [15, 6],
+      [6, 11]
+    ],
+    "opponent_spawns": [
+      [54, 54],
+      [50, 54],
+      [58, 48],
+      [51, 53],
+      [54, 50],
+      [57, 52],
+      [50, 57],
+      [54, 58],
+      [57, 58],
+      [49, 58],
+      [58, 53]
+    ]
+  },
+  "resources": {
+    "matter_deposits": [
+      [16, 16],
+      [21, 13],
+      [25, 28],
+      [33, 22],
+      [31, 43],
+      [43, 36],
+      [47, 50],
+      [52, 45]
+    ]
+  },
+  "objectives": {
+    "future_well": [32, 32]
+  },
+  "measurement_checkpoints": {
+    "local_core": [10, 10],
+    "opponent_core": [54, 54],
+    "future_well": [32, 32],
+    "crossing_reference_tiles": {
+      "ash-cut": [13, 32],
+      "buried-causeway": [32, 32],
+      "folded-verge": [49, 32]
+    }
+  },
+  "claim_boundary": {
+    "descriptor_only": true,
+    "not_evidence_for": [
+      "runtime-authority",
+      "playable-map",
+      "rendered-map",
+      "navigation-qualification",
+      "ai-qualification",
+      "performance-qualification",
+      "packaged-build",
+      "release-readiness"
+    ]
+  }
+}
