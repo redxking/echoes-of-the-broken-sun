@@ -7,6 +7,7 @@
 
 class USoundBase;
 class USoundAttenuation;
+class USoundConcurrency;
 
 UENUM()
 enum class EEchoesPresentationAudioCue : uint8
@@ -38,6 +39,7 @@ public:
     [[nodiscard]] bool HasAllAuthoredCueAssets() const;
     [[nodiscard]] int32 GetLoadedCueCount() const;
     [[nodiscard]] bool HasBoundedSpatialAttenuation() const;
+    [[nodiscard]] bool HasBoundedConcurrencyPolicies() const;
     [[nodiscard]] static constexpr float GetCommandCooldownSeconds()
     {
         return 0.08f;
@@ -45,6 +47,14 @@ public:
     [[nodiscard]] static constexpr float GetDestructionCooldownSeconds()
     {
         return 0.14f;
+    }
+    [[nodiscard]] static constexpr int32 GetCommandMaxConcurrentVoices()
+    {
+        return 2;
+    }
+    [[nodiscard]] static constexpr int32 GetDestructionMaxConcurrentVoices()
+    {
+        return 4;
     }
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -57,6 +67,8 @@ public:
         EEchoesPresentationAudioCue Cue,
         float EffectsVolume,
         bool bReducedDynamicRange) const;
+    [[nodiscard]] const USoundConcurrency* GetConcurrencyPolicyForTest(
+        EEchoesPresentationAudioCue Cue) const;
     [[nodiscard]] int32 GetSuccessfulCommandPlayCountForTest() const
     {
         return SuccessfulCommandPlayCount;
@@ -78,6 +90,8 @@ private:
         bool bReducedDynamicRange) const;
     [[nodiscard]] USoundBase* GetCueAsset(
         EEchoesPresentationAudioCue Cue) const;
+    [[nodiscard]] USoundConcurrency* GetConcurrencyPolicy(
+        EEchoesPresentationAudioCue Cue) const;
 
     UPROPERTY(Transient)
     TObjectPtr<USoundBase> CommandConfirmSound;
@@ -93,6 +107,12 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<USoundAttenuation> DestructionAttenuation;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USoundConcurrency> CommandConcurrency;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USoundConcurrency> DestructionConcurrency;
 
     double LastCommandSeconds = -1000.0;
     double LastDestructionSeconds = -1000.0;

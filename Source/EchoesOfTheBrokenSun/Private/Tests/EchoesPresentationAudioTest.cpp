@@ -6,6 +6,7 @@
 
 #include "EchoesPresentationAudioSubsystem.h"
 #include "Engine/World.h"
+#include "Sound/SoundConcurrency.h"
 #include "Tests/AutomationCommon.h"
 
 #include <limits>
@@ -50,6 +51,70 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
               4);
     TestTrue(TEXT("Destruction cues use bounded spatial attenuation"),
              Audio->HasBoundedSpatialAttenuation());
+    TestTrue(TEXT("Command and destruction use bounded concurrency policies"),
+             Audio->HasBoundedConcurrencyPolicies());
+
+    const USoundConcurrency* CommandConcurrency =
+        Audio->GetConcurrencyPolicyForTest(
+            EEchoesPresentationAudioCue::CommandConfirm);
+    const USoundConcurrency* MeridianDestructionConcurrency =
+        Audio->GetConcurrencyPolicyForTest(
+            EEchoesPresentationAudioCue::DestructionMeridian);
+    const USoundConcurrency* KharuunDestructionConcurrency =
+        Audio->GetConcurrencyPolicyForTest(
+            EEchoesPresentationAudioCue::DestructionKharuun);
+    const USoundConcurrency* ChoirDestructionConcurrency =
+        Audio->GetConcurrencyPolicyForTest(
+            EEchoesPresentationAudioCue::DestructionChoir);
+    if (!TestNotNull(TEXT("Command concurrency policy is available"),
+                     CommandConcurrency) ||
+        !TestNotNull(TEXT("Destruction concurrency policy is available"),
+                     MeridianDestructionConcurrency))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestTrue(TEXT("Command concurrency policy is subsystem-owned"),
+             CommandConcurrency->GetOuter() == Audio);
+    TestTrue(TEXT("Destruction concurrency policy is subsystem-owned"),
+             MeridianDestructionConcurrency->GetOuter() == Audio);
+    TestTrue(TEXT("Command concurrency policy is transient"),
+             CommandConcurrency->HasAnyFlags(RF_Transient));
+    TestTrue(TEXT("Destruction concurrency policy is transient"),
+             MeridianDestructionConcurrency->HasAnyFlags(RF_Transient));
+    TestEqual(TEXT("Command concurrency has a hard voice cap"),
+              CommandConcurrency->Concurrency.MaxCount,
+              Audio->GetCommandMaxConcurrentVoices());
+    TestFalse(TEXT("Command concurrency is global rather than owner-scoped"),
+              CommandConcurrency->Concurrency.bLimitToOwner);
+    TestEqual(
+        TEXT("Command concurrency prevents excess voices"),
+        static_cast<uint8>(CommandConcurrency->Concurrency.ResolutionRule),
+        static_cast<uint8>(EMaxConcurrentResolutionRule::PreventNew));
+    TestTrue(TEXT("Command concurrency retains the 80 ms admission window"),
+             FMath::IsNearlyEqual(
+                 CommandConcurrency->Concurrency.RetriggerTime,
+                 Audio->GetCommandCooldownSeconds()));
+    TestEqual(TEXT("Destruction concurrency has a hard voice cap"),
+              MeridianDestructionConcurrency->Concurrency.MaxCount,
+              Audio->GetDestructionMaxConcurrentVoices());
+    TestFalse(TEXT("Destruction concurrency is global rather than owner-scoped"),
+              MeridianDestructionConcurrency->Concurrency.bLimitToOwner);
+    TestEqual(
+        TEXT("Destruction concurrency resolves farthest then oldest"),
+        static_cast<uint8>(
+            MeridianDestructionConcurrency->Concurrency.ResolutionRule),
+        static_cast<uint8>(
+            EMaxConcurrentResolutionRule::StopFarthestThenOldest));
+    TestTrue(TEXT("Destruction concurrency retains the 140 ms admission window"),
+             FMath::IsNearlyEqual(
+                 MeridianDestructionConcurrency->Concurrency.RetriggerTime,
+                 Audio->GetDestructionCooldownSeconds()));
+    TestTrue(TEXT("All faction destruction cues share one concurrency policy"),
+             MeridianDestructionConcurrency == KharuunDestructionConcurrency &&
+                 MeridianDestructionConcurrency == ChoirDestructionConcurrency);
+    TestTrue(TEXT("Command and destruction concurrency remain independent"),
+             CommandConcurrency != MeridianDestructionConcurrency);
 
     Audio->ResetRateLimitsForTest();
     TestTrue(TEXT("First accepted command cue is admitted"),

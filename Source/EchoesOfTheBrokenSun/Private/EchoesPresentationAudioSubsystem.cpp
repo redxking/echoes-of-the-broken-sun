@@ -4,8 +4,9 @@
 #include "EchoesOfTheBrokenSun.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
-#include "Sound/SoundBase.h"
 #include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundConcurrency.h"
 
 namespace
 {
@@ -47,6 +48,34 @@ void UEchoesPresentationAudioSubsystem::Initialize(
         LoadObject<USoundBase>(nullptr, KharuunDestructionCuePath);
     ChoirDestructionSound =
         LoadObject<USoundBase>(nullptr, ChoirDestructionCuePath);
+
+    CommandConcurrency =
+        NewObject<USoundConcurrency>(this, NAME_None, RF_Transient);
+    if (CommandConcurrency != nullptr)
+    {
+        FSoundConcurrencySettings& Concurrency =
+            CommandConcurrency->Concurrency;
+        Concurrency.MaxCount = GetCommandMaxConcurrentVoices();
+        Concurrency.bLimitToOwner = false;
+        Concurrency.ResolutionRule =
+            EMaxConcurrentResolutionRule::PreventNew;
+        Concurrency.RetriggerTime = GetCommandCooldownSeconds();
+    }
+
+    DestructionConcurrency =
+        NewObject<USoundConcurrency>(this, NAME_None, RF_Transient);
+    if (DestructionConcurrency != nullptr)
+    {
+        FSoundConcurrencySettings& Concurrency =
+            DestructionConcurrency->Concurrency;
+        Concurrency.MaxCount = GetDestructionMaxConcurrentVoices();
+        Concurrency.bLimitToOwner = false;
+        Concurrency.ResolutionRule =
+            EMaxConcurrentResolutionRule::StopFarthestThenOldest;
+        Concurrency.RetriggerTime = GetDestructionCooldownSeconds();
+        Concurrency.VoiceStealReleaseTime = 0.05f;
+    }
+
     DestructionAttenuation = NewObject<USoundAttenuation>(this);
     if (DestructionAttenuation != nullptr)
     {
@@ -62,17 +91,24 @@ void UEchoesPresentationAudioSubsystem::Initialize(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_AUDIO_READY] revision=presentation-audio-v1 cues=%d authored=%s command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false"),
+        TEXT("[ECHOES_AUDIO_READY] revision=presentation-audio-v1 cues=%d authored=%s command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false commandMaxConcurrent=%d destructionMaxConcurrent=%d concurrencyPolicies=%s"),
         GetLoadedCueCount(),
-        HasAllAuthoredCueAssets() && HasBoundedSpatialAttenuation()
-            ? TEXT("true") : TEXT("false"));
+        HasAllAuthoredCueAssets() && HasBoundedSpatialAttenuation() &&
+                HasBoundedConcurrencyPolicies()
+            ? TEXT("true") : TEXT("false"),
+        GetCommandMaxConcurrentVoices(),
+        GetDestructionMaxConcurrentVoices(),
+        HasBoundedConcurrencyPolicies() ? TEXT("true") : TEXT("false"));
 }
 
 bool UEchoesPresentationAudioSubsystem::PlayCommandConfirmation()
 {
     UWorld* World = GetWorld();
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
-    if (World == nullptr || Settings == nullptr || CommandConfirmSound == nullptr)
+    USoundConcurrency* Concurrency = GetConcurrencyPolicy(
+        EEchoesPresentationAudioCue::CommandConfirm);
+    if (World == nullptr || Settings == nullptr || CommandConfirmSound == nullptr ||
+        Concurrency == nullptr)
     {
         return false;
     }
@@ -89,7 +125,13 @@ bool UEchoesPresentationAudioSubsystem::PlayCommandConfirmation()
         EEchoesPresentationAudioCue::CommandConfirm,
         EffectsVolume,
         Settings->IsReducedDynamicRangeEnabled());
-    UGameplayStatics::PlaySound2D(World, CommandConfirmSound, Volume);
+    UGameplayStatics::PlaySound2D(
+        World,
+        CommandConfirmSound,
+        Volume,
+        1.0f,
+        0.0f,
+        Concurrency);
     ++SuccessfulCommandPlayCount;
     UE_LOG(
         LogEchoes,
@@ -119,7 +161,9 @@ bool UEchoesPresentationAudioSubsystem::PlayDestruction(
     UWorld* World = GetWorld();
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     USoundBase* Sound = GetCueAsset(Cue);
-    if (World == nullptr || Settings == nullptr || Sound == nullptr)
+    USoundConcurrency* Concurrency = GetConcurrencyPolicy(Cue);
+    if (World == nullptr || Settings == nullptr || Sound == nullptr ||
+        Concurrency == nullptr)
     {
         return false;
     }
@@ -141,7 +185,8 @@ bool UEchoesPresentationAudioSubsystem::PlayDestruction(
         Volume,
         1.0f,
         0.0f,
-        DestructionAttenuation);
+        DestructionAttenuation,
+        Concurrency);
     ++SuccessfulDestructionPlayCount;
     UE_LOG(
         LogEchoes,
@@ -176,6 +221,35 @@ bool UEchoesPresentationAudioSubsystem::HasBoundedSpatialAttenuation() const
         DestructionAttenuation->Attenuation.AttenuationShape ==
             EAttenuationShape::Sphere &&
         DestructionAttenuation->Attenuation.FalloffDistance > 0.0f;
+}
+
+bool UEchoesPresentationAudioSubsystem::HasBoundedConcurrencyPolicies() const
+{
+    if (CommandConcurrency == nullptr || DestructionConcurrency == nullptr)
+    {
+        return false;
+    }
+
+    const FSoundConcurrencySettings& Command = CommandConcurrency->Concurrency;
+    const FSoundConcurrencySettings& Destruction =
+        DestructionConcurrency->Concurrency;
+    return CommandConcurrency->GetOuter() == this &&
+        DestructionConcurrency->GetOuter() == this &&
+        CommandConcurrency->HasAnyFlags(RF_Transient) &&
+        DestructionConcurrency->HasAnyFlags(RF_Transient) &&
+        Command.MaxCount == GetCommandMaxConcurrentVoices() &&
+        !Command.bLimitToOwner &&
+        Command.ResolutionRule == EMaxConcurrentResolutionRule::PreventNew &&
+        FMath::IsNearlyEqual(
+            Command.RetriggerTime,
+            GetCommandCooldownSeconds()) &&
+        Destruction.MaxCount == GetDestructionMaxConcurrentVoices() &&
+        !Destruction.bLimitToOwner &&
+        Destruction.ResolutionRule ==
+            EMaxConcurrentResolutionRule::StopFarthestThenOldest &&
+        FMath::IsNearlyEqual(
+            Destruction.RetriggerTime,
+            GetDestructionCooldownSeconds());
 }
 
 bool UEchoesPresentationAudioSubsystem::ReserveCue(
@@ -235,6 +309,14 @@ USoundBase* UEchoesPresentationAudioSubsystem::GetCueAsset(
     }
 }
 
+USoundConcurrency* UEchoesPresentationAudioSubsystem::GetConcurrencyPolicy(
+    EEchoesPresentationAudioCue Cue) const
+{
+    return Cue == EEchoesPresentationAudioCue::CommandConfirm
+        ? CommandConcurrency.Get()
+        : DestructionConcurrency.Get();
+}
+
 #if WITH_DEV_AUTOMATION_TESTS
 bool UEchoesPresentationAudioSubsystem::ReserveCueForTest(
     EEchoesPresentationAudioCue Cue,
@@ -258,5 +340,12 @@ float UEchoesPresentationAudioSubsystem::GetCueVolumeForTest(
     bool bReducedDynamicRange) const
 {
     return GetCueVolume(Cue, EffectsVolume, bReducedDynamicRange);
+}
+
+const USoundConcurrency*
+UEchoesPresentationAudioSubsystem::GetConcurrencyPolicyForTest(
+    EEchoesPresentationAudioCue Cue) const
+{
+    return GetConcurrencyPolicy(Cue);
 }
 #endif
