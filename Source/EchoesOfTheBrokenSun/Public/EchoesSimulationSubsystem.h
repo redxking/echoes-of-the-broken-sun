@@ -28,6 +28,7 @@ class AEchoesFogView;
 class AEchoesTerrainView;
 #if WITH_DEV_AUTOMATION_TESTS
 class FEchoesPrologueMissionTest;
+class FEchoesFreshCampaignJourneyTest;
 #endif
 
 /** Information the local presentation may use without exposing hidden state. */
@@ -549,6 +550,7 @@ public:
 private:
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FEchoesPrologueMissionTest;
+    friend class FEchoesFreshCampaignJourneyTest;
 #endif
     [[nodiscard]] FString GetActiveQuickSavePath() const;
     void RefreshCampaignBackupState();

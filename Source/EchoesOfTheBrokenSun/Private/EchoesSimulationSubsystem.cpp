@@ -47,6 +47,8 @@ constexpr int32 AssemblyOfTheMissingSiteRadiusTiles = 3;
 constexpr int32 SeveralVoicesOneCommandSiteRadiusTiles = 3;
 constexpr int32 BrokenSunSiteRadiusTiles = 3;
 constexpr int32 BrokenSunConvergenceRadiusTiles = 2;
+constexpr int32 CampaignMissionCount =
+    static_cast<int32>(EEchoesCampaignMissionId::TheBrokenSun);
 constexpr uint64 SeveralVoicesCrisisHoldTicks = 160;
 constexpr uint8 ChoirAtLumeReachQuickSaveEnvelopeVersion = 1;
 constexpr uint8 ChoirAtLumeReachQuickSaveMagic[] = {
@@ -2211,7 +2213,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NO_NEUTRAL_LEDGER_LOCKED] reason=exact ordered ten-record campaign required"));
+            TEXT("[ECHOES_NO_NEUTRAL_LEDGER_LOCKED] reason=required ordered M01-M10 campaign prefix missing"));
         return false;
     }
     if (SelectedOperation ==
@@ -2221,7 +2223,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_FUTURE_THAT_WON_LOCKED] reason=exact ordered eleven-record campaign required"));
+            TEXT("[ECHOES_FUTURE_THAT_WON_LOCKED] reason=required ordered M01-M11 campaign prefix missing"));
         return false;
     }
     if (SelectedOperation ==
@@ -2231,7 +2233,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_ASSEMBLY_OF_THE_MISSING_LOCKED] reason=exact ordered twelve-record campaign required"));
+            TEXT("[ECHOES_ASSEMBLY_OF_THE_MISSING_LOCKED] reason=required ordered M01-M12 campaign prefix missing"));
         return false;
     }
     if (SelectedOperation ==
@@ -2241,7 +2243,7 @@ bool UEchoesSimulationSubsystem::StartScenario(bool bUseStressScenario)
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_LOCKED] reason=exact ordered thirteen-record campaign required"));
+            TEXT("[ECHOES_SEVERAL_VOICES_ONE_COMMAND_LOCKED] reason=required ordered M01-M13 campaign prefix missing"));
         return false;
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
@@ -5054,28 +5056,28 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             EEchoesOperationMode::CampaignNoNeutralLedger &&
         !IsNoNeutralLedgerUnlocked())
     {
-        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Choir at Lume Reach with the exact ten-record ledger before No Neutral Ledger.");
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Choir at Lume Reach with the required ordered M01-M10 ledger prefix before No Neutral Ledger.");
         return false;
     }
     if (NewOperation ==
             EEchoesOperationMode::CampaignFutureThatWon &&
         !IsFutureThatWonUnlocked())
     {
-        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete No Neutral Ledger with the exact eleven-record ledger before The Future That Won.");
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete No Neutral Ledger with the required ordered M01-M11 ledger prefix before The Future That Won.");
         return false;
     }
     if (NewOperation ==
             EEchoesOperationMode::CampaignAssemblyOfTheMissing &&
         !IsAssemblyOfTheMissingUnlocked())
     {
-        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Future That Won with the exact twelve-record ledger before Assembly of the Missing.");
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete The Future That Won with the required ordered M01-M12 ledger prefix before Assembly of the Missing.");
         return false;
     }
     if (NewOperation ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
         !IsSeveralVoicesOneCommandUnlocked())
     {
-        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Assembly of the Missing with the exact thirteen-record ledger before Several Voices, One Command.");
+        OutFeedback = TEXT("[CAMPAIGN_MISSION_LOCKED] Complete Assembly of the Missing with the required ordered M01-M13 ledger prefix before Several Voices, One Command.");
         return false;
     }
     if (NewOperation == EEchoesOperationMode::CampaignTheBrokenSun &&
@@ -5505,6 +5507,17 @@ FString UEchoesSimulationSubsystem::GetQuickSavePath()
 
 FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
 {
+#if !UE_BUILD_SHIPPING
+    FString QuickSavePathOverride;
+    if (FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesQuickSavePath="),
+            QuickSavePathOverride) &&
+        !QuickSavePathOverride.IsEmpty())
+    {
+        return FPaths::ConvertRelativePathToFull(QuickSavePathOverride);
+    }
+#endif
     if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
     {
         FEchoesCampaignProgress PrerequisiteLedger;
@@ -8621,7 +8634,7 @@ bool UEchoesSimulationSubsystem::IsNoNeutralLedgerUnlocked() const
 {
     if (!IsChoirAtLumeReachUnlocked() ||
         CampaignProgress.Decisions.Num() < 10 ||
-        CampaignProgress.Decisions.Num() > 11)
+        CampaignProgress.Decisions.Num() > CampaignMissionCount)
     {
         return false;
     }
@@ -8665,7 +8678,7 @@ bool UEchoesSimulationSubsystem::IsNoNeutralLedgerUnlocked() const
 bool UEchoesSimulationSubsystem::IsFutureThatWonUnlocked() const
 {
     if (CampaignProgress.Decisions.Num() < 11 ||
-        CampaignProgress.Decisions.Num() > 12)
+        CampaignProgress.Decisions.Num() > CampaignMissionCount)
     {
         return false;
     }
@@ -8714,7 +8727,7 @@ bool UEchoesSimulationSubsystem::IsAssemblyOfTheMissingUnlocked() const
 {
     if (!bCampaignProgressAvailable ||
         CampaignProgress.Decisions.Num() < 12 ||
-        CampaignProgress.Decisions.Num() > 13)
+        CampaignProgress.Decisions.Num() > CampaignMissionCount)
     {
         return false;
     }
@@ -8773,7 +8786,7 @@ bool UEchoesSimulationSubsystem::IsSeveralVoicesOneCommandUnlocked() const
 {
     if (!bCampaignProgressAvailable ||
         CampaignProgress.Decisions.Num() < 13 ||
-        CampaignProgress.Decisions.Num() > 14)
+        CampaignProgress.Decisions.Num() > CampaignMissionCount)
     {
         return false;
     }
@@ -8836,7 +8849,7 @@ bool UEchoesSimulationSubsystem::IsBrokenSunUnlocked() const
 {
     if (!bCampaignProgressAvailable ||
         CampaignProgress.Decisions.Num() < 14 ||
-        CampaignProgress.Decisions.Num() > 15)
+        CampaignProgress.Decisions.Num() > CampaignMissionCount)
     {
         return false;
     }
