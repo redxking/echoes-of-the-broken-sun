@@ -18,6 +18,7 @@
 #include "EchoesSkirmishOverlayLayout.h"
 #include "EchoesSkirmishSetup.h"
 #include "EchoesTechnologyPanelLayout.h"
+#include "EchoesVisualTheme.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -28,27 +29,21 @@
 
 namespace
 {
-FLinearColor MinimapOwnerColor(uint8 Owner, bool bHighContrast)
+EEchoesVisualFaction VisualFactionFromLabel(const FString& Label)
 {
-    if (bHighContrast)
+    if (Label.Contains(TEXT("MERIDIAN"), ESearchCase::IgnoreCase))
     {
-        switch (Owner)
-        {
-            case 0: return FLinearColor(0.1f, 0.95f, 1.0f);
-            case 1: return FLinearColor(1.0f, 0.35f, 0.12f);
-            case 2: return FLinearColor(1.0f, 0.9f, 0.1f);
-            case 3: return FLinearColor(0.86f, 0.55f, 1.0f);
-            default: return FLinearColor::White;
-        }
+        return EEchoesVisualFaction::MeridianCompact;
     }
-    switch (Owner)
+    if (Label.Contains(TEXT("KHARUUN"), ESearchCase::IgnoreCase))
     {
-        case 0: return FLinearColor(0.04f, 0.72f, 0.88f);
-        case 1: return FLinearColor(0.92f, 0.30f, 0.05f);
-        case 2: return FLinearColor(0.95f, 0.74f, 0.08f);
-        case 3: return FLinearColor(0.62f, 0.30f, 0.95f);
-        default: return FLinearColor(0.72f, 0.72f, 0.72f);
+        return EEchoesVisualFaction::KharuunAssemblies;
     }
+    if (Label.Contains(TEXT("CHOIR"), ESearchCase::IgnoreCase))
+    {
+        return EEchoesVisualFaction::HollowChoir;
+    }
+    return EEchoesVisualFaction::Neutral;
 }
 
 const TCHAR* ResearchDisplayName(echoes::sim::ResearchType Technology)
@@ -141,6 +136,186 @@ FString ActiveSkirmishMapDisplayName(
 }
 }
 
+void AEchoesHUD::DrawVisualPanel(
+    const FBox2D& Bounds,
+    const FEchoesVisualTheme& Theme,
+    const bool bEmphasized)
+{
+    if (Canvas == nullptr || Bounds.GetSize().X <= 0.0f ||
+        Bounds.GetSize().Y <= 0.0f)
+    {
+        return;
+    }
+    const FVector2D Size = Bounds.GetSize();
+    const float Border = bEmphasized
+        ? Theme.EmphasisThickness : Theme.BorderThickness;
+    const float Corner = FMath::Min(
+        Theme.CornerLength,
+        FMath::Min(Size.X, Size.Y) * 0.22f);
+    DrawRect(Theme.ElevatedSurface,
+             Bounds.Min.X, Bounds.Min.Y, Size.X, Size.Y);
+    DrawLine(Bounds.Min.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Min.Y,
+             Theme.Border, Theme.BorderThickness);
+    DrawLine(Bounds.Max.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Max.Y,
+             Theme.Border, Theme.BorderThickness);
+    DrawLine(Bounds.Max.X, Bounds.Max.Y, Bounds.Min.X, Bounds.Max.Y,
+             Theme.Border, Theme.BorderThickness);
+    DrawLine(Bounds.Min.X, Bounds.Max.Y, Bounds.Min.X, Bounds.Min.Y,
+             Theme.Border, Theme.BorderThickness);
+    DrawLine(Bounds.Min.X, Bounds.Min.Y, Bounds.Min.X + Corner, Bounds.Min.Y,
+             Theme.Accent, Border);
+    DrawLine(Bounds.Min.X, Bounds.Min.Y, Bounds.Min.X, Bounds.Min.Y + Corner,
+             Theme.Accent, Border);
+    DrawLine(Bounds.Max.X - Corner, Bounds.Max.Y, Bounds.Max.X, Bounds.Max.Y,
+             Theme.Accent, Border);
+    DrawLine(Bounds.Max.X, Bounds.Max.Y - Corner, Bounds.Max.X, Bounds.Max.Y,
+             Theme.Accent, Border);
+}
+
+void AEchoesHUD::DrawShatteredSunMotif(
+    const FBox2D& Bounds,
+    const FEchoesVisualTheme& Theme,
+    const UEchoesGameUserSettings* Settings,
+    const float Opacity)
+{
+    if (Canvas == nullptr || Opacity <= 0.0f)
+    {
+        return;
+    }
+    const bool bReducedMotion =
+        Settings != nullptr && Settings->IsReducedMotionEnabled();
+    const float Time = !bReducedMotion && GetWorld() != nullptr
+        ? GetWorld()->GetTimeSeconds() * 0.018f : 0.0f;
+    const FVector2D Size = Bounds.GetSize();
+    const FVector2D Center(
+        Bounds.Min.X + Size.X * 0.78f,
+        Bounds.Min.Y + Size.Y * 0.24f);
+    const float BaseRadius = FMath::Clamp(
+        FMath::Min(Size.X, Size.Y) * 0.16f,
+        38.0f,
+        150.0f);
+    const FLinearColor Ring = Theme.WithAlpha(Theme.MissionCritical, Opacity);
+    const FLinearColor Fracture = Theme.WithAlpha(Theme.Accent, Opacity * 0.65f);
+
+    for (int32 RingIndex = 0; RingIndex < 3; ++RingIndex)
+    {
+        const float Radius = BaseRadius * (0.66f + RingIndex * 0.22f);
+        constexpr int32 SegmentCount = 24;
+        for (int32 Segment = 0; Segment < SegmentCount; ++Segment)
+        {
+            if ((Segment + RingIndex * 2) % 5 == 0)
+            {
+                continue;
+            }
+            const float StartAngle = Time * (RingIndex % 2 == 0 ? 1.0f : -1.0f) +
+                static_cast<float>(Segment) * UE_TWO_PI / SegmentCount;
+            const float EndAngle = StartAngle + UE_TWO_PI / SegmentCount * 0.68f;
+            const FVector2D Start = Center + FVector2D(
+                FMath::Cos(StartAngle), FMath::Sin(StartAngle)) * Radius;
+            const FVector2D End = Center + FVector2D(
+                FMath::Cos(EndAngle), FMath::Sin(EndAngle)) * Radius;
+            DrawLine(Start.X, Start.Y, End.X, End.Y, Ring,
+                     RingIndex == 1 ? 2.0f : 1.0f);
+        }
+    }
+    for (int32 Ray = 0; Ray < 12; ++Ray)
+    {
+        if (Ray == 2 || Ray == 7)
+        {
+            continue;
+        }
+        const float Angle = static_cast<float>(Ray) * UE_TWO_PI / 12.0f - Time;
+        const FVector2D Direction(FMath::Cos(Angle), FMath::Sin(Angle));
+        const FVector2D Start = Center + Direction * BaseRadius * 0.22f;
+        const FVector2D End = Center + Direction * BaseRadius *
+            (Ray % 3 == 0 ? 1.38f : 1.08f);
+        DrawLine(Start.X, Start.Y, End.X, End.Y, Fracture, 1.0f);
+    }
+    const float Core = BaseRadius * 0.18f;
+    DrawLine(Center.X, Center.Y - Core, Center.X + Core, Center.Y,
+             Ring, 2.0f);
+    DrawLine(Center.X + Core, Center.Y, Center.X, Center.Y + Core,
+             Ring, 2.0f);
+    DrawLine(Center.X, Center.Y + Core, Center.X - Core, Center.Y,
+             Ring, 2.0f);
+    DrawLine(Center.X - Core, Center.Y, Center.X, Center.Y - Core,
+             Ring, 2.0f);
+}
+
+void AEchoesHUD::DrawFactionSigil(
+    const EEchoesVisualFaction Faction,
+    const FVector2D& Center,
+    const float Radius,
+    const FEchoesVisualTheme& Theme,
+    const float Opacity)
+{
+    if (Canvas == nullptr || Radius <= 0.0f)
+    {
+        return;
+    }
+    const FLinearColor Color = Theme.WithAlpha(
+        Theme.FactionColor(Faction), Opacity);
+    const float Weight = FMath::Max(1.0f, Theme.BorderThickness);
+    const auto Line = [this, Color, Weight](
+                          const FVector2D& A,
+                          const FVector2D& B)
+    {
+        DrawLine(A.X, A.Y, B.X, B.Y, Color, Weight);
+    };
+    if (Faction == EEchoesVisualFaction::MeridianCompact)
+    {
+        const FVector2D Top(Center.X, Center.Y - Radius);
+        const FVector2D Right(Center.X + Radius, Center.Y);
+        const FVector2D Bottom(Center.X, Center.Y + Radius);
+        const FVector2D Left(Center.X - Radius, Center.Y);
+        Line(Top, Right); Line(Right, Bottom); Line(Bottom, Left); Line(Left, Top);
+        Line(FVector2D(Center.X, Center.Y - Radius * 0.68f),
+             FVector2D(Center.X, Center.Y + Radius * 0.68f));
+        Line(FVector2D(Center.X - Radius * 0.42f, Center.Y),
+             FVector2D(Center.X + Radius * 0.42f, Center.Y));
+    }
+    else if (Faction == EEchoesVisualFaction::KharuunAssemblies)
+    {
+        const FVector2D Top(Center.X, Center.Y - Radius);
+        const FVector2D BottomRight(Center.X + Radius * 0.86f,
+                                    Center.Y + Radius * 0.62f);
+        const FVector2D BottomLeft(Center.X - Radius * 0.86f,
+                                   Center.Y + Radius * 0.62f);
+        Line(Top, BottomRight); Line(BottomRight, BottomLeft); Line(BottomLeft, Top);
+        Line(FVector2D(Center.X, Center.Y - Radius * 0.34f),
+             FVector2D(Center.X - Radius * 0.52f, Center.Y + Radius));
+        Line(FVector2D(Center.X, Center.Y - Radius * 0.34f),
+             FVector2D(Center.X + Radius * 0.52f, Center.Y + Radius));
+    }
+    else if (Faction == EEchoesVisualFaction::HollowChoir)
+    {
+        const float Offset = Radius * 0.24f;
+        Line(FVector2D(Center.X - Radius, Center.Y - Offset),
+             FVector2D(Center.X, Center.Y - Radius));
+        Line(FVector2D(Center.X, Center.Y - Radius),
+             FVector2D(Center.X + Radius, Center.Y - Offset));
+        Line(FVector2D(Center.X + Radius, Center.Y - Offset),
+             FVector2D(Center.X, Center.Y + Radius - Offset));
+        Line(FVector2D(Center.X, Center.Y + Radius - Offset),
+             FVector2D(Center.X - Radius, Center.Y - Offset));
+        Line(FVector2D(Center.X - Radius * 0.72f, Center.Y + Offset),
+             FVector2D(Center.X, Center.Y - Radius + Offset));
+        Line(FVector2D(Center.X, Center.Y - Radius + Offset),
+             FVector2D(Center.X + Radius * 0.72f, Center.Y + Offset));
+        Line(FVector2D(Center.X + Radius * 0.72f, Center.Y + Offset),
+             FVector2D(Center.X, Center.Y + Radius));
+        Line(FVector2D(Center.X, Center.Y + Radius),
+             FVector2D(Center.X - Radius * 0.72f, Center.Y + Offset));
+    }
+    else
+    {
+        Line(FVector2D(Center.X - Radius, Center.Y),
+             FVector2D(Center.X + Radius, Center.Y));
+        Line(FVector2D(Center.X, Center.Y - Radius),
+             FVector2D(Center.X, Center.Y + Radius));
+    }
+}
+
 void AEchoesHUD::DrawHUD()
 {
     Super::DrawHUD();
@@ -164,22 +339,17 @@ void AEchoesHUD::DrawHUD()
         false);
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float TextX = 34.0f;
     const auto HudY = [HudScale](float Offset)
     {
         return 18.0f + Offset * HudScale;
     };
     const float PanelWidth = HudLayout.MainPanel.GetSize().X;
-    const FLinearColor PanelColor =
-        bHighContrast
-            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-            : FLinearColor(0.008f, 0.018f, 0.035f, 0.88f);
-    const FLinearColor AccentColor =
-        bHighContrast
-            ? FLinearColor(1.0f, 0.9f, 0.1f)
-            : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor SecondaryColor =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
+    const FLinearColor PanelColor = Theme.Surface;
+    const FLinearColor AccentColor = Theme.Accent;
+    const FLinearColor SecondaryColor = Theme.TextSecondary;
 
     if (EchoesController != nullptr &&
         EchoesController->IsOnlineFrontDoorVisible())
@@ -297,7 +467,7 @@ void AEchoesHUD::DrawHUD()
         PanelWidth,
         HudLayout.MainPanel.GetSize().Y);
     DrawText(
-        TEXT("ECHOES OF THE BROKEN SUN  |  PLAYABLE SYSTEMS BUILD — ACTIVE DEVELOPMENT"),
+        TEXT("ECHOES OF THE BROKEN SUN  //  SORYN TACTICAL AUTHORITY"),
         AccentColor,
         TextX,
         HudY(13.0f),
@@ -909,14 +1079,12 @@ void AEchoesHUD::DrawOnlineTitleEntry(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const FBox2D Button = FEchoesOnlineFrontDoorLayout::BuildTitleEntry(
         FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor TextColor = bHighContrast
-        ? FLinearColor::Black
-        : FLinearColor(0.0f, 0.06f, 0.09f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor TextColor = Theme.ActionText;
     DrawRect(
         Accent,
         Button.Min.X,
@@ -952,36 +1120,27 @@ void AEchoesHUD::DrawOnlineFrontDoor(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const FEchoesOnlineFrontDoorLayout Layout =
         FEchoesOnlineFrontDoorLayout::Build(
             FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
-    const FLinearColor Backdrop = bHighContrast
-        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        : FLinearColor(0.005f, 0.012f, 0.026f, 0.992f);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body = bHighContrast
-        ? FLinearColor::White
-        : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted = bHighContrast
-        ? FLinearColor(0.9f, 0.9f, 0.9f)
-        : FLinearColor(0.55f, 0.64f, 0.73f);
-    const FLinearColor ErrorColor = bHighContrast
-        ? FLinearColor(1.0f, 0.85f, 0.2f)
-        : FLinearColor(1.0f, 0.38f, 0.22f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
+    const FLinearColor ErrorColor = Theme.Danger;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const float Left = Layout.Origin.X;
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
     const float TextScale = Layout.TextScale;
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.76f),
-             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, Layout.Size.X, Layout.Size.Y);
-    DrawLine(Left, Top, Left + Layout.Size.X, Top, Accent, 4.0f);
-    DrawLine(Left, Top + Layout.Size.Y, Left + Layout.Size.X,
-             Top + Layout.Size.Y, Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+                    Theme, true);
+    DrawShatteredSunMotif(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+        Theme, Settings, bHighContrast ? 0.12f : 0.055f);
     DrawText(
         State == EEchoesOnlineFrontDoorState::Hosting
             ? TEXT("HOSTING ONLINE 1v1")
@@ -1013,7 +1172,7 @@ void AEchoesHUD::DrawOnlineFrontDoor(
         0.74f * TextScale,
         false);
 
-    const auto DrawControl = [this, Accent, Body, Muted,
+    const auto DrawControl = [this, Accent, Body, Muted, Theme,
                               SmallFont, TextScale, ContentScale](
                                  const FBox2D& Box,
                                  const FString& Label,
@@ -1022,9 +1181,9 @@ void AEchoesHUD::DrawOnlineFrontDoor(
     {
         const FLinearColor Fill = bFocused || bPrimary
             ? Accent
-            : FLinearColor(0.12f, 0.18f, 0.24f, 0.72f);
+            : Theme.WithAlpha(Theme.Border, 0.46f);
         const FLinearColor LabelColor = bFocused || bPrimary
-            ? FLinearColor(0.0f, 0.06f, 0.09f)
+            ? Theme.ActionText
             : Body;
         DrawRect(Fill, Box.Min.X, Box.Min.Y,
                  Box.GetSize().X, Box.GetSize().Y);
@@ -1170,6 +1329,8 @@ void AEchoesHUD::DrawNetworkReconnectBanner(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const int32 Remaining =
         EchoesController->GetOpponentReconnectSecondsRemaining();
     const int32 Minutes = Remaining / 60;
@@ -1178,17 +1339,9 @@ void AEchoesHUD::DrawNetworkReconnectBanner(
     const float Height = 54.0f * HudScale;
     const float Left = (Canvas->ClipX - Width) * 0.5f;
     const float Top = 84.0f * HudScale;
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(1.0f, 0.58f, 0.18f);
-    DrawRect(
-        bHighContrast
-            ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-            : FLinearColor(0.04f, 0.015f, 0.005f, 0.96f),
-        Left,
-        Top,
-        Width,
-        Height);
+    const FLinearColor Accent = Theme.Warning;
+    DrawRect(Theme.WithAlpha(Theme.ElevatedSurface, 0.98f),
+             Left, Top, Width, Height);
     DrawLine(Left, Top, Left + Width, Top, Accent, 3.0f);
     DrawText(
         FString::Printf(
@@ -1215,29 +1368,21 @@ void AEchoesHUD::DrawOnlineLocalMenu(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const FEchoesOnlineLocalMenuLayout Layout =
         FEchoesOnlineLocalMenuLayout::Build(
             FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body = bHighContrast
-        ? FLinearColor::White
-        : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted = bHighContrast
-        ? FLinearColor(0.9f, 0.9f, 0.9f)
-        : FLinearColor(0.57f, 0.67f, 0.76f);
-    const FLinearColor Backdrop = bHighContrast
-        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        : FLinearColor(0.005f, 0.012f, 0.026f, 0.985f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const float Left = Layout.Origin.X;
     const float Top = Layout.Origin.Y;
     const float Scale = Layout.ContentScale;
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f),
-             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, Layout.Size.X, Layout.Size.Y);
-    DrawLine(Left, Top, Left + Layout.Size.X, Top, Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+                    Theme, true);
     DrawText(TEXT("ONLINE MATCH"), Accent,
              Left + 42.0f, Top + 36.0f * Scale,
              SmallFont, 1.55f * Layout.TextScale, false);
@@ -1263,11 +1408,11 @@ void AEchoesHUD::DrawOnlineLocalMenu(
              Layout.ResumeButton.Min.X, Layout.ResumeButton.Min.Y,
              Layout.ResumeButton.GetSize().X, Layout.ResumeButton.GetSize().Y);
     DrawText(TEXT("ENTER / ESCAPE / P / CLICK: RESUME"),
-             FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Layout.ResumeButton.Min.X + 18.0f * Scale,
              Layout.ResumeButton.Min.Y + 15.0f * Scale,
              SmallFont, 0.90f * Layout.TextScale, false);
-    DrawRect(FLinearColor(0.55f, 0.12f, 0.08f, 0.92f),
+    DrawRect(Theme.WithAlpha(Theme.Danger, 0.88f),
              Layout.LeaveButton.Min.X, Layout.LeaveButton.Min.Y,
              Layout.LeaveButton.GetSize().X, Layout.LeaveButton.GetSize().Y);
     DrawText(TEXT("F10 / MENU / GAMEPAD X / CLICK: LEAVE ONLINE MATCH"), Body,
@@ -1330,6 +1475,8 @@ void AEchoesHUD::DrawCommandDeck(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
         FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
@@ -1342,21 +1489,11 @@ void AEchoesHUD::DrawCommandDeck(
     const float Left = Layout.CommandDeckPanel.Min.X;
     const float Top = Layout.CommandDeckPanel.Min.Y;
 
-    const FLinearColor Backdrop = bHighContrast
-        ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-        : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body = bHighContrast
-        ? FLinearColor::White
-        : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted = bHighContrast
-        ? FLinearColor(0.9f, 0.9f, 0.9f)
-        : FLinearColor(0.58f, 0.67f, 0.76f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawRect(Accent, Left, Top, PanelWidth, 3.0f * HudScale);
+    DrawVisualPanel(Layout.CommandDeckPanel, Theme, true);
     DrawRect(
         FLinearColor(Accent.R, Accent.G, Accent.B, 0.75f),
         Left,
@@ -1481,26 +1618,17 @@ void AEchoesHUD::DrawTechnologyPanel(
     const float Scale = FMath::Clamp(HudScale, 0.75f, 1.35f);
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const FEchoesTechnologyPanelLayout Layout =
         FEchoesTechnologyPanelLayout::Build(
             FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
-    const FLinearColor PanelColor =
-        bHighContrast
-            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.99f)
-            : FLinearColor(0.008f, 0.018f, 0.035f, 0.97f);
-    const FLinearColor AccentColor =
-        bHighContrast
-            ? FLinearColor(1.0f, 0.9f, 0.1f)
-            : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor MutedColor =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.68f, 0.73f, 0.82f);
+    const FLinearColor AccentColor = Theme.Accent;
+    const FLinearColor MutedColor = Theme.TextSecondary;
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.58f), 0.0f, 0.0f,
-             Canvas->ClipX, Canvas->ClipY);
-    DrawRect(PanelColor, Layout.Origin.X, Layout.Origin.Y,
-             Layout.Size.X, Layout.Size.Y);
-    DrawRect(AccentColor, Layout.Origin.X, Layout.Origin.Y,
-             Layout.Size.X, 3.0f * Scale);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+                    Theme, true);
 
     const float TextX = Layout.Origin.X + 34.0f * Scale;
     DrawText(
@@ -1595,7 +1723,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         if (bComplete)
         {
             Status = TEXT("COMPLETE");
-            StatusColor = FLinearColor(0.25f, 1.0f, 0.66f);
+            StatusColor = Theme.Success;
         }
         else if (bActive)
         {
@@ -1608,7 +1736,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         else if (bInterrupted)
         {
             Status = TEXT("INTERRUPTED — costs lost; select the producer to restart");
-            StatusColor = FLinearColor(1.0f, 0.38f, 0.22f);
+            StatusColor = Theme.Danger;
         }
         else if (Player->activeResearch != echoes::sim::ResearchType::None)
         {
@@ -1623,26 +1751,25 @@ void AEchoesHUD::DrawTechnologyPanel(
         else if (!bFunded)
         {
             Status = TEXT("INSUFFICIENT RESOURCES");
-            StatusColor = FLinearColor(1.0f, 0.55f, 0.2f);
+            StatusColor = Theme.Danger;
         }
         else if (!bSelectedProducer)
         {
             Status = TEXT("READY — select a production structure");
-            StatusColor = FLinearColor(1.0f, 0.78f, 0.25f);
+            StatusColor = Theme.Warning;
         }
         else
         {
             Status = TEXT("READY — click to research");
         }
 
-        const FLinearColor RowColor =
-            bComplete
-                ? FLinearColor(0.05f, 0.18f, 0.15f, 0.94f)
-                : bActive
-                      ? FLinearColor(0.04f, 0.18f, 0.25f, 0.96f)
-                      : bInterrupted
-                            ? FLinearColor(0.22f, 0.055f, 0.045f, 0.96f)
-                            : FLinearColor(0.025f, 0.055f, 0.09f, 0.94f);
+        const FLinearColor RowColor = bComplete
+            ? Theme.WithAlpha(Theme.Success, 0.12f)
+            : bActive
+                ? Theme.WithAlpha(Theme.Selected, 0.16f)
+                : bInterrupted
+                    ? Theme.WithAlpha(Theme.Danger, 0.16f)
+                    : Theme.WithAlpha(Theme.Border, 0.20f);
         DrawRect(RowColor, Row.Min.X, Row.Min.Y,
                  Row.GetSize().X, Row.GetSize().Y);
         if (bFocused)
@@ -1659,7 +1786,7 @@ void AEchoesHUD::DrawTechnologyPanel(
             Row.Min.X, Row.Min.Y, 4.0f * Scale, Row.GetSize().Y);
         DrawText(
             FString::Printf(TEXT("TIER %d  //  %s"), TierIndex + 1, *Name),
-            FLinearColor::White,
+            Theme.TextPrimary,
             Row.Min.X + 20.0f * Scale,
             Row.Min.Y + 16.0f * Scale,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
@@ -1729,6 +1856,8 @@ void AEchoesHUD::DrawSkirmishSetup(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesSkirmishSetupOverlayLayout Layout =
         FEchoesSkirmishSetupOverlayLayout::Build(
@@ -1740,18 +1869,9 @@ void AEchoesHUD::DrawSkirmishSetup(
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
     const float TextScale = Layout.TextScale;
-    const FLinearColor Backdrop = bHighContrast
-        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        : FLinearColor(0.005f, 0.012f, 0.026f, 0.988f);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body = bHighContrast
-        ? FLinearColor::White
-        : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted = bHighContrast
-        ? FLinearColor(0.9f, 0.9f, 0.9f)
-        : FLinearColor(0.55f, 0.64f, 0.73f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const FEchoesSkirmishSetup& Setup =
         EchoesController->GetPendingSkirmishSetup();
@@ -1769,12 +1889,12 @@ void AEchoesHUD::DrawSkirmishSetup(
         FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
         FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel)};
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f),
-             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth,
-             Top + PanelHeight, Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
+    DrawShatteredSunMotif(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+        Theme, Settings, bHighContrast ? 0.10f : 0.045f);
     DrawText(TEXT("SKIRMISH SETUP"), Accent,
              Left + 46.0f, Top + 34.0f * ContentScale,
              SmallFont, 1.58f * TextScale, false);
@@ -1792,10 +1912,8 @@ void AEchoesHUD::DrawSkirmishSetup(
         const bool bFocused = Row == FocusRow;
         DrawRect(
             bFocused
-                ? bHighContrast
-                    ? FLinearColor(1.0f, 0.9f, 0.1f, 0.24f)
-                    : FLinearColor(0.04f, 0.36f, 0.48f, 0.52f)
-                : FLinearColor(0.12f, 0.18f, 0.24f, 0.30f),
+                ? Theme.WithAlpha(Theme.Selected, bHighContrast ? 0.24f : 0.30f)
+                : Theme.WithAlpha(Theme.Border, 0.18f),
             RowBox.Min.X,
             RowBox.Min.Y,
             RowBox.GetSize().X,
@@ -1826,6 +1944,16 @@ void AEchoesHUD::DrawSkirmishSetup(
             SmallFont,
             0.88f * TextScale,
             false);
+        if (Row < 2)
+        {
+            DrawFactionSigil(
+                VisualFactionFromLabel(Values[Row]),
+                FVector2D(RowBox.Max.X - 22.0f * ContentScale,
+                          (RowBox.Min.Y + RowBox.Max.Y) * 0.5f),
+                11.0f * ContentScale,
+                Theme,
+                bFocused ? 1.0f : 0.68f);
+        }
     }
 
     DrawText(TEXT("BATTLEFIELD CONTRACT"), Accent,
@@ -1854,8 +1982,7 @@ void AEchoesHUD::DrawSkirmishSetup(
              Layout.ReviewButton.GetSize().X,
              Layout.ReviewButton.GetSize().Y);
     DrawText(TEXT("ENTER / GAMEPAD A: REVIEW DEPLOYMENT"),
-             bHighContrast ? FLinearColor::Black
-                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Left + PanelWidth * 0.5f - 194.0f * TextScale,
              Top + PanelHeight - 65.0f,
              SmallFont, 0.92f * TextScale, false);
@@ -1872,6 +1999,8 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
     }
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesSkirmishSummaryOverlayLayout Layout =
         FEchoesSkirmishSummaryOverlayLayout::Build(
@@ -1883,28 +2012,16 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
     const float TextScale = Layout.TextScale;
-    const FLinearColor Backdrop = bHighContrast
-        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        : FLinearColor(0.005f, 0.012f, 0.026f, 0.988f);
-    const FLinearColor Accent = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body = bHighContrast
-        ? FLinearColor::White
-        : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted = bHighContrast
-        ? FLinearColor(0.9f, 0.9f, 0.9f)
-        : FLinearColor(0.55f, 0.64f, 0.73f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const FEchoesSkirmishSetup& Setup =
         EchoesController->GetPendingSkirmishSetup();
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.74f),
-             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth,
-             Top + PanelHeight, Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
     DrawText(TEXT("DEPLOYMENT SUMMARY"), Accent,
              Left + 46.0f, Top + 38.0f * ContentScale,
              SmallFont, 1.52f * TextScale, false);
@@ -1930,6 +2047,13 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
                  Top + (136.0f + Row * 48.0f) * ContentScale,
                  SmallFont, 0.92f * TextScale, false);
     }
+    DrawFactionSigil(
+        VisualFactionFromLabel(
+            FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction)),
+        FVector2D(Left + PanelWidth - 86.0f * ContentScale,
+                  Top + 90.0f * ContentScale),
+        27.0f * ContentScale,
+        Theme);
     DrawText(
         FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset),
         Muted, Left + 54.0f, Top + 392.0f * ContentScale,
@@ -1966,8 +2090,7 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
              Layout.DeployButton.GetSize().X,
              Layout.DeployButton.GetSize().Y);
     DrawText(TEXT("ENTER / GAMEPAD A: DEPLOY"),
-             bHighContrast ? FLinearColor::Black
-                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Left + PanelWidth * 0.5f - 144.0f * TextScale,
              Top + PanelHeight - 65.0f,
              SmallFont, 0.94f * TextScale, false);
@@ -1985,6 +2108,8 @@ void AEchoesHUD::DrawTitleScreen(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const float PanelWidth = FMath::Min(
         FMath::Max(700.0f, Canvas->ClipX - 60.0f),
@@ -1999,17 +2124,9 @@ void AEchoesHUD::DrawTitleScreen(
         0.76f,
         1.22f);
     const float TextScale = HudScale * ContentScale;
-    const FLinearColor Backdrop =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.985f);
-    const FLinearColor Accent =
-        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
-                      : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.84f, 0.9f, 0.95f);
-    const FLinearColor Muted =
-        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
-                      : FLinearColor(0.55f, 0.64f, 0.73f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const FString AccessLine = FString::Printf(
         TEXT("[U] UI %d%%    [I] HIGH CONTRAST %s    [O] REDUCED MOTION %s    [/] REDUCED FLASHING %s"),
@@ -2096,12 +2213,25 @@ void AEchoesHUD::DrawTitleScreen(
     const bool bCampaignRestoreArmed =
         EchoesController->IsCampaignRestoreConfirmationArmed();
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.68f), 0.0f, 0.0f,
-             Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight,
-             Accent, 4.0f);
+    DrawRect(Theme.Canvas, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    const FBox2D ScreenBounds(
+        FVector2D::ZeroVector,
+        FVector2D(Canvas->ClipX, Canvas->ClipY));
+    const FBox2D PanelBounds(
+        FVector2D(Left, Top),
+        FVector2D(Left + PanelWidth, Top + PanelHeight));
+    DrawShatteredSunMotif(
+        ScreenBounds, Theme, Settings, bHighContrast ? 0.22f : 0.10f);
+    DrawVisualPanel(PanelBounds, Theme, true);
+    DrawShatteredSunMotif(
+        PanelBounds, Theme, Settings, bHighContrast ? 0.10f : 0.045f);
+    DrawFactionSigil(
+        VisualFactionFromLabel(LocalFaction),
+        FVector2D(Left + PanelWidth - 82.0f * ContentScale,
+                  Top + 84.0f * ContentScale),
+        30.0f * ContentScale,
+        Theme,
+        0.92f);
 
     DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent,
              Left + 48.0f, Top + 42.0f * ContentScale,
@@ -2359,8 +2489,7 @@ void AEchoesHUD::DrawTitleScreen(
              : CampaignJourney.State == EEchoesCampaignJourneyState::Complete
                  ? TEXT("ENTER: OPEN SELECTED BRIEF   //   CAMPAIGN COMPLETE")
                  : TEXT("PRESS ENTER TO OPEN THE OPERATIONS BRIEF"),
-             bHighContrast ? FLinearColor::Black
-                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Left + PanelWidth * 0.5f - 236.0f * TextScale,
              Top + PanelHeight - 69.0f,
              SmallFont, 0.94f * TextScale, false);
@@ -2385,6 +2514,8 @@ void AEchoesHUD::DrawObjectiveTracker(
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
         FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
     if (!Layout.bObjectiveVisible)
@@ -2396,16 +2527,11 @@ void AEchoesHUD::DrawObjectiveTracker(
     const float Left = Layout.ObjectivePanel.Min.X;
     const float Top = Layout.ObjectivePanel.Min.Y;
 
-    const FLinearColor Backdrop =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-                      : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
-    const FLinearColor Accent =
-        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
-                      : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Active =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.78f, 0.86f, 0.92f);
-    const FLinearColor Complete = FLinearColor(0.25f, 1.0f, 0.66f);
-    const FLinearColor Failed = FLinearColor(1.0f, 0.35f, 0.18f);
+    const FLinearColor Backdrop = Theme.Surface;
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Active = Theme.TextPrimary;
+    const FLinearColor Complete = Theme.Success;
+    const FLinearColor Failed = Theme.Danger;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const float TextScale = FMath::Clamp(HudScale, 0.82f, 1.2f);
 
@@ -3840,19 +3966,20 @@ void AEchoesHUD::DrawObjectiveTracker(
         {
             case echoes::sim::FutureWellChoice::Harvest:
                 WellState = TEXT("PROTOCOL ACTIVE — HARVEST");
-                WellColor = Complete;
+                WellColor = Theme.FutureWellHarvest;
                 break;
             case echoes::sim::FutureWellChoice::Preserve:
                 WellState = TEXT("PROTOCOL ACTIVE — PRESERVE");
-                WellColor = Complete;
+                WellColor = Theme.FutureWellPreserve;
                 break;
             case echoes::sim::FutureWellChoice::Reshape:
                 WellState = TEXT("PROTOCOL ACTIVE — RESHAPE");
-                WellColor = Complete;
+                WellColor = Theme.FutureWellReshape;
                 break;
             case echoes::sim::FutureWellChoice::Dormant:
             default:
                 WellState = TEXT("IN SIGHT — AWAITING PROTOCOL");
+                WellColor = Theme.FutureWellDormant;
                 break;
         }
     }
@@ -3921,6 +4048,8 @@ void AEchoesHUD::DrawMatchResult(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesResultOverlayLayout Layout =
         FEchoesResultOverlayLayout::Build(
@@ -4322,18 +4451,11 @@ void AEchoesHUD::DrawMatchResult(
                 break;
         }
     }
-    const FLinearColor Backdrop =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
     const FLinearColor Accent = bVictory
-        ? FLinearColor(0.25f, 1.0f, 0.66f)
-        : bDraw ? FLinearColor(1.0f, 0.82f, 0.2f)
-                : FLinearColor(1.0f, 0.32f, 0.16f);
-    const FLinearColor Body =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
-    const FLinearColor Muted =
-        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
-                      : FLinearColor(0.56f, 0.65f, 0.74f);
+        ? Theme.Success
+        : bDraw ? Theme.Warning : Theme.Danger;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const uint64 FinalTick = bOnlineResult
         ? EchoesController->GetPresentedFinalTick()
@@ -4341,11 +4463,14 @@ void AEchoesHUD::DrawMatchResult(
             ? Bridge->GetSimulation()->CurrentTick()
             : 0;
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.78f), 0.0f, 0.0f,
-             Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight, Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
+    DrawShatteredSunMotif(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
+        Theme, Settings, bHighContrast ? 0.12f : 0.05f);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent,
+             Theme.EmphasisThickness);
     DrawText(Result, Accent, Left + 44.0f, Top + 42.0f * ContentScale,
              SmallFont, 1.9f * TextScale, false);
     DrawText(Headline, Body, Left + 44.0f, Top + 96.0f * ContentScale,
@@ -4427,9 +4552,7 @@ void AEchoesHUD::DrawMatchResult(
              Muted, Left + 44.0f, Top + 244.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
 
-    const FLinearColor ButtonText = bHighContrast || !bVictory
-        ? FLinearColor::Black
-        : FLinearColor(0.0f, 0.08f, 0.05f);
+    const FLinearColor ButtonText = Theme.ActionText;
     const bool bHasDistinctPrimaryAction = bCanReturnToOperations ||
         bCampaignResultCanAdvance || bReplayConflict;
     if (bOnlineResult)
@@ -4524,6 +4647,8 @@ void AEchoesHUD::DrawPauseMenu(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesPauseOverlayLayout Layout =
         FEchoesPauseOverlayLayout::Build(
@@ -4535,17 +4660,9 @@ void AEchoesHUD::DrawPauseMenu(
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
     const float TextScale = Layout.TextScale;
-    const FLinearColor Backdrop =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
-    const FLinearColor Accent =
-        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
-                      : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Body =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
-    const FLinearColor Muted =
-        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
-                      : FLinearColor(0.56f, 0.65f, 0.74f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -4600,12 +4717,9 @@ void AEchoesHUD::DrawPauseMenu(
         Settings != nullptr && Settings->IsReducedDynamicRangeEnabled()
             ? TEXT("ON") : TEXT("OFF"));
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.76f), 0.0f, 0.0f,
-             Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight,
-             Accent, 4.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawVisualPanel(
+        FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
     DrawText(TEXT("FIELD MENU"), Accent, Left + 42.0f,
              Top + 34.0f * ContentScale, SmallFont, 1.65f * TextScale, false);
     DrawText(OperationLine,
@@ -4615,7 +4729,7 @@ void AEchoesHUD::DrawPauseMenu(
     DrawText(TEXT("MATCH CONTROL"), Accent, Left + 42.0f,
              Top + 132.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawRect(
-        FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+        Theme.WithAlpha(Theme.Selected, 0.13f),
         Layout.ResumeButton.Min.X,
         Layout.ResumeButton.Min.Y,
         Layout.ResumeButton.GetSize().X,
@@ -4624,7 +4738,7 @@ void AEchoesHUD::DrawPauseMenu(
              Left + 42.0f, Top + 162.0f * ContentScale,
              SmallFont, 1.0f * TextScale, false);
     DrawRect(
-        FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+        Theme.WithAlpha(Theme.Selected, 0.13f),
         Layout.RestartButton.Min.X,
         Layout.RestartButton.Min.Y,
         Layout.RestartButton.GetSize().X,
@@ -4636,8 +4750,8 @@ void AEchoesHUD::DrawPauseMenu(
     {
         DrawRect(
             EchoesController->IsReturnToOperationsConfirmationArmed()
-                ? FLinearColor(Accent.R, Accent.G, Accent.B, 0.30f)
-                : FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+                ? Theme.WithAlpha(Theme.Warning, 0.30f)
+                : Theme.WithAlpha(Theme.Selected, 0.13f),
             Layout.ReturnButton.Min.X,
             Layout.ReturnButton.Min.Y,
             Layout.ReturnButton.GetSize().X,
@@ -4680,8 +4794,7 @@ void AEchoesHUD::DrawPauseMenu(
                      EchoesController->IsReturnToOperationsConfirmationArmed()
                  ? TEXT("F10 / MENU AGAIN: RETURN TO OPERATIONS")
                  : TEXT("PRESS ENTER TO RESUME OPERATION"),
-             bHighContrast ? FLinearColor::Black
-                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Left + PanelWidth * 0.5f - 142.0f * TextScale,
              Top + PanelHeight - 65.0f,
              SmallFont, 0.92f * TextScale, false);
@@ -4699,6 +4812,8 @@ void AEchoesHUD::DrawMissionBriefing(
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const float PanelWidth = FMath::Min(
         FMath::Max(620.0f, Canvas->ClipX - 60.0f),
@@ -4714,17 +4829,9 @@ void AEchoesHUD::DrawMissionBriefing(
         0.68f,
         1.25f);
     const float TextScale = HudScale * ContentScale;
-    const FLinearColor Backdrop =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
-                      : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
-    const FLinearColor Accent =
-        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f)
-                      : FLinearColor(0.12f, 0.92f, 1.0f);
-    const FLinearColor Body =
-        bHighContrast ? FLinearColor::White : FLinearColor(0.82f, 0.88f, 0.94f);
-    const FLinearColor Muted =
-        bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
-                      : FLinearColor(0.55f, 0.64f, 0.72f);
+    const FLinearColor Accent = Theme.Accent;
+    const FLinearColor Body = Theme.TextPrimary;
+    const FLinearColor Muted = Theme.TextSecondary;
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
@@ -4884,10 +4991,20 @@ void AEchoesHUD::DrawMissionBriefing(
             break;
     }
 
-    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f), 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
-    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
-    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 3.0f);
-    DrawLine(Left, Top + PanelHeight, Left + PanelWidth, Top + PanelHeight, Accent, 3.0f);
+    DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    const FBox2D BriefingBounds(
+        FVector2D(Left, Top),
+        FVector2D(Left + PanelWidth, Top + PanelHeight));
+    DrawVisualPanel(BriefingBounds, Theme, true);
+    DrawShatteredSunMotif(
+        BriefingBounds, Theme, Settings, bHighContrast ? 0.10f : 0.045f);
+    DrawFactionSigil(
+        VisualFactionFromLabel(LocalFaction),
+        FVector2D(Left + PanelWidth - 76.0f * ContentScale,
+                  Top + 70.0f * ContentScale),
+        26.0f * ContentScale,
+        Theme,
+        0.92f);
 
     DrawText(TEXT("ECHOES OF THE BROKEN SUN"), Accent, TextLeft, Top + 34.0f * ContentScale,
              SmallFont, 1.55f * TextScale, false);
@@ -5413,7 +5530,7 @@ void AEchoesHUD::DrawMissionBriefing(
         : bBrokenSun
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS THE FINAL ACCORD")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
-             bHighContrast ? FLinearColor::Black : FLinearColor(0.0f, 0.06f, 0.09f),
+             Theme.ActionText,
              Left + PanelWidth * 0.5f - 180.0f * TextScale,
              Top + PanelHeight - 64.0f,
              SmallFont,
@@ -5435,6 +5552,8 @@ void AEchoesHUD::DrawTacticalMinimap(
     const echoes::sim::Simulation* Sim = Bridge->GetSimulation();
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
     const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
         FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale, false);
@@ -5446,11 +5565,8 @@ void AEchoesHUD::DrawTacticalMinimap(
     const float Left = Layout.MinimapPanel.Min.X;
     const float Top = Layout.MinimapPanel.Min.Y;
 
-    const FLinearColor Border =
-        bHighContrast ? FLinearColor(1.0f, 0.9f, 0.1f) : FLinearColor(0.15f, 0.88f, 1.0f);
-    const FLinearColor Background =
-        bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-                      : FLinearColor(0.008f, 0.018f, 0.035f, 0.93f);
+    const FLinearColor Border = Theme.Accent;
+    const FLinearColor Background = Theme.Surface;
     const FLinearColor Scar =
         bHighContrast ? FLinearColor(0.42f, 0.42f, 0.42f)
                       : FLinearColor(0.12f, 0.16f, 0.22f);
@@ -5510,14 +5626,14 @@ void AEchoesHUD::DrawTacticalMinimap(
             Entity.type == echoes::sim::EntityType::Barracks ||
             Entity.type == echoes::sim::EntityType::UtilityStructure;
         const float MarkerSize = bStructure ? 5.0f : 3.0f;
-        FLinearColor Color = MinimapOwnerColor(Entity.owner, bHighContrast);
+        FLinearColor Color = Theme.OwnerColor(Entity.owner);
         if (Entity.type == echoes::sim::EntityType::ResourceNode)
         {
-            Color = FLinearColor(1.0f, 0.62f, 0.08f);
+            Color = Theme.Warning;
         }
         else if (Entity.type == echoes::sim::EntityType::FutureWell)
         {
-            Color = FLinearColor(0.78f, 0.3f, 1.0f);
+            Color = Theme.FutureWellReshape;
         }
 
         const bool bSelected = SelectedIds != nullptr && SelectedIds->Contains(Entity.id);
@@ -5531,9 +5647,7 @@ void AEchoesHUD::DrawTacticalMinimap(
             Entity.type == echoes::sim::EntityType::UtilityStructure)
         {
             const float PowerRadius = MarkerSize + 2.5f;
-            const FLinearColor PowerColor = bHighContrast
-                ? FLinearColor::White
-                : FLinearColor(1.0f, 0.84f, 0.18f);
+            const FLinearColor PowerColor = Theme.MissionCritical;
             DrawLine(X, Y - PowerRadius, X + PowerRadius, Y, PowerColor, 1.5f);
             DrawLine(X + PowerRadius, Y, X, Y + PowerRadius, PowerColor, 1.5f);
             DrawLine(X, Y + PowerRadius, X - PowerRadius, Y, PowerColor, 1.5f);
@@ -5565,9 +5679,7 @@ void AEchoesHUD::DrawTacticalMinimap(
     int32 VibrationMarkerCount = 0;
     if (PlayerView != nullptr)
     {
-        const FLinearColor SignatureColor = bHighContrast
-            ? FLinearColor(1.0f, 0.9f, 0.1f)
-            : FLinearColor(1.0f, 0.48f, 0.12f);
+        const FLinearColor SignatureColor = Theme.Warning;
         for (const echoes::sim::VibrationSignature& Signature :
              PlayerView->VibrationSignatures())
         {
@@ -6369,10 +6481,10 @@ void AEchoesHUD::DrawVibrationSignatures(
     }
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const FLinearColor SignatureColor = bHighContrast
-        ? FLinearColor(1.0f, 0.9f, 0.1f)
-        : FLinearColor(1.0f, 0.48f, 0.12f);
+    const FLinearColor SignatureColor = Theme.Warning;
     const float AlertWidth = FMath::Clamp(460.0f * HudScale, 390.0f, 560.0f);
     const float MainPanelRight =
         18.0f + FMath::Min(
@@ -6387,9 +6499,8 @@ void AEchoesHUD::DrawVibrationSignatures(
     }
     if (AlertTop + 64.0f <= Canvas->ClipY - 24.0f)
     {
-        const FLinearColor AlertBackdrop = bHighContrast
-            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-            : FLinearColor(0.025f, 0.012f, 0.008f, 0.94f);
+        const FLinearColor AlertBackdrop =
+            Theme.WithAlpha(Theme.ElevatedSurface, 0.96f);
         DrawRect(AlertBackdrop, AlertLeft, AlertTop, AlertWidth, 64.0f);
         DrawLine(
             AlertLeft,
@@ -6410,8 +6521,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             false);
         DrawText(
             TEXT("APPROXIMATE LOCATION  //  ANONYMOUS  //  NO DIRECT TARGET"),
-            bHighContrast ? FLinearColor::White
-                          : FLinearColor(0.82f, 0.86f, 0.90f),
+            Theme.TextPrimary,
             AlertLeft + 18.0f,
             AlertTop + 36.0f,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
@@ -6486,9 +6596,8 @@ void AEchoesHUD::DrawVibrationSignatures(
                 SignatureColor,
                 2.0f);
         }
-        const FLinearColor LabelBackdrop = bHighContrast
-            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
-            : FLinearColor(0.025f, 0.012f, 0.008f, 0.90f);
+        const FLinearColor LabelBackdrop =
+            Theme.WithAlpha(Theme.ElevatedSurface, 0.94f);
         const float LabelPanelLeft =
             Placement.LabelPosition.X - 8.0f * HudScale;
         const float LabelPanelTop =
@@ -6526,8 +6635,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             false);
         DrawText(
             TEXT("APPROXIMATE // NO UNIT ID"),
-            bHighContrast ? FLinearColor::White
-                          : FLinearColor(0.86f, 0.72f, 0.64f),
+            Theme.TextSecondary,
             Placement.LabelPosition.X,
             Placement.LabelPosition.Y + 17.0f * HudScale,
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
@@ -6564,15 +6672,12 @@ void AEchoesHUD::DrawSelectionRectangle()
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
-    const FLinearColor BorderColor =
-        bHighContrast
-            ? FLinearColor(1.0f, 0.9f, 0.1f, 1.0f)
-            : FLinearColor(0.12f, 0.92f, 1.0f, 0.95f);
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
+    const FLinearColor BorderColor = Theme.Selected;
 
     DrawRect(
-        bHighContrast
-            ? FLinearColor(1.0f, 0.9f, 0.1f, 0.18f)
-            : FLinearColor(0.12f, 0.75f, 1.0f, 0.10f),
+        Theme.WithAlpha(Theme.Selected, bHighContrast ? 0.18f : 0.10f),
         MinX,
         MinY,
         MaxX - MinX,
