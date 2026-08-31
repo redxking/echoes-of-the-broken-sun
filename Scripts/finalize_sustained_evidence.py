@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import datetime
 import errno
 import hashlib
 import importlib.util
@@ -20,6 +21,7 @@ from typing import Callable, Iterable, Optional
 SUMMARY_NAME = "packaged_sustained_soak_summary.json"
 COMPLETION_NAME = "qualification_completion.json"
 MANIFEST_NAME = "sustained_evidence.sha256"
+ABORT_NAME = "qualification_abort.txt"
 PREFLIGHT_BINDING_NAME = "preflight_binding.json"
 PREFLIGHT_SNAPSHOT_NAME = "preflight_evidence_snapshot.zip"
 PREFLIGHT_VERIFIER_NAME = "validate_sustained_preflight.used.py"
@@ -81,6 +83,69 @@ def _write_bytes_atomic(path: pathlib.Path, payload: bytes) -> None:
 def _write_json_atomic(path: pathlib.Path, value: object) -> None:
     payload = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
     _write_bytes_atomic(path, payload)
+
+
+def _write_abort_provenance(
+    path: pathlib.Path,
+    *,
+    reason: str,
+    detail: str,
+    game_pid: int,
+    game_pgid: int,
+    elapsed_seconds: int,
+    next_sample_boundary_seconds: int,
+    wrapper_exit_code: int,
+    cleanup_signal: str,
+    termination_signal: str,
+    wrapper_pid: int | None = None,
+    wrapper_pgid: int | None = None,
+) -> None:
+    path = path.absolute()
+    if path.name != ABORT_NAME or not path.parent.is_dir() or path.parent.is_symlink():
+        raise FinalizationError("Abort provenance path is missing or unsafe")
+    if wrapper_pid is None:
+        wrapper_pid = os.getpid()
+    if wrapper_pgid is None:
+        wrapper_pgid = os.getpgid(0)
+    aborted_utc = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y%m%dT%H%M%SZ"
+    )
+    fields = {
+        "aborted_utc": aborted_utc,
+        "reason": reason,
+        "detail": detail,
+        "wrapper_pid": str(wrapper_pid),
+        "wrapper_pgid": str(wrapper_pgid),
+        "game_pid": str(game_pid),
+        "game_pgid": str(game_pgid),
+        "elapsed_seconds": str(elapsed_seconds),
+        "next_sample_boundary_seconds": str(next_sample_boundary_seconds),
+        "wrapper_status": "failed",
+        "wrapper_exit_code": str(wrapper_exit_code),
+        "cleanup_signal": cleanup_signal,
+        "termination_signal": termination_signal,
+    }
+    for key, value in fields.items():
+        if not value or "\n" in value or "\r" in value:
+            raise FinalizationError(f"Invalid abort-provenance value: {key}")
+    if re.fullmatch(r"[a-z0-9_]+", reason) is None:
+        raise FinalizationError("Abort-provenance reason is invalid")
+    if min(wrapper_pid, wrapper_pgid, game_pid, game_pgid) <= 0:
+        raise FinalizationError("Abort-provenance process identity is invalid")
+    if elapsed_seconds < -1 or next_sample_boundary_seconds < -1:
+        raise FinalizationError("Abort-provenance boundary is invalid")
+    if not 1 <= wrapper_exit_code <= 255:
+        raise FinalizationError("Abort-provenance exit code is invalid")
+    if cleanup_signal not in {"none", "TERM", "TERM+KILL"}:
+        raise FinalizationError("Abort-provenance cleanup signal is invalid")
+    if termination_signal not in {"none", "INT", "TERM", "HUP", "QUIT"}:
+        raise FinalizationError("Abort-provenance termination signal is invalid")
+    _write_bytes_atomic(
+        path,
+        "".join(f"{key}={value}\n" for key, value in fields.items()).encode(
+            "utf-8"
+        ),
+    )
 
 
 def _validate_evidence_names(names: Iterable[str]) -> list[str]:
@@ -571,19 +636,41 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--final-dir", required=True, type=pathlib.Path)
     parser.add_argument("--evidence-file", action="append", default=[])
     parser.add_argument("--trusted-preflight-verifier", type=pathlib.Path)
+    parser.add_argument("--abort-provenance", type=pathlib.Path)
+    parser.add_argument("--abort-reason", default="evidence_finalization_failed")
+    parser.add_argument("--game-pid", type=int)
+    parser.add_argument("--game-pgid", type=int)
+    parser.add_argument("--elapsed-seconds", type=int)
+    parser.add_argument("--next-sample-boundary-seconds", type=int)
+    parser.add_argument("--cleanup-signal", default="none")
+    parser.add_argument("--wrapper-pid", type=int)
+    parser.add_argument("--wrapper-pgid", type=int)
     parser.add_argument("--terminal", action="store_true")
     return parser
 
 
 def main() -> int:
     arguments = _parser().parse_args()
+    termination_signal = "none"
+    handled_signals = {
+        signal.SIGINT,
+        signal.SIGTERM,
+        signal.SIGHUP,
+        signal.SIGQUIT,
+    }
+    original_signal_mask = signal.pthread_sigmask(signal.SIG_BLOCK, handled_signals)
+
     def interrupted(signum: int, _frame: object) -> None:
+        nonlocal termination_signal
+        signal.pthread_sigmask(signal.SIG_BLOCK, handled_signals)
+        termination_signal = signal.Signals(signum).name.removeprefix("SIG")
         raise FinalizationError(
             f"Evidence publication interrupted by signal {signum} before commit"
         )
 
-    for handled_signal in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT):
+    for handled_signal in handled_signals:
         signal.signal(handled_signal, interrupted)
+    signal.pthread_sigmask(signal.SIG_SETMASK, original_signal_mask)
     try:
         published = finalize_evidence(
             arguments.staging_dir,
@@ -592,9 +679,62 @@ def main() -> int:
             terminal_publish=arguments.terminal,
             trusted_preflight_verifier=arguments.trusted_preflight_verifier,
         )
-    except FinalizationError as error:
+    except Exception as error:
+        signal.pthread_sigmask(signal.SIG_BLOCK, handled_signals)
         print(f"Sustained evidence finalization failed: {error}", file=sys.stderr)
-        return 1
+        exit_code = {
+            "INT": 130,
+            "TERM": 143,
+            "HUP": 129,
+            "QUIT": 131,
+        }.get(termination_signal, 1)
+        wrapper_identity = (arguments.wrapper_pid, arguments.wrapper_pgid)
+        runtime_provenance = (
+            arguments.game_pid,
+            arguments.game_pgid,
+            arguments.elapsed_seconds,
+            arguments.next_sample_boundary_seconds,
+        )
+        if arguments.abort_provenance is not None:
+            if any(value is None for value in runtime_provenance) or (
+                (wrapper_identity[0] is None) != (wrapper_identity[1] is None)
+            ):
+                print(
+                    "Sustained evidence abort provenance is incomplete.",
+                    file=sys.stderr,
+                )
+            else:
+                try:
+                    _write_abort_provenance(
+                        arguments.abort_provenance,
+                        reason=arguments.abort_reason,
+                        detail=str(error),
+                        game_pid=arguments.game_pid,
+                        game_pgid=arguments.game_pgid,
+                        elapsed_seconds=arguments.elapsed_seconds,
+                        next_sample_boundary_seconds=(
+                            arguments.next_sample_boundary_seconds
+                        ),
+                        wrapper_exit_code=exit_code,
+                        cleanup_signal=arguments.cleanup_signal,
+                        termination_signal=termination_signal,
+                        wrapper_pid=arguments.wrapper_pid,
+                        wrapper_pgid=arguments.wrapper_pgid,
+                    )
+                except (FinalizationError, OSError) as provenance_error:
+                    print(
+                        f"Sustained evidence abort provenance failed: {provenance_error}",
+                        file=sys.stderr,
+                    )
+        if arguments.terminal:
+            try:
+                sys.stdout.flush()
+                sys.stderr.flush()
+            finally:
+                os._exit(exit_code)
+        signal.pthread_sigmask(signal.SIG_SETMASK, original_signal_mask)
+        return exit_code
+    signal.pthread_sigmask(signal.SIG_SETMASK, original_signal_mask)
     print(published)
     return 0
 

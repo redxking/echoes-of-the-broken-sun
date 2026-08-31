@@ -4,17 +4,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+from unittest import mock
 
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "Scripts"))
 
 from finalize_sustained_evidence import (  # noqa: E402
+    ABORT_NAME,
     COMPLETION_NAME,
     MANIFEST_NAME,
     PREFLIGHT_BINDING_NAME,
@@ -22,6 +27,7 @@ from finalize_sustained_evidence import (  # noqa: E402
     SUMMARY_NAME,
     FinalizationError,
     finalize_evidence,
+    main as finalizer_main,
     verify_published_evidence,
 )
 from sustained_preflight_test_support import create_staged_one_hour  # noqa: E402
@@ -162,6 +168,22 @@ class SustainedEvidenceFinalizerTests(unittest.TestCase):
             command.extend(
                 ("--trusted-preflight-verifier", str(TRUSTED_PREFLIGHT_VERIFIER))
             )
+            command.extend(
+                (
+                    "--abort-provenance",
+                    str(staging / ABORT_NAME),
+                    "--game-pid",
+                    str(os.getpid()),
+                    "--game-pgid",
+                    str(os.getpgid(0)),
+                    "--elapsed-seconds",
+                    "3600",
+                    "--next-sample-boundary-seconds",
+                    "3605",
+                    "--cleanup-signal",
+                    "none",
+                )
+            )
             command.append("--terminal")
             completed = subprocess.run(
                 command, check=False, capture_output=True, text=True
@@ -171,6 +193,201 @@ class SustainedEvidenceFinalizerTests(unittest.TestCase):
             self.assertIn("Atomic completion record:", completed.stdout)
             self.assertTrue(final.is_dir())
             self.assertFalse(staging.exists())
+            self.assertFalse((final / ABORT_NAME).exists())
+
+    def test_terminal_cli_failure_records_exact_abort_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            staging, final, names = self.make_fixture(root, budgets_pass=False)
+            command = [
+                sys.executable,
+                str(PROJECT_ROOT / "Scripts" / "finalize_sustained_evidence.py"),
+                "--staging-dir",
+                str(staging),
+                "--final-dir",
+                str(final),
+            ]
+            for name in names:
+                command.extend(("--evidence-file", name))
+            command.extend(
+                (
+                    "--trusted-preflight-verifier",
+                    str(TRUSTED_PREFLIGHT_VERIFIER),
+                    "--abort-provenance",
+                    str(staging / ABORT_NAME),
+                    "--abort-reason",
+                    "evidence_finalization_failed",
+                    "--game-pid",
+                    str(os.getpid()),
+                    "--game-pgid",
+                    str(os.getpgid(0)),
+                    "--elapsed-seconds",
+                    "3600",
+                    "--next-sample-boundary-seconds",
+                    "3605",
+                    "--cleanup-signal",
+                    "none",
+                    "--wrapper-pid",
+                    str(os.getpid()),
+                    "--wrapper-pgid",
+                    str(os.getpgid(0)),
+                    "--terminal",
+                )
+            )
+            completed = subprocess.run(
+                command, check=False, capture_output=True, text=True
+            )
+            self.assertEqual(completed.returncode, 1, completed.stderr)
+            self.assertFalse(final.exists())
+            values = dict(
+                line.split("=", 1)
+                for line in (staging / ABORT_NAME)
+                .read_text(encoding="utf-8")
+                .splitlines()
+            )
+            self.assertEqual(values["reason"], "evidence_finalization_failed")
+            self.assertIn("not satisfied", values["detail"])
+            self.assertEqual(values["wrapper_exit_code"], "1")
+            self.assertEqual(values["termination_signal"], "none")
+            self.assertEqual(values["game_pid"], str(os.getpid()))
+            self.assertEqual(values["game_pgid"], str(os.getpgid(0)))
+            self.assertFalse((staging / COMPLETION_NAME).exists())
+            self.assertFalse((staging / MANIFEST_NAME).exists())
+
+    def test_terminal_cli_term_records_signal_provenance_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            staging, final, names = self.make_fixture(
+                root,
+                run_class="ten_minute_preflight",
+                runtime_qualified=False,
+            )
+            harness = "\n".join(
+                (
+                    "import os, pathlib, signal, sys, threading, time",
+                    "sys.path.insert(0, sys.argv[1])",
+                    "import finalize_sustained_evidence as finalizer",
+                    "sys.argv = ['finalize_sustained_evidence.py', *sys.argv[2:]]",
+                    "def interrupt_before_publish(*args, **kwargs):",
+                    "    def send_repeated_term():",
+                    "        os.kill(os.getpid(), signal.SIGTERM)",
+                    "        os.kill(os.getpid(), signal.SIGTERM)",
+                    "    sender = threading.Thread(target=send_repeated_term)",
+                    "    sender.start()",
+                    "    while sender.is_alive():",
+                    "        time.sleep(0.01)",
+                    "    raise AssertionError('signal handler did not interrupt publication')",
+                    "finalizer.finalize_evidence = interrupt_before_publish",
+                    "raise SystemExit(finalizer.main())",
+                )
+            )
+            command = [
+                sys.executable,
+                "-c",
+                harness,
+                str(PROJECT_ROOT / "Scripts"),
+                "--staging-dir",
+                str(staging),
+                "--final-dir",
+                str(final),
+            ]
+            for name in names:
+                command.extend(("--evidence-file", name))
+            command.extend(
+                (
+                    "--abort-provenance",
+                    str(staging / ABORT_NAME),
+                    "--game-pid",
+                    str(os.getpid()),
+                    "--game-pgid",
+                    str(os.getpgid(0)),
+                    "--elapsed-seconds",
+                    "600",
+                    "--next-sample-boundary-seconds",
+                    "605",
+                    "--cleanup-signal",
+                    "none",
+                    "--wrapper-pid",
+                    str(os.getpid()),
+                    "--wrapper-pgid",
+                    str(os.getpgid(0)),
+                    "--terminal",
+                )
+            )
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            _, stderr = process.communicate(timeout=10)
+            self.assertEqual(process.returncode, 143, stderr)
+            self.assertFalse(final.exists())
+            values = dict(
+                line.split("=", 1)
+                for line in (staging / ABORT_NAME)
+                .read_text(encoding="utf-8")
+                .splitlines()
+            )
+            self.assertEqual(values["termination_signal"], "TERM")
+            self.assertEqual(values["wrapper_exit_code"], "143")
+            self.assertEqual(values["wrapper_pid"], str(os.getpid()))
+            self.assertEqual(values["wrapper_pgid"], str(os.getpgid(0)))
+            self.assertIn("signal 15", values["detail"])
+            self.assertFalse((staging / COMPLETION_NAME).exists())
+            self.assertFalse((staging / MANIFEST_NAME).exists())
+
+    def test_terminal_cli_oserror_records_abort_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            staging = root / ".evidence.incomplete-test"
+            staging.mkdir()
+            abort_record = staging / ABORT_NAME
+            harness = "\n".join(
+                (
+                    "import sys",
+                    "sys.path.insert(0, sys.argv[1])",
+                    "import finalize_sustained_evidence as finalizer",
+                    "sys.argv = ['finalize_sustained_evidence.py', *sys.argv[2:]]",
+                    "def fail_with_oserror(*args, **kwargs):",
+                    "    raise OSError('synthetic storage failure')",
+                    "finalizer.finalize_evidence = fail_with_oserror",
+                    "raise SystemExit(finalizer.main())",
+                )
+            )
+            arguments = [
+                sys.executable,
+                "-c",
+                harness,
+                str(PROJECT_ROOT / "Scripts"),
+                "--staging-dir",
+                str(staging),
+                "--final-dir",
+                str(root / "evidence"),
+                "--abort-provenance",
+                str(abort_record),
+                "--game-pid",
+                str(os.getpid()),
+                "--game-pgid",
+                str(os.getpgid(0)),
+                "--elapsed-seconds",
+                "600",
+                "--next-sample-boundary-seconds",
+                "605",
+                "--terminal",
+            ]
+            completed = subprocess.run(
+                arguments, check=False, capture_output=True, text=True
+            )
+            self.assertEqual(completed.returncode, 1, completed.stderr)
+            values = dict(
+                line.split("=", 1)
+                for line in abort_record.read_text(encoding="utf-8").splitlines()
+            )
+            self.assertEqual(values["reason"], "evidence_finalization_failed")
+            self.assertEqual(values["detail"], "synthetic storage failure")
+            self.assertEqual(values["wrapper_exit_code"], "1")
+            self.assertEqual(values["termination_signal"], "none")
 
     def test_failed_budget_never_publishes_one_hour_result(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
