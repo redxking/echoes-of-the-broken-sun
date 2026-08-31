@@ -26,7 +26,7 @@
 
   <main id="main-content" class="page-main">
     <header class="page-hero">
-      <span class="section-kicker">Development archive / Source snapshot August 30, 2026</span>
+      <span class="section-kicker">Development archive / Source snapshot August 31, 2026</span>
       <h1>Building the<br><em>first future carefully.</em></h1>
       <p class="lead">This page separates the game that is being designed from the software and presentation that exist today. The foundation is real development work. It is not yet a finished game or a public release.</p>
       <div class="status-note"><strong>Plain answer:</strong> You cannot download and play a polished version of <i>Echoes of the Broken Sun</i> today. The current Unreal source integrates an original first-pass mesh for every Meridian, Kharuun, and Hollow Choir unit and structure, a four-part Future Well, and seven authored Glass Scar world assets. These are vertical-slice art candidates, not finished production models; character art, production terrain, animation, detailed textures, destruction, effects, and audio remain incomplete.</div>
@@ -61,7 +61,7 @@
       </div>
       <div class="update">
         <div><span class="status-pill">Implemented prototype</span></div>
-        <div><h3>Continue from the exact next mission</h3><p>The prologue’s Harvest, Preserve, or Reshape choice is written as a persisted campaign record, and later missions turn that choice into terrain, priorities, alliances, and ending options. Version 0.93 connects all fifteen records into one journey: Continue Campaign opens the exact next mission, a failure retries instead of skipping ahead, and a completed campaign returns to the archive boundary. Starting again or restoring the prior campaign is handled as a protected transaction with one earlier ledger generation retained. Replaying a completed mission can return to the journey, but it cannot silently replace an earlier decision or ending.</p></div>
+        <div><h3>Continue from the exact next mission</h3><p>The prologue’s Harvest, Preserve, or Reshape choice is written as a persisted campaign record, and later missions turn that choice into terrain, priorities, alliances, and ending options. The current source connects all fifteen records into one journey: Continue Campaign opens the exact next mission, a failure retries instead of skipping ahead, and a completed campaign returns to the archive boundary. Starting again or restoring the prior campaign is handled as a protected transaction with one earlier ledger generation retained. Replaying a completed mission can return to the journey, but it cannot silently replace an earlier decision or ending.</p></div>
       </div>
       <div class="update">
         <div><span class="status-pill">Player archive source</span></div>
@@ -73,8 +73,8 @@
       <span class="section-kicker">What is not here yet</span>
       <div class="detail-grid">
         <article class="detail-card"><small>Presentation</small><h3>Finished game graphics</h3><p>Not yet. The roster, Future Well, and first Glass Scar world assets are functional and visible in-engine, but they remain static vertical-slice candidates without final textures, animation, destruction, effects, or full lighting qualification.</p></article>
-        <article class="detail-card"><small>Availability</small><h3>Public playable release</h3><p>Not yet. A version 0.93 Mac Development app has passed local package and startup checks on one M1 Pro Mac, but it is ad-hoc signed, not notarized, not clean-machine tested, and not offered here as a release download.</p></article>
-        <article class="detail-card"><small>Campaign</small><h3>Full routes and final presentation</h3><p>Mission 15 and exact-next-mission continuation exist as bounded prototype systems. Headless automation now completes two distinct routes and endings from an empty ledger, but the remaining routes and endings, campaign-slot UX, ordinary-player full-campaign completion, final dialogue, and cinematics remain ahead.</p></article>
+        <article class="detail-card"><small>Availability</small><h3>Public playable release</h3><p>Not yet. Historical version 0.93 evidence covers a Mac Development app that passed local package and startup checks on one M1 Pro Mac. That package predates the current accepted source baseline (<code>309e354</code>), which has not been packaged. The historical app was ad-hoc signed, not notarized, not clean-machine tested, and is not offered here as a release download.</p></article>
+        <article class="detail-card"><small>Campaign</small><h3>Full routes and final presentation</h3><p>Mission 15 and exact-next-mission continuation exist as bounded prototype systems. Current accepted evidence supports one bounded automated route to Controlled Stabilization; that is not ordinary-player or complete campaign-route evidence. Alternate routes and endings, campaign-slot UX, ordinary-player full-campaign completion, final dialogue, and cinematics remain unqualified.</p></article>
         <article class="detail-card"><small>Faction</small><h3>Finished Hollow Choir</h3><p>The source roster, technologies, bounded mechanics, skirmish choice, and Mission 14–15 command perspectives exist. Broad matchups, final presentation, full usability, and cinematic ending consequences remain undelivered.</p></article>
         <article class="detail-card"><small>Modes</small><h3>Multiplayer and replay UI</h3><p>Bounded in-process and local-host networking and replay systems exist for engineering tests. Player-facing multiplayer/replay UI, separate-process and separate-machine qualification, and an internet-ready service are not available features and are not shown as playable options here.</p></article>
         <article class="detail-card"><small>Release work</small><h3>Final tuning and distribution</h3><p>Balance qualification, production performance, signing, notarization, clean-machine compatibility, and distribution readiness remain open.</p></article>
@@ -93,7 +93,7 @@
         <article class="detail-card"><small>Player experience</small><h3>Polished campaign arc</h3><p>Turn the fifteen bounded campaign operations into a coherent experience with final writing, presentation, accessibility work, sound, and broad usability testing.</p></article>
         <article class="detail-card"><small>Completion evidence</small><h3>Campaign systems</h3><p>Qualify alternate routes and endings end to end, then add campaign slots, broader consequences, relationships, civilian state, and recoverable player-facing progression.</p></article>
       </div>
-      <a class="back" href="https://github.com/redxking/echoes-of-the-broken-sun">View the public repository ↗</a>
+      <a class="back" href="https://github.com/redxking/echoes-of-the-broken-sun">View the project repository ↗</a>
     </section>
   </main>
 
