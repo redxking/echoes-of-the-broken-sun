@@ -173,6 +173,34 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
                 Terrain->GetMapPreset() == Preset);
             bPassed &= TestTrue(
                 FString::Printf(
+                    TEXT("%s: real terrain owns the presentation root tag"),
+                    Label),
+                Terrain->ActorHasTag(
+                    EchoesBattlefieldPresentation::RootTag()));
+            bPassed &= TestTrue(
+                FString::Printf(
+                    TEXT("%s: real terrain owns the selected preset tag"),
+                    Label),
+                Terrain->ActorHasTag(
+                    EchoesBattlefieldPresentation::TagForPreset(Preset)));
+            for (int32 Index = 0; Index < UE_ARRAY_COUNT(Presets); ++Index)
+            {
+                if (Index == PresetIndex)
+                {
+                    continue;
+                }
+                bPassed &= TestFalse(
+                    FString::Printf(
+                        TEXT("%s: real terrain lacks non-selected %s tag"),
+                        Label,
+                        EchoesBattlefieldPresentation::StableName(
+                            Presets[Index])),
+                    Terrain->ActorHasTag(
+                        EchoesBattlefieldPresentation::TagForPreset(
+                            Presets[Index])));
+            }
+            bPassed &= TestTrue(
+                FString::Printf(
                     TEXT("%s: authored terrain meshes remain active"),
                     Label),
                 Terrain->IsUsingAuthoredTerrainMeshes());
