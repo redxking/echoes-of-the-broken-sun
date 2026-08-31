@@ -34,6 +34,20 @@ EXPECTED_GIT_LFS_SHA256 = (
     "8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"
 )
 EXPECTED_ORIGIN_URL = "https://github.com/redxking/echoes-of-the-broken-sun.git"
+GIT_ENVIRONMENT_PREFIX = "GIT_"
+CONTROLLED_GIT_ENVIRONMENT = {
+    "GIT_ATTR_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_CONFIG_SYSTEM": "/dev/null",
+    "GIT_NO_REPLACE_OBJECTS": "1",
+    "GIT_TERMINAL_PROMPT": "0",
+}
+GIT_ENVIRONMENT_POLICY = (
+    "reject-all-inherited-GIT-prefix;controlled="
+    "GIT_ATTR_NOSYSTEM=1,GIT_CONFIG_GLOBAL=/dev/null,GIT_CONFIG_NOSYSTEM=1,"
+    "GIT_CONFIG_SYSTEM=/dev/null,GIT_NO_REPLACE_OBJECTS=1,GIT_TERMINAL_PROMPT=0"
+)
 GENERATED_CONTENT_PACK_SOURCE = "Content/Data/Generated/EchoesContentPack.json"
 GENERATED_CONTENT_PACK_DIGEST_SOURCE = f"{GENERATED_CONTENT_PACK_SOURCE}.sha256"
 
@@ -47,6 +61,8 @@ SCHEMA_2_EXACT_METADATA = {
     "source_origin_push_url": EXPECTED_ORIGIN_URL,
     "source_remote_authority": "github.com/redxking/echoes-of-the-broken-sun",
     "source_checkout_kind": "dedicated-linked-worktree-detached-at-main",
+    "source_top_level_binding": "canonical-exact",
+    "git_environment_policy": GIT_ENVIRONMENT_POLICY,
     "repo_local_derived_state_before": "clean",
     "repo_local_derived_state_scope": "git-ignored-paths-within-source-checkout",
     "source_index_concealment": "absent",
@@ -277,6 +293,27 @@ def _run_tool(
     if completed.returncode != 0:
         raise VerificationError(f"{purpose} failed: {output.strip()}")
     return output
+
+
+def _sanitized_git_environment() -> dict[str, str]:
+    rejected_names = sorted(
+        name
+        for name, value in os.environ.items()
+        if name.startswith(GIT_ENVIRONMENT_PREFIX)
+        and CONTROLLED_GIT_ENVIRONMENT.get(name) != value
+    )
+    if rejected_names:
+        raise VerificationError(
+            "live build context refuses inherited Git or Git LFS environment "
+            f"variables: {', '.join(rejected_names)}"
+        )
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith(GIT_ENVIRONMENT_PREFIX)
+    }
+    environment.update(CONTROLLED_GIT_ENVIRONMENT)
+    return environment
 
 
 def _structured_values(
@@ -611,9 +648,16 @@ def _validate_schema_2_evidence(
 
 
 def _validate_live_build_context(metadata: dict[str, str]) -> None:
-    source_checkout = pathlib.Path(metadata["source_checkout_path"])
-    if not source_checkout.is_dir():
+    git_environment = _sanitized_git_environment()
+    source_checkout_record = pathlib.Path(metadata["source_checkout_path"])
+    if not source_checkout_record.is_dir():
         raise VerificationError("live source checkout is unavailable")
+    try:
+        source_checkout = source_checkout_record.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise VerificationError("live source checkout cannot be resolved") from exc
+    if str(source_checkout) != metadata["source_checkout_path"]:
+        raise VerificationError("live source checkout path is not canonical")
 
     git_path = pathlib.Path(metadata["git_path"])
     git_lfs_path = pathlib.Path(metadata["git_lfs_path"])
@@ -631,13 +675,19 @@ def _validate_live_build_context(metadata: dict[str, str]) -> None:
     git_execution_path = pathlib.Path(metadata["git_resolved_path"])
     git_lfs_execution_path = pathlib.Path(metadata["git_lfs_resolved_path"])
     if (
-        _run_tool([str(git_execution_path), "--version"], "live Git version").strip()
+        _run_tool(
+            [str(git_execution_path), "--version"],
+            "live Git version",
+            environment=git_environment,
+        ).strip()
         != metadata["git_version"]
     ):
         raise VerificationError("live Git version changed")
     if (
         _run_tool(
-            [str(git_lfs_execution_path), "version"], "live Git LFS version"
+            [str(git_lfs_execution_path), "version"],
+            "live Git LFS version",
+            environment=git_environment,
         ).strip()
         != metadata["git_lfs_version"]
     ):
@@ -647,7 +697,24 @@ def _validate_live_build_context(metadata: dict[str, str]) -> None:
         return _run_tool(
             [str(git_execution_path), "-C", str(source_checkout), *arguments],
             f"live Git {' '.join(arguments)}",
+            environment=git_environment,
         ).strip()
+
+    observed_top_level_record = git_output(
+        "rev-parse", "--path-format=absolute", "--show-toplevel"
+    )
+    try:
+        observed_top_level = pathlib.Path(observed_top_level_record).resolve(
+            strict=True
+        )
+    except (OSError, RuntimeError) as exc:
+        raise VerificationError(
+            "live Git checkout top level cannot be resolved"
+        ) from exc
+    if observed_top_level != source_checkout:
+        raise VerificationError(
+            "live Git checkout top level differs from the intended source checkout"
+        )
 
     observed_source = {
         "source_commit": git_output("rev-parse", "--verify", "HEAD"),
@@ -692,15 +759,14 @@ def _validate_live_build_context(metadata: dict[str, str]) -> None:
             "refs/heads/main",
         ],
         "live remote main observation",
+        environment=git_environment,
         timeout_seconds=60,
     ).strip()
     remote_parts = remote_record.split()
     if len(remote_parts) != 2 or remote_parts[0] != metadata["remote_main"]:
         raise VerificationError("live remote main changed")
 
-    if os.environ.get("GIT_LFS_SKIP_SMUDGE"):
-        raise VerificationError("live Git LFS context sets GIT_LFS_SKIP_SMUDGE")
-    lfs_environment = os.environ.copy()
+    lfs_environment = git_environment.copy()
     lfs_environment["PATH"] = (
         f"{git_execution_path.parent}:{git_lfs_execution_path.parent}:"
         f"{lfs_environment.get('PATH', '')}"
@@ -784,7 +850,11 @@ def _validate_live_build_context(metadata: dict[str, str]) -> None:
         if not live_path.is_file() or _sha256(live_path) != metadata[digest_key]:
             raise VerificationError(f"live build-context file changed: {digest_key}")
 
-    developer_environment = os.environ.copy()
+    developer_environment = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith(GIT_ENVIRONMENT_PREFIX)
+    }
     developer_environment["DEVELOPER_DIR"] = EXPECTED_DEVELOPER_DIR
     _run_tool(
         ["/usr/bin/xcodebuild", "-checkFirstLaunchStatus"],

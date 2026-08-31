@@ -12,12 +12,54 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "Scripts"))
 PACKAGER = PROJECT_ROOT / "Scripts" / "package_macos.sh"
 
-from verify_packaged_app import VerificationError, verify_package
+from verify_packaged_app import (
+    CONTROLLED_GIT_ENVIRONMENT,
+    GIT_ENVIRONMENT_POLICY,
+    VerificationError,
+    _sanitized_git_environment,
+    verify_package,
+)
+
+REPOSITORY_SHAPING_GIT_VARIABLES = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_INDEX_VERSION",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_SYSTEM",
+    "GIT_CONFIG_NOSYSTEM",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_KEY_0",
+    "GIT_CONFIG_VALUE_0",
+    "GIT_ATTR_NOSYSTEM",
+    "GIT_EXEC_PATH",
+    "GIT_SSH",
+    "GIT_SSH_COMMAND",
+    "GIT_PROXY_COMMAND",
+    "GIT_ASKPASS",
+    "GIT_TERMINAL_PROMPT",
+    "GIT_ALLOW_PROTOCOL",
+    "GIT_PROTOCOL_FROM_USER",
+    "GIT_LFS_SKIP_SMUDGE",
+    "GIT_LFS_FUTURE_SWITCH",
+    "GIT_PAGER",
+    "GIT_FUTURE_UNDOCUMENTED_SWITCH",
+)
 
 
 def digest(path: pathlib.Path) -> str:
@@ -26,6 +68,12 @@ def digest(path: pathlib.Path) -> str:
 
 def refresh_sidecar(manifest: pathlib.Path, sidecar: pathlib.Path) -> None:
     sidecar.write_text(f"{digest(manifest)}  {manifest.name}\n", encoding="utf-8")
+
+
+def environment_without_git_overrides() -> dict[str, str]:
+    return {
+        name: value for name, value in os.environ.items() if not name.startswith("GIT_")
+    }
 
 
 def replace_manifest_metadata(
@@ -53,6 +101,21 @@ def replace_manifest_metadata(
 
 
 class PackageManifestVerifierTests(unittest.TestCase):
+    @staticmethod
+    def run_packager_with_git_environment(
+        variable_name: str, value: str = "/tmp/redirected-git-context"
+    ) -> subprocess.CompletedProcess[str]:
+        environment = environment_without_git_overrides()
+        environment[variable_name] = value
+        return subprocess.run(
+            [str(PACKAGER)],
+            cwd=PROJECT_ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
     @staticmethod
     def resign_and_refresh_records(
         app: pathlib.Path,
@@ -318,6 +381,8 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     "source_branch=detached",
                     "source_checkout_path=/source",
                     "source_checkout_kind=dedicated-linked-worktree-detached-at-main",
+                    "source_top_level_binding=canonical-exact",
+                    f"git_environment_policy={GIT_ENVIRONMENT_POLICY}",
                     f"origin_main={source_commit}",
                     f"remote_main={source_commit}",
                     "source_tree=clean",
@@ -878,6 +943,8 @@ class PackageManifestVerifierTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(
                 VerificationError, "live source checkout is unavailable"
+            ), mock.patch.dict(
+                os.environ, environment_without_git_overrides(), clear=True
             ):
                 verify_package(
                     app,
@@ -885,6 +952,128 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     sidecar,
                     require_live_build_context=True,
                 )
+
+    def test_live_verifier_rejects_repository_redirection_environment_first(
+        self,
+    ) -> None:
+        for variable_name in ("GIT_DIR", "GIT_WORK_TREE"):
+            with self.subTest(
+                variable=variable_name
+            ), tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                app, manifest, sidecar = self.make_fixture(root)
+                missing_source = root / "unavailable-source"
+                build_argv = json.loads(
+                    next(
+                        line.split("=", 1)[1]
+                        for line in manifest.read_text(encoding="utf-8").splitlines()
+                        if line.startswith("build_command_argv=")
+                    )
+                )
+                build_argv = [
+                    (
+                        f"-project={missing_source}/EchoesOfTheBrokenSun.uproject"
+                        if argument.startswith("-project=")
+                        else argument
+                    )
+                    for argument in build_argv
+                ]
+                replace_manifest_metadata(
+                    manifest,
+                    sidecar,
+                    {
+                        "source_checkout_path": str(missing_source),
+                        "build_command_argv": json.dumps(
+                            build_argv, separators=(",", ":")
+                        ),
+                    },
+                )
+                environment = environment_without_git_overrides()
+                environment[variable_name] = "/tmp/redirected-git-context"
+                with mock.patch.dict(
+                    os.environ, environment, clear=True
+                ), self.assertRaisesRegex(
+                    VerificationError,
+                    rf"inherited Git or Git LFS environment variables: {variable_name}",
+                ):
+                    verify_package(
+                        app,
+                        manifest,
+                        sidecar,
+                        require_live_build_context=True,
+                    )
+
+    def test_packager_rejects_git_dir_redirection_before_tool_use(self) -> None:
+        rejected = self.run_packager_with_git_environment("GIT_DIR")
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("before tool use: GIT_DIR", rejected.stderr)
+
+    def test_packager_rejects_git_work_tree_redirection_before_tool_use(self) -> None:
+        rejected = self.run_packager_with_git_environment("GIT_WORK_TREE")
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("before tool use: GIT_WORK_TREE", rejected.stderr)
+
+    def test_packager_rejects_the_complete_git_environment_prefix_policy(
+        self,
+    ) -> None:
+        for variable_name in REPOSITORY_SHAPING_GIT_VARIABLES:
+            with self.subTest(variable=variable_name):
+                rejected = self.run_packager_with_git_environment(variable_name)
+                self.assertEqual(rejected.returncode, 2)
+                self.assertIn(
+                    f"before tool use: {variable_name}",
+                    rejected.stderr,
+                )
+
+    def test_live_verifier_rejects_and_sanitizes_the_complete_prefix_policy(
+        self,
+    ) -> None:
+        for variable_name in REPOSITORY_SHAPING_GIT_VARIABLES:
+            with self.subTest(variable=variable_name):
+                environment = environment_without_git_overrides()
+                environment[variable_name] = "/tmp/redirected-git-context"
+                with mock.patch.dict(
+                    os.environ, environment, clear=True
+                ), self.assertRaisesRegex(VerificationError, variable_name):
+                    _sanitized_git_environment()
+
+        environment = environment_without_git_overrides()
+        environment.update(CONTROLLED_GIT_ENVIRONMENT)
+        with mock.patch.dict(os.environ, environment, clear=True):
+            sanitized = _sanitized_git_environment()
+        self.assertEqual(
+            {
+                name: value
+                for name, value in sanitized.items()
+                if name.startswith("GIT_")
+            },
+            CONTROLLED_GIT_ENVIRONMENT,
+        )
+
+    def test_live_verifier_controls_only_the_approved_git_environment(self) -> None:
+        self.assertEqual(
+            CONTROLLED_GIT_ENVIRONMENT,
+            {
+                "GIT_ATTR_NOSYSTEM": "1",
+                "GIT_CONFIG_GLOBAL": "/dev/null",
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_CONFIG_SYSTEM": "/dev/null",
+                "GIT_NO_REPLACE_OBJECTS": "1",
+                "GIT_TERMINAL_PROMPT": "0",
+            },
+        )
+        source = (PROJECT_ROOT / "Scripts" / "verify_packaged_app.py").read_text(
+            encoding="utf-8"
+        )
+        environment_guard = "git_environment = _sanitized_git_environment()"
+        source_lookup = (
+            'source_checkout_record = pathlib.Path(metadata["source_checkout_path"])'
+        )
+        top_level_lookup = '"rev-parse", "--path-format=absolute", "--show-toplevel"'
+        commit_lookup = '"source_commit": git_output("rev-parse", "--verify", "HEAD")'
+        self.assertLess(source.index(environment_guard), source.index(source_lookup))
+        self.assertLess(source.index(top_level_lookup), source.index(commit_lookup))
+        self.assertGreaterEqual(source.count("environment=git_environment"), 4)
 
     def test_packager_emits_external_schema_2_provenance(self) -> None:
         source = PACKAGER.read_text(encoding="utf-8")
@@ -906,6 +1095,8 @@ class PackageManifestVerifierTests(unittest.TestCase):
             'print "source_tree_hash=$source_tree_hash"',
             'print "source_checkout_path=$project_root"',
             'print "source_checkout_kind=dedicated-linked-worktree-detached-at-main"',
+            'print "source_top_level_binding=canonical-exact"',
+            'print "git_environment_policy=$git_environment_policy"',
             'print "source_status_sha256=$source_status_evidence_sha256"',
             'print "source_origin_fetch_url=$origin_fetch_url"',
             'print "source_index_concealment=absent"',
@@ -955,10 +1146,27 @@ class PackageManifestVerifierTests(unittest.TestCase):
             'approved_git_lfs_sha256="8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"',
             source,
         )
+        self.assertIn(f'git_environment_policy="{GIT_ENVIRONMENT_POLICY}"', source)
+        for variable_name, value in CONTROLLED_GIT_ENVIRONMENT.items():
+            self.assertIn(f"export {variable_name}={value}", source)
         self.assertLess(
             source.index('git_sha256="$(/usr/bin/shasum'),
             source.index('git_version="$($git_resolved_path --version)"'),
         )
+        environment_rejection = "Packaging refuses inherited Git or Git LFS environment variables before tool use"
+        initial_top_level = (
+            'source_top_level="$(git -C "$project_root" rev-parse '
+            "--path-format=absolute --show-toplevel"
+        )
+        self.assertLess(
+            source.index(environment_rejection),
+            source.index('git_version="$($git_resolved_path --version)"'),
+        )
+        self.assertLess(
+            source.index(initial_top_level),
+            source.index('source_commit="$(git -C "$project_root"'),
+        )
+        self.assertGreaterEqual(source.count("--show-toplevel"), 2)
 
     def test_packager_tracks_the_real_generated_content_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1015,7 +1223,7 @@ class PackageManifestVerifierTests(unittest.TestCase):
         )
         self.assertLess(source.index(equality_check), source.index(preflight))
         self.assertLess(source.index(export), source.index(preflight))
-        environment = os.environ.copy()
+        environment = environment_without_git_overrides()
         environment["DEVELOPER_DIR"] = "/tmp"
         rejected = subprocess.run(
             [str(PACKAGER)],
