@@ -5,6 +5,7 @@
 #include "EchoesFormationLayout.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesPrologueMissionModel.h"
+#include "EchoesSkirmishSetup.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
@@ -162,6 +163,15 @@ public:
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
     void ConfirmPrimaryAction();
+    void FocusPreviousSkirmishSetting();
+    void FocusNextSkirmishSetting();
+    void DecreaseSkirmishSetting();
+    void IncreaseSkirmishSetting();
+    bool SetPendingSkirmishSetup(
+        const FEchoesSkirmishSetup& Setup,
+        FString& OutFeedback);
+    void ReturnToSkirmishSetup();
+    void RequestReturnToOperations();
     /** Opens the exact next briefing derived from durable campaign progress. */
     void ContinueCampaign();
     void ChooseFinalRestoration();
@@ -181,6 +191,11 @@ public:
     void FocusNextTechnologyTier();
     void TogglePauseMenu();
     bool HandleTechnologyPanelPointer(const FVector2D& ScreenPosition);
+    /** Activates the visible modal control at a shared-layout screen position. */
+    bool HandleModalOverlayPointer(
+        const FVector2D& ScreenPosition,
+        const FVector2D& ViewportSize,
+        float HudScale);
     [[nodiscard]] FString GetLocalFactionLabel() const;
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
@@ -197,6 +212,19 @@ public:
     }
     [[nodiscard]] bool IsNewCampaignConfirmationArmed() const;
     [[nodiscard]] bool IsCampaignRestoreConfirmationArmed() const;
+    [[nodiscard]] bool IsReturnToOperationsConfirmationArmed() const;
+    [[nodiscard]] bool IsSkirmishSetupVisible() const;
+    [[nodiscard]] bool IsSkirmishDeploymentSummaryVisible() const;
+    [[nodiscard]] bool CanReturnCompletedSkirmishToOperations() const;
+    [[nodiscard]] const FEchoesSkirmishSetup&
+    GetPendingSkirmishSetup() const
+    {
+        return PendingSkirmishSetup;
+    }
+    [[nodiscard]] int32 GetSkirmishSetupFocusRow() const
+    {
+        return SkirmishSetupFocusRow;
+    }
     [[nodiscard]] bool IsPauseMenuVisible() const
     {
         return bPauseMenuVisible;
@@ -463,6 +491,9 @@ private:
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
     void FailPointerCombatGuardReview(const FString& Reason);
+    bool ResolvePointerScreenPosition(
+        FVector2D& OutScreenPosition,
+        FVector2D* OutViewportSize = nullptr);
     void ChooseFinalResolution(EEchoesFinalResolution Resolution);
     void SelectionPressed();
     void SelectionReleased();
@@ -583,7 +614,9 @@ private:
     double ControlGroupAssignmentExpiresAt = 0.0;
     double NewCampaignConfirmationExpiresAt = 0.0;
     double CampaignRestoreConfirmationExpiresAt = 0.0;
+    double ReturnToOperationsConfirmationExpiresAt = 0.0;
     int32 TechnologyPanelFocusedTier = 0;
+    int32 SkirmishSetupFocusRow = 0;
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
@@ -596,7 +629,10 @@ private:
     bool bMatchResultVisible = false;
     bool bNewCampaignConfirmationArmed = false;
     bool bCampaignRestoreConfirmationArmed = false;
+    bool bReturnToOperationsConfirmationArmed = false;
     bool bCampaignResult = false;
+    FEchoesSkirmishSetup PendingSkirmishSetup =
+        FEchoesSkirmishSetupModel::DefaultSetup();
     uint8 NetworkSeat = echoes::sim::kNeutralPlayer;
     bool bNetworkCompatibilityAccepted = false;
     bool bNetworkReady = false;

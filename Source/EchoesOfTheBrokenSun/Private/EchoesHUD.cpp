@@ -13,6 +13,8 @@
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesSkirmishOverlayLayout.h"
+#include "EchoesSkirmishSetup.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -126,6 +128,15 @@ FVector2D FallbackContactProjection(
     return ViewportSize * 0.5f +
         ScreenDirection * FMath::Max(ViewportSize.X, ViewportSize.Y) * 2.0f;
 }
+
+FString ActiveSkirmishMapDisplayName(
+    const UEchoesSimulationSubsystem* Bridge)
+{
+    const EEchoesSkirmishMapPreset Preset = Bridge != nullptr
+        ? Bridge->GetActiveSkirmishSetup().MapPreset
+        : EEchoesSkirmishMapPreset::GlassScar;
+    return FEchoesSkirmishSetupModel::MapDisplayName(Preset);
+}
 }
 
 void AEchoesHUD::DrawHUD()
@@ -216,13 +227,27 @@ void AEchoesHUD::DrawHUD()
 
     if (EchoesController != nullptr && EchoesController->IsTitleScreenVisible())
     {
-        DrawTitleScreen(EchoesController, Settings);
+        if (EchoesController->IsSkirmishSetupVisible())
+        {
+            DrawSkirmishSetup(EchoesController, Settings);
+        }
+        else
+        {
+            DrawTitleScreen(EchoesController, Settings);
+        }
         return;
     }
 
     if (EchoesController != nullptr && EchoesController->IsMissionBriefingVisible())
     {
-        DrawMissionBriefing(EchoesController, Settings);
+        if (EchoesController->IsSkirmishDeploymentSummaryVisible())
+        {
+            DrawSkirmishDeploymentSummary(EchoesController, Settings);
+        }
+        else
+        {
+            DrawMissionBriefing(EchoesController, Settings);
+        }
         return;
     }
 
@@ -929,7 +954,6 @@ void AEchoesHUD::DrawCommandDeck(
         ? FLinearColor(0.9f, 0.9f, 0.9f)
         : FLinearColor(0.58f, 0.67f, 0.76f);
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
-
     DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
     DrawRect(Accent, Left, Top, PanelWidth, 3.0f * HudScale);
     DrawRect(
@@ -1292,6 +1316,262 @@ void AEchoesHUD::DrawTechnologyPanel(
         false);
 }
 
+void AEchoesHUD::DrawSkirmishSetup(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsSkirmishSetupVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const FEchoesSkirmishSetupOverlayLayout Layout =
+        FEchoesSkirmishSetupOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY),
+            HudScale);
+    const float PanelWidth = Layout.Size.X;
+    const float PanelHeight = Layout.Size.Y;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float ContentScale = Layout.ContentScale;
+    const float TextScale = Layout.TextScale;
+    const FLinearColor Backdrop = bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        : FLinearColor(0.005f, 0.012f, 0.026f, 0.988f);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body = bHighContrast
+        ? FLinearColor::White
+        : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted = bHighContrast
+        ? FLinearColor(0.9f, 0.9f, 0.9f)
+        : FLinearColor(0.55f, 0.64f, 0.73f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const FEchoesSkirmishSetup& Setup =
+        EchoesController->GetPendingSkirmishSetup();
+    const int32 FocusRow = EchoesController->GetSkirmishSetupFocusRow();
+    const FString Labels[] = {
+        TEXT("LOCAL FORCE"),
+        TEXT("OPPOSING FORCE"),
+        TEXT("BATTLEFIELD"),
+        TEXT("AI PROFILE"),
+        TEXT("STARTING RESOURCES")};
+    const FString Values[] = {
+        FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction),
+        FEchoesSkirmishSetupModel::FactionDisplayName(Setup.OpponentFaction),
+        FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
+        FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
+        FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel)};
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f),
+             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth,
+             Top + PanelHeight, Accent, 4.0f);
+    DrawText(TEXT("SKIRMISH SETUP"), Accent,
+             Left + 46.0f, Top + 34.0f * ContentScale,
+             SmallFont, 1.58f * TextScale, false);
+    DrawText(TEXT("SORYN DEPLOYMENT AUTHORITY  //  OFFLINE 1V1"), Muted,
+             Left + 46.0f, Top + 76.0f * ContentScale,
+             SmallFont, 0.86f * TextScale, false);
+    DrawText(TEXT("[UP/DOWN or D-PAD] FOCUS    [LEFT/RIGHT or CLICK HALF] CHANGE"), Body,
+             Left + 46.0f, Top + 108.0f * ContentScale,
+             SmallFont, 0.82f * TextScale, false);
+
+    for (int32 Row = 0; Row < UE_ARRAY_COUNT(Labels); ++Row)
+    {
+        const FBox2D& RowBox = Layout.SettingRows[Row];
+        const float RowTop = RowBox.Min.Y + 8.0f * ContentScale;
+        const bool bFocused = Row == FocusRow;
+        DrawRect(
+            bFocused
+                ? bHighContrast
+                    ? FLinearColor(1.0f, 0.9f, 0.1f, 0.24f)
+                    : FLinearColor(0.04f, 0.36f, 0.48f, 0.52f)
+                : FLinearColor(0.12f, 0.18f, 0.24f, 0.30f),
+            RowBox.Min.X,
+            RowBox.Min.Y,
+            RowBox.GetSize().X,
+            RowBox.GetSize().Y);
+        if (bFocused)
+        {
+            DrawLine(
+                RowBox.Min.X,
+                RowBox.Min.Y,
+                RowBox.Min.X,
+                RowBox.Max.Y,
+                Accent,
+                4.0f);
+        }
+        DrawText(
+            FString::Printf(TEXT("%s%s"), bFocused ? TEXT(">  ") : TEXT("   "), *Labels[Row]),
+            bFocused ? Accent : Muted,
+            Left + 52.0f,
+            RowTop,
+            SmallFont,
+            0.86f * TextScale,
+            false);
+        DrawText(
+            FString::Printf(TEXT("<  %s  >"), *Values[Row]),
+            Body,
+            Left + PanelWidth * 0.47f,
+            RowTop,
+            SmallFont,
+            0.88f * TextScale,
+            false);
+    }
+
+    DrawText(TEXT("BATTLEFIELD CONTRACT"), Accent,
+             Left + 46.0f, Top + 448.0f * ContentScale,
+             SmallFont, 0.88f * TextScale, false);
+    DrawText(
+        FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset),
+        Body, Left + 46.0f, Top + 478.0f * ContentScale,
+        SmallFont, 0.78f * TextScale, false);
+    DrawText(
+        FEchoesSkirmishSetupModel::AiDescription(Setup.AiPersonality),
+        Muted, Left + 46.0f, Top + 506.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+    DrawText(
+        TEXT("Choices are staged only. The active simulation changes after deployment confirmation."),
+        Muted, Left + 46.0f, Top + 542.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+    DrawText(
+        TEXT("[F9] CAMPAIGN OPERATIONS    [C] CONTINUE CAMPAIGN    [TAB] NEXT LOCAL FORCE"),
+        Body, Left + 46.0f, Top + 574.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+
+    DrawRect(Accent,
+             Layout.ReviewButton.Min.X,
+             Layout.ReviewButton.Min.Y,
+             Layout.ReviewButton.GetSize().X,
+             Layout.ReviewButton.GetSize().Y);
+    DrawText(TEXT("ENTER / GAMEPAD A: REVIEW DEPLOYMENT"),
+             bHighContrast ? FLinearColor::Black
+                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Left + PanelWidth * 0.5f - 194.0f * TextScale,
+             Top + PanelHeight - 65.0f,
+             SmallFont, 0.92f * TextScale, false);
+}
+
+void AEchoesHUD::DrawSkirmishDeploymentSummary(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsSkirmishDeploymentSummaryVisible())
+    {
+        return;
+    }
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const FEchoesSkirmishSummaryOverlayLayout Layout =
+        FEchoesSkirmishSummaryOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY),
+            HudScale);
+    const float PanelWidth = Layout.Size.X;
+    const float PanelHeight = Layout.Size.Y;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float ContentScale = Layout.ContentScale;
+    const float TextScale = Layout.TextScale;
+    const FLinearColor Backdrop = bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        : FLinearColor(0.005f, 0.012f, 0.026f, 0.988f);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body = bHighContrast
+        ? FLinearColor::White
+        : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted = bHighContrast
+        ? FLinearColor(0.9f, 0.9f, 0.9f)
+        : FLinearColor(0.55f, 0.64f, 0.73f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const FEchoesSkirmishSetup& Setup =
+        EchoesController->GetPendingSkirmishSetup();
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.74f),
+             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
+    DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 4.0f);
+    DrawLine(Left, Top + PanelHeight, Left + PanelWidth,
+             Top + PanelHeight, Accent, 4.0f);
+    DrawText(TEXT("DEPLOYMENT SUMMARY"), Accent,
+             Left + 46.0f, Top + 38.0f * ContentScale,
+             SmallFont, 1.52f * TextScale, false);
+    DrawText(TEXT("VALIDATE THE COMPLETE CONTRACT BEFORE THE FIELD CHANGES"), Muted,
+             Left + 46.0f, Top + 80.0f * ContentScale,
+             SmallFont, 0.82f * TextScale, false);
+
+    const FString SummaryLines[] = {
+        FString::Printf(TEXT("COMMAND AUTHORITY     %s"),
+            FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction)),
+        FString::Printf(TEXT("OPPOSITION            %s"),
+            FEchoesSkirmishSetupModel::FactionDisplayName(Setup.OpponentFaction)),
+        FString::Printf(TEXT("BATTLEFIELD           %s  //  64 x 64"),
+            FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset)),
+        FString::Printf(TEXT("AI PROFILE            %s"),
+            FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality)),
+        FString::Printf(TEXT("STARTING RESOURCES    %s"),
+            FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel))};
+    for (int32 Row = 0; Row < UE_ARRAY_COUNT(SummaryLines); ++Row)
+    {
+        DrawText(SummaryLines[Row], Row == 0 ? Accent : Body,
+                 Left + 54.0f,
+                 Top + (136.0f + Row * 48.0f) * ContentScale,
+                 SmallFont, 0.92f * TextScale, false);
+    }
+    DrawText(
+        FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset),
+        Muted, Left + 54.0f, Top + 392.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+    DrawText(
+        FEchoesSkirmishSetupModel::AiDescription(Setup.AiPersonality),
+        Muted, Left + 54.0f, Top + 424.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+    DrawText(
+        TEXT("ENTER applies changed choices atomically; an unchanged setup resumes the paused field. On failure, the prior match is restored."),
+        Body, Left + 54.0f, Top + 474.0f * ContentScale,
+        SmallFont, 0.78f * TextScale, false);
+    DrawRect(
+        FLinearColor(Muted.R, Muted.G, Muted.B, 0.22f),
+        Layout.BackButton.Min.X,
+        Layout.BackButton.Min.Y,
+        Layout.BackButton.GetSize().X,
+        Layout.BackButton.GetSize().Y);
+    DrawLine(
+        Layout.BackButton.Min.X,
+        Layout.BackButton.Max.Y,
+        Layout.BackButton.Max.X,
+        Layout.BackButton.Max.Y,
+        Muted,
+        1.5f);
+    DrawText(TEXT("ESCAPE / GAMEPAD B / CLICK: ADJUST SETUP"), Muted,
+             Layout.BackButton.Min.X + 12.0f * ContentScale,
+             Layout.BackButton.Min.Y + 9.0f * ContentScale,
+             SmallFont, 0.80f * TextScale, false);
+
+    DrawRect(Accent,
+             Layout.DeployButton.Min.X,
+             Layout.DeployButton.Min.Y,
+             Layout.DeployButton.GetSize().X,
+             Layout.DeployButton.GetSize().Y);
+    DrawText(TEXT("ENTER / GAMEPAD A: DEPLOY"),
+             bHighContrast ? FLinearColor::Black
+                           : FLinearColor(0.0f, 0.06f, 0.09f),
+             Left + PanelWidth * 0.5f - 144.0f * TextScale,
+             Top + PanelHeight - 65.0f,
+             SmallFont, 0.94f * TextScale, false);
+}
+
 void AEchoesHUD::DrawTitleScreen(
     const AEchoesPlayerController* EchoesController,
     const UEchoesGameUserSettings* Settings)
@@ -1351,6 +1631,8 @@ void AEchoesHUD::DrawTitleScreen(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    const FString SkirmishMapName =
+        ActiveSkirmishMapDisplayName(Bridge);
     const bool bPrologue = Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
     const bool bSevenAccounts = Bridge != nullptr &&
@@ -1445,7 +1727,7 @@ void AEchoesHUD::DrawTitleScreen(
              : bAssemblyOfTheMissing ? TEXT("ASSEMBLY OF THE MISSING")
              : bSeveralVoicesOneCommand ? TEXT("SEVERAL VOICES, ONE COMMAND")
              : bBrokenSun ? TEXT("THE BROKEN SUN")
-                              : TEXT("GLASS SCAR"), Body,
+                              : *SkirmishMapName, Body,
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
     const FString OperationMetadata = bPrologue
@@ -3147,7 +3429,9 @@ void AEchoesHUD::DrawObjectiveTracker(
         return;
     }
 
-    FString WellState = TEXT("UNLOCATED — SEARCH THE SCAR");
+    const FString SkirmishMapName =
+        ActiveSkirmishMapDisplayName(Bridge);
+    FString WellState = TEXT("UNLOCATED — SEARCH THE BATTLEFIELD");
     FLinearColor WellColor = Active;
     if (Objective.bFutureWellVisible)
     {
@@ -3190,7 +3474,11 @@ void AEchoesHUD::DrawObjectiveTracker(
 
     DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
     DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
-    DrawText(TEXT("OPERATION GLASS SCAR  //  OBJECTIVES"), Accent,
+    DrawText(
+             FString::Printf(
+                 TEXT("OPERATION %s  //  OBJECTIVES"),
+                 *SkirmishMapName),
+             Accent,
              Left + 18.0f, Top + 15.0f, SmallFont, 0.90f * TextScale, false);
     DrawText(FString::Printf(TEXT("01  FUTURE WELL     %s"), *WellState), WellColor,
              Left + 18.0f, Top + 52.0f, SmallFont, 0.82f * TextScale, false);
@@ -3233,19 +3521,16 @@ void AEchoesHUD::DrawMatchResult(
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float PanelWidth = FMath::Min(
-        FMath::Max(620.0f, Canvas->ClipX - 60.0f),
-        FMath::Clamp(Canvas->ClipX * 0.54f, 760.0f, 1080.0f));
-    const float PanelHeight = FMath::Min(
-        FMath::Max(390.0f, Canvas->ClipY - 60.0f),
-        FMath::Clamp(Canvas->ClipY * 0.48f, 430.0f, 590.0f));
-    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
-    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
-    const float ContentScale = FMath::Clamp(
-        FMath::Min(PanelWidth / 820.0f, PanelHeight / 460.0f),
-        0.76f,
-        1.25f);
-    const float TextScale = HudScale * ContentScale;
+    const FEchoesResultOverlayLayout Layout =
+        FEchoesResultOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY),
+            HudScale);
+    const float PanelWidth = Layout.Size.X;
+    const float PanelHeight = Layout.Size.Y;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float ContentScale = Layout.ContentScale;
+    const float TextScale = Layout.TextScale;
     const echoes::sim::MatchOutcome Outcome =
         EchoesController->GetPresentedMatchOutcome();
     const bool bCampaignResult = EchoesController->IsCampaignResult();
@@ -3254,6 +3539,8 @@ void AEchoesHUD::DrawMatchResult(
         : FEchoesCampaignJourney{};
     const bool bCampaignResultCanAdvance =
         EchoesController->CanAdvanceCampaignResult();
+    const bool bCanReturnToOperations =
+        EchoesController->CanReturnCompletedSkirmishToOperations();
     const bool bSevenAccountsResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignSevenAccounts;
@@ -3313,6 +3600,8 @@ void AEchoesHUD::DrawMatchResult(
         : EchoesController->DidPresentedLocalPlayerWin();
     const bool bDraw = !bCampaignResult &&
         Outcome == echoes::sim::MatchOutcome::Draw;
+    const FString SkirmishMapName =
+        ActiveSkirmishMapDisplayName(Bridge);
     const FString Result = bCampaignResult
         ? bBrokenSunResult
             ? bVictory
@@ -3407,7 +3696,10 @@ void AEchoesHUD::DrawMatchResult(
                        : TEXT("THE SEVENTH ACCOUNT FALLS SILENT")
             : bVictory ? TEXT("THE LEDGER RETURNS TO LUME REACH")
                        : TEXT("THE ARCHIVE LINE IS LOST")
-        : bVictory ? TEXT("THE GLASS SCAR HOLDS")
+        : bVictory
+            ? FString::Printf(
+                  TEXT("%s SECURED"),
+                  *SkirmishMapName)
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
     const FString Summary = bCampaignResult
@@ -3717,7 +4009,8 @@ void AEchoesHUD::DrawMatchResult(
                   TEXT("MISSION 01 — WHAT THE LEDGER KEEPS  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
         : FString::Printf(
-              TEXT("OPERATION GLASS SCAR  //  FINAL TICK %llu"),
+              TEXT("OPERATION %s  //  FINAL TICK %llu"),
+              *SkirmishMapName,
               static_cast<unsigned long long>(FinalTick));
     DrawText(
         FinalTickLine,
@@ -3730,27 +4023,68 @@ void AEchoesHUD::DrawMatchResult(
              Muted, Left + 44.0f, Top + 244.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
 
-    DrawRect(Accent, Left + 44.0f, Top + PanelHeight - 82.0f,
-             PanelWidth - 88.0f, 46.0f);
-    DrawText(
-             bCampaignResultCanAdvance &&
-                     CampaignJourney.State ==
-                         EEchoesCampaignJourneyState::Ready
-                 ? TEXT("ENTER: CONTINUE CAMPAIGN   //   R: REPLAY MISSION")
-             : bCampaignResultCanAdvance &&
-                     CampaignJourney.State ==
-                         EEchoesCampaignJourneyState::Complete
-                 ? TEXT("ENTER: RETURN TO TITLE   //   R: REPLAY FINALE")
-             : bReplayConflict
-                 ? TEXT("ESC: CAMPAIGN JOURNEY   //   R: REPLAY")
-             : bCampaignResult
-                 ? TEXT("PRESS ENTER OR R TO REPLAY MISSION")
-                 : TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),
-             bHighContrast || !bVictory ? FLinearColor::Black
-                                         : FLinearColor(0.0f, 0.08f, 0.05f),
-             Left + PanelWidth * 0.5f - 214.0f * TextScale,
-             Top + PanelHeight - 69.0f,
-             SmallFont, 0.92f * TextScale, false);
+    const FLinearColor ButtonText = bHighContrast || !bVictory
+        ? FLinearColor::Black
+        : FLinearColor(0.0f, 0.08f, 0.05f);
+    const bool bHasDistinctPrimaryAction = bCanReturnToOperations ||
+        bCampaignResultCanAdvance || bReplayConflict;
+    if (bHasDistinctPrimaryAction)
+    {
+        DrawRect(
+            Accent,
+            Layout.PrimaryButton.Min.X,
+            Layout.PrimaryButton.Min.Y,
+            Layout.PrimaryButton.GetSize().X,
+            Layout.PrimaryButton.GetSize().Y);
+        DrawRect(
+            FLinearColor(Accent.R, Accent.G, Accent.B, 0.76f),
+            Layout.RestartButton.Min.X,
+            Layout.RestartButton.Min.Y,
+            Layout.RestartButton.GetSize().X,
+            Layout.RestartButton.GetSize().Y);
+        const FString PrimaryLabel = bCanReturnToOperations
+            ? TEXT("ENTER / A: OPERATIONS")
+            : bReplayConflict
+                ? TEXT("ESC / CLICK: JOURNEY")
+            : CampaignJourney.State == EEchoesCampaignJourneyState::Complete
+                ? TEXT("ENTER / A: TITLE")
+                : TEXT("ENTER / A: CONTINUE");
+        DrawText(
+            PrimaryLabel,
+            ButtonText,
+            Layout.PrimaryButton.Min.X + 18.0f * ContentScale,
+            Layout.PrimaryButton.Min.Y + 13.0f,
+            SmallFont,
+            0.82f * TextScale,
+            false);
+        DrawText(
+            bCampaignResult ? TEXT("R / CLICK: REPLAY")
+                            : TEXT("R / CLICK: RESTART"),
+            ButtonText,
+            Layout.RestartButton.Min.X + 18.0f * ContentScale,
+            Layout.RestartButton.Min.Y + 13.0f,
+            SmallFont,
+            0.82f * TextScale,
+            false);
+    }
+    else
+    {
+        DrawRect(
+            Accent,
+            Layout.FullButton.Min.X,
+            Layout.FullButton.Min.Y,
+            Layout.FullButton.GetSize().X,
+            Layout.FullButton.GetSize().Y);
+        DrawText(
+            bCampaignResult ? TEXT("ENTER / R / CLICK: REPLAY MISSION")
+                            : TEXT("R / CLICK: RESTART MATCH"),
+            ButtonText,
+            Layout.FullButton.Min.X + 26.0f * ContentScale,
+            Layout.FullButton.Min.Y + 13.0f,
+            SmallFont,
+            0.90f * TextScale,
+            false);
+    }
 }
 
 void AEchoesHUD::DrawPauseMenu(
@@ -3766,19 +4100,16 @@ void AEchoesHUD::DrawPauseMenu(
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float PanelWidth = FMath::Min(
-        FMath::Max(620.0f, Canvas->ClipX - 60.0f),
-        FMath::Clamp(Canvas->ClipX * 0.50f, 720.0f, 980.0f));
-    const float PanelHeight = FMath::Min(
-        FMath::Max(520.0f, Canvas->ClipY - 60.0f),
-        FMath::Clamp(Canvas->ClipY * 0.64f, 560.0f, 700.0f));
-    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
-    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
-    const float ContentScale = FMath::Clamp(
-        FMath::Min(PanelWidth / 780.0f, PanelHeight / 590.0f),
-        0.76f,
-        1.2f);
-    const float TextScale = HudScale * ContentScale;
+    const FEchoesPauseOverlayLayout Layout =
+        FEchoesPauseOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY),
+            HudScale);
+    const float PanelWidth = Layout.Size.X;
+    const float PanelHeight = Layout.Size.Y;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float ContentScale = Layout.ContentScale;
+    const float TextScale = Layout.TextScale;
     const FLinearColor Backdrop =
         bHighContrast ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
                       : FLinearColor(0.005f, 0.012f, 0.026f, 0.98f);
@@ -3791,6 +4122,29 @@ void AEchoesHUD::DrawPauseMenu(
         bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
                       : FLinearColor(0.56f, 0.65f, 0.74f);
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const bool bSkirmish = Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish;
+    const bool bCanReturnToOperations = bSkirmish &&
+        !Bridge->IsNetworkHumanOpponentEnabled();
+    const FString OperationLabel = Bridge != nullptr
+        ? Bridge->GetOperationLabel()
+        : TEXT("OPERATION");
+    const FString OperationLine = bSkirmish
+        ? FString::Printf(
+              TEXT("%s  //  %s VS %s  //  MATCH PAUSED"),
+              FEchoesSkirmishSetupModel::MapDisplayName(
+                  Bridge->GetActiveSkirmishSetup().MapPreset),
+              FEchoesSkirmishSetupModel::FactionDisplayName(
+                  Bridge->GetActiveSkirmishSetup().LocalFaction),
+              FEchoesSkirmishSetupModel::FactionDisplayName(
+                  Bridge->GetActiveSkirmishSetup().OpponentFaction))
+        : FString::Printf(
+              TEXT("%s  //  OPERATION PAUSED"),
+              *OperationLabel);
     const FString SettingsLineA = FString::Printf(
         TEXT("[U] UI SCALE  %d%%       [I] HIGH CONTRAST  %s"),
         FMath::RoundToInt(HudScale * 100.0f),
@@ -3829,18 +4183,50 @@ void AEchoesHUD::DrawPauseMenu(
              Accent, 4.0f);
     DrawText(TEXT("FIELD MENU"), Accent, Left + 42.0f,
              Top + 34.0f * ContentScale, SmallFont, 1.65f * TextScale, false);
-    DrawText(TEXT("OPERATION GLASS SCAR  //  DETERMINISTIC MATCH PAUSED"),
+    DrawText(OperationLine,
              Muted, Left + 42.0f, Top + 78.0f * ContentScale,
              SmallFont, 0.88f * TextScale, false);
 
     DrawText(TEXT("MATCH CONTROL"), Accent, Left + 42.0f,
              Top + 132.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+    DrawRect(
+        FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+        Layout.ResumeButton.Min.X,
+        Layout.ResumeButton.Min.Y,
+        Layout.ResumeButton.GetSize().X,
+        Layout.ResumeButton.GetSize().Y);
     DrawText(TEXT("[ENTER / ESCAPE / P]  RESUME OPERATION"), Body,
              Left + 42.0f, Top + 162.0f * ContentScale,
              SmallFont, 1.0f * TextScale, false);
-    DrawText(TEXT("[R]  RESTART GLASS SCAR FROM THE DETERMINISTIC BASELINE"), Body,
+    DrawRect(
+        FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+        Layout.RestartButton.Min.X,
+        Layout.RestartButton.Min.Y,
+        Layout.RestartButton.GetSize().X,
+        Layout.RestartButton.GetSize().Y);
+    DrawText(TEXT("[R]  RESTART OPERATION FROM ITS DETERMINISTIC BASELINE"), Body,
              Left + 42.0f, Top + 192.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
+    if (bCanReturnToOperations)
+    {
+        DrawRect(
+            EchoesController->IsReturnToOperationsConfirmationArmed()
+                ? FLinearColor(Accent.R, Accent.G, Accent.B, 0.30f)
+                : FLinearColor(Accent.R, Accent.G, Accent.B, 0.13f),
+            Layout.ReturnButton.Min.X,
+            Layout.ReturnButton.Min.Y,
+            Layout.ReturnButton.GetSize().X,
+            Layout.ReturnButton.GetSize().Y);
+        DrawText(
+            EchoesController->IsReturnToOperationsConfirmationArmed()
+                ? TEXT("[F10 / MENU]  CONFIRM RETURN TO OPERATIONS — FIELD REMAINS PAUSED")
+                : TEXT("[F10 / MENU]  RETURN TO OPERATIONS — CONFIRMATION REQUIRED"),
+            EchoesController->IsReturnToOperationsConfirmationArmed()
+                ? Accent
+                : Body,
+            Left + 42.0f, Top + 222.0f * ContentScale,
+            SmallFont, 0.84f * TextScale, false);
+    }
 
     DrawText(TEXT("ACCESSIBILITY & CAMERA"), Accent, Left + 42.0f,
              Top + 250.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
@@ -3859,9 +4245,16 @@ void AEchoesHUD::DrawPauseMenu(
         Muted, Left + 42.0f, Top + 458.0f * ContentScale,
         SmallFont, 0.78f * TextScale, false);
 
-    DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 76.0f,
-             PanelWidth - 84.0f, 42.0f);
-    DrawText(TEXT("PRESS ENTER TO RETURN TO THE SCAR"),
+    DrawRect(Accent,
+             Layout.PrimaryButton.Min.X,
+             Layout.PrimaryButton.Min.Y,
+             Layout.PrimaryButton.GetSize().X,
+             Layout.PrimaryButton.GetSize().Y);
+    DrawText(
+             bCanReturnToOperations &&
+                     EchoesController->IsReturnToOperationsConfirmationArmed()
+                 ? TEXT("F10 / MENU AGAIN: RETURN TO OPERATIONS")
+                 : TEXT("PRESS ENTER TO RESUME OPERATION"),
              bHighContrast ? FLinearColor::Black
                            : FLinearColor(0.0f, 0.06f, 0.09f),
              Left + PanelWidth * 0.5f - 142.0f * TextScale,
@@ -3914,6 +4307,8 @@ void AEchoesHUD::DrawMissionBriefing(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    const FString SkirmishMapName =
+        ActiveSkirmishMapDisplayName(BriefingBridge);
     const bool bPrologue = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignPrologue;
@@ -4128,7 +4523,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("THE BROKEN SUN  //  MISSION 15  //  %s"),
                   *LocalFaction)
         : FString::Printf(
-              TEXT("GLASS SCAR  //  OPERATIONS BRIEF  //  %s"),
+              TEXT("%s  //  OPERATIONS BRIEF  //  %s"),
+              *SkirmishMapName,
               *LocalFaction);
     DrawText(BriefingTitle,
              Muted, TextLeft, Top + 72.0f * ContentScale, SmallFont, 0.90f * TextScale, false);

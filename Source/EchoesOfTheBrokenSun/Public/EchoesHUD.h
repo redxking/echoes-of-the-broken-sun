@@ -25,6 +25,12 @@ private:
     void DrawTitleScreen(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    void DrawSkirmishSetup(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
+    void DrawSkirmishDeploymentSummary(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawMissionBriefing(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);

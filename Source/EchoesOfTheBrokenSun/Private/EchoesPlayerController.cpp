@@ -12,6 +12,7 @@
 #include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesSkirmishOverlayLayout.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "EchoesTerrainView.h"
 #include "Components/StaticMeshComponent.h"
@@ -19,10 +20,12 @@
 #include "Components/SkyLightComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/EngineTypes.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/SkyLight.h"
 #include "Engine/World.h"
+#include "Framework/Application/SlateApplication.h"
 #include "HAL/PlatformMisc.h"
 #include "HAL/PlatformTime.h"
 #include "InputCoreTypes.h"
@@ -32,6 +35,7 @@
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
+#include "Widgets/SViewport.h"
 
 #include <algorithm>
 #include <limits>
@@ -78,6 +82,11 @@ void AEchoesPlayerController::BeginPlay()
     FInputModeGameAndUI InputMode;
     InputMode.SetHideCursorDuringCapture(false);
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    if (UGameViewportClient* GameViewport =
+            GetWorld() != nullptr ? GetWorld()->GetGameViewport() : nullptr)
+    {
+        InputMode.SetWidgetToFocus(GameViewport->GetGameViewportWidget());
+    }
     SetInputMode(InputMode);
     bShowMouseCursor = true;
     if (!bRuntimeStateKnown)
@@ -172,6 +181,66 @@ void AEchoesPlayerController::EndPlay(
 {
     DestroyNetworkPresentation();
     Super::EndPlay(EndPlayReason);
+}
+
+bool AEchoesPlayerController::ResolvePointerScreenPosition(
+    FVector2D& OutScreenPosition,
+    FVector2D* OutViewportSize)
+{
+    int32 ViewportX = 0;
+    int32 ViewportY = 0;
+    GetViewportSize(ViewportX, ViewportY);
+    const FVector2D ViewportSize(ViewportX, ViewportY);
+    if (OutViewportSize != nullptr)
+    {
+        *OutViewportSize = ViewportSize;
+    }
+
+    float CachedMouseX = 0.0f;
+    float CachedMouseY = 0.0f;
+    const bool bCachedMouseAvailable =
+        GetMousePosition(CachedMouseX, CachedMouseY);
+    if (ViewportX > 0 && ViewportY > 0 &&
+        FSlateApplication::IsInitialized())
+    {
+        const UGameViewportClient* GameViewport =
+            GetWorld() != nullptr ? GetWorld()->GetGameViewport() : nullptr;
+        const TSharedPtr<SViewport> ViewportWidget =
+            GameViewport != nullptr
+                ? GameViewport->GetGameViewportWidget()
+                : nullptr;
+        if (ViewportWidget.IsValid())
+        {
+            const FGeometry& Geometry = ViewportWidget->GetCachedGeometry();
+            const FVector2D LocalSize(
+                Geometry.GetLocalSize().X,
+                Geometry.GetLocalSize().Y);
+            if (LocalSize.X > UE_SMALL_NUMBER &&
+                LocalSize.Y > UE_SMALL_NUMBER)
+            {
+                const FVector2D AbsolutePosition =
+                    FSlateApplication::Get().GetCursorPos();
+                const FVector2D LocalPosition =
+                    Geometry.AbsoluteToLocal(AbsolutePosition);
+                const FVector2D ResolvedPosition(
+                    LocalPosition.X * ViewportSize.X / LocalSize.X,
+                    LocalPosition.Y * ViewportSize.Y / LocalSize.Y);
+                if (FMath::IsFinite(ResolvedPosition.X) &&
+                    FMath::IsFinite(ResolvedPosition.Y))
+                {
+                    OutScreenPosition = ResolvedPosition;
+                    return true;
+                }
+            }
+        }
+    }
+
+    if (bCachedMouseAvailable)
+    {
+        OutScreenPosition = FVector2D(CachedMouseX, CachedMouseY);
+        return true;
+    }
+    return false;
 }
 
 void AEchoesPlayerController::ConfigureNetworkSeat(uint8 Seat)
@@ -3116,6 +3185,12 @@ FString AEchoesPlayerController::GetLocalFactionLabel() const
             return FactionDisplayName(NetworkView->faction);
         }
     }
+    if (IsSkirmishSetupVisible() ||
+        IsSkirmishDeploymentSummaryVisible())
+    {
+        return FEchoesSkirmishSetupModel::FactionDisplayName(
+            PendingSkirmishSetup.LocalFaction);
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -3140,6 +3215,12 @@ FString AEchoesPlayerController::GetOpponentFactionLabel() const
                     : echoes::sim::Faction::KharuunAssemblies);
         }
     }
+    if (IsSkirmishSetupVisible() ||
+        IsSkirmishDeploymentSummaryVisible())
+    {
+        return FEchoesSkirmishSetupModel::FactionDisplayName(
+            PendingSkirmishSetup.OpponentFaction);
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -3159,6 +3240,184 @@ bool AEchoesPlayerController::DidPresentedLocalPlayerWin() const
     return OutcomeBelongsToSeat(PresentedMatchOutcome, LocalSeat);
 }
 
+bool AEchoesPlayerController::IsSkirmishSetupVisible() const
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return bTitleScreenVisible && Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
+        !Bridge->IsNetworkHumanOpponentEnabled();
+}
+
+bool AEchoesPlayerController::IsSkirmishDeploymentSummaryVisible() const
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return bMissionBriefingVisible && Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
+        !Bridge->IsNetworkHumanOpponentEnabled();
+}
+
+bool AEchoesPlayerController::CanReturnCompletedSkirmishToOperations() const
+{
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return bMatchResultVisible && !bCampaignResult && Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
+        !Bridge->IsNetworkHumanOpponentEnabled();
+}
+
+bool AEchoesPlayerController::SetPendingSkirmishSetup(
+    const FEchoesSkirmishSetup& Setup,
+    FString& OutFeedback)
+{
+    if (!IsSkirmishSetupVisible())
+    {
+        OutFeedback = TEXT("[SKIRMISH_SETUP_TITLE_REQUIRED] Open the skirmish setup from Operations.");
+        return false;
+    }
+    if (!FEchoesSkirmishSetupModel::Validate(Setup, OutFeedback))
+    {
+        return false;
+    }
+    PendingSkirmishSetup = Setup;
+    OutFeedback = TEXT("SKIRMISH SETUP UPDATED — no active match state was changed.");
+    return true;
+}
+
+void AEchoesPlayerController::FocusPreviousSkirmishSetting()
+{
+    if (!IsSkirmishSetupVisible())
+    {
+        return;
+    }
+    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 4) % 5;
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("SKIRMISH SETUP — row %d of 5 selected; Left/Right changes the value."),
+            SkirmishSetupFocusRow + 1),
+        3600.0f);
+}
+
+void AEchoesPlayerController::FocusNextSkirmishSetting()
+{
+    if (!IsSkirmishSetupVisible())
+    {
+        return;
+    }
+    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 1) % 5;
+    SetStatusMessage(
+        FString::Printf(
+            TEXT("SKIRMISH SETUP — row %d of 5 selected; Left/Right changes the value."),
+            SkirmishSetupFocusRow + 1),
+        3600.0f);
+}
+
+void AEchoesPlayerController::DecreaseSkirmishSetting()
+{
+    if (!IsSkirmishSetupVisible())
+    {
+        return;
+    }
+    switch (SkirmishSetupFocusRow)
+    {
+        case 0:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextFaction(
+                    PendingSkirmishSetup, true, -1);
+            break;
+        case 1:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextFaction(
+                    PendingSkirmishSetup, false, -1);
+            break;
+        case 2:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextMap(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 3:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextAi(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 4:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextResources(
+                    PendingSkirmishSetup, -1);
+            break;
+        default:
+            SkirmishSetupFocusRow = 0;
+            break;
+    }
+    SetStatusMessage(
+        TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
+        3600.0f);
+}
+
+void AEchoesPlayerController::IncreaseSkirmishSetting()
+{
+    if (!IsSkirmishSetupVisible())
+    {
+        return;
+    }
+    switch (SkirmishSetupFocusRow)
+    {
+        case 0:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextFaction(
+                    PendingSkirmishSetup, true, 1);
+            break;
+        case 1:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextFaction(
+                    PendingSkirmishSetup, false, 1);
+            break;
+        case 2:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextMap(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 3:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextAi(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 4:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextResources(
+                    PendingSkirmishSetup, 1);
+            break;
+        default:
+            SkirmishSetupFocusRow = 0;
+            break;
+    }
+    SetStatusMessage(
+        TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
+        3600.0f);
+}
+
+void AEchoesPlayerController::ReturnToSkirmishSetup()
+{
+    if (!IsSkirmishDeploymentSummaryVisible())
+    {
+        return;
+    }
+    bMissionBriefingVisible = false;
+    bTitleScreenVisible = true;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(
+        TEXT("SKIRMISH SETUP — deployment review closed; pending choices retained and active simulation unchanged."),
+        3600.0f);
+}
+
 void AEchoesPlayerController::PresentTitleScreen()
 {
     UEchoesSimulationSubsystem* Bridge =
@@ -3169,6 +3428,11 @@ void AEchoesPlayerController::PresentTitleScreen()
     {
         SetStatusMessage(TEXT("[TITLE_SIM_NOT_READY] The operation is unavailable."));
         return;
+    }
+    if (IsSkirmishDeploymentSummaryVisible())
+    {
+        PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
+        SkirmishSetupFocusRow = 0;
     }
     SynchronizeBoundCampaignProtocol();
     ClearSelection();
@@ -3183,6 +3447,8 @@ void AEchoesPlayerController::PresentTitleScreen()
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
     CampaignRestoreConfirmationExpiresAt = 0.0;
+    bReturnToOperationsConfirmationArmed = false;
+    ReturnToOperationsConfirmationExpiresAt = 0.0;
     bCampaignResult = false;
     bCampaignSuccess = false;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
@@ -3199,7 +3465,7 @@ void AEchoesPlayerController::PresentTitleScreen()
         FString::Printf(
             TEXT("ECHOES OF THE BROKEN SUN — F9 changes operation; C continues the campaign; %sEnter opens the selected brief."),
             Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
-                ? TEXT("Tab changes faction; ")
+                ? TEXT("arrows configure skirmish; ")
             : Bridge->GetOperationMode() ==
                     EEchoesOperationMode::CampaignPrologue
                 ? TEXT("Mara Vey deployed; ")
@@ -3417,7 +3683,18 @@ void AEchoesPlayerController::PresentMissionBriefing()
             ? TEXT("SEVERAL VOICES, ONE COMMAND — research Held Alternatives, resolve one protected voice to Possible while the other remains Manifest, place both voices and Neme at their inherited sites, research Shared Resolution, then raise and hold a Phase Anchor through the visible crisis timer. Enter deploys Hollow Choir authority.")
         : bBrokenSun
             ? TEXT("THE BROKEN SUN — secure the inherited Crownfall approach, assemble Mara, Oruun, Neme, and Talar's witnessed accord, explicitly arm and confirm one earned final resolution, then raise its distinct conduit and hold the exact contract. Enter deploys Hollow Choir authority.")
-            : TEXT("GLASS SCAR OPERATIONS BRIEF — Tab changes faction; Enter deploys."),
+            : *FString::Printf(
+                  TEXT("SKIRMISH DEPLOYMENT REVIEW — %s against %s on %s; AI %s; %s. Enter applies the complete setup and deploys; Escape returns to setup."),
+                  FEchoesSkirmishSetupModel::FactionDisplayName(
+                      PendingSkirmishSetup.LocalFaction),
+                  FEchoesSkirmishSetupModel::FactionDisplayName(
+                      PendingSkirmishSetup.OpponentFaction),
+                  FEchoesSkirmishSetupModel::MapDisplayName(
+                      PendingSkirmishSetup.MapPreset),
+                  FEchoesSkirmishSetupModel::AiDisplayName(
+                      PendingSkirmishSetup.AiPersonality),
+                  FEchoesSkirmishSetupModel::ResourceDisplayName(
+                      PendingSkirmishSetup.ResourceLevel)),
         3600.0f);
     UE_LOG(
         LogEchoes,
@@ -3462,6 +3739,22 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     {
         SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Deployment could not begin."));
         return;
+    }
+    if (IsSkirmishDeploymentSummaryVisible())
+    {
+        FString DeploymentFeedback;
+        if (!Bridge->ApplySkirmishSetup(
+                PendingSkirmishSetup, DeploymentFeedback))
+        {
+            SetStatusMessage(DeploymentFeedback, 15.0f);
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_SKIRMISH_DEPLOYMENT_REJECTED] detail=%s summaryRetained=true"),
+                *DeploymentFeedback);
+            return;
+        }
+        PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
     }
     SynchronizeBoundCampaignProtocol();
     bMissionBriefingVisible = false;
@@ -3723,8 +4016,15 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     {
         SetStatusMessage(
             FString::Printf(
-                  TEXT("DEPLOYED — secure the Future Well or destroy the %s Command Core."),
-                  *GetOpponentFactionLabel()),
+                  TEXT("DEPLOYED — %s against %s on %s; AI %s; secure the Future Well or destroy the opposing Command Core."),
+                  FEchoesSkirmishSetupModel::FactionDisplayName(
+                      PendingSkirmishSetup.LocalFaction),
+                  FEchoesSkirmishSetupModel::FactionDisplayName(
+                      PendingSkirmishSetup.OpponentFaction),
+                  FEchoesSkirmishSetupModel::MapDisplayName(
+                      PendingSkirmishSetup.MapPreset),
+                  FEchoesSkirmishSetupModel::AiDisplayName(
+                      PendingSkirmishSetup.AiPersonality)),
             8.0f);
     }
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_BRIEFING_DISMISSED] paused=false"));
@@ -3744,6 +4044,33 @@ void AEchoesPlayerController::CyclePlayableFaction()
     if (Bridge == nullptr || !Bridge->IsScenarioReady())
     {
         SetStatusMessage(TEXT("[FACTION_SIM_NOT_READY] Faction choice is unavailable."));
+        return;
+    }
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
+    {
+        if (Bridge->IsNetworkHumanOpponentEnabled())
+        {
+            SetStatusMessage(
+                TEXT("SKIRMISH SETUP LOCKED — network match settings are negotiated by match authority."),
+                8.0f);
+            return;
+        }
+        if (!bTitleScreenVisible)
+        {
+            SetStatusMessage(
+                TEXT("DEPLOYMENT REVIEW — Escape returns to setup; Enter applies the shown deployment."),
+                3600.0f);
+            return;
+        }
+        PendingSkirmishSetup =
+            FEchoesSkirmishSetupModel::WithNextFaction(
+                PendingSkirmishSetup, true, 1);
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("LOCAL FORCE: %s — pending only; active simulation unchanged."),
+                FEchoesSkirmishSetupModel::FactionDisplayName(
+                    PendingSkirmishSetup.LocalFaction)),
+            3600.0f);
         return;
     }
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
@@ -3974,6 +4301,11 @@ void AEchoesPlayerController::CycleOperation()
         SetStatusMessage(Feedback);
         return;
     }
+    if (NewOperation == EEchoesOperationMode::Skirmish)
+    {
+        PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
+        SkirmishSetupFocusRow = 0;
+    }
     SynchronizeBoundCampaignProtocol();
     ClearSelection();
     ClearControlGroups();
@@ -4091,8 +4423,68 @@ bool AEchoesPlayerController::IsCampaignRestoreConfirmationArmed() const
                CampaignRestoreConfirmationExpiresAt;
 }
 
+bool AEchoesPlayerController::IsReturnToOperationsConfirmationArmed() const
+{
+    return bReturnToOperationsConfirmationArmed && GetWorld() != nullptr &&
+        GetWorld()->GetTimeSeconds() <=
+            ReturnToOperationsConfirmationExpiresAt;
+}
+
+void AEchoesPlayerController::RequestReturnToOperations()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (!bPauseMenuVisible || Bridge == nullptr ||
+        Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish ||
+        Bridge->IsNetworkHumanOpponentEnabled())
+    {
+        SetStatusMessage(
+            TEXT("[RETURN_TO_OPERATIONS_UNAVAILABLE] Pause an active skirmish before leaving the field."));
+        return;
+    }
+    if (!IsReturnToOperationsConfirmationArmed())
+    {
+        bReturnToOperationsConfirmationArmed = true;
+        ReturnToOperationsConfirmationExpiresAt =
+            GetWorld()->GetTimeSeconds() + 10.0;
+        SetStatusMessage(
+            TEXT("RETURN TO OPERATIONS ARMED — press F10 / Menu again within 10 seconds. The field remains paused; resume it unchanged or replace it by changing the setup."),
+            10.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_RETURN_TO_OPERATIONS_ARMED] confirmationSeconds=10 skirmishOnly=true simulationPaused=true"));
+        return;
+    }
+
+    bReturnToOperationsConfirmationArmed = false;
+    ReturnToOperationsConfirmationExpiresAt = 0.0;
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    PresentTitleScreen();
+    if (bTitleScreenVisible)
+    {
+        SetStatusMessage(
+            TEXT("RETURNED TO OPERATIONS — the field is paused. The current setup resumes the same match; changing setup replaces it after confirmation."),
+            3600.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_RETURNED_TO_OPERATIONS] title=true fieldPaused=true campaignLedgerUnchanged=true"));
+    }
+}
+
 void AEchoesPlayerController::RequestNewCampaign()
 {
+    if (bPauseMenuVisible)
+    {
+        RequestReturnToOperations();
+        return;
+    }
     if (!bTitleScreenVisible)
     {
         SetStatusMessage(TEXT("[NEW_CAMPAIGN_TITLE_REQUIRED] Return to the title screen before replacing campaign progress."));
@@ -4548,6 +4940,24 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
         {
             ContinueCampaign();
         }
+        else if (CanReturnCompletedSkirmishToOperations())
+        {
+            if (UEchoesSimulationSubsystem* Bridge =
+                    GetWorld() != nullptr
+                        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                        : nullptr)
+            {
+                PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
+                SkirmishSetupFocusRow = 0;
+            }
+            PresentTitleScreen();
+            if (bTitleScreenVisible)
+            {
+                SetStatusMessage(
+                    TEXT("OPERATIONS — the completed field remains retained; review the same setup or adjust it before the next deployment."),
+                    3600.0f);
+            }
+        }
         else
         {
             RestartScenario();
@@ -4590,7 +5000,7 @@ void AEchoesPlayerController::NotifyMatchFinished(
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
     FString Message =
-        TEXT("DRAW — both Command Cores fell in the same deterministic tick. Press R to restart.");
+        TEXT("DRAW — both Command Cores fell in the same deterministic tick.");
     if (OutcomeBelongsToSeat(
             Outcome,
             GetNetMode() == NM_Client &&
@@ -4598,20 +5008,24 @@ void AEchoesPlayerController::NotifyMatchFinished(
                 ? NetworkSeat
                 : UEchoesSimulationSubsystem::LocalPlayerId))
     {
-        Message =
-            TEXT("VICTORY — the opposing Command Core has fallen. Press R to restart.");
+        Message = TEXT("VICTORY — the opposing Command Core has fallen.");
     }
     else if (Outcome != echoes::sim::MatchOutcome::Draw)
     {
-        Message =
-            TEXT("DEFEAT — your Command Core has fallen. Press R to restart.");
+        Message = TEXT("DEFEAT — your Command Core has fallen.");
     }
+    Message += CanReturnCompletedSkirmishToOperations()
+        ? TEXT(" Press Enter or controller A to return to Operations, or R to restart.")
+        : TEXT(" Press R to restart.");
     SetStatusMessage(Message, 3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u keyboardRestart=true"),
-        static_cast<uint8>(Outcome));
+        TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u primaryAction=%s keyboardRestart=true"),
+        static_cast<uint8>(Outcome),
+        CanReturnCompletedSkirmishToOperations()
+            ? TEXT("return_to_operations")
+            : TEXT("restart"));
 }
 
 void AEchoesPlayerController::NotifyCampaignPrologueFinished(
@@ -5642,11 +6056,10 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
 #endif
     if (bSelectionButtonDown)
     {
-        float MouseX = 0.0f;
-        float MouseY = 0.0f;
-        if (GetMousePosition(MouseX, MouseY))
+        FVector2D PointerPosition = FVector2D::ZeroVector;
+        if (ResolvePointerScreenPosition(PointerPosition))
         {
-            SelectionCurrentScreenPosition = FVector2D(MouseX, MouseY);
+            SelectionCurrentScreenPosition = PointerPosition;
         }
     }
     PruneSelection();
@@ -6239,6 +6652,10 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CycleEffectsVolume"), &AEchoesPlayerController::CycleEffectsVolume);
     BindPressed(TEXT("ToggleReducedDynamicRange"), &AEchoesPlayerController::ToggleReducedDynamicRange);
     BindPressed(TEXT("ConfirmPrimaryAction"), &AEchoesPlayerController::ConfirmPrimaryAction);
+    BindPressed(TEXT("SkirmishFocusPrevious"), &AEchoesPlayerController::FocusPreviousSkirmishSetting);
+    BindPressed(TEXT("SkirmishFocusNext"), &AEchoesPlayerController::FocusNextSkirmishSetting);
+    BindPressed(TEXT("SkirmishValuePrevious"), &AEchoesPlayerController::DecreaseSkirmishSetting);
+    BindPressed(TEXT("SkirmishValueNext"), &AEchoesPlayerController::IncreaseSkirmishSetting);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
     BindPressed(TEXT("ContinueCampaign"), &AEchoesPlayerController::ContinueCampaign);
@@ -6266,28 +6683,38 @@ void AEchoesPlayerController::SetupInputComponent()
 
 void AEchoesPlayerController::SelectionPressed()
 {
+    FVector2D PointerPosition = FVector2D::ZeroVector;
+    FVector2D ViewportSize = FVector2D::ZeroVector;
+    const bool bPointerAvailable =
+        ResolvePointerScreenPosition(PointerPosition, &ViewportSize);
     if (bTechnologyPanelVisible)
     {
-        float MouseX = 0.0f;
-        float MouseY = 0.0f;
-        if (GetMousePosition(MouseX, MouseY))
+        if (bPointerAvailable)
         {
-            (void)HandleTechnologyPanelPointer(FVector2D(MouseX, MouseY));
+            (void)HandleTechnologyPanelPointer(PointerPosition);
         }
         return;
     }
     if (IsModalOverlayVisible())
     {
+        if (bPointerAvailable &&
+            ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f)
+        {
+            const UEchoesGameUserSettings* Settings =
+                UEchoesGameUserSettings::Get();
+            (void)HandleModalOverlayPointer(
+                PointerPosition,
+                ViewportSize,
+                Settings != nullptr ? Settings->GetHudScale() : 1.0f);
+        }
         return;
     }
-    float MouseX = 0.0f;
-    float MouseY = 0.0f;
-    if (!GetMousePosition(MouseX, MouseY))
+    if (!bPointerAvailable)
     {
         SetStatusMessage(TEXT("[CURSOR_UNAVAILABLE] Selection could not read the pointer position."));
         return;
     }
-    SelectionStartScreenPosition = FVector2D(MouseX, MouseY);
+    SelectionStartScreenPosition = PointerPosition;
     SelectionCurrentScreenPosition = SelectionStartScreenPosition;
     bSelectionButtonDown = true;
 }
@@ -6304,11 +6731,10 @@ void AEchoesPlayerController::SelectionReleased()
         return;
     }
 
-    float MouseX = SelectionCurrentScreenPosition.X;
-    float MouseY = SelectionCurrentScreenPosition.Y;
-    if (GetMousePosition(MouseX, MouseY))
+    FVector2D PointerPosition = SelectionCurrentScreenPosition;
+    if (ResolvePointerScreenPosition(PointerPosition))
     {
-        SelectionCurrentScreenPosition = FVector2D(MouseX, MouseY);
+        SelectionCurrentScreenPosition = PointerPosition;
     }
     bSelectionButtonDown = false;
 
@@ -7087,13 +7513,10 @@ void AEchoesPlayerController::PruneSelection()
 
 bool AEchoesPlayerController::TraceCursor(FHitResult& OutHitResult)
 {
-    float MouseX = 0.0f;
-    float MouseY = 0.0f;
-    if (!GetMousePosition(MouseX, MouseY))
+    if (!ResolvePointerScreenPosition(LastPointerScreenPosition))
     {
         return false;
     }
-    LastPointerScreenPosition = FVector2D(MouseX, MouseY);
     return GetHitResultAtScreenPosition(
         LastPointerScreenPosition,
         ECC_Visibility,
@@ -9320,11 +9743,163 @@ bool AEchoesPlayerController::HandleTechnologyPanelPointer(
     return true;
 }
 
+bool AEchoesPlayerController::HandleModalOverlayPointer(
+    const FVector2D& ScreenPosition,
+    const FVector2D& ViewportSize,
+    float HudScale)
+{
+    if (!IsModalOverlayVisible() || bTechnologyPanelVisible)
+    {
+        return false;
+    }
+    if (ViewportSize.X <= 0.0f || ViewportSize.Y <= 0.0f)
+    {
+        SetStatusMessage(
+            TEXT("[VIEWPORT_UNAVAILABLE] Overlay selection could not resolve the screen."));
+        return true;
+    }
+
+    if (IsSkirmishSetupVisible())
+    {
+        const FEchoesSkirmishSetupOverlayLayout Layout =
+            FEchoesSkirmishSetupOverlayLayout::Build(
+                ViewportSize,
+                HudScale);
+        for (int32 Row = 0; Row < 5; ++Row)
+        {
+            if (!Layout.SettingRows[Row].IsInsideOrOn(ScreenPosition))
+            {
+                continue;
+            }
+            SkirmishSetupFocusRow = Row;
+            if (Layout.SettingDecrease[Row].IsInsideOrOn(ScreenPosition))
+            {
+                DecreaseSkirmishSetting();
+            }
+            else
+            {
+                IncreaseSkirmishSetting();
+            }
+            return true;
+        }
+        if (Layout.ReviewButton.IsInsideOrOn(ScreenPosition))
+        {
+            ConfirmPrimaryAction();
+        }
+        return true;
+    }
+
+    if (IsSkirmishDeploymentSummaryVisible())
+    {
+        const FEchoesSkirmishSummaryOverlayLayout Layout =
+            FEchoesSkirmishSummaryOverlayLayout::Build(
+                ViewportSize,
+                HudScale);
+        if (Layout.BackButton.IsInsideOrOn(ScreenPosition))
+        {
+            ReturnToSkirmishSetup();
+        }
+        else if (Layout.DeployButton.IsInsideOrOn(ScreenPosition))
+        {
+            ConfirmMissionBriefing();
+        }
+        return true;
+    }
+
+    if (bPauseMenuVisible)
+    {
+        const FEchoesPauseOverlayLayout Layout =
+            FEchoesPauseOverlayLayout::Build(ViewportSize, HudScale);
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        const bool bCanReturnToOperations = Bridge != nullptr &&
+            Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
+            !Bridge->IsNetworkHumanOpponentEnabled();
+        if (Layout.ResumeButton.IsInsideOrOn(ScreenPosition))
+        {
+            TogglePauseMenu();
+        }
+        else if (Layout.RestartButton.IsInsideOrOn(ScreenPosition))
+        {
+            RestartScenario();
+        }
+        else if (bCanReturnToOperations &&
+                 Layout.ReturnButton.IsInsideOrOn(ScreenPosition))
+        {
+            RequestReturnToOperations();
+        }
+        else if (Layout.PrimaryButton.IsInsideOrOn(ScreenPosition))
+        {
+            if (bCanReturnToOperations &&
+                IsReturnToOperationsConfirmationArmed())
+            {
+                RequestReturnToOperations();
+            }
+            else
+            {
+                TogglePauseMenu();
+            }
+        }
+        return true;
+    }
+
+    if (bMatchResultVisible)
+    {
+        const FEchoesResultOverlayLayout Layout =
+            FEchoesResultOverlayLayout::Build(ViewportSize, HudScale);
+        const bool bReplayConflict = bCampaignResult &&
+            CampaignCommitStatus ==
+                EEchoesCampaignCommitStatus::ReplayConflict;
+        const bool bHasDistinctPrimaryAction =
+            CanReturnCompletedSkirmishToOperations() ||
+            CanAdvanceCampaignResult() || bReplayConflict;
+        if (bHasDistinctPrimaryAction &&
+            Layout.PrimaryButton.IsInsideOrOn(ScreenPosition))
+        {
+            if (bReplayConflict)
+            {
+                TogglePauseMenu();
+            }
+            else
+            {
+                ConfirmPrimaryAction();
+            }
+        }
+        else if (bHasDistinctPrimaryAction &&
+                 Layout.RestartButton.IsInsideOrOn(ScreenPosition))
+        {
+            RestartScenario();
+        }
+        else if (!bHasDistinctPrimaryAction &&
+                 Layout.FullButton.IsInsideOrOn(ScreenPosition))
+        {
+            if (bCampaignResult)
+            {
+                ConfirmPrimaryAction();
+            }
+            else
+            {
+                RestartScenario();
+            }
+        }
+        return true;
+    }
+
+    return true;
+}
+
 void AEchoesPlayerController::TogglePauseMenu()
 {
     if (bTechnologyPanelVisible)
     {
         ToggleTechnologyPanel();
+        return;
+    }
+    if (IsSkirmishDeploymentSummaryVisible())
+    {
+        ReturnToSkirmishSetup();
         return;
     }
     if (bMatchResultVisible && bCampaignResult &&
@@ -9362,12 +9937,17 @@ void AEchoesPlayerController::TogglePauseMenu()
         return;
     }
     bPauseMenuVisible = !bPauseMenuVisible;
+    bReturnToOperationsConfirmationArmed = false;
+    ReturnToOperationsConfirmationExpiresAt = 0.0;
     Bridge->SetScenarioPaused(bPauseMenuVisible);
     SetIgnoreMoveInput(bPauseMenuVisible);
     SetIgnoreLookInput(bPauseMenuVisible);
     SetStatusMessage(
         bPauseMenuVisible
-            ? TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts.")
+            ? Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
+                    !Bridge->IsNetworkHumanOpponentEnabled()
+                ? TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts; F10 / Menu returns to Operations with confirmation.")
+                : TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts.")
             : TEXT("MATCH RESUMED."),
         bPauseMenuVisible ? 3600.0f : 3.0f);
     UE_LOG(

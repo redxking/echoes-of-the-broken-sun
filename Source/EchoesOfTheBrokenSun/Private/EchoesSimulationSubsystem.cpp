@@ -10,8 +10,10 @@
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesPresentationAudioSubsystem.h"
+#include "EchoesSkirmishSetup.h"
 #include "EchoesTerrainView.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Hash/xxhash.h"
@@ -37,6 +39,10 @@ constexpr int32 PrototypeMapWidthTiles = 64;
 constexpr int32 PrototypeMapHeightTiles = 64;
 constexpr uint32 PrototypeTicksPerSecond = 20;
 constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
+static_assert(
+    PrototypeMapWidthTiles == FEchoesSkirmishSetupModel::MapWidthTiles &&
+        PrototypeMapHeightTiles == FEchoesSkirmishSetupModel::MapHeightTiles,
+    "Skirmish presets must retain the supported snapshot dimensions.");
 constexpr int32 MaximumCatchUpTicksPerFrame = 8;
 constexpr uint64 SustainedStressQualificationSeconds = 60U * 60U;
 constexpr uint64 SustainedStressQualificationTicks =
@@ -108,7 +114,7 @@ constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
 constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
-constexpr uint8 QuickSaveContainerVersion = 2;
+constexpr uint8 QuickSaveContainerVersion = 3;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
@@ -252,11 +258,31 @@ enum class EQuickSaveContainerRead : uint8
 [[nodiscard]] bool BuildQuickSaveBranchIdentity(
     EEchoesOperationMode Operation,
     const FEchoesCampaignProgress& CampaignProgress,
+    const FEchoesSkirmishSetup& SkirmishSetup,
     uint64& OutIdentity,
     FString& OutError)
 {
     OutIdentity = 0;
     OutError.Reset();
+    if (Operation == EEchoesOperationMode::Skirmish)
+    {
+        if (!FEchoesSkirmishSetupModel::Validate(
+                SkirmishSetup, OutError))
+        {
+            return false;
+        }
+        const uint8 SetupBytes[] = {
+            static_cast<uint8>(SkirmishSetup.LocalFaction),
+            static_cast<uint8>(SkirmishSetup.OpponentFaction),
+            static_cast<uint8>(SkirmishSetup.MapPreset),
+            static_cast<uint8>(SkirmishSetup.AiPersonality),
+            static_cast<uint8>(SkirmishSetup.ResourceLevel)};
+        const uint64 Hash = FXxHash64::HashBuffer(
+            SetupBytes,
+            UE_ARRAY_COUNT(SetupBytes)).Hash;
+        OutIdentity = Hash != 0 ? Hash : 1;
+        return true;
+    }
     if (!RequiresCampaignBranchBoundQuickSave(Operation))
     {
         return true;
@@ -311,6 +337,7 @@ enum class EQuickSaveContainerRead : uint8
     EEchoesOperationMode Operation,
     Faction LocalFaction,
     uint64 CampaignBranchIdentity,
+    const FEchoesSkirmishSetup& SkirmishSetup,
     const TArray<uint8>& Payload,
     TArray<uint8>& OutContainer,
     FString& OutError)
@@ -323,7 +350,7 @@ enum class EQuickSaveContainerRead : uint8
         return false;
     }
     OutContainer.Reserve(
-        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 20 + Payload.Num());
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 25 + Payload.Num());
     OutContainer.Append(
         QuickSaveContainerMagic,
         UE_ARRAY_COUNT(QuickSaveContainerMagic));
@@ -332,6 +359,30 @@ enum class EQuickSaveContainerRead : uint8
     OutContainer.Add(static_cast<uint8>(LocalFaction));
     OutContainer.Add(0);
     AppendUint64LittleEndian(OutContainer, CampaignBranchIdentity);
+    if (Operation == EEchoesOperationMode::Skirmish)
+    {
+        FString SetupError;
+        if (!FEchoesSkirmishSetupModel::Validate(
+                SkirmishSetup,
+                SetupError) ||
+            SkirmishSetup.LocalFaction != LocalFaction)
+        {
+            OutContainer.Reset();
+            OutError = SetupError.IsEmpty()
+                ? TEXT("skirmish setup does not match the local faction")
+                : SetupError;
+            return false;
+        }
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.LocalFaction));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.OpponentFaction));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.MapPreset));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.AiPersonality));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.ResourceLevel));
+    }
+    else
+    {
+        OutContainer.AddZeroed(5);
+    }
     AppendUint32LittleEndian(
         OutContainer,
         static_cast<uint32>(Payload.Num()));
@@ -346,11 +397,17 @@ enum class EQuickSaveContainerRead : uint8
     EEchoesOperationMode ExpectedOperation,
     Faction ExpectedFaction,
     uint64 ExpectedCampaignBranchIdentity,
+    bool bAllowLegacySkirmish,
     const TArray<uint8>& Bytes,
     TArray<uint8>& OutPayload,
+    bool& bOutRecoveredSkirmishSetup,
+    FEchoesSkirmishSetup& OutRecoveredSkirmishSetup,
     FString& OutError)
 {
     OutPayload.Reset();
+    bOutRecoveredSkirmishSetup = false;
+    OutRecoveredSkirmishSetup =
+        FEchoesSkirmishSetupModel::DefaultSetup();
     OutError.Reset();
     if (Bytes.Num() < UE_ARRAY_COUNT(QuickSaveContainerMagic) ||
         FMemory::Memcmp(
@@ -364,12 +421,21 @@ enum class EQuickSaveContainerRead : uint8
                 "[LOAD_LEDGER_BRANCH_UNBOUND] This legacy checkpoint has no campaign branch identity and cannot be loaded into the active campaign.");
             return EQuickSaveContainerRead::Invalid;
         }
+        if (ExpectedOperation == EEchoesOperationMode::Skirmish &&
+            !bAllowLegacySkirmish)
+        {
+            OutError = TEXT(
+                "[LOAD_SKIRMISH_SETUP_UNBOUND] This legacy checkpoint has no complete skirmish setup identity.");
+            return EQuickSaveContainerRead::Invalid;
+        }
         return EQuickSaveContainerRead::Legacy;
     }
     constexpr int32 VersionOneHeaderSize =
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 4;
     constexpr int32 VersionTwoHeaderSize =
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 4;
+    constexpr int32 VersionThreeHeaderSize =
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 5 + 4;
     constexpr int32 ChecksumSize = 4;
     if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
     {
@@ -394,14 +460,27 @@ enum class EQuickSaveContainerRead : uint8
         OutError = TEXT("checkpoint container is truncated");
         return EQuickSaveContainerRead::Invalid;
     }
+    uint8 SetupBytes[5] = {};
+    if (Version >= 3)
+    {
+        if (Bytes.Num() - Offset < UE_ARRAY_COUNT(SetupBytes))
+        {
+            OutError = TEXT("checkpoint container is truncated");
+            return EQuickSaveContainerRead::Invalid;
+        }
+        FMemory::Memcpy(
+            SetupBytes,
+            Bytes.GetData() + Offset,
+            UE_ARRAY_COUNT(SetupBytes));
+        Offset += UE_ARRAY_COUNT(SetupBytes);
+    }
     uint32 PayloadLength = 0;
-    const int32 HeaderSize = Version >= 2
-        ? VersionTwoHeaderSize
-        : VersionOneHeaderSize;
+    const int32 HeaderSize = Version >= 3
+        ? VersionThreeHeaderSize
+        : Version >= 2 ? VersionTwoHeaderSize : VersionOneHeaderSize;
     if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
         Reserved != 0 ||
         Operation != static_cast<uint8>(ExpectedOperation) ||
-        FactionValue != static_cast<uint8>(ExpectedFaction) ||
         PayloadLength > static_cast<uint32>(MAX_int32) ||
         Bytes.Num() != HeaderSize + static_cast<int32>(PayloadLength) +
                 ChecksumSize)
@@ -409,6 +488,72 @@ enum class EQuickSaveContainerRead : uint8
         OutError = TEXT(
             "checkpoint container does not match the active operation and faction");
         return EQuickSaveContainerRead::Invalid;
+    }
+    const int32 ChecksumOffset = Bytes.Num() - ChecksumSize;
+    int32 ChecksumReadOffset = ChecksumOffset;
+    uint32 StoredChecksum = 0;
+    if (!ReadUint32LittleEndian(
+            Bytes,
+            ChecksumReadOffset,
+            StoredChecksum) ||
+        StoredChecksum != FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset))
+    {
+        OutError = TEXT("checkpoint container checksum is invalid");
+        return EQuickSaveContainerRead::Invalid;
+    }
+
+    if (Version >= 3 && ExpectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        FEchoesSkirmishSetup RecoveredSetup;
+        RecoveredSetup.LocalFaction = static_cast<Faction>(SetupBytes[0]);
+        RecoveredSetup.OpponentFaction = static_cast<Faction>(SetupBytes[1]);
+        RecoveredSetup.MapPreset =
+            static_cast<EEchoesSkirmishMapPreset>(SetupBytes[2]);
+        RecoveredSetup.AiPersonality =
+            static_cast<echoes::sim::AiPersonality>(SetupBytes[3]);
+        RecoveredSetup.ResourceLevel =
+            static_cast<EEchoesSkirmishResourceLevel>(SetupBytes[4]);
+        FString SetupError;
+        uint64 RecoveredIdentity = 0;
+        if (!FEchoesSkirmishSetupModel::Validate(
+                RecoveredSetup,
+                SetupError) ||
+            FactionValue != SetupBytes[0] ||
+            !BuildQuickSaveBranchIdentity(
+                EEchoesOperationMode::Skirmish,
+                FEchoesCampaignProgress{},
+                RecoveredSetup,
+                RecoveredIdentity,
+                SetupError) ||
+            RecoveredIdentity != CampaignBranchIdentity)
+        {
+            OutError = FString::Printf(
+                TEXT("[LOAD_SKIRMISH_SETUP_INVALID] %s"),
+                SetupError.IsEmpty()
+                    ? TEXT("The checkpoint setup identity is inconsistent.")
+                    : *SetupError);
+            return EQuickSaveContainerRead::Invalid;
+        }
+        OutRecoveredSkirmishSetup = RecoveredSetup;
+        bOutRecoveredSkirmishSetup = true;
+    }
+    else
+    {
+        if (FactionValue != static_cast<uint8>(ExpectedFaction))
+        {
+            OutError = TEXT(
+                "checkpoint container does not match the active operation and faction");
+            return EQuickSaveContainerRead::Invalid;
+        }
+        if (Version >= 3 &&
+            (SetupBytes[0] != 0 || SetupBytes[1] != 0 ||
+             SetupBytes[2] != 0 || SetupBytes[3] != 0 ||
+             SetupBytes[4] != 0))
+        {
+            OutError = TEXT(
+                "checkpoint container carries unexpected skirmish setup data");
+            return EQuickSaveContainerRead::Invalid;
+        }
     }
     if (RequiresCampaignBranchBoundQuickSave(ExpectedOperation))
     {
@@ -425,28 +570,87 @@ enum class EQuickSaveContainerRead : uint8
             return EQuickSaveContainerRead::Invalid;
         }
     }
+    else if (ExpectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        if (Version >= 3)
+        {
+            if (!bOutRecoveredSkirmishSetup)
+            {
+                OutError = TEXT(
+                    "[LOAD_SKIRMISH_SETUP_INVALID] The checkpoint setup could not be recovered.");
+                return EQuickSaveContainerRead::Invalid;
+            }
+        }
+        else if (Version < 2)
+        {
+            if (!bAllowLegacySkirmish)
+            {
+                OutError = TEXT(
+                    "[LOAD_SKIRMISH_SETUP_UNBOUND] This checkpoint predates complete skirmish setup binding.");
+                return EQuickSaveContainerRead::Invalid;
+            }
+        }
+        else if (CampaignBranchIdentity != ExpectedCampaignBranchIdentity &&
+                 !(CampaignBranchIdentity == 0 && bAllowLegacySkirmish))
+        {
+            OutError = TEXT(
+                "[LOAD_SKIRMISH_SETUP_MISMATCH] This checkpoint belongs to a different skirmish setup.");
+            return EQuickSaveContainerRead::Invalid;
+        }
+    }
     else if (Version >= 2 && CampaignBranchIdentity != 0)
     {
         OutError = TEXT(
             "checkpoint container carries an unexpected campaign branch identity");
         return EQuickSaveContainerRead::Invalid;
     }
-    const int32 ChecksumOffset = Bytes.Num() - ChecksumSize;
-    int32 ChecksumReadOffset = ChecksumOffset;
-    uint32 StoredChecksum = 0;
-    if (!ReadUint32LittleEndian(
-            Bytes,
-            ChecksumReadOffset,
-            StoredChecksum) ||
-        StoredChecksum != FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset))
-    {
-        OutError = TEXT("checkpoint container checksum is invalid");
-        return EQuickSaveContainerRead::Invalid;
-    }
     OutPayload.Append(
         Bytes.GetData() + HeaderSize,
         static_cast<int32>(PayloadLength));
     return EQuickSaveContainerRead::Wrapped;
+}
+
+[[nodiscard]] bool ValidateSkirmishSnapshotBinding(
+    const echoes::sim::Simulation& Candidate,
+    const FEchoesSkirmishSetup& Setup,
+    FString& OutError)
+{
+    const echoes::sim::PlayerState* LocalPlayer =
+        Candidate.FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId);
+    const echoes::sim::PlayerState* OpponentPlayer =
+        Candidate.FindPlayer(UEchoesSimulationSubsystem::OpponentPlayerId);
+    if (LocalPlayer == nullptr || OpponentPlayer == nullptr ||
+        LocalPlayer->faction != Setup.LocalFaction ||
+        OpponentPlayer->faction != Setup.OpponentFaction)
+    {
+        OutError = TEXT(
+            "[LOAD_SKIRMISH_FACTION_MISMATCH] The checkpoint forces do not match its recovered setup.");
+        return false;
+    }
+    for (int32 TileY = 0;
+         TileY < FEchoesSkirmishSetupModel::MapHeightTiles;
+         ++TileY)
+    {
+        for (int32 TileX = 0;
+             TileX < FEchoesSkirmishSetupModel::MapWidthTiles;
+             ++TileX)
+        {
+            const bool bExpectedBlocked =
+                FEchoesSkirmishSetupModel::IsBlockedTile(
+                    Setup.MapPreset,
+                    TileX,
+                    TileY);
+            const bool bSnapshotBlocked =
+                Candidate.TerrainAt(TileX, TileY) == Terrain::Blocked;
+            if (bExpectedBlocked != bSnapshotBlocked)
+            {
+                OutError = TEXT(
+                    "[LOAD_SKIRMISH_MAP_MISMATCH] The checkpoint terrain does not match its recovered battlefield.");
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 [[nodiscard]] bool AtomicReplaceFile(
@@ -1726,6 +1930,31 @@ enum class EQuickSaveContainerRead : uint8
     return BlockedTiles;
 }
 
+[[nodiscard]] int32 ConfigureSkirmishTerrain(
+    echoes::sim::Simulation& Simulation,
+    EEchoesSkirmishMapPreset Preset)
+{
+    int32 BlockedTiles = 0;
+    for (int32 TileY = 0;
+         TileY < FEchoesSkirmishSetupModel::MapHeightTiles;
+         ++TileY)
+    {
+        for (int32 TileX = 0;
+             TileX < FEchoesSkirmishSetupModel::MapWidthTiles;
+             ++TileX)
+        {
+            if (FEchoesSkirmishSetupModel::IsBlockedTile(
+                    Preset, TileX, TileY) &&
+                Simulation.SetTerrainTile(
+                    TileX, TileY, Terrain::Blocked))
+            {
+                ++BlockedTiles;
+            }
+        }
+    }
+    return BlockedTiles;
+}
+
 [[nodiscard]] int32 ConfigureLumeReach(
     echoes::sim::Simulation& Simulation,
     FutureWellChoice PriorChoice)
@@ -2491,6 +2720,24 @@ bool UEchoesSimulationSubsystem::StartScenario(
         return false;
     }
 
+    const bool bConfiguredSkirmish =
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+        !bUseStressScenario && !bUseAnyControlledPresentation;
+    if (bConfiguredSkirmish)
+    {
+        FString SetupError;
+        if (!FEchoesSkirmishSetupModel::Validate(
+                ActiveSkirmishSetup, SetupError))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_SKIRMISH_SETUP_REJECTED] detail=%s"),
+                *SetupError);
+            return false;
+        }
+    }
+
     const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
                                             ? World->GetGameInstance()
@@ -2570,8 +2817,16 @@ bool UEchoesSimulationSubsystem::StartScenario(
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun;
     const int32 BaseGlassScarBlockedTiles = bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
-        : ConfigureGlassScar(*Simulation);
-    const int32 ExpectedBaseBlockedTiles = bLumeReach ? 223 : 165;
+        : bConfiguredSkirmish
+            ? ConfigureSkirmishTerrain(
+                  *Simulation, ActiveSkirmishSetup.MapPreset)
+            : ConfigureGlassScar(*Simulation);
+    const int32 ExpectedBaseBlockedTiles = bLumeReach
+        ? 223
+        : bConfiguredSkirmish
+            ? FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(
+                  ActiveSkirmishSetup.MapPreset)
+            : 165;
     if (BaseGlassScarBlockedTiles != ExpectedBaseBlockedTiles)
     {
         UE_LOG(
@@ -2647,9 +2902,13 @@ bool UEchoesSimulationSubsystem::StartScenario(
             ? Faction::HollowChoir
         : SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun
             ? Faction::HollowChoir
-            : LocalFaction;
+            : ActiveSkirmishSetup.LocalFaction;
     const Faction ScenarioOpponentFaction =
-        echoes::presentation::SkirmishOpponent(ScenarioLocalFaction);
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+                !bUseStressScenario
+            ? ActiveSkirmishSetup.OpponentFaction
+            : echoes::presentation::SkirmishOpponent(
+                  ScenarioLocalFaction);
     if (bUseKharuunSystemsPresentation &&
         ScenarioLocalFaction != Faction::KharuunAssemblies)
     {
@@ -2660,6 +2919,9 @@ bool UEchoesSimulationSubsystem::StartScenario(
         Simulation.Reset();
         return false;
     }
+    const ResourcePool ConfiguredSkirmishResources =
+        FEchoesSkirmishSetupModel::StartingResources(
+            ActiveSkirmishSetup.ResourceLevel);
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
@@ -2691,11 +2953,15 @@ bool UEchoesSimulationSubsystem::StartScenario(
                     || SelectedOperation ==
                         EEchoesOperationMode::CampaignTheBrokenSun
                 ? ResourcePool{1000, 500}
-                : ResourcePool{500, 30}) ||
+                : SelectedOperation == EEchoesOperationMode::Skirmish
+                    ? ConfiguredSkirmishResources
+                    : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
             ScenarioOpponentFaction,
-            ResourcePool{500, 30}) ||
+            SelectedOperation == EEchoesOperationMode::Skirmish
+                ? ConfiguredSkirmishResources
+                : ResourcePool{500, 30}) ||
         ((bUseResearchInterruptionPresentation ||
           bUseKharuunSystemsPresentation) &&
          !Simulation->AddPlayer(
@@ -3021,6 +3287,54 @@ bool UEchoesSimulationSubsystem::StartScenario(
     }
     else
     {
+        const auto SpawnConfiguredForce = [&SpawnUnit](
+            uint8 Owner,
+            Faction ForceFaction,
+            const TArray<FIntPoint>& Tiles,
+            bool bLocalForce)
+        {
+            static constexpr EntityType LocalTypes[] = {
+                EntityType::CommandCore,
+                EntityType::Barracks,
+                EntityType::Dropoff,
+                EntityType::Worker,
+                EntityType::Worker,
+                EntityType::Worker,
+                EntityType::Soldier,
+                EntityType::Soldier,
+                EntityType::Soldier,
+                EntityType::HeavyUnit,
+                EntityType::ScoutUnit,
+                EntityType::UtilityStructure};
+            static constexpr EntityType OpponentTypes[] = {
+                EntityType::CommandCore,
+                EntityType::Barracks,
+                EntityType::Dropoff,
+                EntityType::Worker,
+                EntityType::Worker,
+                EntityType::Worker,
+                EntityType::Soldier,
+                EntityType::Soldier,
+                EntityType::HeavyUnit,
+                EntityType::ScoutUnit,
+                EntityType::UtilityStructure};
+            const int32 ExpectedCount = bLocalForce
+                ? UE_ARRAY_COUNT(LocalTypes)
+                : UE_ARRAY_COUNT(OpponentTypes);
+            if (Tiles.Num() != ExpectedCount)
+            {
+                return;
+            }
+            for (int32 Index = 0; Index < Tiles.Num(); ++Index)
+            {
+                SpawnUnit(
+                    Owner,
+                    ForceFaction,
+                    bLocalForce ? LocalTypes[Index] : OpponentTypes[Index],
+                    Tiles[Index].X,
+                    Tiles[Index].Y);
+            }
+        };
         const auto SpawnForce = [&SpawnUnit](
                                     uint8 Owner,
                                     Faction ForceFaction,
@@ -3138,8 +3452,26 @@ bool UEchoesSimulationSubsystem::StartScenario(
         }
         else
         {
-            SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
-            SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
+            if (bConfiguredSkirmish)
+            {
+                SpawnConfiguredForce(
+                    LocalPlayerId,
+                    ScenarioLocalFaction,
+                    FEchoesSkirmishSetupModel::LocalSpawnTiles(
+                        ActiveSkirmishSetup.MapPreset),
+                    true);
+                SpawnConfiguredForce(
+                    OpponentPlayerId,
+                    ScenarioOpponentFaction,
+                    FEchoesSkirmishSetupModel::OpponentSpawnTiles(
+                        ActiveSkirmishSetup.MapPreset),
+                    false);
+            }
+            else
+            {
+                SpawnForce(LocalPlayerId, ScenarioLocalFaction, true);
+                SpawnForce(OpponentPlayerId, ScenarioOpponentFaction, false);
+            }
         }
 
         if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
@@ -3652,7 +3984,10 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 0);
         }
 
-        const TArray<FIntPoint> MatterNodeTiles = bLumeReach
+        const TArray<FIntPoint> MatterNodeTiles = bConfiguredSkirmish
+            ? FEchoesSkirmishSetupModel::ResourceNodeTiles(
+                  ActiveSkirmishSetup.MapPreset)
+            : bLumeReach
             ? TArray<FIntPoint>{
                   {16, 16}, {21, 13}, {26, 24}, {38, 24},
                   {24, 48}, {40, 48}, {48, 42}, {52, 45}}
@@ -3708,8 +4043,13 @@ bool UEchoesSimulationSubsystem::StartScenario(
         }
         else
         {
+            const FIntPoint WellTile = bConfiguredSkirmish
+                ? FEchoesSkirmishSetupModel::FutureWellTile(
+                      ActiveSkirmishSetup.MapPreset)
+                : FIntPoint{32, 32};
             bSpawnSucceeded &=
-                Simulation->SpawnFutureWell(Vec2::FromTiles(32, 32)) != 0;
+                Simulation->SpawnFutureWell(
+                    Vec2::FromTiles(WellTile.X, WellTile.Y)) != 0;
         }
     }
 
@@ -4337,6 +4677,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
         return false;
     }
     bScenarioReady = true;
+    SynchronizeSkirmishEnvironmentPresentation();
     if (bSustainedStressScenario &&
         !ValidateSustainedStressContract(true, false, false))
     {
@@ -4425,6 +4766,27 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 GlassScarBlockedTiles,
                 static_cast<uint8>(SevenAccountsBranch));
         }
+    }
+    else if (bConfiguredSkirmish)
+    {
+        const FIntPoint WellTile =
+            FEchoesSkirmishSetupModel::FutureWellTile(
+                ActiveSkirmishSetup.MapPreset);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_SKIRMISH_MAP_READY] map=%s blocked=%d well=(%d,%d) local=%s opponent=%s ai=%s resources=%s"),
+            FEchoesSkirmishSetupModel::MapDisplayName(
+                ActiveSkirmishSetup.MapPreset),
+            GlassScarBlockedTiles,
+            WellTile.X,
+            WellTile.Y,
+            FactionStableName(ScenarioLocalFaction),
+            FactionStableName(ScenarioOpponentFaction),
+            FEchoesSkirmishSetupModel::AiDisplayName(
+                ActiveSkirmishSetup.AiPersonality),
+            FEchoesSkirmishSetupModel::ResourceDisplayName(
+                ActiveSkirmishSetup.ResourceLevel));
     }
     else
     {
@@ -5081,13 +5443,24 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::KharuunAssemblies &&
         NewFaction != Faction::HollowChoir)
     {
-        OutFeedback = TEXT("[FACTION_INVALID] That force is not playable in Glass Scar.");
+        OutFeedback = TEXT("[FACTION_INVALID] That force is not playable in this operation.");
         return false;
     }
     if (bStressScenario)
     {
         OutFeedback = TEXT("[FACTION_STRESS_LOCKED] The scale fixture has fixed teams.");
         return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        FEchoesSkirmishSetup Setup = ActiveSkirmishSetup;
+        Setup.LocalFaction = NewFaction;
+        if (Setup.OpponentFaction == NewFaction)
+        {
+            Setup.OpponentFaction =
+                echoes::presentation::SkirmishOpponent(NewFaction);
+        }
+        return ApplySkirmishSetup(Setup, OutFeedback);
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
         NewFaction != Faction::MeridianCompact)
@@ -5215,7 +5588,7 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
     {
         SetScenarioPaused(bWasPaused);
         OutFeedback = FString::Printf(
-            TEXT("FACTION SELECTED: %s. Glass Scar reset for deployment."),
+            TEXT("FACTION SELECTED: %s. Operation reset for deployment."),
             FactionStableName(LocalFaction));
         UE_LOG(
             LogEchoes,
@@ -5236,6 +5609,182 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
     OutFeedback = bRollbackSucceeded
                       ? TEXT("[FACTION_REBUILD_FAILED] The prior faction was restored.")
                       : TEXT("[FACTION_ROLLBACK_FAILED] The operation could not be restored.");
+    return false;
+}
+
+bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
+    const FEchoesSkirmishSetup& Setup,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (SelectedOperation != EEchoesOperationMode::Skirmish)
+    {
+        OutFeedback = TEXT("[SKIRMISH_SETUP_OPERATION_LOCKED] Campaign missions retain their authored force and battlefield authority.");
+        return false;
+    }
+    if (bStressScenario || bNetworkHumanOpponent)
+    {
+        OutFeedback = bStressScenario
+            ? TEXT("[SKIRMISH_SETUP_STRESS_LOCKED] The scale fixture has a fixed deployment.")
+            : TEXT("[SKIRMISH_SETUP_NETWORK_LOCKED] Network match settings are authority-negotiated and cannot be changed here.");
+        return false;
+    }
+    FString ValidationError;
+    if (!FEchoesSkirmishSetupModel::Validate(Setup, ValidationError))
+    {
+        OutFeedback = ValidationError;
+        return false;
+    }
+    if (Setup == ActiveSkirmishSetup &&
+        bScenarioReady && Simulation.IsValid())
+    {
+        LocalFaction = Setup.LocalFaction;
+        OutFeedback = TEXT("SKIRMISH DEPLOYMENT READY: the selected setup is already active.");
+        return true;
+    }
+
+    const FEchoesSkirmishSetup PreviousSetup = ActiveSkirmishSetup;
+    const Faction PreviousFaction = LocalFaction;
+    const bool bHadScenario = bScenarioReady && Simulation.IsValid();
+    const bool bWasPaused = bSimulationPaused;
+    const double PreviousFixedTimeAccumulator = FixedTimeAccumulator;
+    const uint64 PreviousNextPlayerCommandSequence =
+        NextPlayerCommandSequence;
+    const bool bPreviouslyWarnedAboutTimeClamp = bWarnedAboutTimeClamp;
+    const bool bPreviouslyLoggedFirstTick = bLoggedFirstTick;
+    const bool bPreviouslyLoggedStressCombat = bLoggedStressCombat;
+    const bool bPreviouslyLoggedAiExpansion = bLoggedAiExpansion;
+    const bool bPreviouslyLoggedAiRetreat = bLoggedAiRetreat;
+    const bool bPreviouslyLoggedAiPlayerView = bLoggedAiPlayerView;
+    const bool bPreviouslyLoggedAiAdaptation = bLoggedAiAdaptation;
+    const bool bPreviouslyLoggedAiMineralCover = bLoggedAiMineralCover;
+    const bool bPreviouslyLoggedAiVibrationResponse =
+        bLoggedAiVibrationResponse;
+    const bool bPreviouslyResearchPresentationScenario =
+        bResearchPresentationScenario;
+    const bool bPreviouslyResearchInterruptionPresentationScenario =
+        bResearchInterruptionPresentationScenario;
+    const bool bPreviouslyKharuunSystemsPresentationScenario =
+        bKharuunSystemsPresentationScenario;
+    const bool bPreviouslyPrologueCompletionPresentationScenario =
+        bPrologueCompletionPresentationScenario;
+    const bool bPreviouslyPointerCombatGuardPresentationScenario =
+        bPointerCombatGuardPresentationScenario;
+    const bool bPreviouslyLoggedResearchPresentationActive =
+        bLoggedResearchPresentationActive;
+    const bool bPreviouslyLoggedResearchPresentationComplete =
+        bLoggedResearchPresentationComplete;
+    const bool bPreviouslyLoggedResearchPresentationInterrupted =
+        bLoggedResearchPresentationInterrupted;
+    const bool bPreviouslyLoggedKharuunSystemsPresentation =
+        bLoggedKharuunSystemsPresentation;
+    const int32 PreviousPrologueCompletionPresentationStage =
+        PrologueCompletionPresentationStage;
+    const EntityId PreviousProloguePresentationWorkerId =
+        ProloguePresentationWorkerId;
+    const EntityId PreviousProloguePresentationWellId =
+        ProloguePresentationWellId;
+    const echoes::sim::ResearchType PreviousResearchPresentationTechnology =
+        ResearchPresentationTechnology;
+    const bool bPreviouslyMatchResultReported = bMatchResultReported;
+    const uint64 PreviousRuntimeMemoryTelemetryTick =
+        LastRuntimeMemoryTelemetryTick;
+    TUniquePtr<echoes::sim::Simulation> PreviousSimulation;
+    if (bHadScenario)
+    {
+        PreviousSimulation = MoveTemp(Simulation);
+        StopPrototypeScenario();
+    }
+    ActiveSkirmishSetup = Setup;
+    LocalFaction = Setup.LocalFaction;
+    if (StartScenario(false))
+    {
+        SetScenarioPaused(bHadScenario ? bWasPaused : true);
+        OutFeedback = FString::Printf(
+            TEXT("SKIRMISH DEPLOYMENT READY: %s against %s on %s // AI %s // %s."),
+            FEchoesSkirmishSetupModel::FactionDisplayName(
+                Setup.LocalFaction),
+            FEchoesSkirmishSetupModel::FactionDisplayName(
+                Setup.OpponentFaction),
+            FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
+            FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
+            FEchoesSkirmishSetupModel::ResourceDisplayName(
+                Setup.ResourceLevel));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_SKIRMISH_SETUP_APPLIED] local=%s opponent=%s map=%s ai=%s resources=%s scenarioReset=%s paused=%s"),
+            FactionStableName(Setup.LocalFaction),
+            FactionStableName(Setup.OpponentFaction),
+            FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
+            FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
+            FEchoesSkirmishSetupModel::ResourceDisplayName(
+                Setup.ResourceLevel),
+            bHadScenario ? TEXT("true") : TEXT("false"),
+            IsScenarioPaused() ? TEXT("true") : TEXT("false"));
+        return true;
+    }
+
+    StopPrototypeScenario();
+    ActiveSkirmishSetup = PreviousSetup;
+    LocalFaction = PreviousFaction;
+    bool bRollbackSucceeded = true;
+    if (bHadScenario)
+    {
+        Simulation = MoveTemp(PreviousSimulation);
+        FixedTimeAccumulator = PreviousFixedTimeAccumulator;
+        NextPlayerCommandSequence = PreviousNextPlayerCommandSequence;
+        bWarnedAboutTimeClamp = bPreviouslyWarnedAboutTimeClamp;
+        bLoggedFirstTick = bPreviouslyLoggedFirstTick;
+        bLoggedStressCombat = bPreviouslyLoggedStressCombat;
+        bLoggedAiExpansion = bPreviouslyLoggedAiExpansion;
+        bLoggedAiRetreat = bPreviouslyLoggedAiRetreat;
+        bLoggedAiPlayerView = bPreviouslyLoggedAiPlayerView;
+        bLoggedAiAdaptation = bPreviouslyLoggedAiAdaptation;
+        bLoggedAiMineralCover = bPreviouslyLoggedAiMineralCover;
+        bLoggedAiVibrationResponse = bPreviouslyLoggedAiVibrationResponse;
+        bResearchPresentationScenario =
+            bPreviouslyResearchPresentationScenario;
+        bResearchInterruptionPresentationScenario =
+            bPreviouslyResearchInterruptionPresentationScenario;
+        bKharuunSystemsPresentationScenario =
+            bPreviouslyKharuunSystemsPresentationScenario;
+        bPrologueCompletionPresentationScenario =
+            bPreviouslyPrologueCompletionPresentationScenario;
+        bPointerCombatGuardPresentationScenario =
+            bPreviouslyPointerCombatGuardPresentationScenario;
+        bLoggedResearchPresentationActive =
+            bPreviouslyLoggedResearchPresentationActive;
+        bLoggedResearchPresentationComplete =
+            bPreviouslyLoggedResearchPresentationComplete;
+        bLoggedResearchPresentationInterrupted =
+            bPreviouslyLoggedResearchPresentationInterrupted;
+        bLoggedKharuunSystemsPresentation =
+            bPreviouslyLoggedKharuunSystemsPresentation;
+        PrologueCompletionPresentationStage =
+            PreviousPrologueCompletionPresentationStage;
+        ProloguePresentationWorkerId = PreviousProloguePresentationWorkerId;
+        ProloguePresentationWellId = PreviousProloguePresentationWellId;
+        ResearchPresentationTechnology =
+            PreviousResearchPresentationTechnology;
+        bMatchResultReported = bPreviouslyMatchResultReported;
+        LastRuntimeMemoryTelemetryTick =
+            PreviousRuntimeMemoryTelemetryTick;
+        bSimulationPaused = bWasPaused;
+        bScenarioReady = false;
+        bRollbackSucceeded =
+            SpawnTerrainView() && SpawnFogView() && SyncEntityViews(true);
+        bScenarioReady = bRollbackSucceeded;
+        SynchronizeSkirmishEnvironmentPresentation();
+    }
+    OutFeedback = bRollbackSucceeded
+        ? TEXT("[SKIRMISH_DEPLOYMENT_FAILED] The requested deployment was rejected; the prior setup and match were restored.")
+        : TEXT("[SKIRMISH_ROLLBACK_FAILED] The requested deployment failed and the prior match could not be restored.");
+    UE_LOG(
+        LogEchoes,
+        Error,
+        TEXT("[ECHOES_SKIRMISH_SETUP_FAILED] rollback=%s priorSetupRetained=true"),
+        bRollbackSucceeded ? TEXT("true") : TEXT("false"));
     return false;
 }
 
@@ -5358,7 +5907,14 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         StopPrototypeScenario();
     }
     SelectedOperation = NewOperation;
-    (void)TryGetFixedCampaignFaction(SelectedOperation, LocalFaction);
+    if (SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        LocalFaction = ActiveSkirmishSetup.LocalFaction;
+    }
+    else
+    {
+        (void)TryGetFixedCampaignFaction(SelectedOperation, LocalFaction);
+    }
     if (!bHadScenario || StartScenario(false))
     {
         if (bHadScenario)
@@ -7258,6 +7814,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         if (!BuildQuickSaveBranchIdentity(
                 SelectedOperation,
                 CampaignProgress,
+                ActiveSkirmishSetup,
                 CampaignBranchIdentity,
                 BranchIdentityError))
         {
@@ -7272,6 +7829,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
                 SelectedOperation,
                 LocalFaction,
                 CampaignBranchIdentity,
+                ActiveSkirmishSetup,
                 PersistedBytes,
                 ContainerBytes,
                 ContainerError))
@@ -7307,6 +7865,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     if (!BuildQuickSaveBranchIdentity(
             SelectedOperation,
             CampaignProgress,
+            ActiveSkirmishSetup,
             ExpectedCampaignBranchIdentity,
             BranchIdentityError))
     {
@@ -7331,6 +7890,9 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
 
         TArray<uint8> ContainerPayload;
         const TArray<uint8>* OperationPayload = &CandidateBytes;
+        bool bRecoveredSkirmishSetup = false;
+        FEchoesSkirmishSetup RecoveredSkirmishSetup =
+            ActiveSkirmishSetup;
         if (UsesQuickSaveContainer(SelectedOperation))
         {
             const EQuickSaveContainerRead ContainerRead =
@@ -7338,11 +7900,24 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
                     SelectedOperation,
                     LocalFaction,
                     ExpectedCampaignBranchIdentity,
+                    SelectedOperation != EEchoesOperationMode::Skirmish ||
+                        ActiveSkirmishSetup ==
+                            FEchoesSkirmishSetupModel::DefaultSetup(),
                     CandidateBytes,
                     ContainerPayload,
+                    bRecoveredSkirmishSetup,
+                    RecoveredSkirmishSetup,
                     OutFailure);
             if (ContainerRead == EQuickSaveContainerRead::Invalid)
             {
+                return false;
+            }
+            if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+                bRecoveredSkirmishSetup &&
+                RecoveredSkirmishSetup != ActiveSkirmishSetup)
+            {
+                OutFailure = TEXT(
+                    "[LOAD_SKIRMISH_SETUP_MISMATCH] This recovery generation belongs to a different skirmish setup.");
                 return false;
             }
             if (ContainerRead == EQuickSaveContainerRead::Wrapped)
@@ -7455,6 +8030,11 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         const echoes::sim::SimulationConfig& Config = Candidate->Config();
         const echoes::sim::PlayerState* CandidateLocalPlayer =
             Candidate->FindPlayer(LocalPlayerId);
+        const Faction CandidateLocalFaction =
+            SelectedOperation == EEchoesOperationMode::Skirmish &&
+                    bRecoveredSkirmishSetup
+                ? RecoveredSkirmishSetup.LocalFaction
+                : LocalFaction;
         if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
@@ -7462,10 +8042,20 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             Config.protectedCommandCorePlayerMask != 0 ||
             !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
             CandidateLocalPlayer == nullptr ||
-            CandidateLocalPlayer->faction != LocalFaction)
+            CandidateLocalPlayer->faction != CandidateLocalFaction)
         {
             OutFailure = TEXT(
-                "checkpoint is not compatible with the active Glass Scar operation and faction");
+                "checkpoint is not compatible with the selected operation and faction");
+            return false;
+        }
+        if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+            !ValidateSkirmishSnapshotBinding(
+                *Candidate,
+                bRecoveredSkirmishSetup
+                    ? RecoveredSkirmishSetup
+                    : ActiveSkirmishSetup,
+                OutFailure))
+        {
             return false;
         }
         return true;
@@ -7685,6 +8275,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     if (!BuildQuickSaveBranchIdentity(
             SelectedOperation,
             CampaignProgress,
+            ActiveSkirmishSetup,
             ExpectedCampaignBranchIdentity,
             BranchIdentityError))
     {
@@ -7705,6 +8296,8 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     uint64 LoadedResolutionStartTick = 0;
     EntityId LoadedApproachAnchorId = 0;
     EntityId LoadedResolutionConduitId = 0;
+    bool bLoadedSkirmishSetupRecovered = false;
+    FEchoesSkirmishSetup LoadedSkirmishSetup = ActiveSkirmishSetup;
     FString SelectedPath;
     FString PrimaryFailure;
     const auto TryLoad = [this,
@@ -7718,6 +8311,8 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                           &LoadedResolutionStartTick,
                           &LoadedApproachAnchorId,
                           &LoadedResolutionConduitId,
+                          &bLoadedSkirmishSetupRecovered,
+                          &LoadedSkirmishSetup,
                           ExpectedCampaignBranchIdentity](
                              const FString& CandidatePath,
                              FString& OutFailure)
@@ -7735,6 +8330,9 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         }
         TArray<uint8> ContainerPayload;
         const TArray<uint8>* OperationPayload = &Bytes;
+        bool bCandidateSkirmishSetupRecovered = false;
+        FEchoesSkirmishSetup CandidateSkirmishSetup =
+            ActiveSkirmishSetup;
         if (UsesQuickSaveContainer(SelectedOperation))
         {
             const EQuickSaveContainerRead ContainerRead =
@@ -7742,8 +8340,13 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                     SelectedOperation,
                     LocalFaction,
                     ExpectedCampaignBranchIdentity,
+                    SelectedOperation != EEchoesOperationMode::Skirmish ||
+                        ActiveSkirmishSetup ==
+                            FEchoesSkirmishSetupModel::DefaultSetup(),
                     Bytes,
                     ContainerPayload,
+                    bCandidateSkirmishSetupRecovered,
+                    CandidateSkirmishSetup,
                     OutFailure);
             if (ContainerRead == EQuickSaveContainerRead::Invalid)
             {
@@ -7866,6 +8469,11 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             return false;
         }
         const echoes::sim::SimulationConfig& Config = Candidate->Config();
+        const Faction CandidateLocalFaction =
+            SelectedOperation == EEchoesOperationMode::Skirmish &&
+                    bCandidateSkirmishSetupRecovered
+                ? CandidateSkirmishSetup.LocalFaction
+                : LocalFaction;
         if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
@@ -7873,9 +8481,21 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             Config.protectedCommandCorePlayerMask != 0 ||
             !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
             Candidate->FindPlayer(LocalPlayerId) == nullptr ||
-            Candidate->FindPlayer(LocalPlayerId)->faction != LocalFaction)
+            Candidate->FindPlayer(LocalPlayerId)->faction !=
+                CandidateLocalFaction)
         {
-            OutFailure = TEXT("snapshot is not a compatible Glass Scar scenario");
+            OutFailure = TEXT(
+                "snapshot is not compatible with the selected operation and faction");
+            return false;
+        }
+        if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+            !ValidateSkirmishSnapshotBinding(
+                *Candidate,
+                bCandidateSkirmishSetupRecovered
+                    ? CandidateSkirmishSetup
+                    : ActiveSkirmishSetup,
+                OutFailure))
+        {
             return false;
         }
         if (SelectedOperation ==
@@ -8558,6 +9178,11 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         LoadedResolutionStartTick = CandidateResolutionStartTick;
         LoadedApproachAnchorId = CandidateApproachAnchorId;
         LoadedResolutionConduitId = CandidateResolutionConduitId;
+        bLoadedSkirmishSetupRecovered =
+            bCandidateSkirmishSetupRecovered;
+        LoadedSkirmishSetup = bCandidateSkirmishSetupRecovered
+            ? CandidateSkirmishSetup
+            : ActiveSkirmishSetup;
         return true;
     };
 
@@ -8590,10 +9215,19 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
 
     TUniquePtr<echoes::sim::Simulation> PreviousSimulation =
         MoveTemp(Simulation);
+    const FEchoesSkirmishSetup PreviousSkirmishSetup =
+        ActiveSkirmishSetup;
+    const Faction PreviousLocalFaction = LocalFaction;
     DestroyEntityViews();
     DestroyFogView();
     DestroyTerrainView();
     Simulation = MoveTemp(LoadedSimulation);
+    if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+        bLoadedSkirmishSetupRecovered)
+    {
+        ActiveSkirmishSetup = LoadedSkirmishSetup;
+        LocalFaction = LoadedSkirmishSetup.LocalFaction;
+    }
     bScenarioReady = false;
     const bool bViewsRestored =
         SpawnTerrainView() && SpawnFogView() && SyncEntityViews(true);
@@ -8603,9 +9237,15 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         DestroyFogView();
         DestroyTerrainView();
         Simulation = MoveTemp(PreviousSimulation);
+        ActiveSkirmishSetup = PreviousSkirmishSetup;
+        LocalFaction = PreviousLocalFaction;
         const bool bRollbackViews =
             SpawnTerrainView() && SpawnFogView() && SyncEntityViews(true);
         bScenarioReady = bRollbackViews;
+        if (SelectedOperation == EEchoesOperationMode::Skirmish)
+        {
+            SynchronizeSkirmishEnvironmentPresentation();
+        }
         OutFeedback = bRollbackViews
                           ? TEXT("[LOAD_VIEW_RESTORE_FAILED] The prior live match was restored.")
                           : TEXT("[LOAD_ROLLBACK_FAILED] Presentation recovery failed.");
@@ -8621,6 +9261,10 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     bSimulationPaused = false;
     bMatchResultReported =
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing;
+    if (SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        SynchronizeSkirmishEnvironmentPresentation();
+    }
     bSeveralVoicesCrisisHoldStarted =
         SelectedOperation ==
                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
@@ -8644,18 +9288,27 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     const bool bUsedBackup = SelectedPath == BackupPath;
     const bool bUsedStagedBackup =
         SelectedPath == BackupTemporaryPath;
+    const FString SetupRecoverySuffix =
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+                bLoadedSkirmishSetupRecovered
+            ? FString::Printf(
+                  TEXT(" with %s setup"),
+                  FEchoesSkirmishSetupModel::MapDisplayName(
+                      ActiveSkirmishSetup.MapPreset))
+            : FString{};
     OutFeedback = FString::Printf(
-        TEXT("QUICK LOAD: tick %llu restored%s."),
+        TEXT("QUICK LOAD: tick %llu restored%s%s."),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
         bUsedBackup
             ? TEXT(" from prior-generation backup")
         : bUsedStagedBackup
             ? TEXT(" from staged prior-generation recovery")
-            : TEXT(""));
+            : TEXT(""),
+        *SetupRecoverySuffix);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s ledgerBound=%s"),
+        TEXT("[ECHOES_QUICK_LOAD] tick=%llu source=%s ledgerBound=%s skirmishSetupRecovered=%s map=%s"),
         static_cast<unsigned long long>(Simulation->CurrentTick()),
         bUsedBackup
             ? TEXT("backup")
@@ -8675,7 +9328,12 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 SelectedOperation ==
                     EEchoesOperationMode::CampaignSeveralVoicesOneCommand
             ? TEXT("true")
-            : TEXT("false"));
+            : TEXT("false"),
+        bLoadedSkirmishSetupRecovered ? TEXT("true") : TEXT("false"),
+        SelectedOperation == EEchoesOperationMode::Skirmish
+            ? FEchoesSkirmishSetupModel::MapDisplayName(
+                  ActiveSkirmishSetup.MapPreset)
+            : TEXT("not_applicable"));
     return true;
 }
 
@@ -13814,10 +14472,16 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
             static_cast<int32>(PlayerView->Entities().size()));
         bLoggedAiPlayerView = true;
     }
+    const echoes::sim::AiPersonality AiPersonality =
+        SelectedOperation == EEchoesOperationMode::Skirmish
+            ? ActiveSkirmishSetup.AiPersonality
+            : echoes::sim::AiPersonality::Adaptive;
+    const TCHAR* AiProfile =
+        FEchoesSkirmishSetupModel::AiDisplayName(AiPersonality);
     const std::vector<echoes::sim::Command> Commands =
         echoes::sim::Simulation::GenerateAiCommands(
             *PlayerView,
-            echoes::sim::AiPersonality::Adaptive);
+            AiPersonality);
     for (const echoes::sim::Command& Command : Commands)
     {
         std::string Rejection;
@@ -13829,7 +14493,8 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                 UE_LOG(
                     LogEchoes,
                     Display,
-                    TEXT("[ECHOES_AI_EXPANSION] personality=adaptive actor=%u buildType=%u tile=(%d,%d) visibilityBounded=true"),
+                    TEXT("[ECHOES_AI_EXPANSION] personality=%s actor=%u buildType=%u tile=(%d,%d) visibilityBounded=true"),
+                    AiProfile,
                     Command.actor,
                     static_cast<uint8>(Command.buildType),
                     Command.position.x.FloorToInt(),
@@ -13853,7 +14518,8 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                     UE_LOG(
                         LogEchoes,
                         Display,
-                        TEXT("[ECHOES_AI_RETREAT] personality=adaptive actor=%u health=%d/%d action=%s visibilityBounded=true"),
+                        TEXT("[ECHOES_AI_RETREAT] personality=%s actor=%u health=%d/%d action=%s visibilityBounded=true"),
+                        AiProfile,
                         Command.actor,
                         Actor->hitPoints,
                         Actor->maxHitPoints,
@@ -13869,7 +14535,8 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                 UE_LOG(
                     LogEchoes,
                     Display,
-                    TEXT("[ECHOES_AI_ADAPTATION] personality=adaptive actor=%u site=%u form=%u compositionVisible=true"),
+                    TEXT("[ECHOES_AI_ADAPTATION] personality=%s actor=%u site=%u form=%u compositionVisible=true"),
+                    AiProfile,
                     Command.actor,
                     Command.target,
                     static_cast<uint8>(Command.warformAdaptation));
@@ -13881,7 +14548,8 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                 UE_LOG(
                     LogEchoes,
                     Display,
-                    TEXT("[ECHOES_AI_MINERAL_COVER] personality=adaptive actor=%u tile=(%d,%d) visibilityBounded=true"),
+                    TEXT("[ECHOES_AI_MINERAL_COVER] personality=%s actor=%u tile=(%d,%d) visibilityBounded=true"),
+                    AiProfile,
                     Command.actor,
                     Command.position.x.FloorToInt(),
                     Command.position.y.FloorToInt());
@@ -13894,7 +14562,8 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
                 UE_LOG(
                     LogEchoes,
                     Display,
-                    TEXT("[ECHOES_AI_VIBRATION_RESPONSE] personality=adaptive actor=%u tile=(%d,%d) anonymous=true visibilityBounded=true"),
+                    TEXT("[ECHOES_AI_VIBRATION_RESPONSE] personality=%s actor=%u tile=(%d,%d) anonymous=true visibilityBounded=true"),
+                    AiProfile,
                     Command.actor,
                     Command.position.x.FloorToInt(),
                     Command.position.y.FloorToInt());
@@ -15969,6 +16638,28 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
     }
     TerrainView = NewTerrainView;
     return true;
+}
+
+void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+    const bool bHideGlassScarComposition =
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+        ActiveSkirmishSetup.MapPreset !=
+            EEchoesSkirmishMapPreset::GlassScar;
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        if (Actor != nullptr &&
+            Actor->ActorHasTag(TEXT("EchoesGlassScarComposition")))
+        {
+            Actor->SetActorHiddenInGame(bHideGlassScarComposition);
+        }
+    }
 }
 
 bool UEchoesSimulationSubsystem::SyncTerrainView()

@@ -61,9 +61,9 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
             TEXT("RTS pointer is not captured on launch"),
             InputSettings->bCaptureMouseOnLaunch);
         TestEqual(
-            TEXT("RTS pointer remains uncaptured during clicks"),
+            TEXT("RTS pointer captures only while pressed so clicks reach gameplay input"),
             InputSettings->DefaultViewportMouseCaptureMode,
-            EMouseCaptureMode::NoCapture);
+            EMouseCaptureMode::CaptureDuringMouseDown);
         TestEqual(
             TEXT("RTS pointer is not locked to the viewport"),
             InputSettings->DefaultViewportMouseLockMode,

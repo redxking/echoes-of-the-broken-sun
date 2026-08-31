@@ -7,6 +7,7 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesSkirmishOverlayLayout.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
 
@@ -417,6 +418,21 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
     }
     AEchoesPlayerController* ResultController =
         World->SpawnActor<AEchoesPlayerController>();
+    const echoes::sim::Simulation* CompletedSimulation =
+        Bridge->GetSimulation();
+    const echoes::sim::Tick CompletedTick =
+        CompletedSimulation->CurrentTick();
+    const uint64 CompletedChecksum =
+        CompletedSimulation->StateChecksum();
+    const FEchoesCampaignProgress CampaignBeforeResultReturn =
+        Bridge->GetCampaignProgress();
+    const FVector2D ResultViewport(1600.0f, 900.0f);
+    const FEchoesResultOverlayLayout ResultLayout =
+        FEchoesResultOverlayLayout::Build(ResultViewport, 1.0f);
+    const auto BoxCenter = [](const FBox2D& Box)
+    {
+        return (Box.Min + Box.Max) * 0.5f;
+    };
     if (TestNotNull(TEXT("Match result controller can be created"), ResultController))
     {
         ResultController->NotifyMatchFinished(Bridge->GetMatchOutcome());
@@ -425,13 +441,49 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Presented result preserves the authoritative outcome"),
                  ResultController->GetPresentedMatchOutcome() ==
                      echoes::sim::MatchOutcome::Player0Victory);
-        ResultController->ConfirmPrimaryAction();
-        TestFalse(TEXT("Enter restart dismisses the match result"),
-                  ResultController->IsMatchResultVisible());
+        TestTrue(
+            TEXT("Completed offline skirmish exposes Operations return"),
+            ResultController->CanReturnCompletedSkirmishToOperations());
+        ResultController->HandleModalOverlayPointer(
+            BoxCenter(ResultLayout.PrimaryButton),
+            ResultViewport,
+            1.0f);
+        TestTrue(
+            TEXT("Result primary action returns to Operations without restarting"),
+            !ResultController->IsMatchResultVisible() &&
+                ResultController->IsTitleScreenVisible() &&
+                ResultController->IsSkirmishSetupVisible() &&
+                Bridge->GetSimulation() == CompletedSimulation &&
+                Bridge->GetSimulation()->CurrentTick() == CompletedTick &&
+                Bridge->GetSimulation()->StateChecksum() ==
+                    CompletedChecksum &&
+                Bridge->GetMatchOutcome() ==
+                    echoes::sim::MatchOutcome::Player0Victory &&
+                Bridge->GetCampaignProgress().Decisions ==
+                    CampaignBeforeResultReturn.Decisions);
     }
-    TestTrue(
-        TEXT("Enter restart returns the skirmish to an ongoing result"),
-        Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Ongoing);
+    AEchoesPlayerController* RestartController =
+        World->SpawnActor<AEchoesPlayerController>();
+    if (TestNotNull(
+            TEXT("Result restart controller can be created"),
+            RestartController))
+    {
+        RestartController->NotifyMatchFinished(Bridge->GetMatchOutcome());
+        RestartController->HandleModalOverlayPointer(
+            BoxCenter(ResultLayout.RestartButton),
+            ResultViewport,
+            1.0f);
+        TestTrue(
+            TEXT("Result R/restart control remains pointer-operable"),
+            !RestartController->IsMatchResultVisible() &&
+                Bridge->GetMatchOutcome() ==
+                    echoes::sim::MatchOutcome::Ongoing);
+        RestartController->Destroy();
+    }
+    if (ResultController != nullptr)
+    {
+        ResultController->Destroy();
+    }
 
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

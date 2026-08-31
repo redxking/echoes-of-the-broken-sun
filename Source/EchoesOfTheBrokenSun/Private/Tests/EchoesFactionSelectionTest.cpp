@@ -66,23 +66,53 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    const echoes::sim::Simulation* DefaultSimulation =
+        Bridge->GetSimulation();
+    const echoes::sim::Tick DefaultTick =
+        DefaultSimulation != nullptr ? DefaultSimulation->CurrentTick() : 0;
+    const uint64 DefaultChecksum =
+        DefaultSimulation != nullptr ? DefaultSimulation->StateChecksum() : 0;
     Controller->PresentTitleScreen();
-    Controller->CyclePlayableFaction();
+    FEchoesSkirmishSetup KharuunSetup =
+        Bridge->GetActiveSkirmishSetup();
+    KharuunSetup.LocalFaction = echoes::sim::Faction::KharuunAssemblies;
+    KharuunSetup.OpponentFaction = echoes::sim::Faction::MeridianCompact;
+    FString SetupFeedback;
+    TestTrue(
+        TEXT("A complete Kharuun deployment can be staged"),
+        Controller->SetPendingSkirmishSetup(
+            KharuunSetup, SetupFeedback));
     TestTrue(TEXT("Faction choice remains on the title screen"),
              Controller->IsTitleScreenVisible());
-    TestTrue(TEXT("Faction rebuild stays paused before deployment"),
+    TestTrue(TEXT("Faction setup stays paused before deployment"),
              Bridge->IsScenarioPaused());
     TestTrue(
-        TEXT("Tab-path faction selection assigns Kharuun to player zero"),
+        TEXT("Staging does not change active Meridian authority"),
         Bridge->GetLocalFaction() ==
-            echoes::sim::Faction::KharuunAssemblies);
-    TestTrue(
-        TEXT("The adaptive opponent becomes Meridian"),
-        Bridge->GetOpponentFaction() ==
             echoes::sim::Faction::MeridianCompact);
+    TestTrue(
+        TEXT("Staging does not rebuild or advance the live simulation"),
+        Bridge->GetSimulation() == DefaultSimulation &&
+            DefaultSimulation != nullptr &&
+            DefaultSimulation->CurrentTick() == DefaultTick &&
+            DefaultSimulation->StateChecksum() == DefaultChecksum);
     TestEqual(TEXT("Controller reports the selected force"),
               Controller->GetLocalFactionLabel(),
               FString(TEXT("KHARUUN ASSEMBLIES")));
+    Controller->ConfirmPrimaryAction();
+    TestTrue(TEXT("The first Enter reviews the complete Kharuun setup"),
+             Controller->IsSkirmishDeploymentSummaryVisible());
+    Controller->ConfirmPrimaryAction();
+    TestFalse(TEXT("The second Enter deploys the Kharuun setup"),
+              Controller->IsMissionBriefingVisible());
+    TestTrue(
+        TEXT("Confirmed deployment assigns Kharuun to player zero"),
+        Bridge->GetLocalFaction() ==
+            echoes::sim::Faction::KharuunAssemblies);
+    TestTrue(
+        TEXT("The explicit opponent becomes Meridian"),
+        Bridge->GetOpponentFaction() ==
+            echoes::sim::Faction::MeridianCompact);
 
     const echoes::sim::Simulation* Selected = Bridge->GetSimulation();
     const echoes::sim::PlayerState* LocalPlayer =
@@ -285,9 +315,18 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         }
     }
 
-    Controller->CyclePlayableFaction();
+    Controller->PresentTitleScreen();
+    FEchoesSkirmishSetup ChoirSetup = Bridge->GetActiveSkirmishSetup();
+    ChoirSetup.LocalFaction = echoes::sim::Faction::HollowChoir;
+    ChoirSetup.OpponentFaction = echoes::sim::Faction::MeridianCompact;
+    SetupFeedback.Reset();
     TestTrue(
-        TEXT("The title cycle exposes Hollow Choir as the third playable faction"),
+        TEXT("A complete Hollow Choir deployment can be staged"),
+        Controller->SetPendingSkirmishSetup(ChoirSetup, SetupFeedback));
+    Controller->ConfirmPrimaryAction();
+    Controller->ConfirmPrimaryAction();
+    TestTrue(
+        TEXT("Confirmed setup exposes Hollow Choir as a playable faction"),
         Bridge->GetLocalFaction() == echoes::sim::Faction::HollowChoir);
     TestTrue(
         TEXT("The declared Choir skirmish matchup uses Meridian opposition"),
@@ -401,28 +440,29 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                     echoes::sim::ChoirIdentityState::DualResolvePossible);
     }
 
-    Controller->CyclePlayableFaction();
+    Controller->PresentTitleScreen();
+    SetupFeedback.Reset();
     TestTrue(
-        TEXT("The third title step wraps Choir back to Meridian"),
-        Bridge->GetLocalFaction() ==
-            echoes::sim::Faction::MeridianCompact);
-    Controller->CyclePlayableFaction();
-    TestTrue(
-        TEXT("The title cycle can return to Kharuun before deployment"),
-        Bridge->GetLocalFaction() ==
-            echoes::sim::Faction::KharuunAssemblies);
-
+        TEXT("Kharuun can be staged again without mutating the Choir field"),
+        Controller->SetPendingSkirmishSetup(
+            KharuunSetup, SetupFeedback) &&
+            Bridge->GetLocalFaction() ==
+                echoes::sim::Faction::HollowChoir);
     Controller->ConfirmPrimaryAction();
     TestTrue(TEXT("Selected Kharuun force reaches the operations brief"),
              Controller->IsMissionBriefingVisible());
     TestTrue(
-        TEXT("Faction selection survives title-to-brief transition"),
+        TEXT("Faction selection remains pending through review"),
         Bridge->GetLocalFaction() ==
-            echoes::sim::Faction::KharuunAssemblies);
+            echoes::sim::Faction::HollowChoir);
 
     Controller->ConfirmPrimaryAction();
     TestFalse(TEXT("Second Enter deploys from the operations brief"),
               Controller->IsMissionBriefingVisible());
+    TestTrue(
+        TEXT("The reviewed setup returns active authority to Kharuun"),
+        Bridge->GetLocalFaction() ==
+            echoes::sim::Faction::KharuunAssemblies);
     Controller->CyclePlayableFaction();
     TestEqual(TEXT("Live Tab selects one owned entity without a pointer"),
               Controller->GetSelectedEntityIds().Num(), 1);

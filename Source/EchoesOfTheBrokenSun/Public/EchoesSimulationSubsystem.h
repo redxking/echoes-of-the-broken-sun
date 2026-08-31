@@ -17,6 +17,7 @@
 #include "EchoesSevenAccountsMissionModel.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesShapeBesideUsMissionModel.h"
+#include "EchoesSkirmishSetup.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
@@ -358,6 +359,14 @@ public:
         echoes::sim::Faction NewFaction,
         FString& OutFeedback);
 
+    /**
+     * Validates and applies one complete offline skirmish deployment. A failed
+     * rebuild restores the prior setup and its paused scenario.
+     */
+    bool ApplySkirmishSetup(
+        const FEchoesSkirmishSetup& Setup,
+        FString& OutFeedback);
+
     /** Rebuilds the undeployed runtime for the selected operation. */
     bool SelectOperationMode(
         EEchoesOperationMode NewOperation,
@@ -434,6 +443,10 @@ public:
         echoes::sim::net::CommandAdmissionContext& Context,
         std::string* SimulationRejection = nullptr);
     void SetNetworkHumanOpponent(bool bEnabled);
+    [[nodiscard]] bool IsNetworkHumanOpponentEnabled() const
+    {
+        return bNetworkHumanOpponent;
+    }
     [[nodiscard]] const echoes::sim::Entity* FindEntity(uint32 EntityId) const;
     [[nodiscard]] AEchoesEntityView* FindEntityView(uint32 EntityId) const;
     [[nodiscard]] FEchoesPresentationPoolStats GetPresentationPoolStats() const;
@@ -575,6 +588,11 @@ public:
     }
     [[nodiscard]] echoes::sim::Faction GetOpponentFaction() const
     {
+        if (!bStressScenario &&
+            SelectedOperation == EEchoesOperationMode::Skirmish)
+        {
+            return ActiveSkirmishSetup.OpponentFaction;
+        }
         switch (GetLocalFaction())
         {
             case echoes::sim::Faction::MeridianCompact:
@@ -584,6 +602,10 @@ public:
                 return echoes::sim::Faction::MeridianCompact;
         }
         return echoes::sim::Faction::MeridianCompact;
+    }
+    [[nodiscard]] const FEchoesSkirmishSetup& GetActiveSkirmishSetup() const
+    {
+        return ActiveSkirmishSetup;
     }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;
@@ -716,6 +738,7 @@ private:
     bool SyncFogView();
     bool SpawnTerrainView();
     bool SyncTerrainView();
+    void SynchronizeSkirmishEnvironmentPresentation();
     void DestroyEntityViews();
     void DestroyFogView();
     void DestroyTerrainView();
@@ -816,6 +839,8 @@ private:
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;
     EEchoesOperationMode SelectedOperation = EEchoesOperationMode::Skirmish;
+    FEchoesSkirmishSetup ActiveSkirmishSetup =
+        FEchoesSkirmishSetupModel::DefaultSetup();
     echoes::sim::EntityId ArchiveCarrierId = 0;
     echoes::sim::EntityId MemoryBearerId = 0;
     echoes::sim::EntityId MigrationWaystoneId = 0;

@@ -1456,6 +1456,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             return false;
         }
         Accent->Tags.Add(TEXT("EchoesPlaceholder"));
+        Accent->Tags.Add(TEXT("EchoesGlassScarComposition"));
         Accent->Tags.Add(DetailTag);
         UStaticMeshComponent* AccentMesh = Accent->GetStaticMeshComponent();
         AccentMesh->SetMobility(EComponentMobility::Movable);
@@ -1696,6 +1697,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             continue;
         }
         Glow->Tags.Add(TEXT("EchoesPlaceholder"));
+        Glow->Tags.Add(TEXT("EchoesGlassScarComposition"));
         Glow->Tags.Add(TEXT("EchoesScarGlow"));
         UPointLightComponent* GlowComponent = Glow->PointLightComponent;
         if (GlowComponent == nullptr)
