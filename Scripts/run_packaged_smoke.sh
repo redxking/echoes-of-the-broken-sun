@@ -42,7 +42,7 @@ for marker in ECHOES_AUDIO_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_SI
   fi
 done
 
-if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*25 entities, 10 visible views, 20 Hz' "$log"; then
+if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*32 entities, 14 visible views, 20 Hz' "$log"; then
   print -u2 "The packaged scenario did not report the accepted initial state. Inspect: $log"
   exit 6
 fi
