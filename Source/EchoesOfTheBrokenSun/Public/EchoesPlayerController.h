@@ -22,6 +22,24 @@ enum class EEchoesCityDistrict : uint8;
 class UEchoesSimulationSubsystem;
 class UEchoesGameInstance;
 
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+namespace echoes::network::testing
+{
+[[nodiscard]] bool ValidateDevelopmentCredentialStagingFile(
+    const FString& Candidate,
+    FString& OutNormalized,
+    FString& OutReason);
+[[nodiscard]] bool StageDevelopmentResumeCredential(
+    const FString& NormalizedPath,
+    const FString& Credential,
+    FString& OutReason);
+[[nodiscard]] bool ConsumeDevelopmentResumeCredential(
+    const FString& Candidate,
+    FString& OutCredential,
+    FString& OutReason);
+}
+#endif
+
 /** RTS selection, faction choice, and context-order input for the local player. */
 UCLASS(NotBlueprintable)
 class ECHOESOFTHEBROKENSUN_API AEchoesPlayerController final
@@ -754,6 +772,7 @@ private:
     uint32 NetworkReconnectActorId = 0;
     echoes::sim::Vec2 NetworkReconnectInitialPosition{};
     FString NetworkResumeCredential;
+    FString DevelopmentResumeCredentialFilePath;
     bool bNetworkMatchResultSent = false;
     bool bNetworkMatchResultReceived = false;
     bool bNetworkMatchResultAcknowledged = false;

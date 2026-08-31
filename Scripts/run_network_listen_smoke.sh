@@ -72,7 +72,8 @@ trap cleanup_processes EXIT INT TERM
 
 "$editor" "$project" "/Engine/Maps/Entry?listen" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
-  -port="$port" -EchoesAutoStart -EchoesNetworkListenSmoke \
+  -MULTIHOME=127.0.0.1 -port="$port" \
+  -EchoesAutoStart -EchoesNetworkListenSmoke \
   "${transport_args[@]}" \
   -AbsLog="$server_log" &
 server_pid=$!

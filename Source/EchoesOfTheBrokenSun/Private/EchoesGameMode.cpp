@@ -23,6 +23,7 @@
 #include "EchoesWeatherView.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
+#include "Engine/NetConnection.h"
 #include "Engine/PointLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
@@ -31,6 +32,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/HUD.h"
 #include "HAL/PlatformTime.h"
+#include "IPAddress.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/App.h"
@@ -80,6 +82,26 @@ const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
     return Difference == 0;
 }
 
+[[nodiscard]] bool IsDevelopmentLoopbackRemote(
+    APlayerController* Controller)
+{
+#if !UE_BUILD_DEVELOPMENT
+    (void)Controller;
+    return false;
+#else
+    UNetConnection* Connection =
+        Controller != nullptr ? Controller->GetNetConnection() : nullptr;
+    const TSharedPtr<const FInternetAddr> RemoteAddress =
+        Connection != nullptr ? Connection->GetRemoteAddr() : nullptr;
+    if (!RemoteAddress.IsValid() || !RemoteAddress->IsValid())
+    {
+        return false;
+    }
+    const TArray<uint8> RawAddress = RemoteAddress->GetRawIp();
+    return RawAddress.Num() == 4 && RawAddress[0] == 127;
+#endif
+}
+
 AEchoesPlayerController* FindLocalEchoesController(UWorld* World)
 {
     if (World == nullptr)
@@ -119,12 +141,28 @@ void AEchoesGameMode::PostLogin(APlayerController* NewPlayer)
     }
     AEchoesPlayerController* EchoesController =
         Cast<AEchoesPlayerController>(NewPlayer);
+    if (EchoesController == nullptr ||
+        !IsDevelopmentLoopbackRemote(NewPlayer))
+    {
+        constexpr TCHAR Reason[] = TEXT("NET_SECURITY_LOOPBACK_ONLY");
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_SEAT_REJECTED] reason=%s seatAssigned=false credentialIssued=false security=development_loopback_only"),
+            Reason);
+        if (EchoesController != nullptr)
+        {
+            EchoesController->RejectNetworkSessionFromServer(Reason);
+            EchoesController->ClientReturnToMainMenuWithTextReason(
+                FText::FromString(Reason));
+        }
+        return;
+    }
     if (bNetworkSeatReserved && !IsNetworkSeatReservationAvailable())
     {
         ExpireNetworkSeatReservation();
     }
-    if (EchoesController == nullptr || bNetworkSessionFinished ||
-        NetworkRemoteController.IsValid())
+    if (bNetworkSessionFinished || NetworkRemoteController.IsValid())
     {
         const FString Reason = bNetworkSessionFinished
             ? TEXT("NET_MATCH_FINISHED")

@@ -4,8 +4,19 @@
 
 #include "EchoesGameInstance.h"
 #include "EchoesOnlineFrontDoorLayout.h"
+#include "EchoesPlayerController.h"
 #include "EchoesSkirmishSetup.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
+#include "Misc/Paths.h"
+
+#if UE_BUILD_DEVELOPMENT && (PLATFORM_MAC || PLATFORM_UNIX)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesOnlineFrontDoorTest,
@@ -25,8 +36,11 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
     };
     const FEndpointCase ValidEndpoints[] = {
         {TEXT("127.0.0.1:7777"), TEXT("127.0.0.1:7777")},
-        {TEXT("192.168.50.12:7801"), TEXT("192.168.50.12:7801")},
-        {TEXT("Example-LAN.local:07801"), TEXT("example-lan.local:7801")}};
+        {TEXT("127.0.0.2:7801"), TEXT("127.0.0.2:7801")},
+        {TEXT("127.255.255.255:65535"),
+         TEXT("127.255.255.255:65535")},
+        {TEXT("127.000.000.001:07801"), TEXT("127.0.0.1:7801")},
+        {TEXT("LOCALHOST:7777"), TEXT("127.0.0.1:7777")}};
     for (const FEndpointCase& Endpoint : ValidEndpoints)
     {
         FString Normalized;
@@ -52,6 +66,14 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         TEXT("127.0.0.1:0"),
         TEXT("127.0.0.1:65536"),
         TEXT("256.1.1.1:7777"),
+        TEXT("0.0.0.0:7777"),
+        TEXT("126.255.255.255:7777"),
+        TEXT("128.0.0.1:7777"),
+        TEXT("192.168.50.12:7801"),
+        TEXT("8.8.8.8:7777"),
+        TEXT("example-lan.local:7801"),
+        TEXT("localhost.:7777"),
+        TEXT("host.localhost:7777"),
         TEXT("-bad.local:7777"),
         TEXT("bad-.local:7777"),
         TEXT("http://127.0.0.1:7777"),
@@ -73,6 +95,295 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Rejected endpoint has no travel target"),
                  Normalized.IsEmpty());
     }
+
+#if UE_BUILD_DEVELOPMENT
+    TestTrue(
+        TEXT("Development host requires an explicit IPv4 loopback bind"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-game -MULTIHOME=127.0.0.1 -port=7777")));
+    TestFalse(
+        TEXT("Ambiguous zero-padded bind spelling fails closed"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-MULTIHOME=127.000.000.001")));
+    TestFalse(
+        TEXT("Missing bind fails closed"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-game -port=7777")));
+    TestFalse(
+        TEXT("Wildcard bind fails closed"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-MULTIHOME=0.0.0.0")));
+    TestFalse(
+        TEXT("LAN bind fails closed"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-MULTIHOME=192.168.50.12")));
+    TestFalse(
+        TEXT("A different loopback alias is not published as the host"),
+        UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+            TEXT("-MULTIHOME=127.0.0.2")));
+#endif
+
+#if UE_BUILD_DEVELOPMENT && (PLATFORM_MAC || PLATFORM_UNIX)
+    TArray<FString> CredentialTestRoots;
+    const auto MakeCredentialRunDirectory = [&CredentialTestRoots]()
+    {
+        const FString Root = FPaths::Combine(
+            FPlatformProcess::UserTempDir(),
+            FString::Printf(
+                TEXT("EchoesCredentialTest-%s"),
+                *FGuid::NewGuid().ToString(EGuidFormats::Digits)));
+        const FString RunDirectory = FPaths::Combine(
+            Root,
+            FString::Printf(
+                TEXT("run.%s"),
+                *FGuid::NewGuid().ToString(EGuidFormats::Digits)));
+        IFileManager::Get().MakeDirectory(*RunDirectory, true);
+        (void)chmod(TCHAR_TO_UTF8(*RunDirectory), 0700);
+        CredentialTestRoots.Add(Root);
+        return RunDirectory;
+    };
+    const auto WriteCredentialFixture = [this](
+        const FString& Path,
+        const FString& Content,
+        uint32 Mode)
+    {
+        const bool bWritten = FFileHelper::SaveStringToFile(
+            Content,
+            *Path,
+            FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+        TestTrue(TEXT("Credential fixture is created"), bWritten);
+        const int32 ChmodResult = chmod(TCHAR_TO_UTF8(*Path), Mode);
+        TestEqual(TEXT("Credential fixture mode is applied"),
+                  ChmodResult, 0);
+        return bWritten && ChmodResult == 0;
+    };
+
+    constexpr TCHAR CredentialFixture[] =
+        TEXT("00112233445566778899aabbccddeeff");
+    FString NormalizedCredentialPath;
+    FString CredentialFileReason;
+    const FString PositiveRun = MakeCredentialRunDirectory();
+    const FString PositiveFile = FPaths::Combine(
+        PositiveRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(PositiveFile, FString(), 0600);
+    TestTrue(
+        TEXT("Empty owner-only credential file is a valid staging target"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                PositiveFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+    TestTrue(
+        TEXT("Bounded credential is staged without changing file policy"),
+        echoes::network::testing::StageDevelopmentResumeCredential(
+            NormalizedCredentialPath,
+            CredentialFixture,
+            CredentialFileReason));
+    TestEqual(TEXT("Staged credential is exactly 32 bytes"),
+              IFileManager::Get().FileSize(*PositiveFile),
+              static_cast<int64>(32));
+    FString ConsumedCredential;
+    TestTrue(
+        TEXT("Owner-only credential file is consumed exactly once"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            PositiveFile, ConsumedCredential, CredentialFileReason));
+    TestEqual(TEXT("Consumed credential remains exact in memory"),
+              ConsumedCredential,
+              FString(CredentialFixture));
+    TestFalse(TEXT("Credential file is deleted before submission"),
+              IFileManager::Get().FileExists(*PositiveFile));
+    ConsumedCredential.Reset();
+    TestFalse(
+        TEXT("A consumed credential file cannot be reused"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            PositiveFile, ConsumedCredential, CredentialFileReason));
+
+    const FString NonemptyRun = MakeCredentialRunDirectory();
+    const FString NonemptyFile = FPaths::Combine(
+        NonemptyRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(NonemptyFile, CredentialFixture, 0600);
+    TestFalse(
+        TEXT("Nonempty phase-one staging file fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                NonemptyFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+
+    const FString WrongModeRun = MakeCredentialRunDirectory();
+    const FString WrongModeFile = FPaths::Combine(
+        WrongModeRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(WrongModeFile, FString(), 0644);
+    TestFalse(
+        TEXT("Credential file with group or other access fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                WrongModeFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+
+    const FString WrongDirectoryModeRun = MakeCredentialRunDirectory();
+    const FString WrongDirectoryModeFile = FPaths::Combine(
+        WrongDirectoryModeRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(WrongDirectoryModeFile, FString(), 0600);
+    (void)chmod(TCHAR_TO_UTF8(*WrongDirectoryModeRun), 0755);
+    TestFalse(
+        TEXT("Credential directory with group or other access fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                WrongDirectoryModeFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+    (void)chmod(TCHAR_TO_UTF8(*WrongDirectoryModeRun), 0700);
+
+    const FString HardLinkRun = MakeCredentialRunDirectory();
+    const FString HardLinkFile = FPaths::Combine(
+        HardLinkRun, TEXT("EchoesResumeCredential.bin"));
+    const FString HardLinkPeer =
+        FPaths::Combine(HardLinkRun, TEXT("HardLinkPeer.bin"));
+    WriteCredentialFixture(HardLinkFile, FString(), 0600);
+    TestEqual(TEXT("Hard-link fixture is created"),
+              link(
+                  TCHAR_TO_UTF8(*HardLinkFile),
+                  TCHAR_TO_UTF8(*HardLinkPeer)),
+              0);
+    TestFalse(
+        TEXT("Multiply linked credential file fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                HardLinkFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+
+    const FString SymlinkRun = MakeCredentialRunDirectory();
+    const FString SymlinkTarget =
+        FPaths::Combine(SymlinkRun, TEXT("Target.bin"));
+    const FString SymlinkFile = FPaths::Combine(
+        SymlinkRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(SymlinkTarget, FString(), 0600);
+    TestEqual(TEXT("Symbolic-link fixture is created"),
+              symlink(
+                  TCHAR_TO_UTF8(*SymlinkTarget),
+                  TCHAR_TO_UTF8(*SymlinkFile)),
+              0);
+    TestFalse(
+        TEXT("Symbolic-link credential path fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                SymlinkFile,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+    TestEqual(TEXT("Credential leaf symbolic link is removed"),
+              unlink(TCHAR_TO_UTF8(*SymlinkFile)),
+              0);
+
+    const FString InvalidContentRun = MakeCredentialRunDirectory();
+    const FString InvalidContentFile = FPaths::Combine(
+        InvalidContentRun, TEXT("EchoesInvalidResumeCredential.bin"));
+    WriteCredentialFixture(
+        InvalidContentFile,
+        TEXT("gggggggggggggggggggggggggggggggg"),
+        0600);
+    TestFalse(
+        TEXT("Malformed bounded-size credential fails closed"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            InvalidContentFile,
+            ConsumedCredential,
+            CredentialFileReason));
+    TestFalse(TEXT("Malformed credential file is still consumed"),
+              IFileManager::Get().FileExists(*InvalidContentFile));
+
+    const FString ShortContentRun = MakeCredentialRunDirectory();
+    const FString ShortContentFile = FPaths::Combine(
+        ShortContentRun, TEXT("EchoesInvalidResumeCredential.bin"));
+    WriteCredentialFixture(ShortContentFile, TEXT("00112233"), 0600);
+    TestFalse(
+        TEXT("Short credential file fails closed"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            ShortContentFile,
+            ConsumedCredential,
+            CredentialFileReason));
+    TestFalse(TEXT("Short credential file is consumed on rejection"),
+              IFileManager::Get().FileExists(*ShortContentFile));
+
+    const FString OversizedContentRun = MakeCredentialRunDirectory();
+    const FString OversizedContentFile = FPaths::Combine(
+        OversizedContentRun, TEXT("EchoesInvalidResumeCredential.bin"));
+    WriteCredentialFixture(
+        OversizedContentFile,
+        TEXT("00112233445566778899aabbccddeeff0"),
+        0600);
+    TestFalse(
+        TEXT("Oversized credential file fails closed"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            OversizedContentFile,
+            ConsumedCredential,
+            CredentialFileReason));
+    TestFalse(TEXT("Oversized credential file is consumed on rejection"),
+              IFileManager::Get().FileExists(*OversizedContentFile));
+
+    const FString ParentSymlinkTargetRun =
+        MakeCredentialRunDirectory();
+    const FString ParentSymlinkTargetFile = FPaths::Combine(
+        ParentSymlinkTargetRun, TEXT("EchoesResumeCredential.bin"));
+    WriteCredentialFixture(ParentSymlinkTargetFile, FString(), 0600);
+    const FString ParentSymlinkRoot = FPaths::Combine(
+        FPlatformProcess::UserTempDir(),
+        FString::Printf(
+            TEXT("EchoesCredentialTest-%s"),
+            *FGuid::NewGuid().ToString(EGuidFormats::Digits)));
+    IFileManager::Get().MakeDirectory(*ParentSymlinkRoot, true);
+    (void)chmod(TCHAR_TO_UTF8(*ParentSymlinkRoot), 0700);
+    CredentialTestRoots.Add(ParentSymlinkRoot);
+    const FString ParentSymlinkRun =
+        FPaths::Combine(ParentSymlinkRoot, TEXT("run.parent-link"));
+    TestEqual(TEXT("Parent-directory symbolic-link fixture is created"),
+              symlink(
+                  TCHAR_TO_UTF8(*ParentSymlinkTargetRun),
+                  TCHAR_TO_UTF8(*ParentSymlinkRun)),
+              0);
+    TestFalse(
+        TEXT("Symbolic-link credential parent fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                FPaths::Combine(
+                    ParentSymlinkRun,
+                    TEXT("EchoesResumeCredential.bin")),
+                NormalizedCredentialPath,
+                CredentialFileReason));
+    TestEqual(TEXT("Credential parent symbolic link is removed"),
+              unlink(TCHAR_TO_UTF8(*ParentSymlinkRun)),
+              0);
+
+    const FString BadRoot = FPaths::Combine(
+        FPlatformProcess::UserTempDir(),
+        TEXT("not-a-private-run"),
+        TEXT("EchoesResumeCredential.bin"));
+    TestFalse(
+        TEXT("Credential path outside a run-prefixed root fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                BadRoot,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+    const FString BadLeaf = FPaths::Combine(
+        PositiveRun, TEXT("UnexpectedCredentialName.bin"));
+    TestFalse(
+        TEXT("Unexpected credential leaf name fails closed"),
+        echoes::network::testing::
+            ValidateDevelopmentCredentialStagingFile(
+                BadLeaf,
+                NormalizedCredentialPath,
+                CredentialFileReason));
+
+    for (const FString& Root : CredentialTestRoots)
+    {
+        TestTrue(TEXT("Credential test fixture root is removed"),
+                 IFileManager::Get().DeleteDirectory(*Root, false, true));
+        TestFalse(TEXT("Credential test fixture leaves no directory"),
+                  IFileManager::Get().DirectoryExists(*Root));
+    }
+#endif
 
     UEchoesGameInstance* GameInstance =
         NewObject<UEchoesGameInstance>(GetTransientPackage());
@@ -127,8 +438,8 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         TEXT("00112233445566778899aabbccddeeff");
     constexpr TCHAR RotatedCredential[] =
         TEXT("ffeeddccbbaa99887766554433221100");
-    GameInstance->BoundReconnectEndpoint = TEXT("host.local:7777");
-    GameInstance->DirectConnectEndpoint = TEXT("host.local:7777");
+    GameInstance->BoundReconnectEndpoint = TEXT("127.0.0.1:7777");
+    GameInstance->DirectConnectEndpoint = TEXT("127.0.0.1:7777");
     GameInstance->StoreNetworkResumeCredential(FirstCredential, 120.0f);
     TestFalse(TEXT("Credential does not age while the match is connected"),
               GameInstance->HasUsableReconnectContext());
@@ -169,7 +480,7 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         RotatedCredential, 120.0f);
     TestTrue(TEXT("Address-change fixture arms reconnect context"),
              GameInstance->ArmReconnectWindow());
-    GameInstance->SetDirectConnectEndpoint(TEXT("other.local:7777"));
+    GameInstance->SetDirectConnectEndpoint(TEXT("127.0.0.2:7777"));
     TestFalse(TEXT("Changing address clears the bound credential"),
               GameInstance->HasUsableReconnectContext());
     TestTrue(TEXT("Changing address removes the secret from memory"),
