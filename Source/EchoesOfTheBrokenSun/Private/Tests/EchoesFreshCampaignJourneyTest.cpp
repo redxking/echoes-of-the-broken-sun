@@ -182,6 +182,22 @@ EEchoesOperationMode OperationForMission(int32 MissionNumber)
         EEchoesOperationMode::CampaignTheBrokenSun};
     return Operations[FMath::Clamp(MissionNumber - 1, 0, 14)];
 }
+
+// This mapping is intentionally test-owned. Using the production
+// ResolutionMask here would let the expected and observed sides share the
+// same defect if two resolution identities were mapped to the wrong bits.
+uint8 TestOwnedResolutionBit(EEchoesFinalResolution Resolution)
+{
+    switch (Resolution)
+    {
+        case EEchoesFinalResolution::Restoration: return 0x01;
+        case EEchoesFinalResolution::ControlledStabilization: return 0x02;
+        case EEchoesFinalResolution::Extinguishment: return 0x04;
+        case EEchoesFinalResolution::OpenEvolution: return 0x08;
+        case EEchoesFinalResolution::None: return 0;
+    }
+    return 0;
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -2046,19 +2062,25 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             EEchoesFinalResolution::Extinguishment,
             EEchoesFinalResolution::OpenEvolution};
         uint8 ObservedResolutionMask = 0;
-        bool bAvailabilityMatchesExpected = true;
         for (const EEchoesFinalResolution Candidate : CandidateResolutions)
         {
-            const uint8 CandidateMask =
-                FEchoesBrokenSunMissionModel::ResolutionMask(Candidate);
+            const uint8 CandidateMask = TestOwnedResolutionBit(Candidate);
             const bool bExpectedAvailable =
                 (Spec.ExpectedFinalResolutionMask & CandidateMask) != 0;
             const bool bObservedAvailable =
                 FEchoesBrokenSunMissionModel::IsResolutionAvailable(
                     Plan, Candidate);
-            bAvailabilityMatchesExpected =
-                bAvailabilityMatchesExpected &&
-                bObservedAvailable == bExpectedAvailable;
+            if (!Require(
+                    CandidateMask != 0 &&
+                        bObservedAvailable == bExpectedAvailable,
+                    FString::Printf(
+                        TEXT("Mission 15 route %s maps resolution %u to independent literal bit 0x%02X"),
+                        Spec.Label,
+                        static_cast<uint8>(Candidate),
+                        CandidateMask)))
+            {
+                return false;
+            }
             if (bObservedAvailable)
             {
                 ObservedResolutionMask = static_cast<uint8>(
@@ -2076,7 +2098,6 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                         Spec.ExpectedFinalResolutionMask &&
                     ObservedResolutionMask ==
                         Spec.ExpectedFinalResolutionMask &&
-                    bAvailabilityMatchesExpected &&
                     FEchoesBrokenSunMissionModel::IsResolutionAvailable(
                         Plan, Resolution),
                 FString::Printf(
