@@ -28,6 +28,30 @@ def refresh_sidecar(manifest: pathlib.Path, sidecar: pathlib.Path) -> None:
     sidecar.write_text(f"{digest(manifest)}  {manifest.name}\n", encoding="utf-8")
 
 
+def replace_manifest_metadata(
+    manifest: pathlib.Path,
+    sidecar: pathlib.Path,
+    updates: dict[str, str],
+) -> None:
+    lines = manifest.read_text(encoding="utf-8").splitlines()
+    remaining = set(updates)
+    for index, line in enumerate(lines):
+        if line == "sha256  relative_path":
+            break
+        if "=" not in line:
+            continue
+        key, _ = line.split("=", 1)
+        if key in updates:
+            lines[index] = f"{key}={updates[key]}"
+            remaining.remove(key)
+    if remaining:
+        raise AssertionError(
+            f"fixture manifest omits metadata: {', '.join(sorted(remaining))}"
+        )
+    manifest.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    refresh_sidecar(manifest, sidecar)
+
+
 class PackageManifestVerifierTests(unittest.TestCase):
     @staticmethod
     def resign_and_refresh_records(
@@ -77,9 +101,14 @@ class PackageManifestVerifierTests(unittest.TestCase):
         contents = app / "Contents"
         (contents / "MacOS").mkdir(parents=True)
         binary = contents / "MacOS" / "EchoesOfTheBrokenSun"
-        git_binary = pathlib.Path(shutil.which("git") or "")
-        if not git_binary.is_file():
-            self.fail("the package verifier fixture requires a local Git executable")
+        git_binary = pathlib.Path("/opt/homebrew/bin/git")
+        git_lfs_binary = pathlib.Path("/opt/homebrew/bin/git-lfs")
+        if not git_binary.is_file() or not git_lfs_binary.is_file():
+            self.fail(
+                "the package verifier fixture requires the approved Git and Git LFS"
+            )
+        git_resolved = git_binary.resolve(strict=True)
+        git_lfs_resolved = git_lfs_binary.resolve(strict=True)
         shutil.copy2(git_binary, binary)
         binary.chmod(0o755)
         with (contents / "Info.plist").open("wb") as handle:
@@ -134,8 +163,15 @@ class PackageManifestVerifierTests(unittest.TestCase):
 
         normal_log = root / "EchoesOfTheBrokenSun.normal-startup-smoke.log"
         stress_log = root / "EchoesOfTheBrokenSun.legacy-stress-startup-smoke.log"
-        normal_log.write_text("normal isolated smoke\n", encoding="utf-8")
-        stress_log.write_text("stress isolated smoke\n", encoding="utf-8")
+        normal_log.write_text(
+            "normal isolated smoke\n" "echoes_normal_startup_smoke_outcome=passed\n",
+            encoding="utf-8",
+        )
+        stress_log.write_text(
+            "stress isolated smoke\n"
+            "echoes_legacy_stress_startup_smoke_outcome=passed\n",
+            encoding="utf-8",
+        )
         sdk_path = (
             "/Applications/Xcode.app/Contents/Developer/Platforms/"
             "MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"
@@ -160,8 +196,13 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"uat_sha256={'5' * 64}",
                     f"uat_driver_sha256={'6' * 64}",
                     f"git_path={git_binary}",
-                    "git_version=git version test",
-                    f"git_sha256={'7' * 64}",
+                    f"git_resolved_path={git_resolved}",
+                    "git_version=git version 2.55.0",
+                    f"git_sha256={digest(git_binary)}",
+                    f"git_lfs_path={git_lfs_binary}",
+                    f"git_lfs_resolved_path={git_lfs_resolved}",
+                    "git_lfs_version=git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)",
+                    f"git_lfs_sha256={digest(git_lfs_binary)}",
                     "developer_dir=/Applications/Xcode.app/Contents/Developer",
                     "xcode=Xcode 26.6;Build version 17F113",
                     "macos_sdk_version=26.5",
@@ -178,10 +219,28 @@ class PackageManifestVerifierTests(unittest.TestCase):
         )
         evidence_contents = {
             "EchoesOfTheBrokenSun.source-status.porcelain-v2-z": b"",
+            "EchoesOfTheBrokenSun.repo-local-ignored-before.txt": b"",
+            "EchoesOfTheBrokenSun.source-index-concealment.txt": b"",
             "EchoesOfTheBrokenSun.git-lfs-status.porcelain": b"",
-            "EchoesOfTheBrokenSun.git-lfs-fsck.txt": b"Git LFS fsck OK\n",
-            "EchoesOfTheBrokenSun.package-preflight.log": b"preflight passed\n",
-            "EchoesOfTheBrokenSun.BuildCookRun.log": b"BuildCookRun passed\n",
+            "EchoesOfTheBrokenSun.git-lfs-fsck.txt": (
+                b"Git LFS fsck OK\n" b"echoes_git_lfs_fsck_outcome=passed\n"
+            ),
+            "EchoesOfTheBrokenSun.git-lfs-restrictive-config.txt": b"",
+            "EchoesOfTheBrokenSun.git-lfs-hydration.txt": (
+                b"echoes_git_lfs_hydration_outcome=passed\n"
+                b"echoes_git_lfs_tracked_file_count=1\n"
+                + (b"a" * 64)
+                + b" * Content/Test.uasset\n"
+            ),
+            "EchoesOfTheBrokenSun.package-preflight.log": (
+                b"preflight passed\n"
+                b"echoes_content_preflight_outcome=passed\n"
+                b"echoes_environment_preflight_outcome=passed\n"
+                b"echoes_package_preflight_outcome=passed\n"
+            ),
+            "EchoesOfTheBrokenSun.BuildCookRun.log": (
+                b"BuildCookRun passed\n" b"echoes_build_cook_run_outcome=passed\n"
+            ),
             "EchoesContentPack.cooked-input.json": b'{"records":[],"schema":"test"}\n',
             "EchoesOfTheBrokenSun.signature-assessment.txt": signature_evidence,
             "EchoesOfTheBrokenSun.gatekeeper-assessment.txt": (
@@ -256,22 +315,48 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     "created_utc=20260831T000000Z",
                     f"source_commit={source_commit}",
                     f"source_tree_hash={source_tree_hash}",
-                    "source_branch=main",
+                    "source_branch=detached",
                     "source_checkout_path=/source",
+                    "source_checkout_kind=dedicated-linked-worktree-detached-at-main",
                     f"origin_main={source_commit}",
                     f"remote_main={source_commit}",
                     "source_tree=clean",
                     "source_binding=clean-pushed-main",
                     "source_upstream_ref=origin/main",
+                    "source_origin_fetch_url=https://github.com/redxking/echoes-of-the-broken-sun.git",
+                    "source_origin_push_url=https://github.com/redxking/echoes-of-the-broken-sun.git",
+                    "source_remote_authority=github.com/redxking/echoes-of-the-broken-sun",
                     f"source_status_sha256={source_status_digest}",
                     "source_status_evidence=EchoesOfTheBrokenSun.source-status.porcelain-v2-z",
-                    "git_lfs_version=git-lfs/3.7.1 (GitHub; darwin arm64)",
+                    "repo_local_derived_state_before=clean",
+                    "repo_local_derived_state_scope=git-ignored-paths-within-source-checkout",
+                    "repo_local_ignored_state_evidence=EchoesOfTheBrokenSun.repo-local-ignored-before.txt",
+                    f"repo_local_ignored_state_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.repo-local-ignored-before.txt'])}",
+                    "source_index_concealment=absent",
+                    "source_index_concealment_scope=git-ls-files-v-and-f-non-H-records",
+                    "source_index_concealment_evidence=EchoesOfTheBrokenSun.source-index-concealment.txt",
+                    f"source_index_concealment_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.source-index-concealment.txt'])}",
+                    "git_lfs_version=git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)",
+                    f"git_lfs_path={git_lfs_binary}",
+                    f"git_lfs_resolved_path={git_lfs_resolved}",
+                    f"git_lfs_sha256={digest(git_lfs_binary)}",
                     "git_lfs_status=clean",
                     f"git_lfs_status_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.git-lfs-status.porcelain'])}",
                     "git_lfs_status_evidence=EchoesOfTheBrokenSun.git-lfs-status.porcelain",
                     "git_lfs_fsck=passed",
+                    "git_lfs_fsck_outcome=passed",
                     f"git_lfs_fsck_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.git-lfs-fsck.txt'])}",
                     "git_lfs_fsck_evidence=EchoesOfTheBrokenSun.git-lfs-fsck.txt",
+                    "git_lfs_restrictive_fetch_config=absent",
+                    "git_lfs_restrictive_fetch_config_scope=effective-git-lfs-FetchInclude-and-FetchExclude",
+                    "git_lfs_restrictive_config_evidence=EchoesOfTheBrokenSun.git-lfs-restrictive-config.txt",
+                    f"git_lfs_restrictive_config_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.git-lfs-restrictive-config.txt'])}",
+                    "git_lfs_hydration=complete",
+                    "git_lfs_hydration_scope=all-git-lfs-tracked-working-tree-files",
+                    "git_lfs_hydration_outcome=passed",
+                    "git_lfs_tracked_file_count=1",
+                    "git_lfs_hydration_evidence=EchoesOfTheBrokenSun.git-lfs-hydration.txt",
+                    f"git_lfs_hydration_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.git-lfs-hydration.txt'])}",
                     "configuration=Development",
                     "platform=Mac-arm64",
                     "architecture=arm64",
@@ -282,8 +367,12 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"build_command_argv={build_command}",
                     "package_preflight_log=EchoesOfTheBrokenSun.package-preflight.log",
                     f"package_preflight_log_sha256={package_preflight_digest}",
+                    "content_preflight_outcome=passed",
+                    "environment_preflight_outcome=passed",
+                    "package_preflight_outcome=passed",
                     "build_log=EchoesOfTheBrokenSun.BuildCookRun.log",
                     f"build_log_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.BuildCookRun.log'])}",
+                    "build_cook_run_outcome=passed",
                     "ignored_cook_inputs=Content/Data/Generated/EchoesContentPack.json;Content/Data/Generated/EchoesContentPack.json.sha256",
                     "generated_content_pack_source=Content/Data/Generated/EchoesContentPack.json",
                     "generated_content_pack_digest_source=Content/Data/Generated/EchoesContentPack.json.sha256",
@@ -293,8 +382,10 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"generated_content_pack_digest_sha256={digest(evidence_paths['EchoesContentPack.cooked-input.json.sha256'])}",
                     "normal_startup_smoke=EchoesOfTheBrokenSun.normal-startup-smoke.log",
                     f"normal_startup_smoke_sha256={digest(normal_log)}",
+                    "normal_startup_smoke_outcome=passed",
                     "legacy_stress_startup_smoke=EchoesOfTheBrokenSun.legacy-stress-startup-smoke.log",
                     f"legacy_stress_startup_smoke_sha256={digest(stress_log)}",
+                    "legacy_stress_startup_smoke_outcome=passed",
                     "unreal_engine=5.8.2",
                     "unreal_root=/Users/Shared/Epic Games/UE_5.8",
                     "unreal_changelist=56702186",
@@ -304,8 +395,9 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"uat_sha256={'5' * 64}",
                     f"uat_driver_sha256={'6' * 64}",
                     f"git_path={git_binary}",
-                    "git_version=git version test",
-                    f"git_sha256={'7' * 64}",
+                    f"git_resolved_path={git_resolved}",
+                    "git_version=git version 2.55.0",
+                    f"git_sha256={digest(git_binary)}",
                     "toolchain_evidence=EchoesOfTheBrokenSun.toolchain.txt",
                     f"toolchain_evidence_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.toolchain.txt'])}",
                     "developer_dir=/Applications/Xcode.app/Contents/Developer",
@@ -349,6 +441,8 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"stapler_evidence_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.stapler-validation.txt'])}",
                     "installer_status=not-produced",
                     "release_qualification=not-release-qualified",
+                    "build_context_record=package-tool-observed",
+                    "manifest_authority=self-consistency-record-not-independent-attestation",
                     "claim_boundary=local-development-package-only",
                     "",
                     "sha256  relative_path",
@@ -368,15 +462,22 @@ class PackageManifestVerifierTests(unittest.TestCase):
             result = verify_package(app, manifest, sidecar)
             self.assertTrue(result["accepted"])
             self.assertEqual(
-                result["acceptance_scope"], "package-manifest-integrity-only"
+                result["acceptance_scope"],
+                "package-integrity-evidence-semantics-and-record-self-consistency",
             )
             self.assertFalse(result["release_qualified"])
             self.assertGreaterEqual(result["application_files"], 3)
             self.assertEqual(result["application_symlinks"], 1)
             self.assertEqual(result["manifest_schema"], 2)
-            self.assertTrue(result["schema_2_provenance_validated"])
+            self.assertTrue(result["artifact_integrity_validated"])
+            self.assertTrue(result["evidence_semantics_validated"])
+            self.assertTrue(result["recorded_build_context_self_consistent"])
+            self.assertFalse(result["live_current_source_toolchain_cross_checked"])
+            self.assertFalse(result["historical_build_context_independently_attested"])
+            self.assertFalse(result["independent_attestation_present"])
+            self.assertNotIn("schema_2_provenance_validated", result)
             self.assertEqual(
-                result["provenance"]["release_qualification"],
+                result["recorded_manifest_metadata"]["release_qualification"],
                 "not-release-qualified",
             )
 
@@ -390,7 +491,12 @@ class PackageManifestVerifierTests(unittest.TestCase):
             refresh_sidecar(manifest, sidecar)
             result = verify_package(app, manifest, sidecar)
             self.assertEqual(result["manifest_schema"], 1)
-            self.assertFalse(result["schema_2_provenance_validated"])
+            self.assertFalse(result["evidence_semantics_validated"])
+            self.assertFalse(result["recorded_build_context_self_consistent"])
+            self.assertFalse(result["live_current_source_toolchain_cross_checked"])
+            self.assertEqual(
+                result["acceptance_scope"], "package-manifest-integrity-only"
+            )
 
     def test_schema_2_rejects_bundle_identifier_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -524,7 +630,7 @@ class PackageManifestVerifierTests(unittest.TestCase):
             manifest.write_text(text, encoding="utf-8")
             refresh_sidecar(manifest, sidecar)
             result = verify_package(app, manifest, sidecar)
-            self.assertTrue(result["schema_2_provenance_validated"])
+            self.assertTrue(result["evidence_semantics_validated"])
 
     def test_schema_2_cross_checks_generated_content_digest_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -582,6 +688,204 @@ class PackageManifestVerifierTests(unittest.TestCase):
             ):
                 verify_package(app, manifest, sidecar)
 
+    def test_schema_2_rejects_coherently_recorded_failed_outcomes(self) -> None:
+        cases = (
+            (
+                "EchoesOfTheBrokenSun.git-lfs-fsck.txt",
+                "git_lfs_fsck_sha256",
+                "echoes_git_lfs_fsck_outcome=passed",
+                "git_lfs_fsck_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.git-lfs-hydration.txt",
+                "git_lfs_hydration_sha256",
+                "echoes_git_lfs_hydration_outcome=passed",
+                "git_lfs_hydration_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.package-preflight.log",
+                "package_preflight_log_sha256",
+                "echoes_content_preflight_outcome=passed",
+                "content_preflight_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.package-preflight.log",
+                "package_preflight_log_sha256",
+                "echoes_environment_preflight_outcome=passed",
+                "environment_preflight_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.package-preflight.log",
+                "package_preflight_log_sha256",
+                "echoes_package_preflight_outcome=passed",
+                "package_preflight_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.BuildCookRun.log",
+                "build_log_sha256",
+                "echoes_build_cook_run_outcome=passed",
+                "build_cook_run_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.normal-startup-smoke.log",
+                "normal_startup_smoke_sha256",
+                "echoes_normal_startup_smoke_outcome=passed",
+                "normal_startup_smoke_outcome",
+            ),
+            (
+                "EchoesOfTheBrokenSun.legacy-stress-startup-smoke.log",
+                "legacy_stress_startup_smoke_sha256",
+                "echoes_legacy_stress_startup_smoke_outcome=passed",
+                "legacy_stress_startup_smoke_outcome",
+            ),
+        )
+        for evidence_name, digest_key, marker, outcome_key in cases:
+            with self.subTest(
+                outcome=outcome_key
+            ), tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                app, manifest, sidecar = self.make_fixture(root)
+                evidence = root / evidence_name
+                evidence.write_text(
+                    evidence.read_text(encoding="utf-8").replace(
+                        marker, marker.replace("=passed", "=failed")
+                    ),
+                    encoding="utf-8",
+                )
+                replace_manifest_metadata(
+                    manifest,
+                    sidecar,
+                    {
+                        digest_key: digest(evidence),
+                        outcome_key: "failed",
+                    },
+                )
+                with self.assertRaisesRegex(VerificationError, outcome_key):
+                    verify_package(app, manifest, sidecar)
+
+    def test_schema_2_rejects_nonempty_clean_state_evidence(self) -> None:
+        cases = (
+            (
+                "EchoesOfTheBrokenSun.source-status.porcelain-v2-z",
+                "source_status_sha256",
+                "source-status evidence",
+            ),
+            (
+                "EchoesOfTheBrokenSun.repo-local-ignored-before.txt",
+                "repo_local_ignored_state_sha256",
+                "repo-local ignored-state evidence",
+            ),
+            (
+                "EchoesOfTheBrokenSun.source-index-concealment.txt",
+                "source_index_concealment_sha256",
+                "source-index concealment evidence",
+            ),
+            (
+                "EchoesOfTheBrokenSun.git-lfs-status.porcelain",
+                "git_lfs_status_sha256",
+                "Git LFS status evidence",
+            ),
+            (
+                "EchoesOfTheBrokenSun.git-lfs-restrictive-config.txt",
+                "git_lfs_restrictive_config_sha256",
+                "Git LFS restrictive-config evidence",
+            ),
+        )
+        for evidence_name, digest_key, error_text in cases:
+            with self.subTest(
+                evidence=evidence_name
+            ), tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                app, manifest, sidecar = self.make_fixture(root)
+                evidence = root / evidence_name
+                evidence.write_text("FAILED\n", encoding="utf-8")
+                replace_manifest_metadata(
+                    manifest,
+                    sidecar,
+                    {digest_key: digest(evidence)},
+                )
+                with self.assertRaisesRegex(VerificationError, error_text):
+                    verify_package(app, manifest, sidecar)
+
+    def test_schema_2_rejects_git_lfs_pointer_stub_inventory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app, manifest, sidecar = self.make_fixture(root)
+            evidence = root / "EchoesOfTheBrokenSun.git-lfs-hydration.txt"
+            evidence.write_text(
+                evidence.read_text(encoding="utf-8").replace(
+                    " * Content/Test.uasset", " - Content/Test.uasset"
+                ),
+                encoding="utf-8",
+            )
+            replace_manifest_metadata(
+                manifest,
+                sidecar,
+                {"git_lfs_hydration_sha256": digest(evidence)},
+            )
+            with self.assertRaisesRegex(VerificationError, "unhydrated pointer stub"):
+                verify_package(app, manifest, sidecar)
+
+    def test_schema_2_pins_source_and_tool_authorities(self) -> None:
+        cases = (
+            ("source_branch", "main"),
+            ("source_checkout_kind", "dedicated-linked-worktree"),
+            ("source_origin_fetch_url", "https://example.invalid/repo.git"),
+            ("source_origin_push_url", "ssh://example.invalid/repo.git"),
+            ("git_version", "git version 2.54.0"),
+            ("git_sha256", "0" * 64),
+            ("git_lfs_version", "git-lfs/3.7.0"),
+            ("git_lfs_sha256", "f" * 64),
+        )
+        for key, value in cases:
+            with self.subTest(metadata=key), tempfile.TemporaryDirectory() as temporary:
+                app, manifest, sidecar = self.make_fixture(pathlib.Path(temporary))
+                replace_manifest_metadata(manifest, sidecar, {key: value})
+                with self.assertRaisesRegex(VerificationError, key):
+                    verify_package(app, manifest, sidecar)
+
+    def test_live_context_is_a_separate_explicit_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app, manifest, sidecar = self.make_fixture(root)
+            missing_source = root / "unavailable-source"
+            build_argv = json.loads(
+                next(
+                    line.split("=", 1)[1]
+                    for line in manifest.read_text(encoding="utf-8").splitlines()
+                    if line.startswith("build_command_argv=")
+                )
+            )
+            build_argv = [
+                (
+                    f"-project={missing_source}/EchoesOfTheBrokenSun.uproject"
+                    if argument.startswith("-project=")
+                    else argument
+                )
+                for argument in build_argv
+            ]
+            replace_manifest_metadata(
+                manifest,
+                sidecar,
+                {
+                    "source_checkout_path": str(missing_source),
+                    "build_command_argv": json.dumps(build_argv, separators=(",", ":")),
+                },
+            )
+            offline_result = verify_package(app, manifest, sidecar)
+            self.assertFalse(
+                offline_result["live_current_source_toolchain_cross_checked"]
+            )
+            with self.assertRaisesRegex(
+                VerificationError, "live source checkout is unavailable"
+            ):
+                verify_package(
+                    app,
+                    manifest,
+                    sidecar,
+                    require_live_build_context=True,
+                )
+
     def test_packager_emits_external_schema_2_provenance(self) -> None:
         source = PACKAGER.read_text(encoding="utf-8")
         self.assertIn(
@@ -601,9 +905,21 @@ class PackageManifestVerifierTests(unittest.TestCase):
             'print "manifest_schema=2"',
             'print "source_tree_hash=$source_tree_hash"',
             'print "source_checkout_path=$project_root"',
+            'print "source_checkout_kind=dedicated-linked-worktree-detached-at-main"',
             'print "source_status_sha256=$source_status_evidence_sha256"',
+            'print "source_origin_fetch_url=$origin_fetch_url"',
+            'print "source_index_concealment=absent"',
+            'print "repo_local_derived_state_before=clean"',
             'print "git_lfs_fsck=passed"',
+            'print "git_lfs_fsck_outcome=passed"',
+            'print "git_lfs_restrictive_fetch_config=absent"',
+            'print "git_lfs_hydration=complete"',
+            'print "git_lfs_hydration_outcome=passed"',
             'print "build_command_argv=$build_command_argv"',
+            'print "content_preflight_outcome=passed"',
+            'print "environment_preflight_outcome=passed"',
+            'print "package_preflight_outcome=passed"',
+            'print "build_cook_run_outcome=passed"',
             'print "generated_content_pack_sha256=$generated_content_pack_copy_sha256"',
             'print "generated_content_pack_digest_sha256=$generated_content_pack_digest_copy_sha256"',
             'print "unreal_root=$ue_root"',
@@ -615,9 +931,34 @@ class PackageManifestVerifierTests(unittest.TestCase):
             'print "notarization_status=not-submitted-by-package-tool"',
             'print "stapling_status=$stapling_status"',
             'print "release_qualification=not-release-qualified"',
+            "--require-live-build-context",
             '--json-output "$provenance"',
         ):
             self.assertIn(required, source)
+        self.assertIn('if [[ "$source_branch" != detached ]]', source)
+        self.assertIn('if [[ "$git_dir" == "$git_common_dir" ]]', source)
+        self.assertIn("source_index_concealment_records", source)
+        self.assertIn('git -C "$project_root" ls-files -f', source)
+        self.assertIn("git_lfs_restrictive_config_records", source)
+        self.assertIn("git_lfs ls-files -l", source)
+        self.assertIn("git_lfs fsck --objects --pointers", source)
+        self.assertIn("ls-files --others --ignored --exclude-standard", source)
+        self.assertIn(
+            'approved_origin_url="https://github.com/redxking/echoes-of-the-broken-sun.git"',
+            source,
+        )
+        self.assertIn(
+            'approved_git_sha256="9048038886ac36210fbb616b49b0707465f63683cb04e33a2013baf95f746938"',
+            source,
+        )
+        self.assertIn(
+            'approved_git_lfs_sha256="8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"',
+            source,
+        )
+        self.assertLess(
+            source.index('git_sha256="$(/usr/bin/shasum'),
+            source.index('git_version="$($git_resolved_path --version)"'),
+        )
 
     def test_packager_tracks_the_real_generated_content_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
