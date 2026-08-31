@@ -78,6 +78,16 @@ std::uint32_t ReadU32(const std::vector<std::uint8_t>& bytes,
     return value;
 }
 
+std::uint64_t ReadU64(const std::vector<std::uint8_t>& bytes,
+                      std::size_t offset) {
+    REQUIRE(offset + 8 <= bytes.size());
+    std::uint64_t value = 0;
+    for (std::uint32_t shift = 0; shift < 64; shift += 8) {
+        value |= static_cast<std::uint64_t>(bytes[offset++]) << shift;
+    }
+    return value;
+}
+
 void ResignSnapshot(std::vector<std::uint8_t>& bytes) {
     REQUIRE(bytes.size() >= 8);
     WriteU64(bytes, bytes.size() - 8,
@@ -129,6 +139,36 @@ std::size_t SnapshotV23EntityCountOffset(std::size_t mapTileCount) {
 
 std::size_t SnapshotV23FirstEntityOffset(std::size_t mapTileCount) {
     return SnapshotV23EntityCountOffset(mapTileCount) + 4;
+}
+
+std::size_t SnapshotV24EntityCountOffset(std::size_t mapTileCount) {
+    // Snapshot v24 appends receipts, so entity offsets remain identical to v23.
+    return SnapshotV23EntityCountOffset(mapTileCount);
+}
+
+std::size_t SnapshotV24FirstEntityOffset(std::size_t mapTileCount) {
+    return SnapshotV23FirstEntityOffset(mapTileCount);
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV24ToV23(
+    const std::vector<std::uint8_t>& current,
+    std::uint32_t receiptCount) {
+    constexpr std::size_t kSerializedReceiptBytes = 19;
+    REQUIRE(ReadU32(current, 4) == 24);
+    const std::size_t receiptBlockBytes =
+        4U + static_cast<std::size_t>(receiptCount) *
+                 kSerializedReceiptBytes;
+    REQUIRE(current.size() >= 8U + receiptBlockBytes);
+    const std::size_t receiptBlockOffset =
+        current.size() - 8U - receiptBlockBytes;
+    REQUIRE(ReadU32(current, receiptBlockOffset) == receiptCount);
+    std::vector<std::uint8_t> prior = current;
+    prior.erase(
+        prior.begin() + static_cast<std::ptrdiff_t>(receiptBlockOffset),
+        prior.end() - 8);
+    WriteU32(prior, 4, 23);
+    ResignSnapshot(prior);
+    return prior;
 }
 
 std::vector<std::uint8_t> ConvertSnapshotV23ToV22(
@@ -500,7 +540,7 @@ void TestProtectedCommandCoreContract() {
 
     const std::vector<std::uint8_t> protectedSnapshot =
         protectedSimulation.SaveSnapshot();
-    REQUIRE(ReadU32(protectedSnapshot, 4) == 23);
+    REQUIRE(ReadU32(protectedSnapshot, 4) == 24);
     REQUIRE(protectedSnapshot[28] == 0x02);
     std::string error;
     std::optional<Simulation> restored =
@@ -516,7 +556,7 @@ void TestProtectedCommandCoreContract() {
     REQUIRE(protectedSimulation.QueueCommand(stop));
     protectedSimulation.Step(4);
     const ReplayRecord replay = protectedSimulation.ExportReplay();
-    REQUIRE(replay.version == 23);
+    REQUIRE(replay.version == 24);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -540,7 +580,7 @@ void TestProtectedCommandCoreContract() {
     REQUIRE(error == "replay export is disabled");
 
     ReplayRecord unsupportedReplay = replay;
-    unsupportedReplay.version = 22;
+    unsupportedReplay.version = 23;
     REQUIRE(!Simulation::ReplayToEnd(unsupportedReplay, &error).has_value());
     REQUIRE(error == "replay version is unsupported");
 
@@ -1453,7 +1493,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(simulation.FindEntity(dormantWell)->wellActivationTick == 0);
 
     const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
-    REQUIRE(ReadU32(snapshot, 4) == 23);
+    REQUIRE(ReadU32(snapshot, 4) == 24);
     std::string error;
     std::optional<Simulation> restored =
         Simulation::LoadSnapshot(snapshot, &error);
@@ -1463,8 +1503,8 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(restored->FindEntity(dormantWell)->wellActivationTick == 0);
 
     const ReplayRecord replay = simulation.ExportReplay();
-    REQUIRE(replay.version == 23);
-    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 23);
+    REQUIRE(replay.version == 24);
+    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 24);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -1473,7 +1513,19 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
-    const std::vector<std::uint8_t> v22 = ConvertSnapshotV23ToV22(snapshot);
+    const std::vector<std::uint8_t> v23 =
+        ConvertSnapshotV24ToV23(snapshot, 1);
+    REQUIRE(ReadU32(v23, 4) == 23);
+    std::optional<Simulation> v23Migrated =
+        Simulation::LoadSnapshot(v23, &error);
+    REQUIRE(v23Migrated.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(!v23Migrated->FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(v23Migrated->Config().protectedCommandCorePlayerMask == 0);
+    REQUIRE(v23Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(ReadU32(v23Migrated->SaveSnapshot(), 4) == 24);
+
+    const std::vector<std::uint8_t> v22 = ConvertSnapshotV23ToV22(v23);
     REQUIRE(ReadU32(v22, 4) == 22);
     std::optional<Simulation> v22Migrated =
         Simulation::LoadSnapshot(v22, &error);
@@ -1481,7 +1533,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(error.empty());
     REQUIRE(v22Migrated->Config().protectedCommandCorePlayerMask == 0);
     REQUIRE(v22Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
-    REQUIRE(ReadU32(v22Migrated->SaveSnapshot(), 4) == 23);
+    REQUIRE(ReadU32(v22Migrated->SaveSnapshot(), 4) == 24);
 
     const std::vector<std::uint8_t> prior =
         ConvertSnapshotV22ToV21(v22, kMapTiles);
@@ -1494,7 +1546,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(error.empty());
     REQUIRE(priorMigrated->FindEntity(activatedWell)->wellActivationTick == 1);
     REQUIRE(priorMigrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 23);
+    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 24);
 
     const std::vector<std::uint8_t> legacy =
         ConvertSnapshotV21ToV20(prior, kMapTiles);
@@ -1506,9 +1558,9 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(migrated->FindEntity(activatedWell)->wellActivationTick ==
             migrated->CurrentTick());
     REQUIRE(migrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 23);
+    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 24);
 
-    const std::size_t firstEntity = SnapshotV23FirstEntityOffset(kMapTiles);
+    const std::size_t firstEntity = SnapshotV24FirstEntityOffset(kMapTiles);
     std::vector<std::uint8_t> futureActivation = snapshot;
     WriteU64(
         futureActivation,
@@ -1644,7 +1696,7 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     std::string error;
 
     std::vector<std::uint8_t> excessiveVision = baseline;
-    WriteU32(excessiveVision, SnapshotV23FirstEntityOffset(mapTiles) + 27, 50000);
+    WriteU32(excessiveVision, SnapshotV24FirstEntityOffset(mapTiles) + 27, 50000);
     ResignSnapshot(excessiveVision);
     REQUIRE(!Simulation::LoadSnapshot(excessiveVision, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
@@ -1664,7 +1716,8 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     Simulation empty({8, 8, 20, 1});
     REQUIRE(empty.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     std::vector<std::uint8_t> truncatedEntities = empty.SaveSnapshot();
-    WriteU32(truncatedEntities, SnapshotV23EntityCountOffset(mapTiles), 64 * 1024);
+    WriteU32(truncatedEntities, SnapshotV24EntityCountOffset(mapTiles),
+             64 * 1024);
     ResignSnapshot(truncatedEntities);
     REQUIRE(!Simulation::LoadSnapshot(truncatedEntities, &error).has_value());
     REQUIRE(error == "snapshot entity count is invalid");
@@ -2695,9 +2748,17 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
                 validRequest, validContext, valid, &rejection) ==
             CommandAdmissionStatus::Accepted);
     REQUIRE(rejection.empty());
-    REQUIRE(valid.StateChecksum() == 17115559860080563393ULL);
+    REQUIRE(!valid.FindCommandResolutionReceipt(1, 1).has_value());
+    REQUIRE(valid.StateChecksum() == 5459800515315438623ULL);
     valid.Step();
-    REQUIRE(valid.StateChecksum() == 15347868296104015380ULL);
+    REQUIRE(valid.StateChecksum() == 4575649953657819729ULL);
+    const std::optional<CommandResolutionReceipt> validReceipt =
+        valid.FindCommandResolutionReceipt(1, 1);
+    REQUIRE(validReceipt.has_value());
+    REQUIRE(validReceipt->player == 1);
+    REQUIRE(validReceipt->commandType == CommandType::RaiseMineralCover);
+    REQUIRE(validReceipt->assignedExecutionTick == 0);
+    REQUIRE(validReceipt->outcome == CommandResolutionOutcome::Applied);
     REQUIRE(std::count_if(
                 valid.Entities().begin(), valid.Entities().end(),
                 [](const Entity& entity) {
@@ -2798,6 +2859,11 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
     REQUIRE(second.QueueCommand(mixedCommand, &rejection));
     REQUIRE(rejection.empty());
     REQUIRE(first.StateChecksum() == second.StateChecksum());
+    const std::uint64_t checksumBeforePendingLookup = first.StateChecksum();
+    REQUIRE(!first.FindCommandResolutionReceipt(1, 1).has_value());
+    REQUIRE(!first.FindCommandResolutionReceipt(1, 2).has_value());
+    REQUIRE(!first.FindCommandResolutionReceipt(1, 3).has_value());
+    REQUIRE(first.StateChecksum() == checksumBeforePendingLookup);
 
     const std::size_t initialEntityCount = first.Entities().size();
     const ResourcePool initialResources = first.FindPlayer(1)->resources;
@@ -2809,6 +2875,7 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
     REQUIRE(restored.has_value());
     REQUIRE(snapshotError.empty());
     REQUIRE(restored->StateChecksum() == first.StateChecksum());
+    REQUIRE(!restored->FindCommandResolutionReceipt(1, 1).has_value());
 
     for (std::uint32_t tick = 0; tick < 5; ++tick) {
         first.Step();
@@ -2816,6 +2883,28 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
         restored->Step();
         REQUIRE(first.StateChecksum() == second.StateChecksum());
         REQUIRE(restored->StateChecksum() == first.StateChecksum());
+        const std::uint64_t checksumBeforeLookup = first.StateChecksum();
+        for (std::uint64_t sequence = 1; sequence <= 3; ++sequence) {
+            const Tick assignedTick = sequence + 1;
+            const std::optional<CommandResolutionReceipt> receipt =
+                first.FindCommandResolutionReceipt(1, sequence);
+            if (tick < assignedTick) {
+                REQUIRE(!receipt.has_value());
+                continue;
+            }
+            REQUIRE(receipt.has_value());
+            REQUIRE(receipt->player == 1);
+            REQUIRE(receipt->commandType ==
+                    CommandType::RaiseMineralCover);
+            REQUIRE(receipt->assignedExecutionTick == assignedTick);
+            REQUIRE(receipt->outcome ==
+                    CommandResolutionOutcome::InvalidPosition);
+            REQUIRE(second.FindCommandResolutionReceipt(1, sequence) ==
+                    receipt);
+            REQUIRE(restored->FindCommandResolutionReceipt(1, sequence) ==
+                    receipt);
+        }
+        REQUIRE(first.StateChecksum() == checksumBeforeLookup);
     }
     REQUIRE(first.Entities().size() == initialEntityCount);
     REQUIRE(first.FindPlayer(1)->resources == initialResources);
@@ -2828,6 +2917,29 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
     REQUIRE(first.TerrainAt(0, 0) == Terrain::Open);
     REQUIRE(first.NextCommandSequence(1) == 4);
 
+    const std::optional<CommandResolutionReceipt> firstReceipt =
+        first.FindCommandResolutionReceipt(1, 1);
+    REQUIRE(firstReceipt.has_value());
+    Command duplicate = MakeCommand(
+        first.CurrentTick(), 1, 1, CommandType::RaiseMineralCover,
+        firstCairnback);
+    duplicate.position = minimum;
+    REQUIRE(!first.QueueCommand(duplicate, &rejection));
+    REQUIRE(rejection ==
+            "command sequence is not newer than executed input");
+    REQUIRE(first.FindCommandResolutionReceipt(1, 1) == firstReceipt);
+
+    const std::vector<std::uint8_t> resolvedSnapshot = first.SaveSnapshot();
+    std::optional<Simulation> resolvedRestore =
+        Simulation::LoadSnapshot(resolvedSnapshot, &snapshotError);
+    REQUIRE(resolvedRestore.has_value());
+    REQUIRE(snapshotError.empty());
+    REQUIRE(resolvedRestore->StateChecksum() == first.StateChecksum());
+    for (std::uint64_t sequence = 1; sequence <= 3; ++sequence) {
+        REQUIRE(resolvedRestore->FindCommandResolutionReceipt(1, sequence) ==
+                first.FindCommandResolutionReceipt(1, sequence));
+    }
+
     std::string replayError;
     const ReplayRecord replay = first.ExportReplay(&replayError);
     REQUIRE(replayError.empty());
@@ -2837,6 +2949,208 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
     REQUIRE(replayed.has_value());
     REQUIRE(replayError.empty());
     REQUIRE(replayed->StateChecksum() == first.StateChecksum());
+    for (std::uint64_t sequence = 1; sequence <= 3; ++sequence) {
+        REQUIRE(replayed->FindCommandResolutionReceipt(1, sequence) ==
+                first.FindCommandResolutionReceipt(1, sequence));
+    }
+}
+
+void TestCommandResolutionReceiptRetentionAndBounds() {
+    const Vec2 invalidPosition = Vec2::FromRaw(
+        std::numeric_limits<std::int32_t>::min(),
+        std::numeric_limits<std::int32_t>::max());
+
+    Simulation noEffect({8, 8, 20, 0x524543454950544eULL});
+    REQUIRE(noEffect.AddPlayer(
+        0, Faction::MeridianCompact, {0, 0}));
+    Command missingActor = MakeCommand(
+        0, 0, 1, CommandType::Stop, 999);
+    REQUIRE(noEffect.QueueCommand(missingActor));
+    noEffect.Step();
+    const std::optional<CommandResolutionReceipt> noEffectReceipt =
+        noEffect.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(noEffectReceipt.has_value());
+    REQUIRE(noEffectReceipt->player == 0);
+    REQUIRE(noEffectReceipt->commandType == CommandType::Stop);
+    REQUIRE(noEffectReceipt->assignedExecutionTick == 0);
+    REQUIRE(noEffectReceipt->outcome ==
+            CommandResolutionOutcome::NoEffect);
+
+    Simulation retained({16, 16, 20, 0x5245434549505454ULL});
+    REQUIRE(retained.AddPlayer(
+        0, Faction::KharuunAssemblies, {0, 100}));
+    const EntityId cairnback = retained.SpawnEntity(
+        0, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(8, 8));
+    REQUIRE(cairnback != 0);
+    Command invalid = MakeCommand(
+        0, 0, 1, CommandType::RaiseMineralCover, cairnback);
+    invalid.position = invalidPosition;
+    REQUIRE(retained.QueueCommand(invalid));
+    retained.Step();
+    const std::optional<CommandResolutionReceipt> receipt =
+        retained.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(receipt.has_value());
+    REQUIRE(receipt->outcome == CommandResolutionOutcome::InvalidPosition);
+
+    const std::vector<std::uint8_t> resolvedSnapshot =
+        retained.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(resolvedSnapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->FindCommandResolutionReceipt(0, 1) == receipt);
+
+    constexpr std::size_t kSerializedReceiptBytes = 19;
+    const std::size_t receiptBlockOffset =
+        resolvedSnapshot.size() - 8U - 4U - kSerializedReceiptBytes;
+    REQUIRE(ReadU32(resolvedSnapshot, receiptBlockOffset) == 1);
+    std::vector<std::uint8_t> invalidOutcome = resolvedSnapshot;
+    invalidOutcome[receiptBlockOffset + 4U +
+                   kSerializedReceiptBytes - 1U] = 0xff;
+    ResignSnapshot(invalidOutcome);
+    REQUIRE(!Simulation::LoadSnapshot(invalidOutcome, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    const std::size_t firstReceiptOffset = receiptBlockOffset + 4U;
+    constexpr std::size_t kReceiptSequenceOffset = 1;
+    constexpr std::size_t kReceiptCommandTypeOffset = 9;
+    constexpr std::size_t kReceiptAssignedTickOffset = 10;
+
+    std::vector<std::uint8_t> sequenceBeyondExecuted = resolvedSnapshot;
+    WriteU64(sequenceBeyondExecuted,
+             firstReceiptOffset + kReceiptSequenceOffset, 2);
+    ResignSnapshot(sequenceBeyondExecuted);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 sequenceBeyondExecuted, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    std::vector<std::uint8_t> invalidOutcomePairing = resolvedSnapshot;
+    invalidOutcomePairing[
+        firstReceiptOffset + kReceiptCommandTypeOffset] =
+        static_cast<std::uint8_t>(CommandType::Stop);
+    ResignSnapshot(invalidOutcomePairing);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 invalidOutcomePairing, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    std::vector<std::uint8_t> expiredReceipt = resolvedSnapshot;
+    constexpr std::size_t kSnapshotCurrentTickOffset = 2407;
+    REQUIRE(ReadU64(expiredReceipt, kSnapshotCurrentTickOffset) == 1);
+    WriteU64(expiredReceipt, kSnapshotCurrentTickOffset,
+             kCommandResolutionReceiptRetentionTicks + 1);
+    ResignSnapshot(expiredReceipt);
+    REQUIRE(!Simulation::LoadSnapshot(expiredReceipt, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    std::vector<std::uint8_t> excessiveReceiptCount = resolvedSnapshot;
+    WriteU32(excessiveReceiptCount, receiptBlockOffset,
+             static_cast<std::uint32_t>(
+                 kMaximumCommandResolutionReceipts + 1));
+    ResignSnapshot(excessiveReceiptCount);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 excessiveReceiptCount, &error).has_value());
+    REQUIRE(error ==
+            "snapshot command resolution receipt count is invalid");
+
+    std::vector<std::uint8_t> truncatedReceipt = resolvedSnapshot;
+    truncatedReceipt.erase(
+        truncatedReceipt.begin() +
+        static_cast<std::ptrdiff_t>(firstReceiptOffset));
+    ResignSnapshot(truncatedReceipt);
+    REQUIRE(!Simulation::LoadSnapshot(truncatedReceipt, &error).has_value());
+    REQUIRE(error ==
+            "snapshot command resolution receipt count is invalid");
+
+    Simulation twoReceipts = retained;
+    Command secondInvalid = MakeCommand(
+        twoReceipts.CurrentTick(), 0, 2,
+        CommandType::RaiseMineralCover, cairnback);
+    secondInvalid.position = invalidPosition;
+    REQUIRE(twoReceipts.QueueCommand(secondInvalid));
+    twoReceipts.Step();
+    const std::vector<std::uint8_t> twoReceiptSnapshot =
+        twoReceipts.SaveSnapshot();
+    const std::size_t twoReceiptBlockOffset =
+        twoReceiptSnapshot.size() - 8U - 4U -
+        2U * kSerializedReceiptBytes;
+    REQUIRE(ReadU32(twoReceiptSnapshot, twoReceiptBlockOffset) == 2);
+    const std::size_t secondReceiptOffset =
+        twoReceiptBlockOffset + 4U + kSerializedReceiptBytes;
+
+    std::vector<std::uint8_t> duplicateReceiptKey = twoReceiptSnapshot;
+    WriteU64(duplicateReceiptKey,
+             secondReceiptOffset + kReceiptSequenceOffset, 1);
+    ResignSnapshot(duplicateReceiptKey);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 duplicateReceiptKey, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    std::vector<std::uint8_t> outOfOrderReceipts = twoReceiptSnapshot;
+    WriteU64(outOfOrderReceipts,
+             twoReceiptBlockOffset + 4U +
+                 kReceiptAssignedTickOffset,
+             1);
+    WriteU64(outOfOrderReceipts,
+             secondReceiptOffset + kReceiptAssignedTickOffset,
+             0);
+    ResignSnapshot(outOfOrderReceipts);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 outOfOrderReceipts, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    retained.Step(kCommandResolutionReceiptRetentionTicks - 1);
+    restored->Step(kCommandResolutionReceiptRetentionTicks - 1);
+    REQUIRE(retained.CurrentTick() ==
+            kCommandResolutionReceiptRetentionTicks);
+    REQUIRE(retained.FindCommandResolutionReceipt(0, 1) == receipt);
+    REQUIRE(restored->StateChecksum() == retained.StateChecksum());
+    retained.Step();
+    restored->Step();
+    REQUIRE(retained.CurrentTick() ==
+            kCommandResolutionReceiptRetentionTicks + 1);
+    REQUIRE(!retained.FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(!restored->FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(restored->StateChecksum() == retained.StateChecksum());
+
+    Simulation bounded({16, 16, 20, 0x5245434549505442ULL});
+    REQUIRE(bounded.AddPlayer(
+        0, Faction::KharuunAssemblies, {0, 100}));
+    const EntityId boundedCairnback = bounded.SpawnEntity(
+        0, Faction::KharuunAssemblies, EntityType::HeavyUnit,
+        Vec2::FromTiles(8, 8));
+    REQUIRE(boundedCairnback != 0);
+    for (std::uint64_t sequence = 1;
+         sequence <= kMaximumCommandResolutionReceipts + 1;
+         ++sequence) {
+        Command command = MakeCommand(
+            0, 0, sequence, CommandType::RaiseMineralCover,
+            boundedCairnback);
+        command.position = invalidPosition;
+        REQUIRE(bounded.QueueCommand(command));
+    }
+    bounded.Step();
+    REQUIRE(!bounded.FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(bounded.FindCommandResolutionReceipt(0, 2).has_value());
+    const std::optional<CommandResolutionReceipt> newest =
+        bounded.FindCommandResolutionReceipt(
+            0, kMaximumCommandResolutionReceipts + 1);
+    REQUIRE(newest.has_value());
+    REQUIRE(newest->assignedExecutionTick == 0);
+    REQUIRE(newest->outcome ==
+            CommandResolutionOutcome::InvalidPosition);
+    const std::vector<std::uint8_t> boundedSnapshot = bounded.SaveSnapshot();
+    std::optional<Simulation> boundedRestore =
+        Simulation::LoadSnapshot(boundedSnapshot, &error);
+    REQUIRE(boundedRestore.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(boundedRestore->StateChecksum() == bounded.StateChecksum());
+    REQUIRE(!boundedRestore->FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(boundedRestore->FindCommandResolutionReceipt(0, 2) ==
+            bounded.FindCommandResolutionReceipt(0, 2));
+    REQUIRE(boundedRestore->FindCommandResolutionReceipt(
+                0, kMaximumCommandResolutionReceipts + 1) == newest);
 }
 
 void TestVibrationDetectionAndAnonymousSignatures() {
@@ -3055,7 +3369,7 @@ void TestPoweredAegisNetworkAndCounterplay() {
     constexpr std::size_t kAegisPowerFieldOffset = 209;
     constexpr std::size_t kAegisEntityIndex = 3;
     const std::size_t aegisPowerOffset =
-        SnapshotV23FirstEntityOffset(64U * 64U) +
+        SnapshotV24FirstEntityOffset(64U * 64U) +
         kAegisEntityIndex * kSerializedEntitySize +
         kAegisPowerFieldOffset;
     REQUIRE(forgedPower[aegisPowerOffset] == 1);
@@ -3452,7 +3766,7 @@ void TestHollowChoirIdentityReconciliationAndPersistence() {
             ChoirIdentityState::DualResolvePossible);
 
     std::vector<std::uint8_t> invalidIdentity = snapshot;
-    invalidIdentity[SnapshotV23FirstEntityOffset(32U * 32U) + 210] = 0xff;
+    invalidIdentity[SnapshotV24FirstEntityOffset(32U * 32U) + 210] = 0xff;
     ResignSnapshot(invalidIdentity);
     REQUIRE(!Simulation::LoadSnapshot(invalidIdentity, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
@@ -4114,6 +4428,8 @@ int main() {
          TestCairnbackTemporaryMineralCover},
         {"mineral cover extreme-coordinate determinism",
          TestMineralCoverExtremeCoordinateDeterminism},
+        {"command resolution receipt retention and bounds",
+         TestCommandResolutionReceiptRetentionAndBounds},
         {"vibration detection and anonymous signatures",
          TestVibrationDetectionAndAnonymousSignatures},
         {"powered Aegis network and counterplay",
