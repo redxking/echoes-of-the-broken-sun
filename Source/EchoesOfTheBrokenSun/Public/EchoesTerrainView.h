@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesSkirmishSetup.h"
 #include "GameFramework/Actor.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
@@ -25,17 +26,25 @@ public:
 
     bool InitializeTerrain(
         const echoes::sim::Simulation& Simulation,
-        float TileWorldSize);
+        float TileWorldSize,
+        EEchoesSkirmishMapPreset MapPreset =
+            EEchoesSkirmishMapPreset::GlassScar);
     bool SyncTerrain(const echoes::sim::Simulation& Simulation);
     bool InitializeScopedTerrain(
         int32 InMapWidthTiles,
         int32 InMapHeightTiles,
-        float TileWorldSize);
+        float TileWorldSize,
+        EEchoesSkirmishMapPreset MapPreset =
+            EEchoesSkirmishMapPreset::GlassScar);
     bool SyncScopedTerrain(
         const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
     [[nodiscard]] int32 GetBlockedTileCount() const { return BlockedTileCount; }
     [[nodiscard]] int32 GetScarredTileCount() const { return ScarredTileCount; }
+    [[nodiscard]] EEchoesSkirmishMapPreset GetMapPreset() const
+    {
+        return ActiveMapPreset;
+    }
     [[nodiscard]] bool IsUsingAuthoredTerrainMeshes() const
     {
         return BlockedMesh != nullptr && ScarredMesh != nullptr &&
@@ -77,6 +86,8 @@ private:
     int32 MapWidthTiles = 0;
     int32 MapHeightTiles = 0;
     float WorldUnitsPerTile = 200.0f;
+    EEchoesSkirmishMapPreset ActiveMapPreset =
+        EEchoesSkirmishMapPreset::GlassScar;
     int32 BlockedTileCount = 0;
     int32 ScarredTileCount = 0;
 };
