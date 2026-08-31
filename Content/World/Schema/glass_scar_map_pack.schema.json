@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echoes.invalid/schema/world/glass-scar-map-pack-v1",
+  "title": "Echoes Glass Scar non-authoritative map-pack descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "map_id",
+    "display_name",
+    "authority",
+    "runtime_binding",
+    "source_snapshot",
+    "canonicalization",
+    "grid",
+    "terrain",
+    "routes",
+    "deployment",
+    "resources",
+    "objectives",
+    "measurement_checkpoints",
+    "claim_boundary"
+  ],
+  "properties": {
+    "schema_id": {"const": "echoes.world.map-pack.v1"},
+    "schema_version": {"const": 1},
+    "map_id": {"const": "glass-scar"},
+    "display_name": {"const": "Glass Scar"},
+    "authority": {"const": "non-authoritative-source-descriptor"},
+    "runtime_binding": {"const": "none"},
+    "source_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git_commit", "files"],
+      "properties": {
+        "git_commit": {
+          "const": "7e95f50ab7dd1c2d335b70837b906e2cd8c72113"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/source_file"}
+        }
+      }
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "algorithm",
+        "encoding",
+        "object_keys",
+        "arrays",
+        "whitespace",
+        "digest_file"
+      ],
+      "properties": {
+        "profile": {"const": "echoes-json-v1"},
+        "algorithm": {"const": "sha256"},
+        "encoding": {"const": "utf-8"},
+        "object_keys": {"const": "lexicographic"},
+        "arrays": {"const": "ordered"},
+        "whitespace": {"const": "none"},
+        "digest_file": {"const": "glass_scar_map_pack_v1.sha256"}
+      }
+    },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width_tiles",
+        "height_tiles",
+        "coordinate_origin",
+        "simulation_tile_centimeters",
+        "presentation_tile_world_units",
+        "timing_status"
+      ],
+      "properties": {
+        "width_tiles": {"const": 64},
+        "height_tiles": {"const": 64},
+        "coordinate_origin": {"const": "southwest"},
+        "simulation_tile_centimeters": {"const": 100},
+        "presentation_tile_world_units": {"const": 200},
+        "timing_status": {"const": "theoretical-only"}
+      }
+    },
+    "terrain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_passable", "glass_scar_bounds", "blocked_rule"],
+      "properties": {
+        "default_passable": {"const": true},
+        "glass_scar_bounds": {
+          "const": {"min_x": 8, "max_x": 55, "min_y": 30, "max_y": 34}
+        },
+        "blocked_rule": {
+          "const": "inside-glass-scar-bounds-unless-inside-a-named-crossing"
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {"$ref": "#/$defs/ash_cut_route"},
+        {"$ref": "#/$defs/buried_causeway_route"},
+        {"$ref": "#/$defs/folded_verge_route"}
+      ]
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_spawns", "opponent_spawns"],
+      "properties": {
+        "local_spawns": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tile"}
+        },
+        "opponent_spawns": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tile"}
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matter_deposits"],
+      "properties": {
+        "matter_deposits": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tile"}
+        }
+      }
+    },
+    "objectives": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["future_well"],
+      "properties": {
+        "future_well": {"$ref": "#/$defs/tile"}
+      }
+    },
+    "measurement_checkpoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_core",
+        "opponent_core",
+        "future_well",
+        "crossing_reference_tiles"
+      ],
+      "properties": {
+        "local_core": {"$ref": "#/$defs/tile"},
+        "opponent_core": {"$ref": "#/$defs/tile"},
+        "future_well": {"$ref": "#/$defs/tile"},
+        "crossing_reference_tiles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ash-cut", "buried-causeway", "folded-verge"],
+          "properties": {
+            "ash-cut": {"$ref": "#/$defs/tile"},
+            "buried-causeway": {"$ref": "#/$defs/tile"},
+            "folded-verge": {"$ref": "#/$defs/tile"}
+          }
+        }
+      }
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["descriptor_only", "not_evidence_for"],
+      "properties": {
+        "descriptor_only": {"const": true},
+        "not_evidence_for": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "runtime-authority",
+              "playable-map",
+              "rendered-map",
+              "navigation-qualification",
+              "ai-qualification",
+              "performance-qualification",
+              "packaged-build",
+              "release-readiness"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "role"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string"},
+        "role": {
+          "enum": [
+            "grid-dimensions",
+            "base-topology-spawns-resources-objective",
+            "legacy-base-terrain-construction",
+            "route-presentation-centers",
+            "presentation-tile-scale",
+            "simulation-centimeter-conversion"
+          ]
+        }
+      }
+    },
+    "tile": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"type": "integer", "minimum": 0, "maximum": 63}
+    },
+    "ash_cut_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name", "ordinal", "crossing", "reference_tile"],
+      "properties": {
+        "id": {"const": "ash-cut"},
+        "display_name": {"const": "Ash Cut"},
+        "ordinal": {"const": 0},
+        "crossing": {
+          "const": {"min_x": 12, "max_x": 15, "min_y": 30, "max_y": 34}
+        },
+        "reference_tile": {"const": [13, 32]}
+      }
+    },
+    "buried_causeway_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name", "ordinal", "crossing", "reference_tile"],
+      "properties": {
+        "id": {"const": "buried-causeway"},
+        "display_name": {"const": "Buried Causeway"},
+        "ordinal": {"const": 1},
+        "crossing": {
+          "const": {"min_x": 29, "max_x": 35, "min_y": 30, "max_y": 34}
+        },
+        "reference_tile": {"const": [32, 32]}
+      }
+    },
+    "folded_verge_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name", "ordinal", "crossing", "reference_tile"],
+      "properties": {
+        "id": {"const": "folded-verge"},
+        "display_name": {"const": "Folded Verge"},
+        "ordinal": {"const": 2},
+        "crossing": {
+          "const": {"min_x": 48, "max_x": 51, "min_y": 30, "max_y": 34}
+        },
+        "reference_tile": {"const": [49, 32]}
+      }
+    }
+  }
+}
