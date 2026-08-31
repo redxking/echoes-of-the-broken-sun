@@ -224,6 +224,615 @@ FString BrokenSunQuickSavePath(
             TEXT("EchoesQuickSaveTheBrokenSun-%08X.bin"),
             Fingerprint));
 }
+
+struct FBrokenSunResolutionPersistenceSpec final
+{
+    const TCHAR* Label = TEXT("unavailable");
+    echoes::sim::FutureWellChoice FoundingChoice =
+        echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice RecordedProtocol =
+        echoes::sim::FutureWellChoice::Dormant;
+    EEchoesFinalResolution SelectedResolution =
+        EEchoesFinalResolution::None;
+    uint8 ExpectedPlanKey = 0xFF;
+    uint8 ExpectedAvailability = 0;
+};
+
+bool RunBrokenSunResolutionPersistenceCase(
+    FAutomationTestBase& Test,
+    const FBrokenSunResolutionPersistenceSpec& Spec)
+{
+    using echoes::sim::ChoirIdentityState;
+    using echoes::sim::CommandType;
+    using echoes::sim::EntityType;
+    using echoes::sim::Faction;
+    using echoes::sim::FutureWellChoice;
+    using echoes::sim::ResearchType;
+    using echoes::sim::Vec2;
+
+    bool bPassed = true;
+    const auto Check = [&Test, &Spec, &bPassed](
+        const TCHAR* Detail,
+        bool bCondition)
+    {
+        if (!bCondition)
+        {
+            Test.AddError(FString::Printf(
+                TEXT("%s: %s"),
+                Spec.Label,
+                Detail));
+            bPassed = false;
+        }
+        return bCondition;
+    };
+
+    FString Feedback;
+    const FString CampaignPath =
+        FEchoesCampaignProgressStore::GetDefaultPath();
+    const FString CampaignBackupPath = CampaignPath + TEXT(".bak");
+    const FString CampaignTemporaryPath = CampaignPath + TEXT(".tmp");
+    FPreservedBrokenSunFile PreservedCampaign(CampaignPath);
+    FPreservedBrokenSunFile PreservedCampaignBackup(CampaignBackupPath);
+    FPreservedBrokenSunFile PreservedCampaignTemporary(
+        CampaignTemporaryPath);
+    for (const FString& Path : {
+             CampaignPath,
+             CampaignBackupPath,
+             CampaignTemporaryPath})
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+    }
+    if (!Check(
+            TEXT("the isolated campaign store starts without residue"),
+            !IFileManager::Get().FileExists(*CampaignPath) &&
+                !IFileManager::Get().FileExists(*CampaignBackupPath) &&
+                !IFileManager::Get().FileExists(*CampaignTemporaryPath)))
+    {
+        return false;
+    }
+
+    FEchoesBrokenSunPlan ExpectedPlan;
+    if (!Check(
+            TEXT("the exact inherited tuple projects a final plan"),
+            FEchoesBrokenSunMissionModel::TryPlanForLedger(
+                Spec.FoundingChoice,
+                0x7B,
+                Spec.RecordedProtocol,
+                ExpectedPlan)) ||
+        !Check(
+            TEXT("the projected plan retains the expected choices, districts, key, and full eligibility mask"),
+            ExpectedPlan.FoundingDoctrine == Spec.FoundingChoice &&
+                ExpectedPlan.RecordedProtocol == Spec.RecordedProtocol &&
+                ExpectedPlan.FirstContributingDistrict ==
+                    EEchoesCityDistrict::LifeSupport &&
+                ExpectedPlan.SecondContributingDistrict ==
+                    EEchoesCityDistrict::Transit &&
+                ExpectedPlan.DeferredDistrict ==
+                    EEchoesCityDistrict::Archive &&
+                ExpectedPlan.StablePlanKey == Spec.ExpectedPlanKey &&
+                ExpectedPlan.AvailableFinalResolutions ==
+                    Spec.ExpectedAvailability) ||
+        !Check(
+            TEXT("the selected resolution is one member of the complete eligibility set"),
+            FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+                ExpectedPlan,
+                Spec.SelectedResolution)))
+    {
+        return false;
+    }
+
+    FEchoesCampaignProgress Prerequisites = MakeBrokenSunPrerequisites(
+        Spec.FoundingChoice,
+        Spec.RecordedProtocol,
+        0x7B,
+        14,
+        Feedback);
+    FEchoesCampaignProgress ReloadedPrerequisites;
+    if (!Check(
+            TEXT("the synthetic prerequisite ledger is validator-accepted and contains exactly fourteen records"),
+            Prerequisites.Decisions.Num() == 14 &&
+                FEchoesCampaignProgressStore::SaveAtomic(
+                    CampaignPath,
+                    Prerequisites,
+                    Feedback) &&
+                FEchoesCampaignProgressStore::LoadWithBackup(
+                    CampaignPath,
+                    ReloadedPrerequisites,
+                    Feedback) &&
+                ReloadedPrerequisites.Decisions ==
+                    Prerequisites.Decisions) ||
+        !Check(
+            TEXT("seeding the first generation creates no backup or temporary residue"),
+            !IFileManager::Get().FileExists(*CampaignBackupPath) &&
+                !IFileManager::Get().FileExists(*CampaignTemporaryPath)))
+    {
+        return false;
+    }
+
+    FTestWorldWrapper WorldWrapper;
+    if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
+    {
+        WorldWrapper.ForwardErrorMessages(&Test);
+        Check(TEXT("the Mission 15 test world can be created"), false);
+        return false;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        WorldWrapper.GetTestWorld()->GetSubsystem<
+            UEchoesSimulationSubsystem>();
+    bool bScenarioStarted = false;
+    const auto FinishWorld = [&]()
+    {
+        if (Bridge != nullptr && bScenarioStarted)
+        {
+            Bridge->StopPrototypeScenario();
+        }
+        WorldWrapper.ForwardErrorMessages(&Test);
+        return bPassed && !WorldWrapper.HasFailed();
+    };
+
+    if (!Check(
+            TEXT("the test world owns a simulation subsystem"),
+            Bridge != nullptr) ||
+        !Check(
+            TEXT("the exact fourteen-record ledger unlocks Mission 15"),
+            Bridge != nullptr && Bridge->IsBrokenSunUnlocked()) ||
+        !Check(
+            TEXT("the Mission 15 operation can be selected"),
+            Bridge->SelectOperationMode(
+                EEchoesOperationMode::CampaignTheBrokenSun,
+                Feedback)) ||
+        !Check(
+            TEXT("the Mission 15 operation can start"),
+            Bridge->StartPrototypeScenario()))
+    {
+        return FinishWorld();
+    }
+    bScenarioStarted = true;
+
+    const FEchoesBrokenSunPlan RuntimePlan = Bridge->GetBrokenSunPlan();
+    if (!Check(
+            TEXT("the runtime plan matches the exact inherited plan"),
+            RuntimePlan.FoundingDoctrine == Spec.FoundingChoice &&
+                RuntimePlan.RecordedProtocol == Spec.RecordedProtocol &&
+                RuntimePlan.FirstContributingDistrict ==
+                    EEchoesCityDistrict::LifeSupport &&
+                RuntimePlan.SecondContributingDistrict ==
+                    EEchoesCityDistrict::Transit &&
+                RuntimePlan.DeferredDistrict ==
+                    EEchoesCityDistrict::Archive &&
+                RuntimePlan.StablePlanKey == Spec.ExpectedPlanKey &&
+                RuntimePlan.AvailableFinalResolutions ==
+                    Spec.ExpectedAvailability))
+    {
+        return FinishWorld();
+    }
+
+    FEchoesObjectiveSnapshot Objective =
+        Bridge->GetLocalObjectiveSnapshot();
+    const echoes::sim::Entity* Voice =
+        Bridge->FindEntity(Objective.BrokenSunAccordVoiceId);
+    const echoes::sim::Entity* Heavy =
+        Bridge->FindEntity(Objective.BrokenSunAccordHeavyId);
+    const echoes::sim::Entity* Neme =
+        Bridge->FindEntity(Objective.BrokenSunNemeId);
+    const echoes::sim::Entity* Worker =
+        Bridge->FindEntity(Objective.BrokenSunWorkerId);
+    if (!Check(
+            TEXT("the runtime exposes the required Hollow Choir command force"),
+            Voice != nullptr && Heavy != nullptr && Neme != nullptr &&
+                Worker != nullptr &&
+                Voice->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Heavy->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Neme->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Worker->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Voice->faction == Faction::HollowChoir &&
+                Heavy->faction == Faction::HollowChoir &&
+                Neme->faction == Faction::HollowChoir &&
+                Worker->faction == Faction::HollowChoir))
+    {
+        return FinishWorld();
+    }
+
+    echoes::sim::EntityId ResearchLoomId = 0;
+    for (const echoes::sim::Entity& Entity :
+         Bridge->GetSimulation()->Entities())
+    {
+        if (Entity.owner ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            Entity.faction == Faction::HollowChoir &&
+            Entity.type == EntityType::Barracks)
+        {
+            ResearchLoomId = Entity.id;
+            break;
+        }
+    }
+    if (!Check(
+            TEXT("the final command force includes a Research Loom"),
+            ResearchLoomId != 0))
+    {
+        return FinishWorld();
+    }
+
+    const auto TickUntil = [Bridge](
+        const TFunction<bool()>& Predicate,
+        int32 MaximumTicks)
+    {
+        for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
+        {
+            if (Predicate())
+            {
+                return true;
+            }
+            Bridge->Tick(0.05f);
+        }
+        return Predicate();
+    };
+    const auto FindBuildSite = [Bridge](
+        const Vec2& Center,
+        int32 Radius,
+        Vec2& OutSite)
+    {
+        const echoes::sim::Simulation* Simulation =
+            Bridge->GetSimulation();
+        if (Simulation == nullptr)
+        {
+            return false;
+        }
+        for (int32 DeltaY = -Radius; DeltaY <= Radius; ++DeltaY)
+        {
+            for (int32 DeltaX = -Radius; DeltaX <= Radius; ++DeltaX)
+            {
+                if (DeltaX * DeltaX + DeltaY * DeltaY >
+                    Radius * Radius)
+                {
+                    continue;
+                }
+                const Vec2 Candidate = Vec2::FromTiles(
+                    Center.x.FloorToInt() + DeltaX,
+                    Center.y.FloorToInt() + DeltaY);
+                if (Simulation->ValidatePlacement(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        EntityType::UtilityStructure,
+                        Candidate) ==
+                    echoes::sim::PlacementResult::Valid)
+                {
+                    OutSite = Candidate;
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    const auto IsWithinContractRadius = [](
+        const Vec2& Position,
+        const Vec2& Site,
+        int32 Radius)
+    {
+        const int64 DeltaX = static_cast<int64>(Position.x.Raw()) -
+            Site.x.Raw();
+        const int64 DeltaY = static_cast<int64>(Position.y.Raw()) -
+            Site.y.Raw();
+        const int64 RadiusRaw = Vec2::FromTiles(Radius, 0).x.Raw();
+        return DeltaX * DeltaX + DeltaY * DeltaY <=
+            RadiusRaw * RadiusRaw;
+    };
+
+    Bridge->SetScenarioPaused(false);
+    Vec2 ApproachBuildSite;
+    if (!Check(
+            TEXT("the approach exposes a valid construction footprint"),
+            FindBuildSite(
+                RuntimePlan.CrownfallApproachSite,
+                3,
+                ApproachBuildSite)) ||
+        !Check(
+            TEXT("the worker accepts the approach-anchor build"),
+            Bridge->IssueBuildCommand(
+                Objective.BrokenSunWorkerId,
+                EntityType::UtilityStructure,
+                Bridge->SimToWorld(ApproachBuildSite),
+                Feedback)) ||
+        !Check(
+            TEXT("the completed approach advances to accord assembly"),
+            TickUntil(
+                [Bridge]()
+                {
+                    return Bridge->GetBrokenSunPhase() ==
+                        EEchoesBrokenSunPhase::AssembleAccord;
+                },
+                4000)))
+    {
+        return FinishWorld();
+    }
+
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    if (!Check(
+            TEXT("the Research Loom accepts Held Alternatives"),
+            Bridge->IssueResearchCommand(
+                ResearchLoomId,
+                ResearchType::ChoirHeldAlternatives,
+                Feedback)) ||
+        !Check(
+            TEXT("Held Alternatives completes deterministically"),
+            TickUntil(
+                [Bridge]()
+                {
+                    const echoes::sim::PlayerState* Player =
+                        Bridge->GetSimulation()->FindPlayer(
+                            UEchoesSimulationSubsystem::LocalPlayerId);
+                    return Player != nullptr &&
+                        Player->HasCompletedResearch(
+                            ResearchType::ChoirHeldAlternatives);
+                },
+                1200)) ||
+        !Check(
+            TEXT("the accord voice accepts the Possible state"),
+            Bridge->IssueChoirReconciliation(
+                Objective.BrokenSunAccordVoiceId,
+                ChoirIdentityState::Possible,
+                Feedback)) ||
+        !Check(
+            TEXT("the Possible voice accepts the Mara accord move"),
+            Bridge->IssueCommand(
+                CommandType::Move,
+                Objective.BrokenSunAccordVoiceId,
+                0,
+                Bridge->SimToWorld(RuntimePlan.MaraAccordSite),
+                FutureWellChoice::Dormant,
+                Feedback)) ||
+        !Check(
+            TEXT("the Manifest heavy accepts the Oruun accord move"),
+            Bridge->IssueCommand(
+                CommandType::Move,
+                Objective.BrokenSunAccordHeavyId,
+                0,
+                Bridge->SimToWorld(RuntimePlan.OruunAccordSite),
+                FutureWellChoice::Dormant,
+                Feedback)) ||
+        !Check(
+            TEXT("Neme accepts the Choir accord move"),
+            Bridge->IssueCommand(
+                CommandType::Move,
+                Objective.BrokenSunNemeId,
+                0,
+                Bridge->SimToWorld(RuntimePlan.NemeAccordSite),
+                FutureWellChoice::Dormant,
+                Feedback)) ||
+        !Check(
+            TEXT("all three accord participants settle at their exact sites"),
+            TickUntil(
+                [Bridge, RuntimePlan, IsWithinContractRadius]()
+                {
+                    const FEchoesObjectiveSnapshot Current =
+                        Bridge->GetLocalObjectiveSnapshot();
+                    const echoes::sim::Entity* CurrentVoice =
+                        Bridge->FindEntity(
+                            Current.BrokenSunAccordVoiceId);
+                    const echoes::sim::Entity* CurrentHeavy =
+                        Bridge->FindEntity(
+                            Current.BrokenSunAccordHeavyId);
+                    const echoes::sim::Entity* CurrentNeme =
+                        Bridge->FindEntity(Current.BrokenSunNemeId);
+                    return CurrentVoice != nullptr &&
+                        CurrentHeavy != nullptr &&
+                        CurrentNeme != nullptr &&
+                        CurrentVoice->choirIdentityState ==
+                            ChoirIdentityState::Possible &&
+                        CurrentHeavy->choirIdentityState ==
+                            ChoirIdentityState::Manifest &&
+                        IsWithinContractRadius(
+                            CurrentVoice->position,
+                            RuntimePlan.MaraAccordSite,
+                            3) &&
+                        IsWithinContractRadius(
+                            CurrentHeavy->position,
+                            RuntimePlan.OruunAccordSite,
+                            3) &&
+                        IsWithinContractRadius(
+                            CurrentNeme->position,
+                            RuntimePlan.NemeAccordSite,
+                            3);
+                },
+                3000)) ||
+        !Check(
+            TEXT("the Research Loom accepts Shared Resolution"),
+            Bridge->IssueResearchCommand(
+                ResearchLoomId,
+                ResearchType::ChoirSharedResolution,
+                Feedback)) ||
+        !Check(
+            TEXT("the witnessed accord opens final-resolution selection"),
+            TickUntil(
+                [Bridge]()
+                {
+                    return Bridge->GetBrokenSunPhase() ==
+                        EEchoesBrokenSunPhase::ChooseFinalResolution;
+                },
+                5000)))
+    {
+        return FinishWorld();
+    }
+
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    if (!Check(
+            TEXT("the choice snapshot exposes the full exact eligibility set and no selected ending"),
+            Objective.BrokenSunAvailableFinalResolutions ==
+                    Spec.ExpectedAvailability &&
+                Objective.BrokenSunPendingFinalResolution ==
+                    EEchoesFinalResolution::None &&
+                Objective.BrokenSunFinalResolution ==
+                    EEchoesFinalResolution::None) ||
+        !Check(
+            TEXT("the first press arms only the requested eligible ending"),
+            Bridge->ChooseFinalResolution(
+                Spec.SelectedResolution,
+                Feedback)))
+    {
+        return FinishWorld();
+    }
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    if (!Check(
+            TEXT("the armed state separates the pending selection from the complete eligibility set"),
+            Objective.BrokenSunAvailableFinalResolutions ==
+                    Spec.ExpectedAvailability &&
+                Objective.BrokenSunPendingFinalResolution ==
+                    Spec.SelectedResolution &&
+                Objective.BrokenSunFinalResolution ==
+                    EEchoesFinalResolution::None) ||
+        !Check(
+            TEXT("the second identical press locks the requested ending"),
+            Bridge->ChooseFinalResolution(
+                Spec.SelectedResolution,
+                Feedback)))
+    {
+        return FinishWorld();
+    }
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    if (!Check(
+            TEXT("the locked ending remains distinct from its complete eligibility set"),
+            Objective.BrokenSunAvailableFinalResolutions ==
+                    Spec.ExpectedAvailability &&
+                Objective.BrokenSunFinalResolution ==
+                    Spec.SelectedResolution &&
+                Bridge->GetBrokenSunPhase() ==
+                    EEchoesBrokenSunPhase::RaiseResolutionConduit))
+    {
+        return FinishWorld();
+    }
+
+    const Vec2 ResolutionCenter =
+        FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+            RuntimePlan,
+            Spec.SelectedResolution);
+    Vec2 ConduitBuildSite;
+    if (!Check(
+            TEXT("the selected ending exposes a valid conduit footprint"),
+            FindBuildSite(ResolutionCenter, 2, ConduitBuildSite)) ||
+        !Check(
+            TEXT("the worker accepts the exact resolution-conduit build"),
+            Bridge->IssueBuildCommand(
+                Objective.BrokenSunWorkerId,
+                EntityType::UtilityStructure,
+                Bridge->SimToWorld(ConduitBuildSite),
+                Feedback)) ||
+        !Check(
+            TEXT("the completed conduit enters the deterministic final hold"),
+            TickUntil(
+                [Bridge]()
+                {
+                    return Bridge->GetBrokenSunPhase() ==
+                        EEchoesBrokenSunPhase::HoldFinalResolution;
+                },
+                4000)))
+    {
+        return FinishWorld();
+    }
+
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    if (!Check(
+            TEXT("the final hold exposes the selected conduit and remaining window"),
+            Objective.bBrokenSunResolutionConduitComplete &&
+                Objective.BrokenSunResolutionConduitId != 0 &&
+                Objective.BrokenSunResolutionTicksRemaining > 0 &&
+                Objective.BrokenSunResolutionTicksRemaining <=
+                    FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
+                        RuntimePlan,
+                        Spec.SelectedResolution)) ||
+        !Check(
+            TEXT("holding the exact contract appends Mission 15"),
+            TickUntil(
+                [Bridge]()
+                {
+                    return Bridge->GetCampaignProgress().FindDecision(
+                               EEchoesCampaignMissionId::TheBrokenSun) !=
+                        nullptr;
+                },
+                5000)))
+    {
+        return FinishWorld();
+    }
+
+    const FEchoesCampaignDecisionRecord* MissionRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::TheBrokenSun);
+    const FEchoesCampaignJourney RuntimeJourney =
+        Bridge->GetCampaignJourney();
+    if (!Check(
+            TEXT("the runtime stores the exact selected ending, full eligibility, plan key, and provenance"),
+            MissionRecord != nullptr &&
+                MissionRecord->Mission ==
+                    EEchoesCampaignMissionId::TheBrokenSun &&
+                MissionRecord->WellChoice == Spec.RecordedProtocol &&
+                MissionRecord->AvailableWellChoices ==
+                    BrokenSunWellMask(Spec.RecordedProtocol) &&
+                MissionRecord->VerifiedFacts == 0xFF &&
+                MissionRecord->FinalResolution ==
+                    Spec.SelectedResolution &&
+                MissionRecord->AvailableFinalResolutions ==
+                    Spec.ExpectedAvailability &&
+                MissionRecord->FinalPlanKey == Spec.ExpectedPlanKey &&
+                MissionRecord->SimulationSnapshotVersion ==
+                    echoes::sim::kSnapshotVersion &&
+                MissionRecord->CompletionTick > 0 &&
+                MissionRecord->FinalStateChecksum != 0 &&
+                Bridge->IsScenarioPaused()) ||
+        !Check(
+            TEXT("the runtime journey terminates at fifteen records without exposing Mission 16"),
+            RuntimeJourney.State ==
+                    EEchoesCampaignJourneyState::Complete &&
+                RuntimeJourney.CompletedMissionCount == 15 &&
+                Bridge->GetCampaignProgress().Decisions.Num() == 15))
+    {
+        return FinishWorld();
+    }
+
+    const FEchoesCampaignDecisionRecord RuntimeMissionRecord =
+        *MissionRecord;
+    FEchoesCampaignProgress ExpectedPersistedCampaign = Prerequisites;
+    ExpectedPersistedCampaign.Decisions.Add(RuntimeMissionRecord);
+
+    FEchoesCampaignProgress ReloadedCampaign;
+    FEchoesCampaignProgress RetainedPrerequisiteGeneration;
+    if (!Check(
+            TEXT("the committed primary exactly matches the fourteen prerequisites plus the runtime Mission 15 record"),
+            FEchoesCampaignProgressStore::LoadGeneration(
+                CampaignPath,
+                ReloadedCampaign,
+                Feedback) &&
+                ReloadedCampaign.Decisions ==
+                    ExpectedPersistedCampaign.Decisions) ||
+        !Check(
+            TEXT("the retained backup is the exact fourteen-record prerequisite generation"),
+            FEchoesCampaignProgressStore::LoadGeneration(
+                CampaignBackupPath,
+                RetainedPrerequisiteGeneration,
+                Feedback) &&
+                RetainedPrerequisiteGeneration.Decisions ==
+                    Prerequisites.Decisions) ||
+        !Check(
+            TEXT("the persisted Mission 15 record matches the authoritative runtime record"),
+            ReloadedCampaign.FindDecision(
+                    EEchoesCampaignMissionId::TheBrokenSun) != nullptr &&
+                *ReloadedCampaign.FindDecision(
+                    EEchoesCampaignMissionId::TheBrokenSun) ==
+                    RuntimeMissionRecord))
+    {
+        return FinishWorld();
+    }
+
+    const FEchoesCampaignJourney ReloadedJourney =
+        FEchoesCampaignJourneyModel::Resolve(ReloadedCampaign);
+    Check(
+        TEXT("the reloaded ledger remains complete at Mission 15 without a Mission 16 projection"),
+        ReloadedJourney.State ==
+                EEchoesCampaignJourneyState::Complete &&
+            ReloadedJourney.CompletedMissionCount == 15);
+    return FinishWorld();
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1258,6 +1867,67 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors() && !WorldWrapper.HasFailed();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FEchoesBrokenSunAlternateResolutionPersistenceTest,
+    "Echoes.Runtime.Campaign.TheBrokenSunAlternateResolutionPersistence",
+    EAutomationTestFlags::EditorContext |
+        EAutomationTestFlags::ClientContext |
+        EAutomationTestFlags::EngineFilter)
+
+bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
+    const FString& Parameters)
+{
+    (void)Parameters;
+
+    FEchoesScopedTestSaveEnvironment TestSaveEnvironment(*this);
+    if (!TestSaveEnvironment.IsReady())
+    {
+        return false;
+    }
+
+    const FBrokenSunResolutionPersistenceSpec Cases[] = {
+        {
+            TEXT("plan 17 Preserve/Reshape to Open Evolution"),
+            echoes::sim::FutureWellChoice::Preserve,
+            echoes::sim::FutureWellChoice::Reshape,
+            EEchoesFinalResolution::OpenEvolution,
+            17,
+            0x0A,
+        },
+        {
+            TEXT("plan 25 Reshape/Preserve to Controlled Stabilization"),
+            echoes::sim::FutureWellChoice::Reshape,
+            echoes::sim::FutureWellChoice::Preserve,
+            EEchoesFinalResolution::ControlledStabilization,
+            25,
+            0x0B,
+        },
+    };
+
+    bool bPassed = true;
+    for (const FBrokenSunResolutionPersistenceSpec& Case : Cases)
+    {
+        bPassed = RunBrokenSunResolutionPersistenceCase(*this, Case) &&
+            bPassed;
+        const FString CampaignPath =
+            FEchoesCampaignProgressStore::GetDefaultPath();
+        const bool bCleaned =
+            !IFileManager::Get().FileExists(*CampaignPath) &&
+            !IFileManager::Get().FileExists(
+                *(CampaignPath + TEXT(".bak"))) &&
+            !IFileManager::Get().FileExists(
+                *(CampaignPath + TEXT(".tmp")));
+        TestTrue(
+            *FString::Printf(
+                TEXT("%s: campaign primary, backup, and temporary generations are removed before the next case"),
+                Case.Label),
+            bCleaned);
+        bPassed = bCleaned && bPassed;
+    }
+
+    return bPassed && !HasAnyErrors();
 }
 
 #endif
