@@ -1,0 +1,1014 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "echoes://narrative/schema/mission-contract-v1",
+  "title": "Echoes Authored Mission Narrative Contract",
+  "$defs": {
+    "text_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_characters",
+        "localization_expansion_percent"
+      ],
+      "properties": {
+        "max_characters": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 320
+        },
+        "localization_expansion_percent": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 50
+        }
+      }
+    },
+    "placeholders": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "localized_text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "loc_key",
+        "source_text",
+        "placeholders",
+        "text_budget",
+        "binding_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_[a-z0-9_]+$"
+        },
+        "loc_key": {
+          "pattern": "^nar_[a-z0-9_]+$"
+        },
+        "source_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        },
+        "placeholders": {
+          "$ref": "#/$defs/placeholders"
+        },
+        "text_budget": {
+          "$ref": "#/$defs/text_budget"
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        }
+      }
+    },
+    "speaker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "faction_id",
+        "role_in_mission",
+        "command_authority",
+        "delivery_channel",
+        "physical_presence_status",
+        "voice_asset_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^spk_[a-z0-9_]+$"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "faction_id": {
+          "enum": [
+            "meridian_compact",
+            "kharuun_assemblies",
+            "hollow_choir"
+          ]
+        },
+        "role_in_mission": {
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "command_authority": {
+          "type": "boolean"
+        },
+        "delivery_channel": {
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "physical_presence_status": {
+          "const": "not_asserted_by_contract"
+        },
+        "voice_asset_status": {
+          "const": "absent"
+        }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "runtime_signal",
+        "prerequisite_ids",
+        "occurrence",
+        "reset_behavior",
+        "binding_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+        },
+        "runtime_signal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "prerequisite_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+          }
+        },
+        "occurrence": {
+          "enum": [
+            "once_per_attempt",
+            "once_per_completion",
+            "repeatable_after_failure"
+          ]
+        },
+        "reset_behavior": {
+          "enum": [
+            "reset_on_mission_retry",
+            "reset_on_mission_replay",
+            "starts_new_mission_attempt"
+          ]
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        }
+      }
+    },
+    "voice_hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "asset_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^aud_m01_vo_[a-z0-9_]+$"
+        },
+        "asset_status": {
+          "const": "absent"
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "loc_key",
+        "speaker_id",
+        "trigger_id",
+        "delivery_channel",
+        "source_text",
+        "placeholders",
+        "text_budget",
+        "subtitle",
+        "transcript_included",
+        "voice_hook",
+        "binding_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_m01_line_[a-z0-9_]+$"
+        },
+        "loc_key": {
+          "pattern": "^nar_m01_line_[a-z0-9_]+$"
+        },
+        "speaker_id": {
+          "pattern": "^spk_[a-z0-9_]+$"
+        },
+        "trigger_id": {
+          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+        },
+        "delivery_channel": {
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "source_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 220
+        },
+        "placeholders": {
+          "$ref": "#/$defs/placeholders"
+        },
+        "text_budget": {
+          "$ref": "#/$defs/text_budget"
+        },
+        "subtitle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "timing_status"
+          ],
+          "properties": {
+            "enabled": {
+              "const": true
+            },
+            "timing_status": {
+              "const": "unassigned"
+            }
+          }
+        },
+        "transcript_included": {
+          "const": true
+        },
+        "voice_hook": {
+          "$ref": "#/$defs/voice_hook"
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        }
+      }
+    },
+    "dialogue_sequence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "beat",
+        "trigger_id",
+        "line_ids",
+        "binding_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_m01_seq_[a-z0-9_]+$"
+        },
+        "beat": {
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "trigger_id": {
+          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+        },
+        "line_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          }
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        }
+      }
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice",
+        "current_runtime_behavior",
+        "design_target_tradeoff",
+        "runtime_alignment",
+        "trigger_id",
+        "dialogue_line_ids",
+        "design_target_choice_ui",
+        "binding_status"
+      ],
+      "properties": {
+        "choice": {
+          "enum": [
+            "Harvest",
+            "Preserve",
+            "Reshape"
+          ]
+        },
+        "current_runtime_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 260
+        },
+        "design_target_tradeoff": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 260
+        },
+        "runtime_alignment": {
+          "enum": [
+            "requires_telegraph_before_binding",
+            "bounded_values_aligned_runtime_consumption_unimplemented",
+            "requires_telegraph_and_expiry_warning_before_binding"
+          ]
+        },
+        "trigger_id": {
+          "const": "nar_m01_evt_well_decision_committed"
+        },
+        "dialogue_line_ids": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          }
+        },
+        "design_target_choice_ui": {
+          "$ref": "#/$defs/localized_text"
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        }
+      }
+    },
+    "result_variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "copy"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "Added",
+            "AlreadyRecorded",
+            "ReplayConflict",
+            "StorageFailure"
+          ]
+        },
+        "copy": {
+          "$ref": "#/$defs/localized_text"
+        }
+      }
+    },
+    "failure_variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "reason_code",
+        "source_condition",
+        "binding_status",
+        "dialogue_line_ids"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_m01_fail_[a-z0-9_]+$"
+        },
+        "reason_code": {
+          "enum": [
+            "local_core_lost",
+            "archive_carrier_lost",
+            "future_well_lost",
+            "terminal_match_outcome",
+            "generic"
+          ]
+        },
+        "source_condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "binding_status": {
+          "enum": [
+            "reason_code_requested",
+            "fallback_available"
+          ]
+        },
+        "dialogue_line_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          }
+        }
+      }
+    },
+    "shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "editorial_target_seconds",
+        "visual_direction",
+        "line_ids",
+        "visual_hook_ids",
+        "audio_hook_ids"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^nar_m01_shot_[0-9]{3}$"
+        },
+        "editorial_target_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 30
+        },
+        "visual_direction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "line_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          }
+        },
+        "visual_hook_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^vis_m01_[a-z0-9_]+$"
+          }
+        },
+        "audio_hook_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^aud_m01_[a-z0-9_]+$"
+          }
+        }
+      }
+    },
+    "asset_hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "asset_status",
+        "binding_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^(aud|vis)_m01_[a-z0-9_]+$"
+        },
+        "kind": {
+          "enum": [
+            "audio",
+            "visual"
+          ]
+        },
+        "asset_status": {
+          "const": "absent"
+        },
+        "binding_status": {
+          "const": "unimplemented"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "namespace",
+    "content_id",
+    "metadata",
+    "runtime_binding",
+    "canon",
+    "speakers",
+    "triggers",
+    "ui_copy",
+    "lines",
+    "dialogue_sequences",
+    "branch_variants",
+    "result_variants",
+    "failure_retry",
+    "cinematic",
+    "asset_hooks",
+    "projections",
+    "implementation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "namespace": {
+      "const": "echoes.narrative"
+    },
+    "content_id": {
+      "const": "nar_m01_what_the_ledger_keeps"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "author",
+        "creator",
+        "source_locale",
+        "rights_status",
+        "originality_review_status",
+        "authority_path",
+        "content_status"
+      ],
+      "properties": {
+        "author": {
+          "const": "Angelis Pseftis"
+        },
+        "creator": {
+          "const": "Angelis Pseftis"
+        },
+        "source_locale": {
+          "const": "en-US"
+        },
+        "rights_status": {
+          "const": "author_attributed_project_source"
+        },
+        "originality_review_status": {
+          "const": "human_review_required"
+        },
+        "authority_path": {
+          "const": "Docs/DevelopmentBible.md"
+        },
+        "content_status": {
+          "const": "authored_source_only"
+        }
+      }
+    },
+    "runtime_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mission_id",
+        "operation_mode",
+        "phases",
+        "well_choices",
+        "well_uncommitted_state",
+        "campaign_commit_statuses",
+        "runtime_consumed",
+        "localization_runtime_status",
+        "failure_reason_binding"
+      ],
+      "properties": {
+        "mission_id": {
+          "const": "WhatTheLedgerKeeps"
+        },
+        "operation_mode": {
+          "const": "CampaignPrologue"
+        },
+        "phases": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "Inactive"
+            },
+            {
+              "const": "RecoverArchive"
+            },
+            {
+              "const": "DecideFutureWell"
+            },
+            {
+              "const": "Withdraw"
+            },
+            {
+              "const": "Complete"
+            },
+            {
+              "const": "Failed"
+            }
+          ],
+          "items": false
+        },
+        "well_choices": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "Harvest"
+            },
+            {
+              "const": "Preserve"
+            },
+            {
+              "const": "Reshape"
+            }
+          ],
+          "items": false
+        },
+        "well_uncommitted_state": {
+          "const": "Dormant"
+        },
+        "campaign_commit_statuses": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "Added"
+            },
+            {
+              "const": "AlreadyRecorded"
+            },
+            {
+              "const": "ReplayConflict"
+            },
+            {
+              "const": "StorageFailure"
+            }
+          ],
+          "items": false
+        },
+        "runtime_consumed": {
+          "const": false
+        },
+        "localization_runtime_status": {
+          "const": "unimplemented"
+        },
+        "failure_reason_binding": {
+          "const": "requested"
+        }
+      }
+    },
+    "canon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "purpose",
+        "player_pov",
+        "command_faction",
+        "archive_carrier_role",
+        "recovery_tile",
+        "evacuation_tile",
+        "carrier_must_hold_recovery_during_well_commit",
+        "hostile_core_destruction_substitutes_for_evacuation",
+        "hidden_moral_score",
+        "canonical_facts",
+        "prohibited_inferences"
+      ],
+      "properties": {
+        "title": {
+          "const": "What the Ledger Keeps"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "player_pov": {
+          "const": "mara_vey_command_authority"
+        },
+        "command_faction": {
+          "const": "meridian_compact"
+        },
+        "archive_carrier_role": {
+          "const": "meridian_scout"
+        },
+        "recovery_tile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "const": 22
+            },
+            "y": {
+              "const": 18
+            }
+          }
+        },
+        "evacuation_tile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "const": 6
+            },
+            "y": {
+              "const": 17
+            }
+          }
+        },
+        "carrier_must_hold_recovery_during_well_commit": {
+          "const": true
+        },
+        "hostile_core_destruction_substitutes_for_evacuation": {
+          "const": false
+        },
+        "hidden_moral_score": {
+          "const": false
+        },
+        "canonical_facts": {
+          "type": "array",
+          "minItems": 7,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          }
+        },
+        "prohibited_inferences": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          }
+        }
+      }
+    },
+    "speakers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/speaker"
+      }
+    },
+    "triggers": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "$ref": "#/$defs/trigger"
+      }
+    },
+    "ui_copy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "briefing",
+        "objectives"
+      ],
+      "properties": {
+        "briefing": {
+          "$ref": "#/$defs/localized_text"
+        },
+        "objectives": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/localized_text"
+          }
+        }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 28,
+      "maxItems": 28,
+      "items": {
+        "$ref": "#/$defs/line"
+      }
+    },
+    "dialogue_sequences": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/dialogue_sequence"
+      }
+    },
+    "branch_variants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "Harvest",
+        "Preserve",
+        "Reshape"
+      ],
+      "properties": {
+        "Harvest": {
+          "$ref": "#/$defs/branch"
+        },
+        "Preserve": {
+          "$ref": "#/$defs/branch"
+        },
+        "Reshape": {
+          "$ref": "#/$defs/branch"
+        }
+      }
+    },
+    "result_variants": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/result_variant"
+      }
+    },
+    "failure_retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_variants",
+        "retry_copy",
+        "campaign_state_effect",
+        "runtime_delivery_status"
+      ],
+      "properties": {
+        "failure_variants": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/failure_variant"
+          }
+        },
+        "retry_copy": {
+          "$ref": "#/$defs/localized_text"
+        },
+        "campaign_state_effect": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "runtime_delivery_status": {
+          "const": "unimplemented"
+        }
+      }
+    },
+    "cinematic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "trigger_id",
+        "format",
+        "implementation_status",
+        "binding_status",
+        "named_character_physical_presence_asserted",
+        "shots"
+      ],
+      "properties": {
+        "id": {
+          "const": "nar_m01_cin_opening"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "trigger_id": {
+          "const": "nar_m01_evt_operation_started"
+        },
+        "format": {
+          "const": "in_engine_storyboard"
+        },
+        "implementation_status": {
+          "const": "absent"
+        },
+        "binding_status": {
+          "const": "authored_unbound"
+        },
+        "named_character_physical_presence_asserted": {
+          "const": false
+        },
+        "shots": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/shot"
+          }
+        }
+      }
+    },
+    "asset_hooks": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "audio"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "visual"
+              }
+            }
+          },
+          "minContains": 4,
+          "maxContains": 4
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/asset_hook"
+      }
+    },
+    "projections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subtitle_source",
+        "transcript_source",
+        "duplication_policy"
+      ],
+      "properties": {
+        "subtitle_source": {
+          "const": "lines[].source_text"
+        },
+        "transcript_source": {
+          "const": "lines[].source_text"
+        },
+        "duplication_policy": {
+          "const": "generated_from_canonical_source_text"
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanics",
+        "narrative_contract",
+        "runtime_consumption",
+        "subtitles",
+        "voice_assets",
+        "cinematics",
+        "localization_pipeline",
+        "well_telegraphs",
+        "reshape_expiry_warning",
+        "manual_observation",
+        "packaged_build"
+      ],
+      "properties": {
+        "mechanics": {
+          "const": "implemented_current_source_with_known_presentation_gaps"
+        },
+        "narrative_contract": {
+          "const": "authored_source_only"
+        },
+        "runtime_consumption": {
+          "const": "unimplemented"
+        },
+        "subtitles": {
+          "const": "authored_unbound"
+        },
+        "voice_assets": {
+          "const": "absent"
+        },
+        "cinematics": {
+          "const": "absent"
+        },
+        "localization_pipeline": {
+          "const": "unimplemented"
+        },
+        "well_telegraphs": {
+          "const": "unimplemented"
+        },
+        "reshape_expiry_warning": {
+          "const": "unimplemented"
+        },
+        "manual_observation": {
+          "const": "not_run"
+        },
+        "packaged_build": {
+          "const": "not_run"
+        }
+      }
+    }
+  }
+}
