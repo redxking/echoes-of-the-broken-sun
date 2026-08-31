@@ -169,11 +169,20 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
     FPreservedUnburiedRoadFile PreservedQuickSave(QuickSavePath);
     FPreservedUnburiedRoadFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    FPreservedUnburiedRoadFile PreservedQuickSaveBackupTemporary(
+        QuickSavePath + TEXT(".bak.tmp"));
     FPreservedUnburiedRoadFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
+    IFileManager::Get().Delete(*QuickSavePath, false, true, true);
+    IFileManager::Get().Delete(
+        *(QuickSavePath + TEXT(".bak")), false, true, true);
+    IFileManager::Get().Delete(
+        *(QuickSavePath + TEXT(".bak.tmp")), false, true, true);
+    IFileManager::Get().Delete(
+        *(QuickSavePath + TEXT(".tmp")), false, true, true);
 
     FString Feedback;
     FEchoesCampaignProgress LockedProgress;
@@ -454,6 +463,21 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
                  Reloaded,
                  Feedback) &&
                  Reloaded.Decisions.Num() == 4);
+    Bridge->StopPrototypeScenario();
+    TestTrue(
+        TEXT("Recorded Mission 04 remains selectable for replay"),
+        Bridge->SelectOperationMode(
+            EEchoesOperationMode::CampaignUnburiedRoad,
+            Feedback) &&
+            Bridge->StartPrototypeScenario());
+    TestTrue(
+        TEXT("A recorded Mission 04 replay can write its prerequisite-bound checkpoint"),
+        Bridge->QuickSaveScenario(Feedback));
+    TestTrue(
+        TEXT("A recorded Mission 04 replay can restore its prerequisite-bound checkpoint"),
+        Bridge->QuickLoadScenario(Feedback) &&
+            Bridge->GetUnburiedRoadPhase() ==
+                EEchoesUnburiedRoadPhase::EstablishRoadhead);
 
     AEchoesPlayerController* Controller =
         World->SpawnActor<AEchoesPlayerController>();

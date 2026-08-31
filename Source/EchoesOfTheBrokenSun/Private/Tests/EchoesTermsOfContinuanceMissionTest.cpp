@@ -310,20 +310,20 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                      echoes::sim::FutureWellChoice::Preserve),
                  Feedback) == EEchoesCampaignCommitStatus::Added);
 
-    FEchoesCampaignProgress AlternateProgress;
-    for (const EEchoesCampaignMissionId Mission : {
-             EEchoesCampaignMissionId::WhatTheLedgerKeeps,
-             EEchoesCampaignMissionId::SevenAccountsOfRain,
-             EEchoesCampaignMissionId::ACityOnReserve,
-             EEchoesCampaignMissionId::TheUnburiedRoad})
-    {
-        TestTrue(TEXT("The alternate fixture accepts a consistent Harvest record"),
-                 AlternateProgress.AppendDecision(
-                     MakeContinuanceRecord(
-                         Mission,
-                         echoes::sim::FutureWellChoice::Harvest),
-                     Feedback) == EEchoesCampaignCommitStatus::Added);
-    }
+    FEchoesCampaignProgress AlternateProgress = SeedProgress;
+    AlternateProgress.Decisions[0].CompletionTick += 1;
+    TestTrue(
+        TEXT("The exact-ledger variant retains the same choices and mission composition"),
+        AlternateProgress.Decisions.Num() == SeedProgress.Decisions.Num() &&
+            AlternateProgress.Decisions[0].WellChoice ==
+                SeedProgress.Decisions[0].WellChoice &&
+            AlternateProgress.Decisions[1].WellChoice ==
+                SeedProgress.Decisions[1].WellChoice &&
+            AlternateProgress.Decisions[2].WellChoice ==
+                SeedProgress.Decisions[2].WellChoice &&
+            AlternateProgress.Decisions[3].WellChoice ==
+                SeedProgress.Decisions[3].WellChoice &&
+            AlternateProgress.Decisions != SeedProgress.Decisions);
     const FString QuickSavePath =
         ContinuanceQuickSavePath(SeedProgress);
     const FString AlternateQuickSavePath =
@@ -335,20 +335,26 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     FPreservedContinuanceFile PreservedQuickSave(QuickSavePath);
     FPreservedContinuanceFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedQuickSaveStagedBackup(
+        QuickSavePath + TEXT(".bak.tmp"));
     FPreservedContinuanceFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
     FPreservedContinuanceFile PreservedAlternateQuickSave(
         AlternateQuickSavePath);
     FPreservedContinuanceFile PreservedAlternateQuickSaveBackup(
         AlternateQuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedAlternateQuickSaveStagedBackup(
+        AlternateQuickSavePath + TEXT(".bak.tmp"));
     FPreservedContinuanceFile PreservedAlternateQuickSaveTemporary(
         AlternateQuickSavePath + TEXT(".tmp"));
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
+             QuickSavePath + TEXT(".bak.tmp"),
              QuickSavePath + TEXT(".tmp"),
              AlternateQuickSavePath,
              AlternateQuickSavePath + TEXT(".bak"),
+             AlternateQuickSavePath + TEXT(".bak.tmp"),
              AlternateQuickSavePath + TEXT(".tmp")})
     {
         IFileManager::Get().Delete(*Path, false, true, true);
@@ -637,13 +643,13 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
              Bridge->QuickLoadScenario(Feedback) &&
                  Bridge->GetTermsOfContinuancePhase() ==
                      EEchoesTermsOfContinuancePhase::SynchronizeNetworks);
-    TestTrue(TEXT("The alternate campaign ledger is stored for save isolation"),
+    TestTrue(TEXT("The same-choice exact-ledger variant is stored for binding validation"),
              FEchoesCampaignProgressStore::SaveAtomic(
                  CampaignPath,
                  AlternateProgress,
                  Feedback));
     TArray<uint8> PreserveCheckpointBytes;
-    TestTrue(TEXT("The Preserve checkpoint can seed a hostile cross-ledger probe"),
+    TestTrue(TEXT("The original checkpoint can seed an exact-ledger mismatch probe"),
              FFileHelper::LoadFileToArray(
                  PreserveCheckpointBytes,
                  *QuickSavePath) &&
@@ -658,7 +664,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         if (!AlternateWorld.CreateTestWorld(EWorldType::Game))
         {
             AlternateWorld.ForwardErrorMessages(this);
-            AddError(TEXT("Could not create the alternate mission-five world."));
+            AddError(TEXT("Could not create the exact-ledger variant mission-five world."));
             return false;
         }
         UEchoesSimulationSubsystem* AlternateBridge =
@@ -666,20 +672,20 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 UEchoesSimulationSubsystem>();
         if (!TestNotNull(TEXT("The alternate world owns a simulation subsystem"),
                          AlternateBridge) ||
-            !TestTrue(TEXT("The alternate campaign can select mission five"),
+            !TestTrue(TEXT("The exact-ledger variant can select mission five"),
                       AlternateBridge->SelectOperationMode(
                           EEchoesOperationMode::CampaignTermsOfContinuance,
                           Feedback)) ||
-            !TestTrue(TEXT("The alternate campaign can start mission five"),
+            !TestTrue(TEXT("The exact-ledger variant can start mission five"),
                       AlternateBridge->StartPrototypeScenario()))
         {
             AlternateWorld.ForwardErrorMessages(this);
             return false;
         }
-        TestFalse(TEXT("A Preserve checkpoint cannot load into a Harvest ledger"),
+        TestFalse(TEXT("A checkpoint cannot load under a different exact prerequisite ledger"),
                   AlternateBridge->QuickLoadScenario(Feedback));
-        TestTrue(TEXT("Cross-ledger loading fails closed without a matching namespace"),
-                 Feedback.Contains(TEXT("LOAD_NO_VALID_CHECKPOINT")));
+        TestTrue(TEXT("Exact-ledger mismatch is identified after coarse mission fields coincide"),
+                 Feedback.Contains(TEXT("LOAD_LEDGER_BRANCH_MISMATCH")));
         AlternateBridge->StopPrototypeScenario();
         AlternateWorld.ForwardErrorMessages(this);
     }
@@ -795,6 +801,40 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  Reloaded,
                  Feedback) &&
                  Reloaded.Decisions.Num() == 5);
+    const FString ReplayQuickSavePath =
+        ContinuanceQuickSavePath(Reloaded);
+    FPreservedContinuanceFile PreservedReplayQuickSave(
+        ReplayQuickSavePath);
+    FPreservedContinuanceFile PreservedReplayQuickSaveBackup(
+        ReplayQuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedReplayQuickSaveStagedBackup(
+        ReplayQuickSavePath + TEXT(".bak.tmp"));
+    FPreservedContinuanceFile PreservedReplayQuickSaveTemporary(
+        ReplayQuickSavePath + TEXT(".tmp"));
+    for (const FString& Path : {
+             ReplayQuickSavePath,
+             ReplayQuickSavePath + TEXT(".bak"),
+             ReplayQuickSavePath + TEXT(".bak.tmp"),
+             ReplayQuickSavePath + TEXT(".tmp")})
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+    }
+    Bridge->StopPrototypeScenario();
+    TestTrue(
+        TEXT("Recorded Mission 05 remains selectable for replay"),
+        !ReplayQuickSavePath.IsEmpty() &&
+            Bridge->SelectOperationMode(
+                EEchoesOperationMode::CampaignTermsOfContinuance,
+                Feedback) &&
+            Bridge->StartPrototypeScenario());
+    TestTrue(
+        TEXT("A recorded Mission 05 replay can write its exact-prerequisite checkpoint"),
+        Bridge->QuickSaveScenario(Feedback));
+    TestTrue(
+        TEXT("A recorded Mission 05 replay can restore its exact-prerequisite checkpoint"),
+        Bridge->QuickLoadScenario(Feedback) &&
+            Bridge->GetTermsOfContinuancePhase() ==
+                EEchoesTermsOfContinuancePhase::SynchronizeNetworks);
 
     FEchoesCampaignProgress CompletedProgress = SeedProgress;
     TestTrue(TEXT("A fully verified fifth record is accepted"),

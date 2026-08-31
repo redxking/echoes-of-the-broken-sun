@@ -3302,6 +3302,8 @@ void AEchoesHUD::DrawMatchResult(
         EchoesController->GetRecordedCampaignFinalResolution();
     const EEchoesCampaignCommitStatus CampaignCommitStatus =
         EchoesController->GetCampaignCommitStatus();
+    const bool bReplayConflict = bCampaignResult &&
+        CampaignCommitStatus == EEchoesCampaignCommitStatus::ReplayConflict;
     const bool bBrokenSunEndingRecorded = bBrokenSunResult &&
         (CampaignCommitStatus == EEchoesCampaignCommitStatus::Added ||
          CampaignCommitStatus ==
@@ -3739,6 +3741,8 @@ void AEchoesHUD::DrawMatchResult(
                      CampaignJourney.State ==
                          EEchoesCampaignJourneyState::Complete
                  ? TEXT("ENTER: RETURN TO TITLE   //   R: REPLAY FINALE")
+             : bReplayConflict
+                 ? TEXT("ESC: CAMPAIGN JOURNEY   //   R: REPLAY")
              : bCampaignResult
                  ? TEXT("PRESS ENTER OR R TO REPLAY MISSION")
                  : TEXT("PRESS ENTER TO REDEPLOY   //   R TO RESTART"),

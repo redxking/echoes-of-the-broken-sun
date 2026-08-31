@@ -177,6 +177,13 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    TArray<uint8> MigratedLegacyBackupBytes;
+    TestTrue(
+        TEXT("The first context-bound save preserves the load-compatible legacy primary"),
+        FFileHelper::LoadFileToArray(
+            MigratedLegacyBackupBytes,
+            *(SavePath + TEXT(".bak"))) &&
+            MigratedLegacyBackupBytes == LegacySnapshotBytes);
     const uint64 FirstTick = Bridge->GetSimulation()->CurrentTick();
     const uint64 FirstChecksum = Bridge->GetSimulation()->StateChecksum();
 

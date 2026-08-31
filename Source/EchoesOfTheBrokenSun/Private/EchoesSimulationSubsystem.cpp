@@ -13,6 +13,7 @@
 #include "EchoesTerrainView.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
+#include "Hash/xxhash.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/CommandLine.h"
@@ -65,7 +66,8 @@ constexpr uint8 SeveralVoicesOneCommandQuickSaveMagic[] = {
 constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
 constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
-constexpr uint8 QuickSaveContainerVersion = 1;
+constexpr uint8 QuickSaveContainerMinimumVersion = 1;
+constexpr uint8 QuickSaveContainerVersion = 2;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
@@ -183,9 +185,91 @@ enum class EQuickSaveContainerRead : uint8
         Operation == EEchoesOperationMode::CampaignReserveAuthority;
 }
 
+[[nodiscard]] int32 CampaignCheckpointPrerequisiteRecordCount(
+    EEchoesOperationMode Operation)
+{
+    switch (Operation)
+    {
+        case EEchoesOperationMode::CampaignSevenAccounts: return 1;
+        case EEchoesOperationMode::CampaignCityReserve: return 2;
+        case EEchoesOperationMode::CampaignUnburiedRoad: return 3;
+        case EEchoesOperationMode::CampaignTermsOfContinuance: return 4;
+        case EEchoesOperationMode::CampaignNamesWithoutBirths: return 5;
+        case EEchoesOperationMode::CampaignShapeOfSilence: return 6;
+        case EEchoesOperationMode::CampaignShapeBesideUs: return 7;
+        case EEchoesOperationMode::CampaignReserveAuthority: return 8;
+        default: return 0;
+    }
+}
+
+[[nodiscard]] bool RequiresCampaignBranchBoundQuickSave(
+    EEchoesOperationMode Operation)
+{
+    return CampaignCheckpointPrerequisiteRecordCount(Operation) > 0;
+}
+
+[[nodiscard]] bool BuildQuickSaveBranchIdentity(
+    EEchoesOperationMode Operation,
+    const FEchoesCampaignProgress& CampaignProgress,
+    uint64& OutIdentity,
+    FString& OutError)
+{
+    OutIdentity = 0;
+    OutError.Reset();
+    if (!RequiresCampaignBranchBoundQuickSave(Operation))
+    {
+        return true;
+    }
+
+    const FEchoesCampaignJourney FullJourney =
+        FEchoesCampaignJourneyModel::Resolve(CampaignProgress);
+    const int32 PrerequisiteRecordCount =
+        CampaignCheckpointPrerequisiteRecordCount(Operation);
+    if (FullJourney.State == EEchoesCampaignJourneyState::Unavailable ||
+        CampaignProgress.Decisions.Num() < PrerequisiteRecordCount)
+    {
+        OutError = TEXT(
+            "the active campaign ledger does not contain a valid prerequisite projection for this checkpoint operation");
+        return false;
+    }
+
+    FEchoesCampaignProgress PrerequisiteProjection;
+    PrerequisiteProjection.Decisions.Append(
+        CampaignProgress.Decisions.GetData(),
+        PrerequisiteRecordCount);
+    const FEchoesCampaignJourney ProjectedJourney =
+        FEchoesCampaignJourneyModel::Resolve(PrerequisiteProjection);
+    if (ProjectedJourney.State != EEchoesCampaignJourneyState::Ready ||
+        ProjectedJourney.NextOperation != Operation)
+    {
+        OutError = TEXT(
+            "the campaign prerequisite projection does not authorize this checkpoint operation");
+        return false;
+    }
+
+    TArray<uint8> LedgerBytes;
+    if (!FEchoesCampaignProgressStore::Encode(
+            PrerequisiteProjection,
+            LedgerBytes,
+            OutError) ||
+        LedgerBytes.IsEmpty())
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT("the active campaign ledger could not be encoded");
+        }
+        return false;
+    }
+    OutIdentity = FXxHash64::HashBuffer(
+        LedgerBytes.GetData(),
+        static_cast<uint64>(LedgerBytes.Num())).Hash;
+    return true;
+}
+
 [[nodiscard]] bool BuildQuickSaveContainer(
     EEchoesOperationMode Operation,
     Faction LocalFaction,
+    uint64 CampaignBranchIdentity,
     const TArray<uint8>& Payload,
     TArray<uint8>& OutContainer,
     FString& OutError)
@@ -198,7 +282,7 @@ enum class EQuickSaveContainerRead : uint8
         return false;
     }
     OutContainer.Reserve(
-        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 12 + Payload.Num());
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 20 + Payload.Num());
     OutContainer.Append(
         QuickSaveContainerMagic,
         UE_ARRAY_COUNT(QuickSaveContainerMagic));
@@ -206,6 +290,7 @@ enum class EQuickSaveContainerRead : uint8
     OutContainer.Add(static_cast<uint8>(Operation));
     OutContainer.Add(static_cast<uint8>(LocalFaction));
     OutContainer.Add(0);
+    AppendUint64LittleEndian(OutContainer, CampaignBranchIdentity);
     AppendUint32LittleEndian(
         OutContainer,
         static_cast<uint32>(Payload.Num()));
@@ -219,6 +304,7 @@ enum class EQuickSaveContainerRead : uint8
 [[nodiscard]] EQuickSaveContainerRead ExtractQuickSaveContainer(
     EEchoesOperationMode ExpectedOperation,
     Faction ExpectedFaction,
+    uint64 ExpectedCampaignBranchIdentity,
     const TArray<uint8>& Bytes,
     TArray<uint8>& OutPayload,
     FString& OutError)
@@ -231,12 +317,20 @@ enum class EQuickSaveContainerRead : uint8
             QuickSaveContainerMagic,
             UE_ARRAY_COUNT(QuickSaveContainerMagic)) != 0)
     {
+        if (RequiresCampaignBranchBoundQuickSave(ExpectedOperation))
+        {
+            OutError = TEXT(
+                "[LOAD_LEDGER_BRANCH_UNBOUND] This legacy checkpoint has no campaign branch identity and cannot be loaded into the active campaign.");
+            return EQuickSaveContainerRead::Invalid;
+        }
         return EQuickSaveContainerRead::Legacy;
     }
-    constexpr int32 HeaderSize =
+    constexpr int32 VersionOneHeaderSize =
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 4;
+    constexpr int32 VersionTwoHeaderSize =
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 4;
     constexpr int32 ChecksumSize = 4;
-    if (Bytes.Num() < HeaderSize + ChecksumSize)
+    if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
     {
         OutError = TEXT("checkpoint container is truncated");
         return EQuickSaveContainerRead::Invalid;
@@ -246,9 +340,25 @@ enum class EQuickSaveContainerRead : uint8
     const uint8 Operation = Bytes[Offset++];
     const uint8 FactionValue = Bytes[Offset++];
     const uint8 Reserved = Bytes[Offset++];
+    if (Version < QuickSaveContainerMinimumVersion ||
+        Version > QuickSaveContainerVersion)
+    {
+        OutError = TEXT("checkpoint container version is unsupported");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    uint64 CampaignBranchIdentity = 0;
+    if (Version >= 2 &&
+        !ReadUint64LittleEndian(Bytes, Offset, CampaignBranchIdentity))
+    {
+        OutError = TEXT("checkpoint container is truncated");
+        return EQuickSaveContainerRead::Invalid;
+    }
     uint32 PayloadLength = 0;
+    const int32 HeaderSize = Version >= 2
+        ? VersionTwoHeaderSize
+        : VersionOneHeaderSize;
     if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
-        Version != QuickSaveContainerVersion || Reserved != 0 ||
+        Reserved != 0 ||
         Operation != static_cast<uint8>(ExpectedOperation) ||
         FactionValue != static_cast<uint8>(ExpectedFaction) ||
         PayloadLength > static_cast<uint32>(MAX_int32) ||
@@ -257,6 +367,27 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutError = TEXT(
             "checkpoint container does not match the active operation and faction");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    if (RequiresCampaignBranchBoundQuickSave(ExpectedOperation))
+    {
+        if (Version < 2)
+        {
+            OutError = TEXT(
+                "[LOAD_LEDGER_BRANCH_UNBOUND] This checkpoint predates campaign branch binding and cannot be loaded into the active campaign.");
+            return EQuickSaveContainerRead::Invalid;
+        }
+        if (CampaignBranchIdentity != ExpectedCampaignBranchIdentity)
+        {
+            OutError = TEXT(
+                "[LOAD_LEDGER_BRANCH_MISMATCH] This checkpoint belongs to a different campaign ledger branch.");
+            return EQuickSaveContainerRead::Invalid;
+        }
+    }
+    else if (Version >= 2 && CampaignBranchIdentity != 0)
+    {
+        OutError = TEXT(
+            "checkpoint container carries an unexpected campaign branch identity");
         return EQuickSaveContainerRead::Invalid;
     }
     const int32 ChecksumOffset = Bytes.Num() - ChecksumSize;
@@ -6855,11 +6986,25 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
     }
     if (UsesQuickSaveContainer(SelectedOperation))
     {
+        uint64 CampaignBranchIdentity = 0;
+        FString BranchIdentityError;
+        if (!BuildQuickSaveBranchIdentity(
+                SelectedOperation,
+                CampaignProgress,
+                CampaignBranchIdentity,
+                BranchIdentityError))
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+                *BranchIdentityError);
+            return false;
+        }
         TArray<uint8> ContainerBytes;
         FString ContainerError;
         if (!BuildQuickSaveContainer(
                 SelectedOperation,
                 LocalFaction,
+                CampaignBranchIdentity,
                 PersistedBytes,
                 ContainerBytes,
                 ContainerError))
@@ -6890,7 +7035,23 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         return false;
     }
 
-    const auto ValidateCheckpointFile = [this](
+    uint64 ExpectedCampaignBranchIdentity = 0;
+    FString BranchIdentityError;
+    if (!BuildQuickSaveBranchIdentity(
+            SelectedOperation,
+            CampaignProgress,
+            ExpectedCampaignBranchIdentity,
+            BranchIdentityError))
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = FString::Printf(
+            TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
+            *BranchIdentityError);
+        return false;
+    }
+
+    const auto ValidateCheckpointFile =
+        [this, ExpectedCampaignBranchIdentity](
                                                 const FString& CandidatePath,
                                                 FString& OutFailure)
     {
@@ -6909,6 +7070,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
                 ExtractQuickSaveContainer(
                     SelectedOperation,
                     LocalFaction,
+                    ExpectedCampaignBranchIdentity,
                     CandidateBytes,
                     ContainerPayload,
                     OutFailure);
@@ -6916,13 +7078,10 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             {
                 return false;
             }
-            if (ContainerRead == EQuickSaveContainerRead::Legacy)
+            if (ContainerRead == EQuickSaveContainerRead::Wrapped)
             {
-                OutFailure = TEXT(
-                    "legacy checkpoint is load-compatible but cannot replace a context-bound recovery generation");
-                return false;
+                OperationPayload = &ContainerPayload;
             }
-            OperationPayload = &ContainerPayload;
         }
 
         TArray<uint8> SnapshotBytes;
@@ -7219,6 +7378,7 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             ? TEXT("preserved_invalid_staged")
         : bHadPriorSave ? TEXT("none_invalid_primary") : TEXT("none"),
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
+            RequiresCampaignBranchBoundQuickSave(SelectedOperation) ||
             SelectedOperation ==
                 EEchoesOperationMode::CampaignChoirAtLumeReach ||
             SelectedOperation ==
@@ -7246,6 +7406,19 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
     const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
+    uint64 ExpectedCampaignBranchIdentity = 0;
+    FString BranchIdentityError;
+    if (!BuildQuickSaveBranchIdentity(
+            SelectedOperation,
+            CampaignProgress,
+            ExpectedCampaignBranchIdentity,
+            BranchIdentityError))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[LOAD_LEDGER_BINDING_FAILED] %s"),
+            *BranchIdentityError);
+        return false;
+    }
     TUniquePtr<echoes::sim::Simulation> LoadedSimulation;
     bool bLoadedCrisisHoldStarted = false;
     bool bLoadedCrisisContractFailed = false;
@@ -7270,7 +7443,8 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                           &bLoadedResolutionContractFailed,
                           &LoadedResolutionStartTick,
                           &LoadedApproachAnchorId,
-                          &LoadedResolutionConduitId](
+                          &LoadedResolutionConduitId,
+                          ExpectedCampaignBranchIdentity](
                              const FString& CandidatePath,
                              FString& OutFailure)
     {
@@ -7293,6 +7467,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
                 ExtractQuickSaveContainer(
                     SelectedOperation,
                     LocalFaction,
+                    ExpectedCampaignBranchIdentity,
                     Bytes,
                     ContainerPayload,
                     OutFailure);
@@ -8213,6 +8388,7 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             ? TEXT("staged_recovery")
             : TEXT("primary"),
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
+                RequiresCampaignBranchBoundQuickSave(SelectedOperation) ||
                 SelectedOperation ==
                     EEchoesOperationMode::CampaignChoirAtLumeReach ||
                 SelectedOperation ==

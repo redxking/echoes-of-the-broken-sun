@@ -539,7 +539,7 @@ public:
     {
         bFailNextScenarioStartForTesting = true;
     }
-    /** One-shot fault injection for atomic checkpoint-rotation tests. */
+    /** One-shot fault injection for checkpoint rename/rotation tests. */
     void FailNextQuickSaveBackupRotationForTesting()
     {
         bFailNextQuickSaveBackupRotationForTesting = true;

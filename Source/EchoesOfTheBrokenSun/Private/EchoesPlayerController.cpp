@@ -9218,6 +9218,22 @@ void AEchoesPlayerController::TogglePauseMenu()
         ToggleTechnologyPanel();
         return;
     }
+    if (bMatchResultVisible && bCampaignResult &&
+        CampaignCommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
+    {
+        PresentTitleScreen();
+        if (bTitleScreenVisible)
+        {
+            SetStatusMessage(
+                TEXT("CAMPAIGN JOURNEY — the original irreversible ledger record remains active. Press C to continue from that record, or choose an operation to replay."),
+                3600.0f);
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_REPLAY_CONFLICT_RETURN] destination=campaign_journey ledgerRewritten=false action=pause_scenario"));
+        }
+        return;
+    }
     if (bTitleScreenVisible || bMissionBriefingVisible || bMatchResultVisible)
     {
         return;
@@ -9484,6 +9500,16 @@ void AEchoesPlayerController::SetStatusMessage(
     float DisplaySeconds)
 {
     StatusMessage = Message;
+    if (bMatchResultVisible && bCampaignResult &&
+        CampaignCommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
+    {
+        StatusMessage.ReplaceInline(
+            TEXT("Campaign progress was not saved."),
+            TEXT("The replay outcome was not recorded; the existing campaign record remains authoritative."));
+        StatusMessage.ReplaceInline(
+            TEXT("Press R to replay."),
+            TEXT("Press Escape to return to the campaign journey or R to replay."));
+    }
     if (bMatchResultVisible && CanAdvanceCampaignResult())
     {
         if (PresentedCampaignOperation ==

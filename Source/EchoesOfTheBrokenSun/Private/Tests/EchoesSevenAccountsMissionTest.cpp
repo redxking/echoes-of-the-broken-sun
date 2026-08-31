@@ -8,6 +8,7 @@
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
@@ -55,6 +56,35 @@ FEchoesCampaignDecisionRecord MakePrologueRecord(
     Record.CompletionTick = 120;
     Record.FinalStateChecksum = 0x7A11A2ULL;
     return Record;
+}
+
+void AppendCheckpointUint32(TArray<uint8>& Bytes, uint32 Value)
+{
+    Bytes.Add(static_cast<uint8>(Value & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 8U) & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 16U) & 0xFFU));
+    Bytes.Add(static_cast<uint8>((Value >> 24U) & 0xFFU));
+}
+
+TArray<uint8> BuildUnboundVersionOneCheckpoint(
+    EEchoesOperationMode Operation,
+    echoes::sim::Faction Faction,
+    const TArray<uint8>& Payload)
+{
+    constexpr uint8 Magic[] = {
+        'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
+    TArray<uint8> Bytes;
+    Bytes.Append(Magic, UE_ARRAY_COUNT(Magic));
+    Bytes.Add(1);
+    Bytes.Add(static_cast<uint8>(Operation));
+    Bytes.Add(static_cast<uint8>(Faction));
+    Bytes.Add(0);
+    AppendCheckpointUint32(Bytes, static_cast<uint32>(Payload.Num()));
+    Bytes.Append(Payload);
+    AppendCheckpointUint32(
+        Bytes,
+        FCrc::MemCrc32(Bytes.GetData(), Bytes.Num()));
+    return Bytes;
 }
 }
 
@@ -122,11 +152,20 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
     FPreservedSevenAccountsFile PreservedQuickSave(MissionQuickSavePath);
     FPreservedSevenAccountsFile PreservedQuickSaveBackup(
         MissionQuickSavePath + TEXT(".bak"));
+    FPreservedSevenAccountsFile PreservedQuickSaveBackupTemporary(
+        MissionQuickSavePath + TEXT(".bak.tmp"));
     FPreservedSevenAccountsFile PreservedQuickSaveTemporary(
         MissionQuickSavePath + TEXT(".tmp"));
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
+    IFileManager::Get().Delete(*MissionQuickSavePath, false, true, true);
+    IFileManager::Get().Delete(
+        *(MissionQuickSavePath + TEXT(".bak")), false, true, true);
+    IFileManager::Get().Delete(
+        *(MissionQuickSavePath + TEXT(".bak.tmp")), false, true, true);
+    IFileManager::Get().Delete(
+        *(MissionQuickSavePath + TEXT(".tmp")), false, true, true);
 
     {
         FTestWorldWrapper LockedWorld;
@@ -182,6 +221,49 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
                          EEchoesOperationMode::CampaignSevenAccounts,
                          BranchFeedback) &&
                      BranchBridge->StartPrototypeScenario());
+        if (BranchBridge != nullptr &&
+            Branch == echoes::sim::FutureWellChoice::Harvest)
+        {
+            const std::vector<uint8> RawSnapshot =
+                BranchBridge->GetSimulation()->SaveSnapshot();
+            TArray<uint8> RawSnapshotBytes;
+            RawSnapshotBytes.Append(
+                RawSnapshot.data(),
+                static_cast<int32>(RawSnapshot.size()));
+            TestTrue(
+                TEXT("An unbound raw Mission 02 checkpoint fixture can be written"),
+                !RawSnapshotBytes.IsEmpty() &&
+                    FFileHelper::SaveArrayToFile(
+                        RawSnapshotBytes,
+                        *MissionQuickSavePath));
+            TestFalse(
+                TEXT("An unbound raw Mission 02 checkpoint fails closed"),
+                BranchBridge->QuickLoadScenario(BranchFeedback));
+            TestTrue(
+                TEXT("Raw Mission 02 rejection names the unbound compatibility boundary"),
+                BranchFeedback.Contains(
+                    TEXT("LOAD_LEDGER_BRANCH_UNBOUND")));
+            const TArray<uint8> VersionOneCheckpoint =
+                BuildUnboundVersionOneCheckpoint(
+                    EEchoesOperationMode::CampaignSevenAccounts,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    RawSnapshotBytes);
+            TestTrue(
+                TEXT("An unbound version-one Mission 02 checkpoint fixture can be written"),
+                FFileHelper::SaveArrayToFile(
+                    VersionOneCheckpoint,
+                    *MissionQuickSavePath));
+            TestFalse(
+                TEXT("An unbound version-one Mission 02 checkpoint fails closed"),
+                BranchBridge->QuickLoadScenario(BranchFeedback));
+            TestTrue(
+                TEXT("Version-one Mission 02 rejection names the unbound compatibility boundary"),
+                BranchFeedback.Contains(
+                    TEXT("LOAD_LEDGER_BRANCH_UNBOUND")));
+            TestTrue(
+                TEXT("The Harvest campaign branch writes a branch-bound checkpoint fixture"),
+                BranchBridge->QuickSaveScenario(BranchFeedback));
+        }
         const echoes::sim::Simulation* BranchSimulation =
             BranchBridge != nullptr ? BranchBridge->GetSimulation() : nullptr;
         if (TestNotNull(TEXT("Branch terrain is authoritative"),
@@ -265,6 +347,23 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("The mission begins at Waystone establishment"),
              Bridge->GetSevenAccountsPhase() ==
                  EEchoesSevenAccountsPhase::EstablishWaystone);
+    const uint64 PreserveInitialTick =
+        Bridge->GetSimulation()->CurrentTick();
+    const uint64 PreserveInitialChecksum =
+        Bridge->GetSimulation()->StateChecksum();
+    TestFalse(
+        TEXT("Mission two rejects a same-operation checkpoint from a different campaign branch"),
+        Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("Cross-branch rejection identifies the campaign ledger mismatch"),
+        Feedback.Contains(TEXT("LOAD_LEDGER_BRANCH_MISMATCH")));
+    TestTrue(
+        TEXT("Cross-branch rejection leaves the active mission state unchanged"),
+        Bridge->GetSimulation()->CurrentTick() == PreserveInitialTick &&
+            Bridge->GetSimulation()->StateChecksum() ==
+                PreserveInitialChecksum &&
+            Bridge->GetSevenAccountsRoute().PriorChoice ==
+                echoes::sim::FutureWellChoice::Preserve);
     TestTrue(TEXT("Mission two writes to its isolated quick-save slot"),
              Bridge->QuickSaveScenario(Feedback) &&
                  IFileManager::Get().FileExists(*MissionQuickSavePath));
@@ -389,11 +488,58 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
                  Reloaded,
                  Feedback) &&
                  Reloaded.Decisions.Num() == 2);
+    Bridge->StopPrototypeScenario();
+    TestTrue(
+        TEXT("Recorded Mission 02 remains selectable for replay"),
+        Bridge->SelectOperationMode(
+            EEchoesOperationMode::CampaignSevenAccounts,
+            Feedback) &&
+            Bridge->StartPrototypeScenario());
+    TestTrue(
+        TEXT("A recorded Mission 02 replay can write its prerequisite-bound checkpoint"),
+        Bridge->QuickSaveScenario(Feedback));
+    TestTrue(
+        TEXT("A recorded Mission 02 replay can restore its prerequisite-bound checkpoint"),
+        Bridge->QuickLoadScenario(Feedback) &&
+            Bridge->GetSevenAccountsPhase() ==
+                EEchoesSevenAccountsPhase::EstablishWaystone);
 
     AEchoesPlayerController* Controller =
         World->SpawnActor<AEchoesPlayerController>();
     if (TestNotNull(TEXT("Mission result controller can be created"), Controller))
     {
+        const TArray<FEchoesCampaignDecisionRecord>
+            LedgerBeforeConflictNavigation =
+                Bridge->GetCampaignProgress().Decisions;
+        Controller->NotifySevenAccountsFinished(
+            true,
+            echoes::sim::FutureWellChoice::Harvest,
+            echoes::sim::FutureWellChoice::Preserve,
+            EEchoesCampaignCommitStatus::ReplayConflict);
+        TestTrue(
+            TEXT("A replay conflict presents a return-to-journey instruction"),
+            Controller->IsMatchResultVisible() &&
+                !Controller->CanAdvanceCampaignResult() &&
+                Controller->GetStatusMessage().Contains(
+                    TEXT("Escape to return to the campaign journey")) &&
+                Controller->GetStatusMessage().Contains(
+                    TEXT("existing campaign record remains authoritative")));
+        Controller->TogglePauseMenu();
+        TestTrue(
+            TEXT("Escape authority returns a replay conflict to the campaign journey"),
+            Controller->IsTitleScreenVisible() &&
+                !Controller->IsMatchResultVisible() &&
+                Bridge->GetCampaignProgress().Decisions ==
+                    LedgerBeforeConflictNavigation);
+        Controller->ContinueCampaign();
+        TestTrue(
+            TEXT("The retained ledger continues from conflict recovery to Mission 03"),
+            Controller->IsMissionBriefingVisible() &&
+                Bridge->GetOperationMode() ==
+                    EEchoesOperationMode::CampaignCityReserve &&
+                Bridge->GetCampaignProgress().Decisions ==
+                    LedgerBeforeConflictNavigation);
+
         Controller->NotifySevenAccountsFinished(
             true,
             echoes::sim::FutureWellChoice::Preserve,
