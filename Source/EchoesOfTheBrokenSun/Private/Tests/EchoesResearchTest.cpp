@@ -27,10 +27,10 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    TestEqual(TEXT("Research interruption uses snapshot schema 23"),
-              echoes::sim::kSnapshotVersion, 23U);
-    TestEqual(TEXT("Research interruption uses replay schema 23"),
-              echoes::sim::kReplayVersion, 23U);
+    TestEqual(TEXT("Research interruption uses snapshot schema 24"),
+              echoes::sim::kSnapshotVersion, 24U);
+    TestEqual(TEXT("Research interruption uses replay schema 24"),
+              echoes::sim::kReplayVersion, 24U);
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
     {

@@ -1260,11 +1260,14 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     FPreservedBrokenSunFile PreservedQuickSave(QuickSavePath);
     FPreservedBrokenSunFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    FPreservedBrokenSunFile PreservedQuickSaveStagedBackup(
+        QuickSavePath + TEXT(".bak.tmp"));
     FPreservedBrokenSunFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
+             QuickSavePath + TEXT(".bak.tmp"),
              QuickSavePath + TEXT(".tmp")})
     {
         IFileManager::Get().Delete(*Path, false, true, true);
@@ -1430,6 +1433,12 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("The approach contract exposes a valid construction footprint"),
         FindBuildSite(RuntimePlan.CrownfallApproachSite, 3,
                       ApproachBuildSite));
+    const auto V24BuildSequence =
+        Bridge->GetSimulation()->NextCommandSequence(
+            UEchoesSimulationSubsystem::LocalPlayerId);
+    TestTrue(
+        TEXT("The schema-24 approach build has a stable receipt sequence"),
+        V24BuildSequence.has_value());
     TestTrue(
         TEXT("The exact approach anchor accepts an ordinary worker build"),
         Bridge->IssueBuildCommand(
@@ -1452,27 +1461,104 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Objective.bBrokenSunApproachSecured &&
             Objective.BrokenSunApproachAnchorId != 0);
     TestTrue(
+        TEXT("The native schema-24 source retains the approach-build receipt"),
+        V24BuildSequence.has_value() &&
+            Bridge->GetSimulation()->FindCommandResolutionReceipt(
+                UEchoesSimulationSubsystem::LocalPlayerId,
+                *V24BuildSequence)
+                .has_value());
+    TestTrue(
         TEXT("A pre-choice checkpoint preserves the exact approach"),
         Bridge->QuickSaveScenario(Feedback) &&
             IFileManager::Get().FileExists(*QuickSavePath));
     const uint64 V22ExpectedTick = Bridge->GetSimulation()->CurrentTick();
-    const uint64 V22ExpectedChecksum =
-        Bridge->GetSimulation()->StateChecksum();
-    TArray<uint8> V22Checkpoint;
+    const auto V22ExpectedNextCommandSequence =
+        Bridge->GetSimulation()->NextCommandSequence(
+            UEchoesSimulationSubsystem::LocalPlayerId);
+    const FEchoesObjectiveSnapshot V22ExpectedObjective = Objective;
+    TArray<uint8> V24Checkpoint;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
+        V24Layout;
     TestTrue(
-        TEXT("The Mission 15 checkpoint can be converted to its genuine schema-22 shape"),
-        FFileHelper::LoadFileToArray(V22Checkpoint, *QuickSavePath) &&
+        TEXT("The Mission 15 schema-24 checkpoint exposes its bounded receipt block"),
+        FFileHelper::LoadFileToArray(V24Checkpoint, *QuickSavePath) &&
             EchoesSnapshotMigrationTestHelpers::
-                ConvertMission15EnvelopeSnapshotV23ToV22(V22Checkpoint) &&
+                InspectMission15EnvelopeSnapshotV24(
+                    V24Checkpoint, V24Layout) &&
+            V24Layout.ReceiptCount > 0U &&
+            V24Layout.ReceiptBlockSize ==
+                4 + static_cast<int32>(V24Layout.ReceiptCount) * 19);
+    TArray<uint8> V22Checkpoint = V24Checkpoint;
+    const uint64 ExpectedV24ToV22Shrink = 5ULL +
+        static_cast<uint64>(V24Layout.ReceiptCount) * 19ULL;
+    TestTrue(
+        TEXT("The Mission 15 checkpoint converts through schema 23 to its genuine schema-22 shape"),
+        EchoesSnapshotMigrationTestHelpers::
+                ConvertMission15EnvelopeSnapshotV24ToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
                 V22Checkpoint) == 22U &&
+            static_cast<uint64>(V24Checkpoint.Num() - V22Checkpoint.Num()) ==
+                ExpectedV24ToV22Shrink &&
+            FMemory::Memcmp(
+                V24Checkpoint.GetData(), V22Checkpoint.GetData(), 34) == 0 &&
+            FMemory::Memcmp(
+                V24Checkpoint.GetData() + 38,
+                V22Checkpoint.GetData() + 38,
+                V24Layout.SnapshotOffset - 38) == 0 &&
             FFileHelper::SaveArrayToFile(V22Checkpoint, *QuickSavePath));
-    TestTrue(TEXT("Mission 15 loads a valid schema-22 checkpoint under schema 23"),
-             Bridge->QuickLoadScenario(Feedback));
     TestTrue(
-        TEXT("Mission 15 schema migration preserves exact deterministic state"),
+        TEXT("The converted Mission 15 primary is the only loadable generation"),
+        !IFileManager::Get().FileExists(
+            *(QuickSavePath + TEXT(".bak"))) &&
+            !IFileManager::Get().FileExists(
+                *(QuickSavePath + TEXT(".bak.tmp"))) &&
+            !IFileManager::Get().FileExists(
+                *(QuickSavePath + TEXT(".tmp"))));
+    TestTrue(
+        TEXT("Mission 15 loads the genuine schema-22 primary without trailing payload"),
+        Bridge->QuickLoadScenario(Feedback) &&
+            !Feedback.Contains(TEXT("prior-generation backup")) &&
+            !Feedback.Contains(TEXT("staged prior-generation recovery")));
+    Objective = Bridge->GetLocalObjectiveSnapshot();
+    const echoes::sim::Entity* LoadedApproachAnchor =
+        Bridge->FindEntity(Objective.BrokenSunApproachAnchorId);
+    TestTrue(
+        TEXT("Mission 15 schema migration preserves receipt-independent mission state"),
         Bridge->GetSimulation()->CurrentTick() == V22ExpectedTick &&
-            Bridge->GetSimulation()->StateChecksum() == V22ExpectedChecksum);
+            Bridge->GetSimulation()->NextCommandSequence(
+                UEchoesSimulationSubsystem::LocalPlayerId) ==
+                V22ExpectedNextCommandSequence &&
+            Bridge->GetBrokenSunPhase() ==
+                EEchoesBrokenSunPhase::AssembleAccord &&
+            Objective.bBrokenSunApproachSecured &&
+            Objective.BrokenSunApproachAnchorId ==
+                V22ExpectedObjective.BrokenSunApproachAnchorId &&
+            Objective.BrokenSunAccordVoiceId ==
+                V22ExpectedObjective.BrokenSunAccordVoiceId &&
+            Objective.BrokenSunAccordHeavyId ==
+                V22ExpectedObjective.BrokenSunAccordHeavyId &&
+            Objective.BrokenSunNemeId ==
+                V22ExpectedObjective.BrokenSunNemeId &&
+            Objective.BrokenSunWorkerId ==
+                V22ExpectedObjective.BrokenSunWorkerId &&
+            Objective.BrokenSunMaraId ==
+                V22ExpectedObjective.BrokenSunMaraId &&
+            Objective.BrokenSunOruunId ==
+                V22ExpectedObjective.BrokenSunOruunId &&
+            Objective.BrokenSunTalarId ==
+                V22ExpectedObjective.BrokenSunTalarId &&
+            LoadedApproachAnchor != nullptr &&
+            LoadedApproachAnchor->owner ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            LoadedApproachAnchor->faction == Faction::HollowChoir &&
+            LoadedApproachAnchor->type == EntityType::UtilityStructure &&
+            LoadedApproachAnchor->completed &&
+            LoadedApproachAnchor->position == ApproachBuildSite &&
+            V24BuildSequence.has_value() &&
+            !Bridge->GetSimulation()->FindCommandResolutionReceipt(
+                UEchoesSimulationSubsystem::LocalPlayerId,
+                *V24BuildSequence)
+                .has_value());
 
     TestTrue(
         TEXT("The Research Loom accepts Held Alternatives"),
@@ -1611,9 +1697,30 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Objective.BrokenSunPendingFinalResolution ==
                 EEchoesFinalResolution::ControlledStabilization &&
             Objective.BrokenSunFinalResolution ==
-                EEchoesFinalResolution::None &&
-            Bridge->QuickSaveScenario(Feedback) &&
-            Bridge->QuickLoadScenario(Feedback));
+                EEchoesFinalResolution::None);
+    TestTrue(
+        TEXT("The legacy-loaded Mission 15 state resaves as native schema 24"),
+        Bridge->QuickSaveScenario(Feedback));
+    TArray<uint8> ResavedV24Primary;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
+        ResavedV24Layout;
+    TestTrue(
+        TEXT("The Mission 15 primary records native schema 24 after legacy load"),
+        FFileHelper::LoadFileToArray(
+            ResavedV24Primary, *QuickSavePath) &&
+            EchoesSnapshotMigrationTestHelpers::
+                InspectMission15EnvelopeSnapshotV24(
+                    ResavedV24Primary,
+                    ResavedV24Layout) &&
+            EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
+                ResavedV24Primary) == 24U);
+    TestTrue(
+        TEXT("The native Mission 15 primary remains directly loadable"),
+        !IFileManager::Get().FileExists(
+            *(QuickSavePath + TEXT(".bak.tmp"))) &&
+            Bridge->QuickLoadScenario(Feedback) &&
+            !Feedback.Contains(TEXT("prior-generation backup")) &&
+            !Feedback.Contains(TEXT("staged prior-generation recovery")));
     Objective = Bridge->GetLocalObjectiveSnapshot();
     TestTrue(
         TEXT("Quick load restores the exact armed-but-unconfirmed choice"),
@@ -1625,7 +1732,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-23 resave retains the valid schema-22 Mission 15 generation"),
+        TEXT("The first schema-24 resave retains the valid schema-22 Mission 15 generation"),
         FFileHelper::LoadFileToArray(
             RetainedV22Backup,
             *(QuickSavePath + TEXT(".bak"))) &&
@@ -1814,7 +1921,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             MissionRecord->AvailableFinalResolutions ==
                 RuntimePlan.AvailableFinalResolutions &&
             MissionRecord->FinalPlanKey == RuntimePlan.StablePlanKey &&
-            MissionRecord->SimulationSnapshotVersion == 23 &&
+            MissionRecord->SimulationSnapshotVersion == 24 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());
