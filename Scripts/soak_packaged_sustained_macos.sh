@@ -388,9 +388,9 @@ while (( ! completion_reached )); do
 
   final_tick="$(/usr/bin/awk '
     /\[ECHOES_STRESS_SUSTAINED_HEARTBEAT\]/ {
-      for (index = 1; index <= NF; ++index) {
-        if ($index ~ /^tick=[0-9]+$/) {
-          split($index, pair, "="); tick = pair[2]
+      for (field_index = 1; field_index <= NF; ++field_index) {
+        if ($field_index ~ /^tick=[0-9]+$/) {
+          split($field_index, pair, "="); tick = pair[2]
         }
       }
     }

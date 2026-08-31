@@ -24,6 +24,28 @@ class SustainedSoakWrapperTests(unittest.TestCase):
             text=True,
         )
 
+    def test_final_tick_awk_is_macos_compatible(self) -> None:
+        source = RUNNER.read_text(encoding="utf-8")
+        prefix = 'final_tick="$(/usr/bin/awk \'\n'
+        suffix = '\n  \' "$raw_log")"'
+        program_start = source.index(prefix) + len(prefix)
+        program_end = source.index(suffix, program_start)
+        program = source[program_start:program_end]
+        observed = subprocess.run(
+            ["/usr/bin/awk", program],
+            input=(
+                "LogEchoes: [ECHOES_STRESS_SUSTAINED_HEARTBEAT] "
+                "fixture=Stress400Sustained tick=20 checksum=1\n"
+                "LogEchoes: [ECHOES_STRESS_SUSTAINED_HEARTBEAT] "
+                "fixture=Stress400Sustained tick=40 checksum=2\n"
+            ),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(observed.returncode, 0, observed.stderr)
+        self.assertEqual(observed.stdout, "40\n")
+
     def test_minimum_duration_is_executable_and_sampling_consistent(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
