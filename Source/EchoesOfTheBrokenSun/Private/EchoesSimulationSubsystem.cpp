@@ -16751,10 +16751,10 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
         SelectedOperation == EEchoesOperationMode::Skirmish
             ? ActiveSkirmishSetup.MapPreset
             : EEchoesSkirmishMapPreset::GlassScar;
-    const FName& ActivePresentationTag =
-        EchoesBattlefieldPresentation::TagForPreset(PresentationPreset);
     int32 ActiveActorCount = 0;
+    int32 SharedActorCount = 0;
     int32 HiddenActorCount = 0;
+    int32 WeatherActorCount = 0;
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
@@ -16762,16 +16762,14 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
         {
             continue;
         }
-        const bool bLegacyGlass = Actor->ActorHasTag(
-            EchoesBattlefieldPresentation::LegacyGlassScarTag());
-        const bool bMapPresentation = Actor->ActorHasTag(
-            EchoesBattlefieldPresentation::RootTag());
-        if (bMapPresentation || bLegacyGlass)
+        if (EchoesBattlefieldPresentation::IsRegistered(Actor->Tags))
         {
+            const bool bSharedActor =
+                EchoesBattlefieldPresentation::IsShared(Actor->Tags);
             const bool bShouldShow =
-                Actor->ActorHasTag(ActivePresentationTag) ||
-                (PresentationPreset == EEchoesSkirmishMapPreset::GlassScar &&
-                 bLegacyGlass);
+                EchoesBattlefieldPresentation::ShouldShow(
+                    Actor->Tags,
+                    PresentationPreset);
             Actor->SetActorHiddenInGame(!bShouldShow);
             if (Actor->ActorHasTag(
                     EchoesBattlefieldPresentation::FloorTag()))
@@ -16779,20 +16777,28 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
                 Actor->SetActorEnableCollision(bShouldShow);
             }
             ActiveActorCount += bShouldShow ? 1 : 0;
+            SharedActorCount += bSharedActor ? 1 : 0;
             HiddenActorCount += bShouldShow ? 0 : 1;
         }
-        if (AEchoesWeatherView* Weather = Cast<AEchoesWeatherView>(Actor))
+        if (EchoesBattlefieldPresentation::IsShared(Actor->Tags) &&
+            Actor->ActorHasTag(EchoesBattlefieldPresentation::WeatherTag()))
         {
-            Weather->ApplyMapPreset(PresentationPreset);
+            if (AEchoesWeatherView* Weather = Cast<AEchoesWeatherView>(Actor))
+            {
+                Weather->ApplyMapPreset(PresentationPreset);
+                ++WeatherActorCount;
+            }
         }
     }
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_MAP_PRESENTATION_PROFILE] preset=%s activeActors=%d hiddenActors=%d terrainPalette=true weatherProfile=true collisionAuthority=false"),
+        TEXT("[ECHOES_MAP_PRESENTATION_PROFILE] preset=%s activeActors=%d sharedActors=%d hiddenActors=%d weatherActors=%d terrainPalette=true weatherProfile=true collisionAuthority=false"),
         EchoesBattlefieldPresentation::StableName(PresentationPreset),
         ActiveActorCount,
-        HiddenActorCount);
+        SharedActorCount,
+        HiddenActorCount,
+        WeatherActorCount);
 }
 
 bool UEchoesSimulationSubsystem::SyncTerrainView()

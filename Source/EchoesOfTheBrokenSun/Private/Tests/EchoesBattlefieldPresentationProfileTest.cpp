@@ -7,7 +7,10 @@
 #include "EchoesTerrainView.h"
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesWeatherView.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "Tests/AutomationCommon.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -58,20 +61,88 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
         PresentationProbes[Index] = World->SpawnActor<AActor>();
         if (PresentationProbes[Index] != nullptr)
         {
-            PresentationProbes[Index]->Tags.Add(
-                EchoesBattlefieldPresentation::RootTag());
-            PresentationProbes[Index]->Tags.Add(
-                EchoesBattlefieldPresentation::TagForPreset(Presets[Index]));
+            EchoesBattlefieldPresentation::RegisterPresetActorTags(
+                PresentationProbes[Index]->Tags,
+                Presets[Index]);
         }
     }
+    AStaticMeshActor* SharedFloor = World->SpawnActor<AStaticMeshActor>();
+    AActor* SharedSun = World->SpawnActor<AActor>();
+    AActor* SharedSky = World->SpawnActor<AActor>();
+    AActor* LegacyGlassScarProbe = World->SpawnActor<AActor>();
+    AActor* MalformedRootOnlyProbe = World->SpawnActor<AActor>();
+    UStaticMeshComponent* SharedFloorMesh = SharedFloor != nullptr
+        ? SharedFloor->GetStaticMeshComponent()
+        : nullptr;
+    if (SharedFloor != nullptr)
+    {
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            SharedFloor->Tags,
+            EchoesBattlefieldPresentation::FloorTag());
+        SharedFloor->SetActorEnableCollision(true);
+    }
+    if (SharedFloorMesh != nullptr)
+    {
+        SharedFloorMesh->SetCollisionEnabled(
+            ECollisionEnabled::QueryAndPhysics);
+    }
+    if (SharedSun != nullptr)
+    {
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            SharedSun->Tags,
+            EchoesBattlefieldPresentation::SunTag());
+    }
+    if (SharedSky != nullptr)
+    {
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            SharedSky->Tags,
+            EchoesBattlefieldPresentation::SkyTag());
+    }
+    if (LegacyGlassScarProbe != nullptr)
+    {
+        LegacyGlassScarProbe->Tags.Add(
+            EchoesBattlefieldPresentation::LegacyGlassScarTag());
+    }
+    if (MalformedRootOnlyProbe != nullptr)
+    {
+        MalformedRootOnlyProbe->Tags.Add(
+            EchoesBattlefieldPresentation::RootTag());
+    }
     AEchoesWeatherView* Weather = World->SpawnActor<AEchoesWeatherView>();
+    AEchoesWeatherView* MalformedWeather =
+        World->SpawnActor<AEchoesWeatherView>();
+    if (Weather != nullptr)
+    {
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            Weather->Tags,
+            EchoesBattlefieldPresentation::WeatherTag());
+    }
+    if (MalformedWeather != nullptr)
+    {
+        MalformedWeather->Tags.Add(
+            EchoesBattlefieldPresentation::RootTag());
+        MalformedWeather->Tags.Add(
+            EchoesBattlefieldPresentation::WeatherTag());
+    }
     if (!TestNotNull(TEXT("Glass Scar presentation probe exists"),
                      PresentationProbes[0]) ||
         !TestNotNull(TEXT("Crownfall presentation probe exists"),
                      PresentationProbes[1]) ||
         !TestNotNull(TEXT("Soryn presentation probe exists"),
                      PresentationProbes[2]) ||
-        !TestNotNull(TEXT("Map-aware weather view exists"), Weather))
+        !TestNotNull(TEXT("Shared floor probe exists"), SharedFloor) ||
+        !TestNotNull(TEXT("Shared floor mesh component exists"),
+                     SharedFloorMesh) ||
+        !TestNotNull(TEXT("Shared sun probe exists"), SharedSun) ||
+        !TestNotNull(TEXT("Shared sky probe exists"), SharedSky) ||
+        !TestNotNull(TEXT("Legacy Glass Scar probe exists"),
+                     LegacyGlassScarProbe) ||
+        !TestNotNull(TEXT("Malformed root-only probe exists"),
+                     MalformedRootOnlyProbe) ||
+        !TestNotNull(TEXT("Registered map-aware weather view exists"),
+                     Weather) ||
+        !TestNotNull(TEXT("Malformed weather probe exists"),
+                     MalformedWeather))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -80,31 +151,101 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
 
     float FogDensities[UE_ARRAY_COUNT(Presets)] = {};
     const auto VerifyProfile =
-        [this, Bridge, Weather, &PresentationProbes, &FogDensities,
-         &Presets](EEchoesSkirmishMapPreset Preset, int32 PresetIndex,
-                   const TCHAR* Label)
+        [this, Bridge, Weather, MalformedWeather, SharedFloor,
+         SharedFloorMesh, SharedSun, SharedSky, LegacyGlassScarProbe,
+         MalformedRootOnlyProbe, &PresentationProbes, &FogDensities, &Presets](
+            EEchoesSkirmishMapPreset Preset,
+            int32 PresetIndex,
+            const TCHAR* Label)
     {
         AEchoesTerrainView* Terrain = Bridge->GetTerrainView();
-        bool bVisibilityExact = true;
+        bool bPassed = true;
+        bPassed &= TestTrue(
+            FString::Printf(TEXT("%s: active setup matches"), Label),
+            Bridge->GetActiveSkirmishSetup().MapPreset == Preset);
+        bPassed &= TestNotNull(
+            FString::Printf(TEXT("%s: terrain view exists"), Label),
+            Terrain);
+        if (Terrain != nullptr)
+        {
+            bPassed &= TestTrue(
+                FString::Printf(TEXT("%s: terrain preset matches"), Label),
+                Terrain->GetMapPreset() == Preset);
+            bPassed &= TestTrue(
+                FString::Printf(
+                    TEXT("%s: authored terrain meshes remain active"),
+                    Label),
+                Terrain->IsUsingAuthoredTerrainMeshes());
+            bPassed &= TestEqual(
+                FString::Printf(
+                    TEXT("%s: blocked-tile presentation count matches"),
+                    Label),
+                Terrain->GetBlockedTileCount(),
+                FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(Preset));
+        }
+        bPassed &= TestTrue(
+            FString::Printf(TEXT("%s: registered weather preset matches"),
+                            Label),
+            Weather->GetMapPreset() == Preset);
+        bPassed &= TestTrue(
+            FString::Printf(TEXT("%s: registered weather density is valid"),
+                            Label),
+            Weather->GetCurrentFogDensity() > 0.0f);
+        bPassed &= TestTrue(
+            FString::Printf(
+                TEXT("%s: malformed weather remains untouched"),
+                Label),
+            MalformedWeather->GetMapPreset() ==
+                EEchoesSkirmishMapPreset::GlassScar);
+        bPassed &= TestTrue(
+            FString::Printf(
+                TEXT("%s: malformed weather fails closed"),
+                Label),
+            MalformedWeather->IsHidden());
         for (int32 Index = 0; Index < UE_ARRAY_COUNT(Presets); ++Index)
         {
-            bVisibilityExact &= PresentationProbes[Index] != nullptr &&
-                PresentationProbes[Index]->IsHidden() ==
-                    (Index != PresetIndex);
+            bPassed &= TestEqual(
+                FString::Printf(
+                    TEXT("%s: %s scoped actor visibility matches"),
+                    Label,
+                    EchoesBattlefieldPresentation::StableName(Presets[Index])),
+                PresentationProbes[Index]->IsHidden(),
+                Index != PresetIndex);
         }
+        bPassed &= TestFalse(
+            FString::Printf(TEXT("%s: shared floor remains visible"), Label),
+            SharedFloor->IsHidden());
+        bPassed &= TestTrue(
+            FString::Printf(TEXT("%s: shared floor collision remains enabled"),
+                            Label),
+            SharedFloor->GetActorEnableCollision());
+        bPassed &= TestEqual(
+            FString::Printf(
+                TEXT("%s: shared floor primitive collision remains enabled"),
+                Label),
+            SharedFloorMesh->GetCollisionEnabled(),
+            ECollisionEnabled::QueryAndPhysics);
+        bPassed &= TestFalse(
+            FString::Printf(TEXT("%s: shared sun remains visible"), Label),
+            SharedSun->IsHidden());
+        bPassed &= TestFalse(
+            FString::Printf(TEXT("%s: shared sky remains visible"), Label),
+            SharedSky->IsHidden());
+        bPassed &= TestEqual(
+            FString::Printf(
+                TEXT("%s: legacy Glass Scar visibility remains compatible"),
+                Label),
+            LegacyGlassScarProbe->IsHidden(),
+            Preset != EEchoesSkirmishMapPreset::GlassScar);
+        bPassed &= TestTrue(
+            FString::Printf(
+                TEXT("%s: malformed root-only actor fails closed"),
+                Label),
+            MalformedRootOnlyProbe->IsHidden());
         FogDensities[PresetIndex] = Weather != nullptr
             ? Weather->GetCurrentFogDensity()
             : 0.0f;
-        return TestTrue(
-            FString::Printf(TEXT("%s profile is selected atomically"), Label),
-            Bridge->GetActiveSkirmishSetup().MapPreset == Preset &&
-                Terrain != nullptr && Terrain->GetMapPreset() == Preset &&
-                Terrain->IsUsingAuthoredTerrainMeshes() &&
-                Terrain->GetBlockedTileCount() ==
-                    FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(Preset) &&
-                Weather != nullptr && Weather->GetMapPreset() == Preset &&
-                Weather->GetCurrentFogDensity() > 0.0f &&
-                bVisibilityExact);
+        return bPassed;
     };
 
     FString Feedback;
@@ -139,12 +280,15 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
     Feedback.Reset();
     TestTrue(TEXT("Crownfall can be restored for lifecycle coverage"),
              Bridge->ApplySkirmishSetup(CrownfallSetup, Feedback));
-    TestTrue(TEXT("Crownfall profile survives restart"),
-             Bridge->RestartPrototypeScenario() &&
-                 VerifyProfile(
-                     EEchoesSkirmishMapPreset::CrownfallBasin,
-                     1,
-                     TEXT("CROWNFALL_RESTART")));
+    const bool bRestarted = Bridge->RestartPrototypeScenario();
+    TestTrue(TEXT("Crownfall profile restarts"), bRestarted);
+    if (bRestarted)
+    {
+        VerifyProfile(
+            EEchoesSkirmishMapPreset::CrownfallBasin,
+            1,
+            TEXT("CROWNFALL_RESTART"));
+    }
     Feedback.Reset();
     TestTrue(TEXT("Crownfall profile checkpoint saves"),
              Bridge->QuickSaveScenario(Feedback));
@@ -156,12 +300,15 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
     TestTrue(TEXT("Soryn can replace the saved profile"),
              Bridge->ApplySkirmishSetup(SorynSetup, Feedback));
     Feedback.Reset();
-    TestTrue(TEXT("Quickload restores terrain, weather, and composition profile"),
-             Bridge->QuickLoadScenario(Feedback) &&
-                 VerifyProfile(
-                     EEchoesSkirmishMapPreset::CrownfallBasin,
-                     1,
-                     TEXT("CROWNFALL_QUICKLOAD")));
+    const bool bQuickLoaded = Bridge->QuickLoadScenario(Feedback);
+    TestTrue(TEXT("Quickload restores the saved map setup"), bQuickLoaded);
+    if (bQuickLoaded)
+    {
+        VerifyProfile(
+            EEchoesSkirmishMapPreset::CrownfallBasin,
+            1,
+            TEXT("CROWNFALL_QUICKLOAD"));
+    }
 
     for (AActor* Probe : PresentationProbes)
     {
@@ -170,7 +317,13 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
             Probe->Destroy();
         }
     }
+    SharedFloor->Destroy();
+    SharedSun->Destroy();
+    SharedSky->Destroy();
+    LegacyGlassScarProbe->Destroy();
+    MalformedRootOnlyProbe->Destroy();
     Weather->Destroy();
+    MalformedWeather->Destroy();
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors() && !WorldWrapper.HasFailed();
