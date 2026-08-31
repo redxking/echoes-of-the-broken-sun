@@ -753,6 +753,8 @@ public:
     [[nodiscard]] std::int32_t PopulationUsed(PlayerId player) const;
     [[nodiscard]] std::int32_t PopulationCapacity(PlayerId player) const;
     [[nodiscard]] MatchOutcome Outcome() const;
+    /** Records a deterministic player forfeit by retiring that player's live Command Core. */
+    bool ForfeitPlayer(PlayerId player);
 
     bool QueueCommand(const Command& command, std::string* rejectionReason = nullptr);
     void Step();

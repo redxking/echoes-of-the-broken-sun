@@ -8,9 +8,9 @@ public class EchoesOfTheBrokenSun : ModuleRules
         CppStandard = CppStandardVersion.Cpp20;
         PublicDependencyModuleNames.AddRange(new[]
         {
-            "Core", "CoreUObject", "Engine", "InputCore", "PhysicsCore",
+            "Core", "CoreUObject", "Engine", "InputCore", "ApplicationCore", "PhysicsCore",
             "AIModule", "NavigationSystem", "GameplayTasks", "UMG", "Slate",
-            "SlateCore", "Json", "JsonUtilities", "EchoesSimCore"
+            "SlateCore", "Json", "JsonUtilities", "Sockets", "EchoesSimCore"
         });
     }
 }

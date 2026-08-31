@@ -5,9 +5,11 @@
 #include "EchoesFogView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameMode.h"
+#include "EchoesGameInstance.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
 #include "EchoesNetworkSession.h"
+#include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesPointerCombatGuardReview.h"
@@ -26,9 +28,11 @@
 #include "Engine/SkyLight.h"
 #include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "HAL/PlatformMisc.h"
 #include "HAL/PlatformTime.h"
 #include "InputCoreTypes.h"
+#include "InputKeyEventArgs.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -89,6 +93,10 @@ void AEchoesPlayerController::BeginPlay()
     }
     SetInputMode(InputMode);
     bShowMouseCursor = true;
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->NotifyControllerReady(this);
+    }
     if (!bRuntimeStateKnown)
     {
         const UEchoesSimulationSubsystem* Bridge =
@@ -155,12 +163,24 @@ void AEchoesPlayerController::BeginPlay()
     }
     if (GetNetMode() == NM_Client)
     {
+        StartNetworkHandshakeTimeout();
         FString RequestedResumeCredential;
         if (FParse::Value(
                 FCommandLine::Get(),
                 TEXT("EchoesNetworkResumeToken="),
                 RequestedResumeCredential) &&
             !RequestedResumeCredential.IsEmpty())
+        {
+            NetworkResumeCredential = RequestedResumeCredential;
+            GetWorldTimerManager().SetTimerForNextTick(
+                this,
+                &AEchoesPlayerController::SubmitNetworkResumeCredential);
+        }
+        else if (UEchoesGameInstance* EchoesGameInstance =
+                     GetEchoesGameInstance();
+                 EchoesGameInstance != nullptr &&
+                 EchoesGameInstance->TryGetPendingReconnectCredential(
+                     RequestedResumeCredential))
         {
             NetworkResumeCredential = RequestedResumeCredential;
             GetWorldTimerManager().SetTimerForNextTick(
@@ -174,14 +194,362 @@ void AEchoesPlayerController::BeginPlay()
                 &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
         }
     }
+#if !UE_BUILD_SHIPPING
+    else if (GetNetMode() == NM_Standalone &&
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesOnlineFrontDoorHostSmoke")))
+    {
+        GetWorldTimerManager().SetTimerForNextTick(
+            this,
+            &AEchoesPlayerController::StartOnlineFrontDoorHostSmoke);
+    }
+    else if (GetNetMode() == NM_Standalone)
+    {
+        FString OnlineClientSmokeEndpoint;
+        if (FParse::Value(
+                FCommandLine::Get(),
+                TEXT("EchoesOnlineFrontDoorClientSmoke="),
+                OnlineClientSmokeEndpoint) &&
+            !OnlineClientSmokeEndpoint.IsEmpty())
+        {
+            GetWorldTimerManager().SetTimerForNextTick(
+                this,
+                &AEchoesPlayerController::StartOnlineFrontDoorClientSmoke);
+        }
+    }
+#endif
 }
 
 void AEchoesPlayerController::EndPlay(
     const EEndPlayReason::Type EndPlayReason)
 {
+    ClearNetworkConnectionTimeouts();
+    GetWorldTimerManager().ClearTimer(NetworkResultAcknowledgementTimer);
     DestroyNetworkPresentation();
     Super::EndPlay(EndPlayReason);
 }
+
+bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
+{
+    if (HandleOnlineEndpointKey(Params))
+    {
+        return true;
+    }
+    return Super::InputKey(Params);
+}
+
+UEchoesGameInstance* AEchoesPlayerController::GetEchoesGameInstance() const
+{
+    return GetGameInstance<UEchoesGameInstance>();
+}
+
+bool AEchoesPlayerController::HandleOnlineEndpointKey(
+    const FInputKeyEventArgs& Params)
+{
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr ||
+        EchoesGameInstance->GetOnlineState() !=
+            EEchoesOnlineFrontDoorState::JoinSetup ||
+        EchoesGameInstance->GetOnlineFocusIndex() != 1 ||
+        (Params.Event != IE_Pressed && Params.Event != IE_Repeat))
+    {
+        return false;
+    }
+    if (Params.Key == EKeys::BackSpace)
+    {
+        (void)EchoesGameInstance->BackspaceEndpointCharacter();
+        return true;
+    }
+    if (Params.Key == EKeys::Delete)
+    {
+        EchoesGameInstance->SetDirectConnectEndpoint(FString());
+        return true;
+    }
+    if (Params.Key == EKeys::V && Params.Event == IE_Pressed &&
+        (IsInputKeyDown(EKeys::LeftCommand) ||
+         IsInputKeyDown(EKeys::RightCommand)))
+    {
+        FString ClipboardText;
+        FPlatformApplicationMisc::ClipboardPaste(ClipboardText);
+        EchoesGameInstance->SetDirectConnectEndpoint(
+            ClipboardText.TrimStartAndEnd());
+        return true;
+    }
+
+    const FString KeyName = Params.Key.GetFName().ToString();
+    if (KeyName.Len() == 1 &&
+        FChar::IsAlpha(KeyName[0]))
+    {
+        return EchoesGameInstance->AppendEndpointCharacter(KeyName[0]);
+    }
+    static const FKey NumberKeys[] = {
+        EKeys::Zero, EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four,
+        EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine};
+    static const FKey NumpadKeys[] = {
+        EKeys::NumPadZero, EKeys::NumPadOne, EKeys::NumPadTwo,
+        EKeys::NumPadThree, EKeys::NumPadFour, EKeys::NumPadFive,
+        EKeys::NumPadSix, EKeys::NumPadSeven, EKeys::NumPadEight,
+        EKeys::NumPadNine};
+    for (int32 Digit = 0; Digit < 10; ++Digit)
+    {
+        if (Params.Key == NumberKeys[Digit] ||
+            Params.Key == NumpadKeys[Digit])
+        {
+            return EchoesGameInstance->AppendEndpointCharacter(
+                static_cast<TCHAR>(TEXT('0') + Digit));
+        }
+    }
+    if (Params.Key == EKeys::Period || Params.Key == EKeys::Decimal)
+    {
+        return EchoesGameInstance->AppendEndpointCharacter(TEXT('.'));
+    }
+    if (Params.Key == EKeys::Hyphen || Params.Key == EKeys::Subtract)
+    {
+        return EchoesGameInstance->AppendEndpointCharacter(TEXT('-'));
+    }
+    if (Params.Key == EKeys::Semicolon &&
+        (IsInputKeyDown(EKeys::LeftShift) ||
+         IsInputKeyDown(EKeys::RightShift)))
+    {
+        return EchoesGameInstance->AppendEndpointCharacter(TEXT(':'));
+    }
+    return false;
+}
+
+bool AEchoesPlayerController::IsOnlineFrontDoorVisible() const
+{
+    const UEchoesGameInstance* EchoesGameInstance =
+        GetGameInstance<UEchoesGameInstance>();
+    if (EchoesGameInstance == nullptr)
+    {
+        return false;
+    }
+    const EEchoesOnlineFrontDoorState State =
+        EchoesGameInstance->GetOnlineState();
+    return State == EEchoesOnlineFrontDoorState::JoinSetup ||
+        State == EEchoesOnlineFrontDoorState::Hosting ||
+        State == EEchoesOnlineFrontDoorState::Connecting ||
+        State == EEchoesOnlineFrontDoorState::Failed;
+}
+
+void AEchoesPlayerController::OpenOnlineFrontDoor()
+{
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (!bTitleScreenVisible || !IsLocalController() ||
+        GetNetMode() != NM_Standalone || EchoesGameInstance == nullptr)
+    {
+        return;
+    }
+    EchoesGameInstance->OpenOnlineFrontDoor();
+    ClearSelection();
+    bSelectionButtonDown = false;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(
+        TEXT("ONLINE 1v1 — host fixed Glass Scar rules or enter a direct host address."),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_ONLINE_FRONT_DOOR_OPENED] source=operations fixedRules=true host=true directJoin=true"));
+}
+
+void AEchoesPlayerController::ConfirmOnlineFrontDoorAction()
+{
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr)
+    {
+        return;
+    }
+    if (EchoesGameInstance->GetOnlineState() ==
+        EEchoesOnlineFrontDoorState::Failed)
+    {
+        EchoesGameInstance->RetryOnlineFrontDoor(this);
+        return;
+    }
+    if (EchoesGameInstance->GetOnlineState() ==
+        EEchoesOnlineFrontDoorState::Hosting)
+    {
+        CopyOnlineHostEndpoint();
+        return;
+    }
+    if (EchoesGameInstance->GetOnlineState() !=
+        EEchoesOnlineFrontDoorState::JoinSetup)
+    {
+        return;
+    }
+    switch (EchoesGameInstance->GetOnlineFocusIndex())
+    {
+        case 0:
+            (void)EchoesGameInstance->RequestFixedRulesHost(GetWorld());
+            break;
+        case 1:
+        case 2:
+            (void)EchoesGameInstance->RequestDirectJoin(this);
+            break;
+        case 3:
+            EchoesGameInstance->CancelOnlineRequest(this);
+            SetIgnoreMoveInput(true);
+            SetIgnoreLookInput(true);
+            break;
+        default:
+            break;
+    }
+}
+
+void AEchoesPlayerController::CopyOnlineHostEndpoint()
+{
+    const UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr ||
+        EchoesGameInstance->GetOnlineState() !=
+            EEchoesOnlineFrontDoorState::Hosting ||
+        EchoesGameInstance->GetHostShareEndpoint().IsEmpty())
+    {
+        SetStatusMessage(
+            TEXT("[LAN_ADDRESS_UNAVAILABLE] This Mac has no usable LAN IPv4 address to copy."),
+            6.0f);
+        return;
+    }
+    FPlatformApplicationMisc::ClipboardCopy(
+        *EchoesGameInstance->GetHostShareEndpoint());
+    SetStatusMessage(
+        TEXT("LAN DIRECT ADDRESS COPIED — share it only with the intended opponent."),
+        6.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_ONLINE_HOST_ADDRESS_COPIED] endpoint=%s scope=lan_direct firewallNatNotAssured=true"),
+        *EchoesGameInstance->GetHostShareEndpoint());
+}
+
+void AEchoesPlayerController::CancelOnlineFrontDoor()
+{
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->CancelOnlineRequest(this);
+    }
+}
+
+void AEchoesPlayerController::LeaveOnlineMatch()
+{
+    const bool bActiveOnlineMatch = IsActiveOnlineNetworkMatch();
+    if (!bActiveOnlineMatch && !CanLeaveNetworkMatchToOnlineMenu())
+    {
+        return;
+    }
+    if (bActiveOnlineMatch && !bOnlineLocalMenuVisible)
+    {
+        return;
+    }
+    if (bActiveOnlineMatch && GetNetMode() == NM_Client)
+    {
+        ServerLeaveNetworkMatch();
+    }
+    else if (bActiveOnlineMatch && GetNetMode() == NM_ListenServer)
+    {
+        AEchoesGameMode* GameMode =
+            GetWorld() != nullptr
+                ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+                : nullptr;
+        if (GameMode == nullptr ||
+            !GameMode->SurrenderNetworkHost(
+                TEXT("NET_HOST_SURRENDERED")))
+        {
+            SetStatusMessage(
+                TEXT("[ONLINE_LEAVE_FAILED] The host surrender could not be recorded."),
+                6.0f);
+        }
+        return;
+    }
+    bOnlineLocalMenuVisible = false;
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->ReturnToOnlineFrontDoor(this);
+    }
+}
+
+void AEchoesPlayerController::BeginHostedNetworkMatchPresentation()
+{
+    if (!IsLocalController() || GetNetMode() != NM_ListenServer)
+    {
+        return;
+    }
+    // BeginNetworkMatch runs on the remote player's server-side controller.
+    // Mirror the authoritative match state onto the local host controller so
+    // local-only controls (pause/menu/result routing) cannot fall back to the
+    // standalone skirmish path.
+    NetworkSeat = 0;
+    bNetworkCompatibilityAccepted = true;
+    bNetworkReady = true;
+    bNetworkMatchStarted = true;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bPauseMenuVisible = false;
+    bOnlineLocalMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    bMatchResultVisible = false;
+    SetIgnoreMoveInput(false);
+    SetIgnoreLookInput(false);
+    SetStatusMessage(
+        TEXT("ONLINE MATCH STARTED — you command the Meridian Compact on Glass Scar."),
+        8.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_ONLINE_HOST_PRESENTATION_STARTED] title=false input=true seat=0"));
+}
+
+#if !UE_BUILD_SHIPPING
+void AEchoesPlayerController::StartOnlineFrontDoorHostSmoke()
+{
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr ||
+        EchoesGameInstance->GetOnlineState() !=
+            EEchoesOnlineFrontDoorState::Idle)
+    {
+        return;
+    }
+    EchoesGameInstance->OpenOnlineFrontDoor();
+    if (EchoesGameInstance->RequestFixedRulesHost(GetWorld()))
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ONLINE_FRONT_DOOR_HOST_SMOKE] apiPath=true requested=true"));
+    }
+}
+
+void AEchoesPlayerController::StartOnlineFrontDoorClientSmoke()
+{
+    FString Endpoint;
+    if (!FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesOnlineFrontDoorClientSmoke="),
+            Endpoint) || Endpoint.IsEmpty())
+    {
+        return;
+    }
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr ||
+        EchoesGameInstance->GetOnlineState() !=
+            EEchoesOnlineFrontDoorState::Idle)
+    {
+        return;
+    }
+    EchoesGameInstance->OpenOnlineFrontDoor();
+    EchoesGameInstance->SetDirectConnectEndpoint(Endpoint);
+    EchoesGameInstance->FocusOnlineAction(2);
+    if (EchoesGameInstance->RequestDirectJoin(this))
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ONLINE_FRONT_DOOR_CLIENT_SMOKE] apiPath=true requested=true endpoint=%s"),
+            *Endpoint);
+    }
+}
+#endif
 
 bool AEchoesPlayerController::ResolvePointerScreenPosition(
     FVector2D& OutScreenPosition,
@@ -281,6 +649,124 @@ void AEchoesPlayerController::ConfigureNetworkResumeCredential(
         return;
     }
     NetworkResumeCredential = Credential;
+}
+
+void AEchoesPlayerController::RejectNetworkSessionFromServer(
+    const FString& StableReason)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+    ClientReceiveOnlineSessionFailure(StableReason.Left(160));
+}
+
+void AEchoesPlayerController::PresentNetworkReconnectGrace(
+    float GraceSeconds)
+{
+    if (!IsLocalController() || GetNetMode() != NM_ListenServer ||
+        GraceSeconds <= 0.0f)
+    {
+        return;
+    }
+    bOpponentReconnectGraceActive = true;
+    OpponentReconnectExpiresAtSeconds =
+        FPlatformTime::Seconds() + static_cast<double>(GraceSeconds);
+    bOnlineLocalMenuVisible = false;
+    bTechnologyPanelVisible = false;
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(
+        TEXT("OPPONENT DISCONNECTED — the authority is paused while their seat is reserved."),
+        GraceSeconds);
+}
+
+void AEchoesPlayerController::ClearNetworkReconnectGrace()
+{
+    bOpponentReconnectGraceActive = false;
+    OpponentReconnectExpiresAtSeconds = 0.0;
+    if (!bMatchResultVisible && !bOnlineLocalMenuVisible &&
+        !bPauseMenuVisible && !bTechnologyPanelVisible)
+    {
+        SetIgnoreMoveInput(false);
+        SetIgnoreLookInput(false);
+    }
+}
+
+void AEchoesPlayerController::NotifyNetworkOpponentForfeit(
+    uint64 FinalTick,
+    const FString& StableReason,
+    bool bWaitForResultRecipient)
+{
+    if (!IsLocalController() || GetNetMode() != NM_ListenServer)
+    {
+        return;
+    }
+    ClearNetworkReconnectGrace();
+    PresentedFinalTick = FinalTick;
+    bNetworkResultExitEnabled = !bWaitForResultRecipient;
+    NotifyMatchFinished(echoes::sim::MatchOutcome::Player0Victory);
+    SetStatusMessage(
+        bWaitForResultRecipient
+            ? TEXT("VICTORY BY FORFEIT — confirming final delivery before the Online menu unlocks.")
+            : TEXT("VICTORY BY FORFEIT — the opponent did not return before reconnect grace expired. Enter leaves for the Online menu."),
+        3600.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_FORFEIT_RESULT] outcome=1 finalTick=%llu reason=%s resultRecipient=%s hostLeaveEnabled=%s"),
+        static_cast<unsigned long long>(FinalTick),
+        *StableReason.Left(96),
+        bWaitForResultRecipient ? TEXT("true") : TEXT("false"),
+        bWaitForResultRecipient ? TEXT("false") : TEXT("true"));
+}
+
+void AEchoesPlayerController::NotifyNetworkHostSurrender(
+    uint64 FinalTick,
+    const FString& StableReason)
+{
+    if (!IsLocalController() || GetNetMode() != NM_ListenServer)
+    {
+        return;
+    }
+    ClearNetworkReconnectGrace();
+    PresentedFinalTick = FinalTick;
+    bNetworkResultExitEnabled = false;
+    bReturnHostToOnlineAfterResultDelivery = true;
+    NotifyMatchFinished(echoes::sim::MatchOutcome::Player1Victory);
+    SetStatusMessage(
+        TEXT("MATCH SURRENDERED — delivering the final result before returning to the Online menu."),
+        12.0f);
+    GetWorldTimerManager().SetTimer(
+        NetworkResultAcknowledgementTimer,
+        this,
+        &AEchoesPlayerController::AllowHostNetworkResultExitAfterTimeout,
+        10.0f,
+        false);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_HOST_SURRENDER_RESULT] outcome=2 finalTick=%llu reason=%s returnAfterAck=true"),
+        static_cast<unsigned long long>(FinalTick),
+        *StableReason.Left(96));
+}
+
+bool AEchoesPlayerController::IsOpponentReconnectGraceActive() const
+{
+    return bOpponentReconnectGraceActive &&
+        GetOpponentReconnectSecondsRemaining() > 0;
+}
+
+int32 AEchoesPlayerController::GetOpponentReconnectSecondsRemaining() const
+{
+    if (!bOpponentReconnectGraceActive)
+    {
+        return 0;
+    }
+    return FMath::Max(
+        0,
+        FMath::CeilToInt(
+            OpponentReconnectExpiresAtSeconds - FPlatformTime::Seconds()));
 }
 
 bool AEchoesPlayerController::IsNetworkClientControlActive() const
@@ -480,7 +966,8 @@ void AEchoesPlayerController::SubmitNetworkResumeCredential()
             LogEchoes,
             Error,
             TEXT("[ECHOES_NETWORK_RESUME_CLIENT_FAILED] reason=NET_RESUME_CREDENTIAL_UNAVAILABLE"));
-        FPlatformMisc::RequestExit(false);
+        HandlePlayerOnlineFailure(
+            TEXT("NET_RESUME_CREDENTIAL_UNAVAILABLE"), false);
         return;
     }
     ServerSubmitNetworkResumeCredential(NetworkResumeCredential);
@@ -509,6 +996,10 @@ void AEchoesPlayerController::ServerSubmitNetworkResumeCredential_Implementation
     ClientReceiveNetworkResumeCredentialResult(
         bAccepted,
         bAccepted ? TEXT("NET_RESUME_CREDENTIAL_ACCEPTED") : Error);
+    if (!bAccepted && GameMode != nullptr)
+    {
+        GameMode->RejectNetworkResumeAttempt(this, Error);
+    }
 }
 
 void AEchoesPlayerController::ClientReceiveNetworkResumeCredentialResult_Implementation(
@@ -533,10 +1024,40 @@ void AEchoesPlayerController::ClientReceiveNetworkResumeCredentialResult_Impleme
     }
     if (!bAccepted)
     {
+        ClearNetworkConnectionTimeouts();
+        if (bNetworkReconnectPhaseOneSmoke ||
+            bNetworkReconnectPhaseTwoSmoke)
+        {
+            FPlatformMisc::RequestExit(false);
+        }
+        else
+        {
+            HandlePlayerOnlineFailure(StableReason, false);
+        }
+        return;
+    }
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->MarkReconnectAttemptAccepted();
+    }
+    SubmitNetworkCompatibilityHello();
+}
+
+void AEchoesPlayerController::ClientReceiveOnlineSessionFailure_Implementation(
+    const FString& StableReason)
+{
+    UE_LOG(
+        LogEchoes,
+        Error,
+        TEXT("[ECHOES_NETWORK_SESSION_REJECTED] reason=%s playerFacing=true"),
+        *StableReason.Left(160));
+    if (bNetworkClientSmoke || bNetworkMatchSmoke ||
+        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke)
+    {
         FPlatformMisc::RequestExit(false);
         return;
     }
-    SubmitNetworkCompatibilityHello();
+    HandlePlayerOnlineFailure(StableReason, false);
 }
 
 void AEchoesPlayerController::SubmitNetworkCompatibilityHello()
@@ -555,7 +1076,7 @@ void AEchoesPlayerController::SubmitNetworkCompatibilityHello()
             LogEchoes,
             Error,
             TEXT("[ECHOES_NETWORK_CLIENT_FAILED] reason=NET_HELLO_ENCODING_FAILED"));
-        FPlatformMisc::RequestExit(false);
+        HandlePlayerOnlineFailure(TEXT("NET_HELLO_ENCODING_FAILED"), false);
         return;
     }
     ServerSubmitCompatibilityHello(echoes::network::ToByteArray(Encoded));
@@ -569,9 +1090,46 @@ void AEchoesPlayerController::SubmitNetworkCompatibilityHello()
         Manifest.playerViewSchemaVersion);
 }
 
+void AEchoesPlayerController::RejectNetworkCompatibility(
+    const FString& StableReason)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+    ClientReceiveCompatibilityResult(false, StableReason.Left(160));
+    if (AEchoesGameMode* GameMode =
+            GetWorld() != nullptr
+                ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+                : nullptr)
+    {
+        GameMode->ReleaseNetworkSeat(this, StableReason, true);
+    }
+}
+
 void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
     const TArray<uint8>& Packet)
 {
+    AEchoesGameMode* GameMode =
+        GetWorld() != nullptr
+            ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+            : nullptr;
+    if (GameMode == nullptr || !GameMode->IsBoundNetworkController(this))
+    {
+        if (GameMode != nullptr &&
+            GameMode->IsAwaitingNetworkResumeCredential(this))
+        {
+            constexpr const TCHAR* ResumeReason =
+                TEXT("NET_RESUME_CREDENTIAL_REQUIRED");
+            GameMode->RejectNetworkResumeAttempt(this, ResumeReason);
+            return;
+        }
+        const FString Reason = TEXT("NET_CONNECTION_NOT_BOUND");
+        ClientReceiveCompatibilityResult(false, Reason);
+        RejectNetworkSessionFromServer(Reason);
+        ClientReturnToMainMenuWithTextReason(FText::FromString(Reason));
+        return;
+    }
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -581,11 +1139,13 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
     if (NetworkSeat >= echoes::sim::kMaximumPlayers || Bridge == nullptr ||
         Simulation == nullptr || !Bridge->IsScenarioReady())
     {
-        ClientReceiveCompatibilityResult(
-            false, TEXT("NET_AUTHORITY_NOT_READY"));
+        RejectNetworkCompatibility(TEXT("NET_AUTHORITY_NOT_READY"));
         return;
     }
-    if (!echoes::network::SupportsNetworkSession(Simulation))
+    if (!echoes::network::SupportsNetworkSession(Simulation) ||
+        Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish ||
+        !FEchoesSkirmishSetupModel::IsCanonicalOnlineSetup(
+            Bridge->GetActiveSkirmishSetup()))
     {
         constexpr const TCHAR* Reason = TEXT("NET_MATCH_SETTINGS_MISMATCH");
         UE_LOG(
@@ -594,7 +1154,7 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_REJECTED] player=%u reason=%s"),
             NetworkSeat,
             Reason);
-        ClientReceiveCompatibilityResult(false, Reason);
+        RejectNetworkCompatibility(Reason);
         return;
     }
 
@@ -612,7 +1172,7 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_REJECTED] player=%u reason=%s"),
             NetworkSeat,
             *Reason);
-        ClientReceiveCompatibilityResult(false, Reason);
+        RejectNetworkCompatibility(Reason);
         return;
     }
 
@@ -630,7 +1190,7 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_REJECTED] player=%u reason=%s"),
             NetworkSeat,
             *Reason);
-        ClientReceiveCompatibilityResult(false, Reason);
+        RejectNetworkCompatibility(Reason);
         return;
     }
 
@@ -643,21 +1203,29 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             Error,
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_REJECTED] player=%u reason=NET_COMMAND_SEQUENCE_UNAVAILABLE"),
             NetworkSeat);
-        ClientReceiveCompatibilityResult(
-            false, TEXT("NET_COMMAND_SEQUENCE_UNAVAILABLE"));
+        RejectNetworkCompatibility(TEXT("NET_COMMAND_SEQUENCE_UNAVAILABLE"));
         return;
     }
     NetworkCommandContext.hasAcceptedSequence = *NextSequence > 1;
     NetworkCommandContext.lastAcceptedSequence = *NextSequence - 1;
 
+    if (!GameMode->NotifyNetworkCompatibilityAccepted(this))
+    {
+        RejectNetworkCompatibility(
+            TEXT("NET_RESUME_ADMISSION_EXPIRED"));
+        return;
+    }
     bNetworkCompatibilityAccepted = true;
     ClientReceiveCompatibilityResult(true, TEXT("NET_COMPATIBLE"));
-    ClientReceiveNetworkResumeCredential(
-        NetworkResumeCredential, 120.0f);
     if (bNetworkResumePending && bNetworkResumeMatchWasStarted)
     {
         bNetworkReady = true;
-        ResumeNetworkMatch();
+        if (ResumeNetworkMatch() && GameMode != nullptr)
+        {
+            GameMode->NotifyNetworkPlayerReady(this);
+            ClientReceiveNetworkResumeCredential(
+                NetworkResumeCredential, 120.0f);
+        }
         return;
     }
     if (bNetworkResumePending)
@@ -668,6 +1236,11 @@ void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
             NetworkCommandContext.lastAcceptedSequence,
             Simulation->CurrentTick(),
             NetworkResumeDisconnectTick);
+    }
+    else
+    {
+        ClientReceiveNetworkResumeCredential(
+            NetworkResumeCredential, 120.0f);
     }
     ClientReceiveNetworkLobbyState(
         false, NetworkSeat, Simulation->CurrentTick(), 3);
@@ -684,8 +1257,15 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
     const FString& StableReason)
 {
     bNetworkCompatibilityAccepted = bAccepted;
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
     if (bAccepted)
     {
+        GetWorldTimerManager().ClearTimer(NetworkHandshakeTimer);
+        StartNetworkReadyTimeout();
+        if (EchoesGameInstance != nullptr)
+        {
+            EchoesGameInstance->MarkClientLobby();
+        }
         UE_LOG(
             LogEchoes,
             Display,
@@ -713,6 +1293,12 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
             Error,
             TEXT("[ECHOES_NETWORK_COMPATIBILITY_RESULT] accepted=false reason=%s"),
             *StableReason);
+        ClearNetworkConnectionTimeouts();
+        if (EchoesGameInstance != nullptr &&
+            EchoesGameInstance->IsPlayerInitiatedOnlineSession())
+        {
+            HandlePlayerOnlineFailure(StableReason, false);
+        }
     }
     if (!bAccepted &&
         (bNetworkClientSmoke || bNetworkMatchSmoke ||
@@ -724,18 +1310,132 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
 
 void AEchoesPlayerController::ServerSetNetworkReady_Implementation()
 {
+    AEchoesGameMode* GameMode =
+        GetWorld() != nullptr
+            ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+            : nullptr;
     if (!bNetworkCompatibilityAccepted || bNetworkReady ||
-        NetworkSeat >= echoes::sim::kMaximumPlayers)
+        NetworkSeat >= echoes::sim::kMaximumPlayers || GameMode == nullptr ||
+        !GameMode->IsBoundNetworkController(this))
     {
         return;
     }
     bNetworkReady = true;
+    const bool bCompletingPreMatchResume = bNetworkResumePending;
+    GameMode->NotifyNetworkPlayerReady(this);
+    if (bCompletingPreMatchResume)
+    {
+        ClientReceiveNetworkResumeCredential(
+            NetworkResumeCredential, 120.0f);
+    }
     UE_LOG(
         LogEchoes,
         Display,
         TEXT("[ECHOES_NETWORK_LOBBY] player=%u compatible=true ready=true started=false"),
         NetworkSeat);
     BeginNetworkMatch();
+}
+
+void AEchoesPlayerController::ServerLeaveNetworkMatch_Implementation()
+{
+    AEchoesGameMode* GameMode =
+        GetWorld() != nullptr
+            ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+            : nullptr;
+    if (!HasAuthority() || !bNetworkMatchStarted || GameMode == nullptr ||
+        !GameMode->IsBoundNetworkController(this))
+    {
+        return;
+    }
+    (void)GameMode->ForfeitNetworkOpponent(
+        TEXT("NET_PLAYER_LEFT_MATCH"));
+}
+
+void AEchoesPlayerController::StartNetworkHandshakeTimeout()
+{
+    if (!IsLocalController() || GetNetMode() != NM_Client)
+    {
+        return;
+    }
+    GetWorldTimerManager().SetTimer(
+        NetworkHandshakeTimer,
+        this,
+        &AEchoesPlayerController::HandleNetworkHandshakeTimeout,
+        15.0f,
+        false);
+}
+
+void AEchoesPlayerController::StartNetworkReadyTimeout()
+{
+    if (!IsLocalController() || GetNetMode() != NM_Client)
+    {
+        return;
+    }
+    GetWorldTimerManager().SetTimer(
+        NetworkReadyTimer,
+        this,
+        &AEchoesPlayerController::HandleNetworkReadyTimeout,
+        45.0f,
+        false);
+}
+
+void AEchoesPlayerController::ClearNetworkConnectionTimeouts()
+{
+    GetWorldTimerManager().ClearTimer(NetworkHandshakeTimer);
+    GetWorldTimerManager().ClearTimer(NetworkReadyTimer);
+}
+
+void AEchoesPlayerController::HandleNetworkHandshakeTimeout()
+{
+    if (bNetworkCompatibilityAccepted)
+    {
+        return;
+    }
+    if (bNetworkClientSmoke || bNetworkMatchSmoke ||
+        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_CLIENT_FAILED] reason=ONLINE_HANDSHAKE_TIMEOUT"));
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+    HandlePlayerOnlineFailure(TEXT("ONLINE_HANDSHAKE_TIMEOUT"), false);
+}
+
+void AEchoesPlayerController::HandleNetworkReadyTimeout()
+{
+    if (bNetworkMatchStarted)
+    {
+        return;
+    }
+    if (bNetworkClientSmoke || bNetworkMatchSmoke ||
+        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_NETWORK_CLIENT_FAILED] reason=ONLINE_READY_TIMEOUT"));
+        FPlatformMisc::RequestExit(false);
+        return;
+    }
+    HandlePlayerOnlineFailure(TEXT("ONLINE_READY_TIMEOUT"), false);
+}
+
+void AEchoesPlayerController::HandlePlayerOnlineFailure(
+    const FString& StableReason,
+    bool bPreserveReconnect)
+{
+    ClearNetworkConnectionTimeouts();
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr)
+    {
+        return;
+    }
+    EchoesGameInstance->ReportOnlineFailure(
+        StableReason, bPreserveReconnect);
+    EchoesGameInstance->ReturnToFailedFrontDoor(this);
 }
 
 void AEchoesPlayerController::BeginNetworkMatch()
@@ -759,6 +1459,32 @@ void AEchoesPlayerController::BeginNetworkMatch()
         QueueNetworkSmokeHostCommand();
     }
     Bridge->SetScenarioPaused(false);
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->MarkNetworkMatchStarted();
+    }
+    AEchoesPlayerController* HostController = nullptr;
+    if (GetWorld() != nullptr)
+    {
+        for (FConstPlayerControllerIterator It =
+                 GetWorld()->GetPlayerControllerIterator();
+             It;
+             ++It)
+        {
+            AEchoesPlayerController* Candidate =
+                Cast<AEchoesPlayerController>(It->Get());
+            if (Candidate != nullptr && Candidate->IsLocalController())
+            {
+                HostController = Candidate;
+                break;
+            }
+        }
+    }
+    if (HostController != nullptr)
+    {
+        HostController->bNetworkResultExitEnabled = false;
+        HostController->BeginHostedNetworkMatchPresentation();
+    }
     ClientReceiveNetworkLobbyState(
         true, NetworkSeat, Simulation->CurrentTick(), 3);
     UE_LOG(
@@ -776,7 +1502,7 @@ void AEchoesPlayerController::BeginNetworkMatch()
         true);
 }
 
-void AEchoesPlayerController::ResumeNetworkMatch()
+bool AEchoesPlayerController::ResumeNetworkMatch()
 {
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
@@ -788,7 +1514,7 @@ void AEchoesPlayerController::ResumeNetworkMatch()
         !bNetworkResumeMatchWasStarted || !bNetworkCompatibilityAccepted ||
         !bNetworkReady || Bridge == nullptr || Simulation == nullptr)
     {
-        return;
+        return false;
     }
     bNetworkMatchStarted = true;
     Bridge->SetNetworkHumanOpponent(true);
@@ -818,6 +1544,7 @@ void AEchoesPlayerController::ResumeNetworkMatch()
         &AEchoesPlayerController::SendScopedUpdate,
         0.5f,
         true);
+    return true;
 }
 
 void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
@@ -837,6 +1564,15 @@ void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
     }
     NetworkSeat = AssignedSeat;
     bNetworkMatchStarted = bStarted;
+    if (bStarted)
+    {
+        GetWorldTimerManager().ClearTimer(NetworkReadyTimer);
+        if (UEchoesGameInstance* EchoesGameInstance =
+                GetEchoesGameInstance())
+        {
+            EchoesGameInstance->MarkNetworkMatchStarted();
+        }
+    }
     UE_LOG(
         LogEchoes,
         Display,
@@ -861,6 +1597,11 @@ void AEchoesPlayerController::ClientReceiveNetworkResumeCredential_Implementatio
         return;
     }
     NetworkResumeCredential = Credential;
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->StoreNetworkResumeCredential(
+            Credential, GraceSeconds);
+    }
     const bool bDevelopmentReconnectSmoke =
         bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke;
     if (bDevelopmentReconnectSmoke)
@@ -1135,6 +1876,10 @@ void AEchoesPlayerController::PublishNetworkMatchResultIfFinished(
         return;
     }
     bNetworkMatchResultSent = true;
+    NetworkSentResultOutcome = static_cast<uint8>(Outcome);
+    NetworkSentResultTick = FinalView.simulationTick;
+    NetworkSentResultSnapshotId = FinalView.snapshotId;
+    NetworkSentResultScopedDigest = FinalView.scopedDigest;
     GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
     ClientReceiveNetworkMatchResult(
         static_cast<uint8>(Outcome),
@@ -1150,6 +1895,14 @@ void AEchoesPlayerController::PublishNetworkMatchResultIfFinished(
         static_cast<unsigned long long>(FinalView.simulationTick),
         static_cast<unsigned long long>(FinalView.snapshotId),
         static_cast<unsigned long long>(FinalView.scopedDigest));
+    if (AEchoesGameMode* GameMode =
+            GetWorld() != nullptr
+                ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+                : nullptr)
+    {
+        GameMode->NotifyNetworkMatchFinished();
+    }
+    BeginHostNetworkResultDeliveryWait();
 }
 
 void AEchoesPlayerController::ClientReceiveNetworkMatchResult_Implementation(
@@ -1183,7 +1936,18 @@ void AEchoesPlayerController::ClientReceiveNetworkMatchResult_Implementation(
         return;
     }
     bNetworkMatchResultReceived = true;
+    PresentedFinalTick = FinalTick;
+    bNetworkResultExitEnabled = true;
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
+    {
+        EchoesGameInstance->MarkNetworkMatchResultReceived();
+    }
     NotifyMatchFinished(Outcome);
+    ServerAcknowledgeNetworkMatchResult(
+        OutcomeValue,
+        FinalTick,
+        FinalSnapshotId,
+        FinalScopedDigest);
     UE_LOG(
         LogEchoes,
         Display,
@@ -1233,6 +1997,137 @@ void AEchoesPlayerController::ClientReceiveNetworkMatchResult_Implementation(
             0.5f,
             false);
     }
+}
+
+void AEchoesPlayerController::ServerAcknowledgeNetworkMatchResult_Implementation(
+    uint8 OutcomeValue,
+    uint64 FinalTick,
+    uint64 FinalSnapshotId,
+    uint64 FinalScopedDigest)
+{
+    const bool bExact = HasAuthority() && bNetworkMatchResultSent &&
+        OutcomeValue == NetworkSentResultOutcome &&
+        FinalTick == NetworkSentResultTick &&
+        FinalSnapshotId == NetworkSentResultSnapshotId &&
+        FinalScopedDigest == NetworkSentResultScopedDigest;
+    if (!bExact)
+    {
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_RESULT_ACK_REJECTED] outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu reason=NET_RESULT_ACK_MISMATCH"),
+            OutcomeValue,
+            static_cast<unsigned long long>(FinalTick),
+            static_cast<unsigned long long>(FinalSnapshotId),
+            static_cast<unsigned long long>(FinalScopedDigest));
+        return;
+    }
+    bNetworkMatchResultAcknowledged = true;
+    EnableHostNetworkResultExit(true, TEXT("NET_RESULT_ACKNOWLEDGED"));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_RESULT_ACKNOWLEDGED] outcome=%u finalTick=%llu finalSnapshot=%llu finalDigest=%llu exact=true"),
+        OutcomeValue,
+        static_cast<unsigned long long>(FinalTick),
+        static_cast<unsigned long long>(FinalSnapshotId),
+        static_cast<unsigned long long>(FinalScopedDigest));
+}
+
+void AEchoesPlayerController::BeginHostNetworkResultDeliveryWait()
+{
+    if (!HasAuthority() || !bNetworkMatchResultSent)
+    {
+        return;
+    }
+    for (FConstPlayerControllerIterator It =
+             GetWorld()->GetPlayerControllerIterator();
+         It;
+         ++It)
+    {
+        AEchoesPlayerController* Host =
+            Cast<AEchoesPlayerController>(It->Get());
+        if (Host != nullptr && Host->IsLocalController())
+        {
+            Host->PresentedFinalTick = NetworkSentResultTick;
+            Host->bNetworkResultExitEnabled = false;
+            Host->bNetworkMatchResultAcknowledged = false;
+            Host->NetworkSentResultOutcome = NetworkSentResultOutcome;
+            Host->NetworkSentResultTick = NetworkSentResultTick;
+            Host->NetworkSentResultSnapshotId = NetworkSentResultSnapshotId;
+            Host->NetworkSentResultScopedDigest =
+                NetworkSentResultScopedDigest;
+            Host->GetWorldTimerManager().SetTimer(
+                Host->NetworkResultAcknowledgementTimer,
+                Host,
+                &AEchoesPlayerController::AllowHostNetworkResultExitAfterTimeout,
+                10.0f,
+                false);
+            break;
+        }
+    }
+}
+
+void AEchoesPlayerController::AllowHostNetworkResultExitAfterTimeout()
+{
+    if (bNetworkMatchResultAcknowledged)
+    {
+        return;
+    }
+    UE_LOG(
+        LogEchoes,
+        Warning,
+        TEXT("[ECHOES_NETWORK_RESULT_ACK_TIMEOUT] finalTick=%llu finalSnapshot=%llu finalResultRetained=true hostLeaveEnabled=true"),
+        static_cast<unsigned long long>(NetworkSentResultTick),
+        static_cast<unsigned long long>(NetworkSentResultSnapshotId));
+    EnableHostNetworkResultExit(false, TEXT("NET_RESULT_ACK_TIMEOUT"));
+}
+
+void AEchoesPlayerController::EnableHostNetworkResultExit(
+    bool bAcknowledged,
+    const FString& StableReason)
+{
+    if (!HasAuthority() || GetWorld() == nullptr)
+    {
+        return;
+    }
+    for (FConstPlayerControllerIterator It =
+             GetWorld()->GetPlayerControllerIterator();
+         It;
+         ++It)
+    {
+        AEchoesPlayerController* Host =
+            Cast<AEchoesPlayerController>(It->Get());
+        if (Host == nullptr || !Host->IsLocalController())
+        {
+            continue;
+        }
+        Host->bNetworkResultExitEnabled = true;
+        Host->bNetworkMatchResultAcknowledged = bAcknowledged;
+        Host->GetWorldTimerManager().ClearTimer(
+            Host->NetworkResultAcknowledgementTimer);
+        Host->SetStatusMessage(
+            bAcknowledged
+                ? TEXT("ONLINE RESULT DELIVERED — Enter leaves for the Online menu.")
+                : TEXT("ONLINE RESULT RETAINED — the opponent did not confirm receipt; Enter leaves for the Online menu."),
+            3600.0f);
+        if (Host->bReturnHostToOnlineAfterResultDelivery)
+        {
+            Host->bReturnHostToOnlineAfterResultDelivery = false;
+            if (UEchoesGameInstance* EchoesGameInstance =
+                    Host->GetEchoesGameInstance())
+            {
+                EchoesGameInstance->ReturnToOnlineFrontDoor(Host);
+            }
+        }
+        break;
+    }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_HOST_RESULT_EXIT] enabled=true acknowledged=%s reason=%s"),
+        bAcknowledged ? TEXT("true") : TEXT("false"),
+        *StableReason.Left(96));
 }
 
 void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
@@ -3273,6 +4168,44 @@ bool AEchoesPlayerController::CanReturnCompletedSkirmishToOperations() const
         !Bridge->IsNetworkHumanOpponentEnabled();
 }
 
+bool AEchoesPlayerController::CanLeaveNetworkMatchToOnlineMenu() const
+{
+    return IsOnlineMatchResult() &&
+        (GetNetMode() == NM_Client || bNetworkResultExitEnabled);
+}
+
+bool AEchoesPlayerController::IsOnlineMatchResult() const
+{
+    if (!bMatchResultVisible || bCampaignResult)
+    {
+        return false;
+    }
+    const UEchoesGameInstance* EchoesGameInstance =
+        GetGameInstance<UEchoesGameInstance>();
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return GetNetMode() != NM_Standalone ||
+        (EchoesGameInstance != nullptr &&
+         EchoesGameInstance->IsPlayerInitiatedOnlineSession()) ||
+        (Bridge != nullptr && Bridge->IsNetworkHumanOpponentEnabled());
+}
+
+bool AEchoesPlayerController::IsActiveOnlineNetworkMatch() const
+{
+    if (!bNetworkMatchStarted || bMatchResultVisible)
+    {
+        return false;
+    }
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    return GetNetMode() != NM_Standalone ||
+        (Bridge != nullptr && Bridge->IsNetworkHumanOpponentEnabled());
+}
+
 bool AEchoesPlayerController::SetPendingSkirmishSetup(
     const FEchoesSkirmishSetup& Setup,
     FString& OutFeedback)
@@ -3293,6 +4226,14 @@ bool AEchoesPlayerController::SetPendingSkirmishSetup(
 
 void AEchoesPlayerController::FocusPreviousSkirmishSetting()
 {
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+        EchoesGameInstance != nullptr &&
+        EchoesGameInstance->GetOnlineState() ==
+            EEchoesOnlineFrontDoorState::JoinSetup)
+    {
+        EchoesGameInstance->FocusPreviousOnlineAction();
+        return;
+    }
     if (!IsSkirmishSetupVisible())
     {
         return;
@@ -3307,6 +4248,14 @@ void AEchoesPlayerController::FocusPreviousSkirmishSetting()
 
 void AEchoesPlayerController::FocusNextSkirmishSetting()
 {
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+        EchoesGameInstance != nullptr &&
+        EchoesGameInstance->GetOnlineState() ==
+            EEchoesOnlineFrontDoorState::JoinSetup)
+    {
+        EchoesGameInstance->FocusNextOnlineAction();
+        return;
+    }
     if (!IsSkirmishSetupVisible())
     {
         return;
@@ -4482,6 +5431,11 @@ void AEchoesPlayerController::RequestReturnToOperations()
 
 void AEchoesPlayerController::RequestNewCampaign()
 {
+    if (bOnlineLocalMenuVisible)
+    {
+        LeaveOnlineMatch();
+        return;
+    }
     if (bPauseMenuVisible)
     {
         RequestReturnToOperations();
@@ -4920,7 +5874,11 @@ void AEchoesPlayerController::CycleOwnedEntity(int32 Direction)
 
 void AEchoesPlayerController::ConfirmPrimaryAction()
 {
-    if (GetNetMode() == NM_Client && bNetworkCompatibilityAccepted &&
+    if (IsOnlineFrontDoorVisible())
+    {
+        ConfirmOnlineFrontDoorAction();
+    }
+    else if (GetNetMode() == NM_Client && bNetworkCompatibilityAccepted &&
         !bNetworkMatchStarted)
     {
         ServerSetNetworkReady();
@@ -4936,9 +5894,26 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     {
         ConfirmMissionBriefing();
     }
+    else if (bOnlineLocalMenuVisible)
+    {
+        TogglePauseMenu();
+    }
     else if (bMatchResultVisible)
     {
-        if (CanAdvanceCampaignResult())
+        if (IsOnlineMatchResult())
+        {
+            if (CanLeaveNetworkMatchToOnlineMenu())
+            {
+                LeaveOnlineMatch();
+            }
+            else
+            {
+                SetStatusMessage(
+                    TEXT("ONLINE RESULT — waiting briefly for final delivery confirmation."),
+                    4.0f);
+            }
+        }
+        else if (CanAdvanceCampaignResult())
         {
             ContinueCampaign();
         }
@@ -4994,11 +5969,23 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bTitleScreenVisible = false;
     bMissionBriefingVisible = false;
     bPauseMenuVisible = false;
+    bOnlineLocalMenuVisible = false;
     bTechnologyPanelVisible = false;
     bMatchResultVisible = true;
     bCampaignResult = false;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = Outcome;
+    if (GetNetMode() != NM_Client)
+    {
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        if (Bridge != nullptr && Bridge->GetSimulation() != nullptr)
+        {
+            PresentedFinalTick = Bridge->GetSimulation()->CurrentTick();
+        }
+    }
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
     FString Message =
@@ -5016,18 +6003,47 @@ void AEchoesPlayerController::NotifyMatchFinished(
     {
         Message = TEXT("DEFEAT — your Command Core has fallen.");
     }
-    Message += CanReturnCompletedSkirmishToOperations()
-        ? TEXT(" Press Enter or controller A to return to Operations, or R to restart.")
-        : TEXT(" Press R to restart.");
+    const bool bOnlineResult = IsOnlineMatchResult();
+    if (bOnlineResult && GetNetMode() == NM_ListenServer)
+    {
+        if (AEchoesGameMode* GameMode =
+                GetWorld() != nullptr
+                    ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
+                    : nullptr)
+        {
+            GameMode->NotifyNetworkMatchFinished();
+        }
+        if (!bNetworkResultExitEnabled &&
+            !GetWorldTimerManager().IsTimerActive(
+                NetworkResultAcknowledgementTimer))
+        {
+            GetWorldTimerManager().SetTimer(
+                NetworkResultAcknowledgementTimer,
+                this,
+                &AEchoesPlayerController::AllowHostNetworkResultExitAfterTimeout,
+                10.0f,
+                false);
+        }
+    }
+    Message += bOnlineResult
+        ? CanLeaveNetworkMatchToOnlineMenu()
+            ? TEXT(" Press Enter, controller A, or R to leave for the Online 1v1 menu.")
+            : TEXT(" Final result delivery is being confirmed; the Online menu will unlock shortly.")
+        : CanReturnCompletedSkirmishToOperations()
+            ? TEXT(" Press Enter or controller A to return to Operations, or R to restart.")
+            : TEXT(" Press R to restart.");
     SetStatusMessage(Message, 3600.0f);
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u primaryAction=%s keyboardRestart=true"),
+        TEXT("[ECHOES_RESULT_PRESENTED] outcome=%u primaryAction=%s keyboardRestart=%s"),
         static_cast<uint8>(Outcome),
-        CanReturnCompletedSkirmishToOperations()
+        bOnlineResult
+            ? TEXT("online_menu")
+        : CanReturnCompletedSkirmishToOperations()
             ? TEXT("return_to_operations")
-            : TEXT("restart"));
+            : TEXT("restart"),
+        bOnlineResult ? TEXT("false") : TEXT("true"));
 }
 
 void AEchoesPlayerController::NotifyCampaignPrologueFinished(
@@ -6662,9 +7678,11 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
     BindPressed(TEXT("ContinueCampaign"), &AEchoesPlayerController::ContinueCampaign);
     BindPressed(TEXT("RequestNewCampaign"), &AEchoesPlayerController::RequestNewCampaign);
+    BindPressed(TEXT("LeaveOnlineMatch"), &AEchoesPlayerController::LeaveOnlineMatch);
     BindPressed(TEXT("RequestCampaignRestore"), &AEchoesPlayerController::RequestCampaignRestore);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
+    BindPressed(TEXT("OpenOnlineFrontDoor"), &AEchoesPlayerController::OpenOnlineFrontDoor);
     BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);
     BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
@@ -9116,8 +10134,14 @@ void AEchoesPlayerController::GuardAtCursor()
 
 void AEchoesPlayerController::QuickSaveScenario()
 {
-    if (IsModalOverlayVisible())
+    if (IsModalOverlayVisible() || IsActiveOnlineNetworkMatch())
     {
+        if (IsActiveOnlineNetworkMatch())
+        {
+            SetStatusMessage(
+                TEXT("[ONLINE_SAVE_DISABLED] Online authority state cannot be written to a local checkpoint."),
+                5.0f);
+        }
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -9138,8 +10162,14 @@ void AEchoesPlayerController::QuickSaveScenario()
 
 void AEchoesPlayerController::QuickLoadScenario()
 {
-    if (IsModalOverlayVisible())
+    if (IsModalOverlayVisible() || IsActiveOnlineNetworkMatch())
     {
+        if (IsActiveOnlineNetworkMatch())
+        {
+            SetStatusMessage(
+                TEXT("[ONLINE_LOAD_DISABLED] A local checkpoint cannot replace online authority state."),
+                5.0f);
+        }
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -9613,6 +10643,14 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 
 void AEchoesPlayerController::ToggleTechnologyPanel()
 {
+    if (IsActiveOnlineNetworkMatch() ||
+        IsOpponentReconnectGraceActive())
+    {
+        SetStatusMessage(
+            TEXT("ONLINE MATCH — the Technology Archive does not pause or replace authority play."),
+            5.0f);
+        return;
+    }
     if (bTitleScreenVisible || bMissionBriefingVisible ||
         bPauseMenuVisible || bMatchResultVisible)
     {
@@ -9745,6 +10783,68 @@ bool AEchoesPlayerController::HandleTechnologyPanelPointer(
     return true;
 }
 
+bool AEchoesPlayerController::HandleOnlineFrontDoorPointer(
+    const FVector2D& ScreenPosition,
+    const FVector2D& ViewportSize,
+    float HudScale)
+{
+    UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+    if (EchoesGameInstance == nullptr || !IsOnlineFrontDoorVisible())
+    {
+        return false;
+    }
+    const FEchoesOnlineFrontDoorLayout Layout =
+        FEchoesOnlineFrontDoorLayout::Build(ViewportSize, HudScale);
+    const EEchoesOnlineFrontDoorState State =
+        EchoesGameInstance->GetOnlineState();
+    if (State == EEchoesOnlineFrontDoorState::JoinSetup)
+    {
+        if (Layout.HostButton.IsInsideOrOn(ScreenPosition))
+        {
+            EchoesGameInstance->FocusOnlineAction(0);
+            ConfirmOnlineFrontDoorAction();
+        }
+        else if (Layout.EndpointField.IsInsideOrOn(ScreenPosition))
+        {
+            EchoesGameInstance->FocusOnlineAction(1);
+        }
+        else if (Layout.JoinButton.IsInsideOrOn(ScreenPosition))
+        {
+            EchoesGameInstance->FocusOnlineAction(2);
+            ConfirmOnlineFrontDoorAction();
+        }
+        else if (Layout.BackButton.IsInsideOrOn(ScreenPosition))
+        {
+            EchoesGameInstance->FocusOnlineAction(3);
+            CancelOnlineFrontDoor();
+        }
+        return true;
+    }
+    if (State == EEchoesOnlineFrontDoorState::Failed)
+    {
+        if (Layout.RetryButton.IsInsideOrOn(ScreenPosition))
+        {
+            EchoesGameInstance->RetryOnlineFrontDoor(this);
+        }
+        else if (Layout.BackButton.IsInsideOrOn(ScreenPosition))
+        {
+            CancelOnlineFrontDoor();
+        }
+        return true;
+    }
+    if (State == EEchoesOnlineFrontDoorState::Hosting &&
+        Layout.EndpointField.IsInsideOrOn(ScreenPosition))
+    {
+        CopyOnlineHostEndpoint();
+        return true;
+    }
+    if (Layout.BackButton.IsInsideOrOn(ScreenPosition))
+    {
+        CancelOnlineFrontDoor();
+    }
+    return true;
+}
+
 bool AEchoesPlayerController::HandleModalOverlayPointer(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize,
@@ -9758,6 +10858,35 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
     {
         SetStatusMessage(
             TEXT("[VIEWPORT_UNAVAILABLE] Overlay selection could not resolve the screen."));
+        return true;
+    }
+
+    if (bOnlineLocalMenuVisible)
+    {
+        const FEchoesOnlineLocalMenuLayout Layout =
+            FEchoesOnlineLocalMenuLayout::Build(ViewportSize, HudScale);
+        if (Layout.ResumeButton.IsInsideOrOn(ScreenPosition))
+        {
+            TogglePauseMenu();
+        }
+        else if (Layout.LeaveButton.IsInsideOrOn(ScreenPosition))
+        {
+            LeaveOnlineMatch();
+        }
+        return true;
+    }
+
+    if (IsOnlineFrontDoorVisible())
+    {
+        return HandleOnlineFrontDoorPointer(
+            ScreenPosition, ViewportSize, HudScale);
+    }
+
+    if (bTitleScreenVisible &&
+        FEchoesOnlineFrontDoorLayout::BuildTitleEntry(
+            ViewportSize, HudScale).IsInsideOrOn(ScreenPosition))
+    {
+        OpenOnlineFrontDoor();
         return true;
     }
 
@@ -9851,6 +10980,15 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
     {
         const FEchoesResultOverlayLayout Layout =
             FEchoesResultOverlayLayout::Build(ViewportSize, HudScale);
+        if (IsOnlineMatchResult())
+        {
+            if (CanLeaveNetworkMatchToOnlineMenu() &&
+                Layout.FullButton.IsInsideOrOn(ScreenPosition))
+            {
+                LeaveOnlineMatch();
+            }
+            return true;
+        }
         const bool bReplayConflict = bCampaignResult &&
             CampaignCommitStatus ==
                 EEchoesCampaignCommitStatus::ReplayConflict;
@@ -9894,6 +11032,31 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
 
 void AEchoesPlayerController::TogglePauseMenu()
 {
+    if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
+        EchoesGameInstance != nullptr &&
+        EchoesGameInstance->GetOnlineState() !=
+            EEchoesOnlineFrontDoorState::Idle)
+    {
+        CancelOnlineFrontDoor();
+        return;
+    }
+    if (IsActiveOnlineNetworkMatch())
+    {
+        bOnlineLocalMenuVisible = !bOnlineLocalMenuVisible;
+        SetIgnoreMoveInput(bOnlineLocalMenuVisible);
+        SetIgnoreLookInput(bOnlineLocalMenuVisible);
+        SetStatusMessage(
+            bOnlineLocalMenuVisible
+                ? TEXT("ONLINE MATCH MENU — local controls are held; the authority state is unchanged. Enter or Escape resumes; choose Leave Online to exit.")
+                : TEXT("ONLINE MATCH CONTROLS RESUMED."),
+            bOnlineLocalMenuVisible ? 3600.0f : 3.0f);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ONLINE_LOCAL_MENU] visible=%s authorityPauseChanged=false restart=false"),
+            bOnlineLocalMenuVisible ? TEXT("true") : TEXT("false"));
+        return;
+    }
     if (bTechnologyPanelVisible)
     {
         ToggleTechnologyPanel();
@@ -9971,6 +11134,27 @@ void AEchoesPlayerController::RestartScenario()
             LogEchoes,
             Display,
             TEXT("[ECHOES_RESTART_SUPPRESSED] reason=research_chord modifier=shift"));
+        return;
+    }
+    if (IsOnlineMatchResult())
+    {
+        if (CanLeaveNetworkMatchToOnlineMenu())
+        {
+            LeaveOnlineMatch();
+        }
+        else
+        {
+            SetStatusMessage(
+                TEXT("ONLINE RESULT — restart is disabled; waiting briefly for final delivery confirmation."),
+                4.0f);
+        }
+        return;
+    }
+    if (IsActiveOnlineNetworkMatch())
+    {
+        SetStatusMessage(
+            TEXT("ONLINE MATCH — restart is disabled. Open the Online Match menu to resume or leave."),
+            5.0f);
         return;
     }
     if (bTitleScreenVisible || bMissionBriefingVisible)

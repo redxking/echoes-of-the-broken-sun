@@ -20,6 +20,7 @@ class ASkyLight;
 enum class EEchoesCommandMarkerType : uint8;
 enum class EEchoesCityDistrict : uint8;
 class UEchoesSimulationSubsystem;
+class UEchoesGameInstance;
 
 /** RTS selection, faction choice, and context-order input for the local player. */
 UCLASS(NotBlueprintable)
@@ -35,6 +36,7 @@ public:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void PlayerTick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
+    virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 
     /** Server-only connection-to-seat binding for the initial 1v1 slice. */
     void ConfigureNetworkSeat(uint8 Seat);
@@ -44,6 +46,17 @@ public:
         uint64 DisconnectTick,
         bool bMatchWasStarted);
     void ConfigureNetworkResumeCredential(const FString& Credential);
+    /** Sends a stable server rejection through the player-facing failure path. */
+    void RejectNetworkSessionFromServer(const FString& StableReason);
+    void PresentNetworkReconnectGrace(float GraceSeconds);
+    void ClearNetworkReconnectGrace();
+    void NotifyNetworkOpponentForfeit(
+        uint64 FinalTick,
+        const FString& StableReason,
+        bool bWaitForResultRecipient);
+    void NotifyNetworkHostSurrender(
+        uint64 FinalTick,
+        const FString& StableReason);
     [[nodiscard]] uint64 GetLastAcceptedNetworkBatchId() const
     {
         return LastAcceptedNetworkBatchId;
@@ -159,6 +172,11 @@ public:
         EEchoesFinalResolution RecordedResolution,
         EEchoesCampaignCommitStatus CommitStatus);
     void PresentTitleScreen();
+    void OpenOnlineFrontDoor();
+    void ConfirmOnlineFrontDoorAction();
+    void CancelOnlineFrontDoor();
+    void LeaveOnlineMatch();
+    void BeginHostedNetworkMatchPresentation();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
     void ConfirmMissionBriefing();
@@ -196,6 +214,10 @@ public:
         const FVector2D& ScreenPosition,
         const FVector2D& ViewportSize,
         float HudScale);
+    bool HandleOnlineFrontDoorPointer(
+        const FVector2D& ScreenPosition,
+        const FVector2D& ViewportSize,
+        float HudScale);
     [[nodiscard]] FString GetLocalFactionLabel() const;
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
@@ -216,6 +238,24 @@ public:
     [[nodiscard]] bool IsSkirmishSetupVisible() const;
     [[nodiscard]] bool IsSkirmishDeploymentSummaryVisible() const;
     [[nodiscard]] bool CanReturnCompletedSkirmishToOperations() const;
+    [[nodiscard]] bool CanLeaveNetworkMatchToOnlineMenu() const;
+    [[nodiscard]] bool IsOnlineMatchResult() const;
+    [[nodiscard]] bool IsActiveOnlineNetworkMatch() const;
+    [[nodiscard]] bool IsOnlineFrontDoorVisible() const;
+    [[nodiscard]] bool IsOnlineLocalMenuVisible() const
+    {
+        return bOnlineLocalMenuVisible;
+    }
+    [[nodiscard]] bool IsNetworkResultExitEnabled() const
+    {
+        return bNetworkResultExitEnabled;
+    }
+    [[nodiscard]] uint64 GetPresentedFinalTick() const
+    {
+        return PresentedFinalTick;
+    }
+    [[nodiscard]] bool IsOpponentReconnectGraceActive() const;
+    [[nodiscard]] int32 GetOpponentReconnectSecondsRemaining() const;
     [[nodiscard]] const FEchoesSkirmishSetup&
     GetPendingSkirmishSetup() const
     {
@@ -249,7 +289,10 @@ public:
     {
         return bTitleScreenVisible || bMissionBriefingVisible ||
                bPauseMenuVisible || bTechnologyPanelVisible ||
-               bMatchResultVisible;
+               bMatchResultVisible || bOnlineLocalMenuVisible ||
+               IsOpponentReconnectGraceActive() ||
+               IsOnlineFrontDoorVisible() ||
+               (bNetworkCompatibilityAccepted && !bNetworkMatchStarted);
     }
     [[nodiscard]] echoes::sim::MatchOutcome GetPresentedMatchOutcome() const
     {
@@ -327,10 +370,21 @@ private:
     UFUNCTION(Server, Reliable)
     void ServerSubmitNetworkResumeCredential(const FString& Credential);
 
+    [[nodiscard]] UEchoesGameInstance* GetEchoesGameInstance() const;
+    bool HandleOnlineEndpointKey(const FInputKeyEventArgs& Params);
+    void CopyOnlineHostEndpoint();
+#if !UE_BUILD_SHIPPING
+    void StartOnlineFrontDoorHostSmoke();
+    void StartOnlineFrontDoorClientSmoke();
+#endif
+
     UFUNCTION(Client, Reliable)
     void ClientReceiveNetworkResumeCredentialResult(
         bool bAccepted,
         const FString& StableReason);
+
+    UFUNCTION(Client, Reliable)
+    void ClientReceiveOnlineSessionFailure(const FString& StableReason);
 
     UFUNCTION(Server, Reliable)
     void ServerSubmitCompatibilityHello(const TArray<uint8>& Packet);
@@ -348,6 +402,9 @@ private:
 
     UFUNCTION(Server, Reliable)
     void ServerSetNetworkReady();
+
+    UFUNCTION(Server, Reliable)
+    void ServerLeaveNetworkMatch();
 
     UFUNCTION(Client, Reliable)
     void ClientReceiveNetworkLobbyState(
@@ -404,6 +461,13 @@ private:
         uint64 FinalSnapshotId,
         uint64 FinalScopedDigest);
 
+    UFUNCTION(Server, Reliable)
+    void ServerAcknowledgeNetworkMatchResult(
+        uint8 Outcome,
+        uint64 FinalTick,
+        uint64 FinalSnapshotId,
+        uint64 FinalScopedDigest);
+
     UFUNCTION(Client, Reliable)
     void ClientReceiveCommandExecution(
         bool bExecuted,
@@ -433,8 +497,9 @@ private:
 
     void SubmitNetworkResumeCredential();
     void SubmitNetworkCompatibilityHello();
+    void RejectNetworkCompatibility(const FString& StableReason);
     void BeginNetworkMatch();
-    void ResumeNetworkMatch();
+    bool ResumeNetworkMatch();
     void SendScopedKeyframe();
     void SendScopedUpdate();
     bool BuildNextScopedKeyframe(
@@ -471,6 +536,19 @@ private:
             echoes::sim::ResearchType::None);
     void PublishNetworkMatchResultIfFinished(
         const echoes::sim::net::ScopedViewKeyframe& FinalView);
+    void StartNetworkHandshakeTimeout();
+    void StartNetworkReadyTimeout();
+    void ClearNetworkConnectionTimeouts();
+    void HandleNetworkHandshakeTimeout();
+    void HandleNetworkReadyTimeout();
+    void HandlePlayerOnlineFailure(
+        const FString& StableReason,
+        bool bPreserveReconnect);
+    void BeginHostNetworkResultDeliveryWait();
+    void AllowHostNetworkResultExitAfterTimeout();
+    void EnableHostNetworkResultExit(
+        bool bAcknowledged,
+        const FString& StableReason);
     bool SyncNetworkPresentation(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe);
     [[nodiscard]] static echoes::sim::Entity BuildNetworkPresentationEntity(
@@ -623,6 +701,7 @@ private:
     bool bTitleScreenVisible = false;
     bool bMissionBriefingVisible = false;
     bool bPauseMenuVisible = false;
+    bool bOnlineLocalMenuVisible = false;
     bool bTechnologyPanelVisible = false;
     bool bTechnologyPanelWasScenarioPaused = false;
     bool bKeyboardTargetingEnabled = false;
@@ -677,10 +756,20 @@ private:
     FString NetworkResumeCredential;
     bool bNetworkMatchResultSent = false;
     bool bNetworkMatchResultReceived = false;
+    bool bNetworkMatchResultAcknowledged = false;
+    bool bNetworkResultExitEnabled = false;
+    bool bOpponentReconnectGraceActive = false;
+    bool bReturnHostToOnlineAfterResultDelivery = false;
     bool bNetworkMatchCommandSubmitted = false;
     bool bNetworkMatchBatchAdmitted = false;
     bool bNetworkMatchSmokeCompletionSent = false;
     echoes::network::ScopedViewState NetworkViewState{};
+    uint8 NetworkSentResultOutcome = 0;
+    uint64 NetworkSentResultTick = 0;
+    uint64 NetworkSentResultSnapshotId = 0;
+    uint64 NetworkSentResultScopedDigest = 0;
+    uint64 PresentedFinalTick = 0;
+    double OpponentReconnectExpiresAtSeconds = 0.0;
     std::optional<echoes::sim::net::ScopedViewKeyframe>
         LastSentNetworkKeyframe{};
     TMap<uint64, uint64> PendingNetworkSnapshotDigests;
@@ -704,6 +793,9 @@ private:
     FTimerHandle NetworkClientExitTimer;
     FTimerHandle NetworkServerExitTimer;
     FTimerHandle NetworkFaultDeliveryTimer;
+    FTimerHandle NetworkHandshakeTimer;
+    FTimerHandle NetworkReadyTimer;
+    FTimerHandle NetworkResultAcknowledgementTimer;
     TArray<uint8> PendingNetworkFaultDelta;
     double LastScopedRecoveryRequestClientSeconds = -1000.0;
     double LastScopedRecoveryRequestServerSeconds = -1000.0;

@@ -43,6 +43,10 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetupModel final
     static constexpr int32 MapHeightTiles = 64;
 
     [[nodiscard]] static FEchoesSkirmishSetup DefaultSetup();
+    /** Immutable ruleset used by the current direct-connect Online 1v1 path. */
+    [[nodiscard]] static FEchoesSkirmishSetup CanonicalOnlineSetup();
+    [[nodiscard]] static bool IsCanonicalOnlineSetup(
+        const FEchoesSkirmishSetup& Setup);
     [[nodiscard]] static bool Validate(
         const FEchoesSkirmishSetup& Setup,
         FString& OutError);

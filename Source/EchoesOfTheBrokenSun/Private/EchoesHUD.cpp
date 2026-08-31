@@ -9,9 +9,11 @@
 #include "EchoesEntityView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesGameInstance.h"
 #include "EchoesHudLayout.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
+#include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSkirmishOverlayLayout.h"
 #include "EchoesSkirmishSetup.h"
@@ -179,12 +181,19 @@ void AEchoesHUD::DrawHUD()
     const FLinearColor SecondaryColor =
         bHighContrast ? FLinearColor::White : FLinearColor(0.73f, 0.76f, 0.82f);
 
+    if (EchoesController != nullptr &&
+        EchoesController->IsOnlineFrontDoorVisible())
+    {
+        DrawOnlineFrontDoor(EchoesController, Settings);
+        return;
+    }
+
     if (Canvas != nullptr && EchoesController != nullptr &&
         EchoesController->IsNetworkCompatibilityAccepted() &&
         !EchoesController->IsNetworkMatchStarted())
     {
         const float LobbyWidth = FMath::Min(Canvas->ClipX - 80.0f, 720.0f);
-        const float LobbyHeight = 250.0f;
+        const float LobbyHeight = 286.0f;
         const float LobbyX = (Canvas->ClipX - LobbyWidth) * 0.5f;
         const float LobbyY = (Canvas->ClipY - LobbyHeight) * 0.5f;
         DrawRect(PanelColor, LobbyX, LobbyY, LobbyWidth, LobbyHeight);
@@ -222,6 +231,14 @@ void AEchoesHUD::DrawHUD()
             GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
             1.0f * HudScale,
             false);
+        DrawText(
+            TEXT("[ESCAPE]  CANCEL TO ONLINE MENU"),
+            SecondaryColor,
+            LobbyX + 32.0f,
+            LobbyY + 226.0f,
+            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            0.88f * HudScale,
+            false);
         return;
     }
 
@@ -235,6 +252,7 @@ void AEchoesHUD::DrawHUD()
         {
             DrawTitleScreen(EchoesController, Settings);
         }
+        DrawOnlineTitleEntry(Settings);
         return;
     }
 
@@ -860,8 +878,14 @@ void AEchoesHUD::DrawHUD()
         EchoesController,
         Settings,
         PlayerView.has_value() ? &*PlayerView : nullptr);
+    DrawNetworkReconnectBanner(EchoesController, Settings);
     DrawSelectionRectangle();
-    if (EchoesController != nullptr && EchoesController->IsTechnologyPanelVisible())
+    if (EchoesController != nullptr &&
+        EchoesController->IsOnlineLocalMenuVisible())
+    {
+        DrawOnlineLocalMenu(EchoesController, Settings);
+    }
+    else if (EchoesController != nullptr && EchoesController->IsTechnologyPanelVisible())
     {
         DrawTechnologyPanel(EchoesController, Bridge, Settings);
     }
@@ -873,6 +897,383 @@ void AEchoesHUD::DrawHUD()
     {
         DrawMatchResult(EchoesController, Bridge, Settings);
     }
+}
+
+void AEchoesHUD::DrawOnlineTitleEntry(
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr)
+    {
+        return;
+    }
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FBox2D Button = FEchoesOnlineFrontDoorLayout::BuildTitleEntry(
+        FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor TextColor = bHighContrast
+        ? FLinearColor::Black
+        : FLinearColor(0.0f, 0.06f, 0.09f);
+    DrawRect(
+        Accent,
+        Button.Min.X,
+        Button.Min.Y,
+        Button.GetSize().X,
+        Button.GetSize().Y);
+    DrawText(
+        TEXT("[F8 / GAMEPAD VIEW]  ONLINE 1v1  //  FIXED GLASS SCAR"),
+        TextColor,
+        Button.Min.X + 16.0f * HudScale,
+        Button.Min.Y + 12.0f * HudScale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.82f * HudScale,
+        false);
+}
+
+void AEchoesHUD::DrawOnlineFrontDoor(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr)
+    {
+        return;
+    }
+    const UEchoesGameInstance* EchoesGameInstance =
+        GetGameInstance<UEchoesGameInstance>();
+    if (EchoesGameInstance == nullptr)
+    {
+        return;
+    }
+    const EEchoesOnlineFrontDoorState State =
+        EchoesGameInstance->GetOnlineState();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesOnlineFrontDoorLayout Layout =
+        FEchoesOnlineFrontDoorLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
+    const FLinearColor Backdrop = bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        : FLinearColor(0.005f, 0.012f, 0.026f, 0.992f);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body = bHighContrast
+        ? FLinearColor::White
+        : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted = bHighContrast
+        ? FLinearColor(0.9f, 0.9f, 0.9f)
+        : FLinearColor(0.55f, 0.64f, 0.73f);
+    const FLinearColor ErrorColor = bHighContrast
+        ? FLinearColor(1.0f, 0.85f, 0.2f)
+        : FLinearColor(1.0f, 0.38f, 0.22f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float ContentScale = Layout.ContentScale;
+    const float TextScale = Layout.TextScale;
+
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.76f),
+             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, Layout.Size.X, Layout.Size.Y);
+    DrawLine(Left, Top, Left + Layout.Size.X, Top, Accent, 4.0f);
+    DrawLine(Left, Top + Layout.Size.Y, Left + Layout.Size.X,
+             Top + Layout.Size.Y, Accent, 4.0f);
+    DrawText(
+        State == EEchoesOnlineFrontDoorState::Hosting
+            ? TEXT("HOSTING ONLINE 1v1")
+        : State == EEchoesOnlineFrontDoorState::Connecting
+            ? TEXT("CONNECTING TO HOST")
+        : State == EEchoesOnlineFrontDoorState::Failed
+            ? TEXT("CONNECTION FAILED")
+            : TEXT("ONLINE 1v1 // DIRECT CONNECT"),
+        State == EEchoesOnlineFrontDoorState::Failed ? ErrorColor : Accent,
+        Left + 46.0f,
+        Top + 38.0f * ContentScale,
+        SmallFont,
+        1.48f * TextScale,
+        false);
+    DrawText(
+        TEXT("FIXED RULES  //  GLASS SCAR  //  MERIDIAN vs KHARUUN  //  STANDARD RESOURCES"),
+        Body,
+        Left + 46.0f,
+        Top + 82.0f * ContentScale,
+        SmallFont,
+        0.78f * TextScale,
+        false);
+    DrawText(
+        TEXT("Direct connection only. The first release has no matchmaking, invitations, or NAT traversal."),
+        Muted,
+        Left + 46.0f,
+        Top + 112.0f * ContentScale,
+        SmallFont,
+        0.74f * TextScale,
+        false);
+
+    const auto DrawControl = [this, Accent, Body, Muted,
+                              SmallFont, TextScale, ContentScale](
+                                 const FBox2D& Box,
+                                 const FString& Label,
+                                 bool bFocused,
+                                 bool bPrimary)
+    {
+        const FLinearColor Fill = bFocused || bPrimary
+            ? Accent
+            : FLinearColor(0.12f, 0.18f, 0.24f, 0.72f);
+        const FLinearColor LabelColor = bFocused || bPrimary
+            ? FLinearColor(0.0f, 0.06f, 0.09f)
+            : Body;
+        DrawRect(Fill, Box.Min.X, Box.Min.Y,
+                 Box.GetSize().X, Box.GetSize().Y);
+        if (!bFocused && !bPrimary)
+        {
+            DrawLine(Box.Min.X, Box.Max.Y, Box.Max.X, Box.Max.Y,
+                     Muted, 1.5f);
+        }
+        DrawText(Label, LabelColor,
+                 Box.Min.X + 18.0f * ContentScale,
+                 Box.Min.Y + 15.0f * ContentScale,
+                 SmallFont, 0.86f * TextScale, false);
+    };
+
+    if (State == EEchoesOnlineFrontDoorState::JoinSetup)
+    {
+        const int32 Focus = EchoesGameInstance->GetOnlineFocusIndex();
+        DrawControl(Layout.HostButton,
+                    TEXT("HOST FIXED-RULES MATCH  //  PORT 7777"),
+                    Focus == 0, false);
+        const FString Endpoint = EchoesGameInstance->GetDirectConnectEndpoint();
+        DrawControl(
+            Layout.EndpointField,
+            FString::Printf(
+                TEXT("JOIN ADDRESS  //  %s%s"),
+                *Endpoint,
+                Focus == 1 ? TEXT("_") : TEXT("")),
+            Focus == 1,
+            false);
+        DrawControl(Layout.JoinButton,
+                    TEXT("JOIN HOST  //  ENTER OR CLICK"),
+                    Focus == 2, false);
+        DrawText(
+            Focus == 1
+                ? TEXT("TYPE OR COMMAND+V  //  BACKSPACE EDITS  //  HOSTNAME OR IPv4:PORT")
+                : TEXT("UP / DOWN OR D-PAD SELECTS  //  ENTER / A CONFIRMS"),
+            Muted,
+            Left + 52.0f,
+            Top + 398.0f * ContentScale,
+            SmallFont,
+            0.76f * TextScale,
+            false);
+        DrawControl(Layout.BackButton,
+                    TEXT("ESCAPE / GAMEPAD B / CLICK: BACK TO OPERATIONS"),
+                    Focus == 3, false);
+        return;
+    }
+
+    if (State == EEchoesOnlineFrontDoorState::Failed)
+    {
+        DrawText(
+            EchoesGameInstance->GetOnlineFailureMessage(),
+            ErrorColor,
+            Left + 52.0f,
+            Top + 188.0f * ContentScale,
+            SmallFont,
+            0.92f * TextScale,
+            false);
+        DrawText(
+            FString::Printf(
+                TEXT("RETAINED ADDRESS  //  %s"),
+                *EchoesGameInstance->GetDirectConnectEndpoint()),
+            Body,
+            Left + 52.0f,
+            Top + 246.0f * ContentScale,
+            SmallFont,
+            0.80f * TextScale,
+            false);
+        DrawControl(Layout.RetryButton,
+                    EchoesGameInstance->HasUsableReconnectContext()
+                        ? FString::Printf(
+                              TEXT("ENTER / A / CLICK: REJOIN MATCH  //  %d SEC"),
+                              EchoesGameInstance->GetReconnectSecondsRemaining())
+                        : TEXT("ENTER / A / CLICK: RETRY ONLINE MENU"),
+                    true, true);
+        DrawControl(Layout.BackButton,
+                    TEXT("ESCAPE / GAMEPAD B / CLICK: BACK TO OPERATIONS"),
+                    false, false);
+        return;
+    }
+
+    DrawText(
+        State == EEchoesOnlineFrontDoorState::Hosting
+            ? TEXT("Waiting for one opponent to connect, pass compatibility, and ready.")
+            : TEXT("Contacting the host and validating the exact build, map, rules, and settings."),
+        Body,
+        Left + 52.0f,
+        Top + 194.0f * ContentScale,
+        SmallFont,
+        0.94f * TextScale,
+        false);
+    if (State == EEchoesOnlineFrontDoorState::Hosting)
+    {
+        const FString HostEndpoint =
+            EchoesGameInstance->GetHostShareEndpoint().IsEmpty()
+                ? TEXT("LAN ADDRESS UNAVAILABLE")
+                : EchoesGameInstance->GetHostShareEndpoint();
+        DrawControl(
+            Layout.EndpointField,
+            FString::Printf(
+                TEXT("ENTER OR CLICK TO COPY LAN ADDRESS  //  %s"),
+                *HostEndpoint),
+            false,
+            !EchoesGameInstance->GetHostShareEndpoint().IsEmpty());
+        DrawText(
+            TEXT("LAN/direct only. macOS firewall, router policy, and Internet NAT can still block the connection."),
+            Muted,
+            Left + 52.0f,
+            Top + 322.0f * ContentScale,
+            SmallFont,
+            0.76f * TextScale,
+            false);
+    }
+    else
+    {
+        DrawText(
+            FString::Printf(
+                TEXT("DESTINATION  //  %s"),
+                *EchoesGameInstance->GetDirectConnectEndpoint()),
+            Muted,
+            Left + 52.0f,
+            Top + 246.0f * ContentScale,
+            SmallFont,
+            0.80f * TextScale,
+            false);
+    }
+    DrawControl(
+        Layout.BackButton,
+        TEXT("ESCAPE / GAMEPAD B / CLICK: CANCEL TO ONLINE MENU"),
+        false,
+        false);
+}
+
+void AEchoesHUD::DrawNetworkReconnectBanner(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsOpponentReconnectGraceActive())
+    {
+        return;
+    }
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const int32 Remaining =
+        EchoesController->GetOpponentReconnectSecondsRemaining();
+    const int32 Minutes = Remaining / 60;
+    const int32 Seconds = Remaining % 60;
+    const float Width = FMath::Min(Canvas->ClipX - 40.0f, 760.0f);
+    const float Height = 54.0f * HudScale;
+    const float Left = (Canvas->ClipX - Width) * 0.5f;
+    const float Top = 84.0f * HudScale;
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(1.0f, 0.58f, 0.18f);
+    DrawRect(
+        bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+            : FLinearColor(0.04f, 0.015f, 0.005f, 0.96f),
+        Left,
+        Top,
+        Width,
+        Height);
+    DrawLine(Left, Top, Left + Width, Top, Accent, 3.0f);
+    DrawText(
+        FString::Printf(
+            TEXT("OPPONENT DISCONNECTED  //  AUTHORITY PAUSED  //  RECONNECT %d:%02d"),
+            Minutes,
+            Seconds),
+        Accent,
+        Left + 20.0f,
+        Top + 17.0f * HudScale,
+        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        0.86f * HudScale,
+        false);
+}
+
+void AEchoesHUD::DrawOnlineLocalMenu(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsOnlineLocalMenuVisible())
+    {
+        return;
+    }
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesOnlineLocalMenuLayout Layout =
+        FEchoesOnlineLocalMenuLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
+    const FLinearColor Accent = bHighContrast
+        ? FLinearColor(1.0f, 0.9f, 0.1f)
+        : FLinearColor(0.15f, 0.88f, 1.0f);
+    const FLinearColor Body = bHighContrast
+        ? FLinearColor::White
+        : FLinearColor(0.84f, 0.9f, 0.95f);
+    const FLinearColor Muted = bHighContrast
+        ? FLinearColor(0.9f, 0.9f, 0.9f)
+        : FLinearColor(0.57f, 0.67f, 0.76f);
+    const FLinearColor Backdrop = bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        : FLinearColor(0.005f, 0.012f, 0.026f, 0.985f);
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    const float Left = Layout.Origin.X;
+    const float Top = Layout.Origin.Y;
+    const float Scale = Layout.ContentScale;
+    DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.72f),
+             0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawRect(Backdrop, Left, Top, Layout.Size.X, Layout.Size.Y);
+    DrawLine(Left, Top, Left + Layout.Size.X, Top, Accent, 4.0f);
+    DrawText(TEXT("ONLINE MATCH"), Accent,
+             Left + 42.0f, Top + 36.0f * Scale,
+             SmallFont, 1.55f * Layout.TextScale, false);
+    DrawText(
+        EchoesController->IsOpponentReconnectGraceActive()
+            ? TEXT("The authority is paused for the bounded reconnect grace period.")
+            : TEXT("This menu is local only. The authoritative match continues for both players."),
+        Body,
+        Left + 42.0f,
+        Top + 94.0f * Scale,
+        SmallFont,
+        0.90f * Layout.TextScale,
+        false);
+    DrawText(
+        TEXT("Restart is disabled in online play. Leaving ends your connection to this match."),
+        Muted,
+        Left + 42.0f,
+        Top + 132.0f * Scale,
+        SmallFont,
+        0.80f * Layout.TextScale,
+        false);
+    DrawRect(Accent,
+             Layout.ResumeButton.Min.X, Layout.ResumeButton.Min.Y,
+             Layout.ResumeButton.GetSize().X, Layout.ResumeButton.GetSize().Y);
+    DrawText(TEXT("ENTER / ESCAPE / P / CLICK: RESUME"),
+             FLinearColor(0.0f, 0.06f, 0.09f),
+             Layout.ResumeButton.Min.X + 18.0f * Scale,
+             Layout.ResumeButton.Min.Y + 15.0f * Scale,
+             SmallFont, 0.90f * Layout.TextScale, false);
+    DrawRect(FLinearColor(0.55f, 0.12f, 0.08f, 0.92f),
+             Layout.LeaveButton.Min.X, Layout.LeaveButton.Min.Y,
+             Layout.LeaveButton.GetSize().X, Layout.LeaveButton.GetSize().Y);
+    DrawText(TEXT("F10 / MENU / GAMEPAD X / CLICK: LEAVE ONLINE MATCH"), Body,
+             Layout.LeaveButton.Min.X + 18.0f * Scale,
+             Layout.LeaveButton.Min.Y + 15.0f * Scale,
+             SmallFont, 0.90f * Layout.TextScale, false);
 }
 
 void AEchoesHUD::DrawCommandDeck(
@@ -3541,6 +3942,7 @@ void AEchoesHUD::DrawMatchResult(
         EchoesController->CanAdvanceCampaignResult();
     const bool bCanReturnToOperations =
         EchoesController->CanReturnCompletedSkirmishToOperations();
+    const bool bOnlineResult = EchoesController->IsOnlineMatchResult();
     const bool bSevenAccountsResult = bCampaignResult &&
         EchoesController->GetPresentedCampaignOperation() ==
             EEchoesOperationMode::CampaignSevenAccounts;
@@ -3933,9 +4335,11 @@ void AEchoesHUD::DrawMatchResult(
         bHighContrast ? FLinearColor(0.9f, 0.9f, 0.9f)
                       : FLinearColor(0.56f, 0.65f, 0.74f);
     UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
-    const uint64 FinalTick = Bridge != nullptr && Bridge->GetSimulation() != nullptr
-                                 ? Bridge->GetSimulation()->CurrentTick()
-                                 : 0;
+    const uint64 FinalTick = bOnlineResult
+        ? EchoesController->GetPresentedFinalTick()
+        : Bridge != nullptr && Bridge->GetSimulation() != nullptr
+            ? Bridge->GetSimulation()->CurrentTick()
+            : 0;
 
     DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.78f), 0.0f, 0.0f,
              Canvas->ClipX, Canvas->ClipY);
@@ -4028,7 +4432,28 @@ void AEchoesHUD::DrawMatchResult(
         : FLinearColor(0.0f, 0.08f, 0.05f);
     const bool bHasDistinctPrimaryAction = bCanReturnToOperations ||
         bCampaignResultCanAdvance || bReplayConflict;
-    if (bHasDistinctPrimaryAction)
+    if (bOnlineResult)
+    {
+        DrawRect(
+            EchoesController->IsNetworkResultExitEnabled()
+                ? Accent
+                : FLinearColor(Accent.R, Accent.G, Accent.B, 0.45f),
+            Layout.FullButton.Min.X,
+            Layout.FullButton.Min.Y,
+            Layout.FullButton.GetSize().X,
+            Layout.FullButton.GetSize().Y);
+        DrawText(
+            EchoesController->IsNetworkResultExitEnabled()
+                ? TEXT("ENTER / A / R / CLICK: ONLINE MENU")
+                : TEXT("FINALIZING RESULT DELIVERY..."),
+            ButtonText,
+            Layout.FullButton.Min.X + 26.0f * ContentScale,
+            Layout.FullButton.Min.Y + 13.0f,
+            SmallFont,
+            0.90f * TextScale,
+            false);
+    }
+    else if (bHasDistinctPrimaryAction)
     {
         DrawRect(
             Accent,

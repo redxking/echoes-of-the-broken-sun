@@ -3842,6 +3842,53 @@ void TestNetworkProtocolAdmissionAndHardening() {
             DecodeStatus::PacketTooLarge);
 }
 
+void TestDeterministicNetworkForfeit() {
+    Simulation simulation({20, 20, 20, 0x464f5246454954ULL});
+    AddTwoPlayers(simulation, {500, 30}, {500, 30});
+    const EntityId hostCore = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(3, 3));
+    const EntityId remoteCore = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(16, 16));
+    const EntityId remoteSoldier = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(14, 16));
+    REQUIRE(hostCore != 0 && remoteCore != 0 && remoteSoldier != 0);
+    REQUIRE(simulation.Outcome() == MatchOutcome::Ongoing);
+
+    simulation.CaptureReplayBaseline();
+    Command pendingMove =
+        MakeCommand(5, 1, 1, CommandType::Move, remoteSoldier);
+    pendingMove.position = Vec2::FromTiles(10, 10);
+    REQUIRE(simulation.QueueCommand(pendingMove));
+    REQUIRE(simulation.ForfeitPlayer(1));
+    REQUIRE(simulation.Outcome() == MatchOutcome::Player0Victory);
+    REQUIRE(simulation.FindEntity(remoteCore) == nullptr);
+    REQUIRE(!simulation.ForfeitPlayer(1));
+
+    std::string replayError;
+    const ReplayRecord rejectedReplay = simulation.ExportReplay(&replayError);
+    REQUIRE(replayError == "replay export is disabled");
+    REQUIRE(rejectedReplay.version == 0);
+    REQUIRE(rejectedReplay.initialSnapshot.empty());
+    REQUIRE(rejectedReplay.commands.empty());
+
+    const Vec2 remotePosition = simulation.FindEntity(remoteSoldier)->position;
+    const std::uint64_t forfeitedChecksum = simulation.StateChecksum();
+    std::string snapshotError;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(simulation.SaveSnapshot(), &snapshotError);
+    REQUIRE(restored.has_value());
+    REQUIRE(snapshotError.empty());
+    REQUIRE(restored->Outcome() == MatchOutcome::Player0Victory);
+    REQUIRE(restored->StateChecksum() == forfeitedChecksum);
+    restored->Step(6);
+    REQUIRE(restored->FindEntity(remoteSoldier) != nullptr);
+    REQUIRE(restored->FindEntity(remoteSoldier)->position == remotePosition);
+    REQUIRE(restored->FindEntity(remoteSoldier)->order.type == OrderType::None);
+}
+
 }  // namespace
 
 int main() {
@@ -3902,6 +3949,8 @@ int main() {
          TestHollowChoirAiUsesScopedThreatsAndStableTieBreaks},
         {"network protocol admission and hardening",
          TestNetworkProtocolAdmissionAndHardening},
+        {"deterministic network forfeit",
+         TestDeterministicNetworkForfeit},
     };
 
     std::size_t passed = 0;

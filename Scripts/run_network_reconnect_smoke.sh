@@ -168,7 +168,7 @@ fi
 required_server_markers=(
   '\[ECHOES_NETWORK_SEAT_BOUND\] player=1 connectionBound=true sharedControl=false'
   '\[ECHOES_NETWORK_COMMAND_BATCH_ADMISSION\] player=1 batch=1 intents=1 accepted=1 rejected=0 .* lastAcceptedSequence=1'
-  '\[ECHOES_NETWORK_SEAT_RESERVED\] player=1 disconnectTick=.* lastAcceptedBatch=1 matchStarted=true graceSeconds=120 aiControl=false credentialLogged=false'
+  '\[ECHOES_NETWORK_SEAT_RESERVED\] player=1 disconnectTick=.* lastAcceptedBatch=1 matchStarted=true graceSeconds=120 authorityPaused=true aiControl=false credentialLogged=false'
   '\[ECHOES_NETWORK_RESUME_VALIDATION_PENDING\] player=1 disconnectTick=.* timeoutSeconds=5 seatActivated=false'
   '\[ECHOES_NETWORK_SEAT_RESUMED\] player=1 disconnectTick=.* lastAcceptedBatch=1 credentialMatched=true credentialRotated=true credentialLogged=false sharedControl=false'
   '\[ECHOES_NETWORK_MATCH_RESUMED\] player=1 disconnectTick=.* authorityTick=.* lastAcceptedSequence=1 nextBatch=2 fullKeyframe=true aiControl=false'
@@ -222,8 +222,8 @@ fi
 disconnect_tick="$(/usr/bin/grep '\[ECHOES_NETWORK_SEAT_RESERVED\]' "$server_log" | /usr/bin/head -1 | /usr/bin/sed -E 's/.*disconnectTick=([0-9]+).*/\1/')"
 resume_tick="$(/usr/bin/grep '\[ECHOES_NETWORK_MATCH_RESUMED\]' "$server_log" | /usr/bin/tail -1 | /usr/bin/sed -E 's/.*authorityTick=([0-9]+).*/\1/')"
 if [[ "$disconnect_tick" != <-> || "$resume_tick" != <-> ||
-      "$resume_tick" -le "$disconnect_tick" ]]; then
-  print -u2 "The authoritative simulation did not advance across the disconnect window."
+      "$resume_tick" -ne "$disconnect_tick" ]]; then
+  print -u2 "The authoritative simulation did not remain frozen across the reconnect reservation window."
   exit 10
 fi
 

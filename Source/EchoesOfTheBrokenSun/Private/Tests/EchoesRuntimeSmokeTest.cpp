@@ -123,7 +123,13 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("ArmControlGroupAssignment"), EKeys::G));
         TestTrue(TEXT("Control-group zero recall input is mapped"),
                  HasAction(TEXT("RecallControlGroup0"), EKeys::Zero));
-        TestTrue(TEXT("Formation cycling input is mapped"),
+        TestTrue(TEXT("Online front-door keyboard input is mapped"),
+                 HasAction(TEXT("OpenOnlineFrontDoor"), EKeys::F8));
+        TestTrue(TEXT("Online front-door gamepad input is mapped"),
+                 HasAction(
+                     TEXT("OpenOnlineFrontDoor"),
+                     EKeys::Gamepad_Special_Left));
+        TestTrue(TEXT("Formation cycling remains context-safe on F8"),
                  HasAction(TEXT("CycleFormation"), EKeys::F8));
         TestTrue(TEXT("Recoverable new-campaign input is mapped"),
                  HasAction(TEXT("RequestNewCampaign"), EKeys::F10));

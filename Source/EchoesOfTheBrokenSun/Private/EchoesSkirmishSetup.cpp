@@ -131,6 +131,23 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::DefaultSetup()
     return FEchoesSkirmishSetup{};
 }
 
+FEchoesSkirmishSetup FEchoesSkirmishSetupModel::CanonicalOnlineSetup()
+{
+    FEchoesSkirmishSetup Setup;
+    Setup.LocalFaction = echoes::sim::Faction::MeridianCompact;
+    Setup.OpponentFaction = echoes::sim::Faction::KharuunAssemblies;
+    Setup.MapPreset = EEchoesSkirmishMapPreset::GlassScar;
+    Setup.AiPersonality = echoes::sim::AiPersonality::Adaptive;
+    Setup.ResourceLevel = EEchoesSkirmishResourceLevel::Standard;
+    return Setup;
+}
+
+bool FEchoesSkirmishSetupModel::IsCanonicalOnlineSetup(
+    const FEchoesSkirmishSetup& Setup)
+{
+    return Setup == CanonicalOnlineSetup();
+}
+
 bool FEchoesSkirmishSetupModel::Validate(
     const FEchoesSkirmishSetup& Setup,
     FString& OutError)

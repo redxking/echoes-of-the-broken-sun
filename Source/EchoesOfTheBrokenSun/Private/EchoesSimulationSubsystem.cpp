@@ -7694,6 +7694,12 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
             "[SAVE_STRESS_DISABLED] Stress fixtures cannot overwrite player checkpoints.");
         return false;
     }
+    if (bNetworkHumanOpponent)
+    {
+        OutFeedback = TEXT(
+            "[SAVE_NETWORK_DISABLED] Online authority state cannot be written to a local checkpoint.");
+        return false;
+    }
 
     const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
     if (Snapshot.empty() || Snapshot.size() > MAX_int32)
@@ -8265,6 +8271,12 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
     {
         OutFeedback = TEXT(
             "[LOAD_STRESS_DISABLED] Stress fixtures cannot consume player checkpoints.");
+        return false;
+    }
+    if (bNetworkHumanOpponent)
+    {
+        OutFeedback = TEXT(
+            "[LOAD_NETWORK_DISABLED] A local checkpoint cannot replace online authority state.");
         return false;
     }
 
@@ -9374,6 +9386,43 @@ void UEchoesSimulationSubsystem::SetNetworkHumanOpponent(bool bEnabled)
         bEnabled ? TEXT("true") : TEXT("false"),
         bEnabled ? 3U : 1U,
         bEnabled ? TEXT("true") : TEXT("false"));
+}
+
+bool UEchoesSimulationSubsystem::ForfeitNetworkPlayer(
+    uint8 ForfeitingPlayer,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!bScenarioReady || !Simulation.IsValid() ||
+        SelectedOperation != EEchoesOperationMode::Skirmish ||
+        !bNetworkHumanOpponent || ForfeitingPlayer > OpponentPlayerId ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        OutFeedback = TEXT("[NETWORK_FORFEIT_UNAVAILABLE] The online match is not in a forfeitable state.");
+        return false;
+    }
+    const echoes::sim::MatchOutcome ExpectedOutcome =
+        ForfeitingPlayer == LocalPlayerId
+            ? echoes::sim::MatchOutcome::Player1Victory
+            : echoes::sim::MatchOutcome::Player0Victory;
+    if (!Simulation->ForfeitPlayer(ForfeitingPlayer) ||
+        Simulation->Outcome() != ExpectedOutcome)
+    {
+        OutFeedback = TEXT("[NETWORK_FORFEIT_FAILED] The opponent forfeit could not be recorded.");
+        return false;
+    }
+    bSimulationPaused = true;
+    bMatchResultReported = true;
+    FixedTimeAccumulator = 0.0;
+    OutFeedback = TEXT("Opponent reconnect grace expired; player 1 forfeited.");
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_NETWORK_FORFEIT_RECORDED] player=%u outcome=%u tick=%llu snapshotState=true replayExport=false"),
+        ForfeitingPlayer,
+        static_cast<uint8>(Simulation->Outcome()),
+        static_cast<unsigned long long>(Simulation->CurrentTick()));
+    return true;
 }
 
 echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
@@ -14258,11 +14307,27 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                      !bMatchResultReported)
             {
                 bMatchResultReported = true;
-                if (AEchoesPlayerController* Controller =
-                        Cast<AEchoesPlayerController>(
-                            GetWorld()->GetFirstPlayerController()))
+                AEchoesPlayerController* ResultController = nullptr;
+                if (GetWorld() != nullptr)
                 {
-                    Controller->NotifyMatchFinished(Outcome);
+                    for (FConstPlayerControllerIterator It =
+                             GetWorld()->GetPlayerControllerIterator();
+                         It;
+                         ++It)
+                    {
+                        AEchoesPlayerController* Candidate =
+                            Cast<AEchoesPlayerController>(It->Get());
+                        if (Candidate != nullptr &&
+                            Candidate->IsLocalController())
+                        {
+                            ResultController = Candidate;
+                            break;
+                        }
+                    }
+                }
+                if (ResultController != nullptr)
+                {
+                    ResultController->NotifyMatchFinished(Outcome);
                 }
                 UE_LOG(
                     LogEchoes,
@@ -15040,6 +15105,12 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
         return false;
     }
+    if (bNetworkHumanOpponent && bSimulationPaused)
+    {
+        OutFeedback = TEXT(
+            "[NETWORK_AUTHORITY_PAUSED] Orders are held while the opponent's reconnect seat is reserved.");
+        return false;
+    }
     if (SelectedOperation ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand &&
         ResearchType == echoes::sim::ResearchType::ChoirSharedResolution &&
@@ -15119,6 +15190,12 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     if (!Simulation.IsValid() || !bScenarioReady)
     {
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
+        return false;
+    }
+    if (bNetworkHumanOpponent && bSimulationPaused)
+    {
+        OutFeedback = TEXT(
+            "[NETWORK_AUTHORITY_PAUSED] Orders are held while the opponent's reconnect seat is reserved.");
         return false;
     }
     if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
@@ -15322,6 +15399,12 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     {
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_CMD_SIM_NOT_READY] actor=%u"), ActorId);
+        return false;
+    }
+    if (bNetworkHumanOpponent && bSimulationPaused)
+    {
+        OutFeedback = TEXT(
+            "[NETWORK_AUTHORITY_PAUSED] Orders are held while the opponent's reconnect seat is reserved.");
         return false;
     }
     if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)

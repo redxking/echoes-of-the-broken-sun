@@ -25,6 +25,16 @@ private:
     void DrawTitleScreen(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    void DrawOnlineTitleEntry(const UEchoesGameUserSettings* Settings);
+    void DrawOnlineFrontDoor(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
+    void DrawOnlineLocalMenu(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
+    void DrawNetworkReconnectBanner(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawSkirmishSetup(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);

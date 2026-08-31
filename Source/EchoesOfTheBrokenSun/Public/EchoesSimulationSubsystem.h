@@ -443,6 +443,8 @@ public:
         echoes::sim::net::CommandAdmissionContext& Context,
         std::string* SimulationRejection = nullptr);
     void SetNetworkHumanOpponent(bool bEnabled);
+    /** Ends a fixed online match by recording one player's deterministic forfeit. */
+    bool ForfeitNetworkPlayer(uint8 ForfeitingPlayer, FString& OutFeedback);
     [[nodiscard]] bool IsNetworkHumanOpponentEnabled() const
     {
         return bNetworkHumanOpponent;

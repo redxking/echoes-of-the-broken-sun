@@ -1993,6 +1993,38 @@ MatchOutcome Simulation::Outcome() const {
     return MatchOutcome::Draw;
 }
 
+bool Simulation::ForfeitPlayer(PlayerId player) {
+    if (player >= players_.size() || !players_[player].active ||
+        Outcome() != MatchOutcome::Ongoing) {
+        return false;
+    }
+    bool retiredCommandCore = false;
+    for (Entity& entity : entities_) {
+        if (entity.owner == player && entity.type == EntityType::CommandCore &&
+            entity.hitPoints > 0) {
+            entity.hitPoints = 0;
+            entity.order = {};
+            retiredCommandCore = true;
+        }
+    }
+    if (!retiredCommandCore) {
+        return false;
+    }
+    pendingCommands_.erase(
+        std::remove_if(
+            pendingCommands_.begin(), pendingCommands_.end(),
+            [player](const Command& command) { return command.player == player; }),
+        pendingCommands_.end());
+    // Match the normal end-of-tick destruction contract immediately. A
+    // forfeit pauses the authority before another tick, so retaining a
+    // zero-health Core here would create a state the snapshot validator
+    // correctly refuses to load.
+    RemoveDestroyedEntities();
+    ClearInvalidOrders();
+    DisableReplayExport();
+    return true;
+}
+
 PlacementResult Simulation::ValidatePlacement(PlayerId player,
                                                EntityType buildingType,
                                                Vec2 position,

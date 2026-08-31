@@ -22,6 +22,23 @@ public:
         AEchoesPlayerController* Controller,
         const FString& Credential,
         FString& OutError);
+    [[nodiscard]] bool IsBoundNetworkController(
+        const AEchoesPlayerController* Controller) const;
+    [[nodiscard]] bool IsAwaitingNetworkResumeCredential(
+        const AEchoesPlayerController* Controller) const;
+    bool NotifyNetworkCompatibilityAccepted(
+        AEchoesPlayerController* Controller);
+    void NotifyNetworkPlayerReady(AEchoesPlayerController* Controller);
+    void RejectNetworkResumeAttempt(
+        AEchoesPlayerController* Controller,
+        const FString& StableReason);
+    void NotifyNetworkMatchFinished();
+    bool SurrenderNetworkHost(const FString& StableReason);
+    void ReleaseNetworkSeat(
+        AEchoesPlayerController* Controller,
+        const FString& StableReason,
+        bool bNotifyClient);
+    bool ForfeitNetworkOpponent(const FString& StableReason);
 
 #if WITH_DEV_AUTOMATION_TESTS
     bool SpawnPrototypeEnvironmentForTesting()
@@ -32,11 +49,18 @@ public:
 
 private:
     static constexpr float NetworkResumeGraceSeconds = 120.0f;
+    static constexpr float NetworkHelloTimeoutSeconds = 12.0f;
+    static constexpr float NetworkReadyTimeoutSeconds = 45.0f;
 
     bool SpawnPrototypeEnvironment();
     void CleanupPrototypeEnvironment();
     void ExpireNetworkSeatReservation();
     void ExpireNetworkResumeValidation();
+    void ExpireNetworkHello();
+    void ExpireNetworkReady();
+    void StartNetworkHelloTimeout(AEchoesPlayerController* Controller);
+    void ClearNetworkAdmissionTimers();
+    void PresentHostReconnectGrace(bool bActive, float RemainingSeconds);
     [[nodiscard]] bool IsNetworkSeatReservationAvailable() const;
     [[nodiscard]] FString GenerateNetworkResumeCredential() const;
     TWeakObjectPtr<APlayerController> NetworkRemoteController;
@@ -47,6 +71,10 @@ private:
     bool bNetworkSeatReserved = false;
     bool bNetworkReservedMatchStarted = false;
     bool bNetworkResumeValidationPending = false;
+    bool bNetworkResumeCompatibilityPending = false;
+    bool bNetworkSessionFinished = false;
     FTimerHandle NetworkReservationTimer;
     FTimerHandle NetworkResumeValidationTimer;
+    FTimerHandle NetworkHelloTimer;
+    FTimerHandle NetworkReadyTimer;
 };
