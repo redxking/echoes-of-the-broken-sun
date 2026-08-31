@@ -809,6 +809,25 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
                     SetupA.MapPreset) &&
             FreshGlassScarProbe != nullptr &&
             FreshGlassScarProbe->IsHidden());
+    AEchoesPlayerController* FreshController = FreshWorld != nullptr
+        ? FreshWorld->SpawnActor<AEchoesPlayerController>()
+        : nullptr;
+    if (TestNotNull(
+            TEXT("Cold-start return controller can be created"),
+            FreshController))
+    {
+        FreshBridge->SetScenarioPaused(false);
+        FreshController->TogglePauseMenu();
+        FreshController->RequestReturnToOperations();
+        FreshController->RequestReturnToOperations();
+        TestTrue(
+            TEXT("Cold-loaded setup remains selected after returning from the field"),
+            FreshController->IsTitleScreenVisible() &&
+                FreshController->IsSkirmishSetupVisible() &&
+                FreshController->GetPendingSkirmishSetup() == SetupA &&
+                FreshBridge->GetActiveSkirmishSetup() == SetupA);
+        FreshController->Destroy();
+    }
     if (FreshGlassScarProbe != nullptr)
     {
         FreshGlassScarProbe->Destroy();

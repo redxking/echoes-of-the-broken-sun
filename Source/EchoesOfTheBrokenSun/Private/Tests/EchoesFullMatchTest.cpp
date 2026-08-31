@@ -426,6 +426,10 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         CompletedSimulation->StateChecksum();
     const FEchoesCampaignProgress CampaignBeforeResultReturn =
         Bridge->GetCampaignProgress();
+    FString CompletedCheckpointFeedback;
+    TestTrue(
+        TEXT("Completed skirmish state can be retained for restart coverage"),
+        Bridge->QuickSaveScenario(CompletedCheckpointFeedback));
     const FVector2D ResultViewport(1600.0f, 900.0f);
     const FEchoesResultOverlayLayout ResultLayout =
         FEchoesResultOverlayLayout::Build(ResultViewport, 1.0f);
@@ -461,7 +465,22 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
                     echoes::sim::MatchOutcome::Player0Victory &&
                 Bridge->GetCampaignProgress().Decisions ==
                     CampaignBeforeResultReturn.Decisions);
+        ResultController->ConfirmPrimaryAction();
+        ResultController->ConfirmPrimaryAction();
+        TestTrue(
+            TEXT("Unchanged setup after a completed result starts a fresh match"),
+            !ResultController->IsMissionBriefingVisible() &&
+                !Bridge->IsScenarioPaused() &&
+                Bridge->GetSimulation() != CompletedSimulation &&
+                Bridge->GetMatchOutcome() ==
+                    echoes::sim::MatchOutcome::Ongoing);
     }
+    CompletedCheckpointFeedback.Reset();
+    TestTrue(
+        TEXT("Completed skirmish state restores before result restart"),
+        Bridge->QuickLoadScenario(CompletedCheckpointFeedback) &&
+            Bridge->GetMatchOutcome() ==
+                echoes::sim::MatchOutcome::Player0Victory);
     AEchoesPlayerController* RestartController =
         World->SpawnActor<AEchoesPlayerController>();
     if (TestNotNull(
@@ -476,6 +495,8 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         TestTrue(
             TEXT("Result R/restart control remains pointer-operable"),
             !RestartController->IsMatchResultVisible() &&
+                RestartController->GetStatusMessage().Contains(
+                    TEXT("MATCH RESTARTED")) &&
                 Bridge->GetMatchOutcome() ==
                     echoes::sim::MatchOutcome::Ongoing);
         RestartController->Destroy();

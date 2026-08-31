@@ -5636,7 +5636,8 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
         return false;
     }
     if (Setup == ActiveSkirmishSetup &&
-        bScenarioReady && Simulation.IsValid())
+        bScenarioReady && Simulation.IsValid() &&
+        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing)
     {
         LocalFaction = Setup.LocalFaction;
         OutFeedback = TEXT("SKIRMISH DEPLOYMENT READY: the selected setup is already active.");

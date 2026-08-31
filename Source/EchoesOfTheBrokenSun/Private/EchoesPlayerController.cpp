@@ -4465,6 +4465,8 @@ void AEchoesPlayerController::RequestReturnToOperations()
     ClearControlGroups();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
+    PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
+    SkirmishSetupFocusRow = 0;
     PresentTitleScreen();
     if (bTitleScreenVisible)
     {
