@@ -24,6 +24,7 @@
 #include "Misc/Paths.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace
@@ -38,6 +39,10 @@ constexpr uint64 SustainedStressQualificationTicks =
     SustainedStressQualificationSeconds * PrototypeTicksPerSecond;
 constexpr uint64 SustainedStressActivityWindowTicks =
     5U * PrototypeTicksPerSecond;
+constexpr uint32 SustainedStressStartupMinimumStableFrames = 20;
+constexpr double SustainedStressStartupMinimumStableSeconds = 1.0;
+constexpr float SustainedStressMaximumActiveDeltaSeconds = 0.25F;
+constexpr uint64 SustainedStressMaximumActiveDeltaMicroseconds = 250'000;
 constexpr uint64 SustainedStressRenewalsPerHeartbeat = 4;
 static_assert(
     SustainedStressRenewalsPerHeartbeat == echoes::sim::kMaximumPlayers,
@@ -4011,6 +4016,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
     bStressScenario = bUseStressScenario;
     bSustainedStressScenario = bUseSustainedStressScenario;
     bSustainedStressFailed = false;
+    bSustainedStressTimingReady = false;
     bSustainedStressQualificationLogged = false;
     SustainedStressFailureCode.Reset();
     SustainedStressIntervalDamage = 0;
@@ -4023,6 +4029,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
     SustainedStressLastActivityTick = 0;
     SustainedStressLastHeartbeatTick = 0;
     SustainedStressLastHeartbeatWallMs = 0;
+    SustainedStressStartupStableFrames = 0;
+    SustainedStressStartupStableSeconds = 0.0;
     SustainedStressRenewalCursorByPlayer.fill(0);
     SustainedStressReadyWallSeconds = 0.0;
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
@@ -4852,13 +4860,10 @@ bool UEchoesSimulationSubsystem::StartScenario(
     }
     else if (bSustainedStressScenario)
     {
-        SustainedStressReadyWallSeconds = FPlatformTime::Seconds();
-        UE_LOG(
-            LogEchoes,
-            Display,
-            TEXT("[ECHOES_STRESS_SUSTAINED_READY] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 protectedCoreMask=15"),
-            static_cast<unsigned long long>(Simulation->CurrentTick()),
-            static_cast<unsigned long long>(Simulation->StateChecksum()));
+        // Unreal can still perform renderer, font, and console-variable work
+        // after BeginPlay returns. Keep the simulation at tick zero until a
+        // bounded stable-frame window arms the sustained timing contract.
+        SustainedStressReadyWallSeconds = 0.0;
     }
     return true;
 }
@@ -4898,6 +4903,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bStressScenario = false;
     bSustainedStressScenario = false;
     bSustainedStressFailed = false;
+    bSustainedStressTimingReady = false;
     bSustainedStressQualificationLogged = false;
     SustainedStressFailureCode.Reset();
     SustainedStressCombatEntityIds.Reset();
@@ -4916,6 +4922,8 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     SustainedStressLastActivityTick = 0;
     SustainedStressLastHeartbeatTick = 0;
     SustainedStressLastHeartbeatWallMs = 0;
+    SustainedStressStartupStableFrames = 0;
+    SustainedStressStartupStableSeconds = 0.0;
     SustainedStressRenewalCursorByPlayer.fill(0);
     SustainedStressReadyWallSeconds = 0.0;
     ArchiveCarrierId = 0;
@@ -12395,9 +12403,82 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         return;
     }
 
+    if (bSustainedStressScenario && !bSustainedStressTimingReady)
+    {
+        if (!FMath::IsFinite(DeltaTime) || DeltaTime < 0.0F)
+        {
+            FailSustainedStressContract(
+                TEXT("SIM_STARTUP_TIME_INVALID"),
+                FString::Printf(
+                    TEXT("rawDeltaSeconds=%.6f expectedFiniteNonnegative=true"),
+                    static_cast<double>(DeltaTime)));
+            return;
+        }
+        if (DeltaTime > SustainedStressMaximumActiveDeltaSeconds)
+        {
+            const double RawDeltaMicrosecondsValue =
+                std::ceil(static_cast<double>(DeltaTime) * 1'000'000.0);
+            const uint64 RawDeltaMicroseconds =
+                RawDeltaMicrosecondsValue >=
+                        static_cast<double>(std::numeric_limits<uint64>::max())
+                    ? std::numeric_limits<uint64>::max()
+                    : static_cast<uint64>(RawDeltaMicrosecondsValue);
+            const uint64 StableWallMicroseconds = static_cast<uint64>(
+                std::floor(
+                    SustainedStressStartupStableSeconds * 1'000'000.0));
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_STRESS_SUSTAINED_STABILIZATION_RESET] tick=0 rawDeltaUs=%llu stableFramesBeforeReset=%u stableWallUsBeforeReset=%llu maximumDeltaUs=%llu"),
+                static_cast<unsigned long long>(RawDeltaMicroseconds),
+                SustainedStressStartupStableFrames,
+                static_cast<unsigned long long>(StableWallMicroseconds),
+                static_cast<unsigned long long>(
+                    SustainedStressMaximumActiveDeltaMicroseconds));
+            FixedTimeAccumulator = 0.0;
+            SustainedStressStartupStableFrames = 0;
+            SustainedStressStartupStableSeconds = 0.0;
+            return;
+        }
+
+        FixedTimeAccumulator = 0.0;
+        ++SustainedStressStartupStableFrames;
+        SustainedStressStartupStableSeconds +=
+            static_cast<double>(DeltaTime);
+        if (SustainedStressStartupStableFrames <
+                SustainedStressStartupMinimumStableFrames ||
+            SustainedStressStartupStableSeconds <
+                SustainedStressStartupMinimumStableSeconds)
+        {
+            return;
+        }
+
+        const uint64 StableWallMicroseconds = static_cast<uint64>(
+            std::floor(
+                SustainedStressStartupStableSeconds * 1'000'000.0));
+        SustainedStressReadyWallSeconds = FPlatformTime::Seconds();
+        bSustainedStressTimingReady = true;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_SUSTAINED_STABILIZED] tick=0 stableFrames=%u stableWallUs=%llu minimumStableFrames=%u minimumStableWallUs=1000000 maximumDeltaUs=%llu"),
+            SustainedStressStartupStableFrames,
+            static_cast<unsigned long long>(StableWallMicroseconds),
+            SustainedStressStartupMinimumStableFrames,
+            static_cast<unsigned long long>(
+                SustainedStressMaximumActiveDeltaMicroseconds));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_STRESS_SUSTAINED_READY] fixture=Stress400Sustained tick=%llu checksum=%llu outcome=ongoing activePlayers=4 activeFactions=3 meridian=200 kharuun=100 hollowChoir=100 team0=100 team1=100 team2=100 team3=100 commandCores=4 combatUnits=396 ownedEntities=400 neutralWells=1 entities=401 views=401 tickRate=20 protectedCoreMask=15"),
+            static_cast<unsigned long long>(Simulation->CurrentTick()),
+            static_cast<unsigned long long>(Simulation->StateChecksum()));
+        return;
+    }
+
     if (bSustainedStressScenario &&
         (!FMath::IsFinite(DeltaTime) || DeltaTime < 0.0F ||
-         DeltaTime > 0.25F))
+         DeltaTime > SustainedStressMaximumActiveDeltaSeconds))
     {
         FailSustainedStressContract(
             TEXT("SIM_TIME_CLAMP"),

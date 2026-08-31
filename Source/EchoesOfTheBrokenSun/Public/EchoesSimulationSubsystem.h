@@ -425,6 +425,10 @@ public:
     {
         return bSustainedStressFailed;
     }
+    [[nodiscard]] bool IsSustainedStressTimingReady() const
+    {
+        return bSustainedStressTimingReady;
+    }
     [[nodiscard]] uint64 GetSustainedStressReplacementCount() const
     {
         return SustainedStressCumulativeReplacements;
@@ -706,6 +710,7 @@ private:
     bool bStressScenario = false;
     bool bSustainedStressScenario = false;
     bool bSustainedStressFailed = false;
+    bool bSustainedStressTimingReady = false;
     bool bSustainedStressQualificationLogged = false;
     FString SustainedStressFailureCode;
     TArray<uint32> SustainedStressCombatEntityIds;
@@ -725,6 +730,8 @@ private:
     uint64 SustainedStressLastActivityTick = 0;
     uint64 SustainedStressLastHeartbeatTick = 0;
     uint64 SustainedStressLastHeartbeatWallMs = 0;
+    uint32 SustainedStressStartupStableFrames = 0;
+    double SustainedStressStartupStableSeconds = 0.0;
     std::array<int32, echoes::sim::kMaximumPlayers>
         SustainedStressRenewalCursorByPlayer{};
     double SustainedStressReadyWallSeconds = 0.0;

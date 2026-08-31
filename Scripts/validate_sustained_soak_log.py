@@ -12,6 +12,8 @@ from typing import Iterable
 
 
 READY_MARKER = "[ECHOES_STRESS_SUSTAINED_READY]"
+STABILIZATION_RESET_MARKER = "[ECHOES_STRESS_SUSTAINED_STABILIZATION_RESET]"
+STABILIZED_MARKER = "[ECHOES_STRESS_SUSTAINED_STABILIZED]"
 HEARTBEAT_MARKER = "[ECHOES_STRESS_SUSTAINED_HEARTBEAT]"
 QUALIFIED_MARKER = "[ECHOES_STRESS_SUSTAINED_QUALIFIED]"
 
@@ -72,6 +74,23 @@ READY_KEYS = {
     "views",
     "tickRate",
     "protectedCoreMask",
+}
+
+STABILIZATION_RESET_KEYS = {
+    "tick",
+    "rawDeltaUs",
+    "stableFramesBeforeReset",
+    "stableWallUsBeforeReset",
+    "maximumDeltaUs",
+}
+
+STABILIZED_KEYS = {
+    "tick",
+    "stableFrames",
+    "stableWallUs",
+    "minimumStableFrames",
+    "minimumStableWallUs",
+    "maximumDeltaUs",
 }
 
 HEARTBEAT_KEYS = {
@@ -242,10 +261,52 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
             raise ValidationError(f"forbidden fatal marker present: {forbidden}")
 
     lines = text.splitlines()
+    stabilized_records = _records(lines, STABILIZED_MARKER, STABILIZED_KEYS)
+    if len(stabilized_records) != 1:
+        raise ValidationError(
+            f"expected exactly one stabilization marker, observed {len(stabilized_records)}"
+        )
+    stabilized_index, stabilized = stabilized_records[0]
+    _require_exact(
+        stabilized,
+        {
+            "tick": 0,
+            "minimumStableFrames": 20,
+            "minimumStableWallUs": 1_000_000,
+            "maximumDeltaUs": 250_000,
+        },
+    )
+    stable_frames = _as_int(stabilized, "stableFrames")
+    stable_wall_us = _as_int(stabilized, "stableWallUs")
+    if stable_frames < 20 or stable_wall_us < 1_000_000:
+        raise ValidationError("stabilization marker is below its declared thresholds")
+    if stable_wall_us > stable_frames * 250_000:
+        raise ValidationError("stabilization counters exceed the per-frame time bound")
+    if stable_frames > 20 and stable_wall_us > 1_250_000:
+        raise ValidationError("stabilization did not occur on the first valid threshold crossing")
+
+    reset_records = _records(
+        lines, STABILIZATION_RESET_MARKER, STABILIZATION_RESET_KEYS
+    )
+    for reset_index, reset in reset_records:
+        _require_exact(reset, {"tick": 0, "maximumDeltaUs": 250_000})
+        if _as_int(reset, "rawDeltaUs") <= 250_000:
+            raise ValidationError("startup reset delta did not exceed the declared maximum")
+        reset_frames = _as_int(reset, "stableFramesBeforeReset")
+        reset_wall_us = _as_int(reset, "stableWallUsBeforeReset")
+        if reset_wall_us > reset_frames * 250_000:
+            raise ValidationError("startup reset counters exceed the per-frame time bound")
+        if reset_frames >= 20 and reset_wall_us >= 1_000_000:
+            raise ValidationError("startup reset was recorded after stabilization was due")
+        if reset_index >= stabilized_index:
+            raise ValidationError("a startup reset occurred after stabilization")
+
     ready_records = _records(lines, READY_MARKER, READY_KEYS)
     if len(ready_records) != 1:
         raise ValidationError(f"expected exactly one readiness marker, observed {len(ready_records)}")
     ready_index, ready = ready_records[0]
+    if stabilized_index >= ready_index:
+        raise ValidationError("sustained readiness preceded startup stabilization")
     _require_exact(ready, EXACT_COMMON)
     _require_exact(
         ready,
@@ -395,6 +456,9 @@ def validate_log(text: str, duration_seconds: int) -> dict[str, object]:
     return {
         "accepted": True,
         "duration_seconds": duration_seconds,
+        "startup_reset_count": len(reset_records),
+        "startup_stable_frames": stable_frames,
+        "startup_stable_wall_us": stable_wall_us,
         "heartbeat_count": len(heartbeat_records),
         "first_tick": 20,
         "final_tick": previous_tick,

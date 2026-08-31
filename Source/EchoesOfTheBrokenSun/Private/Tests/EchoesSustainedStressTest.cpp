@@ -13,6 +13,8 @@
 #include "Tests/AutomationCommon.h"
 
 #include <array>
+#include <cmath>
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -190,6 +192,59 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Sustained stress leaves the sentinel byte-for-byte unchanged"),
              RetainedSave == SentinelSave);
 
+    TestFalse(TEXT("Sustained active timing begins unarmed"),
+              Bridge->IsSustainedStressTimingReady());
+    Bridge->Tick(std::numeric_limits<float>::max());
+    TestFalse(TEXT("An extreme finite bootstrap frame safely resets stabilization"),
+              Bridge->HasSustainedStressFailed());
+    TestFalse(TEXT("An extreme finite bootstrap frame does not arm timing"),
+              Bridge->IsSustainedStressTimingReady());
+    TestEqual(TEXT("An extreme finite bootstrap frame advances no simulation ticks"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+    Bridge->Tick(std::nextafter(
+        0.25F,
+        std::numeric_limits<float>::infinity()));
+    TestFalse(TEXT("The pre-active bootstrap frame does not latch a time-clamp failure"),
+              Bridge->HasSustainedStressFailed());
+    TestEqual(TEXT("The pre-active bootstrap frame is excluded from simulation time"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+    for (int32 FrameIndex = 0; FrameIndex < 20; ++FrameIndex)
+    {
+        Bridge->Tick(0.01F);
+    }
+    TestFalse(TEXT("The stable-frame threshold alone cannot arm timing"),
+              Bridge->IsSustainedStressTimingReady());
+    TestEqual(TEXT("Frame-only stabilization advances no simulation ticks"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+
+    Bridge->Tick(0.30F);
+    for (int32 FrameIndex = 0; FrameIndex < 4; ++FrameIndex)
+    {
+        Bridge->Tick(0.25F);
+    }
+    TestFalse(TEXT("The stable-time threshold alone cannot arm timing"),
+              Bridge->IsSustainedStressTimingReady());
+    TestEqual(TEXT("Time-only stabilization advances no simulation ticks"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+
+    Bridge->Tick(0.30F);
+    for (int32 FrameIndex = 0; FrameIndex < 19; ++FrameIndex)
+    {
+        Bridge->Tick(0.05F);
+    }
+    TestFalse(TEXT("Nineteen stable frames do not arm timing"),
+              Bridge->IsSustainedStressTimingReady());
+    Bridge->Tick(0.05F);
+    TestTrue(TEXT("Twenty stable frames spanning one second arm timing"),
+             Bridge->IsSustainedStressTimingReady());
+    TestEqual(TEXT("Timing arms at deterministic tick zero"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+
     for (int32 TickIndex = 0; TickIndex < 200; ++TickIndex)
     {
         Bridge->Tick(0.05F);
@@ -231,6 +286,16 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
               SustainedReplay.finalChecksum,
               static_cast<uint64>(0));
 
+    AddExpectedError(
+        TEXT("code=SIM_TIME_CLAMP"),
+        EAutomationExpectedErrorFlags::Contains,
+        1);
+    Bridge->Tick(0.30F);
+    TestTrue(TEXT("An active-window frame above 250 ms still fails closed"),
+             Bridge->HasSustainedStressFailed());
+    TestFalse(TEXT("An active-window time clamp clears scenario readiness"),
+              Bridge->IsScenarioReady());
+
     if (!TestTrue(TEXT("Restart preserves sustained fixture mode"),
                   Bridge->RestartPrototypeScenario()) ||
         !TestNotNull(
@@ -246,6 +311,17 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
                  Bridge->IsSustainedStressScenario());
     Simulation = Bridge->GetSimulation();
     TestEqual(TEXT("Restart resets the deterministic tick"),
+              Simulation->CurrentTick(),
+              static_cast<echoes::sim::Tick>(0));
+    TestFalse(TEXT("Restart resets sustained timing stabilization"),
+              Bridge->IsSustainedStressTimingReady());
+    for (int32 FrameIndex = 0; FrameIndex < 20; ++FrameIndex)
+    {
+        Bridge->Tick(0.05F);
+    }
+    TestTrue(TEXT("Restart re-arms timing only after stabilization"),
+             Bridge->IsSustainedStressTimingReady());
+    TestEqual(TEXT("Restarted timing arms at deterministic tick zero"),
               Simulation->CurrentTick(),
               static_cast<echoes::sim::Tick>(0));
     for (int32 TickIndex = 0; TickIndex < 200; ++TickIndex)
@@ -295,6 +371,21 @@ bool FEchoesSustainedStressTest::RunTest(const FString& Parameters)
              Bridge->IsScenarioReady() &&
                  Bridge->IsSustainedStressScenario() &&
                  !Bridge->HasSustainedStressFailed());
+
+    AddExpectedError(
+        TEXT("code=SIM_STARTUP_TIME_INVALID"),
+        EAutomationExpectedErrorFlags::Contains,
+        2);
+    Bridge->Tick(-0.01F);
+    TestTrue(TEXT("Negative startup time fails closed"),
+             Bridge->HasSustainedStressFailed());
+    TestTrue(TEXT("Restart clears a negative startup-time failure"),
+             Bridge->RestartPrototypeScenario());
+    Bridge->Tick(std::numeric_limits<float>::quiet_NaN());
+    TestTrue(TEXT("Nonfinite startup time fails closed"),
+             Bridge->HasSustainedStressFailed());
+    TestTrue(TEXT("Restart clears a nonfinite startup-time failure"),
+             Bridge->RestartPrototypeScenario());
 
     Bridge->StopPrototypeScenario();
     TestFalse(TEXT("Stop clears stress mode"), Bridge->IsStressScenario());

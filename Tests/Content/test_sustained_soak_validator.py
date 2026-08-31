@@ -22,9 +22,20 @@ READY = (
     "protectedCoreMask=15"
 )
 
+STABILIZED = (
+    "[ECHOES_STRESS_SUSTAINED_STABILIZED] tick=0 stableFrames=20 "
+    "stableWallUs=1000000 minimumStableFrames=20 minimumStableWallUs=1000000 "
+    "maximumDeltaUs=250000"
+)
+
+STABILIZATION_RESET = (
+    "[ECHOES_STRESS_SUSTAINED_STABILIZATION_RESET] tick=0 rawDeltaUs=300000 "
+    "stableFramesBeforeReset=7 stableWallUsBeforeReset=350000 maximumDeltaUs=250000"
+)
+
 
 def valid_log(duration_seconds: int = 10, qualified: bool = False) -> str:
-    lines = [READY]
+    lines = [STABILIZATION_RESET, STABILIZED, READY]
     cumulative_losses = 0
     cumulative_replacements = 0
     cumulative_renewals = 0
@@ -103,10 +114,68 @@ class SustainedSoakValidatorTests(unittest.TestCase):
 
     def test_readiness_is_exact_and_precedes_heartbeats(self) -> None:
         valid = valid_log()
-        first_heartbeat = valid.splitlines()[1]
+        first_heartbeat = next(
+            line
+            for line in valid.splitlines()
+            if "[ECHOES_STRESS_SUSTAINED_HEARTBEAT]" in line
+        )
         self.assert_rejected(valid.replace(READY + "\n", ""))
         self.assert_rejected(valid.replace(READY, READY + "\n" + READY))
         self.assert_rejected(first_heartbeat + "\n" + valid)
+
+    def test_stabilization_contract_is_exact_and_precedes_readiness(self) -> None:
+        valid = valid_log()
+        self.assert_rejected(valid.replace(STABILIZED + "\n", ""))
+        self.assert_rejected(
+            valid.replace(STABILIZED, STABILIZED + "\n" + STABILIZED)
+        )
+        self.assert_rejected(valid.replace("stableFrames=20", "stableFrames=19", 1))
+        self.assert_rejected(
+            valid.replace("stableWallUs=1000000", "stableWallUs=999999", 1)
+        )
+        self.assert_rejected(
+            valid.replace("minimumStableFrames=20 ", "", 1)
+        )
+        self.assert_rejected(
+            valid.replace("stableWallUs=1000000", "stableWallUs=6000000", 1)
+        )
+        self.assert_rejected(
+            valid.replace(
+                "stableFrames=20 stableWallUs=1000000",
+                "stableFrames=21 stableWallUs=1300000",
+                1,
+            )
+        )
+        self.assert_rejected(
+            valid.replace(STABILIZED + "\n" + READY, READY + "\n" + STABILIZED)
+        )
+
+    def test_startup_reset_contract_is_exact_and_precedes_stabilization(self) -> None:
+        valid = valid_log()
+        self.assert_rejected(valid.replace("rawDeltaUs=300000", "rawDeltaUs=250000", 1))
+        self.assert_rejected(
+            valid.replace("stableFramesBeforeReset=7 ", "", 1)
+        )
+        self.assert_rejected(
+            valid.replace(
+                "stableFramesBeforeReset=7 stableWallUsBeforeReset=350000",
+                "stableFramesBeforeReset=1 stableWallUsBeforeReset=900000",
+                1,
+            )
+        )
+        self.assert_rejected(
+            valid.replace(
+                "stableFramesBeforeReset=7 stableWallUsBeforeReset=350000",
+                "stableFramesBeforeReset=20 stableWallUsBeforeReset=1000000",
+                1,
+            )
+        )
+        self.assert_rejected(
+            valid.replace(
+                STABILIZATION_RESET + "\n" + STABILIZED,
+                STABILIZED + "\n" + STABILIZATION_RESET,
+            )
+        )
 
     def test_forbidden_runtime_markers_are_rejected(self) -> None:
         for marker in (
@@ -202,9 +271,12 @@ class SustainedSoakValidatorTests(unittest.TestCase):
         self.assert_rejected(qualified.replace("tick=72000 checksum=82000", "tick=72000 checksum=82001", 1))
         marker = qualified.splitlines()[-1]
         self.assert_rejected(qualified + marker + "\n", duration=3600)
-        without_marker = "\n".join(qualified.splitlines()[:-1]) + "\n"
-        raced = READY + "\n" + marker + "\n" + "\n".join(
-            without_marker.splitlines()[1:]
+        without_marker = qualified.splitlines()[:-1]
+        ready_index = without_marker.index(READY)
+        raced = "\n".join(
+            without_marker[: ready_index + 1]
+            + [marker]
+            + without_marker[ready_index + 1 :]
         ) + "\n"
         self.assert_rejected(raced, duration=3600)
 
