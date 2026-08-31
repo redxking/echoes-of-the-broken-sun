@@ -182,7 +182,7 @@ constexpr int32 DevelopmentResumeCredentialLength = 32;
     OutFileHandle = openat(
         OutDirectoryHandle,
         TCHAR_TO_UTF8(*OutLeafName),
-        FileOpenFlags | O_NOFOLLOW | O_CLOEXEC);
+        FileOpenFlags | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
     if (OutFileHandle < 0)
     {
         close(OutDirectoryHandle);
@@ -203,6 +203,40 @@ constexpr int32 DevelopmentResumeCredentialLength = 32;
         return false;
     }
     return true;
+}
+
+[[nodiscard]] bool OpenedDevelopmentCredentialFileStillNamesEntry(
+    int DirectoryHandle,
+    int FileHandle,
+    const FString& LeafName)
+{
+    struct stat OpenedFileState {};
+    struct stat DirectoryEntryState {};
+    return fstat(FileHandle, &OpenedFileState) == 0 &&
+        fstatat(
+            DirectoryHandle,
+            TCHAR_TO_UTF8(*LeafName),
+            &DirectoryEntryState,
+            AT_SYMLINK_NOFOLLOW) == 0 &&
+        S_ISREG(DirectoryEntryState.st_mode) &&
+        OpenedFileState.st_dev == DirectoryEntryState.st_dev &&
+        OpenedFileState.st_ino == DirectoryEntryState.st_ino;
+}
+
+[[nodiscard]] bool RemoveOpenedDevelopmentCredentialFile(
+    int DirectoryHandle,
+    int FileHandle,
+    const FString& LeafName)
+{
+    if (!OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName) ||
+        unlinkat(DirectoryHandle, TCHAR_TO_UTF8(*LeafName), 0) != 0)
+    {
+        return false;
+    }
+    struct stat UnlinkedFileState {};
+    return fstat(FileHandle, &UnlinkedFileState) == 0 &&
+        UnlinkedFileState.st_nlink == 0;
 }
 
 void CloseDevelopmentCredentialFile(
@@ -249,7 +283,15 @@ void CloseDevelopmentCredentialFile(
     struct stat FileState {};
     const bool bEmpty =
         fstat(FileHandle, &FileState) == 0 && FileState.st_size == 0;
+    const bool bEntryUnchanged =
+        OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName);
     CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+    if (!bEntryUnchanged)
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_ENTRY_CHANGED");
+        return false;
+    }
     if (!bEmpty)
     {
         OutReason = TEXT("NET_RESUME_CREDENTIAL_STAGING_FILE_NOT_EMPTY");
@@ -304,8 +346,8 @@ void CloseDevelopmentCredentialFile(
             static_cast<size_t>(CredentialUtf8.Length() - BytesWritten));
         if (Result <= 0)
         {
-            (void)unlinkat(
-                DirectoryHandle, TCHAR_TO_UTF8(*LeafName), 0);
+            (void)RemoveOpenedDevelopmentCredentialFile(
+                DirectoryHandle, FileHandle, LeafName);
             CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
             OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_WRITE_FAILED");
             return false;
@@ -314,9 +356,17 @@ void CloseDevelopmentCredentialFile(
     }
     if (fsync(FileHandle) != 0)
     {
-        (void)unlinkat(DirectoryHandle, TCHAR_TO_UTF8(*LeafName), 0);
+        (void)RemoveOpenedDevelopmentCredentialFile(
+            DirectoryHandle, FileHandle, LeafName);
         CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
         OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_SYNC_FAILED");
+        return false;
+    }
+    if (!OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName))
+    {
+        CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_ENTRY_CHANGED");
         return false;
     }
     CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
@@ -358,7 +408,8 @@ void CloseDevelopmentCredentialFile(
     const bool bExpectedSize =
         fstat(FileHandle, &FileState) == 0 &&
         FileState.st_size == DevelopmentResumeCredentialLength;
-    if (unlinkat(DirectoryHandle, TCHAR_TO_UTF8(*LeafName), 0) != 0)
+    if (!RemoveOpenedDevelopmentCredentialFile(
+            DirectoryHandle, FileHandle, LeafName))
     {
         CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
         OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_CONSUME_FAILED");

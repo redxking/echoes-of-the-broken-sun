@@ -79,7 +79,10 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         TEXT("http://127.0.0.1:7777"),
         TEXT("127.0.0.1:7777?listen"),
         TEXT("host name:7777"),
-        TEXT("fe80::1:7777")};
+        TEXT("fe80::1:7777"),
+        TEXT("[::1]:7777"),
+        TEXT("[::ffff:127.0.0.1]:7777"),
+        TEXT("::ffff:127.0.0.1:7777")};
     for (const TCHAR* Endpoint : InvalidEndpoints)
     {
         FString Normalized;
@@ -276,6 +279,50 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Credential leaf symbolic link is removed"),
               unlink(TCHAR_TO_UTF8(*SymlinkFile)),
               0);
+
+    const FString FifoRun = MakeCredentialRunDirectory();
+    const FString FifoFile = FPaths::Combine(
+        FifoRun, TEXT("EchoesResumeCredential.bin"));
+    TestEqual(TEXT("FIFO credential fixture is created"),
+              mkfifo(TCHAR_TO_UTF8(*FifoFile), 0600),
+              0);
+    TestFalse(
+        TEXT("FIFO staging path fails closed without blocking"),
+        echoes::network::testing::ValidateDevelopmentCredentialStagingFile(
+            FifoFile,
+            NormalizedCredentialPath,
+            CredentialFileReason));
+    TestFalse(
+        TEXT("FIFO consume path fails closed without blocking"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            FifoFile,
+            ConsumedCredential,
+            CredentialFileReason));
+    TestEqual(TEXT("FIFO credential fixture is removed"),
+              unlink(TCHAR_TO_UTF8(*FifoFile)),
+              0);
+
+    const FString DirectoryLeafRun = MakeCredentialRunDirectory();
+    const FString DirectoryLeaf = FPaths::Combine(
+        DirectoryLeafRun, TEXT("EchoesResumeCredential.bin"));
+    TestTrue(TEXT("Directory credential fixture is created"),
+             IFileManager::Get().MakeDirectory(*DirectoryLeaf, false));
+    (void)chmod(TCHAR_TO_UTF8(*DirectoryLeaf), 0700);
+    TestFalse(
+        TEXT("Directory staging path fails closed as non-regular"),
+        echoes::network::testing::ValidateDevelopmentCredentialStagingFile(
+            DirectoryLeaf,
+            NormalizedCredentialPath,
+            CredentialFileReason));
+    TestFalse(
+        TEXT("Directory consume path fails closed as non-regular"),
+        echoes::network::testing::ConsumeDevelopmentResumeCredential(
+            DirectoryLeaf,
+            ConsumedCredential,
+            CredentialFileReason));
+    TestTrue(TEXT("Directory credential fixture is removed"),
+             IFileManager::Get().DeleteDirectory(
+                 *DirectoryLeaf, false, false));
 
     const FString InvalidContentRun = MakeCredentialRunDirectory();
     const FString InvalidContentFile = FPaths::Combine(
