@@ -49,6 +49,8 @@ void UEchoesPresentationAudioSubsystem::Initialize(
     ChoirDestructionSound =
         LoadObject<USoundBase>(nullptr, ChoirDestructionCuePath);
 
+    // ReserveCue owns the 80/140 ms windows. Keep engine retriggering at zero
+    // so empty groups cannot outlive these transient policy objects.
     CommandConcurrency =
         NewObject<USoundConcurrency>(this, NAME_None, RF_Transient);
     if (CommandConcurrency != nullptr)
@@ -59,7 +61,7 @@ void UEchoesPresentationAudioSubsystem::Initialize(
         Concurrency.bLimitToOwner = false;
         Concurrency.ResolutionRule =
             EMaxConcurrentResolutionRule::PreventNew;
-        Concurrency.RetriggerTime = GetCommandCooldownSeconds();
+        Concurrency.RetriggerTime = 0.0f;
     }
 
     DestructionConcurrency =
@@ -72,7 +74,7 @@ void UEchoesPresentationAudioSubsystem::Initialize(
         Concurrency.bLimitToOwner = false;
         Concurrency.ResolutionRule =
             EMaxConcurrentResolutionRule::StopFarthestThenOldest;
-        Concurrency.RetriggerTime = GetDestructionCooldownSeconds();
+        Concurrency.RetriggerTime = 0.0f;
         Concurrency.VoiceStealReleaseTime = 0.05f;
     }
 
@@ -240,16 +242,12 @@ bool UEchoesPresentationAudioSubsystem::HasBoundedConcurrencyPolicies() const
         Command.MaxCount == GetCommandMaxConcurrentVoices() &&
         !Command.bLimitToOwner &&
         Command.ResolutionRule == EMaxConcurrentResolutionRule::PreventNew &&
-        FMath::IsNearlyEqual(
-            Command.RetriggerTime,
-            GetCommandCooldownSeconds()) &&
+        Command.RetriggerTime == 0.0f &&
         Destruction.MaxCount == GetDestructionMaxConcurrentVoices() &&
         !Destruction.bLimitToOwner &&
         Destruction.ResolutionRule ==
             EMaxConcurrentResolutionRule::StopFarthestThenOldest &&
-        FMath::IsNearlyEqual(
-            Destruction.RetriggerTime,
-            GetDestructionCooldownSeconds());
+        Destruction.RetriggerTime == 0.0f;
 }
 
 bool UEchoesPresentationAudioSubsystem::ReserveCue(

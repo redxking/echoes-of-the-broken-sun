@@ -91,10 +91,8 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
         TEXT("Command concurrency prevents excess voices"),
         static_cast<uint8>(CommandConcurrency->Concurrency.ResolutionRule),
         static_cast<uint8>(EMaxConcurrentResolutionRule::PreventNew));
-    TestTrue(TEXT("Command concurrency retains the 80 ms admission window"),
-             FMath::IsNearlyEqual(
-                 CommandConcurrency->Concurrency.RetriggerTime,
-                 Audio->GetCommandCooldownSeconds()));
+    TestTrue(TEXT("Command concurrency disables engine retrigger retention"),
+             CommandConcurrency->Concurrency.RetriggerTime == 0.0f);
     TestEqual(TEXT("Destruction concurrency has a hard voice cap"),
               MeridianDestructionConcurrency->Concurrency.MaxCount,
               Audio->GetDestructionMaxConcurrentVoices());
@@ -106,15 +104,22 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
             MeridianDestructionConcurrency->Concurrency.ResolutionRule),
         static_cast<uint8>(
             EMaxConcurrentResolutionRule::StopFarthestThenOldest));
-    TestTrue(TEXT("Destruction concurrency retains the 140 ms admission window"),
-             FMath::IsNearlyEqual(
-                 MeridianDestructionConcurrency->Concurrency.RetriggerTime,
-                 Audio->GetDestructionCooldownSeconds()));
+    TestTrue(TEXT("Destruction concurrency disables engine retrigger retention"),
+             MeridianDestructionConcurrency->Concurrency.RetriggerTime ==
+                 0.0f);
     TestTrue(TEXT("All faction destruction cues share one concurrency policy"),
              MeridianDestructionConcurrency == KharuunDestructionConcurrency &&
                  MeridianDestructionConcurrency == ChoirDestructionConcurrency);
     TestTrue(TEXT("Command and destruction concurrency remain independent"),
              CommandConcurrency != MeridianDestructionConcurrency);
+    TestTrue(TEXT("Command admission window remains 80 ms"),
+             FMath::IsNearlyEqual(
+                 Audio->GetCommandCooldownSeconds(),
+                 0.08f));
+    TestTrue(TEXT("Destruction admission window remains 140 ms"),
+             FMath::IsNearlyEqual(
+                 Audio->GetDestructionCooldownSeconds(),
+                 0.14f));
 
     Audio->ResetRateLimitsForTest();
     TestTrue(TEXT("First accepted command cue is admitted"),
