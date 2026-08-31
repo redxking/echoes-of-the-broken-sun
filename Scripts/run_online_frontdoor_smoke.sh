@@ -38,7 +38,7 @@ trap cleanup_processes EXIT INT TERM
 
 "$editor" "$project" /Engine/Maps/Entry \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
-  -port="$port" -EchoesAutoStart \
+  -MULTIHOME=127.0.0.1 -port="$port" -EchoesAutoStart \
   -EchoesOnlineFrontDoorHostSmoke -EchoesNetworkMatchSmoke \
   -AbsLog="$server_log" &
 server_pid=$!

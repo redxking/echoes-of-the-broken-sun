@@ -5,11 +5,9 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
-#include "IPAddress.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
-#include "SocketSubsystem.h"
 #include "TimerManager.h"
 
 namespace
@@ -41,16 +39,23 @@ bool IsAsciiAlphaNumeric(TCHAR Character)
         (Character >= TEXT('0') && Character <= TEXT('9'));
 }
 
-bool IsValidIpv4Literal(const FString& Host)
+bool TryCanonicalizeIpv4(
+    const FString& Host,
+    FString& OutCanonical,
+    bool& OutLoopback)
 {
+    OutCanonical.Reset();
+    OutLoopback = false;
     TArray<FString> Octets;
     Host.ParseIntoArray(Octets, TEXT("."), false);
     if (Octets.Num() != 4)
     {
         return false;
     }
-    for (const FString& Octet : Octets)
+    int32 Values[4] = {};
+    for (int32 Index = 0; Index < Octets.Num(); ++Index)
     {
+        const FString& Octet = Octets[Index];
         if (Octet.IsEmpty() || Octet.Len() > 3)
         {
             return false;
@@ -67,39 +72,15 @@ bool IsValidIpv4Literal(const FString& Host)
         {
             return false;
         }
+        Values[Index] = Value;
     }
-    return true;
-}
-
-bool IsValidHostname(const FString& Host)
-{
-    if (Host.IsEmpty() || Host.Len() > 253 ||
-        Host.StartsWith(TEXT(".")) || Host.EndsWith(TEXT(".")))
-    {
-        return false;
-    }
-    TArray<FString> Labels;
-    Host.ParseIntoArray(Labels, TEXT("."), false);
-    if (Labels.IsEmpty())
-    {
-        return false;
-    }
-    for (const FString& Label : Labels)
-    {
-        if (Label.IsEmpty() || Label.Len() > 63 ||
-            !IsAsciiAlphaNumeric(Label[0]) ||
-            !IsAsciiAlphaNumeric(Label[Label.Len() - 1]))
-        {
-            return false;
-        }
-        for (const TCHAR Character : Label)
-        {
-            if (!IsAsciiAlphaNumeric(Character) && Character != TEXT('-'))
-            {
-                return false;
-            }
-        }
-    }
+    OutCanonical = FString::Printf(
+        TEXT("%d.%d.%d.%d"),
+        Values[0],
+        Values[1],
+        Values[2],
+        Values[3]);
+    OutLoopback = Values[0] == 127;
     return true;
 }
 }
@@ -251,6 +232,16 @@ bool UEchoesGameInstance::RequestFixedRulesHost(UWorld* World)
         ReportOnlineFailure(TEXT("ONLINE_HOST_START_UNAVAILABLE"));
         return false;
     }
+#if !UE_BUILD_DEVELOPMENT
+    ReportOnlineFailure(TEXT("ONLINE_DEVELOPMENT_ONLY"));
+    return false;
+#else
+    if (!HasExplicitDevelopmentLoopbackBind(FCommandLine::Get()))
+    {
+        ReportOnlineFailure(TEXT("ONLINE_LOOPBACK_BIND_REQUIRED"));
+        return false;
+    }
+#endif
     OnlineState = EEchoesOnlineFrontDoorState::Hosting;
     OnlineFailureMessage.Reset();
     OnlineFocusIndex = 0;
@@ -272,14 +263,13 @@ bool UEchoesGameInstance::RequestFixedRulesHost(UWorld* World)
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ONLINE_FRONT_DOOR_HOST] requested=true map=/Engine/Maps/Entry listen=true rules=fixed_glass_scar port=%d"),
+        TEXT("[ECHOES_ONLINE_FRONT_DOOR_HOST] requested=true map=/Engine/Maps/Entry listen=true rules=fixed_glass_scar port=%d security=development_loopback_only bind=127.0.0.1"),
         ListenPort);
     return true;
 }
 
 void UEchoesGameInstance::ResolveHostShareEndpoint()
 {
-    HostShareEndpoint.Reset();
     int32 Port = 7777;
     int32 RequestedPort = 0;
     if (FParse::Value(FCommandLine::Get(), TEXT("port="), RequestedPort) &&
@@ -287,40 +277,7 @@ void UEchoesGameInstance::ResolveHostShareEndpoint()
     {
         Port = RequestedPort;
     }
-    ISocketSubsystem* SocketSubsystem =
-        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-    if (SocketSubsystem == nullptr)
-    {
-        return;
-    }
-    TArray<TSharedPtr<FInternetAddr>> Addresses;
-    if (!SocketSubsystem->GetLocalAdapterAddresses(Addresses))
-    {
-        return;
-    }
-    TArray<FString> Candidates;
-    for (const TSharedPtr<FInternetAddr>& Address : Addresses)
-    {
-        if (!Address.IsValid() || !Address->IsValid() ||
-            Address->GetRawIp().Num() != 4)
-        {
-            continue;
-        }
-        const FString Host = Address->ToString(false);
-        if (Host.IsEmpty() || Host.StartsWith(TEXT("127.")) ||
-            Host.StartsWith(TEXT("0.")) ||
-            Host.StartsWith(TEXT("169.254.")))
-        {
-            continue;
-        }
-        Candidates.AddUnique(
-            FString::Printf(TEXT("%s:%d"), *Host, Port));
-    }
-    Candidates.Sort();
-    if (!Candidates.IsEmpty())
-    {
-        HostShareEndpoint = Candidates[0];
-    }
+    HostShareEndpoint = FString::Printf(TEXT("127.0.0.1:%d"), Port);
 }
 
 bool UEchoesGameInstance::RequestDirectJoin(APlayerController* Controller)
@@ -333,6 +290,10 @@ bool UEchoesGameInstance::RequestDirectJoin(APlayerController* Controller)
         ReportOnlineFailure(TEXT("ONLINE_JOIN_START_UNAVAILABLE"));
         return false;
     }
+#if !UE_BUILD_DEVELOPMENT
+    ReportOnlineFailure(TEXT("ONLINE_DEVELOPMENT_ONLY"));
+    return false;
+#endif
     FString Normalized;
     FString ValidationError;
     if (!NormalizeDirectEndpoint(
@@ -373,6 +334,10 @@ bool UEchoesGameInstance::RequestReconnect(APlayerController* Controller)
     {
         return false;
     }
+#if !UE_BUILD_DEVELOPMENT
+    ReportOnlineFailure(TEXT("ONLINE_DEVELOPMENT_ONLY"));
+    return false;
+#endif
     DirectConnectEndpoint = BoundReconnectEndpoint;
     OnlineState = EEchoesOnlineFrontDoorState::Connecting;
     OnlineFailureMessage.Reset();
@@ -698,18 +663,38 @@ bool UEchoesGameInstance::NormalizeDirectEndpoint(
         OutError = TEXT("ONLINE_ADDRESS_PORT_INVALID");
         return false;
     }
-    bool bNumericHost = true;
-    for (const TCHAR Character : Host)
+    FString CanonicalHost;
+    if (Host == TEXT("localhost"))
     {
-        bNumericHost &= FChar::IsDigit(Character) || Character == TEXT('.');
+        CanonicalHost = TEXT("127.0.0.1");
     }
-    if ((bNumericHost && !IsValidIpv4Literal(Host)) ||
-        (!bNumericHost && !IsValidHostname(Host)))
+    else
     {
-        OutError = TEXT("ONLINE_ADDRESS_HOST_INVALID");
-        return false;
+        bool bNumericHost = true;
+        for (const TCHAR Character : Host)
+        {
+            bNumericHost &=
+                FChar::IsDigit(Character) || Character == TEXT('.');
+        }
+        if (!bNumericHost)
+        {
+            OutError = TEXT("ONLINE_ADDRESS_LOOPBACK_REQUIRED");
+            return false;
+        }
+        bool bLoopback = false;
+        if (!TryCanonicalizeIpv4(Host, CanonicalHost, bLoopback))
+        {
+            OutError = TEXT("ONLINE_ADDRESS_HOST_INVALID");
+            return false;
+        }
+        if (!bLoopback)
+        {
+            OutError = TEXT("ONLINE_ADDRESS_LOOPBACK_REQUIRED");
+            return false;
+        }
     }
-    OutNormalized = FString::Printf(TEXT("%s:%lld"), *Host, Port);
+    OutNormalized = FString::Printf(
+        TEXT("%s:%lld"), *CanonicalHost, Port);
     FURL Parsed(nullptr, *OutNormalized, TRAVEL_Absolute);
     if (Parsed.Valid == 0 || Parsed.Host.IsEmpty() || Parsed.Port != Port ||
         Parsed.Op.Num() != 0)
@@ -719,6 +704,31 @@ bool UEchoesGameInstance::NormalizeDirectEndpoint(
         return false;
     }
     return true;
+}
+
+bool UEchoesGameInstance::HasExplicitDevelopmentLoopbackBind(
+    const TCHAR* CommandLine)
+{
+#if !UE_BUILD_DEVELOPMENT
+    (void)CommandLine;
+    return false;
+#else
+    if (CommandLine == nullptr)
+    {
+        return false;
+    }
+    FString BindHost;
+    if (!FParse::Value(CommandLine, TEXT("MULTIHOME="), BindHost) ||
+        BindHost.IsEmpty())
+    {
+        return false;
+    }
+    FString Canonical;
+    bool bLoopback = false;
+    return TryCanonicalizeIpv4(BindHost, Canonical, bLoopback) &&
+        bLoopback && BindHost == TEXT("127.0.0.1") &&
+        Canonical == TEXT("127.0.0.1");
+#endif
 }
 
 void UEchoesGameInstance::HandleNetworkFailure(
@@ -844,7 +854,12 @@ FString UEchoesGameInstance::PlayerFacingFailure(
     }
     if (StableReason.Contains(TEXT("ADDRESS")))
     {
-        return TEXT("Enter a hostname or IPv4 address followed by a port, such as 192.168.1.20:7777.");
+        return TEXT("Development multiplayer accepts only localhost followed by a port, such as 127.0.0.1:7777.");
+    }
+    if (StableReason.Contains(TEXT("LOOPBACK")) ||
+        StableReason.Contains(TEXT("DEVELOPMENT_ONLY")))
+    {
+        return TEXT("Online play is currently limited to a Development build on this Mac.");
     }
     if (StableReason.Contains(TEXT("HOST")) ||
         StableReason.Contains(TEXT("TRAVEL")))
