@@ -17,6 +17,7 @@ import unreal
 ART_ROOT = "/Game/Art/Generated"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
+WORLD_MATERIAL_ASSET_REVISION = "world-surface-instancing-v1"
 ASH_CUT_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarAshCut"
 ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Basalt",
@@ -1356,123 +1357,157 @@ def create_surface_material() -> unreal.Material:
 
 
 def create_world_surface_material() -> unreal.Material:
+    action = "created"
     if unreal.EditorAssetLibrary.does_asset_exist(WORLD_MATERIAL_PATH):
-        existing = unreal.EditorAssetLibrary.load_asset(WORLD_MATERIAL_PATH)
-        if isinstance(existing, unreal.Material):
-            unreal.log(
-                f"[ECHOES_ART_MATERIAL] path={WORLD_MATERIAL_PATH} action=reused"
+        material = unreal.EditorAssetLibrary.load_asset(WORLD_MATERIAL_PATH)
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError(
+                f"Existing asset is not a Material: {WORLD_MATERIAL_PATH}"
             )
-            return existing
-        raise RuntimeError(
-            f"Existing asset is not a Material: {WORLD_MATERIAL_PATH}"
+        action = "reused"
+    else:
+        tools = unreal.AssetToolsHelpers.get_asset_tools()
+        material = tools.create_asset(
+            "M_EchoesWorldSurface",
+            f"{ART_ROOT}/Materials",
+            unreal.Material,
+            unreal.MaterialFactoryNew(),
+        )
+        if material is None:
+            raise RuntimeError("Could not create M_EchoesWorldSurface")
+
+        color = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionVectorParameter, -740, -220
+        )
+        color.set_editor_property("parameter_name", "Color")
+        color.set_editor_property(
+            "default_value", unreal.LinearColor(0.055, 0.07, 0.08, 1.0)
         )
 
-    tools = unreal.AssetToolsHelpers.get_asset_tools()
-    material = tools.create_asset(
-        "M_EchoesWorldSurface",
-        f"{ART_ROOT}/Materials",
-        unreal.Material,
-        unreal.MaterialFactoryNew(),
-    )
-    if material is None:
-        raise RuntimeError("Could not create M_EchoesWorldSurface")
+        world_position = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionWorldPosition, -760, 70
+        )
+        noise = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionNoise, -520, 35
+        )
+        noise.set_editor_property("scale", 180.0)
+        noise.set_editor_property("quality", 2)
+        noise.set_editor_property("levels", 3)
+        noise.set_editor_property("output_min", 0.58)
+        noise.set_editor_property("output_max", 1.0)
+        noise.set_editor_property("turbulence", True)
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            world_position, "", noise, "Position"
+        )
 
-    color = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionVectorParameter, -740, -220
-    )
-    color.set_editor_property("parameter_name", "Color")
-    color.set_editor_property(
-        "default_value", unreal.LinearColor(0.055, 0.07, 0.08, 1.0)
-    )
+        color_variation = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -250, -155
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            color, "", color_variation, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            noise, "", color_variation, "B"
+        )
 
-    world_position = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionWorldPosition, -760, 70
-    )
-    noise = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionNoise, -520, 35
-    )
-    noise.set_editor_property("scale", 180.0)
-    noise.set_editor_property("quality", 2)
-    noise.set_editor_property("levels", 3)
-    noise.set_editor_property("output_min", 0.58)
-    noise.set_editor_property("output_max", 1.0)
-    noise.set_editor_property("turbulence", True)
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        world_position, "", noise, "Position"
-    )
+        metallic = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionScalarParameter, -520, 230
+        )
+        metallic.set_editor_property("parameter_name", "Metallic")
+        metallic.set_editor_property("default_value", 0.16)
 
-    color_variation = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionMultiply, -250, -155
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        color, "", color_variation, "A"
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        noise, "", color_variation, "B"
-    )
+        roughness = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionScalarParameter, -520, 330
+        )
+        roughness.set_editor_property("parameter_name", "Roughness")
+        roughness.set_editor_property("default_value", 0.68)
+        roughness_variation = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -245, 260
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            roughness, "", roughness_variation, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            noise, "", roughness_variation, "B"
+        )
 
-    metallic = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, 230
-    )
-    metallic.set_editor_property("parameter_name", "Metallic")
-    metallic.set_editor_property("default_value", 0.16)
+        emission = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionScalarParameter, -520, -315
+        )
+        emission.set_editor_property("parameter_name", "EmissiveStrength")
+        emission.set_editor_property("default_value", 0.0)
+        emissive_color = unreal.MaterialEditingLibrary.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -245, -300
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            color, "", emissive_color, "A"
+        )
+        unreal.MaterialEditingLibrary.connect_material_expressions(
+            emission, "", emissive_color, "B"
+        )
 
-    roughness = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, 330
-    )
-    roughness.set_editor_property("parameter_name", "Roughness")
-    roughness.set_editor_property("default_value", 0.68)
-    roughness_variation = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionMultiply, -245, 260
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        roughness, "", roughness_variation, "A"
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        noise, "", roughness_variation, "B"
-    )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            color_variation, "", unreal.MaterialProperty.MP_BASE_COLOR
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            metallic, "", unreal.MaterialProperty.MP_METALLIC
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            roughness_variation, "", unreal.MaterialProperty.MP_ROUGHNESS
+        )
+        unreal.MaterialEditingLibrary.connect_material_property(
+            emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+        )
+        unreal.MaterialEditingLibrary.layout_material_expressions(material)
 
-    emission = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, -315
-    )
-    emission.set_editor_property("parameter_name", "EmissiveStrength")
-    emission.set_editor_property("default_value", 0.0)
-    emissive_color = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionMultiply, -245, -300
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        color, "", emissive_color, "A"
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(
-        emission, "", emissive_color, "B"
-    )
+    usage = unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES
+    needs_save = action == "created"
+    if not unreal.MaterialEditingLibrary.has_material_usage(material, usage):
+        unreal.MaterialEditingLibrary.set_base_material_usage(
+            material, usage, True
+        )
+        if action == "reused":
+            action = "repaired"
+        needs_save = True
+    if not unreal.MaterialEditingLibrary.has_material_usage(material, usage):
+        raise RuntimeError(
+            "M_EchoesWorldSurface did not retain InstancedStaticMeshes usage"
+        )
 
-    unreal.MaterialEditingLibrary.connect_material_property(
-        color_variation, "", unreal.MaterialProperty.MP_BASE_COLOR
+    if (
+        unreal.EditorAssetLibrary.get_metadata_tag(
+            material, "Echoes.AssetRevision"
+        )
+        != WORLD_MATERIAL_ASSET_REVISION
+    ):
+        if action == "reused":
+            action = "repaired"
+        needs_save = True
+
+    if needs_save:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            material, "Echoes.Creator", "Angelis Pseftis"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            material,
+            "Echoes.Provenance",
+            "Original scripted Unreal world material",
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            material, "Echoes.Status", "Vertical-slice environment candidate"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            material, "Echoes.AssetRevision", WORLD_MATERIAL_ASSET_REVISION
+        )
+        unreal.MaterialEditingLibrary.recompile_material(material)
+        if not unreal.EditorAssetLibrary.save_loaded_asset(material, False):
+            raise RuntimeError("Could not save M_EchoesWorldSurface")
+
+    unreal.log(
+        "[ECHOES_WORLD_SURFACE_READY] "
+        f"revision={WORLD_MATERIAL_ASSET_REVISION} action={action} "
+        "instancedStaticMeshes=true"
     )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        metallic, "", unreal.MaterialProperty.MP_METALLIC
-    )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        roughness_variation, "", unreal.MaterialProperty.MP_ROUGHNESS
-    )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
-    )
-    unreal.MaterialEditingLibrary.layout_material_expressions(material)
-    unreal.MaterialEditingLibrary.recompile_material(material)
-    unreal.EditorAssetLibrary.set_metadata_tag(
-        material, "Echoes.Creator", "Angelis Pseftis"
-    )
-    unreal.EditorAssetLibrary.set_metadata_tag(
-        material,
-        "Echoes.Provenance",
-        "Original scripted Unreal world material",
-    )
-    unreal.EditorAssetLibrary.set_metadata_tag(
-        material, "Echoes.Status", "Vertical-slice environment candidate"
-    )
-    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
     return material
 
 

@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Tests/AutomationCommon.h"
@@ -69,6 +70,17 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Blocked and scarred terrain use project-authored world meshes"),
         TerrainView->IsUsingAuthoredTerrainMeshes());
+
+    UMaterial* WorldSurfaceMaterial = LoadObject<UMaterial>(
+        nullptr,
+        TEXT("/Game/Art/Generated/Materials/M_EchoesWorldSurface.M_EchoesWorldSurface"));
+    if (TestNotNull(TEXT("Authored world-surface material loads"), WorldSurfaceMaterial))
+    {
+        TestTrue(
+            TEXT("World-surface material supports instanced terrain meshes"),
+            WorldSurfaceMaterial->GetUsageByFlag(
+                MATUSAGE_InstancedStaticMeshes));
+    }
 
     const TCHAR* AuthoredWorldMeshes[] = {
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf.SM_World_GlassScarShelf"),

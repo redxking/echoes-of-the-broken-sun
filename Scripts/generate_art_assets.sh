@@ -26,6 +26,12 @@ if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=47 roster=24 landmarks=4 environme
   exit 3
 fi
 
+if ! rg -q '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-instancing-v1.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
+  print -u2 "The world-surface material is not qualified for instanced terrain."
+  print -u2 "Inspect: $log"
+  exit 10
+fi
+
 if ! rg -q '\[ECHOES_DESTRUCTION_VFX_READY\].*revision=destruction-vfx-v1.*assets=3 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
   print -u2 "The destruction VFX asset audit did not pass."
   print -u2 "Inspect: $log"
