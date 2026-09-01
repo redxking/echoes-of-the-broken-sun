@@ -3406,14 +3406,29 @@ void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
     if (ExpectedDigest == nullptr || *ExpectedDigest != ScopedDigest ||
         SnapshotId <= LastAcknowledgedNetworkSnapshotId)
     {
+        // A bound client can repeat invalid acknowledgements indefinitely;
+        // one line per window keeps the rejection observable without an
+        // unbounded log channel.
+        static double LastAckRejectionLogSeconds = -1.0;
+        static uint64 SuppressedAckRejectionLogs = 0;
+        const double Now = FPlatformTime::Seconds();
+        if (LastAckRejectionLogSeconds >= 0.0 &&
+            Now - LastAckRejectionLogSeconds < 5.0)
+        {
+            ++SuppressedAckRejectionLogs;
+            return;
+        }
+        LastAckRejectionLogSeconds = Now;
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NETWORK_KEYFRAME_ACK_REJECTED] player=%u snapshot=%llu digest=%llu lastAck=%llu reason=NET_SNAPSHOT_LINEAGE_INVALID"),
+            TEXT("[ECHOES_NETWORK_KEYFRAME_ACK_REJECTED] player=%u snapshot=%llu digest=%llu lastAck=%llu reason=NET_SNAPSHOT_LINEAGE_INVALID suppressedRepeats=%llu"),
             NetworkSeat,
             static_cast<unsigned long long>(SnapshotId),
             static_cast<unsigned long long>(ScopedDigest),
-            static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId));
+            static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId),
+            static_cast<unsigned long long>(SuppressedAckRejectionLogs));
+        SuppressedAckRejectionLogs = 0;
         return;
     }
     int32 RetiredSnapshotCount = 0;
@@ -4319,20 +4334,41 @@ void AEchoesPlayerController::TryAdvanceNetworkReconnectSmoke(
 void AEchoesPlayerController::ServerConfirmNetworkSmokeComplete_Implementation(
     uint64 SnapshotId)
 {
+    // Smoke confirmations are meaningful only to an authority that itself
+    // launched in the matching smoke mode; an ordinary match server ignores
+    // them entirely so a bound client cannot use this RPC as a log or probe
+    // channel.
+    if (!FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
+    {
+        return;
+    }
     if (!bNetworkCommandExecutionVerified ||
         !bNetworkHostExecutionVerified ||
         NetworkSnapshotAcknowledgementCount < 2 ||
         SnapshotId != LastAcknowledgedNetworkSnapshotId)
     {
+        static double LastSmokeFailureLogSeconds = -1.0;
+        static uint64 SuppressedSmokeFailureLogs = 0;
+        const double Now = FPlatformTime::Seconds();
+        if (LastSmokeFailureLogSeconds >= 0.0 &&
+            Now - LastSmokeFailureLogSeconds < 5.0)
+        {
+            ++SuppressedSmokeFailureLogs;
+            return;
+        }
+        LastSmokeFailureLogSeconds = Now;
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_NETWORK_SERVER_SMOKE_FAILED] snapshot=%llu expectedAck=%llu remoteExecutionVerified=%s hostExecutionVerified=%s acknowledgements=%llu"),
+            TEXT("[ECHOES_NETWORK_SERVER_SMOKE_FAILED] snapshot=%llu expectedAck=%llu remoteExecutionVerified=%s hostExecutionVerified=%s acknowledgements=%llu suppressedRepeats=%llu"),
             static_cast<unsigned long long>(SnapshotId),
             static_cast<unsigned long long>(LastAcknowledgedNetworkSnapshotId),
             bNetworkCommandExecutionVerified ? TEXT("true") : TEXT("false"),
             bNetworkHostExecutionVerified ? TEXT("true") : TEXT("false"),
-            static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount));
+            static_cast<unsigned long long>(NetworkSnapshotAcknowledgementCount),
+            static_cast<unsigned long long>(SuppressedSmokeFailureLogs));
+        SuppressedSmokeFailureLogs = 0;
         return;
     }
     UE_LOG(
@@ -4400,6 +4436,13 @@ void AEchoesPlayerController::ServerConfirmNetworkMatchSmokeComplete_Implementat
     uint64 FinalSnapshotId,
     uint64 FinalScopedDigest)
 {
+    // Meaningful only to an authority launched in match-smoke mode; ordinary
+    // servers ignore the RPC entirely.
+    if (!FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke")))
+    {
+        return;
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -4463,6 +4506,13 @@ void AEchoesPlayerController::ServerConfirmNetworkReconnectSmokeComplete_Impleme
     uint64 ReportedLastAcceptedSequence,
     uint64 ReportedLastAcceptedBatchId)
 {
+    // Meaningful only to an authority launched in reconnect-smoke mode;
+    // ordinary servers ignore the RPC entirely.
+    if (!FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkReconnectSmoke")))
+    {
+        return;
+    }
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()

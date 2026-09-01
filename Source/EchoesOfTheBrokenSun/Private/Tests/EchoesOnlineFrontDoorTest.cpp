@@ -572,6 +572,26 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
         TEXT("Non-smoke confirm-RPC failure does not request engine exit"),
         IsEngineExitRequested());
 
+    // N-SEC-4: the server-side smoke confirmation is ignored outright by an
+    // authority that did not launch in smoke mode — no error log (an
+    // unexpected Error would fail this test) and no state change.
+    UFunction* ServerConfirmFunction = Controller->FindFunction(
+        FName(TEXT("ServerConfirmNetworkSmokeComplete")));
+    if (!TestNotNull(TEXT("Server smoke confirmation RPC exists"),
+                     ServerConfirmFunction))
+    {
+        return false;
+    }
+    struct
+    {
+        uint64 SnapshotId;
+    } ServerConfirmParams = {7};
+    Controller->UObject::ProcessEvent(
+        ServerConfirmFunction, &ServerConfirmParams);
+    TestFalse(
+        TEXT("Non-smoke server confirm-RPC does not request engine exit"),
+        IsEngineExitRequested());
+
     const FEchoesSkirmishSetup Canonical =
         FEchoesSkirmishSetupModel::CanonicalOnlineSetup();
     TestTrue(TEXT("Online rules are exactly canonical"),
