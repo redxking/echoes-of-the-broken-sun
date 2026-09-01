@@ -22,6 +22,11 @@ public:
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
+    /** Applies the authored exposure, tonemapper, and bloom baseline
+     *  (revision exposure-authored-v1) to the camera. Every mode inherits
+     *  this; review fixtures override only the exposure bias. */
+    void ApplyAuthoredPostProcess();
+
     void SetForwardInput(float Value);
     void SetRightInput(float Value);
     void ZoomIn();

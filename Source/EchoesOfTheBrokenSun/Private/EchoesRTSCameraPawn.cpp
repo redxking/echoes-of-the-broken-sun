@@ -36,10 +36,69 @@ AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
 
 }
 
+void AEchoesRTSCameraPawn::ApplyAuthoredPostProcess()
+{
+    if (Camera == nullptr)
+    {
+        return;
+    }
+    FPostProcessSettings& Settings = Camera->PostProcessSettings;
+
+    // Track A1's explicit exposure contract: histogram metering, but bounded
+    // to a fraction of a stop so site brightness variation survives while
+    // nothing runs away, and no exposure bias by default. Review fixtures
+    // still override the bias after this baseline is applied.
+    Settings.bOverride_AutoExposureMethod = true;
+    Settings.AutoExposureMethod = EAutoExposureMethod::AEM_Histogram;
+    Settings.bOverride_AutoExposureMinBrightness = true;
+    Settings.AutoExposureMinBrightness = 1.0f;
+    Settings.bOverride_AutoExposureMaxBrightness = true;
+    Settings.AutoExposureMaxBrightness = 1.2f;
+    Settings.bOverride_AutoExposureSpeedUp = true;
+    Settings.AutoExposureSpeedUp = 3.0f;
+    Settings.bOverride_AutoExposureSpeedDown = true;
+    Settings.AutoExposureSpeedDown = 1.0f;
+    Settings.bOverride_AutoExposureBias = true;
+    Settings.AutoExposureBias = 0.75f;
+
+    // Filmic tonemapper chosen against the charcoal / pale-ceramic /
+    // broken-sun-amber palette: a slightly relaxed slope with an earlier,
+    // stronger shoulder and a tight white clip rolls ceramic and vitrified
+    // glass into detail instead of clipping them to paper.
+    Settings.bOverride_FilmSlope = true;
+    Settings.FilmSlope = 0.84f;
+    Settings.bOverride_FilmShoulder = true;
+    Settings.FilmShoulder = 0.45f;
+    Settings.bOverride_FilmWhiteClip = true;
+    Settings.FilmWhiteClip = 0.012f;
+
+    // The prototype's glare bleed came from default bloom over hot specular;
+    // keep bloom present but restrained.
+    Settings.bOverride_BloomIntensity = true;
+    Settings.BloomIntensity = 0.3f;
+
+    Camera->PostProcessBlendWeight = 1.0f;
+
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_EXPOSURE_AUTHORED] method=histogram minBrightness=%.2f maxBrightness=%.2f bias=%.2f filmSlope=%.2f filmShoulder=%.2f whiteClip=%.3f bloom=%.2f revision=exposure-authored-v1"),
+        Settings.AutoExposureMinBrightness,
+        Settings.AutoExposureMaxBrightness,
+        Settings.AutoExposureBias,
+        Settings.FilmSlope,
+        Settings.FilmShoulder,
+        Settings.FilmWhiteClip,
+        Settings.BloomIntensity);
+}
+
 void AEchoesRTSCameraPawn::BeginPlay()
 {
     Super::BeginPlay();
     bEdgePanArmed = false;
+    // The authored exposure/tonemapper baseline applies to every camera mode;
+    // the non-shipping review fixtures below may override the bias only.
+    ApplyAuthoredPostProcess();
 #if !UE_BUILD_SHIPPING
     if (FParse::Param(
             FCommandLine::Get(),
