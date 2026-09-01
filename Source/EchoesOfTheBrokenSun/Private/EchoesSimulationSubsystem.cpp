@@ -117,7 +117,7 @@ constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
 constexpr uint8 QuickSaveContainerVersion = 3;
-constexpr uint8 TermsOfContinuanceTopologyRevision = 1;
+constexpr uint8 TermsOfContinuanceTopologyRevision = 2;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 

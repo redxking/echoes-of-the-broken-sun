@@ -184,7 +184,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
              ReshapePlan.MeridianRelaySite ==
                      echoes::sim::Vec2::FromTiles(50, 27) &&
                  ReshapePlan.KharuunSpineSite ==
-                     echoes::sim::Vec2::FromTiles(50, 39) &&
+                     echoes::sim::Vec2::FromTiles(44, 38) &&
                  ReshapePlan.WitnessExtractionSite ==
                      echoes::sim::Vec2::FromTiles(44, 47));
     TestTrue(
@@ -224,7 +224,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     echoes::sim::Vec2::FromTiles(30, 20),
                     echoes::sim::Vec2::FromTiles(37, 23),
                     echoes::sim::Vec2::FromTiles(44, 26),
-                    echoes::sim::Vec2::FromTiles(50, 31)});
+                    echoes::sim::Vec2::FromTiles(49, 32)});
     bool bReshapeSitesAreUniqueAndDisjoint =
         ReshapePlan.PlayerPowerLinkSites.Num() == 1 &&
         !ReshapePlan.SeedPowerLinkSites.Contains(
@@ -260,7 +260,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         echoes::sim::Vec2::FromTiles(30, 20),
         echoes::sim::Vec2::FromTiles(37, 23),
         echoes::sim::Vec2::FromTiles(44, 26),
-        echoes::sim::Vec2::FromTiles(50, 31)};
+        echoes::sim::Vec2::FromTiles(49, 32)};
     const auto IsWithinRouteHop = [](
         const echoes::sim::Vec2& First,
         const echoes::sim::Vec2& Second)
@@ -1185,17 +1185,17 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             LegacyTopologyWorld.ForwardErrorMessages(this);
             return false;
         }
-        const TArray<echoes::sim::Vec2> LegacySharedSeedSites{
+        const TArray<echoes::sim::Vec2> PriorRevisionOneSeedSites{
             echoes::sim::Vec2::FromTiles(24, 15),
-            echoes::sim::Vec2::FromTiles(29, 20),
-            echoes::sim::Vec2::FromTiles(29, 36),
-            echoes::sim::Vec2::FromTiles(29, 40),
-            echoes::sim::Vec2::FromTiles(18, 10)};
+            echoes::sim::Vec2::FromTiles(30, 20),
+            echoes::sim::Vec2::FromTiles(37, 23),
+            echoes::sim::Vec2::FromTiles(44, 26),
+            echoes::sim::Vec2::FromTiles(50, 31)};
         echoes::sim::Simulation* LegacySimulation =
             const_cast<echoes::sim::Simulation*>(
                 LegacyBridge->GetSimulation());
         bool bLegacyTopologyMaterialized =
-            LegacySharedSeedSites.Num() ==
+            PriorRevisionOneSeedSites.Num() ==
                 ReshapePlan.SeedPowerLinkSites.Num();
         for (int32 Index = 0;
              Index < ReshapePlan.SeedPowerLinkSites.Num();
@@ -1223,10 +1223,30 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 bLegacyTopologyMaterialized = false;
                 continue;
             }
-            MutableSeed->position = LegacySharedSeedSites[Index];
+            MutableSeed->position = PriorRevisionOneSeedSites[Index];
+        }
+        echoes::sim::Entity* MutableSpine = nullptr;
+        const FEchoesObjectiveSnapshot LegacyObjective =
+            LegacyBridge->GetLocalObjectiveSnapshot();
+        for (const echoes::sim::Entity& Entity :
+             LegacySimulation->Entities())
+        {
+            if (Entity.id ==
+                LegacyObjective.KharuunContinuanceSpineId)
+            {
+                MutableSpine = const_cast<echoes::sim::Entity*>(
+                    &Entity);
+                break;
+            }
+        }
+        bLegacyTopologyMaterialized &= MutableSpine != nullptr;
+        if (MutableSpine != nullptr)
+        {
+            MutableSpine->position =
+                echoes::sim::Vec2::FromTiles(50, 39);
         }
         if (!TestTrue(
-                TEXT("The regression fixture materializes the prior shared Reshape seed layout"),
+                TEXT("The regression fixture materializes the exact prior revision-1 Reshape geometry"),
                 bLegacyTopologyMaterialized) ||
             !TestTrue(
                 TEXT("The incompatible Reshape checkpoint can be written for load validation"),
@@ -1246,7 +1266,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         {
             constexpr int32 TopologyRevisionOffset = 11;
             constexpr int32 ChecksumSize = 4;
-            LegacyContainerBytes[TopologyRevisionOffset] = 0;
+            LegacyContainerBytes[TopologyRevisionOffset] = 1;
             const int32 ChecksumOffset =
                 LegacyContainerBytes.Num() - ChecksumSize;
             const uint32 Checksum = FCrc::MemCrc32(
@@ -1266,7 +1286,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     *LegacyTopologyQuickSavePath);
         }
         if (!TestTrue(
-                TEXT("The incompatible fixture carries the prior zero topology revision with a valid checksum"),
+                TEXT("The incompatible fixture carries the prior revision-1 topology revision with a valid checksum"),
                 bLegacyRevisionMaterialized))
         {
             LegacyBridge->StopPrototypeScenario();
@@ -1274,7 +1294,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             return false;
         }
         TestFalse(
-            TEXT("QuickLoad rejects the prior shared Reshape seed layout"),
+            TEXT("QuickLoad rejects the prior revision-1 Reshape geometry"),
             LegacyBridge->QuickLoadScenario(Feedback));
         TestTrue(
             TEXT("The incompatible topology rejection is explicit and stable"),
@@ -1353,7 +1373,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 CurrentTopologyBytes,
                 *LegacyTopologyQuickSavePath) &&
             CurrentTopologyBytes.Num() > 16 &&
-            CurrentTopologyBytes[11] == 1;
+            CurrentTopologyBytes[11] == 2;
         DamagedSeed->hitPoints = DamagedSeed->maxHitPoints;
         if (!TestTrue(
                 TEXT("A degraded seed snapshot is written with the current topology revision"),

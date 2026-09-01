@@ -1668,7 +1668,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 M05ExpectedMeridianRelaySite =
                     Vec2::FromTiles(50, 27);
                 M05ExpectedKharuunSpineSite =
-                    Vec2::FromTiles(50, 39);
+                    Vec2::FromTiles(44, 38);
                 M05ExpectedWitnessExtractionSite =
                     Vec2::FromTiles(44, 47);
                 M05ExpectedPlayerPowerLinkSites = {
@@ -1678,7 +1678,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Vec2::FromTiles(30, 20),
                     Vec2::FromTiles(37, 23),
                     Vec2::FromTiles(44, 26),
-                    Vec2::FromTiles(50, 31)};
+                    Vec2::FromTiles(49, 32)};
                 break;
             default:
                 break;
