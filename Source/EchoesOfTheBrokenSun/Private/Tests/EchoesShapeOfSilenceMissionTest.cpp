@@ -190,7 +190,7 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
             PreservePlan.ConfluenceSite ==
                 echoes::sim::Vec2::FromTiles(32, 50) &&
             ReshapePlan.WaystoneAnchor ==
-                echoes::sim::Vec2::FromTiles(50, 28) &&
+                echoes::sim::Vec2::FromTiles(48, 20) &&
             ReshapePlan.ListeningSpineSite ==
                 echoes::sim::Vec2::FromTiles(39, 37) &&
             ReshapePlan.FirstWitnessSite ==
@@ -352,20 +352,34 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     constexpr int32 ChecksumSize = 4;
     TArray<uint8> CurrentTopologyBytes;
     if (!TestTrue(
-            TEXT("The current Mission 07 checkpoint carries topology revision one"),
+            TEXT("The current Mission 07 checkpoint carries topology revision two"),
             FFileHelper::LoadFileToArray(
                 CurrentTopologyBytes,
                 *QuickSavePath) &&
                 CurrentTopologyBytes.Num() > 16 &&
-                CurrentTopologyBytes[TopologyRevisionOffset] == 1))
+                CurrentTopologyBytes[TopologyRevisionOffset] == 2))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
     TestTrue(
-        TEXT("Topology revision zero binds the prior Reshape listening geometry"),
-        echoes::sim::Vec2::FromTiles(50, 38) !=
+        TEXT("Topology revision one binds the prior Reshape anchor and downstream geometry"),
+        echoes::sim::Vec2::FromTiles(50, 28) !=
+                ReshapePlan.WaystoneAnchor &&
+            echoes::sim::Vec2::FromTiles(39, 37) ==
+                ReshapePlan.ListeningSpineSite &&
+            echoes::sim::Vec2::FromTiles(22, 38) ==
+                ReshapePlan.FirstWitnessSite &&
+            echoes::sim::Vec2::FromTiles(30, 38) ==
+                ReshapePlan.SecondWitnessSite &&
+            echoes::sim::Vec2::FromTiles(25, 50) ==
+                ReshapePlan.ConfluenceSite);
+    TestTrue(
+        TEXT("Topology revision zero binds the original Reshape listening geometry"),
+        echoes::sim::Vec2::FromTiles(50, 28) !=
+                ReshapePlan.WaystoneAnchor &&
+            echoes::sim::Vec2::FromTiles(50, 38) !=
                 ReshapePlan.ListeningSpineSite &&
             echoes::sim::Vec2::FromTiles(46, 45) !=
                 ReshapePlan.FirstWitnessSite &&
@@ -374,10 +388,38 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
             echoes::sim::Vec2::FromTiles(50, 50) !=
                 ReshapePlan.ConfluenceSite);
     TArray<uint8> LegacyTopologyBytes = CurrentTopologyBytes;
-    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    LegacyTopologyBytes[TopologyRevisionOffset] = 1;
     const int32 ChecksumOffset =
         LegacyTopologyBytes.Num() - ChecksumSize;
-    const uint32 LegacyChecksum = FCrc::MemCrc32(
+    uint32 LegacyChecksum = FCrc::MemCrc32(
+        LegacyTopologyBytes.GetData(),
+        ChecksumOffset);
+    for (int32 ByteIndex = 0;
+         ByteIndex < ChecksumSize;
+         ++ByteIndex)
+    {
+        LegacyTopologyBytes[ChecksumOffset + ByteIndex] =
+            static_cast<uint8>(
+                LegacyChecksum >> (ByteIndex * 8));
+    }
+    if (!TestTrue(
+            TEXT("The revision-one Mission 07 fixture retains a valid checksum"),
+            FFileHelper::SaveArrayToFile(
+                LegacyTopologyBytes,
+                *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(
+        TEXT("QuickLoad rejects the revision-one Mission 07 topology"),
+        Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("The revision-one Mission 07 topology rejection is explicit and stable"),
+        Feedback.Contains(TEXT("LOAD_SHAPE_OF_SILENCE_TOPOLOGY_MISMATCH")));
+    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    LegacyChecksum = FCrc::MemCrc32(
         LegacyTopologyBytes.GetData(),
         ChecksumOffset);
     for (int32 ByteIndex = 0;

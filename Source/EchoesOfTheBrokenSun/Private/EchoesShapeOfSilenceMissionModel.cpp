@@ -78,7 +78,7 @@ FEchoesShapeOfSilenceMissionModel::PlanForChoice(
         case echoes::sim::FutureWellChoice::Reshape:
             return {
                 Choice,
-                echoes::sim::Vec2::FromTiles(50, 28),
+                echoes::sim::Vec2::FromTiles(48, 20),
                 echoes::sim::Vec2::FromTiles(39, 37),
                 echoes::sim::Vec2::FromTiles(22, 38),
                 echoes::sim::Vec2::FromTiles(30, 38),
