@@ -1,35 +1,60 @@
 # Echoes of the Broken Sun
 
-**Author and creator:** Angelis Pseftis  
-**Current state:** This is a verified Unreal playable-systems prototype entering its authored Glass Scar vertical slice, not a completed or publicly playable game. Version 0.93.0 retains the accepted networking, three local skirmish factions, and all fifteen bounded campaign operations through **The Broken Sun**, then connects those operations into a player-facing journey. `C` continues from the validated persisted ledger to the exact next authored mission; a failed mission retries instead of advancing; and a complete fifteen-record campaign returns to the title/archive boundary without inventing Mission 16. New Campaign and Restore are transactional across the active ledger and one retained prior generation. A replay conflict returns to the campaign journey without changing either generation. Campaign-bound Mission 02–09 quick-save containers bind the exact prerequisite-ledger projection; unbound raw and version-1 bound saves fail closed, while a compatible legacy noncampaign raw save remains loadable and is preserved as the prior generation during its first container upgrade. The exact-source MacEditor report created `2026.08.31-01.18.03` UTC records 47/47 successful tests with no warning or error entries; its added `FreshJourney` case drives two isolated controller/simulation routes from an empty ledger through Mission 15: Preserve to Restoration and Harvest to Extinguishment. It also verifies generation replacement/restore and replay-conflict immutability. A subsequent guarded 47/47 rerun scoped every automation entry point to temporary storage, left the suite root empty, and produced identical recursive path/type/mode/size/mtime/symlink-target/file-hash manifests for the real player `Saved/SaveGames` tree before and after. That establishes equality of the two sampled states, not absence of a transient write, any read, or an external race. The campaign journey remains headless controller/simulation evidence, not rendered UI, physical input, or ordinary-human campaign completion. The later retained Mac-arm64 Development package is bound by its manifest to clean source commit `dab16f281b9fe3fe84f463b556fe23dd56bd36ca`. Its normal and 400-unit startup smokes passed, and two 1600x900 packaged Metal sessions closed the specific `M_EchoesWorldSurface` instanced-static-mesh fallback: no usage/default-material fallback appeared and visual inspection found no checkerboard or missing surface. The ordinary frame also exposes severe blown highlights, a dense debug-like control overlay, and prototype-state text, so it is not final-quality presentation evidence. Performance has not been rerun on this later package. The earlier package at `79d0cf3b45b7eeebed6d59a3939dae5ef0056421` exceeded the 11 ms GPU/render-thread budgets, its 180-second diagnostic exceeded the memory-slope budget, and its nominal 600-second result is rejected because the match ended before warm-up. The package is ad-hoc signed, not notarized, and has not been clean-machine qualified. Recovery testing covers logical single-process persistence/reopen and controlled API-level rename failures, not multiprocess access, filesystem crash consistency, or power-loss durability. These results do not establish every alternate route or ending, modeled downstream social consequences, broad three-faction balance or usability, final assets/audio, or release readiness.
+*A science-fantasy real-time strategy game about the cost of making one future real.*
 
-*Echoes of the Broken Sun* is an original science-fantasy real-time strategy game for macOS. Its central strategic resource, the Future Well, forces a player to choose between immediate power, sustained possibility, and temporary transformation of the battlefield.
+Created by Angelis Pseftis.
 
-The repository is intentionally evidence-bounded. A file or menu stub is not treated as a working feature. The current implementation includes an Unreal Engine 5.8 project, Apple Silicon configuration, source-controlled balance definitions, a tool-independent deterministic C++ simulation, and a runtime Unreal adapter with visibility-scoped entity views, RTS camera, selection/controller layer, HUD, opponent AI, construction, one-slot unit production, logistics capacity, pause/restart, Command-Core victory state, and Future Well orders. All twenty-four current faction units and structures across Meridian, Kharuun, and Hollow Choir use distinct project-authored static-mesh candidates. The Future Well has a four-part authored landmark candidate whose Dormant, Harvest, Preserve, and Reshape states differ by geometry as well as color and motion. The Glass Scar has authored shelf, ridge, shard, route, Matter-deposit, and shared-surface candidates; selection, accepted orders, and destruction feedback use registered authored mesh-VFX candidates; command/removal events use a first registered presentation-audio candidate family. Fog, character animation, production textures, final destruction/particle effects, music, voice, ambience, and the final effects mix remain prototype or unimplemented presentation rather than final art/audio. Test results and remaining limitations are recorded in [Docs/Archive/ProjectLedger.md](Docs/Archive/ProjectLedger.md).
+## What is this game?
 
-## Current development gate
+A long time ago, the sun over the world of Soryn shattered. What broke off didn't just become rubble — it became **Dawnshards**: fragments that carry futures which never got to happen. Burn one for power and you can light a city. But you also close the door on whatever that future would have been. Some of those futures, it turns out, were aware enough to know they'd been erased.
 
-Unreal Engine 5.8.2 is installed at `/Users/Shared/Epic Games/UE_5.8` and its completed launcher manifest has been inspected. The separately delivered Apple Metal Toolchain is installed. The host is a 16 GB M1 Pro Mac with about 67 GiB free at the current 0.93.0 evidence checkpoint. The authoritative 8.2 GB project checkout operates from `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project`; the Seagate APFS volume has about 3.6 TiB free and must remain mounted for development and package access. `/Users/angelispseftis/PycharmProjects/echoes-of-the-broken-sun` is only a symlink to that checkout, not a second copy. The retained 0.93.0 Development package is stored separately under `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Packages`; package presence is not a passing profile, valid active-workload soak, clean-machine, notarization, or release result. The internal-space thresholds below still govern engine caches, temporary build products, and any work intentionally placed there. A verified official launcher-installer backup exists at `~/Downloads/EpicInstaller-20.1.4.dmg`, but it should not replace the newer installed launcher.
+That's the idea at the center of *Echoes of the Broken Sun*: every strategic choice you make has a cost, and the game makes you look at it. You'll build bases, gather resources, scout the map, and fight tactical battles the way any real-time strategy fan expects. But the map's most important resource, the **Future Well**, never lets you forget what you're spending. Do you **Harvest** it for an immediate windfall and destroy it forever? **Preserve** it and profit slowly while everyone fights to hold the ground around it? Or **Reshape** it, bending the battlefield itself into a possibility that was never supposed to exist — temporarily?
 
-The current Unreal integration gate is:
+There's no "good" button. Every choice is visible, permanent in its own way, and remembered by the story that follows.
 
-1. Stop prototype builds below 10 GiB free, restore at least 12 GiB before large imports or release packaging, and target 100 GiB for sustained production. These are project engineering thresholds, not Epic-published minimums.
-2. Keep full Xcode selected. Xcode 26.6 has passed project generation, current-source arm64 Development Editor and Game compilation, a forty-seven-test Unreal automation report, null-RHI startup for the bounded playable-faction routes and all fifteen implemented campaign missions, the controlled prologue-completion path, and the 400-unit/four-team fixture, plus an earlier local Development cook/package; Epic still recommends 26.1.1, and clean-machine use remains unverified.
-3. Advance the accepted Unreal NetDriver packet-simulation evidence to operating-system traffic conditioning and then separate machines without weakening authority ownership. Replace the Development bearer-resume fixture with authenticated identity, protected credential storage, and encrypted transport before internet-facing claims. Private-lobby/invite behavior, spectators, abuse controls, and security qualification remain mandatory later gates. In parallel, extend the accepted seven-case pointer combat/Guard matrix into unaided-human usability and dynamic resize coverage, and continue replacing technical primitives under the performance, provenance, and accessibility gates.
-4. Follow [Docs/Archive/SetupAndBuild.md](Docs/Archive/SetupAndBuild.md) and record every accepted result in the ledger.
+## Who you play as
+
+Three factions, three completely different ways of thinking about the war:
+
+- **The Meridian Compact** — engineers and administrators holding together ark-cities on power grids, supply lines, and disciplined logistics. They're strongest once they've built a network; cut a single link and even their strongest positions can come apart.
+- **The Kharuun Assemblies** — a people whose identity is built from layered ancestral memory, fighting from mobile, living infrastructure grown out of mineral-organic terrain. They don't hold ground so much as reshape it and move through it.
+- **The Hollow Choir** — the erased futures themselves, learning to exist. They don't hold territory in the normal sense; they hold *possibilities*, and eventually have to commit to one. (This faction unlocks a bit later in development — see below.)
+
+None of them are the villain. None of them are purely right. That's on purpose.
+
+## Where the project stands today
+
+Here's the honest picture, in plain terms:
+
+*Echoes of the Broken Sun* is being built solo, in the open, as a real Unreal Engine 5 project — not a pitch deck or a concept. Right now it's best described as a **working prototype that's growing into its first real vertical slice**: a full, playable slice of the game called the **Glass Scar**, plus a first pass at the entire 15-mission campaign that carries a single ongoing story from start to finish.
+
+What's actually built and running:
+
+- A complete, deterministic combat and economy simulation — workers, production, logistics, combat, fog of war, and all three Future Well decisions — for the Meridian Compact and Kharuun Assemblies, playable against a functioning AI opponent.
+- All 15 campaign missions exist as working, testable content, chained together into one continuous campaign you can play through from the first evacuation to the final confrontation at the Broken Sun, with save/restore and consequences that carry forward from mission to mission.
+- Early versions of every unit and structure, the Future Well, and the Glass Scar battlefield itself, built with the game's own visual identity rather than placeholder blocks.
+- The first working feedback systems a strategy game needs to actually feel good to play: order confirmation, selection, formations, destruction effects, and a first pass at sound design — all original work.
+
+What's still ahead, also in plain terms: this is **not yet a finished, publicly playable game**. The presentation is still rough in places — you'll see development-grade art, an unfinished interface, and missing music, voice, and ambience. Balance across all three factions hasn't been proven out. The Hollow Choir isn't playable yet. And it's been tested primarily through automated and controller-driven playthroughs, not the kind of hands-on, "hand a stranger a mouse and see what happens" testing that a real release needs.
+
+The current direction — locked in as of this month — is to finish this as a **complete, professional-quality single-player game**: the full Glass Scar skirmish and all fifteen campaign missions, with real voice acting, a finished score, finished art, and one consistent look and feel from the game itself through to its website and story materials. It's launching on macOS first, with Linux/SteamOS and Windows support planned to follow. Online multiplayer exists in the code but is intentionally switched off for now — this release is about finishing the single-player experience right.
+
+## Want to know more, or get involved?
+
+If you're curious about the deeper worldbuilding, the campaign, the factions, and the design philosophy behind all of it, the full design bible lives at [`Docs/Archive/DevelopmentBible.md`](Docs/Archive/DevelopmentBible.md). The nuts-and-bolts engineering documentation — architecture, build instructions, and the detailed, evidence-based development log — lives alongside it in [`Docs/Archive/`](Docs/Archive/).
+
+This is an ambitious, one-person effort to build something with real craft behind it, not cut corners. If that's the kind of project you want to watch grow — or you're the kind of person who might want to help build it — following along here is the best way to see it happen. Reach out to Angelis Pseftis directly if you'd like to talk about the project.
 
 ## Repository map
 
-- `Source/EchoesSimCore`: deterministic, engine-independent RTS simulation
-- `Source/EchoesOfTheBrokenSun`: Unreal presentation and interaction module
-- `Content/Data/Source`: authoritative source data for factions, units, structures, technologies, and Future Wells
-- `Content/Art/Generated`: registered vertical-slice mesh and material candidates
-- `site`: static public game archive deployed through GitHub Pages
-- `Config`: macOS/Apple Silicon Unreal defaults
-- `Tests/Native`: simulation tests runnable before Unreal is installed
-- `Docs/Archive/DevelopmentBible.md`: game, universe, campaign, UI, audio, accessibility, and player-experience design
-- `Docs/Archive/TechnicalArchitecture.md`: simulation, Unreal integration, AI, networking, save, replay, and build architecture
-- `Docs/Archive/ProjectLedger.md`: decisions, roadmap, acceptance evidence, risks, performance budgets, test record, and known limitations
-- `Docs/Archive/AssetRegister.md`: asset provenance and distribution status
+- `Source/EchoesSimCore` — the deterministic, engine-independent simulation at the heart of the game
+- `Source/EchoesOfTheBrokenSun` — the Unreal Engine presentation and interaction layer
+- `Content/Data/Source` — the source data defining factions, units, structures, technologies, and Future Wells
+- `Content/Art/Generated` — in-progress art for the vertical slice
+- `site` — the public game website, deployed through GitHub Pages
+- `Docs/Archive/DevelopmentBible.md` — the world, story, campaign, and design bible
+- `Docs/Archive/TechnicalArchitecture.md` — how the simulation, engine integration, AI, networking, and build pipeline work
+- `Docs/Archive/ProjectLedger.md` — the detailed, evidence-based development log: decisions, test results, and known limitations
+- `Docs/Archive/AssetRegister.md` — where every asset comes from and its licensing status
 
-All project documents are authoritative files edited in place. No document is a claim of production readiness.
+All project documents are living files, kept honest and up to date as the game develops.
