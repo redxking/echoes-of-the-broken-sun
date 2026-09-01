@@ -2840,6 +2840,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             FindOwnedEntities(Bridge, EntityType::CommandCore);
         const EntityId M07CoreId =
             M07Cores.IsEmpty() ? 0 : M07Cores[0];
+        const TArray<EntityId> M07Soldiers =
+            FindOwnedEntities(Bridge, EntityType::Soldier);
+        const TArray<EntityId> M07Heavies =
+            FindOwnedEntities(Bridge, EntityType::HeavyUnit);
+        TArray<EntityId> M07GuardIds;
+        TArray<EntityId> M07GuardTargetIds;
+        EntityId M07SpineId = 0;
         FString M07FirstObservedProtectedLoss = TEXT("none");
         uint64 M07FirstObservedProtectedLossTick = 0;
         const auto ObserveMissionSevenProtectedState = [
@@ -2890,6 +2897,9 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             M07Plan,
             M07Start,
             M07Workers,
+            &M07GuardIds,
+            &M07GuardTargetIds,
+            &M07SpineId,
             &M07FirstObservedProtectedLoss,
             &M07FirstObservedProtectedLossTick,
             &ObserveMissionSevenProtectedState,
@@ -2898,9 +2908,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             ObserveMissionSevenProtectedState();
             const echoes::sim::Simulation* Simulation =
                 Bridge->GetSimulation();
-            EntityId SpineId = 0;
-            const Entity* Spine = nullptr;
-            if (Simulation != nullptr)
+            if (M07SpineId == 0 && Simulation != nullptr)
             {
                 for (const Entity& Candidate : Simulation->Entities())
                 {
@@ -2909,9 +2917,34 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                         Candidate.type == EntityType::UtilityStructure &&
                         Candidate.position == M07Plan.ListeningSpineSite)
                     {
-                        SpineId = Candidate.id;
-                        Spine = &Candidate;
+                        M07SpineId = Candidate.id;
                         break;
+                    }
+                }
+            }
+            FString GuardState = TEXT("none");
+            if (!M07GuardIds.IsEmpty())
+            {
+                GuardState.Reset();
+                for (int32 GuardIndex = 0;
+                     GuardIndex < M07GuardIds.Num();
+                     ++GuardIndex)
+                {
+                    if (GuardIndex > 0)
+                    {
+                        GuardState += TEXT(" ");
+                    }
+                    const FString GuardLabel = FString::Printf(
+                        TEXT("guard%d"), GuardIndex + 1);
+                    GuardState += DescribeFreshJourneyEntity(
+                        *GuardLabel,
+                        M07GuardIds[GuardIndex],
+                        Bridge->FindEntity(M07GuardIds[GuardIndex]));
+                    if (M07GuardTargetIds.IsValidIndex(GuardIndex))
+                    {
+                        GuardState += FString::Printf(
+                            TEXT(" expectedTarget=%u"),
+                            M07GuardTargetIds[GuardIndex]);
                     }
                 }
             }
@@ -2920,7 +2953,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             const FString PriorFeedback =
                 Feedback.IsEmpty() ? TEXT("none") : Feedback;
             Feedback = FString::Printf(
-                TEXT("[M07_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expected={anchor=(%d,%d) spine=(%d,%d) witnesses=(%d,%d):(%d,%d) confluence=(%d,%d)} firstObservedProtectedLossTick=%llu firstObservedProtectedLoss=%s priorFeedback=%s current={%s %s %s %s %s %s %s}"),
+                TEXT("[M07_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expected={anchor=(%d,%d) spine=(%d,%d) witnesses=(%d,%d):(%d,%d) confluence=(%d,%d)} firstObservedProtectedLossTick=%llu firstObservedProtectedLoss=%s priorFeedback=%s current={%s %s %s %s %s %s %s} defenders={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr
                         ? Simulation->CurrentTick()
@@ -2968,7 +3001,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     WorkerId,
                     Bridge->FindEntity(WorkerId)),
                 *DescribeFreshJourneyEntity(
-                    TEXT("spine"), SpineId, Spine));
+                    TEXT("spine"),
+                    M07SpineId,
+                    Bridge->FindEntity(M07SpineId)),
+                *GuardState);
         };
         const auto RequireMissionSeven = [
             &Require,
@@ -3009,12 +3045,160 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             ObserveMissionSevenProtectedState();
             return Predicate();
         };
+        const auto IssueMissionSevenGuardAssignments = [
+            Bridge,
+            &M07GuardIds,
+            &M07GuardTargetIds,
+            &Feedback]()
+        {
+            if (M07GuardIds.Num() != 4 ||
+                M07GuardTargetIds.Num() != M07GuardIds.Num())
+            {
+                Feedback = TEXT(
+                    "[M07_TACTICS_ASSIGNMENT_INVALID] Mission 07 requires four exact Guard assignments.");
+                return false;
+            }
+            for (int32 GuardIndex = 0;
+                 GuardIndex < M07GuardIds.Num();
+                 ++GuardIndex)
+            {
+                const Entity* Target = Bridge->FindEntity(
+                    M07GuardTargetIds[GuardIndex]);
+                if (Target == nullptr || Target->hitPoints <= 0 ||
+                    !Bridge->IssueCommand(
+                        CommandType::Guard,
+                        M07GuardIds[GuardIndex],
+                        M07GuardTargetIds[GuardIndex],
+                        Bridge->SimToWorld(Target->position),
+                        FutureWellChoice::Dormant,
+                        Feedback))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto PrepareMissionSevenGuards = [
+            M07Start,
+            M07Workers,
+            M07Soldiers,
+            M07Heavies,
+            &M07GuardIds,
+            &M07GuardTargetIds,
+            &IssueMissionSevenGuardAssignments,
+            &Feedback]()
+        {
+            if (M07Workers.IsEmpty() || M07Soldiers.Num() < 3 ||
+                M07Heavies.IsEmpty())
+            {
+                Feedback = FString::Printf(
+                    TEXT("[M07_TACTICS_GUARDS_UNAVAILABLE] Requires one worker, three Soldiers, and one Heavy; workers=%d soldiers=%d heavies=%d."),
+                    M07Workers.Num(),
+                    M07Soldiers.Num(),
+                    M07Heavies.Num());
+                return false;
+            }
+            const EntityId GuardActors[] = {
+                M07Soldiers[0],
+                M07Soldiers[1],
+                M07Soldiers[2],
+                M07Heavies[0]};
+            const EntityId GuardTargets[] = {
+                M07Workers[0],
+                M07Workers[0],
+                M07Start.SecondMemoryWitnessId,
+                M07Start.SecondMemoryWitnessId};
+            M07GuardIds.Reset();
+            M07GuardTargetIds.Reset();
+            for (int32 GuardIndex = 0;
+                 GuardIndex < UE_ARRAY_COUNT(GuardActors);
+                 ++GuardIndex)
+            {
+                M07GuardIds.Add(GuardActors[GuardIndex]);
+                M07GuardTargetIds.Add(GuardTargets[GuardIndex]);
+            }
+            return IssueMissionSevenGuardAssignments();
+        };
+        const auto MissionSevenGuardsActive = [
+            Bridge,
+            &M07GuardIds,
+            &M07GuardTargetIds]()
+        {
+            if (M07GuardIds.Num() != 4 ||
+                M07GuardTargetIds.Num() != M07GuardIds.Num())
+            {
+                return false;
+            }
+            for (int32 GuardIndex = 0;
+                 GuardIndex < M07GuardIds.Num();
+                 ++GuardIndex)
+            {
+                const Entity* Guard = Bridge->FindEntity(
+                    M07GuardIds[GuardIndex]);
+                if (Guard == nullptr || Guard->hitPoints <= 0 ||
+                    Guard->order.type != echoes::sim::OrderType::Guard ||
+                    Guard->order.target !=
+                        M07GuardTargetIds[GuardIndex])
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto RetargetMissionSevenSpineGuard = [
+            Bridge,
+            M07Plan,
+            &M07SpineId,
+            &M07GuardTargetIds,
+            &IssueMissionSevenGuardAssignments,
+            &Feedback]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr)
+            {
+                Feedback = TEXT(
+                    "[M07_TACTICS_SIM_MISSING] Mission 07 simulation is unavailable.");
+                return false;
+            }
+            for (const Entity& Candidate : Simulation->Entities())
+            {
+                if (Candidate.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Candidate.type == EntityType::UtilityStructure &&
+                    Candidate.completed && Candidate.hitPoints > 0 &&
+                    Candidate.position == M07Plan.ListeningSpineSite)
+                {
+                    M07SpineId = Candidate.id;
+                    break;
+                }
+            }
+            if (M07SpineId == 0 || M07GuardTargetIds.Num() != 4)
+            {
+                Feedback = TEXT(
+                    "[M07_TACTICS_SPINE_UNAVAILABLE] The completed Listening Spine is unavailable for Guard retargeting.");
+                return false;
+            }
+            M07GuardTargetIds[0] = M07SpineId;
+            return IssueMissionSevenGuardAssignments();
+        };
         ObserveMissionSevenProtectedState();
         if (!RequireMissionSeven(
                 M07Start.MigrationWaystoneId != 0 &&
                     M07Start.OruunId != 0 &&
                     !M07Workers.IsEmpty(),
                 TEXT("Mission 07 exposes its Waystone, Oruun, and worker")) ||
+            !RequireMissionSeven(
+                PrepareMissionSevenGuards(),
+                TEXT("Mission 07 assigns ordinary Guard tactics")) ||
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
+                    [&MissionSevenGuardsActive]()
+                    {
+                        return MissionSevenGuardsActive();
+                    },
+                    20),
+                TEXT("Mission 07 initial Guard assignments take effect")) ||
             !RequireMissionSeven(
                 Bridge->IssueCommand(
                     CommandType::ToggleWaystoneRoot,
@@ -3089,6 +3273,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     3200),
                 TEXT("Mission 07 opens paired witnessing")) ||
             !RequireMissionSeven(
+                RetargetMissionSevenSpineGuard(),
+                TEXT("Mission 07 retargets one escort to the Listening Spine")) ||
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
+                    [&MissionSevenGuardsActive]()
+                    {
+                        return MissionSevenGuardsActive();
+                    },
+                    20),
+                TEXT("Mission 07 Spine and protected-actor Guards take effect")) ||
+            !RequireMissionSeven(
                 Move(
                     M07Start.FirstMemoryWitnessId,
                     M07Plan.FirstWitnessSite),
@@ -3118,7 +3313,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             EEchoesShapeOfSilencePhase::Complete;
                     },
                     3400),
-                TEXT("Mission 07 completes through ordinary play")) ||
+                TEXT("Mission 07 completes through guarded ordinary play")) ||
             !VerifyCompletion(7, EEchoesCampaignCommitStatus::Added) ||
             !AdvanceToNextMission(7))
         {
