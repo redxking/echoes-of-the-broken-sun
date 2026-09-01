@@ -27,12 +27,14 @@ constexpr std::int32_t kMaximumProductionTicks = 60 * 1000;
 constexpr std::uint32_t kLegacySnapshotVersion = 20;
 constexpr std::uint32_t kPriorSnapshotVersion = 21;
 constexpr std::uint32_t kChoirSnapshotVersion = 22;
+constexpr std::uint32_t kProtectedCommandCoreSnapshotVersion = 23;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
 constexpr std::size_t kPriorSerializedEntityBytes = 210;
 constexpr std::size_t kSerializedEntityBytes = 235;
 constexpr std::size_t kSerializedCommandBytes = 38;
+constexpr std::size_t kSerializedCommandResolutionReceiptBytes = 19;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
@@ -41,6 +43,11 @@ constexpr std::uint8_t kValidCommandCoreProtectionMask =
 
 [[nodiscard]] bool HasChoirSnapshotSchema(std::uint32_t version) {
     return version >= kChoirSnapshotVersion;
+}
+
+[[nodiscard]] bool HasProtectedCommandCoreSnapshotSchema(
+    std::uint32_t version) {
+    return version >= kProtectedCommandCoreSnapshotVersion;
 }
 
 [[nodiscard]] std::int64_t Abs64(std::int64_t value) {
@@ -132,6 +139,12 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
     return type >= CommandType::Stop &&
            type <= CommandType::ReconcileToPossible;
+}
+
+[[nodiscard]] bool IsValidCommandResolutionOutcome(
+    CommandResolutionOutcome outcome) {
+    return outcome >= CommandResolutionOutcome::Applied &&
+           outcome <= CommandResolutionOutcome::InvalidPosition;
 }
 
 [[nodiscard]] bool IsValidResearchType(ResearchType type) {
@@ -975,6 +988,21 @@ std::optional<std::uint64_t> Simulation::NextCommandSequence(
         return std::nullopt;
     }
     return maximumSequence + 1;
+}
+
+std::optional<CommandResolutionReceipt>
+Simulation::FindCommandResolutionReceipt(PlayerId player,
+                                         std::uint64_t sequence) const {
+    const auto found = std::find_if(
+        commandResolutionReceipts_.begin(),
+        commandResolutionReceipts_.end(),
+        [player, sequence](const StoredCommandResolutionReceipt& stored) {
+            return stored.receipt.player == player &&
+                   stored.sequence == sequence;
+        });
+    return found == commandResolutionReceipts_.end()
+               ? std::nullopt
+               : std::optional<CommandResolutionReceipt>{found->receipt};
 }
 
 PlayerState* Simulation::MutablePlayer(PlayerId player) {
@@ -2581,23 +2609,58 @@ void Simulation::ProcessCommandsForCurrentTick() {
     std::sort(due.begin(), due.end(), CommandLess);
     pendingCommands_ = std::move(remaining);
     for (const Command& command : due) {
-        ApplyCommand(command);
+        const CommandResolutionOutcome outcome = ApplyCommand(command);
+        RecordCommandResolutionReceipt(command, outcome);
         hasExecutedSequence_[command.player] = true;
         lastExecutedSequence_[command.player] = command.sequence;
     }
 }
 
-void Simulation::ApplyCommand(const Command& command) {
+void Simulation::RecordCommandResolutionReceipt(
+    const Command& command,
+    CommandResolutionOutcome outcome) {
+    // QueueCommand and snapshot validation enforce unique, monotonically
+    // executed player/sequence keys. Preserve that invariant here without an
+    // O(receipt-count) duplicate scan on the authoritative due-command path.
+    StoredCommandResolutionReceipt stored{};
+    stored.sequence = command.sequence;
+    stored.receipt.player = command.player;
+    stored.receipt.commandType = command.type;
+    stored.receipt.assignedExecutionTick = command.executeTick;
+    stored.receipt.outcome = outcome;
+    commandResolutionReceipts_.push_back(stored);
+    if (commandResolutionReceipts_.size() >
+        kMaximumCommandResolutionReceipts) {
+        commandResolutionReceipts_.pop_front();
+    }
+}
+
+void Simulation::PruneCommandResolutionReceipts() {
+    while (!commandResolutionReceipts_.empty()) {
+        const Tick assigned = commandResolutionReceipts_.front()
+                                  .receipt.assignedExecutionTick;
+        if (currentTick_ <= assigned ||
+            currentTick_ - assigned <=
+                kCommandResolutionReceiptRetentionTicks) {
+            break;
+        }
+        commandResolutionReceipts_.pop_front();
+    }
+}
+
+CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
     Entity* actor = MutableEntity(command.actor);
     if (actor == nullptr || actor->owner != command.player || !actor->completed ||
         actor->hitPoints <= 0) {
-        return;
+        return CommandResolutionOutcome::NoEffect;
     }
     if (actor->pendingWarformAdaptation != WarformAdaptation::None &&
         command.type != CommandType::AdaptWarform) {
-        return;
+        return CommandResolutionOutcome::NoEffect;
     }
-    switch (command.type) {
+    CommandResolutionOutcome outcome = CommandResolutionOutcome::NoEffect;
+    const auto apply = [&]() {
+        switch (command.type) {
         case CommandType::Stop: {
             PlayerState* player = MutablePlayer(command.player);
             if (player != nullptr &&
@@ -2610,6 +2673,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 player->researchRequired = 0;
             }
             actor->order = {};
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::Move:
@@ -2619,6 +2683,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Move;
                 actor->order.target = 0;
                 actor->order.destination = command.position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         case CommandType::Gather: {
@@ -2630,6 +2695,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Gather;
                 actor->order.target = target->id;
                 actor->order.destination = target->position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         }
@@ -2641,6 +2707,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Deliver;
                 actor->order.target = target->id;
                 actor->order.destination = target->position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         }
@@ -2674,6 +2741,7 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->order.buildType = command.buildType;
             // Set the order before push_back; vector growth may relocate the actor.
             entities_.push_back(site);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::Attack: {
@@ -2685,6 +2753,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Attack;
                 actor->order.target = target->id;
                 actor->order.destination = target->position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         }
@@ -2699,6 +2768,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.target = target->id;
                 actor->order.destination = target->position;
                 actor->order.wellChoice = command.wellChoice;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         }
@@ -2719,6 +2789,7 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->productionProgress = 0;
             actor->productionRequired =
                 ProductionTicks(player->faction, command.buildType);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::Research: {
@@ -2739,6 +2810,7 @@ void Simulation::ApplyCommand(const Command& command) {
             player->researchRequired = static_cast<std::int32_t>(
                 rules->researchTicks);
             player->lastInterruptedResearch = ResearchType::None;
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::ReconcileToManifest:
@@ -2770,6 +2842,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->choirIdentityResolveAtTick +
                     config_.rules.choirIdentity.cooldownTicks);
             RefreshChoirIdentityStats(*actor);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::AttackMove:
@@ -2778,6 +2851,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::AttackMove;
                 actor->order.target = 0;
                 actor->order.destination = command.position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         case CommandType::Hold:
@@ -2785,6 +2859,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Hold;
                 actor->order.target = 0;
                 actor->order.destination = actor->position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         case CommandType::Guard: {
@@ -2794,6 +2869,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.type = OrderType::Guard;
                 actor->order.target = guarded->id;
                 actor->order.destination = guarded->position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         }
@@ -2805,6 +2881,7 @@ void Simulation::ApplyCommand(const Command& command) {
                 actor->order.target = 0;
                 actor->order.anchor = actor->position;
                 actor->order.destination = command.position;
+                outcome = CommandResolutionOutcome::Applied;
             }
             return;
         case CommandType::ToggleDeploy: {
@@ -2814,6 +2891,7 @@ void Simulation::ApplyCommand(const Command& command) {
             }
             if (actor->deployed) {
                 actor->deployed = false;
+                outcome = CommandResolutionOutcome::Applied;
                 return;
             }
             const std::int64_t deltaX =
@@ -2835,6 +2913,7 @@ void Simulation::ApplyCommand(const Command& command) {
                     deltaY >= 0 ? kFixedScale : -kFixedScale);
             }
             actor->deployed = true;
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::ActivateRelaySupply:
@@ -2849,6 +2928,7 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->relaySupplyCooldownUntilTick = std::min(
                 kMaximumSupportedTick,
                 currentTick_ + config_.rules.relaySupply.cooldownTicks);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         case CommandType::ToggleWaystoneRoot:
             if (ValidateWaystoneRoot(command.player, actor->id) !=
@@ -2867,6 +2947,7 @@ void Simulation::ApplyCommand(const Command& command) {
                     kMaximumSupportedTick,
                     currentTick_ + config_.rules.waystoneMigration.rootTicks);
             }
+            outcome = CommandResolutionOutcome::Applied;
             return;
         case CommandType::AdaptWarform: {
             if (ValidateWarformAdaptation(
@@ -2890,12 +2971,17 @@ void Simulation::ApplyCommand(const Command& command) {
             actor->moltUntilTick = std::min(
                 kMaximumSupportedTick,
                 currentTick_ + config_.rules.warformAdaptation.moltTicks);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
         case CommandType::RaiseMineralCover: {
-            if (ValidateMineralCover(command.player, actor->id,
-                                     command.position) !=
-                MineralCoverResult::Valid) {
+            const MineralCoverResult validation = ValidateMineralCover(
+                command.player, actor->id, command.position);
+            if (validation == MineralCoverResult::InvalidPosition) {
+                outcome = CommandResolutionOutcome::InvalidPosition;
+                return;
+            }
+            if (validation != MineralCoverResult::Valid) {
                 return;
             }
             PlayerState* player = MutablePlayer(command.player);
@@ -2936,9 +3022,13 @@ void Simulation::ApplyCommand(const Command& command) {
                 currentTick_ + rules.cooldownTicks);
             (void)SetTerrainTile(tileX, tileY, Terrain::Blocked);
             entities_.push_back(cover);
+            outcome = CommandResolutionOutcome::Applied;
             return;
         }
-    }
+        }
+    };
+    apply();
+    return outcome;
 }
 
 void Simulation::ProcessGather(Entity& worker) {
@@ -3822,6 +3912,7 @@ void Simulation::Step() {
     RemoveDestroyedEntities();
     ClearInvalidOrders();
     ++currentTick_;
+    PruneCommandResolutionReceipts();
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
@@ -4927,6 +5018,28 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
     for (const Command& command : pending) {
         WriteCommand(writer, command);
     }
+    std::vector<StoredCommandResolutionReceipt> receipts(
+        commandResolutionReceipts_.begin(),
+        commandResolutionReceipts_.end());
+    std::sort(
+        receipts.begin(), receipts.end(),
+        [](const StoredCommandResolutionReceipt& lhs,
+           const StoredCommandResolutionReceipt& rhs) {
+            return std::tie(lhs.receipt.assignedExecutionTick,
+                            lhs.receipt.player,
+                            lhs.sequence) <
+                   std::tie(rhs.receipt.assignedExecutionTick,
+                            rhs.receipt.player,
+                            rhs.sequence);
+        });
+    writer.U32(static_cast<std::uint32_t>(receipts.size()));
+    for (const StoredCommandResolutionReceipt& stored : receipts) {
+        writer.U8(stored.receipt.player);
+        writer.U64(stored.sequence);
+        writer.U8(static_cast<std::uint8_t>(stored.receipt.commandType));
+        writer.U64(stored.receipt.assignedExecutionTick);
+        writer.U8(static_cast<std::uint8_t>(stored.receipt.outcome));
+    }
 }
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
@@ -4934,7 +5047,9 @@ std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     writer.Reserve(
         1536U + terrain_.size() * (1U + explored_.size()) +
         entities_.size() * kSerializedEntityBytes +
-        pendingCommands_.size() * kSerializedCommandBytes);
+        pendingCommands_.size() * kSerializedCommandBytes + 4U +
+        commandResolutionReceipts_.size() *
+            kSerializedCommandResolutionReceiptBytes);
     WriteSnapshotPayload(writer);
     const std::uint64_t integrity = Fnv1a(writer.Data());
     writer.U64(integrity);
@@ -4982,7 +5097,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version != kSnapshotVersion && version != kChoirSnapshotVersion &&
+    if (version != kSnapshotVersion &&
+        version != kProtectedCommandCoreSnapshotVersion &&
+        version != kChoirSnapshotVersion &&
         version != kPriorSnapshotVersion && version != kLegacySnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
@@ -4992,7 +5109,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version == kSnapshotVersion) {
+    if (HasProtectedCommandCoreSnapshotSchema(version)) {
         if (!reader.U8(config.protectedCommandCorePlayerMask)) {
             SetError(error, "snapshot protection mask is truncated");
             return std::nullopt;
@@ -5750,6 +5867,86 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         sawPendingSequence[player] = true;
         lastPendingTick[player] = command.executeTick;
         lastPendingSequence[player] = command.sequence;
+    }
+    if (version == kSnapshotVersion) {
+        std::uint32_t receiptCount = 0;
+        if (!reader.U32(receiptCount) ||
+            receiptCount > kMaximumCommandResolutionReceipts ||
+            static_cast<std::size_t>(receiptCount) >
+                reader.Remaining() /
+                    kSerializedCommandResolutionReceiptBytes) {
+            SetError(error, "snapshot command resolution receipt count is invalid");
+            return std::nullopt;
+        }
+        simulation.commandResolutionReceipts_.clear();
+        std::array<bool, kMaximumPlayers> sawReceiptSequence{};
+        std::array<std::uint64_t, kMaximumPlayers> lastReceiptSequence{};
+        bool sawCanonicalReceipt = false;
+        Tick lastReceiptTick = 0;
+        PlayerId lastReceiptPlayer = 0;
+        std::uint64_t lastCanonicalReceiptSequence = 0;
+        for (std::uint32_t index = 0; index < receiptCount; ++index) {
+            StoredCommandResolutionReceipt stored{};
+            std::uint8_t commandType = 0;
+            std::uint8_t outcome = 0;
+            if (!reader.U8(stored.receipt.player) ||
+                !reader.U64(stored.sequence) ||
+                !reader.U8(commandType) ||
+                !reader.U64(stored.receipt.assignedExecutionTick) ||
+                !reader.U8(outcome)) {
+                SetError(error,
+                         "snapshot command resolution receipt is truncated");
+                return std::nullopt;
+            }
+            stored.receipt.commandType =
+                static_cast<CommandType>(commandType);
+            stored.receipt.outcome =
+                static_cast<CommandResolutionOutcome>(outcome);
+            const PlayerId player = stored.receipt.player;
+            const Tick assignedTick =
+                stored.receipt.assignedExecutionTick;
+            const bool canonical =
+                !sawCanonicalReceipt ||
+                std::tie(lastReceiptTick,
+                         lastReceiptPlayer,
+                         lastCanonicalReceiptSequence) <
+                    std::tie(assignedTick, player, stored.sequence);
+            if (player >= simulation.players_.size() ||
+                !simulation.players_[player].active ||
+                !IsValidCommandType(stored.receipt.commandType) ||
+                !IsValidCommandResolutionOutcome(stored.receipt.outcome) ||
+                assignedTick >= simulation.currentTick_ ||
+                (simulation.currentTick_ > assignedTick &&
+                 simulation.currentTick_ - assignedTick >
+                     kCommandResolutionReceiptRetentionTicks) ||
+                !simulation.hasExecutedSequence_[player] ||
+                stored.sequence >
+                    simulation.lastExecutedSequence_[player] ||
+                (sawReceiptSequence[player] &&
+                 stored.sequence <= lastReceiptSequence[player]) ||
+                !canonical ||
+                (stored.receipt.outcome ==
+                     CommandResolutionOutcome::InvalidPosition &&
+                 stored.receipt.commandType !=
+                     CommandType::RaiseMineralCover) ||
+                (simulation.config_.rules.version < 2 &&
+                 stored.receipt.commandType > CommandType::Research)) {
+                SetError(error,
+                         "snapshot command resolution receipt is invalid");
+                return std::nullopt;
+            }
+            sawReceiptSequence[player] = true;
+            lastReceiptSequence[player] = stored.sequence;
+            sawCanonicalReceipt = true;
+            lastReceiptTick = assignedTick;
+            lastReceiptPlayer = player;
+            lastCanonicalReceiptSequence = stored.sequence;
+            simulation.commandResolutionReceipts_.push_back(stored);
+        }
+    } else {
+        // Schemas 20 through 23 predate authoritative resolution receipts.
+        // Their empty ledger means unavailable evidence, never success.
+        simulation.commandResolutionReceipts_.clear();
     }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");

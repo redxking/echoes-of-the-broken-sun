@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <compare>
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <map>
 #include <optional>
@@ -31,8 +32,10 @@ inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
 inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
-inline constexpr std::uint32_t kSnapshotVersion = 23;
-inline constexpr std::uint32_t kReplayVersion = 23;
+inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
+inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
+inline constexpr std::uint32_t kSnapshotVersion = 24;
+inline constexpr std::uint32_t kReplayVersion = 24;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -188,6 +191,13 @@ enum class CommandType : std::uint8_t {
     Research = 17,
     ReconcileToManifest = 18,
     ReconcileToPossible = 19,
+};
+
+/** Coarse authoritative result of resolving a structurally admitted command. */
+enum class CommandResolutionOutcome : std::uint8_t {
+    Applied = 0,
+    NoEffect = 1,
+    InvalidPosition = 2,
 };
 
 enum class ChoirIdentityState : std::uint8_t {
@@ -605,6 +615,22 @@ struct Command final {
     friend bool operator==(const Command&, const Command&) = default;
 };
 
+/**
+ * Presentation-safe evidence that a command reached deterministic resolution.
+ * Applied does not mean that a long-lived order has completed. NoEffect
+ * deliberately withholds semantic failure details, and InvalidPosition is the
+ * one explicit boundary required for mineral-cover coordinate rejection.
+ */
+struct CommandResolutionReceipt final {
+    PlayerId player = 0;
+    CommandType commandType = CommandType::Stop;
+    Tick assignedExecutionTick = 0;
+    CommandResolutionOutcome outcome = CommandResolutionOutcome::NoEffect;
+
+    friend bool operator==(const CommandResolutionReceipt&,
+                           const CommandResolutionReceipt&) = default;
+};
+
 struct SimulationConfig final {
     std::int32_t mapWidthTiles = 64;
     std::int32_t mapHeightTiles = 64;
@@ -676,6 +702,8 @@ private:
 struct ReplayRecord final {
     std::uint32_t version = kReplayVersion;
     std::vector<std::uint8_t> initialSnapshot{};
+    // Receipts are never an independent replay input. Commands after the
+    // baseline regenerate them through normal deterministic resolution.
     std::vector<Command> commands{};
     Tick finalTick = 0;
     std::uint64_t finalChecksum = 0;
@@ -693,6 +721,14 @@ public:
     }
     [[nodiscard]] std::optional<std::uint64_t> NextCommandSequence(
         PlayerId player) const;
+    /**
+     * Observational lookup only. Absence covers missing, pending, expired,
+     * legacy-loaded, and otherwise unavailable evidence; it never authorizes
+     * retry, replay, or an assumption of success.
+     */
+    [[nodiscard]] std::optional<CommandResolutionReceipt>
+    FindCommandResolutionReceipt(PlayerId player,
+                                 std::uint64_t sequence) const;
 
     bool AddPlayer(PlayerId player, Faction faction, ResourcePool startingResources);
     [[nodiscard]] const PlayerState* FindPlayer(PlayerId player) const;
@@ -819,6 +855,11 @@ private:
         std::int32_t damage = 0;
     };
 
+    struct StoredCommandResolutionReceipt final {
+        std::uint64_t sequence = 0;
+        CommandResolutionReceipt receipt{};
+    };
+
     [[nodiscard]] bool IsInsideMap(Vec2 position,
                                    std::int32_t halfExtentRaw = 0) const;
     [[nodiscard]] PlayerState* MutablePlayer(PlayerId player);
@@ -894,7 +935,12 @@ private:
     void ResolveChoirIdentities();
     void ResolveChoirCoherence();
     void ProcessCommandsForCurrentTick();
-    void ApplyCommand(const Command& command);
+    [[nodiscard]] CommandResolutionOutcome ApplyCommand(
+        const Command& command);
+    void RecordCommandResolutionReceipt(
+        const Command& command,
+        CommandResolutionOutcome outcome);
+    void PruneCommandResolutionReceipts();
     void ProcessEntityOrders();
     void ProcessGather(Entity& worker);
     void ProcessDeliver(Entity& worker);
@@ -934,6 +980,7 @@ private:
     std::vector<Entity> entities_{};
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};
+    std::deque<StoredCommandResolutionReceipt> commandResolutionReceipts_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
     bool replayExportEnabled_ = true;
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
