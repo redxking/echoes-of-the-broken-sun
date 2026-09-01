@@ -198,6 +198,49 @@ uint8 TestOwnedResolutionBit(EEchoesFinalResolution Resolution)
     }
     return 0;
 }
+
+Vec2 TestOwnedNoNeutralRallySite(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 43);
+        default: return {};
+    }
+}
+
+FString DescribeFreshJourneyEntity(
+    const TCHAR* Label,
+    EntityId Id,
+    const Entity* Current)
+{
+    if (Current == nullptr)
+    {
+        return FString::Printf(TEXT("%s{id=%u missing}"), Label, Id);
+    }
+    return FString::Printf(
+        TEXT("%s{id=%u owner=%u faction=%u type=%u hp=%d/%d pos=(%d,%d) completed=%s progress=%d/%d order=%u target=%u destination=(%d,%d) wellChoice=%u activation=%llu reshapeUntil=%llu}"),
+        Label,
+        Id,
+        Current->owner,
+        static_cast<uint8>(Current->faction),
+        static_cast<uint8>(Current->type),
+        Current->hitPoints,
+        Current->maxHitPoints,
+        Current->position.x.FloorToInt(),
+        Current->position.y.FloorToInt(),
+        Current->completed ? TEXT("true") : TEXT("false"),
+        Current->constructionProgress,
+        Current->constructionRequired,
+        static_cast<uint8>(Current->order.type),
+        Current->order.target,
+        Current->order.destination.x.FloorToInt(),
+        Current->order.destination.y.FloorToInt(),
+        static_cast<uint8>(Current->wellChoice),
+        static_cast<unsigned long long>(Current->wellActivationTick),
+        static_cast<unsigned long long>(Current->reshapeUntilTick));
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1501,9 +1544,107 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M11Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
+        const Vec2 ExpectedM11Rally =
+            TestOwnedNoNeutralRallySite(Spec.LumeChoice);
+        const auto CompleteMissionEleven = [
+            Bridge, M11Start, M11Plan, ExpectedM11Rally, &Feedback]()
+        {
+            const bool bComplete = TickUntil(
+                Bridge,
+                [Bridge]()
+                {
+                    return Bridge->GetNoNeutralLedgerPhase() ==
+                        EEchoesNoNeutralLedgerPhase::Complete;
+                },
+                6200);
+            if (bComplete)
+            {
+                return true;
+            }
+
+            const FEchoesObjectiveSnapshot Current =
+                Bridge->GetLocalObjectiveSnapshot();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            const uint64 CurrentTick = Simulation != nullptr
+                ? Simulation->CurrentTick()
+                : 0;
+            Feedback = FString::Printf(
+                TEXT("[M11_DIAGNOSTIC] tick=%llu phase=%u outcome=%u planKey=%u protocol=%u rally=(%d,%d) localCore={intact=%s hp=%d/%d} facts={route=%s interfaces=%s districtA=%s districtB=%s evidence=%s protocol=%s rallied=%s reshapeExpired=%s} %s %s %s %s %s %s %s %s"),
+                static_cast<unsigned long long>(CurrentTick),
+                static_cast<uint8>(Current.NoNeutralLedgerPhase),
+                static_cast<uint8>(Current.Outcome),
+                M11Plan.StablePlanKey,
+                static_cast<uint8>(M11Plan.LumeProtocol),
+                ExpectedM11Rally.x.FloorToInt(),
+                ExpectedM11Rally.y.FloorToInt(),
+                Current.bLocalCoreIntact ? TEXT("true") : TEXT("false"),
+                Current.LocalCoreHitPoints,
+                Current.LocalCoreMaxHitPoints,
+                Current.bNoNeutralRouteSecured ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralPublicInterfacesIntact
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralFirstDistrictIntegrated
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralSecondDistrictIntegrated
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralEvidenceAttested
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralProtocolApplied
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralCoalitionRallied
+                    ? TEXT("true") : TEXT("false"),
+                Current.bNoNeutralReshapeWindowExpired
+                    ? TEXT("true") : TEXT("false"),
+                *DescribeFreshJourneyEntity(
+                    TEXT("oruun"),
+                    M11Start.NoNeutralOruunId,
+                    Bridge->FindEntity(M11Start.NoNeutralOruunId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("waystone"),
+                    M11Start.NoNeutralWaystoneId,
+                    Bridge->FindEntity(M11Start.NoNeutralWaystoneId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("witness"),
+                    M11Start.NoNeutralLedgerWitnessId,
+                    Bridge->FindEntity(
+                        M11Start.NoNeutralLedgerWitnessId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("well"),
+                    M11Start.NoNeutralWellId,
+                    Bridge->FindEntity(M11Start.NoNeutralWellId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("districtA"),
+                    M11Start.NoNeutralFirstDistrictInterfaceId,
+                    Bridge->FindEntity(
+                        M11Start.NoNeutralFirstDistrictInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("districtB"),
+                    M11Start.NoNeutralSecondDistrictInterfaceId,
+                    Bridge->FindEntity(
+                        M11Start.NoNeutralSecondDistrictInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("meridianEvidence"),
+                    M11Start.NoNeutralMeridianEvidenceInterfaceId,
+                    Bridge->FindEntity(
+                        M11Start.NoNeutralMeridianEvidenceInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("kharuunEvidence"),
+                    M11Start.NoNeutralKharuunEvidenceInterfaceId,
+                    Bridge->FindEntity(
+                        M11Start.NoNeutralKharuunEvidenceInterfaceId)));
+            return false;
+        };
         Vec2 M11FirstLink;
         Vec2 M11SecondLink;
         if (!Require(
+                M11Plan.RallySite == ExpectedM11Rally,
+                FString::Printf(
+                    TEXT("Mission 11 route %s maps its protocol to the independent literal rally (%d,%d)"),
+                    Spec.Label,
+                    ExpectedM11Rally.x.FloorToInt(),
+                    ExpectedM11Rally.y.FloorToInt())) ||
+            !Require(
                 M11Workers.Num() >= 2 &&
                     M11Start.NoNeutralWaystoneId != 0,
                 TEXT("Mission 11 exposes its Waystone and two workers")) ||
@@ -1658,22 +1799,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     2600),
                 TEXT("Mission 11 applies the recorded protocol")) ||
             !Require(
-                Move(M11Start.NoNeutralOruunId, M11Plan.RallySite),
+                Move(M11Start.NoNeutralOruunId, ExpectedM11Rally),
                 TEXT("Mission 11 Oruun accepts the rally")) ||
             !Require(
                 Move(
                     M11Start.NoNeutralLedgerWitnessId,
-                    M11Plan.RallySite),
+                    ExpectedM11Rally),
                 TEXT("Mission 11 witness accepts the rally")) ||
             !Require(
-                TickUntil(
-                    Bridge,
-                    [Bridge]()
-                    {
-                        return Bridge->GetNoNeutralLedgerPhase() ==
-                            EEchoesNoNeutralLedgerPhase::Complete;
-                    },
-                    6200),
+                CompleteMissionEleven(),
                 TEXT("Mission 11 completes through ordinary play")) ||
             !VerifyCompletion(11, EEchoesCampaignCommitStatus::Added) ||
             !AdvanceToNextMission(11))
@@ -2094,6 +2228,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Plan.FoundingDoctrine == Spec.FoundingChoice &&
                     Plan.RecordedProtocol == Spec.LumeChoice &&
                     Plan.StablePlanKey == Spec.ExpectedFinalPlanKey &&
+                    Plan.CrownfallApproachSite ==
+                        TestOwnedNoNeutralRallySite(Spec.LumeChoice) &&
                     Plan.AvailableFinalResolutions ==
                         Spec.ExpectedFinalResolutionMask &&
                     ObservedResolutionMask ==

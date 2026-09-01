@@ -225,6 +225,51 @@ FString BrokenSunQuickSavePath(
             Fingerprint));
 }
 
+echoes::sim::Vec2 TestOwnedBrokenSunApproachSite(
+    echoes::sim::FutureWellChoice Protocol)
+{
+    using echoes::sim::FutureWellChoice;
+    using echoes::sim::Vec2;
+    switch (Protocol)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 43);
+        default: return {};
+    }
+}
+
+FString DescribeBrokenSunEntity(
+    const TCHAR* Label,
+    echoes::sim::EntityId Id,
+    const echoes::sim::Entity* Current)
+{
+    if (Current == nullptr)
+    {
+        return FString::Printf(TEXT("%s{id=%u missing}"), Label, Id);
+    }
+    return FString::Printf(
+        TEXT("%s{id=%u owner=%u faction=%u type=%u hp=%d/%d pos=(%d,%d) completed=%s progress=%d/%d order=%u target=%u anchor=(%d,%d) destination=(%d,%d)}"),
+        Label,
+        Id,
+        Current->owner,
+        static_cast<uint8>(Current->faction),
+        static_cast<uint8>(Current->type),
+        Current->hitPoints,
+        Current->maxHitPoints,
+        Current->position.x.FloorToInt(),
+        Current->position.y.FloorToInt(),
+        Current->completed ? TEXT("true") : TEXT("false"),
+        Current->constructionProgress,
+        Current->constructionRequired,
+        static_cast<uint8>(Current->order.type),
+        Current->order.target,
+        Current->order.anchor.x.FloorToInt(),
+        Current->order.anchor.y.FloorToInt(),
+        Current->order.destination.x.FloorToInt(),
+        Current->order.destination.y.FloorToInt());
+}
+
 struct FBrokenSunResolutionPersistenceSpec final
 {
     const TCHAR* Label = TEXT("unavailable");
@@ -236,6 +281,7 @@ struct FBrokenSunResolutionPersistenceSpec final
         EEchoesFinalResolution::None;
     uint8 ExpectedPlanKey = 0xFF;
     uint8 ExpectedAvailability = 0;
+    echoes::sim::Vec2 ExpectedApproachSite{};
 };
 
 bool RunBrokenSunResolutionPersistenceCase(
@@ -252,7 +298,7 @@ bool RunBrokenSunResolutionPersistenceCase(
 
     bool bPassed = true;
     const auto Check = [&Test, &Spec, &bPassed](
-        const TCHAR* Detail,
+        const FString& Detail,
         bool bCondition)
     {
         if (!bCondition)
@@ -260,7 +306,7 @@ bool RunBrokenSunResolutionPersistenceCase(
             Test.AddError(FString::Printf(
                 TEXT("%s: %s"),
                 Spec.Label,
-                Detail));
+                *Detail));
             bPassed = false;
         }
         return bCondition;
@@ -311,7 +357,9 @@ bool RunBrokenSunResolutionPersistenceCase(
                     EEchoesCityDistrict::Archive &&
                 ExpectedPlan.StablePlanKey == Spec.ExpectedPlanKey &&
                 ExpectedPlan.AvailableFinalResolutions ==
-                    Spec.ExpectedAvailability) ||
+                    Spec.ExpectedAvailability &&
+                ExpectedPlan.CrownfallApproachSite ==
+                    Spec.ExpectedApproachSite) ||
         !Check(
             TEXT("the selected resolution is one member of the complete eligibility set"),
             FEchoesBrokenSunMissionModel::IsResolutionAvailable(
@@ -402,7 +450,9 @@ bool RunBrokenSunResolutionPersistenceCase(
                     EEchoesCityDistrict::Archive &&
                 RuntimePlan.StablePlanKey == Spec.ExpectedPlanKey &&
                 RuntimePlan.AvailableFinalResolutions ==
-                    Spec.ExpectedAvailability))
+                    Spec.ExpectedAvailability &&
+                RuntimePlan.CrownfallApproachSite ==
+                    Spec.ExpectedApproachSite))
     {
         return FinishWorld();
     }
@@ -524,32 +574,197 @@ bool RunBrokenSunResolutionPersistenceCase(
     Bridge->SetScenarioPaused(false);
     Vec2 ApproachBuildSite;
     if (!Check(
+            TEXT("the literal approach center is open in the authored Lume terrain"),
+            Bridge->GetSimulation()->TerrainAt(
+                Spec.ExpectedApproachSite.x.FloorToInt(),
+                Spec.ExpectedApproachSite.y.FloorToInt()) ==
+                echoes::sim::Terrain::Open) ||
+        !Check(
             TEXT("the approach exposes a valid construction footprint"),
             FindBuildSite(
-                RuntimePlan.CrownfallApproachSite,
+                Spec.ExpectedApproachSite,
                 3,
-                ApproachBuildSite)) ||
+                ApproachBuildSite)))
+    {
+        return FinishWorld();
+    }
+
+    const auto ApproachBuildSequence =
+        Bridge->GetSimulation()->NextCommandSequence(
+            UEchoesSimulationSubsystem::LocalPlayerId);
+    if (!Check(
+            TEXT("the approach build has a stable command sequence"),
+            ApproachBuildSequence.has_value()) ||
         !Check(
             TEXT("the worker accepts the approach-anchor build"),
             Bridge->IssueBuildCommand(
                 Objective.BrokenSunWorkerId,
                 EntityType::UtilityStructure,
                 Bridge->SimToWorld(ApproachBuildSite),
-                Feedback)) ||
-        !Check(
-            TEXT("the completed approach advances to accord assembly"),
-            TickUntil(
-                [Bridge]()
-                {
-                    return Bridge->GetBrokenSunPhase() ==
-                        EEchoesBrokenSunPhase::AssembleAccord;
-                },
-                4000)))
+                Feedback)))
     {
         return FinishWorld();
     }
 
+    echoes::sim::EntityId ObservedApproachId = 0;
+    bool bReceiptObserved = false;
+    bool bReceiptApplied = false;
+    int32 ReceiptOutcome = -1;
+    bool bSiteCreated = false;
+    bool bConstructionProgressed = false;
+    bool bSiteCompleted = false;
+    bool bApproachBound = false;
+    bool bAssembleAccordReached = false;
+    const auto ObserveApproach = [&]()
+    {
+        if (ApproachBuildSequence.has_value())
+        {
+            const auto Receipt =
+                Bridge->GetSimulation()->FindCommandResolutionReceipt(
+                    UEchoesSimulationSubsystem::LocalPlayerId,
+                    *ApproachBuildSequence);
+            if (Receipt.has_value())
+            {
+                bReceiptObserved = true;
+                ReceiptOutcome = static_cast<int32>(Receipt->outcome);
+                bReceiptApplied =
+                    Receipt->outcome ==
+                    echoes::sim::CommandResolutionOutcome::Applied;
+            }
+        }
+
+        const echoes::sim::Entity* Site = ObservedApproachId != 0
+            ? Bridge->FindEntity(ObservedApproachId)
+            : nullptr;
+        if (Site == nullptr)
+        {
+            for (const echoes::sim::Entity& Candidate :
+                 Bridge->GetSimulation()->Entities())
+            {
+                if (Candidate.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Candidate.faction == Faction::HollowChoir &&
+                    Candidate.type == EntityType::UtilityStructure &&
+                    Candidate.position == ApproachBuildSite)
+                {
+                    ObservedApproachId = Candidate.id;
+                    Site = &Candidate;
+                    break;
+                }
+            }
+        }
+        if (Site != nullptr)
+        {
+            bSiteCreated = true;
+            bConstructionProgressed = bConstructionProgressed ||
+                Site->constructionProgress > 0 || Site->completed;
+            bSiteCompleted = bSiteCompleted ||
+                (Site->completed && Site->hitPoints > 0);
+        }
+
+        const FEchoesObjectiveSnapshot Current =
+            Bridge->GetLocalObjectiveSnapshot();
+        bApproachBound = bApproachBound ||
+            (Current.bBrokenSunApproachSecured &&
+             Current.BrokenSunApproachAnchorId != 0);
+        bAssembleAccordReached = bAssembleAccordReached ||
+            Current.BrokenSunPhase ==
+                EEchoesBrokenSunPhase::AssembleAccord;
+    };
+    for (int32 TickIndex = 0;
+         TickIndex < 4000 && !bAssembleAccordReached;
+         ++TickIndex)
+    {
+        ObserveApproach();
+        if (Bridge->GetBrokenSunPhase() ==
+            EEchoesBrokenSunPhase::Failed)
+        {
+            break;
+        }
+        if (!bAssembleAccordReached)
+        {
+            Bridge->Tick(0.05f);
+        }
+    }
+    ObserveApproach();
+
     Objective = Bridge->GetLocalObjectiveSnapshot();
+    const echoes::sim::Entity* CurrentWorker =
+        Bridge->FindEntity(Objective.BrokenSunWorkerId);
+    const echoes::sim::Entity* CurrentSite = ObservedApproachId != 0
+        ? Bridge->FindEntity(ObservedApproachId)
+        : nullptr;
+    const echoes::sim::Entity* BoundSite =
+        Objective.BrokenSunApproachAnchorId != 0
+            ? Bridge->FindEntity(Objective.BrokenSunApproachAnchorId)
+            : nullptr;
+    const FString ApproachDiagnostic = FString::Printf(
+        TEXT("[M15_APPROACH_DIAGNOSTIC] tick=%llu phase=%u outcome=%u planKey=%u center=(%d,%d) build=(%d,%d) sequence=%s receipt={seen=%s applied=%s outcome=%d} observed={siteId=%u created=%s progressed=%s completed=%s bound=%s assemble=%s objectiveAnchor=%u secured=%s} %s %s"),
+        static_cast<unsigned long long>(
+            Bridge->GetSimulation()->CurrentTick()),
+        static_cast<uint8>(Objective.BrokenSunPhase),
+        static_cast<uint8>(Objective.Outcome),
+        RuntimePlan.StablePlanKey,
+        Spec.ExpectedApproachSite.x.FloorToInt(),
+        Spec.ExpectedApproachSite.y.FloorToInt(),
+        ApproachBuildSite.x.FloorToInt(),
+        ApproachBuildSite.y.FloorToInt(),
+        ApproachBuildSequence.has_value() ? TEXT("present") : TEXT("missing"),
+        bReceiptObserved ? TEXT("true") : TEXT("false"),
+        bReceiptApplied ? TEXT("true") : TEXT("false"),
+        ReceiptOutcome,
+        ObservedApproachId,
+        bSiteCreated ? TEXT("true") : TEXT("false"),
+        bConstructionProgressed ? TEXT("true") : TEXT("false"),
+        bSiteCompleted ? TEXT("true") : TEXT("false"),
+        bApproachBound ? TEXT("true") : TEXT("false"),
+        bAssembleAccordReached ? TEXT("true") : TEXT("false"),
+        Objective.BrokenSunApproachAnchorId,
+        Objective.bBrokenSunApproachSecured ? TEXT("true") : TEXT("false"),
+        *DescribeBrokenSunEntity(
+            TEXT("worker"),
+            Objective.BrokenSunWorkerId,
+            CurrentWorker),
+        *DescribeBrokenSunEntity(
+            TEXT("site"),
+            ObservedApproachId,
+            CurrentSite));
+    bool bApproachContractPassed = true;
+    bApproachContractPassed = Check(
+        TEXT("the admitted approach build resolves as applied"),
+        bReceiptObserved && bReceiptApplied) &&
+        bApproachContractPassed;
+    bApproachContractPassed = Check(
+        TEXT("the applied build creates the exact owned approach site"),
+        bSiteCreated && ObservedApproachId != 0) &&
+        bApproachContractPassed;
+    bApproachContractPassed = Check(
+        TEXT("the approach worker makes construction progress"),
+        bConstructionProgressed) && bApproachContractPassed;
+    bApproachContractPassed = Check(
+        TEXT("the exact approach structure completes intact"),
+        bSiteCompleted) && bApproachContractPassed;
+    bApproachContractPassed = Check(
+        FString::Printf(
+            TEXT("the completed approach advances to accord assembly — %s"),
+            *ApproachDiagnostic),
+        bAssembleAccordReached && bApproachBound &&
+            Objective.BrokenSunPhase ==
+                EEchoesBrokenSunPhase::AssembleAccord &&
+            Objective.bBrokenSunApproachSecured &&
+            Objective.BrokenSunApproachAnchorId == ObservedApproachId &&
+            BoundSite != nullptr && BoundSite->completed &&
+            BoundSite->hitPoints > 0 &&
+            BoundSite->position == ApproachBuildSite &&
+            IsWithinContractRadius(
+                BoundSite->position,
+                Spec.ExpectedApproachSite,
+                3)) && bApproachContractPassed;
+    if (!bApproachContractPassed)
+    {
+        return FinishWorld();
+    }
+
     if (!Check(
             TEXT("the Research Loom accepts Held Alternatives"),
             Bridge->IssueResearchCommand(
@@ -887,6 +1102,10 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 {
                     continue;
                 }
+                TestTrue(
+                    TEXT("Every final plan inherits the test-owned literal approach for its recorded protocol"),
+                    Plan.CrownfallApproachSite ==
+                        TestOwnedBrokenSunApproachSite(Protocol));
 
                 uint8 ExpectedMask = static_cast<uint8>(
                     EEchoesFinalResolutionAvailability::
@@ -2002,6 +2221,7 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             EEchoesFinalResolution::OpenEvolution,
             17,
             0x0A,
+            echoes::sim::Vec2::FromTiles(46, 43),
         },
         {
             TEXT("plan 25 Reshape/Preserve to Controlled Stabilization"),
@@ -2010,6 +2230,7 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             EEchoesFinalResolution::ControlledStabilization,
             25,
             0x0B,
+            echoes::sim::Vec2::FromTiles(32, 56),
         },
     };
 
