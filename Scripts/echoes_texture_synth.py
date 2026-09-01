@@ -12,7 +12,7 @@ import struct
 import zlib
 
 SIZE = 512
-REVISION_TEXTURES = "surface-textures-v2"
+REVISION_TEXTURES = "surface-textures-v5"
 
 
 # --- Deterministic PRNG / noise -------------------------------------------
@@ -173,24 +173,68 @@ def causeway_ash() -> dict[str, list[tuple[int, int, int]]]:
             strata = fbm(u * 4 + fbm(u * 9, v * 9, seed + 2) * 0.7, v * 22, seed)
             band = 0.5 + 0.5 * math.sin(strata * 14.0)
             ash = fbm(u * 46, v * 46, seed + 6)
-            tone = 0.06 + band * 0.045 + ash * 0.05
+            tone = 0.06 + band * 0.028 + ash * 0.04
             track = math.exp(-((v - 0.5) ** 2) / 0.02) * (0.5 + 0.5 * fbm(u * 30, 0.5, seed + 13))
-            value = tone + track * 0.05
+            value = tone + track * 0.03
             base.append((
                 _clamp8(value * 1.02),
                 _clamp8(value * 0.99),
                 _clamp8(value * 0.94),
             ))
-            height.append(band * 0.35 + ash * 0.4 - track * 0.3)
-            rough = 0.88 - track * 0.5 + ash * 0.1
+            height.append(band * 0.2 + ash * 0.3 - track * 0.15)
+            rough = 0.92 - track * 0.22 + ash * 0.08
             mre.append((_clamp8(0.03), _clamp8(max(0.0, min(1.0, rough))), 0))
-    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 2.2)}
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.3)}
+
+
+def glass_scar_ground() -> dict[str, list[tuple[int, int, int]]]:
+    """Glass Scar ground: dark vitrified basalt laced with golden fracture
+    veins that echo the Broken Sun, per the site hero reference."""
+    seed = 404
+    crack = [0.0] * (SIZE * SIZE)
+    rng = Xorshift(seed)
+    for _ in range(6):
+        x = rng.next_float() * SIZE
+        y = rng.next_float() * SIZE
+        angle = rng.next_float() * math.tau
+        for _step in range(1200):
+            angle += (rng.next_float() - 0.5) * 0.16
+            x = (x + math.cos(angle) * 1.8) % SIZE
+            y = (y + math.sin(angle) * 1.8) % SIZE
+            for ox in (-2, -1, 0, 1, 2):
+                for oy in (-2, -1, 0, 1, 2):
+                    dist = abs(ox) + abs(oy)
+                    if dist > 2:
+                        continue
+                    index = int(y + oy) % SIZE * SIZE + int(x + ox) % SIZE
+                    fall = (1.0, 0.55, 0.25)[dist]
+                    crack[index] = min(1.0, crack[index] + 0.4 * fall)
+    base, height, mre = [], [], []
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            body = 0.028 + fbm(u * 10, v * 10, seed + 5) * 0.035
+            vein = crack[y * SIZE + x]
+            glow = vein ** 1.4
+            r = body * 1.02 + glow * 0.95
+            g = body * 1.05 + glow * 0.55
+            b = body * 1.22 + glow * 0.12
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(-vein * 0.4 + fbm(u * 18, v * 18, seed + 8) * 0.3)
+            rough = 0.62 + fbm(u * 24, v * 24, seed + 11) * 0.2 - glow * 0.3
+            mre.append((
+                _clamp8(0.02),
+                _clamp8(max(0.05, min(1.0, rough))),
+                _clamp8(glow),
+            ))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.6)}
 
 
 FAMILIES = {
     "T_EchoesCeramicCivic": ceramic_civic,
     "T_EchoesVitrifiedGlass": vitrified_glass,
     "T_EchoesCausewayAsh": causeway_ash,
+    "T_EchoesGlassScarGround": glass_scar_ground,
 }
 
 

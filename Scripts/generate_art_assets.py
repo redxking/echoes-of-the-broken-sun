@@ -21,10 +21,10 @@ import echoes_texture_synth as texture_synth
 
 ART_ROOT = "/Game/Art/Generated"
 TEXTURE_ROOT = f"{ART_ROOT}/Textures"
-SURFACE_TEXTURED_REVISION = "surface-textured-v3"
+SURFACE_TEXTURED_REVISION = "surface-textured-v6"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
-WORLD_MATERIAL_ASSET_REVISION = "world-surface-instancing-v1"
+WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v4"
 ASH_CUT_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarAshCut"
 ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Basalt",
@@ -1638,17 +1638,98 @@ def create_world_surface_material() -> unreal.Material:
             emission, "", emissive_color, "B"
         )
 
+        # A3 ground layer: ash strata maps sampled by world position under
+        # the existing UE noise macro-variation (baked identity, live breakup).
+        lib = unreal.MaterialEditingLibrary
+        ground_textures = import_surface_textures()
+        wp_mask = lib.create_material_expression(
+            material, unreal.MaterialExpressionComponentMask, -700, 320
+        )
+        wp_mask.set_editor_property("r", True)
+        wp_mask.set_editor_property("g", True)
+        wp_mask.set_editor_property("b", False)
+        wp_mask.set_editor_property("a", False)
+        lib.connect_material_expressions(world_position, "", wp_mask, "")
+        world_uv_scale = lib.create_material_expression(
+            material, unreal.MaterialExpressionScalarParameter, -700, 420
+        )
+        world_uv_scale.set_editor_property("parameter_name", "WorldUVScale")
+        world_uv_scale.set_editor_property("default_value", 0.0004)
+        world_uv = lib.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -540, 360
+        )
+        lib.connect_material_expressions(wp_mask, "", world_uv, "A")
+        lib.connect_material_expressions(world_uv_scale, "", world_uv, "B")
+        ash_base = _texture_parameter(
+            material, "GroundBaseColorMap",
+            ground_textures["T_EchoesGlassScarGround_BaseColor"], -380, 320,
+            unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+        )
+        ash_mre = _texture_parameter(
+            material, "GroundMREMap",
+            ground_textures["T_EchoesGlassScarGround_MRE"], -380, 560,
+            unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+        )
+        ash_normal = _texture_parameter(
+            material, "GroundNormalMap",
+            ground_textures["T_EchoesGlassScarGround_Normal"], -380, 800,
+            unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+        )
+        for node in (ash_base, ash_mre, ash_normal):
+            lib.connect_material_expressions(world_uv, "", node, "UVs")
+        textured_base = lib.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -120, -140
+        )
+        lib.connect_material_expressions(color_variation, "", textured_base, "A")
+        lib.connect_material_expressions(ash_base, "", textured_base, "B")
+        rough_bias = lib.create_material_expression(
+            material, unreal.MaterialExpressionAdd, -220, 600
+        )
+        rough_bias.set_editor_property("const_b", 0.5)
+        lib.connect_material_expressions(ash_mre, "G", rough_bias, "A")
+        textured_rough = lib.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -80, 520
+        )
+        lib.connect_material_expressions(roughness_variation, "", textured_rough, "A")
+        lib.connect_material_expressions(rough_bias, "", textured_rough, "B")
+
         unreal.MaterialEditingLibrary.connect_material_property(
-            color_variation, "", unreal.MaterialProperty.MP_BASE_COLOR
+            textured_base, "", unreal.MaterialProperty.MP_BASE_COLOR
         )
         unreal.MaterialEditingLibrary.connect_material_property(
             metallic, "", unreal.MaterialProperty.MP_METALLIC
         )
         unreal.MaterialEditingLibrary.connect_material_property(
-            roughness_variation, "", unreal.MaterialProperty.MP_ROUGHNESS
+            textured_rough, "", unreal.MaterialProperty.MP_ROUGHNESS
         )
         unreal.MaterialEditingLibrary.connect_material_property(
-            emissive_color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+            ash_normal, "", unreal.MaterialProperty.MP_NORMAL
+        )
+        # Golden fracture glow: steady vein emissive under reduced-flashing
+        # limits, added to the tint-driven emissive path.
+        glow_strength = lib.create_material_expression(
+            material, unreal.MaterialExpressionScalarParameter, -220, 760
+        )
+        glow_strength.set_editor_property("parameter_name", "GroundGlowStrength")
+        glow_strength.set_editor_property("default_value", 2.4)
+        glow_masked = lib.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, -80, 700
+        )
+        lib.connect_material_expressions(ash_mre, "B", glow_masked, "A")
+        lib.connect_material_expressions(glow_strength, "", glow_masked, "B")
+        vein_glow = lib.create_material_expression(
+            material, unreal.MaterialExpressionMultiply, 40, 620
+        )
+        lib.connect_material_expressions(ash_base, "", vein_glow, "A")
+        lib.connect_material_expressions(glow_masked, "", vein_glow, "B")
+        combined_emissive = lib.create_material_expression(
+            material, unreal.MaterialExpressionAdd, 160, -60
+        )
+        lib.connect_material_expressions(emissive_color, "", combined_emissive, "A")
+        lib.connect_material_expressions(vein_glow, "", combined_emissive, "B")
+
+        unreal.MaterialEditingLibrary.connect_material_property(
+            combined_emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
         )
         unreal.MaterialEditingLibrary.layout_material_expressions(material)
 

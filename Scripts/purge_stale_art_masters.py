@@ -9,7 +9,8 @@ Author: Angelis Pseftis.
 import unreal
 
 STALE_MASTERS = {
-    "/Game/Art/Generated/Materials/M_EchoesSurface": "surface-textured-v3",
+    "/Game/Art/Generated/Materials/M_EchoesSurface": "surface-textured-v6",
+    "/Game/Art/Generated/Materials/M_EchoesWorldSurface": "world-surface-textured-v4",
 }
 
 purged = 0
