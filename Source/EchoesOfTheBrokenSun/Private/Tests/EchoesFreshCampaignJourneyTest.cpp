@@ -3355,6 +3355,22 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         EntityId M08RelayId = 0;
         FString M08FirstObservedFailure = TEXT("none");
         uint64 M08FirstObservedFailureTick = 0;
+        // Convoy pacing state. Both budgets are the pre-existing Mission 08
+        // wait allowances (3000 ticks to reach RaiseEchoRelay, 3400 ticks to
+        // open paired-state traversal); every new wait in the escort tactic
+        // draws from one of them, so the mission's total tick allowance is
+        // unchanged.
+        const int32 M08ConvoyIncrementRaw = 2 * echoes::sim::kFixedScale;
+        const int32 M08ConvoyReformRadiusTiles = 2;
+        const int32 M08WorkerHoldStandoffRaw =
+            (3 * echoes::sim::kFixedScale) / 2;
+        int32 M08ApproachBudgetTicks = 3000;
+        int32 M08RelayBudgetTicks = 3400;
+        int32 M08TalarConvoyIncrements = 0;
+        int32 M08WorkerConvoyIncrements = 0;
+        const TArray<int32> M08TalarEscortIndices = {0, 1, 2, 3};
+        const TArray<int32> M08WorkerEscortIndices = {0, 1};
+        const TArray<int32> M08NoEscortIndices;
         EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
             Bridge->GetShapeBesideUsPhase();
         FString M08LastKnownCore = DescribeFreshJourneyEntity(
@@ -3513,6 +3529,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M08LastKnownRelay,
             &M08GuardIds,
             &M08GuardTargetIds,
+            &M08ApproachBudgetTicks,
+            &M08RelayBudgetTicks,
+            &M08TalarConvoyIncrements,
+            &M08WorkerConvoyIncrements,
             &ObserveMissionEightProtectedState,
             &Feedback]()
         {
@@ -3548,7 +3568,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 }
             }
             Feedback = FString::Printf(
-                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} defenders={%s}"),
+                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} convoy={talarIncrements=%d workerIncrements=%d approachBudget=%d relayBudget=%d} defenders={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr
                         ? Simulation->CurrentTick()
@@ -3606,6 +3626,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     TEXT("relay"),
                     M08RelayId,
                     Bridge->FindEntity(M08RelayId)),
+                M08TalarConvoyIncrements,
+                M08WorkerConvoyIncrements,
+                M08ApproachBudgetTicks,
+                M08RelayBudgetTicks,
                 *DefenderState);
         };
         const auto RequireMissionEight = [
@@ -3744,6 +3768,413 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             }
             return true;
         };
+        // Ticks the world while draining one of the two pre-existing Mission
+        // 08 wait budgets, with the same Failed-phase short-circuit as
+        // TickUntilMissionEightCondition.
+        const auto TickMissionEightWithinBudget = [
+            Bridge,
+            &ObserveMissionEightProtectedState](
+                int32& RemainingTicks,
+                const TFunction<bool()>& Predicate)
+        {
+            while (RemainingTicks > 0)
+            {
+                ObserveMissionEightProtectedState();
+                if (Bridge->GetShapeBesideUsPhase() ==
+                    EEchoesShapeBesideUsPhase::Failed)
+                {
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                Bridge->Tick(0.05f);
+                --RemainingTicks;
+            }
+            ObserveMissionEightProtectedState();
+            return Bridge->GetShapeBesideUsPhase() !=
+                    EEchoesShapeBesideUsPhase::Failed &&
+                Predicate();
+        };
+        const auto MissionEightEscortsReformed = [
+            Bridge,
+            &M08GuardIds,
+            &M08GuardTargetIds](
+                const TArray<int32>& EscortIndices,
+                EntityId LeadId,
+                int32 RadiusTiles)
+        {
+            const Entity* Lead = Bridge->FindEntity(LeadId);
+            if (Lead == nullptr || Lead->hitPoints <= 0)
+            {
+                return false;
+            }
+            for (const int32 EscortIndex : EscortIndices)
+            {
+                if (!M08GuardIds.IsValidIndex(EscortIndex) ||
+                    !M08GuardTargetIds.IsValidIndex(EscortIndex))
+                {
+                    return false;
+                }
+                const Entity* Escort =
+                    Bridge->FindEntity(M08GuardIds[EscortIndex]);
+                if (Escort == nullptr || Escort->hitPoints <= 0 ||
+                    Escort->order.type != echoes::sim::OrderType::Guard ||
+                    Escort->order.target !=
+                        M08GuardTargetIds[EscortIndex] ||
+                    !IsAtSite(
+                        Bridge,
+                        M08GuardIds[EscortIndex],
+                        Lead->position,
+                        RadiusTiles))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto MissionEightConvoyCasualty = [
+            Bridge,
+            &M08GuardIds](
+                EntityId LeadId,
+                const TArray<int32>& EscortIndices)
+        {
+            const Entity* Lead = Bridge->FindEntity(LeadId);
+            if (Lead == nullptr || Lead->hitPoints <= 0)
+            {
+                return true;
+            }
+            for (const int32 EscortIndex : EscortIndices)
+            {
+                if (!M08GuardIds.IsValidIndex(EscortIndex))
+                {
+                    return true;
+                }
+                const Entity* Escort =
+                    Bridge->FindEntity(M08GuardIds[EscortIndex]);
+                if (Escort == nullptr || Escort->hitPoints <= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
+        // The simulation rejects Hold for attack-less actors
+        // ([HOLD_REQUIRES_DEFENDER]), so the worker halts through Stop, which
+        // clears its order and leaves it stationary in place.
+        const auto HaltMissionEightLead = [
+            Bridge,
+            &Feedback](
+                EntityId LeadId,
+                bool bLeadCanHold)
+        {
+            const Entity* Lead = Bridge->FindEntity(LeadId);
+            if (Lead == nullptr || Lead->hitPoints <= 0)
+            {
+                return false;
+            }
+            return Bridge->IssueCommand(
+                bLeadCanHold ? CommandType::Hold : CommandType::Stop,
+                LeadId,
+                0,
+                Bridge->SimToWorld(Lead->position),
+                FutureWellChoice::Dormant,
+                Feedback);
+        };
+        // One bounded step from the lead's live position toward Goal, in pure
+        // integer math on raw fixed-point coordinates. Returns false when the
+        // lead already stands at the requested standoff (with one-eighth-tile
+        // slack for integer truncation); a zero standoff demands exact
+        // arrival, and its final step lands exactly on Goal.
+        const auto ComputeMissionEightConvoyStep = [](
+            const Vec2& Current,
+            const Vec2& Goal,
+            int32 StandoffRaw,
+            int32 IncrementRaw,
+            Vec2& OutStepDestination)
+        {
+            const int64 DeltaX =
+                static_cast<int64>(Goal.x.Raw()) - Current.x.Raw();
+            const int64 DeltaY =
+                static_cast<int64>(Goal.y.Raw()) - Current.y.Raw();
+            const int64 DistanceSquared =
+                DeltaX * DeltaX + DeltaY * DeltaY;
+            const int64 ArrivalRaw =
+                StandoffRaw > 0
+                    ? static_cast<int64>(StandoffRaw) +
+                          echoes::sim::kFixedScale / 8
+                    : 0;
+            if (DistanceSquared <= ArrivalRaw * ArrivalRaw)
+            {
+                return false;
+            }
+            int64 Distance = 0;
+            int64 SquareRemainder = DistanceSquared;
+            int64 Bit = int64(1) << 62;
+            while (Bit > SquareRemainder)
+            {
+                Bit >>= 2;
+            }
+            while (Bit != 0)
+            {
+                if (SquareRemainder >= Distance + Bit)
+                {
+                    SquareRemainder -= Distance + Bit;
+                    Distance = (Distance >> 1) + Bit;
+                }
+                else
+                {
+                    Distance >>= 1;
+                }
+                Bit >>= 2;
+            }
+            if (Distance <= StandoffRaw)
+            {
+                return false;
+            }
+            const int64 TravelRaw = FMath::Min(
+                static_cast<int64>(IncrementRaw),
+                Distance - StandoffRaw);
+            if (TravelRaw >= Distance)
+            {
+                OutStepDestination = Goal;
+                return true;
+            }
+            OutStepDestination = Vec2::FromRaw(
+                static_cast<int32>(
+                    Current.x.Raw() + DeltaX * TravelRaw / Distance),
+                static_cast<int32>(
+                    Current.y.Raw() + DeltaY * TravelRaw / Distance));
+            return true;
+        };
+        // Bounded convoy pacing: reform first, then repeatedly move the lead
+        // one computed increment toward Goal, halt it, and wait until every
+        // escort stands back inside the two-tile follow radius before the
+        // next increment. Destinations are always derived from live positions
+        // and plan-owned sites; nothing is hard-coded.
+        const auto PaceMissionEightConvoy = [
+            Bridge,
+            &Move,
+            &Feedback,
+            &ObserveMissionEightProtectedState,
+            &TickMissionEightWithinBudget,
+            &MissionEightEscortsReformed,
+            &MissionEightConvoyCasualty,
+            &HaltMissionEightLead,
+            &ComputeMissionEightConvoyStep,
+            M08ConvoyIncrementRaw,
+            M08ConvoyReformRadiusTiles](
+                const TCHAR* LegLabel,
+                EntityId LeadId,
+                bool bLeadCanHold,
+                const Vec2& Goal,
+                int32 StandoffRaw,
+                const TArray<int32>& EscortIndices,
+                int32& RemainingTicks,
+                int32& IncrementCount) -> bool
+        {
+            const auto FailLeg = [
+                Bridge,
+                LegLabel,
+                LeadId,
+                &Feedback,
+                &RemainingTicks](const TCHAR* Reason)
+            {
+                Feedback = FString::Printf(
+                    TEXT("[M08_CONVOY_%s] leg=%s remainingBudget=%d %s"),
+                    Reason,
+                    LegLabel,
+                    RemainingTicks,
+                    *DescribeFreshJourneyEntity(
+                        TEXT("lead"),
+                        LeadId,
+                        Bridge->FindEntity(LeadId)));
+                return false;
+            };
+            while (true)
+            {
+                if (MissionEightConvoyCasualty(LeadId, EscortIndices))
+                {
+                    return FailLeg(TEXT("CASUALTY"));
+                }
+                if (!EscortIndices.IsEmpty())
+                {
+                    if (!TickMissionEightWithinBudget(
+                            RemainingTicks,
+                            [LeadId,
+                             &EscortIndices,
+                             &MissionEightEscortsReformed,
+                             &MissionEightConvoyCasualty,
+                             M08ConvoyReformRadiusTiles]()
+                            {
+                                return MissionEightConvoyCasualty(
+                                           LeadId, EscortIndices) ||
+                                    MissionEightEscortsReformed(
+                                        EscortIndices,
+                                        LeadId,
+                                        M08ConvoyReformRadiusTiles);
+                            }))
+                    {
+                        return FailLeg(TEXT("REFORM_TIMEOUT"));
+                    }
+                    if (MissionEightConvoyCasualty(LeadId, EscortIndices))
+                    {
+                        return FailLeg(TEXT("CASUALTY"));
+                    }
+                }
+                const Entity* Lead = Bridge->FindEntity(LeadId);
+                if (Lead == nullptr || Lead->hitPoints <= 0)
+                {
+                    return FailLeg(TEXT("CASUALTY"));
+                }
+                Vec2 StepDestination;
+                if (!ComputeMissionEightConvoyStep(
+                        Lead->position,
+                        Goal,
+                        StandoffRaw,
+                        M08ConvoyIncrementRaw,
+                        StepDestination))
+                {
+                    return true;
+                }
+                if (RemainingTicks <= 0)
+                {
+                    return FailLeg(TEXT("BUDGET_EXHAUSTED"));
+                }
+                if (!Move(LeadId, StepDestination))
+                {
+                    const FString StepRejection = FString::Printf(
+                        TEXT("step=(%d,%d) rejection=%s"),
+                        StepDestination.x.FloorToInt(),
+                        StepDestination.y.FloorToInt(),
+                        *Feedback);
+                    Vec2 HalfStepDestination = StepDestination;
+                    if (!ComputeMissionEightConvoyStep(
+                            Lead->position,
+                            Goal,
+                            StandoffRaw,
+                            M08ConvoyIncrementRaw / 2,
+                            HalfStepDestination) ||
+                        !Move(LeadId, HalfStepDestination))
+                    {
+                        FailLeg(TEXT("STEP_REJECTED"));
+                        Feedback += TEXT(" ");
+                        Feedback += StepRejection;
+                        return false;
+                    }
+                    StepDestination = HalfStepDestination;
+                }
+                ++IncrementCount;
+                for (int32 WarmupIndex = 0;
+                     WarmupIndex < 2 && RemainingTicks > 0;
+                     ++WarmupIndex)
+                {
+                    ObserveMissionEightProtectedState();
+                    Bridge->Tick(0.05f);
+                    --RemainingTicks;
+                }
+                const Vec2 StepGoal = StepDestination;
+                const bool bFinalStep =
+                    StandoffRaw == 0 && StepGoal == Goal;
+                if (!TickMissionEightWithinBudget(
+                        RemainingTicks,
+                        [Bridge,
+                         LeadId,
+                         StepGoal,
+                         bFinalStep,
+                         &EscortIndices,
+                         &MissionEightConvoyCasualty]()
+                        {
+                            if (MissionEightConvoyCasualty(
+                                    LeadId, EscortIndices))
+                            {
+                                return true;
+                            }
+                            const Entity* Current =
+                                Bridge->FindEntity(LeadId);
+                            if (Current->order.type ==
+                                echoes::sim::OrderType::None)
+                            {
+                                return true;
+                            }
+                            return bFinalStep
+                                ? Current->position == StepGoal
+                                : IsAtSite(Bridge, LeadId, StepGoal, 1);
+                        }))
+                {
+                    return FailLeg(TEXT("STEP_TIMEOUT"));
+                }
+                if (MissionEightConvoyCasualty(LeadId, EscortIndices))
+                {
+                    return FailLeg(TEXT("CASUALTY"));
+                }
+                if (!HaltMissionEightLead(LeadId, bLeadCanHold))
+                {
+                    return FailLeg(TEXT("HALT_REJECTED"));
+                }
+            }
+        };
+        // The worker's construction stance: 1.375 tiles from the relay site
+        // back along the plan-owned first-echo direction. That clears the
+        // relay's 2x2 placement footprint (combined half-extents come to
+        // 1.125 tiles) while keeping the worker inside the required two
+        // tiles.
+        const Vec2 M08BuildStanceSite = [
+            &M08Plan,
+            &ComputeMissionEightConvoyStep]()
+        {
+            Vec2 StanceSite = M08Plan.EchoRelaySite;
+            (void)ComputeMissionEightConvoyStep(
+                M08Plan.EchoRelaySite,
+                M08Plan.FirstEchoSite,
+                0,
+                (11 * echoes::sim::kFixedScale) / 8,
+                StanceSite);
+            return StanceSite;
+        }();
+        const auto MissionEightWorkerHolding = [
+            Bridge,
+            M08Worker,
+            M08Plan]()
+        {
+            const Entity* Worker = Bridge->FindEntity(M08Worker);
+            return Worker != nullptr && Worker->hitPoints > 0 &&
+                Worker->order.type == echoes::sim::OrderType::None &&
+                IsAtSite(Bridge, M08Worker, M08Plan.FirstEchoSite, 2);
+        };
+        const auto MissionEightConvoyStagedAtRelay = [
+            Bridge,
+            M08Plan,
+            M08Worker,
+            &M08GuardIds]()
+        {
+            const Entity* Worker = Bridge->FindEntity(M08Worker);
+            if (Worker == nullptr || Worker->hitPoints <= 0 ||
+                !IsAtSite(Bridge, M08Worker, M08Plan.EchoRelaySite, 2))
+            {
+                return false;
+            }
+            if (M08GuardIds.Num() != 4)
+            {
+                return false;
+            }
+            for (int32 EscortIndex = 0; EscortIndex < 2; ++EscortIndex)
+            {
+                const Entity* Escort =
+                    Bridge->FindEntity(M08GuardIds[EscortIndex]);
+                if (Escort == nullptr || Escort->hitPoints <= 0 ||
+                    !IsAtSite(
+                        Bridge,
+                        M08GuardIds[EscortIndex],
+                        M08Plan.EchoRelaySite,
+                        2))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
         const auto PrepareMissionEightTalarGuards = [
             M08Start,
             M08Soldiers,
@@ -3785,6 +4216,24 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             }
             M08GuardTargetIds[0] = M08RelayId;
             M08GuardTargetIds[1] = M08RelayId;
+            M08GuardTargetIds[2] =
+                M08Start.ShapeBesideUsTalarId;
+            M08GuardTargetIds[3] =
+                M08Start.ShapeBesideUsTalarId;
+            return IssueMissionEightGuardAssignments();
+        };
+        const auto RetargetMissionEightWorkerGuards = [
+            M08Start,
+            M08Worker,
+            &M08GuardTargetIds,
+            &IssueMissionEightGuardAssignments]()
+        {
+            if (M08GuardTargetIds.Num() != 4)
+            {
+                return false;
+            }
+            M08GuardTargetIds[0] = M08Worker;
+            M08GuardTargetIds[1] = M08Worker;
             M08GuardTargetIds[2] =
                 M08Start.ShapeBesideUsTalarId;
             M08GuardTargetIds[3] =
@@ -3836,19 +4285,83 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     20),
                 TEXT("Mission 08 initial Talar Guards take effect")) ||
             !RequireMissionEight(
-                Move(
-                    M08Start.ShapeBesideUsTalarId,
-                    M08Plan.FirstEchoSite),
-                TEXT("Mission 08 Talar accepts the first-echo route")) ||
+                PaceMissionEightConvoy(
+                    TEXT("worker-first-echo"),
+                    M08Worker,
+                    false,
+                    M08Plan.FirstEchoSite,
+                    M08WorkerHoldStandoffRaw,
+                    M08NoEscortIndices,
+                    M08ApproachBudgetTicks,
+                    M08WorkerConvoyIncrements),
+                TEXT("Mission 08 pre-positions the separate worker beside the first echo")) ||
             !RequireMissionEight(
-                TickUntilMissionEightCondition(
-                    [Bridge]()
+                TickMissionEightWithinBudget(
+                    M08ApproachBudgetTicks,
+                    [&MissionEightWorkerHolding]()
                     {
-                        return Bridge->GetShapeBesideUsPhase() ==
-                            EEchoesShapeBesideUsPhase::RaiseEchoRelay;
-                    },
-                    3000),
+                        return MissionEightWorkerHolding();
+                    }),
+                TEXT("Mission 08 holds the worker within two tiles of the first echo")) ||
+            !RequireMissionEight(
+                PaceMissionEightConvoy(
+                    TEXT("talar-first-echo"),
+                    M08Start.ShapeBesideUsTalarId,
+                    true,
+                    M08Plan.FirstEchoSite,
+                    0,
+                    M08TalarEscortIndices,
+                    M08ApproachBudgetTicks,
+                    M08TalarConvoyIncrements),
+                TEXT("Mission 08 paces Talar to the first echo behind reformed Guards")) ||
+            !RequireMissionEight(
+                Bridge->GetShapeBesideUsPhase() ==
+                    EEchoesShapeBesideUsPhase::RaiseEchoRelay,
                 TEXT("Mission 08 reaches relay construction")) ||
+            !RequireMissionEight(
+                MissionEightGuardsActive() &&
+                    MissionEightEscortsReformed(
+                        M08TalarEscortIndices,
+                        M08Start.ShapeBesideUsTalarId,
+                        M08ConvoyReformRadiusTiles),
+                TEXT("Mission 08 proves all four Guards reformed at the phase change")) ||
+            !RequireMissionEight(
+                RetargetMissionEightWorkerGuards(),
+                TEXT("Mission 08 retargets two Guards to escort the worker")) ||
+            !RequireMissionEight(
+                TickMissionEightWithinBudget(
+                    M08RelayBudgetTicks,
+                    [&MissionEightGuardsActive]()
+                    {
+                        return MissionEightGuardsActive();
+                    }),
+                TEXT("Mission 08 worker and Talar Guards take effect")) ||
+            !RequireMissionEight(
+                PaceMissionEightConvoy(
+                    TEXT("worker-echo-relay"),
+                    M08Worker,
+                    false,
+                    M08Plan.EchoRelaySite,
+                    0,
+                    M08WorkerEscortIndices,
+                    M08RelayBudgetTicks,
+                    M08WorkerConvoyIncrements),
+                TEXT("Mission 08 paces the worker to the relay site with both escorts")) ||
+            !RequireMissionEight(
+                MissionEightGuardsActive() &&
+                    MissionEightConvoyStagedAtRelay(),
+                TEXT("Mission 08 stages the worker and both escorts within two tiles of the relay")) ||
+            !RequireMissionEight(
+                PaceMissionEightConvoy(
+                    TEXT("worker-build-stance"),
+                    M08Worker,
+                    false,
+                    M08BuildStanceSite,
+                    0,
+                    M08WorkerEscortIndices,
+                    M08RelayBudgetTicks,
+                    M08WorkerConvoyIncrements),
+                TEXT("Mission 08 clears the relay footprint for construction")) ||
             !RequireMissionEight(
                 Bridge->IssueBuildCommand(
                     M08Worker,
@@ -3876,14 +4389,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     20),
                 TEXT("Mission 08 relay and Talar Guards take effect")) ||
             !RequireMissionEight(
-                TickUntilMissionEightCondition(
+                TickMissionEightWithinBudget(
+                    M08RelayBudgetTicks,
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
                             EEchoesShapeBesideUsPhase::
                                 TraversePairedStates;
-                    },
-                    3400),
+                    }),
                 TEXT("Mission 08 opens paired-state traversal")) ||
             !RequireMissionEight(
                 RetargetMissionEightTraversalGuards(),
