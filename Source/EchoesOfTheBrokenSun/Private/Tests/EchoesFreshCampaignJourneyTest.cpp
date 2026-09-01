@@ -3377,14 +3377,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const TArray<int32> M08WitnessBEscortIndices = {2};
         const TArray<int32> M08ConvergenceEscortIndices = {3};
         const TArray<int32> M08NoEscortIndices;
-        // 2.5-tile convergence approach standoff: with the pacer's
-        // one-eighth-tile arrival slack Talar halts 2.5-2.63 tiles from the
-        // plan convergence site — inside the 3-tile mission radius, inside
-        // both witness escorts' 6-tile ward-centered Guard scans, and clear
-        // of the opposing posture rally. Plan offsets are congruent across
-        // all mission branches, so this is branch- and seed-agnostic.
-        const int32 M08ConvergenceStandoffRaw =
-            (5 * echoes::sim::kFixedScale) / 2;
+        // Vision-safe stand displacement: final stands sit ~2.8 tiles from
+        // their plan site — inside every 3-tile mission-fact radius — chosen
+        // so the stand tile lies outside every live hostile's own vision
+        // disc. Standing inside a hostile vision disc is a permanent
+        // aggro pull (the opposing AI attacks any visible enemy without a
+        // range bound), which is what killed witnessB at its raw site.
+        const int32 M08StandOffsetRaw = (14 * echoes::sim::kFixedScale) / 5;
+        FString M08StandTelemetry;
         EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
             Bridge->GetShapeBesideUsPhase();
         FString M08LastKnownCore = DescribeFreshJourneyEntity(
@@ -3550,6 +3550,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M08TalarConvoyIncrements,
             &M08WorkerConvoyIncrements,
             &M08WitnessConvoyIncrements,
+            &M08StandTelemetry,
             &ObserveMissionEightProtectedState,
             &Feedback]()
         {
@@ -3585,7 +3586,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 }
             }
             Feedback = FString::Printf(
-                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} convoy={talarIncrements=%d workerIncrements=%d witnessIncrements=%d approachBudget=%d relayBudget=%d traversalBudget=%d completionBudget=%d} defenders={%s}"),
+                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} convoy={talarIncrements=%d workerIncrements=%d witnessIncrements=%d approachBudget=%d relayBudget=%d traversalBudget=%d completionBudget=%d} stands={%s} defenders={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr
                         ? Simulation->CurrentTick()
@@ -3650,6 +3651,9 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 M08RelayBudgetTicks,
                 M08TraversalBudgetTicks,
                 M08CompletionBudgetTicks,
+                M08StandTelemetry.IsEmpty()
+                    ? TEXT("none")
+                    : *M08StandTelemetry,
                 *DefenderState);
         };
         const auto RequireMissionEight = [
@@ -4009,6 +4013,155 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 static_cast<int32>(
                     Current.y.Raw() + DeltaY * TravelRaw / Distance));
             return true;
+        };
+        // True when the candidate position's tile lies outside every live
+        // hostile entity's own vision disc — the same floored-tile Euclidean
+        // math the simulation's UpdateVisibility/markVisible uses. A stand
+        // outside every disc is never seen, so it never triggers the
+        // opposing AI's visible-enemy attack pull.
+        const auto MissionEightStandHiddenFromHostiles = [Bridge](
+            const Vec2& Candidate)
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr)
+            {
+                return false;
+            }
+            const int64 CandidateTileX = Candidate.x.FloorToInt();
+            const int64 CandidateTileY = Candidate.y.FloorToInt();
+            for (const Entity& Hostile : Simulation->Entities())
+            {
+                if (Hostile.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId ||
+                    Hostile.owner == echoes::sim::kNeutralPlayer ||
+                    Hostile.hitPoints <= 0 || Hostile.visionTiles <= 0)
+                {
+                    continue;
+                }
+                const int64 DeltaTileX =
+                    CandidateTileX - Hostile.position.x.FloorToInt();
+                const int64 DeltaTileY =
+                    CandidateTileY - Hostile.position.y.FloorToInt();
+                const int64 RadiusTiles = Hostile.visionTiles;
+                if (DeltaTileX * DeltaTileX + DeltaTileY * DeltaTileY <=
+                    RadiusTiles * RadiusTiles)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        // Chooses a leg's final stand: the plan site displaced by the stand
+        // offset along the direction away from the nearest live hostile,
+        // rotated in fixed 30-degree steps (smallest deviation first) until
+        // a candidate is passable and hidden from every hostile vision
+        // disc; falls back to the raw site when none qualifies. Every stand
+        // remains inside the 3-tile mission-fact radius by construction,
+        // and everything derives from live simulation state and plan sites.
+        const auto SelectMissionEightVisionSafeStand = [
+            Bridge,
+            M08StandOffsetRaw,
+            &M08StandTelemetry,
+            &ComputeMissionEightConvoyStep,
+            &MissionEightStandHiddenFromHostiles](
+                const TCHAR* StandLabel,
+                const Vec2& Site) -> Vec2
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            Vec2 Chosen = Site;
+            bool bFallback = true;
+            if (Simulation != nullptr)
+            {
+                const Entity* NearestHostile = nullptr;
+                int64 NearestDistanceSquared =
+                    std::numeric_limits<int64>::max();
+                for (const Entity& Hostile : Simulation->Entities())
+                {
+                    if (Hostile.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId ||
+                        Hostile.owner == echoes::sim::kNeutralPlayer ||
+                        Hostile.hitPoints <= 0)
+                    {
+                        continue;
+                    }
+                    const int64 DeltaX =
+                        static_cast<int64>(Hostile.position.x.Raw()) -
+                        Site.x.Raw();
+                    const int64 DeltaY =
+                        static_cast<int64>(Hostile.position.y.Raw()) -
+                        Site.y.Raw();
+                    const int64 DistanceSquared =
+                        DeltaX * DeltaX + DeltaY * DeltaY;
+                    if (DistanceSquared < NearestDistanceSquared ||
+                        (DistanceSquared == NearestDistanceSquared &&
+                         (NearestHostile == nullptr ||
+                          Hostile.id < NearestHostile->id)))
+                    {
+                        NearestHostile = &Hostile;
+                        NearestDistanceSquared = DistanceSquared;
+                    }
+                }
+                int64 AwayX = 0;
+                int64 AwayY = -1024;
+                if (NearestHostile != nullptr)
+                {
+                    AwayX = static_cast<int64>(Site.x.Raw()) -
+                        NearestHostile->position.x.Raw();
+                    AwayY = static_cast<int64>(Site.y.Raw()) -
+                        NearestHostile->position.y.Raw();
+                    if (AwayX == 0 && AwayY == 0)
+                    {
+                        AwayY = -1024;
+                    }
+                }
+                // cos/sin pairs in 1/1024ths for 0, +/-30, +/-60, +/-90,
+                // +/-120, +/-150, 180 degrees.
+                static constexpr int32 RotationTable[][2] = {
+                    {1024, 0},   {887, 512},   {887, -512},
+                    {512, 887},  {512, -887},  {0, 1024},
+                    {0, -1024},  {-512, 887},  {-512, -887},
+                    {-887, 512}, {-887, -512}, {-1024, 0}};
+                for (const auto& Rotation : RotationTable)
+                {
+                    const int64 RotatedX =
+                        (AwayX * Rotation[0] - AwayY * Rotation[1]) / 1024;
+                    const int64 RotatedY =
+                        (AwayX * Rotation[1] + AwayY * Rotation[0]) / 1024;
+                    if (RotatedX == 0 && RotatedY == 0)
+                    {
+                        continue;
+                    }
+                    const Vec2 DirectionTarget = Vec2::FromRaw(
+                        static_cast<int32>(Site.x.Raw() + RotatedX),
+                        static_cast<int32>(Site.y.Raw() + RotatedY));
+                    Vec2 Candidate = Site;
+                    if (!ComputeMissionEightConvoyStep(
+                            Site,
+                            DirectionTarget,
+                            0,
+                            M08StandOffsetRaw,
+                            Candidate))
+                    {
+                        continue;
+                    }
+                    if (Simulation->IsPositionPassable(Candidate) &&
+                        MissionEightStandHiddenFromHostiles(Candidate))
+                    {
+                        Chosen = Candidate;
+                        bFallback = false;
+                        break;
+                    }
+                }
+            }
+            M08StandTelemetry += FString::Printf(
+                TEXT(" %s=(%d,%d)%s"),
+                StandLabel,
+                Chosen.x.FloorToInt(),
+                Chosen.y.FloorToInt(),
+                bFallback ? TEXT("(fallback-site)") : TEXT(""));
+            return Chosen;
         };
         // Bounded convoy pacing: reform first, then repeatedly move the lead
         // one computed increment toward Goal, halt it, and wait until every
@@ -4540,7 +4693,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     TEXT("witnessA-first-state"),
                     M08Start.FirstStateWitnessId,
                     false,
-                    M08Plan.FirstStateSite,
+                    SelectMissionEightVisionSafeStand(
+                        TEXT("witnessA"), M08Plan.FirstStateSite),
                     0,
                     M08WitnessAEscortIndices,
                     M08TraversalBudgetTicks,
@@ -4551,7 +4705,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     TEXT("witnessB-second-state"),
                     M08Start.SecondStateWitnessId,
                     true,
-                    M08Plan.SecondStateSite,
+                    SelectMissionEightVisionSafeStand(
+                        TEXT("witnessB"), M08Plan.SecondStateSite),
                     0,
                     M08WitnessBEscortIndices,
                     M08TraversalBudgetTicks,
@@ -4571,8 +4726,9 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     TEXT("talar-convergence"),
                     M08Start.ShapeBesideUsTalarId,
                     true,
-                    M08Plan.ConvergenceSite,
-                    M08ConvergenceStandoffRaw,
+                    SelectMissionEightVisionSafeStand(
+                        TEXT("convergence"), M08Plan.ConvergenceSite),
+                    0,
                     M08ConvergenceEscortIndices,
                     M08CompletionBudgetTicks,
                     M08TalarConvoyIncrements),
