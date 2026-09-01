@@ -751,6 +751,15 @@ private:
      *  saves never fire a burst. Presentation only. */
     void UpdateGameplayAudioPresentation(
         const TArray<const echoes::sim::Entity*>& VisibleEntities);
+
+    /** The current mission phase as its authored contract name; empty for
+     *  Skirmish. */
+    [[nodiscard]] FString CurrentMissionPhaseName() const;
+
+    /** Fires authored mid-mission lines on real phase transitions. Terminal
+     *  phases are owned by the result flow; scenario changes and restored
+     *  saves re-baseline silently. Presentation only. */
+    void UpdateNarrativeDispatch();
     bool SpawnFogView();
     bool SyncFogView();
     bool SpawnTerrainView();
@@ -787,6 +796,8 @@ private:
     };
     TMap<uint32, FGameplayAudioSnapshot> GameplayAudioSnapshots;
     const echoes::sim::Simulation* GameplayAudioBaselineSimulation = nullptr;
+    const echoes::sim::Simulation* NarrativeBaselineSimulation = nullptr;
+    FString NarrativeLastPhaseName;
     echoes::sim::ResearchType GameplayAudioLastActiveResearch =
         echoes::sim::ResearchType::None;
     echoes::sim::ResearchType GameplayAudioLastInterruptedResearch =

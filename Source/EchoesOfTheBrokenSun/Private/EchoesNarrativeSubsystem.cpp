@@ -231,6 +231,30 @@ void UEchoesNarrativeSubsystem::LoadPack()
             }
             Narrative.Failures.Add(Failure.Key, MoveTemp(Text));
         }
+        const TSharedPtr<FJsonObject>* FailureLineValues = nullptr;
+        if (!(*Entry)->TryGetObjectField(
+                TEXT("failure_lines"), FailureLineValues) ||
+            FailureLineValues == nullptr || !FailureLineValues->IsValid())
+        {
+            LoadError = FString::Printf(
+                TEXT("NARRATIVE_FAILURE_LINES_INVALID:%s"), *Pair.Key);
+            Operations.Reset();
+            return;
+        }
+        for (const TPair<FString, TSharedPtr<FJsonValue>>& FailureLine :
+             (*FailureLineValues)->Values)
+        {
+            FString LineId;
+            if (!FailureLine.Value.IsValid() ||
+                !FailureLine.Value->TryGetString(LineId) || LineId.IsEmpty())
+            {
+                LoadError = FString::Printf(
+                    TEXT("NARRATIVE_FAILURE_LINES_INVALID:%s"), *Pair.Key);
+                Operations.Reset();
+                return;
+            }
+            Narrative.FailureLines.Add(FailureLine.Key, MoveTemp(LineId));
+        }
         TotalLineCount += Narrative.Lines.Num();
         Operations.Add(Pair.Key, MoveTemp(Narrative));
     }
@@ -385,6 +409,40 @@ void UEchoesNarrativeSubsystem::EnqueueSignal(
     if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())
     {
         ActiveLineStartSeconds = NowSeconds;
+    }
+}
+
+void UEchoesNarrativeSubsystem::EnqueueFailureLine(
+    EEchoesOperationMode Operation,
+    const FString& ReasonCode,
+    double NowSeconds)
+{
+    const FOperationNarrative* Found =
+        Operations.Find(OperationPackKey(Operation));
+    if (Found == nullptr)
+    {
+        return;
+    }
+    const FString* LineId = Found->FailureLines.Find(ReasonCode);
+    if (LineId == nullptr)
+    {
+        LineId = Found->FailureLines.Find(TEXT("generic"));
+    }
+    if (LineId == nullptr)
+    {
+        return;
+    }
+    for (const FEchoesNarrativeLine& Line : Found->Lines)
+    {
+        if (Line.Id == *LineId)
+        {
+            SubtitleQueue.Add(Line);
+            if (ActiveLineStartSeconds < 0.0)
+            {
+                ActiveLineStartSeconds = NowSeconds;
+            }
+            return;
+        }
     }
 }
 

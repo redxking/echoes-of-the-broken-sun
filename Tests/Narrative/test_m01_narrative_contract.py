@@ -545,7 +545,7 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             {
                 "mechanics": "implemented_current_source_with_known_presentation_gaps",
                 "narrative_contract": "authored_source_only",
-                "runtime_consumption": "unimplemented",
+                "runtime_consumption": "partial_briefing_lines_results",
                 "subtitles": "authored_unbound",
                 "voice_assets": "absent",
                 "cinematics": "absent",

@@ -183,6 +183,19 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
               Narrative->GetQueuedLineCountForTest(),
               3);
     Narrative->ClearSubtitleQueue();
+    Narrative->EnqueueFailureLine(
+        EEchoesOperationMode::CampaignSevenAccounts, TEXT("generic"), 400.0);
+    TestEqual(TEXT("A failure enqueues exactly one generic line"),
+              Narrative->GetQueuedLineCountForTest(),
+              1);
+    Narrative->EnqueueFailureLine(
+        EEchoesOperationMode::CampaignSevenAccounts,
+        TEXT("nonexistent_reason"),
+        400.0);
+    TestEqual(TEXT("An unknown reason falls back to the generic line"),
+              Narrative->GetQueuedLineCountForTest(),
+              2);
+    Narrative->ClearSubtitleQueue();
 
     // Skirmish deliberately has no narrative contract.
     TestFalse(TEXT("Skirmish has no narrative contract"),

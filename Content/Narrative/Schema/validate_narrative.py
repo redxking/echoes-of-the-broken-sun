@@ -1397,7 +1397,7 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
     expected_implementation = {
         "mechanics": "implemented_current_source_with_known_presentation_gaps",
         "narrative_contract": "authored_source_only",
-        "runtime_consumption": "unimplemented",
+        "runtime_consumption": "partial_briefing_lines_results",
         "subtitles": "authored_unbound",
         "voice_assets": "absent",
         "cinematics": "absent",
@@ -2602,7 +2602,7 @@ def validate_registered_mission_contract(
     for key, expected in {
         "mechanics": "implemented_current_source_with_known_presentation_gaps",
         "narrative_contract": "authored_source_only",
-        "runtime_consumption": "unimplemented",
+        "runtime_consumption": "partial_briefing_lines_results",
         "subtitles": "authored_unbound",
         "voice_assets": "absent",
         "cinematics": "absent",

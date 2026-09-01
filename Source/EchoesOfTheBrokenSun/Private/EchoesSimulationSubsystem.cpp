@@ -9,6 +9,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesGameplayAudioSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
+#include "EchoesNarrativeSubsystem.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
@@ -16781,6 +16782,276 @@ void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
     }
 }
 
+FString UEchoesSimulationSubsystem::CurrentMissionPhaseName() const
+{
+    switch (GetOperationMode())
+    {
+        case EEchoesOperationMode::Skirmish:
+            return FString();
+        case EEchoesOperationMode::CampaignPrologue:
+        {
+            switch (GetProloguePhase())
+            {
+                case EEchoesProloguePhase::Inactive: return TEXT("Inactive");
+                case EEchoesProloguePhase::RecoverArchive: return TEXT("RecoverArchive");
+                case EEchoesProloguePhase::DecideFutureWell: return TEXT("DecideFutureWell");
+                case EEchoesProloguePhase::Withdraw: return TEXT("Withdraw");
+                case EEchoesProloguePhase::Complete: return TEXT("Complete");
+                case EEchoesProloguePhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignSevenAccounts:
+        {
+            switch (GetSevenAccountsPhase())
+            {
+                case EEchoesSevenAccountsPhase::Inactive: return TEXT("Inactive");
+                case EEchoesSevenAccountsPhase::EstablishWaystone: return TEXT("EstablishWaystone");
+                case EEchoesSevenAccountsPhase::RecallMemory: return TEXT("RecallMemory");
+                case EEchoesSevenAccountsPhase::Complete: return TEXT("Complete");
+                case EEchoesSevenAccountsPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignCityReserve:
+        {
+            switch (GetCityReservePhase())
+            {
+                case EEchoesCityReservePhase::Inactive: return TEXT("Inactive");
+                case EEchoesCityReservePhase::StabilizePriority: return TEXT("StabilizePriority");
+                case EEchoesCityReservePhase::StabilizeSecondary: return TEXT("StabilizeSecondary");
+                case EEchoesCityReservePhase::StabilizeFinal: return TEXT("StabilizeFinal");
+                case EEchoesCityReservePhase::Complete: return TEXT("Complete");
+                case EEchoesCityReservePhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignUnburiedRoad:
+        {
+            switch (GetUnburiedRoadPhase())
+            {
+                case EEchoesUnburiedRoadPhase::Inactive: return TEXT("Inactive");
+                case EEchoesUnburiedRoadPhase::EstablishRoadhead: return TEXT("EstablishRoadhead");
+                case EEchoesUnburiedRoadPhase::RaiseListeningSpine: return TEXT("RaiseListeningSpine");
+                case EEchoesUnburiedRoadPhase::RecoverMemoryShard: return TEXT("RecoverMemoryShard");
+                case EEchoesUnburiedRoadPhase::Complete: return TEXT("Complete");
+                case EEchoesUnburiedRoadPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignTermsOfContinuance:
+        {
+            switch (GetTermsOfContinuancePhase())
+            {
+                case EEchoesTermsOfContinuancePhase::Inactive: return TEXT("Inactive");
+                case EEchoesTermsOfContinuancePhase::SynchronizeNetworks: return TEXT("SynchronizeNetworks");
+                case EEchoesTermsOfContinuancePhase::HoldContinuanceWindow: return TEXT("HoldContinuanceWindow");
+                case EEchoesTermsOfContinuancePhase::ExtractWitnesses: return TEXT("ExtractWitnesses");
+                case EEchoesTermsOfContinuancePhase::Complete: return TEXT("Complete");
+                case EEchoesTermsOfContinuancePhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        {
+            switch (GetNamesWithoutBirthsPhase())
+            {
+                case EEchoesNamesWithoutBirthsPhase::Inactive: return TEXT("Inactive");
+                case EEchoesNamesWithoutBirthsPhase::LocateCensus: return TEXT("LocateCensus");
+                case EEchoesNamesWithoutBirthsPhase::StabilizeArchive: return TEXT("StabilizeArchive");
+                case EEchoesNamesWithoutBirthsPhase::ShelterCivilians: return TEXT("ShelterCivilians");
+                case EEchoesNamesWithoutBirthsPhase::ExtractEvidence: return TEXT("ExtractEvidence");
+                case EEchoesNamesWithoutBirthsPhase::Complete: return TEXT("Complete");
+                case EEchoesNamesWithoutBirthsPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignShapeOfSilence:
+        {
+            switch (GetShapeOfSilencePhase())
+            {
+                case EEchoesShapeOfSilencePhase::Inactive: return TEXT("Inactive");
+                case EEchoesShapeOfSilencePhase::RootWaystone: return TEXT("RootWaystone");
+                case EEchoesShapeOfSilencePhase::RaiseListeningSpine: return TEXT("RaiseListeningSpine");
+                case EEchoesShapeOfSilencePhase::PositionMemoryWitnesses: return TEXT("PositionMemoryWitnesses");
+                case EEchoesShapeOfSilencePhase::ReachConfluence: return TEXT("ReachConfluence");
+                case EEchoesShapeOfSilencePhase::Complete: return TEXT("Complete");
+                case EEchoesShapeOfSilencePhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignShapeBesideUs:
+        {
+            switch (GetShapeBesideUsPhase())
+            {
+                case EEchoesShapeBesideUsPhase::Inactive: return TEXT("Inactive");
+                case EEchoesShapeBesideUsPhase::ReachFirstEcho: return TEXT("ReachFirstEcho");
+                case EEchoesShapeBesideUsPhase::RaiseEchoRelay: return TEXT("RaiseEchoRelay");
+                case EEchoesShapeBesideUsPhase::TraversePairedStates: return TEXT("TraversePairedStates");
+                case EEchoesShapeBesideUsPhase::ReachConvergence: return TEXT("ReachConvergence");
+                case EEchoesShapeBesideUsPhase::Complete: return TEXT("Complete");
+                case EEchoesShapeBesideUsPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignReserveAuthority:
+        {
+            switch (GetReserveAuthorityPhase())
+            {
+                case EEchoesReserveAuthorityPhase::Inactive: return TEXT("Inactive");
+                case EEchoesReserveAuthorityPhase::SecureAuthority: return TEXT("SecureAuthority");
+                case EEchoesReserveAuthorityPhase::AllocateFirstDistrict: return TEXT("AllocateFirstDistrict");
+                case EEchoesReserveAuthorityPhase::AllocateSecondDistrict: return TEXT("AllocateSecondDistrict");
+                case EEchoesReserveAuthorityPhase::ReachDeferredDistrict: return TEXT("ReachDeferredDistrict");
+                case EEchoesReserveAuthorityPhase::Complete: return TEXT("Complete");
+                case EEchoesReserveAuthorityPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        {
+            switch (GetChoirAtLumeReachPhase())
+            {
+                case EEchoesChoirAtLumeReachPhase::Inactive: return TEXT("Inactive");
+                case EEchoesChoirAtLumeReachPhase::EstablishContact: return TEXT("EstablishContact");
+                case EEchoesChoirAtLumeReachPhase::ResolveDeferredLiability: return TEXT("ResolveDeferredLiability");
+                case EEchoesChoirAtLumeReachPhase::RaiseFirstAnchor: return TEXT("RaiseFirstAnchor");
+                case EEchoesChoirAtLumeReachPhase::RaiseSecondAnchor: return TEXT("RaiseSecondAnchor");
+                case EEchoesChoirAtLumeReachPhase::CommitFutureWell: return TEXT("CommitFutureWell");
+                case EEchoesChoirAtLumeReachPhase::ResolveFutureWell: return TEXT("ResolveFutureWell");
+                case EEchoesChoirAtLumeReachPhase::Complete: return TEXT("Complete");
+                case EEchoesChoirAtLumeReachPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignNoNeutralLedger:
+        {
+            switch (GetNoNeutralLedgerPhase())
+            {
+                case EEchoesNoNeutralLedgerPhase::Inactive: return TEXT("Inactive");
+                case EEchoesNoNeutralLedgerPhase::SecureInheritedRoute: return TEXT("SecureInheritedRoute");
+                case EEchoesNoNeutralLedgerPhase::IntegrateDistrictContributions: return TEXT("IntegrateDistrictContributions");
+                case EEchoesNoNeutralLedgerPhase::AttestEvidenceChannels: return TEXT("AttestEvidenceChannels");
+                case EEchoesNoNeutralLedgerPhase::ApplyRecordedProtocol: return TEXT("ApplyRecordedProtocol");
+                case EEchoesNoNeutralLedgerPhase::RallyCoalition: return TEXT("RallyCoalition");
+                case EEchoesNoNeutralLedgerPhase::Complete: return TEXT("Complete");
+                case EEchoesNoNeutralLedgerPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignFutureThatWon:
+        {
+            switch (GetFutureThatWonPhase())
+            {
+                case EEchoesFutureThatWonPhase::Inactive: return TEXT("Inactive");
+                case EEchoesFutureThatWonPhase::EstablishIndependentReadback: return TEXT("EstablishIndependentReadback");
+                case EEchoesFutureThatWonPhase::VerifyRecordedInputs: return TEXT("VerifyRecordedInputs");
+                case EEchoesFutureThatWonPhase::BindRecordedProtocol: return TEXT("BindRecordedProtocol");
+                case EEchoesFutureThatWonPhase::HoldStabilityWindow: return TEXT("HoldStabilityWindow");
+                case EEchoesFutureThatWonPhase::ObserveDistrictReadbacks: return TEXT("ObserveDistrictReadbacks");
+                case EEchoesFutureThatWonPhase::Complete: return TEXT("Complete");
+                case EEchoesFutureThatWonPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        {
+            switch (GetAssemblyOfTheMissingPhase())
+            {
+                case EEchoesAssemblyOfTheMissingPhase::Inactive: return TEXT("Inactive");
+                case EEchoesAssemblyOfTheMissingPhase::EstablishPublicRecordReadback: return TEXT("EstablishPublicRecordReadback");
+                case EEchoesAssemblyOfTheMissingPhase::LinkCrownfallIndex: return TEXT("LinkCrownfallIndex");
+                case EEchoesAssemblyOfTheMissingPhase::ObserveAssembly: return TEXT("ObserveAssembly");
+                case EEchoesAssemblyOfTheMissingPhase::Complete: return TEXT("Complete");
+                case EEchoesAssemblyOfTheMissingPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        {
+            switch (GetSeveralVoicesOneCommandPhase())
+            {
+                case EEchoesSeveralVoicesOneCommandPhase::Inactive: return TEXT("Inactive");
+                case EEchoesSeveralVoicesOneCommandPhase::ResearchHeldAlternatives: return TEXT("ResearchHeldAlternatives");
+                case EEchoesSeveralVoicesOneCommandPhase::ResolveIncompatibleVoices: return TEXT("ResolveIncompatibleVoices");
+                case EEchoesSeveralVoicesOneCommandPhase::ResearchSharedResolution: return TEXT("ResearchSharedResolution");
+                case EEchoesSeveralVoicesOneCommandPhase::AnchorCrisis: return TEXT("AnchorCrisis");
+                case EEchoesSeveralVoicesOneCommandPhase::HoldSharedResolution: return TEXT("HoldSharedResolution");
+                case EEchoesSeveralVoicesOneCommandPhase::Complete: return TEXT("Complete");
+                case EEchoesSeveralVoicesOneCommandPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+        case EEchoesOperationMode::CampaignTheBrokenSun:
+        {
+            switch (GetBrokenSunPhase())
+            {
+                case EEchoesBrokenSunPhase::Inactive: return TEXT("Inactive");
+                case EEchoesBrokenSunPhase::SecureCrownfallApproach: return TEXT("SecureCrownfallApproach");
+                case EEchoesBrokenSunPhase::AssembleAccord: return TEXT("AssembleAccord");
+                case EEchoesBrokenSunPhase::ChooseFinalResolution: return TEXT("ChooseFinalResolution");
+                case EEchoesBrokenSunPhase::RaiseResolutionConduit: return TEXT("RaiseResolutionConduit");
+                case EEchoesBrokenSunPhase::HoldFinalResolution: return TEXT("HoldFinalResolution");
+                case EEchoesBrokenSunPhase::Complete: return TEXT("Complete");
+                case EEchoesBrokenSunPhase::Failed: return TEXT("Failed");
+            }
+            return TEXT("");
+        }
+    }
+    return FString();
+}
+
+void UEchoesSimulationSubsystem::UpdateNarrativeDispatch()
+{
+    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    {
+        NarrativeBaselineSimulation = nullptr;
+        return;
+    }
+    const echoes::sim::Simulation* Current = Simulation.Get();
+    const FString PhaseName = CurrentMissionPhaseName();
+    if (PhaseName.IsEmpty())
+    {
+        NarrativeBaselineSimulation = Current;
+        NarrativeLastPhaseName.Reset();
+        return;
+    }
+    if (NarrativeBaselineSimulation != Current)
+    {
+        // A new scenario or a restored save re-baselines silently: entering
+        // an already-reached phase on load must not replay its lines.
+        NarrativeBaselineSimulation = Current;
+        NarrativeLastPhaseName = PhaseName;
+        return;
+    }
+    if (PhaseName == NarrativeLastPhaseName)
+    {
+        return;
+    }
+    const FString PreviousPhaseName = NarrativeLastPhaseName;
+    NarrativeLastPhaseName = PhaseName;
+    // Terminal phases belong to the result flow, which clears the lane and
+    // enqueues its own copy; Inactive transitions carry no narrative.
+    if (PhaseName == TEXT("Inactive") || PhaseName == TEXT("Complete") ||
+        PhaseName == TEXT("Failed") || PreviousPhaseName.IsEmpty())
+    {
+        return;
+    }
+    UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+    UEchoesNarrativeSubsystem* Narrative =
+        GameInstance != nullptr
+            ? GameInstance->GetSubsystem<UEchoesNarrativeSubsystem>()
+            : nullptr;
+    if (Narrative == nullptr)
+    {
+        return;
+    }
+    Narrative->EnqueueSignal(
+        GetOperationMode(),
+        FString::Printf(TEXT("phase_entered:%s"), *PhaseName),
+        GetWorld()->GetRealTimeSeconds());
+}
+
 void UEchoesSimulationSubsystem::OnPreGarbageCollect()
 {
     const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
@@ -17044,6 +17315,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
     }
     UpdateAlertPresentation();
     UpdateGameplayAudioPresentation(VisibleEntities);
+    UpdateNarrativeDispatch();
     return bAllVisibleViewsReady;
 }
 

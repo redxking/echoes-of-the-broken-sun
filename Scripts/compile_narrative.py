@@ -70,6 +70,10 @@ def project_mission(mission: dict) -> dict:
             variant["reason_code"]: variant["source_condition"]
             for variant in mission["failure_retry"]["failure_variants"]
         },
+        "failure_lines": {
+            variant["reason_code"]: variant["dialogue_line_ids"][0]
+            for variant in mission["failure_retry"]["failure_variants"]
+        },
         "retry": mission["failure_retry"]["retry_copy"]["source_text"],
     }
 

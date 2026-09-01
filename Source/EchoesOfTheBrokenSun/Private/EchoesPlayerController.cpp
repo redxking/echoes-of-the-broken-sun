@@ -5011,11 +5011,22 @@ void AEchoesPlayerController::PresentResultAudio(bool bSuccess)
         if (Bridge != nullptr)
         {
             Narrative->ClearSubtitleQueue();
-            Narrative->EnqueueSignal(
-                Bridge->GetOperationMode(),
-                bSuccess ? TEXT("phase_entered:Complete")
-                         : TEXT("phase_entered:Failed"),
-                World->GetRealTimeSeconds());
+            if (bSuccess)
+            {
+                Narrative->EnqueueSignal(
+                    Bridge->GetOperationMode(),
+                    TEXT("phase_entered:Complete"),
+                    World->GetRealTimeSeconds());
+            }
+            else
+            {
+                // Runtime failure-reason binding is still "requested"; the
+                // generic failure line is the only honest selection today.
+                Narrative->EnqueueFailureLine(
+                    Bridge->GetOperationMode(),
+                    TEXT("generic"),
+                    World->GetRealTimeSeconds());
+            }
         }
     }
 }

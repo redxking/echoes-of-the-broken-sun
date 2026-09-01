@@ -94,6 +94,14 @@ public:
         const FString& Signal,
         double NowSeconds);
 
+    /** Enqueues the single authored line for one failure reason code.
+     *  Runtime failure-reason delivery is not yet bound, so callers pass
+     *  "generic" until it is; an unknown reason falls back to generic. */
+    void EnqueueFailureLine(
+        EEchoesOperationMode Operation,
+        const FString& ReasonCode,
+        double NowSeconds);
+
     /** The line currently owning the subtitle lane, if any. */
     [[nodiscard]] bool GetActiveSubtitle(
         double NowSeconds,
@@ -120,6 +128,7 @@ private:
         TArray<FEchoesNarrativeLine> Lines;
         TMap<FString, FString> Results;
         TMap<FString, FString> Failures;
+        TMap<FString, FString> FailureLines;
         FString Retry;
     };
 

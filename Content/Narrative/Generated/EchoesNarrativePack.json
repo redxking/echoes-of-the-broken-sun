@@ -6,6 +6,14 @@
   "CampaignAssemblyOfTheMissing": {
    "briefing": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
    "content_id": "nar_m13_assembly_of_the_missing",
+   "failure_lines": {
+    "generic": "nar_m13_line_fail_generic_006",
+    "local_core_lost": "nar_m13_line_fail_core_001",
+    "oruun_lost": "nar_m13_line_fail_oruun_002",
+    "public_interface_lost": "nar_m13_line_fail_interface_004",
+    "terminal_match_outcome": "nar_m13_line_fail_terminal_005",
+    "verifier_lost": "nar_m13_line_fail_verifier_003"
+   },
    "failures": {
     "generic": "Any other failure surface without a bound stable reason.",
     "local_core_lost": "The local command core is destroyed while the operation is active.",
@@ -136,6 +144,15 @@
   "CampaignChoirAtLumeReach": {
    "briefing": "Lume Reach holds a Well, a Choir presence that answers, and the liability our Mission 09 deferral left standing. Establish contact on the inherited approach, resolve the liability, raise both anchors, and commit a new Well protocol — then stand at its public resolution.",
    "content_id": "nar_m10_the_choir_at_lume_reach",
+   "failure_lines": {
+    "future_well_lost": "nar_m10_line_fail_well_004",
+    "generic": "nar_m10_line_fail_generic_007",
+    "local_core_lost": "nar_m10_line_fail_core_001",
+    "oruun_lost": "nar_m10_line_fail_oruun_002",
+    "reshape_window_expired": "nar_m10_line_fail_window_005",
+    "terminal_match_outcome": "nar_m10_line_fail_terminal_006",
+    "waystone_lost": "nar_m10_line_fail_waystone_003"
+   },
    "failures": {
     "future_well_lost": "The Lume Well is destroyed before the protocol is resolved.",
     "generic": "Any other failure surface without a bound stable reason.",
@@ -330,6 +347,12 @@
   "CampaignCityReserve": {
    "briefing": "The ark-city grid is on reserve and failing. The founding decision fixed the order the districts come back: reconnect each district interface in that order and keep every structure standing. The order is inherited; the work is now.",
    "content_id": "nar_m03_a_city_on_reserve",
+   "failure_lines": {
+    "district_structure_lost": "nar_m03_line_fail_district_002",
+    "generic": "nar_m03_line_fail_generic_004",
+    "local_core_lost": "nar_m03_line_fail_core_001",
+    "terminal_match_outcome": "nar_m03_line_fail_terminal_003"
+   },
    "failures": {
     "district_structure_lost": "A Life Support, Transit, or Archive district structure is destroyed.",
     "generic": "Any other failure surface without a bound stable reason.",
@@ -446,6 +469,16 @@
   "CampaignFutureThatWon": {
    "briefing": "The Chancellor's apparatus demonstrates a future in public, and the record it points at is ours. Establish independent readback at both interfaces, verify the recorded inputs, bind only the recorded protocol, hold the fixed window, and watch both districts read it back.",
    "content_id": "nar_m12_the_future_that_won",
+   "failure_lines": {
+    "conflicting_protocol_bound": "nar_m12_line_fail_conflict_006",
+    "future_well_lost": "nar_m12_line_fail_well_004",
+    "generic": "nar_m12_line_fail_generic_008",
+    "local_core_lost": "nar_m12_line_fail_core_001",
+    "oruun_lost": "nar_m12_line_fail_oruun_002",
+    "public_interface_lost": "nar_m12_line_fail_interface_005",
+    "terminal_match_outcome": "nar_m12_line_fail_terminal_007",
+    "verifier_lost": "nar_m12_line_fail_verifier_003"
+   },
    "failures": {
     "conflicting_protocol_bound": "A protocol conflicting with the Mission 10 record is bound at the Well.",
     "future_well_lost": "The separate Future Well is destroyed before the readbacks are observed.",
@@ -616,6 +649,14 @@
   "CampaignNamesWithoutBirths": {
    "briefing": "Somewhere in this district, names were recorded that no birth explains, and then the record of them was erased. Follow the trace the founding decision left reachable: locate the census, power the archive, shelter who the search exposes, and take the evidence out whole.",
    "content_id": "nar_m06_names_without_births",
+   "failure_lines": {
+    "archive_lost": "nar_m06_line_fail_archive_003",
+    "civilian_proxy_lost": "nar_m06_line_fail_civilian_004",
+    "generic": "nar_m06_line_fail_generic_006",
+    "local_core_lost": "nar_m06_line_fail_core_001",
+    "talar_lost": "nar_m06_line_fail_talar_002",
+    "terminal_match_outcome": "nar_m06_line_fail_terminal_005"
+   },
    "failures": {
     "archive_lost": "The census archive structure is destroyed.",
     "civilian_proxy_lost": "Either exposed civilian proxy is destroyed.",
@@ -759,6 +800,18 @@
   "CampaignNoNeutralLedger": {
    "briefing": "Ten records, no neutral reading. The doctrine picks our route, the allocation our contributors, the Lume protocol itself. Walk it exactly: secure, integrate, attest both neutral interfaces, apply only what was recorded, and rally the coalition where the protocol says.",
    "content_id": "nar_m11_no_neutral_ledger",
+   "failure_lines": {
+    "conflicting_protocol_applied": "nar_m11_line_fail_conflict_007",
+    "future_well_lost": "nar_m11_line_fail_well_005",
+    "generic": "nar_m11_line_fail_generic_010",
+    "ledger_witness_lost": "nar_m11_line_fail_witness_004",
+    "local_core_lost": "nar_m11_line_fail_core_001",
+    "oruun_lost": "nar_m11_line_fail_oruun_002",
+    "public_interface_lost": "nar_m11_line_fail_interface_006",
+    "reshape_window_expired": "nar_m11_line_fail_window_008",
+    "terminal_match_outcome": "nar_m11_line_fail_terminal_009",
+    "waystone_lost": "nar_m11_line_fail_waystone_003"
+   },
    "failures": {
     "conflicting_protocol_applied": "A protocol conflicting with the Mission 10 record is applied at the Well.",
     "future_well_lost": "The Future Well is destroyed before the recorded protocol is applied.",
@@ -943,6 +996,13 @@
   "CampaignPrologue": {
    "briefing": "Recover the displaced archive convoy at tile 22,18, commit one visible Future Well protocol while the carrier holds the site, then evacuate the carrier to Lume Reach at tile 6,17.",
    "content_id": "nar_m01_what_the_ledger_keeps",
+   "failure_lines": {
+    "archive_carrier_lost": "nar_m01_line_talar_fail_carrier",
+    "future_well_lost": "nar_m01_line_mara_fail_well",
+    "generic": "nar_m01_line_mara_fail_generic",
+    "local_core_lost": "nar_m01_line_mara_fail_core",
+    "terminal_match_outcome": "nar_m01_line_mara_fail_terminal"
+   },
    "failures": {
     "archive_carrier_lost": "The archive carrier is absent or has no hit points.",
     "future_well_lost": "A committed Future Well is controlled by a nonlocal player.",
@@ -1138,6 +1198,13 @@
   "CampaignReserveAuthority": {
    "briefing": "The reserve cannot carry three districts. The doctrine we inherited recommends an order; the choice is ours, and it will not be reversible. Secure the authority site, power exactly two districts, and Mara confirms the one we defer, standing in it.",
    "content_id": "nar_m09_reserve_authority",
+   "failure_lines": {
+    "district_structure_lost": "nar_m09_line_fail_district_003",
+    "generic": "nar_m09_line_fail_generic_005",
+    "local_core_lost": "nar_m09_line_fail_core_001",
+    "mara_lost": "nar_m09_line_fail_mara_002",
+    "terminal_match_outcome": "nar_m09_line_fail_terminal_004"
+   },
    "failures": {
     "district_structure_lost": "A Life Support, Transit, or Archive district structure is destroyed.",
     "generic": "Any other failure surface without a bound stable reason.",
@@ -1268,6 +1335,13 @@
   "CampaignSevenAccounts": {
    "briefing": "The migration moves today, and the seven inherited accounts disagree about the ground. Hold the route, root the Waystone at the anchor the founding decision left, and bring the memory bearer to the account site.",
    "content_id": "nar_m02_seven_accounts_of_rain",
+   "failure_lines": {
+    "generic": "nar_m02_line_oruun_fail_generic_005",
+    "local_core_lost": "nar_m02_line_oruun_fail_core_001",
+    "memory_bearer_lost": "nar_m02_line_oruun_fail_bearer_002",
+    "terminal_match_outcome": "nar_m02_line_oruun_fail_terminal_004",
+    "waystone_lost": "nar_m02_line_oruun_fail_waystone_003"
+   },
    "failures": {
     "generic": "Any other failure surface without a bound stable reason.",
     "local_core_lost": "The local command core is destroyed while the operation is active.",
@@ -1396,6 +1470,15 @@
   "CampaignSeveralVoicesOneCommand": {
    "briefing": "The Choir asks to be commanded, once, precisely: a Soldier voice resolving Possible, a Heavy voice holding Manifest, Neme at the command site, and a Phase Anchor at the crisis. Research both looms, place every voice exactly, and hold the contract for one hundred sixty fixed ticks.",
    "content_id": "nar_m14_several_voices_one_command",
+   "failure_lines": {
+    "crisis_contract_breached": "nar_m14_line_fail_contract_005",
+    "generic": "nar_m14_line_fail_generic_007",
+    "local_core_lost": "nar_m14_line_fail_core_001",
+    "neme_lost": "nar_m14_line_fail_neme_003",
+    "protected_voice_lost": "nar_m14_line_fail_voice_002",
+    "research_loom_lost": "nar_m14_line_fail_loom_004",
+    "terminal_match_outcome": "nar_m14_line_fail_terminal_006"
+   },
    "failures": {
     "crisis_contract_breached": "Any protected element or required site is breached after the hold begins; the failure is irreversible even if repaired.",
     "generic": "Any other failure surface without a bound stable reason.",
@@ -1559,6 +1642,13 @@
   "CampaignShapeBesideUs": {
    "briefing": "Something walks beside our proxies through ground that exists twice. Neme offers guidance through the overlap; the offer is the first reciprocal contact we can act on. Reach the first echo, raise the relay, traverse both paired states, and Talar walks to the convergence.",
    "content_id": "nar_m08_the_shape_beside_us",
+   "failure_lines": {
+    "generic": "nar_m08_line_fail_generic_005",
+    "local_core_lost": "nar_m08_line_fail_core_001",
+    "state_witness_lost": "nar_m08_line_fail_witness_003",
+    "talar_lost": "nar_m08_line_fail_talar_002",
+    "terminal_match_outcome": "nar_m08_line_fail_terminal_004"
+   },
    "failures": {
     "generic": "Any other failure surface without a bound stable reason.",
     "local_core_lost": "The local command core is destroyed while the operation is active.",
@@ -1695,6 +1785,14 @@
   "CampaignShapeOfSilence": {
    "briefing": "The Compact lost a census. Our communal memory lost a neighborhood, and lost the memory of losing it. The two silences correspond. Root the Waystone, raise the Spine, set two witnesses where the accounts thin, and Oruun walks to the confluence to hear the shape.",
    "content_id": "nar_m07_the_shape_of_silence",
+   "failure_lines": {
+    "generic": "nar_m07_line_fail_generic_006",
+    "local_core_lost": "nar_m07_line_fail_core_001",
+    "memory_witness_lost": "nar_m07_line_fail_witness_004",
+    "oruun_lost": "nar_m07_line_fail_oruun_002",
+    "terminal_match_outcome": "nar_m07_line_fail_terminal_005",
+    "waystone_lost": "nar_m07_line_fail_waystone_003"
+   },
    "failures": {
     "generic": "Any other failure surface without a bound stable reason.",
     "local_core_lost": "The local command core is destroyed while the operation is active.",
@@ -1838,6 +1936,14 @@
   "CampaignTheBrokenSun": {
    "briefing": "The Crownfall is the last contract. Secure the approach, assemble all three accords with the witnesses protected, confirm the earned ending twice — it cannot be unsaid — raise its Resolution Conduit, and hold everything the contract names until the sky believes you.",
    "content_id": "nar_m15_the_broken_sun",
+   "failure_lines": {
+    "command_force_lost": "nar_m15_line_fail_force_003",
+    "generic": "nar_m15_line_fail_generic_006",
+    "local_core_lost": "nar_m15_line_fail_core_001",
+    "protected_witness_lost": "nar_m15_line_fail_witness_002",
+    "resolution_contract_breached": "nar_m15_line_fail_contract_004",
+    "terminal_match_outcome": "nar_m15_line_fail_terminal_005"
+   },
    "failures": {
     "command_force_lost": "The bounded Choir command force is broken.",
     "generic": "Any other failure surface without a bound stable reason.",
@@ -2030,6 +2136,13 @@
   "CampaignUnburiedRoad": {
    "briefing": "A memory shard is missing from the record, and the road to it runs subsurface. Take the road the founding decision selected: root the Waystone at the roadhead, raise a Listening Spine over the vaults, and walk the bearer to the shard.",
    "content_id": "nar_m04_the_unburied_road",
+   "failure_lines": {
+    "generic": "nar_m04_line_fail_generic_005",
+    "local_core_lost": "nar_m04_line_fail_core_001",
+    "memory_bearer_lost": "nar_m04_line_fail_bearer_002",
+    "terminal_match_outcome": "nar_m04_line_fail_terminal_004",
+    "waystone_lost": "nar_m04_line_fail_waystone_003"
+   },
    "failures": {
     "generic": "Any other failure surface without a bound stable reason.",
     "local_core_lost": "The local command core is destroyed while the operation is active.",
