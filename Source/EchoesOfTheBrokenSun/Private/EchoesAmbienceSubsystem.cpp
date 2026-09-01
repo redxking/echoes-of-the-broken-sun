@@ -21,7 +21,7 @@ constexpr TCHAR CrownfallCuePath[] =
 constexpr TCHAR FutureWellCuePath[] =
     TEXT("/Game/Audio/Generated/AMB_FutureWell.AMB_FutureWell");
 
-constexpr const TCHAR* AllCuePaths[] = {
+constexpr const TCHAR* AllAmbienceCuePaths[] = {
     GlassScarCuePath,
     LumeReachCuePath,
     ArkCityCuePath,
@@ -29,7 +29,7 @@ constexpr const TCHAR* AllCuePaths[] = {
     FutureWellCuePath,
 };
 
-[[nodiscard]] FName CueKey(const TCHAR* Path)
+[[nodiscard]] FName AmbienceCueKey(const TCHAR* Path)
 {
     return FName(Path);
 }
@@ -40,12 +40,12 @@ void UEchoesAmbienceSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     Super::Initialize(Collection);
     Collection.InitializeDependency(UEchoesAudioMixSubsystem::StaticClass());
 
-    for (const TCHAR* Path : AllCuePaths)
+    for (const TCHAR* Path : AllAmbienceCuePaths)
     {
         USoundBase* Sound = LoadCue(Path);
         if (Sound != nullptr)
         {
-            LoadedCues.Add(CueKey(Path), Sound);
+            LoadedCues.Add(AmbienceCueKey(Path), Sound);
         }
     }
 
@@ -136,7 +136,7 @@ USoundBase* UEchoesAmbienceSubsystem::ResolveBedCue(
             Path = CrownfallCuePath;
             break;
     }
-    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(CueKey(Path));
+    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(AmbienceCueKey(Path));
     return Found != nullptr ? Found->Get() : nullptr;
 }
 
@@ -189,7 +189,7 @@ void UEchoesAmbienceSubsystem::SetWellProximity(bool bNearWell)
     if (bNearWell)
     {
         const TObjectPtr<USoundBase>* Found =
-            LoadedCues.Find(CueKey(FutureWellCuePath));
+            LoadedCues.Find(AmbienceCueKey(FutureWellCuePath));
         USoundBase* Cue = Found != nullptr ? Found->Get() : nullptr;
         UWorld* World = GetWorld();
         if (World != nullptr && Cue != nullptr && WellComponent == nullptr)
@@ -218,7 +218,7 @@ void UEchoesAmbienceSubsystem::SetWellProximity(bool bNearWell)
 
 bool UEchoesAmbienceSubsystem::HasAllAuthoredCues() const
 {
-    return GetLoadedCueCount() == UE_ARRAY_COUNT(AllCuePaths);
+    return GetLoadedCueCount() == UE_ARRAY_COUNT(AllAmbienceCuePaths);
 }
 
 int32 UEchoesAmbienceSubsystem::GetLoadedCueCount() const

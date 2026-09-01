@@ -29,7 +29,7 @@ constexpr const TCHAR* AlertCuePaths[] = {
     TEXT("/Game/Audio/Generated/ALERT_CapacityLow.ALERT_CapacityLow"),
 };
 
-[[nodiscard]] FName CueKey(const TCHAR* Path)
+[[nodiscard]] FName InterfaceCueKey(const TCHAR* Path)
 {
     return FName(Path);
 }
@@ -45,14 +45,14 @@ void UEchoesInterfaceAudioSubsystem::Initialize(
     {
         if (USoundBase* Sound = LoadCue(Path))
         {
-            LoadedCues.Add(CueKey(Path), Sound);
+            LoadedCues.Add(InterfaceCueKey(Path), Sound);
         }
     }
     for (const TCHAR* Path : AlertCuePaths)
     {
         if (USoundBase* Sound = LoadCue(Path))
         {
-            LoadedCues.Add(CueKey(Path), Sound);
+            LoadedCues.Add(InterfaceCueKey(Path), Sound);
         }
     }
 
@@ -113,7 +113,7 @@ USoundBase* UEchoesInterfaceAudioSubsystem::ResolveInterfaceCue(
         return nullptr;
     }
     const TObjectPtr<USoundBase>* Found =
-        LoadedCues.Find(CueKey(InterfaceCuePaths[Index]));
+        LoadedCues.Find(InterfaceCueKey(InterfaceCuePaths[Index]));
     return Found != nullptr ? Found->Get() : nullptr;
 }
 
@@ -126,7 +126,7 @@ USoundBase* UEchoesInterfaceAudioSubsystem::ResolveAlertCue(
         return nullptr;
     }
     const TObjectPtr<USoundBase>* Found =
-        LoadedCues.Find(CueKey(AlertCuePaths[Index]));
+        LoadedCues.Find(InterfaceCueKey(AlertCuePaths[Index]));
     return Found != nullptr ? Found->Get() : nullptr;
 }
 

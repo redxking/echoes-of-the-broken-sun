@@ -7,6 +7,7 @@
 #include "EchoesFogView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesGameplayAudioSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
@@ -16554,18 +16555,31 @@ void UEchoesSimulationSubsystem::UpdateAlertPresentation()
         {
             InterfaceAudio->PlayAlert(EEchoesAlertCue::ResearchComplete);
         }
-        bool bNewUnit = false;
+        uint32 NewUnitId = 0;
         for (const uint32 UnitId : OwnedUnitIds)
         {
             if (!AlertKnownOwnedUnitIds.Contains(UnitId))
             {
-                bNewUnit = true;
+                NewUnitId = UnitId;
                 break;
             }
         }
-        if (bNewUnit)
+        if (NewUnitId != 0)
         {
             InterfaceAudio->PlayAlert(EEchoesAlertCue::ProductionComplete);
+            if (UEchoesGameplayAudioSubsystem* GameplayAudio =
+                    GetWorld()
+                        ->GetSubsystem<UEchoesGameplayAudioSubsystem>())
+            {
+                const echoes::sim::Entity* NewUnit =
+                    Current->FindEntity(NewUnitId);
+                if (NewUnit != nullptr)
+                {
+                    GameplayAudio->PlayEvent(
+                        EEchoesGameplayAudioEvent::ProductionComplete,
+                        SimToWorld(NewUnit->position));
+                }
+            }
         }
 
         const int32 Used = Current->PopulationUsed(LocalPlayerId);
@@ -16588,6 +16602,183 @@ void UEchoesSimulationSubsystem::UpdateAlertPresentation()
 
     AlertKnownResearchMask = Local->completedResearchMask;
     AlertKnownOwnedUnitIds = MoveTemp(OwnedUnitIds);
+}
+
+void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
+    const TArray<const echoes::sim::Entity*>& VisibleEntities)
+{
+    if (!Simulation.IsValid())
+    {
+        GameplayAudioBaselineSimulation = nullptr;
+        GameplayAudioSnapshots.Reset();
+        return;
+    }
+    const echoes::sim::Simulation* Current = Simulation.Get();
+    UEchoesGameplayAudioSubsystem* Audio =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesGameplayAudioSubsystem>()
+            : nullptr;
+
+    // A new simulation instance re-baselines everything silently.
+    const bool bRebaseline = GameplayAudioBaselineSimulation != Current;
+    if (bRebaseline)
+    {
+        GameplayAudioBaselineSimulation = Current;
+        GameplayAudioSnapshots.Reset();
+        const echoes::sim::PlayerState* Local =
+            Current->FindPlayer(LocalPlayerId);
+        GameplayAudioLastActiveResearch = Local != nullptr
+            ? Local->activeResearch
+            : echoes::sim::ResearchType::None;
+        GameplayAudioLastInterruptedResearch = Local != nullptr
+            ? Local->lastInterruptedResearch
+            : echoes::sim::ResearchType::None;
+    }
+
+    TMap<uint32, FGameplayAudioSnapshot> NextSnapshots;
+    NextSnapshots.Reserve(VisibleEntities.Num());
+    for (const echoes::sim::Entity* Entity : VisibleEntities)
+    {
+        if (Entity == nullptr)
+        {
+            continue;
+        }
+        FGameplayAudioSnapshot Snapshot;
+        Snapshot.HitPoints = Entity->hitPoints;
+        Snapshot.Cargo = Entity->cargo;
+        Snapshot.ConstructionProgress = Entity->constructionProgress;
+        Snapshot.AttackCooldownTicks = Entity->attackCooldownTicks;
+        Snapshot.ReshapeUntilTick = Entity->reshapeUntilTick;
+        Snapshot.WellChoice = Entity->wellChoice;
+        Snapshot.Owner = Entity->owner;
+        Snapshot.bCompleted = Entity->completed;
+        Snapshot.bTemporaryMineralCover = Entity->temporaryMineralCover;
+
+        const FGameplayAudioSnapshot* Previous =
+            GameplayAudioSnapshots.Find(Entity->id);
+        if (Previous != nullptr && Audio != nullptr && !bRebaseline)
+        {
+            const FVector Location = SimToWorld(Entity->position);
+
+            // A rising attack cooldown means the entity fired this frame.
+            if (Snapshot.AttackCooldownTicks >
+                Previous->AttackCooldownTicks)
+            {
+                Audio->PlayEvent(
+                    UEchoesGameplayAudioSubsystem::WeaponEventForType(
+                        Entity->type),
+                    Location);
+            }
+            // Authoritative damage landed. Temporary mineral cover absorbing
+            // it is the shielded variant.
+            if (Snapshot.HitPoints < Previous->HitPoints)
+            {
+                Audio->PlayEvent(
+                    Snapshot.bTemporaryMineralCover
+                        ? EEchoesGameplayAudioEvent::ImpactShielded
+                        : EEchoesGameplayAudioEvent::ImpactHit,
+                    Location);
+            }
+            // Worker cargo movement: up is a gather, down is a delivery.
+            if (Entity->type == echoes::sim::EntityType::Worker)
+            {
+                if (Snapshot.Cargo > Previous->Cargo)
+                {
+                    Audio->PlayEvent(
+                        EEchoesGameplayAudioEvent::GatherMatter,
+                        Location);
+                }
+                else if (Snapshot.Cargo < Previous->Cargo)
+                {
+                    Audio->PlayEvent(
+                        EEchoesGameplayAudioEvent::DeliverMatter,
+                        Location);
+                }
+            }
+            // Construction lifecycle on continuously observed sites.
+            if (!Previous->bCompleted &&
+                Previous->ConstructionProgress == 0 &&
+                Snapshot.ConstructionProgress > 0)
+            {
+                Audio->PlayEvent(
+                    EEchoesGameplayAudioEvent::ConstructionStart,
+                    Location);
+            }
+            if (!Previous->bCompleted && Snapshot.bCompleted)
+            {
+                Audio->PlayEvent(
+                    EEchoesGameplayAudioEvent::ConstructionComplete,
+                    Location);
+            }
+            if (Entity->type == echoes::sim::EntityType::FutureWell)
+            {
+                if (Previous->Owner == echoes::sim::kNeutralPlayer &&
+                    Snapshot.Owner != echoes::sim::kNeutralPlayer)
+                {
+                    Audio->PlayEvent(
+                        EEchoesGameplayAudioEvent::WellClaim,
+                        Location);
+                }
+                if (Previous->WellChoice ==
+                        echoes::sim::FutureWellChoice::Dormant &&
+                    Snapshot.WellChoice !=
+                        echoes::sim::FutureWellChoice::Dormant)
+                {
+                    Audio->PlayEvent(
+                        UEchoesGameplayAudioSubsystem::WellEventForChoice(
+                            Snapshot.WellChoice),
+                        Location);
+                }
+            }
+            // The Reshape window opening and closing on an observed entity.
+            if (Previous->ReshapeUntilTick == 0 &&
+                Snapshot.ReshapeUntilTick > 0)
+            {
+                Audio->PlayEvent(
+                    EEchoesGameplayAudioEvent::ReshapeOpen,
+                    Location);
+            }
+            else if (Previous->ReshapeUntilTick > 0 &&
+                     Snapshot.ReshapeUntilTick == 0)
+            {
+                Audio->PlayEvent(
+                    EEchoesGameplayAudioEvent::ReshapeClose,
+                    Location);
+            }
+            // A newly emerged owned unit is a production completion. The
+            // alert layer covers the notification; this is the diegetic cue.
+            // (Handled through the alert observer's known-unit set to avoid
+            // double bookkeeping; see UpdateAlertPresentation.)
+        }
+        NextSnapshots.Add(Entity->id, MoveTemp(Snapshot));
+    }
+    GameplayAudioSnapshots = MoveTemp(NextSnapshots);
+
+    // Player-scoped research transitions are not fog-gated.
+    const echoes::sim::PlayerState* Local = Current->FindPlayer(LocalPlayerId);
+    if (Local != nullptr && Audio != nullptr && !bRebaseline)
+    {
+        if (GameplayAudioLastActiveResearch ==
+                echoes::sim::ResearchType::None &&
+            Local->activeResearch != echoes::sim::ResearchType::None)
+        {
+            Audio->PlayEvent2D(EEchoesGameplayAudioEvent::ResearchStart);
+        }
+        if (Local->lastInterruptedResearch !=
+                GameplayAudioLastInterruptedResearch &&
+            Local->lastInterruptedResearch !=
+                echoes::sim::ResearchType::None)
+        {
+            Audio->PlayEvent2D(
+                EEchoesGameplayAudioEvent::ResearchInterrupted);
+        }
+    }
+    if (Local != nullptr)
+    {
+        GameplayAudioLastActiveResearch = Local->activeResearch;
+        GameplayAudioLastInterruptedResearch =
+            Local->lastInterruptedResearch;
+    }
 }
 
 void UEchoesSimulationSubsystem::OnPreGarbageCollect()
@@ -16852,6 +17043,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
         }
     }
     UpdateAlertPresentation();
+    UpdateGameplayAudioPresentation(VisibleEntities);
     return bAllVisibleViewsReady;
 }
 

@@ -742,6 +742,15 @@ private:
      *  save re-observes silently instead of firing a burst of alerts.
      *  Presentation only. */
     void UpdateAlertPresentation();
+
+    /** Gameplay-event audio observation over the fair-visibility entity set.
+     *  Diffs per-entity authoritative state (attack cooldown reset, damage,
+     *  cargo, construction, Well protocol, Reshape window) and local research
+     *  state, and reports events to the gameplay-audio subsystem. Entities
+     *  entering visibility re-baseline silently, so fog reveals and restored
+     *  saves never fire a burst. Presentation only. */
+    void UpdateGameplayAudioPresentation(
+        const TArray<const echoes::sim::Entity*>& VisibleEntities);
     bool SpawnFogView();
     bool SyncFogView();
     bool SpawnTerrainView();
@@ -760,6 +769,28 @@ private:
     uint32 AlertKnownResearchMask = 0;
     TSet<uint32> AlertKnownOwnedUnitIds;
     bool bAlertCapacityLowLatched = false;
+
+    /** Last observed authoritative state per visible entity, for the
+     *  gameplay-audio observer. Entries drop when visibility is lost. */
+    struct FGameplayAudioSnapshot final
+    {
+        int32 HitPoints = 0;
+        int32 Cargo = 0;
+        int32 ConstructionProgress = 0;
+        uint64 AttackCooldownTicks = 0;
+        uint64 ReshapeUntilTick = 0;
+        echoes::sim::FutureWellChoice WellChoice =
+            echoes::sim::FutureWellChoice::Dormant;
+        uint8 Owner = echoes::sim::kNeutralPlayer;
+        bool bCompleted = true;
+        bool bTemporaryMineralCover = false;
+    };
+    TMap<uint32, FGameplayAudioSnapshot> GameplayAudioSnapshots;
+    const echoes::sim::Simulation* GameplayAudioBaselineSimulation = nullptr;
+    echoes::sim::ResearchType GameplayAudioLastActiveResearch =
+        echoes::sim::ResearchType::None;
+    echoes::sim::ResearchType GameplayAudioLastInterruptedResearch =
+        echoes::sim::ResearchType::None;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> EntityViews;
     UPROPERTY(Transient)
     TArray<TObjectPtr<AEchoesEntityView>> FreeEntityViews;

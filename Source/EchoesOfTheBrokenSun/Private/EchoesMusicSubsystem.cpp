@@ -42,7 +42,7 @@ constexpr TCHAR EndingExtinguishmentCuePath[] = TEXT(
 constexpr TCHAR EndingOpenEvolutionCuePath[] = TEXT(
     "/Game/Audio/Generated/MUS_EndingOpenEvolution.MUS_EndingOpenEvolution");
 
-constexpr const TCHAR* AllCuePaths[] = {
+constexpr const TCHAR* AllMusicCuePaths[] = {
     TitleCuePath,          MeridianCuePath,
     KharuunCuePath,        ChoirCuePath,
     ActICuePath,           ActIICuePath,
@@ -53,7 +53,7 @@ constexpr const TCHAR* AllCuePaths[] = {
     EndingOpenEvolutionCuePath,
 };
 
-[[nodiscard]] FName CueKey(const TCHAR* Path)
+[[nodiscard]] FName MusicCueKey(const TCHAR* Path)
 {
     return FName(Path);
 }
@@ -66,12 +66,12 @@ void UEchoesMusicSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     // category submix at load time.
     Collection.InitializeDependency(UEchoesAudioMixSubsystem::StaticClass());
 
-    for (const TCHAR* Path : AllCuePaths)
+    for (const TCHAR* Path : AllMusicCuePaths)
     {
         USoundBase* Sound = LoadCue(Path);
         if (Sound != nullptr)
         {
-            LoadedCues.Add(CueKey(Path), Sound);
+            LoadedCues.Add(MusicCueKey(Path), Sound);
         }
     }
 
@@ -183,7 +183,7 @@ USoundBase* UEchoesMusicSubsystem::ResolveBedCue(
     {
         return nullptr;
     }
-    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(CueKey(Path));
+    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(MusicCueKey(Path));
     return Found != nullptr ? Found->Get() : nullptr;
 }
 
@@ -212,7 +212,7 @@ USoundBase* UEchoesMusicSubsystem::ResolveStingerCue(
             Path = EndingOpenEvolutionCuePath;
             break;
     }
-    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(CueKey(Path));
+    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(MusicCueKey(Path));
     return Found != nullptr ? Found->Get() : nullptr;
 }
 
@@ -300,7 +300,7 @@ void UEchoesMusicSubsystem::SetThreatLayers(bool bTension, bool bCombat)
         if (bWanted)
         {
             const TObjectPtr<USoundBase>* Found =
-                LoadedCues.Find(CueKey(Path));
+                LoadedCues.Find(MusicCueKey(Path));
             USoundBase* Sound = Found != nullptr ? Found->Get() : nullptr;
             if (Component == nullptr)
             {
@@ -336,7 +336,7 @@ bool UEchoesMusicSubsystem::PlayStinger(EEchoesMusicStinger Stinger)
 
 bool UEchoesMusicSubsystem::HasAllAuthoredCues() const
 {
-    return GetLoadedCueCount() == UE_ARRAY_COUNT(AllCuePaths);
+    return GetLoadedCueCount() == UE_ARRAY_COUNT(AllMusicCuePaths);
 }
 
 int32 UEchoesMusicSubsystem::GetLoadedCueCount() const
