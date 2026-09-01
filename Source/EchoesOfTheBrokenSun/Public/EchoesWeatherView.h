@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesSkirmishSetup.h"
 #include "GameFramework/Actor.h"
 #include "EchoesWeatherView.generated.h"
 
@@ -17,10 +18,15 @@ public:
     AEchoesWeatherView();
 
     virtual void Tick(float DeltaSeconds) override;
+    void ApplyMapPreset(EEchoesSkirmishMapPreset MapPreset);
 
     [[nodiscard]] float GetCurrentFogDensity() const
     {
         return CurrentFogDensity;
+    }
+    [[nodiscard]] EEchoesSkirmishMapPreset GetMapPreset() const
+    {
+        return ActiveMapPreset;
     }
 
 private:
@@ -34,4 +40,6 @@ private:
 
     float DriftPhaseSeconds = 0.0f;
     float CurrentFogDensity = 0.0007f;
+    EEchoesSkirmishMapPreset ActiveMapPreset =
+        EEchoesSkirmishMapPreset::GlassScar;
 };

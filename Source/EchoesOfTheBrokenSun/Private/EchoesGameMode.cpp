@@ -4,6 +4,7 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EchoesBattlefieldPresentation.h"
 #include "EchoesCommandMarkerView.h"
 #include "EchoesDestructionView.h"
 #include "EchoesHUD.h"
@@ -1831,6 +1832,9 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     }
 
     Floor->Tags.Add(TEXT("EchoesPlaceholder"));
+    EchoesBattlefieldPresentation::RegisterSharedActorTags(
+        Floor->Tags,
+        EchoesBattlefieldPresentation::FloorTag());
     UStaticMeshComponent* FloorMesh = Floor->GetStaticMeshComponent();
     FloorMesh->SetMobility(EComponentMobility::Movable);
     FloorMesh->SetStaticMesh(CubeMesh);
@@ -1875,7 +1879,11 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             return false;
         }
         Accent->Tags.Add(TEXT("EchoesPlaceholder"));
-        Accent->Tags.Add(TEXT("EchoesGlassScarComposition"));
+        Accent->Tags.Add(
+            EchoesBattlefieldPresentation::LegacyGlassScarTag());
+        EchoesBattlefieldPresentation::RegisterPresetActorTags(
+            Accent->Tags,
+            EEchoesSkirmishMapPreset::GlassScar);
         Accent->Tags.Add(DetailTag);
         UStaticMeshComponent* AccentMesh = Accent->GetStaticMeshComponent();
         AccentMesh->SetMobility(EComponentMobility::Movable);
@@ -2116,7 +2124,11 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             continue;
         }
         Glow->Tags.Add(TEXT("EchoesPlaceholder"));
-        Glow->Tags.Add(TEXT("EchoesGlassScarComposition"));
+        Glow->Tags.Add(
+            EchoesBattlefieldPresentation::LegacyGlassScarTag());
+        EchoesBattlefieldPresentation::RegisterPresetActorTags(
+            Glow->Tags,
+            EEchoesSkirmishMapPreset::GlassScar);
         Glow->Tags.Add(TEXT("EchoesScarGlow"));
         UPointLightComponent* GlowComponent = Glow->PointLightComponent;
         if (GlowComponent == nullptr)
@@ -2164,6 +2176,9 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_WEATHER_SPAWN_FAILED]"));
         return false;
     }
+    EchoesBattlefieldPresentation::RegisterSharedActorTags(
+        Weather->Tags,
+        EchoesBattlefieldPresentation::WeatherTag());
 
     ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(
         FVector(0.0f, 0.0f, 1800.0f),
@@ -2176,10 +2191,16 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     if (Sun != nullptr)
     {
         Sun->Tags.Add(TEXT("EchoesPlaceholder"));
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            Sun->Tags,
+            EchoesBattlefieldPresentation::SunTag());
     }
     if (Sky != nullptr)
     {
         Sky->Tags.Add(TEXT("EchoesPlaceholder"));
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            Sky->Tags,
+            EchoesBattlefieldPresentation::SkyTag());
     }
     if (Sun == nullptr || Sky == nullptr)
     {

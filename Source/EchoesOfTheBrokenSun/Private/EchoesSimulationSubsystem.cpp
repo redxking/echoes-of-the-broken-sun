@@ -1,5 +1,6 @@
 #include "EchoesSimulationSubsystem.h"
 
+#include "EchoesBattlefieldPresentation.h"
 #include "EchoesContentSubsystem.h"
 #include "EchoesDestructionView.h"
 #include "EchoesEntityView.h"
@@ -12,6 +13,7 @@
 #include "EchoesPresentationAudioSubsystem.h"
 #include "EchoesSkirmishSetup.h"
 #include "EchoesTerrainView.h"
+#include "EchoesWeatherView.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -16710,8 +16712,15 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         FVector::ZeroVector,
         FRotator::ZeroRotator,
         SpawnParameters);
+    const EEchoesSkirmishMapPreset PresentationPreset =
+        SelectedOperation == EEchoesOperationMode::Skirmish
+            ? ActiveSkirmishSetup.MapPreset
+            : EEchoesSkirmishMapPreset::GlassScar;
     if (NewTerrainView == nullptr ||
-        !NewTerrainView->InitializeTerrain(*Simulation, TileWorldSize))
+        !NewTerrainView->InitializeTerrain(
+            *Simulation,
+            TileWorldSize,
+            PresentationPreset))
     {
         if (NewTerrainView != nullptr)
         {
@@ -16721,6 +16730,13 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         return false;
     }
     TerrainView = NewTerrainView;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_TERRAIN_PRESENTATION_READY] preset=%s blocked=%d scarred=%d authored=true collisionAuthority=false"),
+        EchoesBattlefieldPresentation::StableName(PresentationPreset),
+        NewTerrainView->GetBlockedTileCount(),
+        NewTerrainView->GetScarredTileCount());
     return true;
 }
 
@@ -16731,19 +16747,58 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
     {
         return;
     }
-    const bool bHideGlassScarComposition =
-        SelectedOperation == EEchoesOperationMode::Skirmish &&
-        ActiveSkirmishSetup.MapPreset !=
-            EEchoesSkirmishMapPreset::GlassScar;
+    const EEchoesSkirmishMapPreset PresentationPreset =
+        SelectedOperation == EEchoesOperationMode::Skirmish
+            ? ActiveSkirmishSetup.MapPreset
+            : EEchoesSkirmishMapPreset::GlassScar;
+    int32 ActiveActorCount = 0;
+    int32 SharedActorCount = 0;
+    int32 HiddenActorCount = 0;
+    int32 WeatherActorCount = 0;
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
-        if (Actor != nullptr &&
-            Actor->ActorHasTag(TEXT("EchoesGlassScarComposition")))
+        if (Actor == nullptr)
         {
-            Actor->SetActorHiddenInGame(bHideGlassScarComposition);
+            continue;
+        }
+        if (EchoesBattlefieldPresentation::IsRegistered(Actor->Tags))
+        {
+            const bool bSharedActor =
+                EchoesBattlefieldPresentation::IsShared(Actor->Tags);
+            const bool bShouldShow =
+                EchoesBattlefieldPresentation::ShouldShow(
+                    Actor->Tags,
+                    PresentationPreset);
+            Actor->SetActorHiddenInGame(!bShouldShow);
+            if (Actor->ActorHasTag(
+                    EchoesBattlefieldPresentation::FloorTag()))
+            {
+                Actor->SetActorEnableCollision(bShouldShow);
+            }
+            ActiveActorCount += bShouldShow ? 1 : 0;
+            SharedActorCount += bSharedActor ? 1 : 0;
+            HiddenActorCount += bShouldShow ? 0 : 1;
+        }
+        if (EchoesBattlefieldPresentation::IsShared(Actor->Tags) &&
+            Actor->ActorHasTag(EchoesBattlefieldPresentation::WeatherTag()))
+        {
+            if (AEchoesWeatherView* Weather = Cast<AEchoesWeatherView>(Actor))
+            {
+                Weather->ApplyMapPreset(PresentationPreset);
+                ++WeatherActorCount;
+            }
         }
     }
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_MAP_PRESENTATION_PROFILE] preset=%s activeActors=%d sharedActors=%d hiddenActors=%d weatherActors=%d terrainPalette=true weatherProfile=true collisionAuthority=false"),
+        EchoesBattlefieldPresentation::StableName(PresentationPreset),
+        ActiveActorCount,
+        SharedActorCount,
+        HiddenActorCount,
+        WeatherActorCount);
 }
 
 bool UEchoesSimulationSubsystem::SyncTerrainView()
