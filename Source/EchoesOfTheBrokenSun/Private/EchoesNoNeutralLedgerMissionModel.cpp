@@ -221,7 +221,9 @@ FEchoesNoNeutralLedgerMissionModel::DistrictContributionSite(
         case EEchoesCityDistrict::LifeSupport:
             return Vec2::FromTiles(18, 35);
         case EEchoesCityDistrict::Transit:
-            return Vec2::FromTiles(32, 34);
+            // (32,34) and (32,35) both close on some route maps; (32,33) is
+            // open on every one of them.
+            return Vec2::FromTiles(32, 33);
         case EEchoesCityDistrict::Archive:
             return Vec2::FromTiles(46, 35);
     }
