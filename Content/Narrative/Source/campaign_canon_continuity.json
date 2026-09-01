@@ -1,500 +1,503 @@
 {
-  "schema_version": 1,
-  "namespace": "echoes.narrative",
-  "content_id": "nar_campaign_canon_continuity_v1",
-  "metadata": {
-    "author": "Angelis Pseftis",
-    "creator": "Angelis Pseftis",
-    "source_locale": "en-US",
-    "authority_path": "Docs/Archive/DevelopmentBible.md",
-    "authority_status": "structured_projection_of_authoritative_bible",
-    "content_status": "validated_authored_source",
-    "runtime_consumed": false
-  },
-  "campaign": {
-    "mission_count": 15,
-    "terminal_mission_id": "TheBrokenSun",
-    "mission_16_exists": false,
-    "hidden_moral_score": false,
-    "founding_well_doctrine_missions": [
-      "WhatTheLedgerKeeps",
-      "SevenAccountsOfRain",
-      "ACityOnReserve",
-      "TheUnburiedRoad",
-      "TermsOfContinuance",
-      "NamesWithoutBirths",
-      "TheShapeOfSilence",
-      "TheShapeBesideUs",
-      "ReserveAuthority"
-    ],
-    "independent_lume_choice_mission": "ChoirAtLumeReach",
-    "lume_protocol_receipt_missions": [
-      "NoNeutralLedger",
-      "TheFutureThatWon",
-      "AssemblyOfTheMissing",
-      "SeveralVoicesOneCommand",
-      "TheBrokenSun"
-    ],
-    "final_resolutions": [
-      "Restoration",
-      "ControlledStabilization",
-      "Extinguishment",
-      "OpenEvolution"
-    ]
-  },
-  "world": {
-    "setting": "Soryn",
-    "crownfall_rule": "Crownfall condensed unrealized causal branches into Dawnshards; consuming a shard closes the possibility it contains.",
-    "future_well_rule": "A controlled Future Well offers Harvest, Preserve, or Reshape as mutually exclusive protocols with visible costs and no moral ranking.",
-    "future_well_choices": [
-      "Harvest",
-      "Preserve",
-      "Reshape"
-    ],
-    "factions": [
-      {
-        "id": "meridian_compact",
-        "canon": "A culturally plural governance and logistics compact whose strength comes from reliable connected infrastructure.",
-        "voice_rule": "Measured commitments, anchors, tolerances, ledgers, duty windows, and reserve margins.",
-        "prohibited_reduction": "Do not treat the Compact as a single ethnicity or as the morally correct faction."
-      },
-      {
-        "id": "kharuun_assemblies",
-        "canon": "A society of layered personhood, imperfectly merged ancestral memory, mobile infrastructure, and terrain adaptation.",
-        "voice_rule": "Present evidence may correct inherited certainty; dry humor comes from the mismatch.",
-        "prohibited_reduction": "Do not portray the Kharuun as primitive, mystical, or governed by infallible memory."
-      },
-      {
-        "id": "hollow_choir",
-        "canon": "Coherent consciousness retained by erased branches; maintained possibilities carry public duration, cost, and counterplay.",
-        "voice_rule": "Stable speech is selected from incompatible phrasing rather than delivered as a default mystical collective voice.",
-        "prohibited_reduction": "Do not reveal a hidden real personality, unrestricted rewind, or cost-free complexity."
-      }
-    ]
-  },
-  "characters": [
-    {
-      "id": "mara_vey",
-      "faction_id": "meridian_compact",
-      "arc": "Disciplined preparation saves people, but her drive to make uncertainty governable can turn moral questions into control problems.",
-      "mission_ids": [
-        "WhatTheLedgerKeeps",
-        "ACityOnReserve",
-        "ReserveAuthority",
-        "ChoirAtLumeReach",
-        "TheBrokenSun"
-      ],
-      "continuity_boundary": "Mara commands Mission 01 but is not the simulated archive-carrier entity; in Mission 10 she is an off-map liaison and in Mission 15 a protected neutral witness."
-    },
-    {
-      "id": "oruun_of_seven_stones",
-      "faction_id": "kharuun_assemblies",
-      "arc": "Oruun tests inherited memory against present evidence while confronting the accountability cost of curated communal continuity.",
-      "mission_ids": [
-        "WhatTheLedgerKeeps",
-        "SevenAccountsOfRain",
-        "TheUnburiedRoad",
-        "TheShapeOfSilence",
-        "ChoirAtLumeReach",
-        "NoNeutralLedger",
-        "TheFutureThatWon",
-        "AssemblyOfTheMissing",
-        "TheBrokenSun"
-      ],
-      "continuity_boundary": "Oruun is a Mission 01 interlocutor, becomes the Kharuun command authority in later operations, and is a protected neutral witness in Mission 15."
-    },
-    {
-      "id": "talar_venn",
-      "faction_id": "meridian_compact",
-      "arc": "Talar preserves records that institutional ledgers omitted and insists that evidence remain attributable to the people who carried its cost.",
-      "mission_ids": [
-        "WhatTheLedgerKeeps",
-        "NamesWithoutBirths",
-        "TheShapeBesideUs",
-        "TheBrokenSun"
-      ],
-      "continuity_boundary": "Talar requests the Mission 01 archive recovery, follows the census trail in Missions 06 and 08, and is a protected neutral witness in Mission 15."
-    },
-    {
-      "id": "neme",
-      "faction_id": "hollow_choir",
-      "arc": "Neme negotiates among internal futures that disagree about coexistence rather than revealing one secretly dominant identity.",
-      "mission_ids": [
-        "TheShapeBesideUs",
-        "SeveralVoicesOneCommand",
-        "TheBrokenSun"
-      ],
-      "continuity_boundary": "Mission 08 establishes reciprocal contact, Mission 14 a bounded local Choir command contract, and Mission 15 a final local command role; none proves a unified permanent Choir identity."
-    },
-    {
-      "id": "cael_rhyse",
-      "faction_id": "meridian_compact",
-      "arc": "Rhyse argues for one governable future by pointing to cities preserved under Compact policy, at an unacceptable existential cost.",
-      "mission_ids": [
-        "TheFutureThatWon"
-      ],
-      "continuity_boundary": "Mission 12 represents Rhyse only through attributable neutral public apparatus; he is not playable or commandable."
-    }
+ "schema_version": 1,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_campaign_canon_continuity_v1",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "authority_status": "structured_projection_of_authoritative_bible",
+  "content_status": "validated_authored_source",
+  "runtime_consumed": false
+ },
+ "campaign": {
+  "mission_count": 15,
+  "terminal_mission_id": "TheBrokenSun",
+  "mission_16_exists": false,
+  "hidden_moral_score": false,
+  "founding_well_doctrine_missions": [
+   "WhatTheLedgerKeeps",
+   "SevenAccountsOfRain",
+   "ACityOnReserve",
+   "TheUnburiedRoad",
+   "TermsOfContinuance",
+   "NamesWithoutBirths",
+   "TheShapeOfSilence",
+   "TheShapeBesideUs",
+   "ReserveAuthority"
   ],
-  "missions": [
-    {
-      "sequence": 1,
-      "title": "What the Ledger Keeps",
-      "mission_id": "WhatTheLedgerKeeps",
-      "operation_mode": "CampaignPrologue",
-      "command_authority": "mara_vey",
-      "command_faction": "meridian_compact",
-      "named_participants": [
-        "mara_vey",
-        "talar_venn",
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "No prior campaign record."
-      ],
-      "established_output": [
-        "The archive carrier reaches Lume Reach after the archive recovery and one valid Glass Scar Well protocol.",
-        "The selected Harvest, Preserve, or Reshape protocol becomes the founding Well doctrine."
-      ],
-      "prohibited_inferences": [
-        "Mara is the simulated archive carrier.",
-        "Destroying the hostile Core substitutes for evacuation.",
-        "One Well protocol is the canonical moral answer."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 2,
-      "title": "Seven Accounts of Rain",
-      "mission_id": "SevenAccountsOfRain",
-      "operation_mode": "CampaignSevenAccounts",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine."
-      ],
-      "established_output": [
-        "Oruun defends a migration route while inherited accounts disagree about the terrain."
-      ],
-      "prohibited_inferences": [
-        "Any inherited account is established as infallible.",
-        "The Kharuun memory dispute is resolved."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 3,
-      "title": "A City on Reserve",
-      "mission_id": "ACityOnReserve",
-      "operation_mode": "CampaignCityReserve",
-      "command_authority": "mara_vey",
-      "command_faction": "meridian_compact",
-      "named_participants": [
-        "mara_vey"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine."
-      ],
-      "established_output": [
-        "Mara reconnects three ark-city districts in the inherited priority order."
-      ],
-      "prohibited_inferences": [
-        "The wider city is fully recovered.",
-        "All reserve consequences are resolved."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 4,
-      "title": "The Unburied Road",
-      "mission_id": "TheUnburiedRoad",
-      "operation_mode": "CampaignUnburiedRoad",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "The Mission 01 founding Well doctrine selects the continuing route."
-      ],
-      "established_output": [
-        "Oruun roots the Waystone, raises a Listening Spine, and recovers the missing memory shard."
-      ],
-      "prohibited_inferences": [
-        "The recovered shard resolves the Assembly memory dispute.",
-        "A complete ancestral record has been restored."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 5,
-      "title": "Terms of Continuance",
-      "mission_id": "TermsOfContinuance",
-      "operation_mode": "CampaignTermsOfContinuance",
-      "command_authority": "meridian_authority",
-      "command_faction": "meridian_compact",
-      "named_participants": [],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine."
-      ],
-      "established_output": [
-        "Meridian-authoritative treaty and witness proxies face generic Kharuun-owned Adaptive-AI pressure."
-      ],
-      "prohibited_inferences": [
-        "Mixed-faction command is implemented.",
-        "Pressure against both networks is proven.",
-        "The Hollow Choir is identified."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 6,
-      "title": "Names Without Births",
-      "mission_id": "NamesWithoutBirths",
-      "operation_mode": "CampaignNamesWithoutBirths",
-      "command_authority": "meridian_authority",
-      "command_faction": "meridian_compact",
-      "named_participants": [
-        "talar_venn"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine."
-      ],
-      "established_output": [
-        "Talar locates a census trace while the archive, civilian proxies, and evidence extraction are protected."
-      ],
-      "prohibited_inferences": [
-        "The erased census has an established cause or author.",
-        "Civilian outcomes beyond the bounded proxies are modeled."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 7,
-      "title": "The Shape of Silence",
-      "mission_id": "TheShapeOfSilence",
-      "operation_mode": "CampaignShapeOfSilence",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine.",
-        "Consumes the erased-census trace and the curated-memory omission as separate evidence channels."
-      ],
-      "established_output": [
-        "A bounded correspondence between census and communal-memory omissions is established."
-      ],
-      "prohibited_inferences": [
-        "Cause, hidden authorship, or a Choir identity is proven.",
-        "The planned Assembly confrontation is complete."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 8,
-      "title": "The Shape Beside Us",
-      "mission_id": "TheShapeBesideUs",
-      "operation_mode": "CampaignShapeBesideUs",
-      "command_authority": "meridian_authority",
-      "command_faction": "meridian_compact",
-      "named_participants": [
-        "talar_venn",
-        "neme"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine.",
-        "Follows the bounded omission correspondence without assigning cause."
-      ],
-      "established_output": [
-        "Repeatable, actionable reciprocal contact with Neme is established through Meridian proxies."
-      ],
-      "prohibited_inferences": [
-        "A unified Choir identity, hidden authorship, or causation is established.",
-        "The Hollow Choir is established as a playable faction by this mission."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 9,
-      "title": "Reserve Authority",
-      "mission_id": "ReserveAuthority",
-      "operation_mode": "CampaignReserveAuthority",
-      "command_authority": "mara_vey",
-      "command_faction": "meridian_compact",
-      "named_participants": [
-        "mara_vey"
-      ],
-      "continuity_input": [
-        "Retains the Mission 01 founding Well doctrine."
-      ],
-      "established_output": [
-        "Mara powers exactly two of Life Support, Transit, and Archive and confirms the intact deferred district."
-      ],
-      "prohibited_inferences": [
-        "The wider city is recovered.",
-        "Unmodeled civilian survival or casualty counts are established."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 10,
-      "title": "The Choir at Lume Reach",
-      "mission_id": "ChoirAtLumeReach",
-      "operation_mode": "CampaignChoirAtLumeReach",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones",
-        "mara_vey"
-      ],
-      "continuity_input": [
-        "Consumes the Mission 09 deferred district liability.",
-        "Mara is an off-map liaison rather than the command authority."
-      ],
-      "established_output": [
-        "Oruun establishes public contact and infrastructure, then records an independent Lume Harvest, Preserve, or Reshape protocol."
-      ],
-      "prohibited_inferences": [
-        "The local Choir is playable or commandable.",
-        "Quarantine proxies establish Mara's involvement or Compact-wide action."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 11,
-      "title": "No Neutral Ledger",
-      "mission_id": "NoNeutralLedger",
-      "operation_mode": "CampaignNoNeutralLedger",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "Consumes the exact ten-record ledger across the Mission 01 doctrine, Mission 09 district pair, and Mission 10 Lume protocol."
-      ],
-      "established_output": [
-        "The ledger produces one of 27 explicit plans and records a bounded local coalition assembly."
-      ],
-      "prohibited_inferences": [
-        "A hidden trust score or survivor roster exists.",
-        "Mixed-faction command or a playable Hollow Choir is implemented."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 12,
-      "title": "The Future That Won",
-      "mission_id": "TheFutureThatWon",
-      "operation_mode": "CampaignFutureThatWon",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones",
-        "cael_rhyse"
-      ],
-      "continuity_input": [
-        "Consumes the exact eleven-record ledger and retains the Mission 10 Lume protocol through the Mission 11 receipt."
-      ],
-      "established_output": [
-        "Independent public readback and one bounded local protocol outcome are recorded."
-      ],
-      "prohibited_inferences": [
-        "Rhyse is playable or commandable.",
-        "Population restoration, civilian survival, permanence, trust, consent, or ethical justification is established."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 13,
-      "title": "Assembly of the Missing",
-      "mission_id": "AssemblyOfTheMissing",
-      "operation_mode": "CampaignAssemblyOfTheMissing",
-      "command_authority": "oruun_of_seven_stones",
-      "command_faction": "kharuun_assemblies",
-      "named_participants": [
-        "oruun_of_seven_stones"
-      ],
-      "continuity_input": [
-        "Consumes the exact twelve-record ledger and retains the exact prior Lume protocol receipt."
-      ],
-      "established_output": [
-        "Public readback, Crownfall linkage, and paired observation are recorded."
-      ],
-      "prohibited_inferences": [
-        "Authorship, responsibility, consent, trust, or cryptographic authenticity is established.",
-        "Mixed-faction command or playable Rhyse or Choir authority is implemented."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 14,
-      "title": "Several Voices, One Command",
-      "mission_id": "SeveralVoicesOneCommand",
-      "operation_mode": "CampaignSeveralVoicesOneCommand",
-      "command_authority": "local_hollow_choir_authority",
-      "command_faction": "hollow_choir",
-      "named_participants": [
-        "neme"
-      ],
-      "continuity_input": [
-        "Consumes the exact thirteen-record ledger and retains the exact prior Lume protocol receipt."
-      ],
-      "established_output": [
-        "Possible, Manifest, and Neme coexist under one bounded local Choir command-crisis contract."
-      ],
-      "prohibited_inferences": [
-        "The Choir's final fate or a unified permanent identity is decided.",
-        "The operation substitutes for Mission 15's endings."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    },
-    {
-      "sequence": 15,
-      "title": "The Broken Sun",
-      "mission_id": "TheBrokenSun",
-      "operation_mode": "CampaignTheBrokenSun",
-      "command_authority": "local_hollow_choir_authority",
-      "command_faction": "hollow_choir",
-      "named_participants": [
-        "neme",
-        "mara_vey",
-        "oruun_of_seven_stones",
-        "talar_venn"
-      ],
-      "continuity_input": [
-        "Consumes the exact fourteen-record ledger, including the Mission 01 doctrine, Mission 09 district pair, Mission 10 Lume protocol, and Missions 11 through 14 receipts."
-      ],
-      "established_output": [
-        "An earned subset of Restoration, Controlled Stabilization, Extinguishment, and Open Evolution is exposed without a hidden moral score.",
-        "One eligible resolution and its availability context are recorded; the completed fifteen-record ledger is terminal."
-      ],
-      "prohibited_inferences": [
-        "Unchosen endings or wider social consequences are resolved.",
-        "A Mission 16 exists or follows from campaign completion.",
-        "The selected ending is a canonical moral answer."
-      ],
-      "mechanics_status": "bounded_operation_implemented_current_source",
-      "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
-    }
+  "independent_lume_choice_mission": "ChoirAtLumeReach",
+  "lume_protocol_receipt_missions": [
+   "NoNeutralLedger",
+   "TheFutureThatWon",
+   "AssemblyOfTheMissing",
+   "SeveralVoicesOneCommand",
+   "TheBrokenSun"
+  ],
+  "final_resolutions": [
+   "Restoration",
+   "ControlledStabilization",
+   "Extinguishment",
+   "OpenEvolution"
   ]
+ },
+ "world": {
+  "setting": "Soryn",
+  "crownfall_rule": "Crownfall condensed unrealized causal branches into Dawnshards; consuming a shard closes the possibility it contains.",
+  "future_well_rule": "A controlled Future Well offers Harvest, Preserve, or Reshape as mutually exclusive protocols with visible costs and no moral ranking.",
+  "future_well_choices": [
+   "Harvest",
+   "Preserve",
+   "Reshape"
+  ],
+  "factions": [
+   {
+    "id": "meridian_compact",
+    "canon": "A culturally plural governance and logistics compact whose strength comes from reliable connected infrastructure.",
+    "voice_rule": "Measured commitments, anchors, tolerances, ledgers, duty windows, and reserve margins.",
+    "prohibited_reduction": "Do not treat the Compact as a single ethnicity or as the morally correct faction."
+   },
+   {
+    "id": "kharuun_assemblies",
+    "canon": "A society of layered personhood, imperfectly merged ancestral memory, mobile infrastructure, and terrain adaptation.",
+    "voice_rule": "Present evidence may correct inherited certainty; dry humor comes from the mismatch.",
+    "prohibited_reduction": "Do not portray the Kharuun as primitive, mystical, or governed by infallible memory."
+   },
+   {
+    "id": "hollow_choir",
+    "canon": "Coherent consciousness retained by erased branches; maintained possibilities carry public duration, cost, and counterplay.",
+    "voice_rule": "Stable speech is selected from incompatible phrasing rather than delivered as a default mystical collective voice.",
+    "prohibited_reduction": "Do not reveal a hidden real personality, unrestricted rewind, or cost-free complexity."
+   }
+  ]
+ },
+ "characters": [
+  {
+   "id": "mara_vey",
+   "faction_id": "meridian_compact",
+   "arc": "Disciplined preparation saves people, but her drive to make uncertainty governable can turn moral questions into control problems.",
+   "mission_ids": [
+    "WhatTheLedgerKeeps",
+    "ACityOnReserve",
+    "TermsOfContinuance",
+    "ReserveAuthority",
+    "ChoirAtLumeReach",
+    "TheBrokenSun"
+   ],
+   "continuity_boundary": "Mara commands Mission 01 but is not the simulated archive-carrier entity; in Mission 10 she is an off-map liaison and in Mission 15 a protected neutral witness; in Mission 05 she is the treaty authority on the command channel while the simulated treaty and witness proxies remain unnamed."
+  },
+  {
+   "id": "oruun_of_seven_stones",
+   "faction_id": "kharuun_assemblies",
+   "arc": "Oruun tests inherited memory against present evidence while confronting the accountability cost of curated communal continuity.",
+   "mission_ids": [
+    "WhatTheLedgerKeeps",
+    "SevenAccountsOfRain",
+    "TheUnburiedRoad",
+    "TheShapeOfSilence",
+    "ChoirAtLumeReach",
+    "NoNeutralLedger",
+    "TheFutureThatWon",
+    "AssemblyOfTheMissing",
+    "TheBrokenSun"
+   ],
+   "continuity_boundary": "Oruun is a Mission 01 interlocutor, becomes the Kharuun command authority in later operations, and is a protected neutral witness in Mission 15."
+  },
+  {
+   "id": "talar_venn",
+   "faction_id": "meridian_compact",
+   "arc": "Talar preserves records that institutional ledgers omitted and insists that evidence remain attributable to the people who carried its cost.",
+   "mission_ids": [
+    "WhatTheLedgerKeeps",
+    "NamesWithoutBirths",
+    "TheShapeBesideUs",
+    "TheBrokenSun"
+   ],
+   "continuity_boundary": "Talar requests the Mission 01 archive recovery, follows the census trail in Missions 06 and 08, and is a protected neutral witness in Mission 15."
+  },
+  {
+   "id": "neme",
+   "faction_id": "hollow_choir",
+   "arc": "Neme negotiates among internal futures that disagree about coexistence rather than revealing one secretly dominant identity.",
+   "mission_ids": [
+    "TheShapeBesideUs",
+    "SeveralVoicesOneCommand",
+    "TheBrokenSun"
+   ],
+   "continuity_boundary": "Mission 08 establishes reciprocal contact, Mission 14 a bounded local Choir command contract, and Mission 15 a final local command role; none proves a unified permanent Choir identity."
+  },
+  {
+   "id": "cael_rhyse",
+   "faction_id": "meridian_compact",
+   "arc": "Rhyse argues for one governable future by pointing to cities preserved under Compact policy, at an unacceptable existential cost.",
+   "mission_ids": [
+    "TheFutureThatWon"
+   ],
+   "continuity_boundary": "Mission 12 represents Rhyse only through attributable neutral public apparatus; he is not playable or commandable."
+  }
+ ],
+ "missions": [
+  {
+   "sequence": 1,
+   "title": "What the Ledger Keeps",
+   "mission_id": "WhatTheLedgerKeeps",
+   "operation_mode": "CampaignPrologue",
+   "command_authority": "mara_vey",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "mara_vey",
+    "talar_venn",
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "No prior campaign record."
+   ],
+   "established_output": [
+    "The archive carrier reaches Lume Reach after the archive recovery and one valid Glass Scar Well protocol.",
+    "The selected Harvest, Preserve, or Reshape protocol becomes the founding Well doctrine."
+   ],
+   "prohibited_inferences": [
+    "Mara is the simulated archive carrier.",
+    "Destroying the hostile Core substitutes for evacuation.",
+    "One Well protocol is the canonical moral answer."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 2,
+   "title": "Seven Accounts of Rain",
+   "mission_id": "SevenAccountsOfRain",
+   "operation_mode": "CampaignSevenAccounts",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine."
+   ],
+   "established_output": [
+    "Oruun defends a migration route while inherited accounts disagree about the terrain."
+   ],
+   "prohibited_inferences": [
+    "Any inherited account is established as infallible.",
+    "The Kharuun memory dispute is resolved."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 3,
+   "title": "A City on Reserve",
+   "mission_id": "ACityOnReserve",
+   "operation_mode": "CampaignCityReserve",
+   "command_authority": "mara_vey",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "mara_vey"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine."
+   ],
+   "established_output": [
+    "Mara reconnects three ark-city districts in the inherited priority order."
+   ],
+   "prohibited_inferences": [
+    "The wider city is fully recovered.",
+    "All reserve consequences are resolved."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 4,
+   "title": "The Unburied Road",
+   "mission_id": "TheUnburiedRoad",
+   "operation_mode": "CampaignUnburiedRoad",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "The Mission 01 founding Well doctrine selects the continuing route."
+   ],
+   "established_output": [
+    "Oruun roots the Waystone, raises a Listening Spine, and recovers the missing memory shard."
+   ],
+   "prohibited_inferences": [
+    "The recovered shard resolves the Assembly memory dispute.",
+    "A complete ancestral record has been restored."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 5,
+   "title": "Terms of Continuance",
+   "mission_id": "TermsOfContinuance",
+   "operation_mode": "CampaignTermsOfContinuance",
+   "command_authority": "mara_vey",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "mara_vey"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine."
+   ],
+   "established_output": [
+    "Meridian-authoritative treaty and witness proxies face generic Kharuun-owned Adaptive-AI pressure."
+   ],
+   "prohibited_inferences": [
+    "Mixed-faction command is implemented.",
+    "Pressure against both networks is proven.",
+    "The Hollow Choir is identified."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 6,
+   "title": "Names Without Births",
+   "mission_id": "NamesWithoutBirths",
+   "operation_mode": "CampaignNamesWithoutBirths",
+   "command_authority": "meridian_authority",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "talar_venn"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine."
+   ],
+   "established_output": [
+    "Talar locates a census trace while the archive, civilian proxies, and evidence extraction are protected."
+   ],
+   "prohibited_inferences": [
+    "The erased census has an established cause or author.",
+    "Civilian outcomes beyond the bounded proxies are modeled."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 7,
+   "title": "The Shape of Silence",
+   "mission_id": "TheShapeOfSilence",
+   "operation_mode": "CampaignShapeOfSilence",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine.",
+    "Consumes the erased-census trace and the curated-memory omission as separate evidence channels."
+   ],
+   "established_output": [
+    "A bounded correspondence between census and communal-memory omissions is established."
+   ],
+   "prohibited_inferences": [
+    "Cause, hidden authorship, or a Choir identity is proven.",
+    "The planned Assembly confrontation is complete."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 8,
+   "title": "The Shape Beside Us",
+   "mission_id": "TheShapeBesideUs",
+   "operation_mode": "CampaignShapeBesideUs",
+   "command_authority": "meridian_authority",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "talar_venn",
+    "neme"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine.",
+    "Follows the bounded omission correspondence without assigning cause."
+   ],
+   "established_output": [
+    "Repeatable, actionable reciprocal contact with Neme is established through Meridian proxies."
+   ],
+   "prohibited_inferences": [
+    "A unified Choir identity, hidden authorship, or causation is established.",
+    "The Hollow Choir is established as a playable faction by this mission."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 9,
+   "title": "Reserve Authority",
+   "mission_id": "ReserveAuthority",
+   "operation_mode": "CampaignReserveAuthority",
+   "command_authority": "mara_vey",
+   "command_faction": "meridian_compact",
+   "named_participants": [
+    "mara_vey"
+   ],
+   "continuity_input": [
+    "Retains the Mission 01 founding Well doctrine."
+   ],
+   "established_output": [
+    "Mara powers exactly two of Life Support, Transit, and Archive and confirms the intact deferred district."
+   ],
+   "prohibited_inferences": [
+    "The wider city is recovered.",
+    "Unmodeled civilian survival or casualty counts are established."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 10,
+   "title": "The Choir at Lume Reach",
+   "mission_id": "ChoirAtLumeReach",
+   "operation_mode": "CampaignChoirAtLumeReach",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones",
+    "mara_vey"
+   ],
+   "continuity_input": [
+    "Consumes the Mission 09 deferred district liability.",
+    "Mara is an off-map liaison rather than the command authority."
+   ],
+   "established_output": [
+    "Oruun establishes public contact and infrastructure, then records an independent Lume Harvest, Preserve, or Reshape protocol."
+   ],
+   "prohibited_inferences": [
+    "The local Choir is playable or commandable.",
+    "Quarantine proxies establish Mara's involvement or Compact-wide action."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 11,
+   "title": "No Neutral Ledger",
+   "mission_id": "NoNeutralLedger",
+   "operation_mode": "CampaignNoNeutralLedger",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "Consumes the exact ten-record ledger across the Mission 01 doctrine, Mission 09 district pair, and Mission 10 Lume protocol."
+   ],
+   "established_output": [
+    "The ledger produces one of 27 explicit plans and records a bounded local coalition assembly."
+   ],
+   "prohibited_inferences": [
+    "A hidden trust score or survivor roster exists.",
+    "Mixed-faction command or a playable Hollow Choir is implemented."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 12,
+   "title": "The Future That Won",
+   "mission_id": "TheFutureThatWon",
+   "operation_mode": "CampaignFutureThatWon",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones",
+    "cael_rhyse"
+   ],
+   "continuity_input": [
+    "Consumes the exact eleven-record ledger and retains the Mission 10 Lume protocol through the Mission 11 receipt."
+   ],
+   "established_output": [
+    "Independent public readback and one bounded local protocol outcome are recorded."
+   ],
+   "prohibited_inferences": [
+    "Rhyse is playable or commandable.",
+    "Population restoration, civilian survival, permanence, trust, consent, or ethical justification is established."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 13,
+   "title": "Assembly of the Missing",
+   "mission_id": "AssemblyOfTheMissing",
+   "operation_mode": "CampaignAssemblyOfTheMissing",
+   "command_authority": "oruun_of_seven_stones",
+   "command_faction": "kharuun_assemblies",
+   "named_participants": [
+    "oruun_of_seven_stones"
+   ],
+   "continuity_input": [
+    "Consumes the exact twelve-record ledger and retains the exact prior Lume protocol receipt."
+   ],
+   "established_output": [
+    "Public readback, Crownfall linkage, and paired observation are recorded."
+   ],
+   "prohibited_inferences": [
+    "Authorship, responsibility, consent, trust, or cryptographic authenticity is established.",
+    "Mixed-faction command or playable Rhyse or Choir authority is implemented."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 14,
+   "title": "Several Voices, One Command",
+   "mission_id": "SeveralVoicesOneCommand",
+   "operation_mode": "CampaignSeveralVoicesOneCommand",
+   "command_authority": "local_hollow_choir_authority",
+   "command_faction": "hollow_choir",
+   "named_participants": [
+    "neme"
+   ],
+   "continuity_input": [
+    "Consumes the exact thirteen-record ledger and retains the exact prior Lume protocol receipt."
+   ],
+   "established_output": [
+    "Possible, Manifest, and Neme coexist under one bounded local Choir command-crisis contract."
+   ],
+   "prohibited_inferences": [
+    "The Choir's final fate or a unified permanent identity is decided.",
+    "The operation substitutes for Mission 15's endings."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  },
+  {
+   "sequence": 15,
+   "title": "The Broken Sun",
+   "mission_id": "TheBrokenSun",
+   "operation_mode": "CampaignTheBrokenSun",
+   "command_authority": "local_hollow_choir_authority",
+   "command_faction": "hollow_choir",
+   "named_participants": [
+    "neme",
+    "mara_vey",
+    "oruun_of_seven_stones",
+    "talar_venn"
+   ],
+   "continuity_input": [
+    "Consumes the exact fourteen-record ledger, including the Mission 01 doctrine, Mission 09 district pair, Mission 10 Lume protocol, and Missions 11 through 14 receipts."
+   ],
+   "established_output": [
+    "An earned subset of Restoration, Controlled Stabilization, Extinguishment, and Open Evolution is exposed without a hidden moral score.",
+    "One eligible resolution and its availability context are recorded; the completed fifteen-record ledger is terminal."
+   ],
+   "prohibited_inferences": [
+    "Unchosen endings or wider social consequences are resolved.",
+    "A Mission 16 exists or follows from campaign completion.",
+    "The selected ending is a canonical moral answer."
+   ],
+   "mechanics_status": "bounded_operation_implemented_current_source",
+   "narrative_presentation_status": "final_dialogue_cinematics_unqualified"
+  }
+ ]
 }

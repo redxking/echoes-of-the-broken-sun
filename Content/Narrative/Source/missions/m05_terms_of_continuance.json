@@ -1,0 +1,956 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m05_terms_of_continuance",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TermsOfContinuance",
+  "operation_mode": "CampaignTermsOfContinuance",
+  "phases": [
+   "Inactive",
+   "SynchronizeNetworks",
+   "HoldContinuanceWindow",
+   "ExtractWitnesses",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "Terms of Continuance",
+  "purpose": "Mara Vey, as the Meridian treaty authority, synchronizes the Meridian relay with the Kharuun spine so drafted ceasefire terms can be read across both networks, holds the continuance window uncompromised for its authored span, and takes both treaty witnesses off the field alive. Canon continuity extension recorded 2026-09-01 with owner approval: Mara Vey alone carries Mission 05's spoken lines, consistent with her Act I Meridian command arc; the Bible's treaty and witness proxies remain unnamed.",
+  "player_pov": "mara_command_authority",
+  "command_faction": "meridian_compact",
+  "witness_roles": "one Meridian witness proxy and one Kharuun witness proxy, both unnamed",
+  "relay_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 27
+   },
+   "preserve": {
+    "x": 32,
+    "y": 27
+   },
+   "reshape": {
+    "x": 50,
+    "y": 27
+   }
+  },
+  "spine_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 39
+   },
+   "preserve": {
+    "x": 32,
+    "y": 39
+   },
+   "reshape": {
+    "x": 44,
+    "y": 38
+   }
+  },
+  "extraction_site_by_founding_choice": {
+   "harvest": {
+    "x": 20,
+    "y": 47
+   },
+   "preserve": {
+    "x": 32,
+    "y": 47
+   },
+   "reshape": {
+    "x": 44,
+    "y": 47
+   }
+  },
+  "continuance_window_ticks": {
+   "start": 300,
+   "end": 900
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored accord clauses from it.",
+   "The Harvest founding decision selects the Iron Clause, with the Meridian relay at tile 14,27, the Kharuun spine at tile 14,39, and the witness extraction at tile 20,47.",
+   "The Preserve founding decision selects the Witness Clause, with the Meridian relay at tile 32,27, the Kharuun spine at tile 32,39, and the witness extraction at tile 32,47.",
+   "The Reshape founding decision selects the Folded Clause, with the Meridian relay at tile 50,27, the Kharuun spine at tile 44,38, and the witness extraction at tile 44,47.",
+   "Both the Meridian relay and the Kharuun spine must be synchronized before the continuance window phase can begin.",
+   "The continuance window spans authored ticks 300 through 900 and must be held uncompromised for its full span.",
+   "Completion requires both witnesses extracted alive after the window has held.",
+   "Losing the local core, the Meridian relay, the Kharuun spine, or either witness, or compromising the window, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "No party signs or ratifies the ceasefire in this operation.",
+   "The source of the pressure on the field is not identified, and no Hollow Choir involvement is established.",
+   "The extracted witnesses' account is not established as accepted by either command.",
+   "Holding the window does not establish that the war paused anywhere beyond this field.",
+   "Mixed-faction command is not established; command authority in this operation is Meridian only.",
+   "The three clauses' names describe drafting variants and terrain, not legal force."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_mara_vey",
+   "display_name": "Mara Vey",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m05_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_networks_synchronized",
+   "runtime_signal": "phase_entered:HoldContinuanceWindow",
+   "prerequisite_ids": [
+    "nar_m05_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_window_held",
+   "runtime_signal": "phase_entered:ExtractWitnesses",
+   "prerequisite_ids": [
+    "nar_m05_evt_networks_synchronized"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_witnesses_extracted",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m05_evt_window_held"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m05_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m05_evt_witnesses_extracted"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m05_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m05_ui_briefing",
+   "loc_key": "nar_m05_ui_briefing",
+   "source_text": "Drafted ceasefire terms are ready to read, and nobody has signed them. Synchronize our relay with the Kharuun spine, hold the continuance window for its full span while the terms read out, and take both witnesses off the field alive.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m05_ui_obj_synchronize_networks",
+    "loc_key": "nar_m05_ui_obj_synchronize_networks",
+    "source_text": "Synchronize the Meridian relay and the Kharuun spine.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 93,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m05_ui_obj_hold_window",
+    "loc_key": "nar_m05_ui_obj_hold_window",
+    "source_text": "Hold the continuance window uncompromised for its full span.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 100,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m05_ui_obj_extract_witnesses",
+    "loc_key": "nar_m05_ui_obj_extract_witnesses",
+    "source_text": "Extract both witnesses from the field alive.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 84,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m05_line_op_terms_001",
+   "loc_key": "nar_m05_line_op_terms_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The terms are drafted, the ground is chosen, and nobody has signed anything. What we hold today is not a peace. It is a window where one could stand.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 189,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_op_terms_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_op_networks_002",
+   "loc_key": "nar_m05_line_op_networks_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Our relay and their spine have to carry one reading between them. Two networks in step, or no reading at all.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 149,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_op_networks_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_op_clause_003",
+   "loc_key": "nar_m05_line_op_clause_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The founding decision picked the clause we read from. I would have drafted it differently. The record does not ask me.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 158,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_op_clause_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_op_witnesses_004",
+   "loc_key": "nar_m05_line_op_witnesses_004",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Two witnesses, one from each side of a war neither side has stopped fighting. Their work is to watch. Ours is to keep the watchers breathing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 181,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_op_witnesses_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_sync_confirm_001",
+   "loc_key": "nar_m05_line_sync_confirm_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_networks_synchronized",
+   "delivery_channel": "command_radio",
+   "source_text": "Relay and spine are in step. Two networks that spent a war jamming each other are holding one signal. Log the tick; I want that on record.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 178,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_sync_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_sync_window_002",
+   "loc_key": "nar_m05_line_sync_window_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_networks_synchronized",
+   "delivery_channel": "command_radio",
+   "source_text": "The window opens now and closes on schedule. Between those marks the terms read out, and nothing on this field is allowed to interrupt.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 175,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_sync_window_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_window_confirm_001",
+   "loc_key": "nar_m05_line_window_confirm_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_window_held",
+   "delivery_channel": "command_radio",
+   "source_text": "The window held its full span. The terms are read. That is further than any accord between us has reached.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 146,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_window_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_window_extract_002",
+   "loc_key": "nar_m05_line_window_extract_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_window_held",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the witnesses. Both of them, alive, off this field. A reading with no witness is a rumor with a timestamp.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_window_extract_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_complete_witness_001",
+   "loc_key": "nar_m05_line_complete_witness_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_witnesses_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "Both witnesses are clear. What they carry is a record of terms read in the open, once, without interruption.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 148,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_complete_witness_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_complete_unsigned_002",
+   "loc_key": "nar_m05_line_complete_unsigned_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_witnesses_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "Nothing is signed. The pressure that leaned on this field today is not accounted for in the terms, and it has not stopped leaning.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 170,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_complete_unsigned_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_complete_record_003",
+   "loc_key": "nar_m05_line_complete_record_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_witnesses_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "Log the operation closed. The window held because we held it. Whether the terms hold is not a thing this field can decide.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 162,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_complete_record_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_core_001",
+   "loc_key": "nar_m05_line_fail_core_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. A window with no authority behind it is just weather.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 119,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_relay_002",
+   "loc_key": "nar_m05_line_fail_relay_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "Our relay is down. Half a synchronization is silence with good intentions.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 114,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_relay_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_spine_003",
+   "loc_key": "nar_m05_line_fail_spine_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Kharuun spine is dark. Whatever their command heard, the reading is over.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 117,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_spine_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_witness_004",
+   "loc_key": "nar_m05_line_fail_witness_004",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A witness is down. The terms may survive; the account of them will not.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 111,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_witness_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_window_005",
+   "loc_key": "nar_m05_line_fail_window_005",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The window is compromised. The reading was interrupted, and an interrupted reading binds nobody.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 136,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_window_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_terminal_006",
+   "loc_key": "nar_m05_line_fail_terminal_006",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The field gave its answer to the terms before anyone signed them.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 139,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_terminal_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_line_fail_generic_007",
+   "loc_key": "nar_m05_line_fail_generic_007",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m05_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The window is closed, and the terms stay drafted and unread.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m05_vo_fail_generic_007",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m05_seq_opening",
+   "beat": "unsigned_terms_and_a_held_window",
+   "trigger_id": "nar_m05_evt_operation_started",
+   "line_ids": [
+    "nar_m05_line_op_terms_001",
+    "nar_m05_line_op_networks_002",
+    "nar_m05_line_op_clause_003",
+    "nar_m05_line_op_witnesses_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_seq_synchronization",
+   "beat": "two_networks_one_signal",
+   "trigger_id": "nar_m05_evt_networks_synchronized",
+   "line_ids": [
+    "nar_m05_line_sync_confirm_001",
+    "nar_m05_line_sync_window_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_seq_window",
+   "beat": "the_reading_holds",
+   "trigger_id": "nar_m05_evt_window_held",
+   "line_ids": [
+    "nar_m05_line_window_confirm_001",
+    "nar_m05_line_window_extract_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m05_seq_completion",
+   "beat": "witnessed_but_unsigned",
+   "trigger_id": "nar_m05_evt_witnesses_extracted",
+   "line_ids": [
+    "nar_m05_line_complete_witness_001",
+    "nar_m05_line_complete_unsigned_002",
+    "nar_m05_line_complete_record_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m05_result_added",
+    "loc_key": "nar_m05_result_added",
+    "source_text": "The attempt is recorded. Both networks synchronized, the continuance window held its full span, and both witnesses left the field alive carrying the reading. Nothing is signed, and the pressure that worked this field is not named in the terms.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m05_result_alreadyrecorded",
+    "loc_key": "nar_m05_result_alreadyrecorded",
+    "source_text": "This attempt was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m05_result_replayconflict",
+    "loc_key": "nar_m05_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m05_result_storagefailure",
+    "loc_key": "nar_m05_result_storagefailure",
+    "source_text": "The witnesses were extracted but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m05_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_relay",
+    "reason_code": "meridian_relay_lost",
+    "source_condition": "The Meridian relay is destroyed before extraction completes.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_relay_002"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_spine",
+    "reason_code": "kharuun_spine_lost",
+    "source_condition": "The Kharuun spine is destroyed before extraction completes.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_spine_003"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_witness",
+    "reason_code": "witness_lost",
+    "source_condition": "Either witness is destroyed before extraction completes.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_witness_004"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_window",
+    "reason_code": "continuance_window_compromised",
+    "source_condition": "The continuance window is compromised before completing its span.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_window_005"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_terminal_006"
+    ]
+   },
+   {
+    "id": "nar_m05_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m05_line_fail_generic_007"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m05_retry",
+   "loc_key": "nar_m05_retry",
+   "source_text": "The window closed on this attempt. Retry the operation; the drafted terms and the inherited clause remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 05 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m05_cine_opening",
+  "title": "Terms of Continuance, a window held open",
+  "trigger_id": "nar_m05_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m05_shot_draft",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A treaty draft under instrument light: dense clauses, three variant riders, every signature line empty.",
+    "line_ids": [
+     "nar_m05_line_op_terms_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m05_draft_unsigned"
+    ],
+    "audio_hook_ids": [
+     "aud_m05_ambience_accord"
+    ]
+   },
+   {
+    "id": "nar_m05_shot_networks",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Two masts on one horizon, a Meridian relay and a grown Kharuun spine, separated by scarred ground and aligned for the first time.",
+    "line_ids": [
+     "nar_m05_line_op_networks_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m05_two_masts"
+    ],
+    "audio_hook_ids": [
+     "aud_m05_ambience_accord"
+    ]
+   },
+   {
+    "id": "nar_m05_shot_window",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A field gone still mid-war: weapons held, dust settling, a countdown lattice hanging over the ground between the masts.",
+    "line_ids": [
+     "nar_m05_line_sync_window_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m05_held_field"
+    ],
+    "audio_hook_ids": [
+     "aud_m05_ambience_accord"
+    ]
+   },
+   {
+    "id": "nar_m05_shot_witnesses",
+    "editorial_target_seconds": 7,
+    "visual_direction": "Two witnesses walking out under separate escort, opposite gaits, carrying the same model of document case.",
+    "line_ids": [
+     "nar_m05_line_op_witnesses_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m05_witness_walk"
+    ],
+    "audio_hook_ids": [
+     "aud_m05_ambience_accord"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m05_draft_unsigned",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m05_two_masts",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m05_held_field",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m05_witness_walk",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m05_ambience_accord",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "partial_briefing_lines_results",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

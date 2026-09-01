@@ -32,12 +32,12 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
             TEXT("The narrative pack loads and digest-verifies (error=%s)"),
             *Narrative->GetLoadError()),
         Narrative->IsReady());
-    TestEqual(TEXT("Fourteen authored operations are bound"),
+    TestEqual(TEXT("Fifteen authored operations are bound"),
               Narrative->GetOperationCount(),
-              14);
+              15);
     TestEqual(TEXT("The full authored line count is carried"),
               Narrative->GetTotalLineCount(),
-              290);
+              308);
     TestEqual(TEXT("The pack digest is a full SHA-256"),
               Narrative->GetPackDigest().Len(),
               64);
@@ -48,6 +48,7 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
         EEchoesOperationMode::CampaignSevenAccounts,
         EEchoesOperationMode::CampaignCityReserve,
         EEchoesOperationMode::CampaignUnburiedRoad,
+        EEchoesOperationMode::CampaignTermsOfContinuance,
         EEchoesOperationMode::CampaignNamesWithoutBirths,
         EEchoesOperationMode::CampaignShapeOfSilence,
         EEchoesOperationMode::CampaignShapeBesideUs,
@@ -200,12 +201,6 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
     // Skirmish deliberately has no narrative contract.
     TestFalse(TEXT("Skirmish has no narrative contract"),
               Narrative->HasOperation(EEchoesOperationMode::Skirmish));
-
-    // The Terms of Continuance contract is not yet authored (open decision 7)
-    // and must fail closed as absent rather than half-bound.
-    TestFalse(TEXT("Terms of Continuance is honestly absent"),
-              Narrative->HasOperation(
-                  EEchoesOperationMode::CampaignTermsOfContinuance));
 
     GameInstance->Shutdown();
     return true;

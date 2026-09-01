@@ -1,7 +1,7 @@
 {
  "author": "Angelis Pseftis",
- "authored_missions": 14,
- "line_count": 290,
+ "authored_missions": 15,
+ "line_count": 308,
  "operations": {
   "CampaignAssemblyOfTheMissing": {
    "briefing": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
@@ -1932,6 +1932,152 @@
    },
    "retry": "The hollow closed on this attempt. Retry the operation; the founding decision and its inherited listening geometry remain as recorded.",
    "title": "The Shape of Silence"
+  },
+  "CampaignTermsOfContinuance": {
+   "briefing": "Drafted ceasefire terms are ready to read, and nobody has signed them. Synchronize our relay with the Kharuun spine, hold the continuance window for its full span while the terms read out, and take both witnesses off the field alive.",
+   "content_id": "nar_m05_terms_of_continuance",
+   "failure_lines": {
+    "continuance_window_compromised": "nar_m05_line_fail_window_005",
+    "generic": "nar_m05_line_fail_generic_007",
+    "kharuun_spine_lost": "nar_m05_line_fail_spine_003",
+    "local_core_lost": "nar_m05_line_fail_core_001",
+    "meridian_relay_lost": "nar_m05_line_fail_relay_002",
+    "terminal_match_outcome": "nar_m05_line_fail_terminal_006",
+    "witness_lost": "nar_m05_line_fail_witness_004"
+   },
+   "failures": {
+    "continuance_window_compromised": "The continuance window is compromised before completing its span.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "kharuun_spine_lost": "The Kharuun spine is destroyed before extraction completes.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "meridian_relay_lost": "The Meridian relay is destroyed before extraction completes.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "witness_lost": "Either witness is destroyed before extraction completes."
+   },
+   "lines": [
+    {
+     "id": "nar_m05_line_op_terms_001",
+     "signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+     "speaker": "Mara Vey",
+     "text": "The terms are drafted, the ground is chosen, and nobody has signed anything. What we hold today is not a peace. It is a window where one could stand."
+    },
+    {
+     "id": "nar_m05_line_op_networks_002",
+     "signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+     "speaker": "Mara Vey",
+     "text": "Our relay and their spine have to carry one reading between them. Two networks in step, or no reading at all."
+    },
+    {
+     "id": "nar_m05_line_op_clause_003",
+     "signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+     "speaker": "Mara Vey",
+     "text": "The founding decision picked the clause we read from. I would have drafted it differently. The record does not ask me."
+    },
+    {
+     "id": "nar_m05_line_op_witnesses_004",
+     "signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+     "speaker": "Mara Vey",
+     "text": "Two witnesses, one from each side of a war neither side has stopped fighting. Their work is to watch. Ours is to keep the watchers breathing."
+    },
+    {
+     "id": "nar_m05_line_sync_confirm_001",
+     "signal": "phase_entered:HoldContinuanceWindow",
+     "speaker": "Mara Vey",
+     "text": "Relay and spine are in step. Two networks that spent a war jamming each other are holding one signal. Log the tick; I want that on record."
+    },
+    {
+     "id": "nar_m05_line_sync_window_002",
+     "signal": "phase_entered:HoldContinuanceWindow",
+     "speaker": "Mara Vey",
+     "text": "The window opens now and closes on schedule. Between those marks the terms read out, and nothing on this field is allowed to interrupt."
+    },
+    {
+     "id": "nar_m05_line_window_confirm_001",
+     "signal": "phase_entered:ExtractWitnesses",
+     "speaker": "Mara Vey",
+     "text": "The window held its full span. The terms are read. That is further than any accord between us has reached."
+    },
+    {
+     "id": "nar_m05_line_window_extract_002",
+     "signal": "phase_entered:ExtractWitnesses",
+     "speaker": "Mara Vey",
+     "text": "Now the witnesses. Both of them, alive, off this field. A reading with no witness is a rumor with a timestamp."
+    },
+    {
+     "id": "nar_m05_line_complete_witness_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Both witnesses are clear. What they carry is a record of terms read in the open, once, without interruption."
+    },
+    {
+     "id": "nar_m05_line_complete_unsigned_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Nothing is signed. The pressure that leaned on this field today is not accounted for in the terms, and it has not stopped leaning."
+    },
+    {
+     "id": "nar_m05_line_complete_record_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Log the operation closed. The window held because we held it. Whether the terms hold is not a thing this field can decide."
+    },
+    {
+     "id": "nar_m05_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The command core is gone. A window with no authority behind it is just weather."
+    },
+    {
+     "id": "nar_m05_line_fail_relay_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "Our relay is down. Half a synchronization is silence with good intentions."
+    },
+    {
+     "id": "nar_m05_line_fail_spine_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The Kharuun spine is dark. Whatever their command heard, the reading is over."
+    },
+    {
+     "id": "nar_m05_line_fail_witness_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "A witness is down. The terms may survive; the account of them will not."
+    },
+    {
+     "id": "nar_m05_line_fail_window_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The window is compromised. The reading was interrupted, and an interrupted reading binds nobody."
+    },
+    {
+     "id": "nar_m05_line_fail_terminal_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The engagement has gone terminal. The field gave its answer to the terms before anyone signed them."
+    },
+    {
+     "id": "nar_m05_line_fail_generic_007",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The operation has failed. The window is closed, and the terms stay drafted and unread."
+    }
+   ],
+   "mission_id": "TermsOfContinuance",
+   "objectives": [
+    "Synchronize the Meridian relay and the Kharuun spine.",
+    "Hold the continuance window uncompromised for its full span.",
+    "Extract both witnesses from the field alive."
+   ],
+   "results": {
+    "Added": "The attempt is recorded. Both networks synchronized, the continuance window held its full span, and both witnesses left the field alive carrying the reading. Nothing is signed, and the pressure that worked this field is not named in the terms.",
+    "AlreadyRecorded": "This attempt was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The witnesses were extracted but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The window closed on this attempt. Retry the operation; the drafted terms and the inherited clause remain as recorded.",
+   "title": "Terms of Continuance"
   },
   "CampaignTheBrokenSun": {
    "briefing": "The Crownfall is the last contract. Secure the approach, assemble all three accords with the witnesses protected, confirm the earned ending twice — it cannot be unsaid — raise its Resolution Conduit, and hold everything the contract names until the sky believes you.",

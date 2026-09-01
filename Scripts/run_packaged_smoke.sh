@@ -65,7 +65,7 @@ if ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 
   exit 7
 fi
 
-if ! /usr/bin/grep -q '\[ECHOES_NARRATIVE_READY\] ready=true operations=14 lines=290 sha256=' "$log"; then
+if ! /usr/bin/grep -q '\[ECHOES_NARRATIVE_READY\] ready=true operations=15 lines=308 sha256=' "$log"; then
   print -u2 "The packaged narrative pack did not bind fail-closed-ready. Inspect: $log"
   exit 7
 fi
