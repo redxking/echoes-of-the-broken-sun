@@ -129,7 +129,7 @@ set +e
 "$editor" "$project" \
   -unattended -nop4 -nosplash -nullrhi \
   -EchoesSaveGameDirectory="$suite_storage_root" \
-  -ExecCmds="Automation RunTests Echoes; Quit" \
+  -ExecCmds="Automation RunTests Echoes.; Quit" \
   -TestExit="Automation Test Queue Empty" \
   -ReportExportPath="$report_dir"
 editor_status=$?
@@ -184,7 +184,7 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "62" ||
+if [[ "$(read_report_value succeeded)" != "64" ||
       "$(read_report_value succeededWithWarnings)" != "0" ||
       "$(read_report_value failed)" != "0" ||
       "$(read_report_value notRun)" != "0" ||
@@ -204,6 +204,7 @@ expected_tests=(
   "Echoes.Runtime.AI.SkirmishDeterminismSmoke"
   "Echoes.Runtime.Bootstrap.ClassesAndCore"
   "Echoes.Runtime.Campaign.WhatTheLedgerKeeps"
+  "Echoes.Runtime.Cinematics.ReferenceSequence"
   "Echoes.Runtime.Campaign.Journey"
   "Echoes.Runtime.Campaign.FreshJourney"
   "Echoes.Runtime.Campaign.SevenAccountsOfRain"
@@ -211,6 +212,7 @@ expected_tests=(
   "Echoes.Runtime.Campaign.TheUnburiedRoad"
   "Echoes.Runtime.Campaign.TermsOfContinuance"
   "Echoes.Runtime.Campaign.NamesWithoutBirths"
+  "Echoes.Runtime.Campaign.PlanMatrix"
   "Echoes.Runtime.Campaign.TheShapeOfSilence"
   "Echoes.Runtime.Campaign.TheShapeBesideUs"
   "Echoes.Runtime.Campaign.ReserveAuthority"
@@ -261,7 +263,7 @@ expected_tests=(
 
 for expected_test in "${expected_tests[@]}"; do
   matched=false
-  for test_index in {0..61}; do
+  for test_index in {0..63}; do
     if [[ "$(read_report_value tests.$test_index.fullTestPath)" == "$expected_test" ]]; then
       matched=true
       if [[ "$(read_report_value tests.$test_index.state)" != "Success" ||
@@ -280,6 +282,6 @@ for expected_test in "${expected_tests[@]}"; do
   fi
 done
 
-print "Unreal automation passed: 62/62 Echoes tests, 0 warnings, 0 errors."
+print "Unreal automation passed: 64/64 Echoes tests, 0 warnings, 0 errors."
 print "Player SaveGames guard passed: sampled tree unchanged; scoped storage empty."
 print "Evidence report: $report"

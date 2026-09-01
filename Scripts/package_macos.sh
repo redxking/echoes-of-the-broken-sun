@@ -30,9 +30,9 @@ approved_git_version="git version 2.55.0"
 approved_git_resolved_path="/opt/homebrew/Cellar/git/2.55.0/bin/git"
 approved_git_sha256="9048038886ac36210fbb616b49b0707465f63683cb04e33a2013baf95f746938"
 approved_git_lfs_path="/opt/homebrew/bin/git-lfs"
-approved_git_lfs_version="git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)"
-approved_git_lfs_resolved_path="/opt/homebrew/Cellar/git-lfs/3.7.1/bin/git-lfs"
-approved_git_lfs_sha256="8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"
+approved_git_lfs_version="git-lfs/3.8.0 (GitHub; darwin arm64; go 1.27.0)"
+approved_git_lfs_resolved_path="/opt/homebrew/Cellar/git-lfs/3.8.0/bin/git-lfs"
+approved_git_lfs_sha256="8e4ed79ff8562870a7f3b88993c221994e2bf44f8c65b930764b3f0ab0fcefa5"
 approved_origin_url="https://github.com/redxking/echoes-of-the-broken-sun.git"
 git_path="$(command -v git)"
 git_lfs_path="$(command -v git-lfs)"
@@ -56,7 +56,7 @@ git_version="$($git_resolved_path --version)"
 git_lfs_version="$($git_lfs_resolved_path version)"
 if [[ "$git_version" != "$approved_git_version" ||
       "$git_lfs_version" != "$approved_git_lfs_version" ]]; then
-  print -u2 "Packaging requires the reviewed Git 2.55.0 and Git LFS 3.7.1 tool identities."
+  print -u2 "Packaging requires the reviewed Git 2.55.0 and Git LFS 3.8.0 tool identities."
   exit 2
 fi
 git() {

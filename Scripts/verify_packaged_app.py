@@ -28,10 +28,10 @@ EXPECTED_GIT_VERSION = "git version 2.55.0"
 EXPECTED_GIT_RESOLVED_PATH = "/opt/homebrew/Cellar/git/2.55.0/bin/git"
 EXPECTED_GIT_SHA256 = "9048038886ac36210fbb616b49b0707465f63683cb04e33a2013baf95f746938"
 EXPECTED_GIT_LFS_PATH = "/opt/homebrew/bin/git-lfs"
-EXPECTED_GIT_LFS_VERSION = "git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)"
-EXPECTED_GIT_LFS_RESOLVED_PATH = "/opt/homebrew/Cellar/git-lfs/3.7.1/bin/git-lfs"
+EXPECTED_GIT_LFS_VERSION = "git-lfs/3.8.0 (GitHub; darwin arm64; go 1.27.0)"
+EXPECTED_GIT_LFS_RESOLVED_PATH = "/opt/homebrew/Cellar/git-lfs/3.8.0/bin/git-lfs"
 EXPECTED_GIT_LFS_SHA256 = (
-    "8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"
+    "8e4ed79ff8562870a7f3b88993c221994e2bf44f8c65b930764b3f0ab0fcefa5"
 )
 EXPECTED_ORIGIN_URL = "https://github.com/redxking/echoes-of-the-broken-sun.git"
 GIT_ENVIRONMENT_PREFIX = "GIT_"

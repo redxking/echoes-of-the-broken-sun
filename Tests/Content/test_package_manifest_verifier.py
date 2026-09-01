@@ -264,7 +264,7 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     f"git_sha256={digest(git_binary)}",
                     f"git_lfs_path={git_lfs_binary}",
                     f"git_lfs_resolved_path={git_lfs_resolved}",
-                    "git_lfs_version=git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)",
+                    "git_lfs_version=git-lfs/3.8.0 (GitHub; darwin arm64; go 1.27.0)",
                     f"git_lfs_sha256={digest(git_lfs_binary)}",
                     "developer_dir=/Applications/Xcode.app/Contents/Developer",
                     "xcode=Xcode 26.6;Build version 17F113",
@@ -401,7 +401,7 @@ class PackageManifestVerifierTests(unittest.TestCase):
                     "source_index_concealment_scope=git-ls-files-v-and-f-non-H-records",
                     "source_index_concealment_evidence=EchoesOfTheBrokenSun.source-index-concealment.txt",
                     f"source_index_concealment_sha256={digest(evidence_paths['EchoesOfTheBrokenSun.source-index-concealment.txt'])}",
-                    "git_lfs_version=git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)",
+                    "git_lfs_version=git-lfs/3.8.0 (GitHub; darwin arm64; go 1.27.0)",
                     f"git_lfs_path={git_lfs_binary}",
                     f"git_lfs_resolved_path={git_lfs_resolved}",
                     f"git_lfs_sha256={digest(git_lfs_binary)}",
@@ -1143,7 +1143,7 @@ class PackageManifestVerifierTests(unittest.TestCase):
             source,
         )
         self.assertIn(
-            'approved_git_lfs_sha256="8a62ba6b8bc9ab15cae4b2704c434568b2d8bd4bda9468a0d48fb70131191501"',
+            'approved_git_lfs_sha256="8e4ed79ff8562870a7f3b88993c221994e2bf44f8c65b930764b3f0ab0fcefa5"',
             source,
         )
         self.assertIn(f'git_environment_policy="{GIT_ENVIRONMENT_POLICY}"', source)

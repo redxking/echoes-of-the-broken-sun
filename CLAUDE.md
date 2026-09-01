@@ -89,7 +89,7 @@ env TMPDIR="$(getconf DARWIN_USER_TEMP_DIR)" ./Scripts/run_unreal_tests.sh    # 
    `nohup … </dev/null > /tmp/echoes-verify/<name>.log 2>&1 &` — then poll with `sleep 50; tail`. Bash
    block-buffers redirected stdout, so write explicit progress markers with `>>` if you need to watch phases.
 4. **`Tests/Content/test_package_manifest_verifier.py` cannot run on Linux.** It pins
-   `/opt/homebrew/bin/git` 2.55.0 and `git-lfs` 3.7.1. Its Linux failure is never a regression.
+   `/opt/homebrew/bin/git` 2.55.0 and `git-lfs` 3.8.0. Its Linux failure is never a regression.
 
 Storage discipline: stop prototype builds below 10 GiB free on the internal volume, restore 12 GiB before
 large imports, 60 GiB before packaging. The Seagate volume must stay mounted.
