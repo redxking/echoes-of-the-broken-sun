@@ -1365,7 +1365,44 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             DegradedTopologyWorld.ForwardErrorMessages(this);
             return false;
         }
+        const echoes::sim::EntityId DamagedSeedId = DamagedSeed->id;
+        const echoes::sim::Vec2 DamagedSeedSite = DamagedSeed->position;
         DamagedSeed->hitPoints = 0;
+        DegradedSimulation->Step();
+        const auto IsDamagedSeedAbsent = [
+            DegradedBridge,
+            DamagedSeedId,
+            DamagedSeedSite]()
+        {
+            if (DegradedBridge->FindEntity(DamagedSeedId) != nullptr)
+            {
+                return false;
+            }
+            const echoes::sim::Simulation* CurrentSimulation =
+                DegradedBridge->GetSimulation();
+            if (CurrentSimulation == nullptr)
+            {
+                return false;
+            }
+            for (const echoes::sim::Entity& Entity :
+                 CurrentSimulation->Entities())
+            {
+                if (Entity.type == echoes::sim::EntityType::Dropoff &&
+                    Entity.position == DamagedSeedSite)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if (!TestTrue(
+                TEXT("Simulation cleanup removes the damaged seed ID and authored-site Dropoff before checkpointing"),
+                IsDamagedSeedAbsent()))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
         TArray<uint8> CurrentTopologyBytes;
         const bool bCurrentDegradedCheckpointWritten =
             DegradedBridge->QuickSaveScenario(Feedback) &&
@@ -1374,38 +1411,33 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 *LegacyTopologyQuickSavePath) &&
             CurrentTopologyBytes.Num() > 16 &&
             CurrentTopologyBytes[11] == 2;
-        DamagedSeed->hitPoints = DamagedSeed->maxHitPoints;
         if (!TestTrue(
-                TEXT("A degraded seed snapshot is written with the current topology revision"),
-                bCurrentDegradedCheckpointWritten) ||
-            !TestTrue(
-                TEXT("QuickLoad accepts the current-format degraded seed snapshot"),
+                TEXT("A checkpoint without the cleaned-up seed is written with topology revision two"),
+                bCurrentDegradedCheckpointWritten))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (!TestTrue(
+                TEXT("QuickLoad accepts the current-format checkpoint without the cleaned-up seed"),
                 DegradedBridge->QuickLoadScenario(Feedback)))
         {
             DegradedBridge->StopPrototypeScenario();
             DegradedTopologyWorld.ForwardErrorMessages(this);
             return false;
         }
-        const echoes::sim::Entity* ReloadedDamagedSeed = nullptr;
-        for (const echoes::sim::Entity& Entity :
-             DegradedBridge->GetSimulation()->Entities())
+        if (!TestTrue(
+                TEXT("QuickLoad preserves the cleaned-up seed absence and synchronization phase"),
+                IsDamagedSeedAbsent() &&
+                    DegradedBridge->GetTermsOfContinuancePhase() ==
+                        EEchoesTermsOfContinuancePhase::
+                            SynchronizeNetworks))
         {
-            if (Entity.owner ==
-                    UEchoesSimulationSubsystem::LocalPlayerId &&
-                Entity.faction ==
-                    echoes::sim::Faction::MeridianCompact &&
-                Entity.type == echoes::sim::EntityType::Dropoff &&
-                Entity.position ==
-                    ReshapePlan.SeedPowerLinkSites[0])
-            {
-                ReloadedDamagedSeed = &Entity;
-                break;
-            }
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
         }
-        TestTrue(
-            TEXT("QuickLoad reconstructs the degraded seed state instead of rejecting it as an old topology"),
-            ReloadedDamagedSeed != nullptr &&
-                ReloadedDamagedSeed->hitPoints <= 0);
         DegradedBridge->StopPrototypeScenario();
         DegradedTopologyWorld.ForwardErrorMessages(this);
     }
