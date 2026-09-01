@@ -77,7 +77,7 @@ git_lfs_restrictive_config_records() {
   git_lfs env 2>/dev/null |
     /usr/bin/awk '/^FetchInclude=|^FetchExclude=/ { print }'
 }
-export PATH="${git_resolved_path:h}:${git_lfs_resolved_path:h}:$PATH"
+export PATH="${approved_git_path:h}:${approved_git_lfs_path:h}:$PATH"
 if ! source_top_level="$(git -C "$project_root" rev-parse --path-format=absolute --show-toplevel 2>/dev/null)"; then
   print -u2 "Packaging could not resolve the canonical Git checkout top level."
   exit 10
