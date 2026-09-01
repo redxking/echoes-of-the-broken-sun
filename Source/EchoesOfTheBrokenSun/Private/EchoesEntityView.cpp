@@ -4,6 +4,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
@@ -802,6 +803,18 @@ void AEchoesEntityView::ApplyAuthoritativeState(
 
     if (bHadAuthoritativeState && HitPoints < PreviousHitPoints)
     {
+        // An owned entity just took authoritative damage: raise the
+        // rate-limited under-attack alert. Presentation only; the alert
+        // subsystem's per-class window absorbs sustained fire.
+        if (State.owner == 0 /* local player */ && GetWorld() != nullptr)
+        {
+            if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+                    GetWorld()
+                        ->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+            {
+                InterfaceAudio->PlayAlert(EEchoesAlertCue::UnderAttack);
+            }
+        }
         const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
         const bool bReducedFlashing =
             Settings != nullptr && Settings->IsReducedFlashingEnabled();

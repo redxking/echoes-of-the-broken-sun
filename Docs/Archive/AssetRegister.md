@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Authoritative
 created: 2026-08-28
-updated: 2026-08-30
+updated: 2026-09-01
 ---
 
 # Asset and License Register
@@ -26,6 +26,10 @@ This is the single authoritative provenance register and is edited in place. An 
 | ART-007 | Production-oriented Buried Causeway route kit: revised two-LOD mesh, UV-driven master material, and four material instances under `Content/Art/Generated` | `Scripts/generate_art_assets.py`, executed in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original work; generated only from project code and Unreal-provided geometry/material operations | Runtime Buried Causeway presentation and production-pipeline acceptance | Integrated production-oriented candidate; not final environment art |
 | ART-008 | Production-oriented Folded Verge route kit: revised two-LOD mesh, UV-driven master material, and four material instances under `Content/Art/Generated` | `Scripts/generate_art_assets.py`, executed in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original work; generated only from project code and Unreal-provided geometry/material operations | Runtime Folded Verge presentation and production-pipeline acceptance | Integrated production-oriented candidate; not final environment art |
 | AUDIO-001 | Three mono PCM sources under `Content/Audio/Source` and imported SoundWave assets under `Content/Audio/Generated` | `Scripts/generate_audio_assets.py`, executed in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Accepted-command and faction-distinct functional-loss confirmation | Integrated presentation-audio candidate; not final mix or complete audio family |
+| AUDIO-002 | Twelve interface and alert cues (`UI_*`, `ALERT_*`) under `Content/Audio/Source` and imported SoundWave assets under `/Game/Audio/Generated` | `Scripts/echoes_audio_synth.py` revision `interface-audio-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Menu focus/select/confirm/reject, panel open/close, brief advance, and five rate-limited alerts | Imported audio candidates; runtime routing and mix qualification pending |
+| AUDIO-003 | Eighteen gameplay cues (`SFX_Weapon*`, `SFX_Impact*`, Matter, construction, production, research, Well, Reshape) under `Content/Audio/Source` and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `gameplay-audio-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Authoritative gameplay event confirmation | Imported audio candidates; event routing and coverage test pending |
+| AUDIO-004 | Fifteen music cues (title, three faction themes, three act beds, tension/combat layers, victory/defeat, four ending stingers) as looping/one-shot stereo sources and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `music-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Title/faction/act music, threat layers, and result punctuation | Imported audio candidates; rendered state-transition capture and mix qualification pending |
+| AUDIO-005 | Five looping stereo ambience beds (Glass Scar, Lume Reach, ark-city, Crownfall, Future Well proximity) and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `ambience-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Site ambience and Well proximity presentation | Imported audio candidates; rendered per-site capture and masking measurement pending |
 | CONCEPT-001 | Four 2x2 Meridian/Kharuun unit and structure presentation sheets under `site/assets/concepts` | OpenAI image generation through Codex, 2026-08-29; exact prompts below; no source images | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Arsenal visual targets | Development concept reference; not a runtime or production asset |
 | CONCEPT-002 | Four-state Future Well presentation sheet at `site/assets/concepts/future-well-states.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Future Well visual target | Development concept reference; not a runtime or production asset |
 | CONCEPT-003 | Four-view Glass Scar environment and route presentation sheet at `site/assets/concepts/glass-scar-routes.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Glass Scar visual target | Development concept reference; not a runtime or production asset |
@@ -130,6 +134,28 @@ This is the single authoritative provenance register and is edited in place. An 
 - Integer PCM inspection recorded peak/RMS full-scale ratios of `0.374603/0.154609` for Command, `0.508728/0.181148` for Meridian, and `0.467834/0.155841` for Kharuun; absolute DC offset remained below `0.0015` full scale. These are structural signal measurements, not loudness, perceptual quality, hearing-safety, or mastering evidence.
 - Exact standard and reduced-dynamic-range Metal reviews each loaded and played all three cues. Standard command/destruction multipliers were `0.56/0.96`; reduced values were `0.68/0.74`. Both reviews exposed effects-volume and reduced-dynamic-range labels, used the 80 ms command and 140 ms destruction rate limits, and exited normally. Standard/reduced log SHA-256 values are `524ff5433d2e3af796b6c38b9b7dbc6d27e80f53ecb939b61df75ce9869efa58` and `cbe16a799169795971501824dafdfb89d0b935d56859737e458b789f8230c654`. The first reduced visual inspection caught a transient clipped redraw and was rejected; the stable redraw was accepted. No queried project/audio warning/error, fatal, assertion, or ensure marker was present.
 - These records accept provenance, exact source and asset identity, file structure, runtime loading, 2D/spatial routing, volume/mute and reduced-dynamic-range behavior, bounded rate limits, and two controlled live playback branches. They do not establish subjective listening quality, a final mix/master, music, ambience, voice, complete alerts, broad simultaneous-combat mixing, hearing-safety evaluation, package behavior, performance, or final audio.
+
+## AUDIO-002 through AUDIO-005 generation record
+
+- Generator: `Scripts/echoes_audio_synth.py` (pure Python, editor-independent); import and audit:
+  `Scripts/generate_audio_assets.py` through `Scripts/generate_audio_assets.sh` in Unreal Engine 5.8.2.
+- 2026-09-01: all 54 registered cues (4 `presentation-audio-v1`, 12 `interface-audio-v1`,
+  18 `gameplay-audio-v1`, 15 `music-v1`, 5 `ambience-v1`) synthesized to
+  `Content/Audio/Source` as 48 kHz 16-bit PCM WAV, mono for one-shots and stereo for music and
+  ambience, every cue under the 0.96 true-peak ceiling. A second synthesis run reused all 54
+  sources byte-identically (`action=reused` 54/54), proving byte-idempotence under the recorded
+  revisions. Aggregate manifest SHA-256 over the per-cue sha256 lines:
+  `10368c73bee52a344af5bd30103c01818c4fdc56c9d6e5bbd3b378971df1f560`; per-cue digests, byte
+  sizes, and peak/RMS are in the retained generation log
+  (`WorkstreamControl/evidence/demo-audio-families-*/audio-sources.log`).
+- The same date's editor import produced the 54 SoundWave assets under `/Game/Audio/Generated`
+  with creator, provenance, role, category, revision, and looping metadata; the wrapper audit
+  (`cues=54 revisions=5 … sourcesOriginal=true thirdPartySamples=false`) passed, and an
+  immediate re-run reused every asset without modification.
+- No recording, sample library, generated-model output, Marketplace asset, or other third-party
+  audio is present in any of these cues. Structural peak/RMS measurements are not loudness,
+  perceptual-quality, hearing-safety, or mastering evidence. These families do not establish
+  runtime event coverage, rendered playback, the qualified mix, packaged behavior, or final audio.
 
 ## CONCEPT-001 exact prompt record
 

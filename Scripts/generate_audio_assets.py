@@ -53,11 +53,27 @@ def import_sound(spec: synth.CueSpec) -> unreal.SoundWave:
         revision = unreal.EditorAssetLibrary.get_metadata_tag(
             existing, "Echoes.AssetRevision"
         )
-        category = unreal.EditorAssetLibrary.get_metadata_tag(
-            existing, "Echoes.AudioCategory"
-        )
-        if revision == spec.revision and category == spec.category:
-            unreal.log(f"[ECHOES_AUDIO_ASSET] path={path} action=reused")
+        if revision == spec.revision:
+            # Same revision means the imported PCM is current. Refresh the
+            # descriptive metadata in place rather than deleting the asset:
+            # a force-delete-then-reimport of the same path inside one editor
+            # session fails, and the source bytes have not changed.
+            category = unreal.EditorAssetLibrary.get_metadata_tag(
+                existing, "Echoes.AudioCategory"
+            )
+            if category != spec.category:
+                unreal.EditorAssetLibrary.set_metadata_tag(
+                    existing, "Echoes.AudioCategory", spec.category
+                )
+                unreal.EditorAssetLibrary.set_metadata_tag(
+                    existing, "Echoes.Role", spec.role
+                )
+                unreal.EditorAssetLibrary.save_loaded_asset(existing, False)
+                unreal.log(
+                    f"[ECHOES_AUDIO_ASSET] path={path} action=retagged"
+                )
+            else:
+                unreal.log(f"[ECHOES_AUDIO_ASSET] path={path} action=reused")
             return existing
         if not unreal.EditorAssetLibrary.delete_asset(path):
             raise RuntimeError(f"Could not replace audio asset: {path}")

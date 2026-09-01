@@ -389,6 +389,17 @@ private:
     void ServerSubmitNetworkResumeCredential(const FString& Credential);
 
     [[nodiscard]] UEchoesGameInstance* GetEchoesGameInstance() const;
+
+    /** Title, deployment, and result music/ambience selection. Presentation
+     *  only: these read presented state and never feed validation or the
+     *  simulation. */
+    void PresentTitleAudio();
+    void PresentDeploymentAudio();
+    void PresentResultAudio(bool bSuccess);
+    void PresentEndingAudio(
+        EEchoesFinalResolution RecordedResolution,
+        bool bSuccess);
+
     bool HandleOnlineEndpointKey(const FInputKeyEventArgs& Params);
     void CopyOnlineHostEndpoint();
 #if !UE_BUILD_SHIPPING

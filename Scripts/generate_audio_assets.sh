@@ -15,18 +15,19 @@ fi
 
 mkdir -p "$project_root/Saved/Logs"
 
+
 "$editor" "$project" \
   -unattended -nop4 -nosplash -nullrhi -NoSound \
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! rg -q '\[ECHOES_AUDIO_ASSET_READY\].*cues=54 revisions=5 sourceRate=48000.*effects=21 interface=13 music=15 ambience=5 dialogue=0.*sourcesOriginal=true thirdPartySamples=false.*runtimeRoutingValidated=false runtimeConcurrencyValidated=false.*finalAudio=false' "$log"; then
+if ! grep -Eq '\[ECHOES_AUDIO_ASSET_READY\].*cues=54 revisions=5 sourceRate=48000.*effects=21 interface=13 music=15 ambience=5 dialogue=0.*sourcesOriginal=true thirdPartySamples=false.*runtimeRoutingValidated=false runtimeConcurrencyValidated=false.*finalAudio=false' "$log"; then
   print -u2 "The presentation-audio asset audit did not pass."
   print -u2 "Inspect: $log"
   exit 3
 fi
 
-if rg -q 'LogPython: Error:|LogAudio: Error:|LogEditorAssetSubsystem: Error:|LogInterchangeEngine: Error:' "$log"; then
+if grep -Eq 'LogPython: Error:|LogAudio: Error:|LogEditorAssetSubsystem: Error:|LogInterchangeEngine: Error:' "$log"; then
   print -u2 "The Unreal audio generator reported an error."
   print -u2 "Inspect: $log"
   exit 4

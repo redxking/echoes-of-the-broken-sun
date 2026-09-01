@@ -1,5 +1,6 @@
 #include "EchoesPlayerController.h"
 
+#include "EchoesAmbienceSubsystem.h"
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
@@ -8,6 +9,8 @@
 #include "EchoesGameInstance.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesHudLayout.h"
+#include "EchoesInterfaceAudioSubsystem.h"
+#include "EchoesMusicSubsystem.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -4884,6 +4887,154 @@ void AEchoesPlayerController::ReturnToSkirmishSetup()
         3600.0f);
 }
 
+void AEchoesPlayerController::PresentTitleAudio()
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+    if (UEchoesMusicSubsystem* Music =
+            World->GetSubsystem<UEchoesMusicSubsystem>())
+    {
+        Music->SetThreatLayers(false, false);
+        Music->SetMusicContext(EEchoesMusicContext::Title);
+    }
+    if (UEchoesAmbienceSubsystem* Ambience =
+            World->GetSubsystem<UEchoesAmbienceSubsystem>())
+    {
+        Ambience->SetWellProximity(false);
+        Ambience->SetAmbienceBed(EEchoesAmbienceBed::None);
+    }
+}
+
+void AEchoesPlayerController::PresentDeploymentAudio()
+{
+    UWorld* World = GetWorld();
+    UEchoesSimulationSubsystem* Bridge =
+        World != nullptr
+            ? World->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (World == nullptr || Bridge == nullptr)
+    {
+        return;
+    }
+    UEchoesMusicSubsystem* Music =
+        World->GetSubsystem<UEchoesMusicSubsystem>();
+    UEchoesAmbienceSubsystem* Ambience =
+        World->GetSubsystem<UEchoesAmbienceSubsystem>();
+
+    const EEchoesOperationMode Operation = Bridge->GetOperationMode();
+    EEchoesAmbienceBed Bed = EEchoesAmbienceBed::GlassScar;
+    if (Operation == EEchoesOperationMode::Skirmish)
+    {
+        const FEchoesSkirmishSetup Setup = Bridge->GetActiveSkirmishSetup();
+        if (Setup.MapPreset == EEchoesSkirmishMapPreset::CrownfallBasin)
+        {
+            Bed = EEchoesAmbienceBed::Crownfall;
+        }
+        if (Music != nullptr)
+        {
+            Music->SetMusicContext(
+                EEchoesMusicContext::FactionTheme,
+                Setup.LocalFaction);
+        }
+    }
+    else
+    {
+        // Mission index 1..15 in declaration order; acts break 5/10/15.
+        const int32 MissionIndex =
+            static_cast<int32>(Operation) -
+            static_cast<int32>(EEchoesOperationMode::CampaignPrologue) + 1;
+        const int32 ActIndex =
+            MissionIndex <= 5 ? 1 : MissionIndex <= 10 ? 2 : 3;
+        // Sites the Bible pins to a bed: the ark-city grid missions, Lume
+        // Reach, and the Act III Crownfall approach. The remaining missions
+        // play on Soryn's open vitrified terrain and use the Glass Scar wind.
+        if (Operation == EEchoesOperationMode::CampaignCityReserve ||
+            Operation == EEchoesOperationMode::CampaignReserveAuthority)
+        {
+            Bed = EEchoesAmbienceBed::ArkCity;
+        }
+        else if (Operation == EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            Bed = EEchoesAmbienceBed::LumeReach;
+        }
+        else if (MissionIndex >= 11)
+        {
+            Bed = EEchoesAmbienceBed::Crownfall;
+        }
+        if (Music != nullptr)
+        {
+            Music->SetMusicContext(
+                EEchoesMusicContext::ActBed,
+                echoes::sim::Faction::MeridianCompact,
+                ActIndex);
+        }
+    }
+    if (Ambience != nullptr)
+    {
+        Ambience->SetAmbienceBed(Bed);
+    }
+}
+
+void AEchoesPlayerController::PresentResultAudio(bool bSuccess)
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+    if (UEchoesMusicSubsystem* Music =
+            World->GetSubsystem<UEchoesMusicSubsystem>())
+    {
+        Music->SetThreatLayers(false, false);
+        Music->PlayStinger(
+            bSuccess ? EEchoesMusicStinger::Victory
+                     : EEchoesMusicStinger::Defeat);
+    }
+}
+
+void AEchoesPlayerController::PresentEndingAudio(
+    EEchoesFinalResolution RecordedResolution,
+    bool bSuccess)
+{
+    if (!bSuccess || RecordedResolution == EEchoesFinalResolution::None)
+    {
+        PresentResultAudio(bSuccess);
+        return;
+    }
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+    if (UEchoesMusicSubsystem* Music =
+            World->GetSubsystem<UEchoesMusicSubsystem>())
+    {
+        Music->SetThreatLayers(false, false);
+        EEchoesMusicStinger Stinger = EEchoesMusicStinger::EndingRestoration;
+        switch (RecordedResolution)
+        {
+            case EEchoesFinalResolution::Restoration:
+                break;
+            case EEchoesFinalResolution::ControlledStabilization:
+                Stinger = EEchoesMusicStinger::EndingStabilization;
+                break;
+            case EEchoesFinalResolution::Extinguishment:
+                Stinger = EEchoesMusicStinger::EndingExtinguishment;
+                break;
+            case EEchoesFinalResolution::OpenEvolution:
+                Stinger = EEchoesMusicStinger::EndingOpenEvolution;
+                break;
+            case EEchoesFinalResolution::None:
+            default:
+                break;
+        }
+        Music->PlayStinger(Stinger);
+    }
+}
+
 void AEchoesPlayerController::PresentTitleScreen()
 {
     UEchoesSimulationSubsystem* Bridge =
@@ -4925,6 +5076,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     Bridge->SetScenarioPaused(true);
+    PresentTitleAudio();
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
     SetStatusMessage(
@@ -5224,7 +5376,13 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     }
     SynchronizeBoundCampaignProtocol();
     bMissionBriefingVisible = false;
+    if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+            GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+    {
+        InterfaceAudio->PlayInterfaceCue(EEchoesInterfaceCue::BriefAdvance);
+    }
     Bridge->SetScenarioPaused(false);
+    PresentDeploymentAudio();
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
@@ -6518,6 +6676,15 @@ void AEchoesPlayerController::NotifyMatchFinished(
     }
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
+    if (Outcome != echoes::sim::MatchOutcome::Draw)
+    {
+        PresentResultAudio(OutcomeBelongsToSeat(
+            Outcome,
+            GetNetMode() == NM_Client &&
+                    NetworkSeat < echoes::sim::kMaximumPlayers
+                ? NetworkSeat
+                : UEchoesSimulationSubsystem::LocalPlayerId));
+    }
     FString Message =
         TEXT("DRAW — both Command Cores fell in the same deterministic tick.");
     if (OutcomeBelongsToSeat(
@@ -6593,6 +6760,7 @@ void AEchoesPlayerController::NotifyCampaignPrologueFinished(
     bCampaignResult = true;
     PresentedCampaignOperation = EEchoesOperationMode::CampaignPrologue;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     CampaignConsequence = Consequence;
     RecordedCampaignConsequence = RecordedConsequence;
     CampaignCommitStatus = CommitStatus;
@@ -6653,6 +6821,7 @@ void AEchoesPlayerController::NotifySevenAccountsFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignSevenAccounts;
     CampaignConsequence = Consequence;
@@ -6711,6 +6880,7 @@ void AEchoesPlayerController::NotifyCityReserveFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignCityReserve;
     CampaignConsequence = Consequence;
@@ -6769,6 +6939,7 @@ void AEchoesPlayerController::NotifyUnburiedRoadFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignUnburiedRoad;
     CampaignConsequence = Consequence;
@@ -6827,6 +6998,7 @@ void AEchoesPlayerController::NotifyTermsOfContinuanceFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignTermsOfContinuance;
     CampaignConsequence = Consequence;
@@ -6886,6 +7058,7 @@ void AEchoesPlayerController::NotifyNamesWithoutBirthsFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignNamesWithoutBirths;
     CampaignConsequence = Consequence;
@@ -6944,6 +7117,7 @@ void AEchoesPlayerController::NotifyShapeOfSilenceFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignShapeOfSilence;
     CampaignConsequence = Consequence;
@@ -7003,6 +7177,7 @@ void AEchoesPlayerController::NotifyShapeBesideUsFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignShapeBesideUs;
     CampaignConsequence = Consequence;
@@ -7064,6 +7239,7 @@ void AEchoesPlayerController::NotifyReserveAuthorityFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignReserveAuthority;
     CampaignConsequence = Consequence;
@@ -7133,6 +7309,7 @@ void AEchoesPlayerController::NotifyChoirAtLumeReachFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignChoirAtLumeReach;
     CampaignConsequence = Consequence;
@@ -7209,6 +7386,7 @@ void AEchoesPlayerController::NotifyNoNeutralLedgerFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignNoNeutralLedger;
     CampaignConsequence = Consequence;
@@ -7290,6 +7468,7 @@ void AEchoesPlayerController::NotifyFutureThatWonFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignFutureThatWon;
     CampaignConsequence = Consequence;
@@ -7371,6 +7550,7 @@ void AEchoesPlayerController::NotifyAssemblyOfTheMissingFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignAssemblyOfTheMissing;
     CampaignConsequence = Consequence;
@@ -7452,6 +7632,7 @@ void AEchoesPlayerController::NotifySeveralVoicesOneCommandFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentResultAudio(bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignSeveralVoicesOneCommand;
     CampaignConsequence = Consequence;
@@ -7533,6 +7714,7 @@ void AEchoesPlayerController::NotifyBrokenSunFinished(
     bMatchResultVisible = true;
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
+    PresentEndingAudio(RecordedResolution, bSuccess);
     PresentedCampaignOperation =
         EEchoesOperationMode::CampaignTheBrokenSun;
     CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
@@ -11227,6 +11409,11 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
                 : 0;
         bTechnologyPanelWasScenarioPaused = Bridge->IsScenarioPaused();
         bTechnologyPanelVisible = true;
+        if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+                GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+        {
+            InterfaceAudio->PlayInterfaceCue(EEchoesInterfaceCue::MenuOpen);
+        }
         bSelectionButtonDown = false;
         Bridge->SetScenarioPaused(true);
         SetIgnoreMoveInput(true);
@@ -11632,6 +11819,13 @@ void AEchoesPlayerController::TogglePauseMenu()
         return;
     }
     bPauseMenuVisible = !bPauseMenuVisible;
+    if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+            GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+    {
+        InterfaceAudio->PlayInterfaceCue(
+            bPauseMenuVisible ? EEchoesInterfaceCue::MenuOpen
+                              : EEchoesInterfaceCue::MenuClose);
+    }
     bReturnToOperationsConfirmationArmed = false;
     ReturnToOperationsConfirmationExpiresAt = 0.0;
     Bridge->SetScenarioPaused(bPauseMenuVisible);
@@ -11936,6 +12130,17 @@ void AEchoesPlayerController::SetStatusMessage(
     }
     StatusMessageExpiresAt =
         GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() + DisplaySeconds : 0.0;
+    // A leading bracketed token is this controller's stable failure-reason
+    // convention. Pair every such rejection with the distinct rejection cue;
+    // the subsystem's admission window absorbs repeat-key bursts.
+    if (StatusMessage.StartsWith(TEXT("[")) && GetWorld() != nullptr)
+    {
+        if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+                GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+        {
+            InterfaceAudio->PlayInterfaceCue(EEchoesInterfaceCue::Reject);
+        }
+    }
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLAYER_FEEDBACK] %s"), *StatusMessage);
 }
 

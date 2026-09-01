@@ -116,8 +116,12 @@ modifications and recent unqualified commits at the time of writing.
 - Fog, atmosphere, health bars, ownership markers, minimap, and most HUD presentation are code-authored or
   Engine-provided prototypes.
 - No production textures, no character or machine animation, no Niagara effects, no transparent dissolve.
-- Audio consists of exactly four synthesized cues: one command confirmation and three faction destruction
-  sounds. No music, ambience, interface audio, alerts, weapon audio, or mix architecture exists.
+- 2026-09-01 update: 54 registered synthesized cues now exist (interface, alerts, gameplay,
+  fifteen music cues, five ambience beds) as byte-idempotent sources and imported SoundWaves,
+  with a five-category submix graph, independent per-category volumes, whole-graph reduced
+  dynamic range, and music/ambience runtime managers wired to title, deployment, and results.
+  Gameplay-event audio routing (B4), interface-event routing (B5), rendered playback
+  qualification, and the mix gates 15–19 remain open.
 - The earlier packaged profile exceeded the GPU and render-thread budgets and failed the memory-slope
   diagnostic; the later package has never been profiled.
 - No Developer ID signature, no notarization, no installer, no clean-machine result.
@@ -452,10 +456,10 @@ Dependencies are hard: do not accept a gate whose prerequisite has not passed.
 
 | # | Gate | Track | Depends on | State |
 |---|---|---|---|---|
-| 1 | Full automation suite green on current `main` with correct `TMPDIR` | C1 | — | NOT RUN |
-| 2 | Native sim 37/37 in three configurations on current `main` | C1 | — | NOT RUN |
-| 3 | Content suites 123/123 on current `main` | C1 | — | NOT RUN |
-| 4 | Campaign plan-17 focused paths pass | C1 | 1 | NOT RUN |
+| 1 | Full automation suite green on current `main` with correct `TMPDIR` | C1 | — | PASS — 56/56 at `39955ea` 2026-09-01, then 57/57 (`a470eb9`) and 58/58 with the audio-mix and music/ambience tests; evidence `demo-gates-1-4-39955ea-*` |
+| 2 | Native sim 37/37 in three configurations on current `main` | C1 | — | PASS — 37/37 optimized/debug/ASan+UBSan at `39955ea` 2026-09-01; evidence `demo-gates-1-4-39955ea-*` |
+| 3 | Content suites 123/123 on current `main` | C1 | — | PASS — 7 suites / 123 tests at `39955ea` 2026-09-01; re-passed inside every later `build_editor.sh` run |
+| 4 | Campaign plan-17 focused paths pass | C1 | 1 | PASS — every Campaign test including `FreshJourney` (all four journeys, M01–M15) reports Success inside gate 1's run at `39955ea` 2026-09-01 |
 | 5 | Exposure and lighting corrected; no clipped highlights in packaged capture | A1 | 1 | NOT RUN |
 | 6 | No debug overlay or prototype text in a shipping-configuration capture | A2 | 5 | NOT RUN |
 | 7 | Production textures and material instances registered and byte-idempotent | A3 | 5 | NOT RUN |
@@ -465,7 +469,7 @@ Dependencies are hard: do not accept a gate whose prerequisite has not passed.
 | 11 | Production fog and shroud within the 1.5 ms budget | A7 | 5 | NOT RUN |
 | 12 | Interface art complete at five resolutions, standard and high contrast | A8 | 5 | NOT RUN |
 | 13 | Act and ending interludes rendered and skippable with subtitles | A9 | 8, 12 | NOT RUN |
-| 14 | Submix graph with five independent category volumes | B1 | — | NOT RUN |
+| 14 | Submix graph with five independent category volumes | B1 | — | PASS — `Echoes.Runtime.Audio.MixArchitecture` green in 57/57 at `a470eb9` 2026-09-01; evidence `demo-gate14-mix-architecture-*`. Category gains verified at the graph; audible qualification stays with gate 19 |
 | 15 | Music set registered with loudness and peak measured | B2 | 14 | NOT RUN |
 | 16 | Ambience beds per site, not masking combat cues | B3 | 14 | NOT RUN |
 | 17 | Gameplay audio coverage — no unmapped authoritative event | B4 | 14 | NOT RUN |

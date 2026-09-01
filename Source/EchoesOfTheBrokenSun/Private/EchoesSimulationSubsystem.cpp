@@ -7,6 +7,7 @@
 #include "EchoesFogView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
@@ -16495,6 +16496,100 @@ void UEchoesSimulationSubsystem::EmitDestructionPresentation(
     }
 }
 
+void UEchoesSimulationSubsystem::UpdateAlertPresentation()
+{
+    if (!Simulation.IsValid())
+    {
+        AlertBaselineSimulation = nullptr;
+        return;
+    }
+    const echoes::sim::Simulation* Current = Simulation.Get();
+    const uint64 Tick = Current->CurrentTick();
+    const echoes::sim::PlayerState* Local =
+        Current->FindPlayer(LocalPlayerId);
+    if (Local == nullptr)
+    {
+        AlertBaselineSimulation = nullptr;
+        return;
+    }
+
+    const bool bRebaseline = AlertBaselineSimulation != Current ||
+        Tick < AlertLastObservedTick;
+    AlertLastObservedTick = Tick;
+
+    // Owned units currently alive. Structures are excluded: unit emergence
+    // is what the production alert reports.
+    TSet<uint32> OwnedUnitIds;
+    for (const echoes::sim::Entity& Entity : Current->Entities())
+    {
+        const bool bUnit =
+            Entity.type == echoes::sim::EntityType::Worker ||
+            Entity.type == echoes::sim::EntityType::Soldier ||
+            Entity.type == echoes::sim::EntityType::HeavyUnit ||
+            Entity.type == echoes::sim::EntityType::ScoutUnit;
+        if (bUnit && Entity.owner == LocalPlayerId)
+        {
+            OwnedUnitIds.Add(Entity.id);
+        }
+    }
+
+    UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>()
+            : nullptr;
+
+    if (bRebaseline)
+    {
+        // A new scenario or a restored save: observe silently.
+        AlertBaselineSimulation = Current;
+        AlertKnownResearchMask = Local->completedResearchMask;
+        AlertKnownOwnedUnitIds = MoveTemp(OwnedUnitIds);
+        bAlertCapacityLowLatched = false;
+        return;
+    }
+
+    if (InterfaceAudio != nullptr)
+    {
+        if ((Local->completedResearchMask & ~AlertKnownResearchMask) != 0)
+        {
+            InterfaceAudio->PlayAlert(EEchoesAlertCue::ResearchComplete);
+        }
+        bool bNewUnit = false;
+        for (const uint32 UnitId : OwnedUnitIds)
+        {
+            if (!AlertKnownOwnedUnitIds.Contains(UnitId))
+            {
+                bNewUnit = true;
+                break;
+            }
+        }
+        if (bNewUnit)
+        {
+            InterfaceAudio->PlayAlert(EEchoesAlertCue::ProductionComplete);
+        }
+
+        const int32 Used = Current->PopulationUsed(LocalPlayerId);
+        const int32 Capacity = Current->PopulationCapacity(LocalPlayerId);
+        if (Capacity > 0)
+        {
+            // Edge-triggered at 7/8 full; re-arms below 3/4 so a hovering
+            // population does not retrigger through the rate limiter alone.
+            if (!bAlertCapacityLowLatched && Used * 8 >= Capacity * 7)
+            {
+                bAlertCapacityLowLatched = true;
+                InterfaceAudio->PlayAlert(EEchoesAlertCue::CapacityLow);
+            }
+            else if (bAlertCapacityLowLatched && Used * 4 < Capacity * 3)
+            {
+                bAlertCapacityLowLatched = false;
+            }
+        }
+    }
+
+    AlertKnownResearchMask = Local->completedResearchMask;
+    AlertKnownOwnedUnitIds = MoveTemp(OwnedUnitIds);
+}
+
 void UEchoesSimulationSubsystem::OnPreGarbageCollect()
 {
     const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
@@ -16627,6 +16722,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
         FVector WorldLocation = FVector::ZeroVector;
         echoes::sim::Faction Faction = echoes::sim::Faction::MeridianCompact;
         echoes::sim::EntityType Type = echoes::sim::EntityType::Worker;
+        uint8 Owner = echoes::sim::kNeutralPlayer;
     };
 
     bool bAllVisibleViewsReady = true;
@@ -16676,6 +16772,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
                 Presentation.WorldLocation = View->GetActorLocation();
                 Presentation.Faction = View->GetEntityFaction();
                 Presentation.Type = View->GetEntityType();
+                Presentation.Owner = View->GetOwnerPlayerId();
             }
         }
         EntityViews.Remove(RemovedId);
@@ -16739,7 +16836,22 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
             Presentation.WorldLocation,
             Presentation.Faction,
             Presentation.Type);
+        const bool bOwnedStructureLost =
+            Presentation.Owner == LocalPlayerId &&
+            (Presentation.Type == echoes::sim::EntityType::CommandCore ||
+             Presentation.Type == echoes::sim::EntityType::Dropoff ||
+             Presentation.Type == echoes::sim::EntityType::Barracks ||
+             Presentation.Type == echoes::sim::EntityType::UtilityStructure);
+        if (bOwnedStructureLost && GetWorld() != nullptr)
+        {
+            if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+                    GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+            {
+                InterfaceAudio->PlayAlert(EEchoesAlertCue::StructureLost);
+            }
+        }
     }
+    UpdateAlertPresentation();
     return bAllVisibleViewsReady;
 }
 

@@ -736,6 +736,12 @@ private:
     void OnPreGarbageCollect();
     void OnPostGarbageCollect();
     bool SyncEntityViews(bool bTeleportNewViews);
+
+    /** Research/production/capacity alert observation over authoritative
+     *  local-player state. Baseline-guarded so a fresh scenario or a restored
+     *  save re-observes silently instead of firing a burst of alerts.
+     *  Presentation only. */
+    void UpdateAlertPresentation();
     bool SpawnFogView();
     bool SyncFogView();
     bool SpawnTerrainView();
@@ -746,6 +752,14 @@ private:
     void DestroyTerrainView();
 
     TUniquePtr<echoes::sim::Simulation> Simulation;
+
+    // Alert-observation baseline. Rebuilt silently whenever the simulation
+    // instance changes or authoritative time moves backwards.
+    const echoes::sim::Simulation* AlertBaselineSimulation = nullptr;
+    uint64 AlertLastObservedTick = 0;
+    uint32 AlertKnownResearchMask = 0;
+    TSet<uint32> AlertKnownOwnedUnitIds;
+    bool bAlertCapacityLowLatched = false;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> EntityViews;
     UPROPERTY(Transient)
     TArray<TObjectPtr<AEchoesEntityView>> FreeEntityViews;
