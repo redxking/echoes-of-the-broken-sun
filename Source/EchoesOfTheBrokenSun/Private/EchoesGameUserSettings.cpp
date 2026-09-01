@@ -10,6 +10,17 @@ constexpr float MinimumCameraScale = 0.5f;
 constexpr float MaximumCameraScale = 2.0f;
 constexpr float MinimumEffectsVolume = 0.0f;
 constexpr float MaximumEffectsVolume = 1.0f;
+
+// A non-finite persisted volume is treated as silence rather than passed
+// through: the mix fails closed rather than emitting an unbounded gain.
+[[nodiscard]] float ClampVolume(float Value)
+{
+    if (!FMath::IsFinite(Value))
+    {
+        return 0.0f;
+    }
+    return FMath::Clamp(Value, MinimumEffectsVolume, MaximumEffectsVolume);
+}
 }
 
 UEchoesGameUserSettings* UEchoesGameUserSettings::Get()
@@ -33,6 +44,11 @@ void UEchoesGameUserSettings::SetToDefaults()
     CameraZoomScale = 1.0f;
     EffectsVolume = 1.0f;
     bReducedDynamicRange = false;
+    MasterVolume = 1.0f;
+    MusicVolume = 1.0f;
+    DialogueVolume = 1.0f;
+    InterfaceVolume = 1.0f;
+    AmbienceVolume = 1.0f;
 }
 
 void UEchoesGameUserSettings::ValidateSettings()
@@ -51,6 +67,11 @@ void UEchoesGameUserSettings::ValidateSettings()
         EffectsVolume,
         MinimumEffectsVolume,
         MaximumEffectsVolume);
+    MasterVolume = ClampVolume(MasterVolume);
+    MusicVolume = ClampVolume(MusicVolume);
+    DialogueVolume = ClampVolume(DialogueVolume);
+    InterfaceVolume = ClampVolume(InterfaceVolume);
+    AmbienceVolume = ClampVolume(AmbienceVolume);
 }
 
 float UEchoesGameUserSettings::GetHudScale() const
@@ -159,4 +180,110 @@ bool UEchoesGameUserSettings::IsReducedDynamicRangeEnabled() const
 void UEchoesGameUserSettings::SetReducedDynamicRangeEnabled(bool bEnabled)
 {
     bReducedDynamicRange = bEnabled;
+}
+
+float UEchoesGameUserSettings::GetMasterVolume() const
+{
+    return ClampVolume(MasterVolume);
+}
+
+void UEchoesGameUserSettings::SetMasterVolume(float NewVolume)
+{
+    MasterVolume = ClampVolume(NewVolume);
+}
+
+float UEchoesGameUserSettings::GetMusicVolume() const
+{
+    return ClampVolume(MusicVolume);
+}
+
+void UEchoesGameUserSettings::SetMusicVolume(float NewVolume)
+{
+    MusicVolume = ClampVolume(NewVolume);
+}
+
+float UEchoesGameUserSettings::GetDialogueVolume() const
+{
+    return ClampVolume(DialogueVolume);
+}
+
+void UEchoesGameUserSettings::SetDialogueVolume(float NewVolume)
+{
+    DialogueVolume = ClampVolume(NewVolume);
+}
+
+float UEchoesGameUserSettings::GetInterfaceVolume() const
+{
+    return ClampVolume(InterfaceVolume);
+}
+
+void UEchoesGameUserSettings::SetInterfaceVolume(float NewVolume)
+{
+    InterfaceVolume = ClampVolume(NewVolume);
+}
+
+float UEchoesGameUserSettings::GetAmbienceVolume() const
+{
+    return ClampVolume(AmbienceVolume);
+}
+
+void UEchoesGameUserSettings::SetAmbienceVolume(float NewVolume)
+{
+    AmbienceVolume = ClampVolume(NewVolume);
+}
+
+float UEchoesGameUserSettings::GetAudioCategoryVolume(
+    EEchoesAudioCategory Category) const
+{
+    switch (Category)
+    {
+        case EEchoesAudioCategory::Music:
+            return GetMusicVolume();
+        case EEchoesAudioCategory::Dialogue:
+            return GetDialogueVolume();
+        case EEchoesAudioCategory::Interface:
+            return GetInterfaceVolume();
+        case EEchoesAudioCategory::Ambience:
+            return GetAmbienceVolume();
+        case EEchoesAudioCategory::Effects:
+        default:
+            return GetEffectsVolume();
+    }
+}
+
+void UEchoesGameUserSettings::SetAudioCategoryVolume(
+    EEchoesAudioCategory Category,
+    float NewVolume)
+{
+    switch (Category)
+    {
+        case EEchoesAudioCategory::Music:
+            SetMusicVolume(NewVolume);
+            return;
+        case EEchoesAudioCategory::Dialogue:
+            SetDialogueVolume(NewVolume);
+            return;
+        case EEchoesAudioCategory::Interface:
+            SetInterfaceVolume(NewVolume);
+            return;
+        case EEchoesAudioCategory::Ambience:
+            SetAmbienceVolume(NewVolume);
+            return;
+        case EEchoesAudioCategory::Effects:
+        default:
+            SetEffectsVolume(NewVolume);
+            return;
+    }
+}
+
+FEchoesAudioMixVolumes UEchoesGameUserSettings::GetAudioMixVolumes() const
+{
+    FEchoesAudioMixVolumes Volumes;
+    Volumes.Master = GetMasterVolume();
+    Volumes.Music = GetMusicVolume();
+    Volumes.Dialogue = GetDialogueVolume();
+    Volumes.Interface = GetInterfaceVolume();
+    Volumes.Ambience = GetAmbienceVolume();
+    Volumes.Effects = GetEffectsVolume();
+    return Volumes;
 }

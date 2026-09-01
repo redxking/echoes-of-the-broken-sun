@@ -2,6 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameUserSettings.h"
+
+#include "EchoesAudioMix.h"
+
 #include "EchoesGameUserSettings.generated.h"
 
 /** Persisted presentation and accessibility controls owned by the local player. */
@@ -36,6 +39,27 @@ public:
     [[nodiscard]] bool IsReducedDynamicRangeEnabled() const;
     void SetReducedDynamicRangeEnabled(bool bEnabled);
 
+    [[nodiscard]] float GetMasterVolume() const;
+    void SetMasterVolume(float NewVolume);
+    [[nodiscard]] float GetMusicVolume() const;
+    void SetMusicVolume(float NewVolume);
+    [[nodiscard]] float GetDialogueVolume() const;
+    void SetDialogueVolume(float NewVolume);
+    [[nodiscard]] float GetInterfaceVolume() const;
+    void SetInterfaceVolume(float NewVolume);
+    [[nodiscard]] float GetAmbienceVolume() const;
+    void SetAmbienceVolume(float NewVolume);
+
+    /** Reads one category's player-facing volume by category. */
+    [[nodiscard]] float GetAudioCategoryVolume(
+        EEchoesAudioCategory Category) const;
+    /** Writes one category's player-facing volume by category. */
+    void SetAudioCategoryVolume(
+        EEchoesAudioCategory Category,
+        float NewVolume);
+    /** The complete master-plus-five-category volume set. */
+    [[nodiscard]] FEchoesAudioMixVolumes GetAudioMixVolumes() const;
+
 private:
     UPROPERTY(Config)
     float HudScale = 1.0f;
@@ -63,4 +87,19 @@ private:
 
     UPROPERTY(Config)
     bool bReducedDynamicRange = false;
+
+    UPROPERTY(Config)
+    float MasterVolume = 1.0f;
+
+    UPROPERTY(Config)
+    float MusicVolume = 1.0f;
+
+    UPROPERTY(Config)
+    float DialogueVolume = 1.0f;
+
+    UPROPERTY(Config)
+    float InterfaceVolume = 1.0f;
+
+    UPROPERTY(Config)
+    float AmbienceVolume = 1.0f;
 };
