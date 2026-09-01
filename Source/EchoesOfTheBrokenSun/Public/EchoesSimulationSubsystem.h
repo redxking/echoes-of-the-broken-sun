@@ -484,6 +484,11 @@ public:
     [[nodiscard]] FString GetOperationLabel() const;
     /** Resolves the exact next campaign operation from the validated ledger. */
     [[nodiscard]] FEchoesCampaignJourney GetCampaignJourney() const;
+    /** Stable failure reason code for the active campaign operation's
+     *  authored failure variants; "generic" when no specific cause is
+     *  derivable (or the mission's binding is not implemented yet). */
+    [[nodiscard]] FString GetMissionFailureReasonCode() const;
+
     [[nodiscard]] EEchoesProloguePhase GetProloguePhase() const;
     [[nodiscard]] EEchoesSevenAccountsPhase GetSevenAccountsPhase() const;
     [[nodiscard]] bool IsSevenAccountsUnlocked() const;
@@ -848,6 +853,12 @@ private:
     int32 PrologueCompletionPresentationStage = 0;
     echoes::sim::EntityId ProloguePresentationWorkerId = 0;
     echoes::sim::EntityId ProloguePresentationWellId = 0;
+    [[nodiscard]] FEchoesPrologueMissionFacts GatherPrologueFacts() const;
+    [[nodiscard]] FEchoesSevenAccountsMissionFacts GatherSevenAccountsFacts() const;
+    [[nodiscard]] FEchoesCityReserveMissionFacts GatherCityReserveFacts() const;
+    [[nodiscard]] FEchoesUnburiedRoadMissionFacts GatherUnburiedRoadFacts() const;
+    [[nodiscard]] FEchoesTermsOfContinuanceMissionFacts
+    GatherTermsOfContinuanceFacts() const;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

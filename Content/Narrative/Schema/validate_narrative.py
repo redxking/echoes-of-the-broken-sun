@@ -86,6 +86,15 @@ EXPECTED_MISSIONS = [
     (14, "Several Voices, One Command", "SeveralVoicesOneCommand", "CampaignSeveralVoicesOneCommand"),
     (15, "The Broken Sun", "TheBrokenSun", "CampaignTheBrokenSun"),
 ]
+# Missions whose failure reason codes the runtime derives and binds today.
+RUNTIME_BOUND_FAILURE_MISSIONS = {
+    "m01_what_the_ledger_keeps",
+    "m02_seven_accounts_of_rain",
+    "m03_a_city_on_reserve",
+    "m04_the_unburied_road",
+    "m05_terms_of_continuance",
+}
+
 EXPECTED_CHARACTER_IDS = {
     "mara_vey",
     "oruun_of_seven_stones",
@@ -927,7 +936,13 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
     _expect_exact(runtime["campaign_commit_statuses"], EXPECTED_COMMIT_STATUSES, "mission.runtime_binding.campaign_commit_statuses")
     _expect_exact(runtime["runtime_consumed"], False, "mission.runtime_binding.runtime_consumed")
     _expect_exact(runtime["localization_runtime_status"], "unimplemented", "mission.runtime_binding.localization_runtime_status")
-    _expect_exact(runtime["failure_reason_binding"], "requested", "mission.runtime_binding.failure_reason_binding")
+    _expect_exact(
+        runtime["failure_reason_binding"],
+        "bound_runtime"
+        if "m01_what_the_ledger_keeps" in RUNTIME_BOUND_FAILURE_MISSIONS
+        else "requested",
+        "mission.runtime_binding.failure_reason_binding",
+    )
 
     matrix_m01 = canon["missions"][0]
     _expect_exact(matrix_m01["mission_id"], runtime["mission_id"], "mission.runtime_binding.matrix_mission_id")
@@ -2285,7 +2300,13 @@ def validate_registered_mission_contract(
     _expect_exact(runtime["campaign_commit_statuses"], EXPECTED_COMMIT_STATUSES, "mission.runtime_binding.campaign_commit_statuses")
     _expect_exact(runtime["runtime_consumed"], False, "mission.runtime_binding.runtime_consumed")
     _expect_exact(runtime["localization_runtime_status"], "unimplemented", "mission.runtime_binding.localization_runtime_status")
-    _expect_exact(runtime["failure_reason_binding"], "requested", "mission.runtime_binding.failure_reason_binding")
+    _expect_exact(
+        runtime["failure_reason_binding"],
+        "bound_runtime"
+        if entry["file"].removesuffix(".json") in RUNTIME_BOUND_FAILURE_MISSIONS
+        else "requested",
+        "mission.runtime_binding.failure_reason_binding",
+    )
 
     matrix = canon["missions"][entry["mission_index"]]
     _expect_exact(matrix["mission_id"], runtime["mission_id"], "mission.runtime_binding.matrix_mission_id")

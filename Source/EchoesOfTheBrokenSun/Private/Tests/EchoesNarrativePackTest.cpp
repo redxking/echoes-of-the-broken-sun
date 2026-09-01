@@ -198,6 +198,66 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
               2);
     Narrative->ClearSubtitleQueue();
 
+    // Every reason code the runtime derivation can emit for the bound
+    // missions must resolve to its own authored failure line.
+    struct FReasonBinding
+    {
+        EEchoesOperationMode Operation;
+        std::initializer_list<const TCHAR*> Reasons;
+    };
+    const FReasonBinding ReasonBindings[] = {
+        {EEchoesOperationMode::CampaignPrologue,
+         {TEXT("local_core_lost"), TEXT("archive_carrier_lost"),
+          TEXT("future_well_lost"), TEXT("terminal_match_outcome"),
+          TEXT("generic")}},
+        {EEchoesOperationMode::CampaignSevenAccounts,
+         {TEXT("local_core_lost"), TEXT("memory_bearer_lost"),
+          TEXT("waystone_lost"), TEXT("terminal_match_outcome"),
+          TEXT("generic")}},
+        {EEchoesOperationMode::CampaignCityReserve,
+         {TEXT("local_core_lost"), TEXT("district_structure_lost"),
+          TEXT("terminal_match_outcome"), TEXT("generic")}},
+        {EEchoesOperationMode::CampaignUnburiedRoad,
+         {TEXT("local_core_lost"), TEXT("memory_bearer_lost"),
+          TEXT("waystone_lost"), TEXT("terminal_match_outcome"),
+          TEXT("generic")}},
+        {EEchoesOperationMode::CampaignTermsOfContinuance,
+         {TEXT("local_core_lost"), TEXT("meridian_relay_lost"),
+          TEXT("kharuun_spine_lost"), TEXT("witness_lost"),
+          TEXT("continuance_window_compromised"),
+          TEXT("terminal_match_outcome"), TEXT("generic")}},
+    };
+    for (const FReasonBinding& Binding : ReasonBindings)
+    {
+        TSet<FString> BoundLineIds;
+        int32 ReasonCount = 0;
+        for (const TCHAR* Reason : Binding.Reasons)
+        {
+            Narrative->ClearSubtitleQueue();
+            Narrative->EnqueueFailureLine(Binding.Operation, Reason, 500.0);
+            TestEqual(
+                *FString::Printf(
+                    TEXT("%s failure reason %s binds one authored line"),
+                    *UEchoesNarrativeSubsystem::OperationPackKey(
+                        Binding.Operation),
+                    Reason),
+                Narrative->GetQueuedLineCountForTest(),
+                1);
+            BoundLineIds.Add(Narrative->GetLastQueuedLineIdForTest());
+            ++ReasonCount;
+        }
+        // Distinct lines per reason: a silent generic fallback would
+        // collapse two reasons onto one line id and fail this count.
+        TestEqual(
+            *FString::Printf(
+                TEXT("%s binds a distinct line per authored reason"),
+                *UEchoesNarrativeSubsystem::OperationPackKey(
+                    Binding.Operation)),
+            BoundLineIds.Num(),
+            ReasonCount);
+    }
+    Narrative->ClearSubtitleQueue();
+
     // Skirmish deliberately has no narrative contract.
     TestFalse(TEXT("Skirmish has no narrative contract"),
               Narrative->HasOperation(EEchoesOperationMode::Skirmish));

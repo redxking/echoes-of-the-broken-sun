@@ -32,7 +32,7 @@
   ],
   "runtime_consumed": false,
   "localization_runtime_status": "unimplemented",
-  "failure_reason_binding": "requested"
+  "failure_reason_binding": "bound_runtime"
  },
  "canon": {
   "title": "The Unburied Road",

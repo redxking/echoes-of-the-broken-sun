@@ -5023,11 +5023,9 @@ void AEchoesPlayerController::PresentResultAudio(bool bSuccess)
             }
             else
             {
-                // Runtime failure-reason binding is still "requested"; the
-                // generic failure line is the only honest selection today.
                 Narrative->EnqueueFailureLine(
                     Bridge->GetOperationMode(),
-                    TEXT("generic"),
+                    Bridge->GetMissionFailureReasonCode(),
                     World->GetRealTimeSeconds());
             }
         }

@@ -9508,7 +9508,7 @@ echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
                                 : echoes::sim::MatchOutcome::Ongoing;
 }
 
-EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
+FEchoesPrologueMissionFacts UEchoesSimulationSubsystem::GatherPrologueFacts() const
 {
     FEchoesPrologueMissionFacts Facts;
     Facts.bOperationActive =
@@ -9516,7 +9516,7 @@ EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesProloguePhase::Inactive;
+        return Facts;
     }
 
     const echoes::sim::Entity* Carrier = Simulation->FindEntity(ArchiveCarrierId);
@@ -9549,8 +9549,161 @@ EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
             Facts.bFutureWellLost = Entity.owner != LocalPlayerId;
         }
     }
-    return FEchoesPrologueMissionModel::DeterminePhase(Facts);
+    return Facts;
 }
+EEchoesProloguePhase UEchoesSimulationSubsystem::GetProloguePhase() const
+{
+    return FEchoesPrologueMissionModel::DeterminePhase(GatherPrologueFacts());
+}
+
+FString UEchoesSimulationSubsystem::GetMissionFailureReasonCode() const
+{
+    // Priority follows each mission's authored failure-variant order; every
+    // path falls back to the contract's guaranteed generic variant.
+    switch (SelectedOperation)
+    {
+        case EEchoesOperationMode::CampaignPrologue:
+        {
+            const FEchoesPrologueMissionFacts Facts = GatherPrologueFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bArchiveCarrierIntact)
+            {
+                return TEXT("archive_carrier_lost");
+            }
+            if (Facts.bFutureWellLost)
+            {
+                return TEXT("future_well_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignSevenAccounts:
+        {
+            const FEchoesSevenAccountsMissionFacts Facts =
+                GatherSevenAccountsFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bMemoryBearerIntact)
+            {
+                return TEXT("memory_bearer_lost");
+            }
+            if (!Facts.bWaystoneIntact)
+            {
+                return TEXT("waystone_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignCityReserve:
+        {
+            const FEchoesCityReserveMissionFacts Facts =
+                GatherCityReserveFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bLifeSupportIntact || !Facts.bTransitIntact ||
+                !Facts.bArchiveIntact)
+            {
+                return TEXT("district_structure_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignUnburiedRoad:
+        {
+            const FEchoesUnburiedRoadMissionFacts Facts =
+                GatherUnburiedRoadFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bMemoryBearerIntact)
+            {
+                return TEXT("memory_bearer_lost");
+            }
+            if (!Facts.bWaystoneIntact)
+            {
+                return TEXT("waystone_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignTermsOfContinuance:
+        {
+            const FEchoesTermsOfContinuanceMissionFacts Facts =
+                GatherTermsOfContinuanceFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bMeridianRelayIntact)
+            {
+                return TEXT("meridian_relay_lost");
+            }
+            if (!Facts.bKharuunSpineIntact)
+            {
+                return TEXT("kharuun_spine_lost");
+            }
+            if (!Facts.bMeridianWitnessIntact ||
+                !Facts.bKharuunWitnessIntact)
+            {
+                return TEXT("witness_lost");
+            }
+            if (Facts.bContinuanceWindowCompromised)
+            {
+                return TEXT("continuance_window_compromised");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        default:
+            // Missions 06-15 bind in a later slice; their contracts keep the
+            // guaranteed generic failure variant meanwhile.
+            return TEXT("generic");
+    }
+}
+
 
 bool UEchoesSimulationSubsystem::IsSevenAccountsUnlocked() const
 {
@@ -10202,8 +10355,8 @@ echoes::sim::EntityId UEchoesSimulationSubsystem::GetCityDistrictId(
     return 0;
 }
 
-EEchoesSevenAccountsPhase
-UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
+FEchoesSevenAccountsMissionFacts
+UEchoesSimulationSubsystem::GatherSevenAccountsFacts() const
 {
     FEchoesSevenAccountsMissionFacts Facts;
     Facts.bOperationActive =
@@ -10211,7 +10364,7 @@ UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesSevenAccountsPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesSevenAccountsRoute Route = GetSevenAccountsRoute();
@@ -10245,10 +10398,17 @@ UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
             break;
         }
     }
-    return FEchoesSevenAccountsMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesSevenAccountsPhase
+UEchoesSimulationSubsystem::GetSevenAccountsPhase() const
+{
+    return FEchoesSevenAccountsMissionModel::DeterminePhase(
+        GatherSevenAccountsFacts());
 }
 
-EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
+
+FEchoesCityReserveMissionFacts UEchoesSimulationSubsystem::GatherCityReserveFacts() const
 {
     FEchoesCityReserveMissionFacts Facts;
     Facts.bOperationActive =
@@ -10256,7 +10416,7 @@ EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesCityReservePhase::Inactive;
+        return Facts;
     }
 
     const echoes::sim::Entity* LifeSupport =
@@ -10286,13 +10446,18 @@ EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
             break;
         }
     }
+    return Facts;
+}
+EEchoesCityReservePhase UEchoesSimulationSubsystem::GetCityReservePhase() const
+{
     return FEchoesCityReserveMissionModel::DeterminePhase(
-        Facts,
+        GatherCityReserveFacts(),
         GetCityReserveGrid());
 }
 
-EEchoesUnburiedRoadPhase
-UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
+
+FEchoesUnburiedRoadMissionFacts
+UEchoesSimulationSubsystem::GatherUnburiedRoadFacts() const
 {
     FEchoesUnburiedRoadMissionFacts Facts;
     Facts.bOperationActive =
@@ -10300,7 +10465,7 @@ UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesUnburiedRoadPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesUnburiedRoadRoute Route = GetUnburiedRoadRoute();
@@ -10342,11 +10507,18 @@ UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
             Facts.bListeningSpineComplete = true;
         }
     }
-    return FEchoesUnburiedRoadMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesUnburiedRoadPhase
+UEchoesSimulationSubsystem::GetUnburiedRoadPhase() const
+{
+    return FEchoesUnburiedRoadMissionModel::DeterminePhase(
+        GatherUnburiedRoadFacts());
 }
 
-EEchoesTermsOfContinuancePhase
-UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
+
+FEchoesTermsOfContinuanceMissionFacts
+UEchoesSimulationSubsystem::GatherTermsOfContinuanceFacts() const
 {
     FEchoesTermsOfContinuanceMissionFacts Facts;
     Facts.bOperationActive =
@@ -10355,7 +10527,7 @@ UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesTermsOfContinuancePhase::Inactive;
+        return Facts;
     }
 
     const FEchoesTermsOfContinuancePlan Plan =
@@ -10429,8 +10601,15 @@ UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
             break;
         }
     }
-    return FEchoesTermsOfContinuanceMissionModel::DeterminePhase(Facts);
+    return Facts;
 }
+EEchoesTermsOfContinuancePhase
+UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
+{
+    return FEchoesTermsOfContinuanceMissionModel::DeterminePhase(
+        GatherTermsOfContinuanceFacts());
+}
+
 
 EEchoesNamesWithoutBirthsPhase
 UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const

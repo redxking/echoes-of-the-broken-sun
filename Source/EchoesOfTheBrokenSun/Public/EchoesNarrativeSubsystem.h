@@ -115,6 +115,10 @@ public:
     {
         return SubtitleQueue.Num();
     }
+    [[nodiscard]] FString GetLastQueuedLineIdForTest() const
+    {
+        return SubtitleQueue.Num() > 0 ? SubtitleQueue.Last().Id : FString();
+    }
 
     /** Seconds one line owns the lane: base plus per-character reading time. */
     [[nodiscard]] static double SubtitleDurationSeconds(const FString& Text);
