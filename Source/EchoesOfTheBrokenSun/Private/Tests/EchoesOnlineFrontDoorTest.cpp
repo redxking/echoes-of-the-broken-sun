@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "CoreGlobals.h"
 #include "EchoesGameInstance.h"
 #include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesPlayerController.h"
@@ -536,6 +537,40 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Back closes the online front door"),
               GameInstance->GetOnlineState(),
               EEchoesOnlineFrontDoorState::Idle);
+
+    // N-SEC-1: a smoke-completion confirmation arriving at an ordinary
+    // client (one that never entered smoke mode) must be rejected without
+    // terminating the process. The RPC is invoked through
+    // UObject::ProcessEvent so the local implementation runs directly on a
+    // world-less controller whose smoke flags hold their false defaults.
+    AEchoesPlayerController* Controller =
+        NewObject<AEchoesPlayerController>(GetTransientPackage());
+    if (!TestNotNull(TEXT("Player controller can be instantiated"),
+                     Controller))
+    {
+        return false;
+    }
+    UFunction* ConfirmFunction = Controller->FindFunction(
+        FName(TEXT("ClientConfirmNetworkSmokeComplete")));
+    if (!TestNotNull(TEXT("Smoke completion confirmation RPC exists"),
+                     ConfirmFunction))
+    {
+        return false;
+    }
+    TestFalse(TEXT("Engine exit is not already requested"),
+              IsEngineExitRequested());
+    AddExpectedError(
+        TEXT("ECHOES_NETWORK_CLIENT_SMOKE_FAILED"),
+        EAutomationExpectedErrorFlags::Contains,
+        1);
+    struct
+    {
+        uint64 SnapshotId;
+    } ConfirmParams = {7};
+    Controller->UObject::ProcessEvent(ConfirmFunction, &ConfirmParams);
+    TestFalse(
+        TEXT("Non-smoke confirm-RPC failure does not request engine exit"),
+        IsEngineExitRequested());
 
     const FEchoesSkirmishSetup Canonical =
         FEchoesSkirmishSetupModel::CanonicalOnlineSetup();

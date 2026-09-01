@@ -4371,7 +4371,13 @@ void AEchoesPlayerController::ClientConfirmNetworkSmokeComplete_Implementation(
             static_cast<unsigned long long>(SnapshotId),
             static_cast<unsigned long long>(NetworkSmokeCompletionSnapshotId),
             bNetworkSmokeCompletionSent ? TEXT("true") : TEXT("false"));
-        FPlatformMisc::RequestExit(false);
+        // Only a client that itself entered smoke mode may terminate on a
+        // failed confirmation; an ordinary client must survive a stray or
+        // hostile smoke-confirm RPC.
+        if (bNetworkClientSmoke)
+        {
+            FPlatformMisc::RequestExit(false);
+        }
         return;
     }
     UE_LOG(
