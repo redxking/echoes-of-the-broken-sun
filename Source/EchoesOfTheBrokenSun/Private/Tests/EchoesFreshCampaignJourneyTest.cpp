@@ -240,6 +240,95 @@ Vec2 TestOwnedFutureWonWellApproach(FutureWellChoice Choice)
     }
 }
 
+Vec2 TestOwnedUnburiedRoadRoadhead(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(14, 28);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 28);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(50, 28);
+        default: return {};
+    }
+}
+
+Vec2 TestOwnedUnburiedRoadSpineSite(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(14, 37);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 37);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(49, 35);
+        default: return {};
+    }
+}
+
+Vec2 TestOwnedUnburiedRoadShardSite(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(20, 43);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(38, 43);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(44, 40);
+        default: return {};
+    }
+}
+
+int64 MinimumOpponentCombatDistanceSquaredRaw(
+    const UEchoesSimulationSubsystem* Bridge,
+    const Vec2& Site)
+{
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    int64 Minimum = TNumericLimits<int64>::Max();
+    if (Simulation == nullptr)
+    {
+        return Minimum;
+    }
+    for (const Entity& Candidate : Simulation->Entities())
+    {
+        const bool bMobileCombatUnit =
+            Candidate.type == EntityType::Soldier ||
+            Candidate.type == EntityType::HeavyUnit ||
+            Candidate.type == EntityType::ScoutUnit;
+        if (Candidate.owner == UEchoesSimulationSubsystem::LocalPlayerId ||
+            Candidate.owner == echoes::sim::kNeutralPlayer ||
+            Candidate.hitPoints <= 0 || !bMobileCombatUnit)
+        {
+            continue;
+        }
+        const int64 DeltaX =
+            static_cast<int64>(Candidate.position.x.Raw()) - Site.x.Raw();
+        const int64 DeltaY =
+            static_cast<int64>(Candidate.position.y.Raw()) - Site.y.Raw();
+        Minimum = FMath::Min(Minimum, DeltaX * DeltaX + DeltaY * DeltaY);
+    }
+    return Minimum;
+}
+
+int64 MinimumEntityDistanceSquaredRaw(
+    const UEchoesSimulationSubsystem* Bridge,
+    const Vec2& Site)
+{
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    int64 Minimum = TNumericLimits<int64>::Max();
+    if (Simulation == nullptr)
+    {
+        return Minimum;
+    }
+    for (const Entity& Candidate : Simulation->Entities())
+    {
+        if (Candidate.hitPoints <= 0)
+        {
+            continue;
+        }
+        const int64 DeltaX =
+            static_cast<int64>(Candidate.position.x.Raw()) - Site.x.Raw();
+        const int64 DeltaY =
+            static_cast<int64>(Candidate.position.y.Raw()) - Site.y.Raw();
+        Minimum = FMath::Min(Minimum, DeltaX * DeltaX + DeltaY * DeltaY);
+    }
+    return Minimum;
+}
+
 FString DescribeFreshJourneyEntity(
     const TCHAR* Label,
     EntityId Id,
@@ -795,9 +884,158 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetUnburiedRoadRoute();
         const TArray<EntityId> M04Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
+        const TArray<EntityId> M04Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M04WorkerId =
+            M04Workers.IsEmpty() ? 0 : M04Workers[0];
+        const EntityId M04CoreId =
+            M04Cores.IsEmpty() ? 0 : M04Cores[0];
+        const echoes::sim::Simulation* M04Simulation =
+            Bridge->GetSimulation();
+        const int64 M04MinimumOpponentSeparationRaw =
+            22LL * echoes::sim::kFixedScale;
+        const int64 M04OpponentCombatDistanceSquaredRaw =
+            MinimumOpponentCombatDistanceSquaredRaw(
+                Bridge, M04Route.ListeningSpineSite);
+        const int64 M04MissionDomainClearanceRaw =
+            3LL * echoes::sim::kFixedScale;
+        const int64 M04SpineEntityDistanceSquaredRaw =
+            MinimumEntityDistanceSquaredRaw(
+                Bridge, M04Route.ListeningSpineSite);
+        const int64 M04ShardEntityDistanceSquaredRaw =
+            MinimumEntityDistanceSquaredRaw(
+                Bridge, M04Route.MemoryShardSite);
+        const auto TickUntilMissionFourPhase = [
+            Bridge,
+            M04Route,
+            M04Waystone,
+            M04Bearer,
+            M04WorkerId,
+            M04CoreId,
+            &Spec,
+            &Feedback](
+                EEchoesUnburiedRoadPhase ExpectedPhase,
+                int32 MaximumTicks)
+        {
+            const bool bReached = TickUntil(
+                Bridge,
+                [Bridge, ExpectedPhase]()
+                {
+                    return Bridge->GetUnburiedRoadPhase() == ExpectedPhase;
+                },
+                MaximumTicks);
+            if (bReached)
+            {
+                return true;
+            }
+
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            EntityId SpineId = 0;
+            const Entity* Spine = nullptr;
+            if (Simulation != nullptr)
+            {
+                for (const Entity& Candidate : Simulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.type == EntityType::UtilityStructure &&
+                        Candidate.position == M04Route.ListeningSpineSite)
+                    {
+                        SpineId = Candidate.id;
+                        Spine = &Candidate;
+                        break;
+                    }
+                }
+            }
+            const Entity* Waystone =
+                Bridge->FindEntity(M04Waystone);
+            Feedback = FString::Printf(
+                TEXT("[M04_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expectedPhase=%u foundingChoice=%u roadhead=(%d,%d) spineSite=(%d,%d) shard=(%d,%d) waystoneMode=%u %s %s %s %s %s"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr ? Simulation->CurrentTick() : 0),
+                Simulation != nullptr
+                    ? static_cast<uint8>(Simulation->Outcome())
+                    : 0xFF,
+                static_cast<uint8>(Bridge->GetUnburiedRoadPhase()),
+                static_cast<uint8>(ExpectedPhase),
+                static_cast<uint8>(Spec.FoundingChoice),
+                M04Route.Roadhead.x.FloorToInt(),
+                M04Route.Roadhead.y.FloorToInt(),
+                M04Route.ListeningSpineSite.x.FloorToInt(),
+                M04Route.ListeningSpineSite.y.FloorToInt(),
+                M04Route.MemoryShardSite.x.FloorToInt(),
+                M04Route.MemoryShardSite.y.FloorToInt(),
+                Waystone != nullptr
+                    ? static_cast<uint8>(Waystone->waystoneMode)
+                    : 0xFF,
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"),
+                    M04CoreId,
+                    Bridge->FindEntity(M04CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("bearer"),
+                    M04Bearer,
+                    Bridge->FindEntity(M04Bearer)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("waystone"),
+                    M04Waystone,
+                    Waystone),
+                *DescribeFreshJourneyEntity(
+                    TEXT("worker"),
+                    M04WorkerId,
+                    Bridge->FindEntity(M04WorkerId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("spine"), SpineId, Spine));
+            return false;
+        };
         if (!Require(
                 !M04Workers.IsEmpty(),
                 TEXT("Mission 04 exposes a construction worker")) ||
+            !Require(
+                M04Route.Roadhead ==
+                        TestOwnedUnburiedRoadRoadhead(
+                            Spec.FoundingChoice) &&
+                    M04Route.ListeningSpineSite ==
+                        TestOwnedUnburiedRoadSpineSite(
+                            Spec.FoundingChoice) &&
+                    M04Route.MemoryShardSite ==
+                        TestOwnedUnburiedRoadShardSite(
+                            Spec.FoundingChoice),
+                TEXT("Mission 04 binds the independently expected route")) ||
+            !Require(
+                M04Simulation != nullptr &&
+                    M04Simulation->IsPositionPassable(
+                        M04Route.Roadhead) &&
+                    M04Simulation->IsPositionPassable(
+                        M04Route.ListeningSpineSite) &&
+                    M04Simulation->IsPositionPassable(
+                        M04Route.MemoryShardSite) &&
+                    M04Simulation->ValidatePlacement(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        EntityType::UtilityStructure,
+                        M04Route.ListeningSpineSite) ==
+                        echoes::sim::PlacementResult::Valid,
+                TEXT("Mission 04 route is open and buildable")) ||
+            !Require(
+                M04OpponentCombatDistanceSquaredRaw !=
+                        TNumericLimits<int64>::Max() &&
+                    M04OpponentCombatDistanceSquaredRaw >
+                        M04MinimumOpponentSeparationRaw *
+                        M04MinimumOpponentSeparationRaw,
+                TEXT("Mission 04 construction begins outside the opposing approach")) ||
+            !Require(
+                M04SpineEntityDistanceSquaredRaw !=
+                        TNumericLimits<int64>::Max() &&
+                    M04ShardEntityDistanceSquaredRaw !=
+                        TNumericLimits<int64>::Max() &&
+                    M04SpineEntityDistanceSquaredRaw >
+                        M04MissionDomainClearanceRaw *
+                        M04MissionDomainClearanceRaw &&
+                    M04ShardEntityDistanceSquaredRaw >
+                        M04MissionDomainClearanceRaw *
+                        M04MissionDomainClearanceRaw,
+                TEXT("Mission 04 Spine and shard domains exclude spawned entities")) ||
             !Require(
                 Bridge->IssueCommand(
                     CommandType::ToggleWaystoneRoot,
@@ -854,32 +1092,22 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 TEXT("Mission 04 opens Listening Spine construction")) ||
             !Require(
                 Bridge->IssueBuildCommand(
-                    M04Workers[0],
+                    M04WorkerId,
                     EntityType::UtilityStructure,
                     Bridge->SimToWorld(M04Route.ListeningSpineSite),
                     Feedback),
                 TEXT("Mission 04 worker accepts the Listening Spine")) ||
             !Require(
-                TickUntil(
-                    Bridge,
-                    [Bridge]()
-                    {
-                        return Bridge->GetUnburiedRoadPhase() ==
-                            EEchoesUnburiedRoadPhase::RecoverMemoryShard;
-                    },
+                TickUntilMissionFourPhase(
+                    EEchoesUnburiedRoadPhase::RecoverMemoryShard,
                     3200),
                 TEXT("Mission 04 opens shard recovery")) ||
             !Require(
                 Move(M04Bearer, M04Route.MemoryShardSite),
                 TEXT("Mission 04 bearer accepts shard recovery")) ||
             !Require(
-                TickUntil(
-                    Bridge,
-                    [Bridge]()
-                    {
-                        return Bridge->GetUnburiedRoadPhase() ==
-                            EEchoesUnburiedRoadPhase::Complete;
-                    },
+                TickUntilMissionFourPhase(
+                    EEchoesUnburiedRoadPhase::Complete,
                     3200),
                 TEXT("Mission 04 completes through ordinary play")) ||
             !VerifyCompletion(4, EEchoesCampaignCommitStatus::Added) ||
