@@ -3366,10 +3366,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             (3 * echoes::sim::kFixedScale) / 2;
         int32 M08ApproachBudgetTicks = 3000;
         int32 M08RelayBudgetTicks = 3400;
+        int32 M08TraversalBudgetTicks = 3600;
+        int32 M08CompletionBudgetTicks = 3600;
         int32 M08TalarConvoyIncrements = 0;
         int32 M08WorkerConvoyIncrements = 0;
+        int32 M08WitnessConvoyIncrements = 0;
         const TArray<int32> M08TalarEscortIndices = {0, 1, 2, 3};
         const TArray<int32> M08WorkerEscortIndices = {0, 1};
+        const TArray<int32> M08WitnessAEscortIndices = {1};
+        const TArray<int32> M08WitnessBEscortIndices = {2};
         const TArray<int32> M08NoEscortIndices;
         EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
             Bridge->GetShapeBesideUsPhase();
@@ -3531,8 +3536,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M08GuardTargetIds,
             &M08ApproachBudgetTicks,
             &M08RelayBudgetTicks,
+            &M08TraversalBudgetTicks,
+            &M08CompletionBudgetTicks,
             &M08TalarConvoyIncrements,
             &M08WorkerConvoyIncrements,
+            &M08WitnessConvoyIncrements,
             &ObserveMissionEightProtectedState,
             &Feedback]()
         {
@@ -3568,7 +3576,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 }
             }
             Feedback = FString::Printf(
-                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} convoy={talarIncrements=%d workerIncrements=%d approachBudget=%d relayBudget=%d} defenders={%s}"),
+                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} convoy={talarIncrements=%d workerIncrements=%d witnessIncrements=%d approachBudget=%d relayBudget=%d traversalBudget=%d completionBudget=%d} defenders={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr
                         ? Simulation->CurrentTick()
@@ -3628,8 +3636,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Bridge->FindEntity(M08RelayId)),
                 M08TalarConvoyIncrements,
                 M08WorkerConvoyIncrements,
+                M08WitnessConvoyIncrements,
                 M08ApproachBudgetTicks,
                 M08RelayBudgetTicks,
+                M08TraversalBudgetTicks,
+                M08CompletionBudgetTicks,
                 *DefenderState);
         };
         const auto RequireMissionEight = [
@@ -3768,12 +3779,53 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             }
             return true;
         };
-        // Ticks the world while draining one of the two pre-existing Mission
-        // 08 wait budgets, with the same Failed-phase short-circuit as
-        // TickUntilMissionEightCondition.
+        // Fail-safe against clear-on-death idling: an alive escort whose
+        // expected ward also lives must hold a Guard order on that ward;
+        // re-issue the Guard when the simulation cleared it. A no-op in every
+        // healthy state (order already Guard) and after a real ward loss
+        // (dead wards are skipped, and witness/Talar losses fail the mission
+        // through the phase reducer regardless).
+        const auto ReassertMissionEightGuardOrders = [
+            Bridge,
+            &M08GuardIds,
+            &M08GuardTargetIds]()
+        {
+            for (int32 GuardIndex = 0;
+                 GuardIndex < M08GuardIds.Num();
+                 ++GuardIndex)
+            {
+                if (!M08GuardTargetIds.IsValidIndex(GuardIndex))
+                {
+                    continue;
+                }
+                const Entity* Guard =
+                    Bridge->FindEntity(M08GuardIds[GuardIndex]);
+                const Entity* Ward =
+                    Bridge->FindEntity(M08GuardTargetIds[GuardIndex]);
+                if (Guard == nullptr || Guard->hitPoints <= 0 ||
+                    Ward == nullptr || Ward->hitPoints <= 0 ||
+                    Guard->order.type == echoes::sim::OrderType::Guard)
+                {
+                    continue;
+                }
+                FString ReguardFeedback;
+                (void)Bridge->IssueCommand(
+                    CommandType::Guard,
+                    M08GuardIds[GuardIndex],
+                    M08GuardTargetIds[GuardIndex],
+                    Bridge->SimToWorld(Ward->position),
+                    FutureWellChoice::Dormant,
+                    ReguardFeedback);
+            }
+        };
+        // Ticks the world while draining one of the pre-existing Mission 08
+        // wait budgets, with the same Failed-phase short-circuit as
+        // TickUntilMissionEightCondition, re-asserting cleared Guard orders
+        // each tick.
         const auto TickMissionEightWithinBudget = [
             Bridge,
-            &ObserveMissionEightProtectedState](
+            &ObserveMissionEightProtectedState,
+            &ReassertMissionEightGuardOrders](
                 int32& RemainingTicks,
                 const TFunction<bool()>& Predicate)
         {
@@ -3785,6 +3837,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 {
                     return false;
                 }
+                ReassertMissionEightGuardOrders();
                 if (Predicate())
                 {
                     return true;
@@ -4399,6 +4452,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     }),
                 TEXT("Mission 08 opens paired-state traversal")) ||
             !RequireMissionEight(
+                PaceMissionEightConvoy(
+                    TEXT("worker-withdrawal"),
+                    M08Worker,
+                    false,
+                    M08Plan.FirstEchoSite,
+                    M08WorkerHoldStandoffRaw,
+                    M08NoEscortIndices,
+                    M08RelayBudgetTicks,
+                    M08WorkerConvoyIncrements),
+                TEXT("Mission 08 withdraws the worker from the contested corridor")) ||
+            !RequireMissionEight(
                 RetargetMissionEightTraversalGuards(),
                 TEXT("Mission 08 assigns completed-relay and witness Guards")) ||
             !RequireMissionEight(
@@ -4410,23 +4474,35 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     20),
                 TEXT("Mission 08 traversal Guards take effect")) ||
             !RequireMissionEight(
-                Move(
+                PaceMissionEightConvoy(
+                    TEXT("witnessA-first-state"),
                     M08Start.FirstStateWitnessId,
-                    M08Plan.FirstStateSite),
+                    false,
+                    M08Plan.FirstStateSite,
+                    0,
+                    M08WitnessAEscortIndices,
+                    M08TraversalBudgetTicks,
+                    M08WitnessConvoyIncrements),
                 TEXT("Mission 08 first witness accepts its state")) ||
             !RequireMissionEight(
-                Move(
+                PaceMissionEightConvoy(
+                    TEXT("witnessB-second-state"),
                     M08Start.SecondStateWitnessId,
-                    M08Plan.SecondStateSite),
+                    true,
+                    M08Plan.SecondStateSite,
+                    0,
+                    M08WitnessBEscortIndices,
+                    M08TraversalBudgetTicks,
+                    M08WitnessConvoyIncrements),
                 TEXT("Mission 08 second witness accepts its state")) ||
             !RequireMissionEight(
-                TickUntilMissionEightCondition(
+                TickMissionEightWithinBudget(
+                    M08TraversalBudgetTicks,
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
                             EEchoesShapeBesideUsPhase::ReachConvergence;
-                    },
-                    3600),
+                    }),
                 TEXT("Mission 08 traverses both states")) ||
             !RequireMissionEight(
                 Move(
@@ -4434,13 +4510,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M08Plan.ConvergenceSite),
                 TEXT("Mission 08 Talar accepts convergence")) ||
             !RequireMissionEight(
-                TickUntilMissionEightCondition(
+                TickMissionEightWithinBudget(
+                    M08CompletionBudgetTicks,
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
                             EEchoesShapeBesideUsPhase::Complete;
-                    },
-                    3600),
+                    }),
                 TEXT("Mission 08 completes through guarded ordinary play")) ||
             !VerifyCompletion(8, EEchoesCampaignCommitStatus::Added) ||
             !AdvanceToNextMission(8))
