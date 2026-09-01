@@ -5241,6 +5241,14 @@ void AEchoesPlayerController::PresentTitleScreen()
             Display,
             TEXT("[ECHOES_ART_REVIEW_OPEN_BRIEF] editorOnly=true"));
         ConfirmTitleScreen();
+        if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewDeploy")))
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_ART_REVIEW_DEPLOY] editorOnly=true"));
+            ConfirmMissionBriefing();
+        }
     }
 #endif
 }
