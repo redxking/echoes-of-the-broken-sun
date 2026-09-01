@@ -234,7 +234,7 @@ echoes::sim::Vec2 TestOwnedBrokenSunApproachSite(
     {
         case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
         case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
-        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 43);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(32, 43);
         default: return {};
     }
 }
@@ -282,6 +282,7 @@ struct FBrokenSunResolutionPersistenceSpec final
     uint8 ExpectedPlanKey = 0xFF;
     uint8 ExpectedAvailability = 0;
     echoes::sim::Vec2 ExpectedApproachSite{};
+    echoes::sim::Vec2 ExpectedApproachBuildSite{};
 };
 
 bool RunBrokenSunResolutionPersistenceCase(
@@ -584,7 +585,16 @@ bool RunBrokenSunResolutionPersistenceCase(
             FindBuildSite(
                 Spec.ExpectedApproachSite,
                 3,
-                ApproachBuildSite)))
+                ApproachBuildSite)) ||
+        !Check(
+            FString::Printf(
+                TEXT("the plan-specific deterministic approach probe matches independent literal (%d,%d); observed (%d,%d)"),
+                Spec.ExpectedApproachBuildSite.x.FloorToInt(),
+                Spec.ExpectedApproachBuildSite.y.FloorToInt(),
+                ApproachBuildSite.x.FloorToInt(),
+                ApproachBuildSite.y.FloorToInt()),
+            Spec.ExpectedApproachBuildSite == Vec2{} ||
+                ApproachBuildSite == Spec.ExpectedApproachBuildSite))
     {
         return FinishWorld();
     }
@@ -615,6 +625,14 @@ bool RunBrokenSunResolutionPersistenceCase(
     bool bSiteCompleted = false;
     bool bApproachBound = false;
     bool bAssembleAccordReached = false;
+    uint64 LastSeenSiteTick = 0;
+    int32 LastSeenSiteHitPoints = 0;
+    int32 LastSeenSiteMaxHitPoints = 0;
+    int32 LastSeenConstructionProgress = 0;
+    int32 LastSeenConstructionRequired = 0;
+    bool bLastSeenSiteCompleted = false;
+    bool bSiteDisappeared = false;
+    uint64 SiteDisappearanceTick = 0;
     const auto ObserveApproach = [&]()
     {
         if (ApproachBuildSequence.has_value())
@@ -660,6 +678,19 @@ bool RunBrokenSunResolutionPersistenceCase(
                 Site->constructionProgress > 0 || Site->completed;
             bSiteCompleted = bSiteCompleted ||
                 (Site->completed && Site->hitPoints > 0);
+            LastSeenSiteTick =
+                Bridge->GetSimulation()->CurrentTick();
+            LastSeenSiteHitPoints = Site->hitPoints;
+            LastSeenSiteMaxHitPoints = Site->maxHitPoints;
+            LastSeenConstructionProgress = Site->constructionProgress;
+            LastSeenConstructionRequired = Site->constructionRequired;
+            bLastSeenSiteCompleted = Site->completed;
+        }
+        else if (bSiteCreated && !bSiteDisappeared)
+        {
+            bSiteDisappeared = true;
+            SiteDisappearanceTick =
+                Bridge->GetSimulation()->CurrentTick();
         }
 
         const FEchoesObjectiveSnapshot Current =
@@ -698,8 +729,33 @@ bool RunBrokenSunResolutionPersistenceCase(
         Objective.BrokenSunApproachAnchorId != 0
             ? Bridge->FindEntity(Objective.BrokenSunApproachAnchorId)
             : nullptr;
+    const echoes::sim::Entity* NearestOpponent = nullptr;
+    int64 NearestOpponentDistanceSquaredRaw = 0;
+    for (const echoes::sim::Entity& Candidate :
+         Bridge->GetSimulation()->Entities())
+    {
+        if (Candidate.owner !=
+            UEchoesSimulationSubsystem::OpponentPlayerId)
+        {
+            continue;
+        }
+        const int64 DeltaX =
+            static_cast<int64>(Candidate.position.x.Raw()) -
+            ApproachBuildSite.x.Raw();
+        const int64 DeltaY =
+            static_cast<int64>(Candidate.position.y.Raw()) -
+            ApproachBuildSite.y.Raw();
+        const int64 DistanceSquared =
+            DeltaX * DeltaX + DeltaY * DeltaY;
+        if (NearestOpponent == nullptr ||
+            DistanceSquared < NearestOpponentDistanceSquaredRaw)
+        {
+            NearestOpponent = &Candidate;
+            NearestOpponentDistanceSquaredRaw = DistanceSquared;
+        }
+    }
     const FString ApproachDiagnostic = FString::Printf(
-        TEXT("[M15_APPROACH_DIAGNOSTIC] tick=%llu phase=%u outcome=%u planKey=%u center=(%d,%d) build=(%d,%d) sequence=%s receipt={seen=%s applied=%s outcome=%d} observed={siteId=%u created=%s progressed=%s completed=%s bound=%s assemble=%s objectiveAnchor=%u secured=%s} %s %s"),
+        TEXT("[M15_APPROACH_DIAGNOSTIC] tick=%llu phase=%u outcome=%u planKey=%u center=(%d,%d) build=(%d,%d) sequence=%s receipt={seen=%s applied=%s outcome=%d} observed={siteId=%u created=%s progressed=%s completed=%s bound=%s assemble=%s objectiveAnchor=%u secured=%s} lastSeen={tick=%llu hp=%d/%d progress=%d/%d completed=%s disappeared=%s disappearanceTick=%llu} nearestOpponentDistanceSquaredRaw=%lld %s %s %s"),
         static_cast<unsigned long long>(
             Bridge->GetSimulation()->CurrentTick()),
         static_cast<uint8>(Objective.BrokenSunPhase),
@@ -721,6 +777,15 @@ bool RunBrokenSunResolutionPersistenceCase(
         bAssembleAccordReached ? TEXT("true") : TEXT("false"),
         Objective.BrokenSunApproachAnchorId,
         Objective.bBrokenSunApproachSecured ? TEXT("true") : TEXT("false"),
+        static_cast<unsigned long long>(LastSeenSiteTick),
+        LastSeenSiteHitPoints,
+        LastSeenSiteMaxHitPoints,
+        LastSeenConstructionProgress,
+        LastSeenConstructionRequired,
+        bLastSeenSiteCompleted ? TEXT("true") : TEXT("false"),
+        bSiteDisappeared ? TEXT("true") : TEXT("false"),
+        static_cast<unsigned long long>(SiteDisappearanceTick),
+        static_cast<long long>(NearestOpponentDistanceSquaredRaw),
         *DescribeBrokenSunEntity(
             TEXT("worker"),
             Objective.BrokenSunWorkerId,
@@ -728,7 +793,11 @@ bool RunBrokenSunResolutionPersistenceCase(
         *DescribeBrokenSunEntity(
             TEXT("site"),
             ObservedApproachId,
-            CurrentSite));
+            CurrentSite),
+        *DescribeBrokenSunEntity(
+            TEXT("nearestOpponent"),
+            NearestOpponent != nullptr ? NearestOpponent->id : 0,
+            NearestOpponent));
     bool bApproachContractPassed = true;
     bApproachContractPassed = Check(
         TEXT("the admitted approach build resolves as applied"),
@@ -2221,7 +2290,8 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             EEchoesFinalResolution::OpenEvolution,
             17,
             0x0A,
-            echoes::sim::Vec2::FromTiles(46, 43),
+            echoes::sim::Vec2::FromTiles(32, 43),
+            echoes::sim::Vec2::FromTiles(32, 40),
         },
         {
             TEXT("plan 25 Reshape/Preserve to Controlled Stabilization"),
@@ -2231,6 +2301,7 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             25,
             0x0B,
             echoes::sim::Vec2::FromTiles(32, 56),
+            {},
         },
     };
 

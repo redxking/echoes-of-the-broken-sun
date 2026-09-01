@@ -205,7 +205,7 @@ Vec2 TestOwnedNoNeutralRallySite(FutureWellChoice Choice)
     {
         case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
         case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
-        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 43);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(32, 43);
         default: return {};
     }
 }
@@ -216,7 +216,7 @@ Vec2 TestOwnedFutureWonWellApproach(FutureWellChoice Choice)
     {
         case FutureWellChoice::Harvest: return Vec2::FromTiles(16, 54);
         case FutureWellChoice::Preserve: return Vec2::FromTiles(30, 54);
-        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 41);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(32, 41);
         default: return {};
     }
 }
@@ -1847,6 +1847,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     ExpectedM12WellSite.x.FloorToInt(),
                     ExpectedM12WellSite.y.FloorToInt())) ||
             !Require(
+                M12Plan.FutureWellSite != M12Plan.FirstDistrictInputSite &&
+                    M12Plan.FutureWellSite !=
+                        M12Plan.SecondDistrictInputSite &&
+                    M12Plan.FutureWellSite != M12Plan.MeridianReadbackSite &&
+                    M12Plan.FutureWellSite != M12Plan.KharuunReadbackSite,
+                FString::Printf(
+                    TEXT("Mission 12 route %s keeps its Future Well distinct from contributing districts and public readbacks"),
+                    Spec.Label)) ||
+            !Require(
                 Bridge->GetSimulation()->TerrainAt(
                     M12WellApproach.x.FloorToInt(),
                     M12WellApproach.y.FloorToInt()) ==
@@ -2001,8 +2010,116 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M13Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
+        const TArray<EntityId> M13Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M13WorkerId =
+            M13Workers.IsEmpty() ? 0 : M13Workers[0];
+        const EntityId M13CoreId = M13Cores.IsEmpty() ? 0 : M13Cores[0];
         Vec2 M13Link;
+        const auto OpenMissionThirteenObservation = [
+            Bridge, M13Start, M13Plan, M13WorkerId, M13CoreId,
+            &M13Link, &Feedback]()
+        {
+            const bool bOpened = TickUntil(
+                Bridge,
+                [Bridge]()
+                {
+                    return Bridge->GetAssemblyOfTheMissingPhase() ==
+                        EEchoesAssemblyOfTheMissingPhase::ObserveAssembly;
+                },
+                7000);
+            if (bOpened)
+            {
+                return true;
+            }
+
+            const FEchoesObjectiveSnapshot Current =
+                Bridge->GetLocalObjectiveSnapshot();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            EntityId LinkId = 0;
+            const Entity* Link = nullptr;
+            if (Simulation != nullptr)
+            {
+                for (const Entity& Candidate : Simulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.type == EntityType::UtilityStructure &&
+                        Candidate.position == M13Link)
+                    {
+                        LinkId = Candidate.id;
+                        Link = &Candidate;
+                        break;
+                    }
+                }
+            }
+            Feedback = FString::Printf(
+                TEXT("[M13_LINK_DIAGNOSTIC] tick=%llu phase=%u outcome=%u planKey=%u index=(%d,%d) link=(%d,%d) facts={coreIntact=%s coreHp=%d/%d publicInterfaces=%s readback=%s linked=%s meridianWitness=%s kharuunWitness=%s} %s %s %s %s %s %s %s %s"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr ? Simulation->CurrentTick() : 0),
+                static_cast<uint8>(Current.AssemblyOfTheMissingPhase),
+                static_cast<uint8>(Current.Outcome),
+                M13Plan.StablePlanKey,
+                M13Plan.CrownfallIndexSite.x.FloorToInt(),
+                M13Plan.CrownfallIndexSite.y.FloorToInt(),
+                M13Link.x.FloorToInt(),
+                M13Link.y.FloorToInt(),
+                Current.bLocalCoreIntact ? TEXT("true") : TEXT("false"),
+                Current.LocalCoreHitPoints,
+                Current.LocalCoreMaxHitPoints,
+                Current.bAssemblyPublicInterfacesIntact
+                    ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyPublicRecordReadbackEstablished
+                    ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyCrownfallIndexLinked
+                    ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyMeridianWitnessObserved
+                    ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyKharuunWitnessObserved
+                    ? TEXT("true") : TEXT("false"),
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"),
+                    M13CoreId,
+                    Bridge->FindEntity(M13CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("oruun"),
+                    M13Start.AssemblyOruunId,
+                    Bridge->FindEntity(M13Start.AssemblyOruunId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("verifier"),
+                    M13Start.AssemblyVerifierId,
+                    Bridge->FindEntity(M13Start.AssemblyVerifierId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("meridianRecord"),
+                    M13Start.AssemblyMeridianPublicRecordInterfaceId,
+                    Bridge->FindEntity(
+                        M13Start.AssemblyMeridianPublicRecordInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("kharuunRecord"),
+                    M13Start.AssemblyKharuunPublicRecordInterfaceId,
+                    Bridge->FindEntity(
+                        M13Start.AssemblyKharuunPublicRecordInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("crownfallIndex"),
+                    M13Start.AssemblyCrownfallIndexInterfaceId,
+                    Bridge->FindEntity(
+                        M13Start.AssemblyCrownfallIndexInterfaceId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("worker"),
+                    M13WorkerId,
+                    Bridge->FindEntity(M13WorkerId)),
+                *DescribeFreshJourneyEntity(TEXT("link"), LinkId, Link));
+            return false;
+        };
         if (!Require(
+                M13Plan.CrownfallIndexSite == ExpectedM11Rally,
+                FString::Printf(
+                    TEXT("Mission 13 route %s propagates the independent literal Crownfall index (%d,%d)"),
+                    Spec.Label,
+                    ExpectedM11Rally.x.FloorToInt(),
+                    ExpectedM11Rally.y.FloorToInt())) ||
+            !Require(
                 !M13Workers.IsEmpty(),
                 TEXT("Mission 13 exposes a Kharuun construction worker")) ||
             !Require(
@@ -2041,15 +2158,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Feedback),
                 TEXT("Mission 13 accepts the Crownfall link")) ||
             !Require(
-                TickUntil(
-                    Bridge,
-                    [Bridge]()
-                    {
-                        return Bridge->GetAssemblyOfTheMissingPhase() ==
-                            EEchoesAssemblyOfTheMissingPhase::
-                                ObserveAssembly;
-                    },
-                    7000),
+                OpenMissionThirteenObservation(),
                 TEXT("Mission 13 opens independent observation")) ||
             !Require(
                 Move(
@@ -2087,6 +2196,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             EntityType::Worker,
             echoes::sim::Faction::HollowChoir);
         if (!Require(
+                M14Plan.CrisisAnchorSite == ExpectedM11Rally,
+                FString::Printf(
+                    TEXT("Mission 14 route %s propagates the independent literal crisis anchor (%d,%d)"),
+                    Spec.Label,
+                    ExpectedM11Rally.x.FloorToInt(),
+                    ExpectedM11Rally.y.FloorToInt())) ||
+            !Require(
                 !M14Workers.IsEmpty() &&
                     M14Objective.SeveralVoicesResearchLoomId != 0,
                 TEXT("Mission 14 exposes its Choir worker and Research Loom")) ||
