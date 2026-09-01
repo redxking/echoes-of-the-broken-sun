@@ -2924,6 +2924,9 @@ bool UEchoesSimulationSubsystem::StartScenario(
     const ResourcePool ConfiguredSkirmishResources =
         FEchoesSkirmishSetupModel::StartingResources(
             ActiveSkirmishSetup.ResourceLevel);
+    const ResourcePool CampaignPrologueResources{
+        500,
+        FMath::Max(30, Config.rules.futureWell.reshapeDawnCost)};
     if (!Simulation->AddPlayer(
             LocalPlayerId,
             ScenarioLocalFaction,
@@ -2955,9 +2958,12 @@ bool UEchoesSimulationSubsystem::StartScenario(
                     || SelectedOperation ==
                         EEchoesOperationMode::CampaignTheBrokenSun
                 ? ResourcePool{1000, 500}
-                : SelectedOperation == EEchoesOperationMode::Skirmish
-                    ? ConfiguredSkirmishResources
-                    : ResourcePool{500, 30}) ||
+                : SelectedOperation ==
+                          EEchoesOperationMode::CampaignPrologue
+                    ? CampaignPrologueResources
+                    : SelectedOperation == EEchoesOperationMode::Skirmish
+                        ? ConfiguredSkirmishResources
+                        : ResourcePool{500, 30}) ||
         !Simulation->AddPlayer(
             OpponentPlayerId,
             ScenarioOpponentFaction,
@@ -15818,6 +15824,23 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             {
                 OutFeedback = TEXT("[WELL_INVALID] A worker must target a dormant Future Well with a chosen protocol.");
                 return false;
+            }
+            if (WellChoice == FutureWellChoice::Reshape)
+            {
+                const echoes::sim::PlayerState* Player =
+                    Simulation->FindPlayer(Actor.owner);
+                const int32 Cost =
+                    Simulation->Config().rules.futureWell.reshapeDawnCost;
+                const int32 AvailableDawn =
+                    Player != nullptr ? Player->resources.dawnshards : 0;
+                if (AvailableDawn < Cost)
+                {
+                    OutFeedback = FString::Printf(
+                        TEXT("[WELL_RESHAPE_INSUFFICIENT_DAWN] Reshape requires %d Dawnshards; %d available."),
+                        Cost,
+                        AvailableDawn);
+                    return false;
+                }
             }
             break;
         case CommandType::Build:

@@ -531,9 +531,63 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 break;
             }
         }
+        const echoes::sim::Simulation* M01Simulation =
+            Bridge->GetSimulation();
+        const echoes::sim::PlayerState* M01Player =
+            M01Simulation != nullptr
+                ? M01Simulation->FindPlayer(
+                      UEchoesSimulationSubsystem::LocalPlayerId)
+                : nullptr;
+        const int32 M01StartingDawn =
+            M01Player != nullptr ? M01Player->resources.dawnshards : -1;
+        const int32 M01ReshapeDawnCost =
+            M01Simulation != nullptr
+                ? M01Simulation->Config().rules.futureWell.reshapeDawnCost
+                : -1;
+        const bool bM01FoundingReshape =
+            Spec.FoundingChoice == FutureWellChoice::Reshape;
+        const auto M01FoundingChoiceActivated = [Bridge, Well, &Spec]()
+        {
+            const echoes::sim::Simulation* Current =
+                Bridge->GetSimulation();
+            const Entity* CurrentWell = Bridge->FindEntity(Well);
+            return Current != nullptr && CurrentWell != nullptr &&
+                CurrentWell->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                CurrentWell->wellChoice == Spec.FoundingChoice &&
+                CurrentWell->wellActivationTick > 0 &&
+                CurrentWell->wellActivationTick <= Current->CurrentTick();
+        };
+        const auto M01ReshapeSpendIsExact = [
+            Bridge,
+            bM01FoundingReshape,
+            M01StartingDawn,
+            M01ReshapeDawnCost]()
+        {
+            if (!bM01FoundingReshape)
+            {
+                return true;
+            }
+            const echoes::sim::Simulation* Current =
+                Bridge->GetSimulation();
+            const echoes::sim::PlayerState* Player =
+                Current != nullptr
+                    ? Current->FindPlayer(
+                          UEchoesSimulationSubsystem::LocalPlayerId)
+                    : nullptr;
+            return Player != nullptr &&
+                Player->resources.dawnshards ==
+                    M01StartingDawn - M01ReshapeDawnCost;
+        };
         if (!Require(
-                Carrier != 0 && !M01Workers.IsEmpty() && Well != 0,
+                Carrier != 0 && !M01Workers.IsEmpty() && Well != 0 &&
+                    M01Player != nullptr,
                 TEXT("Mission 01 exposes carrier, worker, and Future Well")) ||
+            !Require(
+                !bM01FoundingReshape ||
+                    (M01ReshapeDawnCost > 0 &&
+                     M01StartingDawn >= M01ReshapeDawnCost),
+                TEXT("Mission 01 funds the authored Reshape founding choice")) ||
             !Require(
                 Move(
                     Carrier,
@@ -583,6 +637,12 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     900),
                 TEXT("Mission 01 records the Future Well choice")) ||
+            !Require(
+                M01FoundingChoiceActivated(),
+                TEXT("Mission 01 activates the exact founding choice")) ||
+            !Require(
+                M01ReshapeSpendIsExact(),
+                TEXT("Mission 01 spends the exact authored Reshape cost")) ||
             !Require(
                 Move(
                     Carrier,

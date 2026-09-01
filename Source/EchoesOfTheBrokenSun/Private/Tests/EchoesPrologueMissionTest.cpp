@@ -156,6 +156,7 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     echoes::sim::Simulation* Simulation =
         const_cast<echoes::sim::Simulation*>(Bridge->GetSimulation());
     echoes::sim::EntityId WorkerId = 0;
+    echoes::sim::EntityId BarracksId = 0;
     echoes::sim::EntityId WellId = 0;
     if (Simulation != nullptr)
     {
@@ -166,6 +167,12 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
             {
                 WorkerId = Entity.id;
             }
+            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.type == echoes::sim::EntityType::Barracks &&
+                BarracksId == 0)
+            {
+                BarracksId = Entity.id;
+            }
             if (Entity.type == echoes::sim::EntityType::FutureWell)
             {
                 WellId = Entity.id;
@@ -174,8 +181,26 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     }
     TestTrue(TEXT("Mara Vey's scout is the explicit archive carrier"),
              CarrierId != 0);
-    TestTrue(TEXT("The mission retains a worker and central Future Well"),
-             WorkerId != 0 && WellId != 0);
+    TestTrue(
+        TEXT("The mission retains a worker, Barracks, and central Future Well"),
+        WorkerId != 0 && BarracksId != 0 && WellId != 0);
+    const echoes::sim::PlayerState* ProloguePlayer =
+        Simulation != nullptr
+            ? Simulation->FindPlayer(
+                  UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    const int32 ReshapeDawnCost =
+        Simulation != nullptr
+            ? Simulation->Config().rules.futureWell.reshapeDawnCost
+            : -1;
+    const int32 StartingDawn =
+        ProloguePlayer != nullptr
+            ? ProloguePlayer->resources.dawnshards
+            : -1;
+    TestTrue(
+        TEXT("The Prologue starts at the exact baseline-or-Reshape minimum"),
+        ReshapeDawnCost > 0 &&
+            StartingDawn == FMath::Max(30, ReshapeDawnCost));
 
     FString Feedback;
     const echoes::sim::Entity* Well = Bridge->FindEntity(WellId);
@@ -252,7 +277,77 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
             900));
     Feedback.Reset();
     TestTrue(
-        TEXT("Holding the archive admits the ordinary Preserve command"),
+        TEXT("Ordinary Soldier production queues before the Well decision"),
+        Bridge->IssueProductionCommand(
+            BarracksId,
+            echoes::sim::EntityType::Soldier,
+            Feedback));
+    TestTrue(
+        TEXT("Queued production executes and reduces Dawn below Reshape cost"),
+        TickUntil(
+            [Bridge, StartingDawn, ReshapeDawnCost]()
+            {
+                const echoes::sim::Simulation* Current =
+                    Bridge->GetSimulation();
+                const echoes::sim::PlayerState* Player =
+                    Current != nullptr
+                        ? Current->FindPlayer(
+                              UEchoesSimulationSubsystem::LocalPlayerId)
+                        : nullptr;
+                return Player != nullptr &&
+                    Player->resources.dawnshards < StartingDawn &&
+                    Player->resources.dawnshards < ReshapeDawnCost;
+            },
+            4));
+    const echoes::sim::Simulation* PostProductionSimulation =
+        Bridge->GetSimulation();
+    const echoes::sim::PlayerState* PostProductionPlayer =
+        PostProductionSimulation != nullptr
+            ? PostProductionSimulation->FindPlayer(
+                  UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    const int32 DawnBeforeRejectedReshape =
+        PostProductionPlayer != nullptr
+            ? PostProductionPlayer->resources.dawnshards
+            : -1;
+    TestTrue(
+        TEXT("Ordinary production leaves Reshape immediately unaffordable"),
+        DawnBeforeRejectedReshape >= 0 &&
+            DawnBeforeRejectedReshape < ReshapeDawnCost);
+    Feedback.Reset();
+    TestFalse(
+        TEXT("An immediately unaffordable Reshape is rejected before queuing"),
+        Bridge->IssueCommand(
+            echoes::sim::CommandType::FutureWell,
+            WorkerId,
+            WellId,
+            Bridge->SimToWorld(Bridge->FindEntity(WellId)->position),
+            echoes::sim::FutureWellChoice::Reshape,
+            Feedback));
+    TestTrue(
+        TEXT("The Reshape rejection reports the authored Dawn shortfall"),
+        Feedback.Contains(TEXT("WELL_RESHAPE_INSUFFICIENT_DAWN")) &&
+            !Feedback.Contains(TEXT("[QUEUED]")));
+    const echoes::sim::Simulation* PostRejectionSimulation =
+        Bridge->GetSimulation();
+    const echoes::sim::PlayerState* PostRejectionPlayer =
+        PostRejectionSimulation != nullptr
+            ? PostRejectionSimulation->FindPlayer(
+                  UEchoesSimulationSubsystem::LocalPlayerId)
+            : nullptr;
+    const echoes::sim::Entity* RejectedWell =
+        Bridge->FindEntity(WellId);
+    TestTrue(
+        TEXT("Rejected Reshape neither spends Dawn nor changes the dormant Well"),
+        PostRejectionPlayer != nullptr && RejectedWell != nullptr &&
+            PostRejectionPlayer->resources.dawnshards ==
+                DawnBeforeRejectedReshape &&
+            RejectedWell->wellChoice ==
+                echoes::sim::FutureWellChoice::Dormant &&
+            RejectedWell->wellActivationTick == 0);
+    Feedback.Reset();
+    TestTrue(
+        TEXT("The free Preserve protocol remains available after rejection"),
         Bridge->IssueCommand(
             echoes::sim::CommandType::FutureWell,
             WorkerId,
@@ -269,6 +364,20 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
                     EEchoesProloguePhase::Withdraw;
             },
             900));
+    const echoes::sim::Entity* PreservedWell =
+        Bridge->FindEntity(WellId);
+    const echoes::sim::Simulation* PostPreserveSimulation =
+        Bridge->GetSimulation();
+    TestTrue(
+        TEXT("Preserve activates under local authority after the rejected Reshape"),
+        PostPreserveSimulation != nullptr && PreservedWell != nullptr &&
+            PreservedWell->owner ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            PreservedWell->wellChoice ==
+                echoes::sim::FutureWellChoice::Preserve &&
+            PreservedWell->wellActivationTick > 0 &&
+            PreservedWell->wellActivationTick <=
+                PostPreserveSimulation->CurrentTick());
 
     Feedback.Reset();
     TestTrue(
