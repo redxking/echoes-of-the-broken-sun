@@ -2836,12 +2836,186 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M07Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
-        if (!Require(
+        const TArray<EntityId> M07Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M07CoreId =
+            M07Cores.IsEmpty() ? 0 : M07Cores[0];
+        FString M07FirstObservedProtectedLoss = TEXT("none");
+        uint64 M07FirstObservedProtectedLossTick = 0;
+        const auto ObserveMissionSevenProtectedState = [
+            Bridge,
+            M07CoreId,
+            M07Start,
+            &M07FirstObservedProtectedLoss,
+            &M07FirstObservedProtectedLossTick]()
+        {
+            const auto ObserveProtected = [
+                Bridge,
+                &M07FirstObservedProtectedLoss,
+                &M07FirstObservedProtectedLossTick](
+                    const TCHAR* Label,
+                    EntityId Id)
+            {
+                if (M07FirstObservedProtectedLoss != TEXT("none"))
+                {
+                    return;
+                }
+                const Entity* Current = Bridge->FindEntity(Id);
+                if (Id != 0 && Current != nullptr &&
+                    Current->hitPoints > 0)
+                {
+                    return;
+                }
+                const echoes::sim::Simulation* Simulation =
+                    Bridge->GetSimulation();
+                M07FirstObservedProtectedLossTick =
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0;
+                M07FirstObservedProtectedLoss =
+                    DescribeFreshJourneyEntity(Label, Id, Current);
+            };
+            ObserveProtected(TEXT("core"), M07CoreId);
+            ObserveProtected(
+                TEXT("waystone"), M07Start.MigrationWaystoneId);
+            ObserveProtected(TEXT("oruun"), M07Start.OruunId);
+            ObserveProtected(
+                TEXT("witnessA"), M07Start.FirstMemoryWitnessId);
+            ObserveProtected(
+                TEXT("witnessB"), M07Start.SecondMemoryWitnessId);
+        };
+        const auto WriteMissionSevenDiagnostic = [
+            Bridge,
+            M07CoreId,
+            M07Plan,
+            M07Start,
+            M07Workers,
+            &M07FirstObservedProtectedLoss,
+            &M07FirstObservedProtectedLossTick,
+            &ObserveMissionSevenProtectedState,
+            &Feedback]()
+        {
+            ObserveMissionSevenProtectedState();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            EntityId SpineId = 0;
+            const Entity* Spine = nullptr;
+            if (Simulation != nullptr)
+            {
+                for (const Entity& Candidate : Simulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.type == EntityType::UtilityStructure &&
+                        Candidate.position == M07Plan.ListeningSpineSite)
+                    {
+                        SpineId = Candidate.id;
+                        Spine = &Candidate;
+                        break;
+                    }
+                }
+            }
+            const EntityId WorkerId =
+                M07Workers.IsEmpty() ? 0 : M07Workers[0];
+            const FString PriorFeedback =
+                Feedback.IsEmpty() ? TEXT("none") : Feedback;
+            Feedback = FString::Printf(
+                TEXT("[M07_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expected={anchor=(%d,%d) spine=(%d,%d) witnesses=(%d,%d):(%d,%d) confluence=(%d,%d)} firstObservedProtectedLossTick=%llu firstObservedProtectedLoss=%s priorFeedback=%s current={%s %s %s %s %s %s %s}"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0),
+                Simulation != nullptr
+                    ? static_cast<uint8>(Simulation->Outcome())
+                    : 0xFF,
+                static_cast<uint8>(Bridge->GetShapeOfSilencePhase()),
+                M07Plan.WaystoneAnchor.x.FloorToInt(),
+                M07Plan.WaystoneAnchor.y.FloorToInt(),
+                M07Plan.ListeningSpineSite.x.FloorToInt(),
+                M07Plan.ListeningSpineSite.y.FloorToInt(),
+                M07Plan.FirstWitnessSite.x.FloorToInt(),
+                M07Plan.FirstWitnessSite.y.FloorToInt(),
+                M07Plan.SecondWitnessSite.x.FloorToInt(),
+                M07Plan.SecondWitnessSite.y.FloorToInt(),
+                M07Plan.ConfluenceSite.x.FloorToInt(),
+                M07Plan.ConfluenceSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    M07FirstObservedProtectedLossTick),
+                *M07FirstObservedProtectedLoss,
+                *PriorFeedback,
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"),
+                    M07CoreId,
+                    Bridge->FindEntity(M07CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("waystone"),
+                    M07Start.MigrationWaystoneId,
+                    Bridge->FindEntity(M07Start.MigrationWaystoneId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("oruun"),
+                    M07Start.OruunId,
+                    Bridge->FindEntity(M07Start.OruunId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("witnessA"),
+                    M07Start.FirstMemoryWitnessId,
+                    Bridge->FindEntity(M07Start.FirstMemoryWitnessId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("witnessB"),
+                    M07Start.SecondMemoryWitnessId,
+                    Bridge->FindEntity(M07Start.SecondMemoryWitnessId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("worker"),
+                    WorkerId,
+                    Bridge->FindEntity(WorkerId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("spine"), SpineId, Spine));
+        };
+        const auto RequireMissionSeven = [
+            &Require,
+            &ObserveMissionSevenProtectedState,
+            &WriteMissionSevenDiagnostic](
+                bool bCondition,
+                const FString& Label)
+        {
+            ObserveMissionSevenProtectedState();
+            if (!bCondition)
+            {
+                WriteMissionSevenDiagnostic();
+            }
+            return Require(bCondition, Label);
+        };
+        const auto TickUntilMissionSevenCondition = [
+            Bridge,
+            &ObserveMissionSevenProtectedState](
+                const TFunction<bool()>& Predicate,
+                int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0;
+                 TickIndex < MaximumTicks;
+                 ++TickIndex)
+            {
+                ObserveMissionSevenProtectedState();
+                if (Bridge->GetShapeOfSilencePhase() ==
+                    EEchoesShapeOfSilencePhase::Failed)
+                {
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                Bridge->Tick(0.05f);
+            }
+            ObserveMissionSevenProtectedState();
+            return Predicate();
+        };
+        ObserveMissionSevenProtectedState();
+        if (!RequireMissionSeven(
                 M07Start.MigrationWaystoneId != 0 &&
                     M07Start.OruunId != 0 &&
                     !M07Workers.IsEmpty(),
                 TEXT("Mission 07 exposes its Waystone, Oruun, and worker")) ||
-            !Require(
+            !RequireMissionSeven(
                 Bridge->IssueCommand(
                     CommandType::ToggleWaystoneRoot,
                     M07Start.MigrationWaystoneId,
@@ -2850,9 +3024,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     FutureWellChoice::Dormant,
                     Feedback),
                 TEXT("Mission 07 Waystone accepts uproot")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge, M07Start]()
                     {
                         const Entity* Current = Bridge->FindEntity(
@@ -2863,14 +3036,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     300),
                 TEXT("Mission 07 Waystone becomes mobile")) ||
-            !Require(
+            !RequireMissionSeven(
                 Move(
                     M07Start.MigrationWaystoneId,
                     M07Plan.WaystoneAnchor),
                 TEXT("Mission 07 Waystone accepts its listening route")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge, M07Start, M07Plan]()
                     {
                         return IsAtSite(
@@ -2880,7 +3052,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     2600),
                 TEXT("Mission 07 Waystone reaches its anchor")) ||
-            !Require(
+            !RequireMissionSeven(
                 Bridge->IssueCommand(
                     CommandType::ToggleWaystoneRoot,
                     M07Start.MigrationWaystoneId,
@@ -2889,9 +3061,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     FutureWellChoice::Dormant,
                     Feedback),
                 TEXT("Mission 07 Waystone accepts root")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeOfSilencePhase() ==
@@ -2900,16 +3071,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     400),
                 TEXT("Mission 07 opens Listening Spine construction")) ||
-            !Require(
+            !RequireMissionSeven(
                 Bridge->IssueBuildCommand(
                     M07Workers[0],
                     EntityType::UtilityStructure,
                     Bridge->SimToWorld(M07Plan.ListeningSpineSite),
                     Feedback),
                 TEXT("Mission 07 accepts its Listening Spine")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeOfSilencePhase() ==
@@ -2918,19 +3088,18 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3200),
                 TEXT("Mission 07 opens paired witnessing")) ||
-            !Require(
+            !RequireMissionSeven(
                 Move(
                     M07Start.FirstMemoryWitnessId,
                     M07Plan.FirstWitnessSite),
                 TEXT("Mission 07 first witness accepts its site")) ||
-            !Require(
+            !RequireMissionSeven(
                 Move(
                     M07Start.SecondMemoryWitnessId,
                     M07Plan.SecondWitnessSite),
                 TEXT("Mission 07 second witness accepts its site")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeOfSilencePhase() ==
@@ -2938,12 +3107,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3400),
                 TEXT("Mission 07 positions both witnesses")) ||
-            !Require(
+            !RequireMissionSeven(
                 Move(M07Start.OruunId, M07Plan.ConfluenceSite),
                 TEXT("Mission 07 Oruun accepts the confluence route")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSeven(
+                TickUntilMissionSevenCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeOfSilencePhase() ==

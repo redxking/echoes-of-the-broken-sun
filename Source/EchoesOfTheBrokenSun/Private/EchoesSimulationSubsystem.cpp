@@ -119,6 +119,7 @@ constexpr uint8 QuickSaveContainerMinimumVersion = 1;
 constexpr uint8 QuickSaveContainerVersion = 3;
 constexpr uint8 TermsOfContinuanceTopologyRevision = 2;
 constexpr uint8 NamesWithoutBirthsTopologyRevision = 2;
+constexpr uint8 ShapeOfSilenceTopologyRevision = 1;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
@@ -367,7 +368,10 @@ enum class EQuickSaveContainerRead : uint8
             : Operation ==
                     EEchoesOperationMode::CampaignNamesWithoutBirths
                 ? NamesWithoutBirthsTopologyRevision
-                : 0;
+                : Operation ==
+                        EEchoesOperationMode::CampaignShapeOfSilence
+                    ? ShapeOfSilenceTopologyRevision
+                    : 0;
     OutContainer.Add(TopologyRevision);
     AppendUint64LittleEndian(OutContainer, CampaignBranchIdentity);
     if (Operation == EEchoesOperationMode::Skirmish)
@@ -629,10 +633,20 @@ enum class EQuickSaveContainerRead : uint8
             "[LOAD_NAMES_TOPOLOGY_MISMATCH] This checkpoint predates the active Names Without Births route topology.");
         return EQuickSaveContainerRead::Invalid;
     }
+    if (ExpectedOperation ==
+            EEchoesOperationMode::CampaignShapeOfSilence &&
+        TopologyRevision != ShapeOfSilenceTopologyRevision)
+    {
+        OutError = TEXT(
+            "[LOAD_SHAPE_OF_SILENCE_TOPOLOGY_MISMATCH] This checkpoint predates the active Shape of Silence route topology.");
+        return EQuickSaveContainerRead::Invalid;
+    }
     if (ExpectedOperation !=
             EEchoesOperationMode::CampaignTermsOfContinuance &&
         ExpectedOperation !=
             EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        ExpectedOperation !=
+            EEchoesOperationMode::CampaignShapeOfSilence &&
         TopologyRevision != 0)
     {
         OutError = TEXT(

@@ -168,12 +168,37 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     const FEchoesShapeOfSilencePlan ReshapePlan =
         FEchoesShapeOfSilenceMissionModel::PlanForChoice(
             echoes::sim::FutureWellChoice::Reshape);
-    TestTrue(TEXT("All three inherited choices produce distinct listening geometry"),
-             HarvestPlan.WaystoneAnchor == echoes::sim::Vec2::FromTiles(14, 28) &&
-                 PreservePlan.WaystoneAnchor == echoes::sim::Vec2::FromTiles(32, 28) &&
-                 ReshapePlan.WaystoneAnchor == echoes::sim::Vec2::FromTiles(50, 28) &&
-                 HarvestPlan.FirstWitnessSite != PreservePlan.FirstWitnessSite &&
-                 PreservePlan.ConfluenceSite != ReshapePlan.ConfluenceSite);
+    TestTrue(
+        TEXT("All three inherited choices retain their exact listening geometry"),
+        HarvestPlan.WaystoneAnchor == echoes::sim::Vec2::FromTiles(14, 28) &&
+            HarvestPlan.ListeningSpineSite ==
+                echoes::sim::Vec2::FromTiles(14, 38) &&
+            HarvestPlan.FirstWitnessSite ==
+                echoes::sim::Vec2::FromTiles(10, 45) &&
+            HarvestPlan.SecondWitnessSite ==
+                echoes::sim::Vec2::FromTiles(18, 45) &&
+            HarvestPlan.ConfluenceSite ==
+                echoes::sim::Vec2::FromTiles(14, 50) &&
+            PreservePlan.WaystoneAnchor ==
+                echoes::sim::Vec2::FromTiles(32, 28) &&
+            PreservePlan.ListeningSpineSite ==
+                echoes::sim::Vec2::FromTiles(32, 38) &&
+            PreservePlan.FirstWitnessSite ==
+                echoes::sim::Vec2::FromTiles(28, 45) &&
+            PreservePlan.SecondWitnessSite ==
+                echoes::sim::Vec2::FromTiles(36, 45) &&
+            PreservePlan.ConfluenceSite ==
+                echoes::sim::Vec2::FromTiles(32, 50) &&
+            ReshapePlan.WaystoneAnchor ==
+                echoes::sim::Vec2::FromTiles(50, 28) &&
+            ReshapePlan.ListeningSpineSite ==
+                echoes::sim::Vec2::FromTiles(39, 37) &&
+            ReshapePlan.FirstWitnessSite ==
+                echoes::sim::Vec2::FromTiles(22, 38) &&
+            ReshapePlan.SecondWitnessSite ==
+                echoes::sim::Vec2::FromTiles(30, 38) &&
+            ReshapePlan.ConfluenceSite ==
+                echoes::sim::Vec2::FromTiles(25, 50));
 
     FEchoesShapeOfSilenceMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission seven"),
@@ -315,9 +340,80 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("The operation begins at Waystone establishment"),
              Bridge->GetShapeOfSilencePhase() ==
                  EEchoesShapeOfSilencePhase::RootWaystone);
-    TestTrue(TEXT("Mission seven uses its ledger-bound quick-save slot"),
-             Bridge->QuickSaveScenario(Feedback) &&
-                 IFileManager::Get().FileExists(*QuickSavePath));
+    if (!TestTrue(TEXT("Mission seven uses its ledger-bound quick-save slot"),
+                  Bridge->QuickSaveScenario(Feedback) &&
+                      IFileManager::Get().FileExists(*QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    constexpr int32 TopologyRevisionOffset = 11;
+    constexpr int32 ChecksumSize = 4;
+    TArray<uint8> CurrentTopologyBytes;
+    if (!TestTrue(
+            TEXT("The current Mission 07 checkpoint carries topology revision one"),
+            FFileHelper::LoadFileToArray(
+                CurrentTopologyBytes,
+                *QuickSavePath) &&
+                CurrentTopologyBytes.Num() > 16 &&
+                CurrentTopologyBytes[TopologyRevisionOffset] == 1))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestTrue(
+        TEXT("Topology revision zero binds the prior Reshape listening geometry"),
+        echoes::sim::Vec2::FromTiles(50, 38) !=
+                ReshapePlan.ListeningSpineSite &&
+            echoes::sim::Vec2::FromTiles(46, 45) !=
+                ReshapePlan.FirstWitnessSite &&
+            echoes::sim::Vec2::FromTiles(54, 45) !=
+                ReshapePlan.SecondWitnessSite &&
+            echoes::sim::Vec2::FromTiles(50, 50) !=
+                ReshapePlan.ConfluenceSite);
+    TArray<uint8> LegacyTopologyBytes = CurrentTopologyBytes;
+    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    const int32 ChecksumOffset =
+        LegacyTopologyBytes.Num() - ChecksumSize;
+    const uint32 LegacyChecksum = FCrc::MemCrc32(
+        LegacyTopologyBytes.GetData(),
+        ChecksumOffset);
+    for (int32 ByteIndex = 0;
+         ByteIndex < ChecksumSize;
+         ++ByteIndex)
+    {
+        LegacyTopologyBytes[ChecksumOffset + ByteIndex] =
+            static_cast<uint8>(
+                LegacyChecksum >> (ByteIndex * 8));
+    }
+    if (!TestTrue(
+            TEXT("The revision-zero Mission 07 fixture retains a valid checksum"),
+            FFileHelper::SaveArrayToFile(
+                LegacyTopologyBytes,
+                *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(
+        TEXT("QuickLoad rejects the revision-zero Mission 07 topology"),
+        Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("The Mission 07 topology rejection is explicit and stable"),
+        Feedback.Contains(TEXT("LOAD_SHAPE_OF_SILENCE_TOPOLOGY_MISMATCH")));
+    if (!TestTrue(
+            TEXT("The current Mission 07 checkpoint is restored after the legacy probe"),
+            FFileHelper::SaveArrayToFile(
+                CurrentTopologyBytes,
+                *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
     TestTrue(TEXT("The initial phase reconstructs after quick load"),
              Bridge->QuickLoadScenario(Feedback) &&
                  Bridge->GetShapeOfSilencePhase() ==
