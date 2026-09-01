@@ -50,11 +50,15 @@ CATEGORIES = (
 REVISION_PRESENTATION = "presentation-audio-v1"
 REVISION_INTERFACE = "interface-audio-v1"
 REVISION_GAMEPLAY = "gameplay-audio-v1"
-REVISION_MUSIC = "music-v1"
+REVISION_MUSIC = "music-v3"
 REVISION_AMBIENCE = "ambience-v1"
-REVISION_MUSIC_PAIRINGS = "music-v2"
+REVISION_MUSIC_PAIRINGS = "music-v4"
 
 PEAK_CEILING = 0.96
+# Music masters to a lower ceiling so 4x-oversampled true peak stays under
+# the release target of -1 dBTP (B6); applied as a transparent whole-buffer
+# gain trim, never as extra clipping.
+MUSIC_PEAK_CEILING = 0.85
 
 
 # ---------------------------------------------------------------------------
@@ -182,20 +186,30 @@ class Buffer:
             self.data[i] *= gain
         return peak
 
-    def to_wave_bytes(self) -> bytes:
+    def to_wave_bytes(self, ceiling: float = PEAK_CEILING) -> bytes:
+        clipped_data = [soft_clip(value) for value in self.data]
+        peak = max((abs(value) for value in clipped_data), default=0.0)
+        # The transparent trim applies only to lowered ceilings (music); the
+        # default ceiling keeps the original hard-clamp bytes for every
+        # already-registered family.
+        gain = (
+            ceiling / peak
+            if ceiling < PEAK_CEILING and peak > ceiling
+            else 1.0
+        )
         payload = io.BytesIO()
         with wave.open(payload, "wb") as writer:
             writer.setnchannels(self.channels)
             writer.setsampwidth(2)
             writer.setframerate(SAMPLE_RATE)
             frames = bytearray()
-            for value in self.data:
-                clipped = soft_clip(value)
-                if clipped > PEAK_CEILING:
-                    clipped = PEAK_CEILING
-                elif clipped < -PEAK_CEILING:
-                    clipped = -PEAK_CEILING
-                frames.extend(struct.pack("<h", int(round(clipped * 32767.0))))
+            for value in clipped_data:
+                trimmed = value * gain
+                if trimmed > ceiling:
+                    trimmed = ceiling
+                elif trimmed < -ceiling:
+                    trimmed = -ceiling
+                frames.extend(struct.pack("<h", int(round(trimmed * 32767.0))))
             writer.writeframes(bytes(frames))
         return payload.getvalue()
 
@@ -1321,7 +1335,12 @@ def cue_by_name(name: str) -> CueSpec:
 
 def render(spec: CueSpec) -> bytes:
     if spec.buffer_synth is not None:
-        return spec.buffer_synth().to_wave_bytes()
+        ceiling = (
+            MUSIC_PEAK_CEILING
+            if spec.revision in (REVISION_MUSIC, REVISION_MUSIC_PAIRINGS)
+            else PEAK_CEILING
+        )
+        return spec.buffer_synth().to_wave_bytes(ceiling)
     if spec.sample_synth is None:
         raise RuntimeError(f"Cue has no synthesis path: {spec.asset_name}")
     frame_count = int(round(spec.duration_seconds * SAMPLE_RATE))

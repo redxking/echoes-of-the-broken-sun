@@ -75,8 +75,13 @@ def import_sound(spec: synth.CueSpec) -> unreal.SoundWave:
             else:
                 unreal.log(f"[ECHOES_AUDIO_ASSET] path={path} action=reused")
             return existing
-        if not unreal.EditorAssetLibrary.delete_asset(path):
-            raise RuntimeError(f"Could not replace audio asset: {path}")
+        # A stale-revision asset must already have been removed by the purge
+        # pass (its own editor session): deleting and re-importing one path
+        # inside a single session strands the package name.
+        raise RuntimeError(
+            f"Stale audio asset survived the purge pass: {path} "
+            f"(recorded {revision}, expected {spec.revision})"
+        )
 
     task = unreal.AssetImportTask()
     task.filename = source_path(spec)

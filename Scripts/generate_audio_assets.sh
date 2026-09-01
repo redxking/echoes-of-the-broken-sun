@@ -15,9 +15,22 @@ fi
 
 mkdir -p "$project_root/Saved/Logs"
 
+purge="$project_root/Scripts/purge_stale_audio_assets.py"
+purge_log="$project_root/Saved/Logs/AudioAssetPurge.log"
 
 "$editor" "$project" \
-  -unattended -nop4 -nosplash -nullrhi -NoSound \
+  -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+  -ExecutePythonScript="$purge" \
+  -abslog="$purge_log"
+
+if ! grep -q '\[ECHOES_AUDIO_PURGE_READY\]' "$purge_log"; then
+  print -u2 "The stale-audio purge pass did not complete."
+  print -u2 "Inspect: $purge_log"
+  exit 3
+fi
+
+"$editor" "$project" \
+  -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
