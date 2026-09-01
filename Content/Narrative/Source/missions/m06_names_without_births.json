@@ -1,0 +1,1010 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m06_names_without_births",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "NamesWithoutBirths",
+  "operation_mode": "CampaignNamesWithoutBirths",
+  "phases": [
+   "Inactive",
+   "LocateCensus",
+   "StabilizeArchive",
+   "ShelterCivilians",
+   "ExtractEvidence",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "Names Without Births",
+  "purpose": "Talar Venn traces an erased census record along the geometry the founding Well decision selected, powers the archive that holds it, shelters the two civilian proxies the trace exposes, and stands at the extraction site to take the evidence out intact.",
+  "player_pov": "talar_venn_command_authority",
+  "command_faction": "meridian_compact",
+  "census_site_by_founding_choice": {
+   "harvest": {
+    "x": 16,
+    "y": 22
+   },
+   "preserve": {
+    "x": 32,
+    "y": 22
+   },
+   "reshape": {
+    "x": 48,
+    "y": 22
+   }
+  },
+  "power_link_site_by_founding_choice": {
+   "harvest": {
+    "x": 16,
+    "y": 16
+   },
+   "preserve": {
+    "x": 28,
+    "y": 16
+   },
+   "reshape": {
+    "x": 45,
+    "y": 16
+   }
+  },
+  "civilian_shelter_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 48
+   },
+   "preserve": {
+    "x": 32,
+    "y": 48
+   },
+   "reshape": {
+    "x": 39,
+    "y": 37
+   }
+  },
+  "evidence_extraction_site_by_founding_choice": {
+   "harvest": {
+    "x": 22,
+    "y": 44
+   },
+   "preserve": {
+    "x": 32,
+    "y": 44
+   },
+   "reshape": {
+    "x": 46,
+    "y": 37
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored census geometries from it.",
+   "The Harvest founding decision selects the Foundry Roll trace, with the census at tile 16,22, the power link at 16,16, the shelter at 14,48, and the extraction at 22,44.",
+   "The Preserve founding decision selects the Missing Quarter trace, with the census at tile 32,22, the power link at 28,16, the shelter at 32,48, and the extraction at 32,44.",
+   "The Reshape founding decision selects the Folded Register trace, with the census at tile 48,22, the power link at 45,16, the shelter at 39,37, and the extraction at 46,37.",
+   "The census evidence must be located before the archive can be stabilized, and the archive powered before the civilians can be sheltered.",
+   "Both civilian proxies must be sheltered before the extraction phase, and completion requires Talar at the extraction site.",
+   "Losing the local core, Talar, the archive, or either civilian proxy, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "No cause or author of the erased census is established by the trace.",
+   "Civilian outcomes beyond the two bounded proxies are not modeled and may not be claimed.",
+   "The recovered evidence is not established as complete or authentic.",
+   "Sheltering the proxies does not assert their consent or their trust.",
+   "The missing names are not established as recoverable.",
+   "No wider Compact records policy follows from one extracted trace."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_talar_venn",
+   "display_name": "Talar Venn",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m06_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_census_located",
+   "runtime_signal": "phase_entered:StabilizeArchive",
+   "prerequisite_ids": [
+    "nar_m06_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_archive_stabilized",
+   "runtime_signal": "phase_entered:ShelterCivilians",
+   "prerequisite_ids": [
+    "nar_m06_evt_census_located"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_civilians_sheltered",
+   "runtime_signal": "phase_entered:ExtractEvidence",
+   "prerequisite_ids": [
+    "nar_m06_evt_archive_stabilized"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_evidence_extracted",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m06_evt_civilians_sheltered"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m06_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m06_evt_evidence_extracted"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m06_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m06_ui_briefing",
+   "loc_key": "nar_m06_ui_briefing",
+   "source_text": "Somewhere in this district, names were recorded that no birth explains, and then the record of them was erased. Follow the trace the founding decision left reachable: locate the census, power the archive, shelter who the search exposes, and take the evidence out whole.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m06_ui_obj_locate_census",
+    "loc_key": "nar_m06_ui_obj_locate_census",
+    "source_text": "Locate the census evidence along the inherited trace.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 93,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m06_ui_obj_stabilize_archive",
+    "loc_key": "nar_m06_ui_obj_stabilize_archive",
+    "source_text": "Power the archive that holds the record.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 80,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m06_ui_obj_shelter_civilians",
+    "loc_key": "nar_m06_ui_obj_shelter_civilians",
+    "source_text": "Shelter both exposed civilian proxies.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 78,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m06_ui_obj_extract_evidence",
+    "loc_key": "nar_m06_ui_obj_extract_evidence",
+    "source_text": "Bring Talar to the extraction site with the evidence intact.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 100,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m06_line_op_names_001",
+   "loc_key": "nar_m06_line_op_names_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The register lists names with no births behind them. Someone recorded these people. Someone else made sure the recording did not keep.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 174,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_op_names_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_op_method_002",
+   "loc_key": "nar_m06_line_op_method_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "We are not here to decide what it means. We are here to find the census, keep it powered, and carry out what remains of it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 163,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_op_method_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_op_care_003",
+   "loc_key": "nar_m06_line_op_care_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "If the search exposes anyone living, they come under shelter before any record moves. Records wait better than people do.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 161,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_op_care_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_op_quiet_004",
+   "loc_key": "nar_m06_line_op_quiet_004",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Whoever erased this worked carefully. We will work more carefully.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 106,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_op_quiet_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_census_found_001",
+   "loc_key": "nar_m06_line_census_found_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_census_located",
+   "delivery_channel": "command_radio",
+   "source_text": "Found it. The census block is intact under the fill. The names are here, and the gaps around them have edges.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 149,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_census_found_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_census_power_002",
+   "loc_key": "nar_m06_line_census_power_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_census_located",
+   "delivery_channel": "command_radio",
+   "source_text": "The archive needs power before it will give anything up. The link site is marked; get a worker on it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_census_power_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_archive_up_001",
+   "loc_key": "nar_m06_line_archive_up_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_archive_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "Archive is powered and reading. It has been waiting a long time to be asked.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 116,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_archive_up_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_archive_exposed_002",
+   "loc_key": "nar_m06_line_archive_exposed_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_archive_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "The trace touched two residences. Both occupied. Shelter them first; the record has kept this long and will keep an hour more.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 166,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_archive_exposed_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_shelter_done_001",
+   "loc_key": "nar_m06_line_shelter_done_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_civilians_sheltered",
+   "delivery_channel": "command_radio",
+   "source_text": "Both proxies are under shelter and holding. Nobody else appears on the trace.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 117,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_shelter_done_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_shelter_extract_002",
+   "loc_key": "nar_m06_line_shelter_extract_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_civilians_sheltered",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the extraction. I will take the evidence out myself. Some things should not pass through more hands than they must.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_shelter_extract_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_complete_evidence_001",
+   "loc_key": "nar_m06_line_complete_evidence_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_evidence_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "The evidence is out and intact. Names without births, in the original hand, with the erasure marks preserved.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 149,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_complete_evidence_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_complete_bounds_002",
+   "loc_key": "nar_m06_line_complete_bounds_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_evidence_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "This does not tell us who erased them, or why. It tells us the erasure happened, and now it cannot happen quietly again.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 160,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_complete_persist_003",
+   "loc_key": "nar_m06_line_complete_persist_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_evidence_extracted",
+   "delivery_channel": "command_radio",
+   "source_text": "I will file it under its own name. The register deserves at least that.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 111,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_complete_persist_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_core_001",
+   "loc_key": "nar_m06_line_fail_core_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is down. The trace stops here, and the record stays in the ground.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 123,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_talar_002",
+   "loc_key": "nar_m06_line_fail_talar_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off from the operation. Without the archivist, there is no extraction worth the name.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 134,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_talar_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_archive_003",
+   "loc_key": "nar_m06_line_fail_archive_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The archive is destroyed. Whatever it still held of the census is gone with it, and that loss is now also part of the record.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 165,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_archive_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_civilian_004",
+   "loc_key": "nar_m06_line_fail_civilian_004",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "We lost one of the people the trace exposed. I will not call an extraction after that a success. The attempt ends.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 154,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_civilian_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_terminal_005",
+   "loc_key": "nar_m06_line_fail_terminal_005",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The register keeps its silence tonight.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 113,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_terminal_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_line_fail_generic_006",
+   "loc_key": "nar_m06_line_fail_generic_006",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m06_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The names remain unexplained, and unclaimed.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 110,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m06_vo_fail_generic_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m06_seq_opening",
+   "beat": "erased_names_and_careful_method",
+   "trigger_id": "nar_m06_evt_operation_started",
+   "line_ids": [
+    "nar_m06_line_op_names_001",
+    "nar_m06_line_op_method_002",
+    "nar_m06_line_op_care_003",
+    "nar_m06_line_op_quiet_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_seq_census",
+   "beat": "census_located_power_needed",
+   "trigger_id": "nar_m06_evt_census_located",
+   "line_ids": [
+    "nar_m06_line_census_found_001",
+    "nar_m06_line_census_power_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_seq_archive",
+   "beat": "archive_reads_civilians_exposed",
+   "trigger_id": "nar_m06_evt_archive_stabilized",
+   "line_ids": [
+    "nar_m06_line_archive_up_001",
+    "nar_m06_line_archive_exposed_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_seq_shelter",
+   "beat": "people_before_records",
+   "trigger_id": "nar_m06_evt_civilians_sheltered",
+   "line_ids": [
+    "nar_m06_line_shelter_done_001",
+    "nar_m06_line_shelter_extract_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m06_seq_completion",
+   "beat": "evidence_out_intact",
+   "trigger_id": "nar_m06_evt_evidence_extracted",
+   "line_ids": [
+    "nar_m06_line_complete_evidence_001",
+    "nar_m06_line_complete_bounds_002",
+    "nar_m06_line_complete_persist_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m06_result_added",
+    "loc_key": "nar_m06_result_added",
+    "source_text": "The extraction is recorded. The census evidence is out, its erasure marks preserved, and both exposed proxies are sheltered. Who erased the names, and why, remains an open entry.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m06_result_alreadyrecorded",
+    "loc_key": "nar_m06_result_alreadyrecorded",
+    "source_text": "This extraction was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m06_result_replayconflict",
+    "loc_key": "nar_m06_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m06_result_storagefailure",
+    "loc_key": "nar_m06_result_storagefailure",
+    "source_text": "The evidence was extracted but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m06_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m06_fail_talar",
+    "reason_code": "talar_lost",
+    "source_condition": "Talar Venn is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_talar_002"
+    ]
+   },
+   {
+    "id": "nar_m06_fail_archive",
+    "reason_code": "archive_lost",
+    "source_condition": "The census archive structure is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_archive_003"
+    ]
+   },
+   {
+    "id": "nar_m06_fail_civilian",
+    "reason_code": "civilian_proxy_lost",
+    "source_condition": "Either exposed civilian proxy is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_civilian_004"
+    ]
+   },
+   {
+    "id": "nar_m06_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_terminal_005"
+    ]
+   },
+   {
+    "id": "nar_m06_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m06_line_fail_generic_006"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m06_retry",
+   "loc_key": "nar_m06_retry",
+   "source_text": "The trace closed on this attempt. Retry the operation; the founding decision and its inherited census geometry remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 06 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m06_cine_opening",
+  "title": "Names Without Births, an erasure with edges",
+  "trigger_id": "nar_m06_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m06_shot_register",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A Compact record hall in shallow light: ranks of pale-ceramic register stacks, one section conspicuously clean where entries should crowd — a void with edges, not an empty lot.",
+    "line_ids": [
+     "nar_m06_line_op_names_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m06_register_void"
+    ],
+    "audio_hook_ids": [
+     "aud_m06_ambience_records"
+    ]
+   },
+   {
+    "id": "nar_m06_shot_trace",
+    "editorial_target_seconds": 8,
+    "visual_direction": "An archival overlay traces thin cyan lines between census, power link, shelter, and extraction sites; the geometry is exact and unhurried.",
+    "line_ids": [
+     "nar_m06_line_op_method_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m06_trace_overlay"
+    ],
+    "audio_hook_ids": [
+     "aud_m06_ambience_records"
+    ]
+   },
+   {
+    "id": "nar_m06_shot_residences",
+    "editorial_target_seconds": 7,
+    "visual_direction": "Two occupied residences at the trace's edge, warm interior light against charcoal; small ordinary movement inside.",
+    "line_ids": [
+     "nar_m06_line_op_care_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m06_exposed_residences"
+    ],
+    "audio_hook_ids": [
+     "aud_m06_ambience_records"
+    ]
+   },
+   {
+    "id": "nar_m06_shot_erasure",
+    "editorial_target_seconds": 7,
+    "visual_direction": "Close on a register surface: names in the original hand, and over them the precise, patient marks of removal.",
+    "line_ids": [
+     "nar_m06_line_op_quiet_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m06_erasure_marks"
+    ],
+    "audio_hook_ids": [
+     "aud_m06_ambience_records"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m06_register_void",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m06_trace_overlay",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m06_exposed_residences",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m06_erasure_marks",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m06_ambience_records",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

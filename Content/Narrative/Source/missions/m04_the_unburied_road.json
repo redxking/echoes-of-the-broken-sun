@@ -1,0 +1,887 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m04_the_unburied_road",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TheUnburiedRoad",
+  "operation_mode": "CampaignUnburiedRoad",
+  "phases": [
+   "Inactive",
+   "EstablishRoadhead",
+   "RaiseListeningSpine",
+   "RecoverMemoryShard",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Unburied Road",
+  "purpose": "Oruun-of-Seven-Stones takes mobile Kharuun infrastructure down the route the founding Well decision selected, roots the Waystone at the roadhead, raises a Listening Spine, and brings the memory bearer to the missing shard site to recover it.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "memory_bearer_role": "kharuun_worker",
+  "roadhead_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 28
+   },
+   "preserve": {
+    "x": 32,
+    "y": 28
+   },
+   "reshape": {
+    "x": 50,
+    "y": 28
+   }
+  },
+  "listening_spine_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 37
+   },
+   "preserve": {
+    "x": 32,
+    "y": 37
+   },
+   "reshape": {
+    "x": 49,
+    "y": 35
+   }
+  },
+  "memory_shard_site_by_founding_choice": {
+   "harvest": {
+    "x": 20,
+    "y": 43
+   },
+   "preserve": {
+    "x": 38,
+    "y": 43
+   },
+   "reshape": {
+    "x": 44,
+    "y": 40
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored roads from it.",
+   "The Harvest founding decision selects the Ash Cut, with the roadhead at tile 14,28, the Listening Spine site at tile 14,37, and the shard site at tile 20,43.",
+   "The Preserve founding decision selects the Buried Causeway, with the roadhead at tile 32,28, the Listening Spine site at tile 32,37, and the shard site at tile 38,43.",
+   "The Reshape founding decision selects the Folded Verge, with the roadhead at tile 50,28, the Listening Spine site at tile 49,35, and the shard site at tile 44,40.",
+   "The Waystone must be rooted at the roadhead before the Listening Spine phase can begin.",
+   "The Listening Spine must be complete before the shard recovery phase can begin, and completion requires the memory bearer at the shard site.",
+   "Losing the local core, the memory bearer, the Waystone, or reaching a terminal engagement outcome fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "The recovered shard does not resolve the Assembly memory dispute.",
+   "No complete ancestral record is restored by recovering one shard.",
+   "The shard's content is not established as authentic or infallible.",
+   "Completion does not assert anything about who buried the shard or why.",
+   "No claim of subsurface territory control beyond the walked road is established.",
+   "The three roads' names describe terrain, not moral standing."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m04_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_roadhead_established",
+   "runtime_signal": "phase_entered:RaiseListeningSpine",
+   "prerequisite_ids": [
+    "nar_m04_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_spine_raised",
+   "runtime_signal": "phase_entered:RecoverMemoryShard",
+   "prerequisite_ids": [
+    "nar_m04_evt_roadhead_established"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_shard_recovered",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m04_evt_spine_raised"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m04_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m04_evt_shard_recovered"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m04_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m04_ui_briefing",
+   "loc_key": "nar_m04_ui_briefing",
+   "source_text": "A memory shard is missing from the record, and the road to it runs subsurface. Take the road the founding decision selected: root the Waystone at the roadhead, raise a Listening Spine over the vaults, and walk the bearer to the shard.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m04_ui_obj_establish_roadhead",
+    "loc_key": "nar_m04_ui_obj_establish_roadhead",
+    "source_text": "Uproot the Waystone and root it at the inherited roadhead.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 98,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m04_ui_obj_raise_spine",
+    "loc_key": "nar_m04_ui_obj_raise_spine",
+    "source_text": "Raise a Listening Spine at the survey site while the road holds.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 104,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m04_ui_obj_recover_shard",
+    "loc_key": "nar_m04_ui_obj_recover_shard",
+    "source_text": "Bring the memory bearer to the shard site to make the recovery.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 103,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m04_line_op_road_001",
+   "loc_key": "nar_m04_line_op_road_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Something is missing from the record, and the record knows it. A shard, unburied by nobody, waiting on a road we stopped walking.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 169,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_op_road_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_op_inherit_002",
+   "loc_key": "nar_m04_line_op_inherit_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The founding decision picked our road for us. My accounts have opinions about all three. Today we only get to test one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_op_inherit_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_op_method_003",
+   "loc_key": "nar_m04_line_op_method_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Waystone first, at the roadhead. A road without an anchor is a rumor with a direction.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_op_method_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_op_vaults_004",
+   "loc_key": "nar_m04_line_op_vaults_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The vaults under this ground are older than my oldest account, and she claims to remember the sun before it broke. Walk carefully.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 170,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_op_vaults_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_road_confirm_001",
+   "loc_key": "nar_m04_line_road_confirm_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_roadhead_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Roadhead is anchored. The Waystone took to the ground like it remembered it. Perhaps it does.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 133,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_road_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_road_spine_002",
+   "loc_key": "nar_m04_line_road_spine_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_roadhead_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the Listening Spine. Before we take anything from this road, we owe it the courtesy of hearing what it holds.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 153,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_road_spine_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_spine_confirm_001",
+   "loc_key": "nar_m04_line_spine_confirm_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_spine_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "The Spine is up and listening. The strata carry more voices than my seven, and none of them agree either. Reassuring, in its way.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 169,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_spine_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_spine_bearer_002",
+   "loc_key": "nar_m04_line_spine_bearer_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_spine_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "Bearer forward, to the shard site. Slow steps. What was left unburied this long can wait a few minutes more for care.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 157,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_spine_bearer_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_complete_shard_001",
+   "loc_key": "nar_m04_line_complete_shard_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_shard_recovered",
+   "delivery_channel": "command_radio",
+   "source_text": "The bearer holds the shard. The road gave up what it kept, and the record has one gap fewer.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 132,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_complete_shard_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_complete_dispute_002",
+   "loc_key": "nar_m04_line_complete_dispute_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_shard_recovered",
+   "delivery_channel": "command_radio",
+   "source_text": "One shard recovered does not settle what the Assembly argues about. It gives the argument better material. That is the most memory ever does.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 181,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_complete_dispute_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_complete_road_003",
+   "loc_key": "nar_m04_line_complete_road_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_shard_recovered",
+   "delivery_channel": "command_radio",
+   "source_text": "Mark the road open in the accounts. Eighth account, first entry: the way is walkable, and we walked it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 143,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_complete_road_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_fail_core_001",
+   "loc_key": "nar_m04_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. A road with no authority behind it closes on its own.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 119,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_fail_bearer_002",
+   "loc_key": "nar_m04_line_fail_bearer_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The memory bearer is lost. The shard stays where it lay, and the gap in the record keeps its shape.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 139,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_fail_bearer_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_fail_waystone_003",
+   "loc_key": "nar_m04_line_fail_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is destroyed. The roadhead is an anchor no longer; the road is a rumor again.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 130,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_fail_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_fail_terminal_004",
+   "loc_key": "nar_m04_line_fail_terminal_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. Whatever the road holds, it keeps it today.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 117,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_fail_terminal_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_line_fail_generic_005",
+   "loc_key": "nar_m04_line_fail_generic_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m04_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. We withdraw, and the road stays unburied and unwalked.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 120,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m04_vo_fail_generic_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m04_seq_opening",
+   "beat": "missing_shard_and_inherited_road",
+   "trigger_id": "nar_m04_evt_operation_started",
+   "line_ids": [
+    "nar_m04_line_op_road_001",
+    "nar_m04_line_op_inherit_002",
+    "nar_m04_line_op_method_003",
+    "nar_m04_line_op_vaults_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_seq_roadhead",
+   "beat": "waystone_anchors_the_road",
+   "trigger_id": "nar_m04_evt_roadhead_established",
+   "line_ids": [
+    "nar_m04_line_road_confirm_001",
+    "nar_m04_line_road_spine_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_seq_spine",
+   "beat": "listening_before_taking",
+   "trigger_id": "nar_m04_evt_spine_raised",
+   "line_ids": [
+    "nar_m04_line_spine_confirm_001",
+    "nar_m04_line_spine_bearer_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m04_seq_completion",
+   "beat": "shard_recovered_record_amended",
+   "trigger_id": "nar_m04_evt_shard_recovered",
+   "line_ids": [
+    "nar_m04_line_complete_shard_001",
+    "nar_m04_line_complete_dispute_002",
+    "nar_m04_line_complete_road_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m04_result_added",
+    "loc_key": "nar_m04_result_added",
+    "source_text": "The recovery is recorded. The shard is out of the ground and in the bearer's keeping, and the road is marked walkable. What the shard means is a dispute the record now has to hold.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m04_result_alreadyrecorded",
+    "loc_key": "nar_m04_result_alreadyrecorded",
+    "source_text": "This recovery was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m04_result_replayconflict",
+    "loc_key": "nar_m04_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m04_result_storagefailure",
+    "loc_key": "nar_m04_result_storagefailure",
+    "source_text": "The shard was recovered but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m04_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m04_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m04_fail_bearer",
+    "reason_code": "memory_bearer_lost",
+    "source_condition": "The memory bearer is destroyed before the shard is recovered.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m04_line_fail_bearer_002"
+    ]
+   },
+   {
+    "id": "nar_m04_fail_waystone",
+    "reason_code": "waystone_lost",
+    "source_condition": "The Waystone is destroyed before or after rooting.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m04_line_fail_waystone_003"
+    ]
+   },
+   {
+    "id": "nar_m04_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m04_line_fail_terminal_004"
+    ]
+   },
+   {
+    "id": "nar_m04_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m04_line_fail_generic_005"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m04_retry",
+   "loc_key": "nar_m04_retry",
+   "source_text": "The road closed on this attempt. Retry the operation; the founding decision and its inherited road remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 04 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m04_cine_opening",
+  "title": "The Unburied Road, a gap in the record",
+  "trigger_id": "nar_m04_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m04_shot_record",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A Kharuun record wall in close frame: banded strata of inscribed mineral, one band interrupted by a clean, empty socket where a shard should sit.",
+    "line_ids": [
+     "nar_m04_line_op_road_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m04_record_gap"
+    ],
+    "audio_hook_ids": [
+     "aud_m04_ambience_vaults"
+    ]
+   },
+   {
+    "id": "nar_m04_shot_roads",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Three subsurface roads diverge from a single mouth, each lit differently by its own strata; the frame holds all three without preferring one.",
+    "line_ids": [
+     "nar_m04_line_op_inherit_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m04_three_roads"
+    ],
+    "audio_hook_ids": [
+     "aud_m04_ambience_vaults"
+    ]
+   },
+   {
+    "id": "nar_m04_shot_waystone",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The Waystone travels with the column, roots trailing like a held breath; the roadhead cut waits ahead in amber half-light.",
+    "line_ids": [
+     "nar_m04_line_op_method_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m04_waystone_column"
+    ],
+    "audio_hook_ids": [
+     "aud_m04_ambience_vaults"
+    ]
+   },
+   {
+    "id": "nar_m04_shot_vaults",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Grown mineral vaults recede overhead, amber light seeping along the strata; the column is small beneath them.",
+    "line_ids": [
+     "nar_m04_line_op_vaults_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m04_vault_ceiling"
+    ],
+    "audio_hook_ids": [
+     "aud_m04_ambience_vaults"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m04_record_gap",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m04_three_roads",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m04_waystone_column",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m04_vault_ceiling",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m04_ambience_vaults",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

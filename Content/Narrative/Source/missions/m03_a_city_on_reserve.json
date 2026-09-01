@@ -1,0 +1,843 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m03_a_city_on_reserve",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "ACityOnReserve",
+  "operation_mode": "CampaignCityReserve",
+  "phases": [
+   "Inactive",
+   "StabilizePriority",
+   "StabilizeSecondary",
+   "StabilizeFinal",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "A City on Reserve",
+  "purpose": "Mara Vey stabilizes an ark-city reserve grid by reconnecting the Life Support, Transit, and Archive districts in the priority order the founding Well decision selected, while every district structure and the local core must survive.",
+  "player_pov": "mara_vey_command_authority",
+  "command_faction": "meridian_compact",
+  "district_sites": {
+   "life_support": {
+    "x": 24,
+    "y": 10
+   },
+   "transit": {
+    "x": 10,
+    "y": 24
+   },
+   "archive": {
+    "x": 20,
+    "y": 20
+   }
+  },
+  "priority_order_by_founding_choice": {
+   "harvest": [
+    "life_support",
+    "transit",
+    "archive"
+   ],
+   "preserve": [
+    "archive",
+    "life_support",
+    "transit"
+   ],
+   "reshape": [
+    "transit",
+    "life_support",
+    "archive"
+   ]
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored reserve plans from it.",
+   "The Harvest founding decision selects the emergency load-shed plan, stabilizing Life Support, then Transit, then Archive.",
+   "The Preserve founding decision selects the continuity reserve plan, stabilizing Archive, then Life Support, then Transit.",
+   "The Reshape founding decision selects the manifested transit-weave plan, stabilizing Transit, then Life Support, then Archive.",
+   "The Life Support district interface stands at tile 24,10, Transit at tile 10,24, and Archive at tile 20,20.",
+   "Each district must be powered in the inherited order; a later district cannot be stabilized before an earlier one.",
+   "Losing the local core, any district structure, or reaching a terminal engagement outcome fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "The wider city is not fully recovered by stabilizing three districts.",
+   "No claim is made about reserve consequences beyond the three reconnected interfaces.",
+   "Completion does not assert civilian survival or wellbeing inside any district.",
+   "The inherited priority order is not established as the correct or moral order.",
+   "No consent of district populations to the chosen order is established.",
+   "Grid stability beyond the held session is not established."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_mara_vey",
+   "display_name": "Mara Vey",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m03_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_priority_stabilized",
+   "runtime_signal": "phase_entered:StabilizeSecondary",
+   "prerequisite_ids": [
+    "nar_m03_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_secondary_stabilized",
+   "runtime_signal": "phase_entered:StabilizeFinal",
+   "prerequisite_ids": [
+    "nar_m03_evt_priority_stabilized"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_grid_stabilized",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m03_evt_secondary_stabilized"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m03_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m03_evt_grid_stabilized"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m03_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m03_ui_briefing",
+   "loc_key": "nar_m03_ui_briefing",
+   "source_text": "The ark-city grid is on reserve and failing. The founding decision fixed the order the districts come back: reconnect each district interface in that order and keep every structure standing. The order is inherited; the work is now.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m03_ui_obj_stabilize_priority",
+    "loc_key": "nar_m03_ui_obj_stabilize_priority",
+    "source_text": "Power the first district interface in the inherited priority order.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 107,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m03_ui_obj_stabilize_secondary",
+    "loc_key": "nar_m03_ui_obj_stabilize_secondary",
+    "source_text": "Power the second district interface while the first holds.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 98,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m03_ui_obj_stabilize_final",
+    "loc_key": "nar_m03_ui_obj_stabilize_final",
+    "source_text": "Power the final district interface and keep all three standing.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 103,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m03_line_op_grid_001",
+   "loc_key": "nar_m03_line_op_grid_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Three districts, one reserve, and less margin than the gauges admit. We bring them back in the order we inherited, not the order we would argue for.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 188,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_op_grid_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_op_order_002",
+   "loc_key": "nar_m03_line_op_order_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The founding decision fixed the sequence. I have opinions about it. Opinions do not power a district.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_op_order_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_op_method_003",
+   "loc_key": "nar_m03_line_op_method_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Workers to the first interface. Escort stays with them. Nothing improvised until the third district holds.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 146,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_op_method_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_op_stakes_004",
+   "loc_key": "nar_m03_line_op_stakes_004",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Every structure out there is load-bearing. Lose one and the plan is no longer a plan.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 125,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_op_stakes_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_prio_confirm_001",
+   "loc_key": "nar_m03_line_prio_confirm_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_priority_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "First district is powered and holding. The draw is inside tolerance. Move the crew on.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_prio_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_prio_next_002",
+   "loc_key": "nar_m03_line_prio_next_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_priority_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "Second interface next. Same procedure, same discipline. The grid does not care that we are tired.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 137,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_prio_next_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_second_confirm_001",
+   "loc_key": "nar_m03_line_second_confirm_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_secondary_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "Two districts up. The reserve is carrying both without complaint, which is more than I promised anyone.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 143,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_second_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_second_final_002",
+   "loc_key": "nar_m03_line_second_final_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_secondary_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "One interface left. Finish the sequence exactly as inherited, and then we can argue about what it cost.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 143,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_second_final_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_complete_grid_001",
+   "loc_key": "nar_m03_line_complete_grid_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_grid_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "Third district is powered. The grid is stable in the inherited order, all structures standing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 134,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_complete_grid_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_complete_cost_002",
+   "loc_key": "nar_m03_line_complete_cost_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_grid_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "Three districts back is not a city recovered. It is three districts back. I will take it, and log the difference.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 153,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_complete_cost_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_complete_order_003",
+   "loc_key": "nar_m03_line_complete_order_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_grid_stabilized",
+   "delivery_channel": "command_radio",
+   "source_text": "The order held. Whether it was the right order is a question the record keeps open, and so will I.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 138,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_complete_order_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_fail_core_001",
+   "loc_key": "nar_m03_line_fail_core_001",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is down. Without command authority the reconnection sequence cannot continue.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 134,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_fail_district_002",
+   "loc_key": "nar_m03_line_fail_district_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "We lost a district structure. The inherited plan has no branch for a missing district. This attempt is over.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 148,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_fail_district_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_fail_terminal_003",
+   "loc_key": "nar_m03_line_fail_terminal_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The grid stays on reserve tonight.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 108,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_fail_terminal_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_line_fail_generic_004",
+   "loc_key": "nar_m03_line_fail_generic_004",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m03_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. Stand the crews down; we will run the sequence again.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 119,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m03_vo_fail_generic_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m03_seq_opening",
+   "beat": "reserve_grid_orders",
+   "trigger_id": "nar_m03_evt_operation_started",
+   "line_ids": [
+    "nar_m03_line_op_grid_001",
+    "nar_m03_line_op_order_002",
+    "nar_m03_line_op_method_003",
+    "nar_m03_line_op_stakes_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_seq_priority",
+   "beat": "first_district_holds",
+   "trigger_id": "nar_m03_evt_priority_stabilized",
+   "line_ids": [
+    "nar_m03_line_prio_confirm_001",
+    "nar_m03_line_prio_next_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_seq_secondary",
+   "beat": "second_district_holds",
+   "trigger_id": "nar_m03_evt_secondary_stabilized",
+   "line_ids": [
+    "nar_m03_line_second_confirm_001",
+    "nar_m03_line_second_final_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m03_seq_completion",
+   "beat": "grid_stable_in_inherited_order",
+   "trigger_id": "nar_m03_evt_grid_stabilized",
+   "line_ids": [
+    "nar_m03_line_complete_grid_001",
+    "nar_m03_line_complete_cost_002",
+    "nar_m03_line_complete_order_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m03_result_added",
+    "loc_key": "nar_m03_result_added",
+    "source_text": "The stabilization is recorded. Three districts run in the inherited order, and the reserve holds for now. What the order deferred, and who it deferred, stays in the record as an open cost.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m03_result_alreadyrecorded",
+    "loc_key": "nar_m03_result_alreadyrecorded",
+    "source_text": "This stabilization was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m03_result_replayconflict",
+    "loc_key": "nar_m03_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m03_result_storagefailure",
+    "loc_key": "nar_m03_result_storagefailure",
+    "source_text": "The grid was stabilized but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m03_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m03_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m03_fail_district",
+    "reason_code": "district_structure_lost",
+    "source_condition": "A Life Support, Transit, or Archive district structure is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m03_line_fail_district_002"
+    ]
+   },
+   {
+    "id": "nar_m03_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m03_line_fail_terminal_003"
+    ]
+   },
+   {
+    "id": "nar_m03_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m03_line_fail_generic_004"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m03_retry",
+   "loc_key": "nar_m03_retry",
+   "source_text": "The grid is still on reserve. Retry the operation; the founding decision and its inherited priority order remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 03 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m03_cine_opening",
+  "title": "A City on Reserve, districts dark in sequence",
+  "trigger_id": "nar_m03_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m03_shot_skyline",
+    "editorial_target_seconds": 9,
+    "visual_direction": "An ark-city district skyline at dusk, pale ceramic frames dark against a charcoal sky; scattered status bands blink amber where power should be steady.",
+    "line_ids": [
+     "nar_m03_line_op_grid_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m03_district_skyline"
+    ],
+    "audio_hook_ids": [
+     "aud_m03_ambience_reserve"
+    ]
+   },
+   {
+    "id": "nar_m03_shot_gridmap",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A grid schematic resolves over the districts, three interfaces marked in the inherited order; the sequence draws itself without commentary.",
+    "line_ids": [
+     "nar_m03_line_op_order_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m03_grid_schematic"
+    ],
+    "audio_hook_ids": [
+     "aud_m03_ambience_reserve"
+    ]
+   },
+   {
+    "id": "nar_m03_shot_crews",
+    "editorial_target_seconds": 7,
+    "visual_direction": "Worker crews move along a conduit-dense causeway toward the first interface, escort silhouettes holding the flanks.",
+    "line_ids": [
+     "nar_m03_line_op_method_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m03_worker_column"
+    ],
+    "audio_hook_ids": [
+     "aud_m03_ambience_reserve"
+    ]
+   },
+   {
+    "id": "nar_m03_shot_interface",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The first district interface in close frame, unpowered, its status band dark; the reserve gauge beside it sits near the bottom of its arc.",
+    "line_ids": [
+     "nar_m03_line_op_stakes_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m03_district_interface"
+    ],
+    "audio_hook_ids": [
+     "aud_m03_ambience_reserve"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m03_district_skyline",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m03_grid_schematic",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m03_worker_column",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m03_district_interface",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m03_ambience_reserve",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

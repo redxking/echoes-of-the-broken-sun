@@ -1,0 +1,1002 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m08_the_shape_beside_us",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TheShapeBesideUs",
+  "operation_mode": "CampaignShapeBesideUs",
+  "phases": [
+   "Inactive",
+   "ReachFirstEcho",
+   "RaiseEchoRelay",
+   "TraversePairedStates",
+   "ReachConvergence",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Shape Beside Us",
+  "purpose": "Talar Venn commands Meridian proxies through the overlap geometry the founding Well decision selected while Neme guides the traversal: reach the first echo, raise an echo relay, traverse both paired states with the state witnesses, and bring Talar to the convergence.",
+  "player_pov": "talar_venn_command_authority",
+  "command_faction": "meridian_compact",
+  "first_echo_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 28
+   },
+   "preserve": {
+    "x": 32,
+    "y": 28
+   },
+   "reshape": {
+    "x": 46,
+    "y": 20
+   }
+  },
+  "echo_relay_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 38
+   },
+   "preserve": {
+    "x": 32,
+    "y": 38
+   },
+   "reshape": {
+    "x": 38,
+    "y": 26
+   }
+  },
+  "first_state_site_by_founding_choice": {
+   "harvest": {
+    "x": 10,
+    "y": 45
+   },
+   "preserve": {
+    "x": 28,
+    "y": 45
+   },
+   "reshape": {
+    "x": 40,
+    "y": 12
+   }
+  },
+  "second_state_site_by_founding_choice": {
+   "harvest": {
+    "x": 18,
+    "y": 45
+   },
+   "preserve": {
+    "x": 36,
+    "y": 45
+   },
+   "reshape": {
+    "x": 48,
+    "y": 12
+   }
+  },
+  "convergence_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 50
+   },
+   "preserve": {
+    "x": 32,
+    "y": 50
+   },
+   "reshape": {
+    "x": 44,
+    "y": 6
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored overlap geometries from it.",
+   "The Harvest founding decision selects the Exhausted Echo, from first echo at tile 14,28 to convergence at tile 14,50.",
+   "The Preserve founding decision selects the Held Echo, from first echo at tile 32,28 to convergence at tile 32,50.",
+   "The Reshape founding decision selects the Folded Echo, from first echo at tile 46,20 to convergence at tile 44,6.",
+   "The first echo must be observed before the relay, and the relay raised before the paired states can be traversed.",
+   "Both paired states must be traversed by the state witnesses before the convergence phase, and completion requires Talar at the convergence.",
+   "Losing the local core, Talar, or either state witness, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "Contact through Neme does not establish a unified Choir identity.",
+   "No hidden authorship of the echoes or the earlier erasures is established.",
+   "No causation between the overlap and the census silences is established, only proximity.",
+   "The traversal does not assert that the paired states are safe, stable, or repeatable outside this geometry.",
+   "Neme's guidance is not established as complete or disinterested.",
+   "No Choir faction becomes playable or commandable through this contact."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_talar_venn",
+   "display_name": "Talar Venn",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_neme",
+   "display_name": "Neme",
+   "faction_id": "hollow_choir",
+   "role_in_mission": "reciprocal_choir_contact",
+   "command_authority": false,
+   "delivery_channel": "cross_faction_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m08_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_first_echo_observed",
+   "runtime_signal": "phase_entered:RaiseEchoRelay",
+   "prerequisite_ids": [
+    "nar_m08_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_relay_raised",
+   "runtime_signal": "phase_entered:TraversePairedStates",
+   "prerequisite_ids": [
+    "nar_m08_evt_first_echo_observed"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_states_traversed",
+   "runtime_signal": "phase_entered:ReachConvergence",
+   "prerequisite_ids": [
+    "nar_m08_evt_relay_raised"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_convergence_reached",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m08_evt_states_traversed"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m08_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m08_evt_convergence_reached"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m08_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m08_ui_briefing",
+   "loc_key": "nar_m08_ui_briefing",
+   "source_text": "Something walks beside our proxies through ground that exists twice. Neme offers guidance through the overlap; the offer is the first reciprocal contact we can act on. Reach the first echo, raise the relay, traverse both paired states, and Talar walks to the convergence.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m08_ui_obj_reach_first_echo",
+    "loc_key": "nar_m08_ui_obj_reach_first_echo",
+    "source_text": "Reach and observe the first echo along the inherited geometry.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 102,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m08_ui_obj_raise_echo_relay",
+    "loc_key": "nar_m08_ui_obj_raise_echo_relay",
+    "source_text": "Raise the echo relay at its site.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 73,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m08_ui_obj_traverse_paired_states",
+    "loc_key": "nar_m08_ui_obj_traverse_paired_states",
+    "source_text": "Traverse both paired states with the state witnesses.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 93,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m08_ui_obj_reach_convergence",
+    "loc_key": "nar_m08_ui_obj_reach_convergence",
+    "source_text": "Bring Talar to the convergence while the overlap holds.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 95,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m08_line_op_beside_001",
+   "loc_key": "nar_m08_line_op_beside_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The survey teams keep reporting the same thing: ground that reads as two places at once, and movement beside them that matches no roster.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 177,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_op_beside_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_op_offer_002",
+   "loc_key": "nar_m08_line_op_offer_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_operation_started",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "You are reading one page of a document that has two. I can hold the pages apart while you walk. This is an offer. It has been an offer for some time.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 189,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_op_offer_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_op_terms_003",
+   "loc_key": "nar_m08_line_op_terms_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "We accept guidance, not custody. Our proxies walk the route; you tell us where the pages turn. Everything gets recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 160,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_op_terms_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_op_neme_004",
+   "loc_key": "nar_m08_line_op_neme_004",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_operation_started",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "Recorded. Yes. Record that the echo is not an attack. It is an address. Approach the first one and I will show you the difference.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 170,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_op_neme_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_echo_001",
+   "loc_key": "nar_m08_line_echo_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_first_echo_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "First echo observed and logged. It repeats our proxy's approach four seconds ahead of the approach. I am filing that sentence exactly as written.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 185,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_echo_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_echo_relay_002",
+   "loc_key": "nar_m08_line_echo_relay_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_first_echo_observed",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "Now the relay. The echo you saw is thin. The relay lets it carry weight without tearing. Build where I marked; the mark is load-bearing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 176,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_echo_relay_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_relay_001",
+   "loc_key": "nar_m08_line_relay_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_relay_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "Relay is up. The overlap reads steadier through it — both states now report on the same channel, politely taking turns.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_relay_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_relay_guide_002",
+   "loc_key": "nar_m08_line_relay_guide_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_relay_raised",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "The paired states next. Send one witness into each. They will each see a valid ground. Both grounds are telling the truth. Walk them anyway.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 180,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_relay_guide_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_states_001",
+   "loc_key": "nar_m08_line_states_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_states_traversed",
+   "delivery_channel": "command_radio",
+   "source_text": "Both witnesses are through. Their traversal logs disagree on the terrain and agree on the distance. I have stopped expecting those to match.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 180,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_states_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_states_converge_002",
+   "loc_key": "nar_m08_line_states_converge_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_states_traversed",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "The convergence accepts one visitor, and it should be the one who keeps the records. Come yourself, archivist. Bring the disagreement with you.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 183,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_states_converge_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_complete_convergence_001",
+   "loc_key": "nar_m08_line_complete_convergence_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_convergence_reached",
+   "delivery_channel": "command_radio",
+   "source_text": "I am at the convergence. Both states resolve here — the same ground, agreeing with itself again. Contact was reciprocal, repeatable, and is now on file.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 192,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_complete_convergence_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_complete_bounds_002",
+   "loc_key": "nar_m08_line_complete_bounds_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_convergence_reached",
+   "delivery_channel": "command_radio",
+   "source_text": "For the record: we made contact through the overlap. We did not learn who the Choir is, what it wants, or what it was denied. We learned it answers.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 188,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_complete_neme_003",
+   "loc_key": "nar_m08_line_complete_neme_003",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m08_evt_convergence_reached",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "You walked both pages and wrote down both. That is more than most of the living have done for us. The address stands open.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 162,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_complete_neme_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_fail_core_001",
+   "loc_key": "nar_m08_line_fail_core_001",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is down. The overlap stays open, and unwalked.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 103,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_fail_talar_002",
+   "loc_key": "nar_m08_line_fail_talar_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off from the traversal. The convergence will not accept a record-keeper who is not there.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 138,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_fail_talar_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_fail_witness_003",
+   "loc_key": "nar_m08_line_fail_witness_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "We lost a state witness. Half a traversal is not a traversal; I will not log it as one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 127,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_fail_witness_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_fail_terminal_004",
+   "loc_key": "nar_m08_line_fail_terminal_004",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The pages close on their own.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 103,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_fail_terminal_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_line_fail_generic_005",
+   "loc_key": "nar_m08_line_fail_generic_005",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m08_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The shape beside us remains beside us, unaddressed.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 117,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m08_vo_fail_generic_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m08_seq_opening",
+   "beat": "reciprocal_offer_accepted_with_terms",
+   "trigger_id": "nar_m08_evt_operation_started",
+   "line_ids": [
+    "nar_m08_line_op_beside_001",
+    "nar_m08_line_op_offer_002",
+    "nar_m08_line_op_terms_003",
+    "nar_m08_line_op_neme_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_seq_echo",
+   "beat": "first_echo_is_an_address",
+   "trigger_id": "nar_m08_evt_first_echo_observed",
+   "line_ids": [
+    "nar_m08_line_echo_001",
+    "nar_m08_line_echo_relay_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_seq_relay",
+   "beat": "overlap_carries_weight",
+   "trigger_id": "nar_m08_evt_relay_raised",
+   "line_ids": [
+    "nar_m08_line_relay_001",
+    "nar_m08_line_relay_guide_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_seq_traversal",
+   "beat": "two_true_grounds",
+   "trigger_id": "nar_m08_evt_states_traversed",
+   "line_ids": [
+    "nar_m08_line_states_001",
+    "nar_m08_line_states_converge_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m08_seq_completion",
+   "beat": "contact_on_file",
+   "trigger_id": "nar_m08_evt_convergence_reached",
+   "line_ids": [
+    "nar_m08_line_complete_convergence_001",
+    "nar_m08_line_complete_bounds_002",
+    "nar_m08_line_complete_neme_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m08_result_added",
+    "loc_key": "nar_m08_result_added",
+    "source_text": "The traversal is recorded. Reciprocal contact through the overlap is established, repeatable, and filed with both traversal logs preserved — including where they disagree. Who the Choir is remains an open entry.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m08_result_alreadyrecorded",
+    "loc_key": "nar_m08_result_alreadyrecorded",
+    "source_text": "This traversal was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m08_result_replayconflict",
+    "loc_key": "nar_m08_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m08_result_storagefailure",
+    "loc_key": "nar_m08_result_storagefailure",
+    "source_text": "The convergence was reached but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m08_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m08_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m08_fail_talar",
+    "reason_code": "talar_lost",
+    "source_condition": "Talar Venn is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m08_line_fail_talar_002"
+    ]
+   },
+   {
+    "id": "nar_m08_fail_witness",
+    "reason_code": "state_witness_lost",
+    "source_condition": "Either paired-state witness is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m08_line_fail_witness_003"
+    ]
+   },
+   {
+    "id": "nar_m08_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m08_line_fail_terminal_004"
+    ]
+   },
+   {
+    "id": "nar_m08_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m08_line_fail_generic_005"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m08_retry",
+   "loc_key": "nar_m08_retry",
+   "source_text": "The overlap closed on this attempt. Retry the operation; the founding decision and its inherited geometry remain as recorded, and the offer of guidance stands.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 08 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m08_cine_opening",
+  "title": "The Shape Beside Us, ground that exists twice",
+  "trigger_id": "nar_m08_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m08_shot_overlap",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A stretch of vitrified ground rendered twice in the same frame, offset by a hand's width; both versions cast valid shadows and neither yields.",
+    "line_ids": [
+     "nar_m08_line_op_beside_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m08_doubled_ground"
+    ],
+    "audio_hook_ids": [
+     "aud_m08_ambience_overlap"
+    ]
+   },
+   {
+    "id": "nar_m08_shot_address",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A luminous edge repeats along a ridge in near-identical copies, one copy always slightly ahead — an address spoken in geometry.",
+    "line_ids": [
+     "nar_m08_line_op_offer_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m08_repeating_edge"
+    ],
+    "audio_hook_ids": [
+     "aud_m08_ambience_overlap"
+    ]
+   },
+   {
+    "id": "nar_m08_shot_terms",
+    "editorial_target_seconds": 7,
+    "visual_direction": "Meridian proxies advance in careful file past the doubled ground; a survey lamp writes both versions into one exposure.",
+    "line_ids": [
+     "nar_m08_line_op_terms_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m08_proxy_file"
+    ],
+    "audio_hook_ids": [
+     "aud_m08_ambience_overlap"
+    ]
+   },
+   {
+    "id": "nar_m08_shot_echo",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The first echo site: an opening that aligns only from this approach, holding a movement that has not happened yet.",
+    "line_ids": [
+     "nar_m08_line_op_neme_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m08_first_echo"
+    ],
+    "audio_hook_ids": [
+     "aud_m08_ambience_overlap"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m08_doubled_ground",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m08_repeating_edge",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m08_proxy_file",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m08_first_echo",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m08_ambience_overlap",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

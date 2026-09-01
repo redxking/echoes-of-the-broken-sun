@@ -1,0 +1,1024 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m07_the_shape_of_silence",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TheShapeOfSilence",
+  "operation_mode": "CampaignShapeOfSilence",
+  "phases": [
+   "Inactive",
+   "RootWaystone",
+   "RaiseListeningSpine",
+   "PositionMemoryWitnesses",
+   "ReachConfluence",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Shape of Silence",
+  "purpose": "Oruun-of-Seven-Stones follows the correspondence between an erased census and curated omissions in Kharuun communal memory: root the Waystone at the hollow's anchor, raise a Listening Spine, position two memory witnesses, and reach the confluence himself.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "waystone_anchor_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 28
+   },
+   "preserve": {
+    "x": 32,
+    "y": 28
+   },
+   "reshape": {
+    "x": 48,
+    "y": 20
+   }
+  },
+  "listening_spine_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 38
+   },
+   "preserve": {
+    "x": 32,
+    "y": 38
+   },
+   "reshape": {
+    "x": 39,
+    "y": 37
+   }
+  },
+  "first_witness_site_by_founding_choice": {
+   "harvest": {
+    "x": 10,
+    "y": 45
+   },
+   "preserve": {
+    "x": 28,
+    "y": 45
+   },
+   "reshape": {
+    "x": 22,
+    "y": 38
+   }
+  },
+  "second_witness_site_by_founding_choice": {
+   "harvest": {
+    "x": 18,
+    "y": 45
+   },
+   "preserve": {
+    "x": 36,
+    "y": 45
+   },
+   "reshape": {
+    "x": 30,
+    "y": 38
+   }
+  },
+  "confluence_site_by_founding_choice": {
+   "harvest": {
+    "x": 14,
+    "y": 50
+   },
+   "preserve": {
+    "x": 32,
+    "y": 50
+   },
+   "reshape": {
+    "x": 25,
+    "y": 50
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored memory hollows from it.",
+   "The Harvest founding decision selects the Cinder Hollow geometry, anchored at tile 14,28 with its confluence at tile 14,50.",
+   "The Preserve founding decision selects the Held Hollow geometry, anchored at tile 32,28 with its confluence at tile 32,50.",
+   "The Reshape founding decision selects the Folded Hollow geometry, anchored at tile 48,20 with its confluence at tile 25,50.",
+   "The Waystone must be rooted at the anchor before the Listening Spine, and the Spine raised before the witnesses can be positioned.",
+   "Both memory witnesses must stand at their sites before the confluence phase, and completion requires Oruun himself at the confluence.",
+   "Losing the local core, Oruun, the Waystone, or either witness, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "The correspondence between the erased census and the communal omissions is bounded; no cause is established.",
+   "No hidden author of either erasure is identified.",
+   "No Choir identity is established by this mission.",
+   "The Assembly confrontation the correspondence gestures toward is not completed here.",
+   "The witnesses' accounts are not established as true, only as positioned and heard.",
+   "No claim about what the silence contains is established, only its shape."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m07_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_waystone_rooted",
+   "runtime_signal": "phase_entered:RaiseListeningSpine",
+   "prerequisite_ids": [
+    "nar_m07_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_spine_raised",
+   "runtime_signal": "phase_entered:PositionMemoryWitnesses",
+   "prerequisite_ids": [
+    "nar_m07_evt_waystone_rooted"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_witnesses_positioned",
+   "runtime_signal": "phase_entered:ReachConfluence",
+   "prerequisite_ids": [
+    "nar_m07_evt_spine_raised"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_confluence_reached",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m07_evt_witnesses_positioned"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m07_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m07_evt_confluence_reached"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m07_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m07_ui_briefing",
+   "loc_key": "nar_m07_ui_briefing",
+   "source_text": "The Compact lost a census. Our communal memory lost a neighborhood, and lost the memory of losing it. The two silences correspond. Root the Waystone, raise the Spine, set two witnesses where the accounts thin, and Oruun walks to the confluence to hear the shape.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m07_ui_obj_root_waystone",
+    "loc_key": "nar_m07_ui_obj_root_waystone",
+    "source_text": "Root the Waystone at the hollow's inherited anchor.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 91,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m07_ui_obj_raise_spine",
+    "loc_key": "nar_m07_ui_obj_raise_spine",
+    "source_text": "Raise a Listening Spine over the thinned accounts.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 90,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m07_ui_obj_position_witnesses",
+    "loc_key": "nar_m07_ui_obj_position_witnesses",
+    "source_text": "Position both memory witnesses at their sites.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 86,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m07_ui_obj_reach_confluence",
+    "loc_key": "nar_m07_ui_obj_reach_confluence",
+    "source_text": "Bring Oruun to the confluence while the geometry holds.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 95,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m07_line_op_silence_001",
+   "loc_key": "nar_m07_line_op_silence_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "My accounts remember this district street by street. Then, for one neighborhood, all seven go quiet at once. Seven accounts do not agree on anything. Except, apparently, this.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 215,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_op_silence_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_op_census_002",
+   "loc_key": "nar_m07_line_op_census_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Talar's erased census and our curated quiet share a border. I do not know what that correspondence means. I intend to stand where I can hear it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 184,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_op_census_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_op_method_003",
+   "loc_key": "nar_m07_line_op_method_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Waystone to the anchor, then the Spine. We do this in the old order: anchor, listen, witness, walk.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 139,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_op_method_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_op_witness_004",
+   "loc_key": "nar_m07_line_op_witness_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Two witnesses, at the two places where the accounts thin. Not to speak. To stand where speaking stopped.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 144,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_op_witness_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_rooted_001",
+   "loc_key": "nar_m07_line_rooted_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone holds the anchor. The hollow has a center now, whatever else it is missing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 128,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_rooted_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_rooted_spine_002",
+   "loc_key": "nar_m07_line_rooted_spine_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "Raise the Spine. If the silence has a shape, the strata will carry its outline.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 119,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_rooted_spine_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_spine_001",
+   "loc_key": "nar_m07_line_spine_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_spine_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "The Spine is listening. There is something under the quiet — not a voice. The place where a voice was expected.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 151,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_spine_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_spine_witnesses_002",
+   "loc_key": "nar_m07_line_spine_witnesses_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_spine_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "Witnesses to their sites. Slowly. The accounts thin exactly where I asked them to stand, and I do not like what that implies about who curated them.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 188,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_spine_witnesses_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_witnesses_001",
+   "loc_key": "nar_m07_line_witnesses_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_witnesses_positioned",
+   "delivery_channel": "command_radio",
+   "source_text": "Both witnesses are placed. The geometry is complete except for me.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 106,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_witnesses_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_witnesses_walk_002",
+   "loc_key": "nar_m07_line_witnesses_walk_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_witnesses_positioned",
+   "delivery_channel": "command_radio",
+   "source_text": "I will walk the last leg myself. If the silence answers to anyone, it should answer to someone carrying seven ways to disagree with it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 175,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_witnesses_walk_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_complete_confluence_001",
+   "loc_key": "nar_m07_line_complete_confluence_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_confluence_reached",
+   "delivery_channel": "command_radio",
+   "source_text": "I am at the confluence. The witnesses hold, the Spine reads, and the silence has a shape: bounded, deliberate, and older than my accounts.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 178,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_complete_confluence_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_complete_bounds_002",
+   "loc_key": "nar_m07_line_complete_bounds_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_confluence_reached",
+   "delivery_channel": "command_radio",
+   "source_text": "I cannot tell you what was removed, or by whom. I can now tell you where removal stops. That is a smaller fact, and a harder one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 169,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_complete_record_003",
+   "loc_key": "nar_m07_line_complete_record_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_confluence_reached",
+   "delivery_channel": "command_radio",
+   "source_text": "Enter the outline in the accounts. All seven. Let them disagree about everything but the border.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 136,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_complete_record_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_core_001",
+   "loc_key": "nar_m07_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. The geometry cannot be held without authority behind it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 122,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_oruun_002",
+   "loc_key": "nar_m07_line_fail_oruun_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off from the walk. The confluence keeps its shape unheard.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 107,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_oruun_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_waystone_003",
+   "loc_key": "nar_m07_line_fail_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is destroyed. The hollow loses its center, and the listening geometry with it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 131,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_witness_004",
+   "loc_key": "nar_m07_line_fail_witness_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "We lost a witness. The silence stays unmeasured; I will not pretend two ears were one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_witness_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_terminal_005",
+   "loc_key": "nar_m07_line_fail_terminal_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The hollow keeps its quiet.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 101,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_terminal_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_line_fail_generic_006",
+   "loc_key": "nar_m07_line_fail_generic_006",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m07_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The shape of the silence remains its own.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 107,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m07_vo_fail_generic_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m07_seq_opening",
+   "beat": "two_silences_correspond",
+   "trigger_id": "nar_m07_evt_operation_started",
+   "line_ids": [
+    "nar_m07_line_op_silence_001",
+    "nar_m07_line_op_census_002",
+    "nar_m07_line_op_method_003",
+    "nar_m07_line_op_witness_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_seq_anchored",
+   "beat": "hollow_gains_a_center",
+   "trigger_id": "nar_m07_evt_waystone_rooted",
+   "line_ids": [
+    "nar_m07_line_rooted_001",
+    "nar_m07_line_rooted_spine_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_seq_listening",
+   "beat": "outline_under_the_quiet",
+   "trigger_id": "nar_m07_evt_spine_raised",
+   "line_ids": [
+    "nar_m07_line_spine_001",
+    "nar_m07_line_spine_witnesses_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_seq_witnessed",
+   "beat": "geometry_complete_but_one",
+   "trigger_id": "nar_m07_evt_witnesses_positioned",
+   "line_ids": [
+    "nar_m07_line_witnesses_001",
+    "nar_m07_line_witnesses_walk_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m07_seq_completion",
+   "beat": "silence_measured_not_solved",
+   "trigger_id": "nar_m07_evt_confluence_reached",
+   "line_ids": [
+    "nar_m07_line_complete_confluence_001",
+    "nar_m07_line_complete_bounds_002",
+    "nar_m07_line_complete_record_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m07_result_added",
+    "loc_key": "nar_m07_result_added",
+    "source_text": "The confluence is recorded. The silence now has a measured border in all seven accounts, and the correspondence with the erased census is documented. What was removed, and by whom, remains open.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m07_result_alreadyrecorded",
+    "loc_key": "nar_m07_result_alreadyrecorded",
+    "source_text": "This confluence was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m07_result_replayconflict",
+    "loc_key": "nar_m07_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m07_result_storagefailure",
+    "loc_key": "nar_m07_result_storagefailure",
+    "source_text": "The confluence was reached but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m07_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m07_fail_oruun",
+    "reason_code": "oruun_lost",
+    "source_condition": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_oruun_002"
+    ]
+   },
+   {
+    "id": "nar_m07_fail_waystone",
+    "reason_code": "waystone_lost",
+    "source_condition": "The Waystone is destroyed before or after rooting.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_waystone_003"
+    ]
+   },
+   {
+    "id": "nar_m07_fail_witness",
+    "reason_code": "memory_witness_lost",
+    "source_condition": "Either memory witness is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_witness_004"
+    ]
+   },
+   {
+    "id": "nar_m07_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_terminal_005"
+    ]
+   },
+   {
+    "id": "nar_m07_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m07_line_fail_generic_006"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m07_retry",
+   "loc_key": "nar_m07_retry",
+   "source_text": "The hollow closed on this attempt. Retry the operation; the founding decision and its inherited listening geometry remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 07 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m07_cine_opening",
+  "title": "The Shape of Silence, a border in the accounts",
+  "trigger_id": "nar_m07_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m07_shot_hollow",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A Kharuun memory hollow at dusk: grown mineral walls dense with inscribed strata, and one span where the inscriptions simply stop — clean stone, no scar.",
+    "line_ids": [
+     "nar_m07_line_op_silence_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m07_quiet_span"
+    ],
+    "audio_hook_ids": [
+     "aud_m07_ambience_hollow"
+    ]
+   },
+   {
+    "id": "nar_m07_shot_overlay",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Two translucent maps drift into alignment: the Compact census void and the Kharuun quiet, their borders meeting without merging.",
+    "line_ids": [
+     "nar_m07_line_op_census_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m07_corresponding_voids"
+    ],
+    "audio_hook_ids": [
+     "aud_m07_ambience_hollow"
+    ]
+   },
+   {
+    "id": "nar_m07_shot_order",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The Waystone column moves toward the anchor cut; behind it the Spine segments ride disassembled, in the old processional order.",
+    "line_ids": [
+     "nar_m07_line_op_method_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m07_processional_column"
+    ],
+    "audio_hook_ids": [
+     "aud_m07_ambience_hollow"
+    ]
+   },
+   {
+    "id": "nar_m07_shot_witnesses",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Two witness figures stand at marked sites in the middle distance, small against the strata, facing the quiet span rather than each other.",
+    "line_ids": [
+     "nar_m07_line_op_witness_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m07_standing_witnesses"
+    ],
+    "audio_hook_ids": [
+     "aud_m07_ambience_hollow"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m07_quiet_span",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m07_corresponding_voids",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m07_processional_column",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m07_standing_witnesses",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m07_ambience_hollow",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}
