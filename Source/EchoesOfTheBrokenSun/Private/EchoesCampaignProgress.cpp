@@ -1046,3 +1046,148 @@ bool FEchoesCampaignProgressStore::LoadGeneration(
         OutProgress.Decisions.Num() == 1 ? TEXT("") : TEXT("s"));
     return true;
 }
+
+bool FEchoesCampaignProgressStore::IsValidSlotName(const FString& SlotName)
+{
+    if (SlotName.IsEmpty() || SlotName.Len() > 32)
+    {
+        return false;
+    }
+    for (const TCHAR Character : SlotName)
+    {
+        const bool bAllowed =
+            (Character >= TEXT('a') && Character <= TEXT('z')) ||
+            (Character >= TEXT('A') && Character <= TEXT('Z')) ||
+            (Character >= TEXT('0') && Character <= TEXT('9')) ||
+            Character == TEXT(' ') || Character == TEXT('-') ||
+            Character == TEXT('_');
+        if (!bAllowed)
+        {
+            return false;
+        }
+    }
+    // A leading or trailing space invites duplicate-looking slots.
+    return !SlotName.StartsWith(TEXT(" ")) && !SlotName.EndsWith(TEXT(" "));
+}
+
+FString FEchoesCampaignProgressStore::GetSlotPath(const FString& SlotName)
+{
+    FString Encoded = SlotName;
+    Encoded.ReplaceInline(TEXT(" "), TEXT("_"));
+    return FPaths::Combine(
+        GetSaveGameDirectory(),
+        FString::Printf(TEXT("EchoesCampaignSlot_%s.bin"), *Encoded));
+}
+
+bool FEchoesCampaignProgressStore::SaveSlot(
+    const FString& SlotName,
+    const FEchoesCampaignProgress& Progress,
+    FString& OutFeedback)
+{
+    if (!IsValidSlotName(SlotName))
+    {
+        OutFeedback = TEXT("[CAMPAIGN_SLOT_NAME_INVALID] Use 1-32 letters, digits, spaces, hyphens, or underscores.");
+        return false;
+    }
+    return SaveAtomic(GetSlotPath(SlotName), Progress, OutFeedback);
+}
+
+bool FEchoesCampaignProgressStore::LoadSlot(
+    const FString& SlotName,
+    FEchoesCampaignProgress& OutProgress,
+    FString& OutFeedback)
+{
+    if (!IsValidSlotName(SlotName))
+    {
+        OutFeedback = TEXT("[CAMPAIGN_SLOT_NAME_INVALID] Use 1-32 letters, digits, spaces, hyphens, or underscores.");
+        return false;
+    }
+    const FString Path = GetSlotPath(SlotName);
+    if (!IFileManager::Get().FileExists(*Path) &&
+        !IFileManager::Get().FileExists(*(Path + TEXT(".bak"))))
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[CAMPAIGN_SLOT_ABSENT] No slot named %s exists."),
+            *SlotName);
+        return false;
+    }
+    return LoadWithBackup(Path, OutProgress, OutFeedback);
+}
+
+bool FEchoesCampaignProgressStore::DeleteSlot(
+    const FString& SlotName,
+    FString& OutFeedback)
+{
+    if (!IsValidSlotName(SlotName))
+    {
+        OutFeedback = TEXT("[CAMPAIGN_SLOT_NAME_INVALID] Use 1-32 letters, digits, spaces, hyphens, or underscores.");
+        return false;
+    }
+    const FString Path = GetSlotPath(SlotName);
+    const FString BackupPath = Path + TEXT(".bak");
+    const bool bPrimaryExists = IFileManager::Get().FileExists(*Path);
+    const bool bBackupExists = IFileManager::Get().FileExists(*BackupPath);
+    if (!bPrimaryExists && !bBackupExists)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[CAMPAIGN_SLOT_ABSENT] No slot named %s exists."),
+            *SlotName);
+        return false;
+    }
+    bool bDeleted = true;
+    if (bPrimaryExists)
+    {
+        bDeleted &= IFileManager::Get().Delete(*Path, false, true, true);
+    }
+    if (bBackupExists)
+    {
+        bDeleted &= IFileManager::Get().Delete(*BackupPath, false, true, true);
+    }
+    if (!bDeleted)
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[CAMPAIGN_SLOT_DELETE_FAILED] Slot %s could not be fully removed."),
+            *SlotName);
+        return false;
+    }
+    OutFeedback = FString::Printf(
+        TEXT("CAMPAIGN SLOT: %s deleted."), *SlotName);
+    return true;
+}
+
+TArray<FEchoesCampaignProgressStore::FSlotSummary>
+FEchoesCampaignProgressStore::ListSlots()
+{
+    TArray<FSlotSummary> Summaries;
+    TArray<FString> Files;
+    IFileManager::Get().FindFiles(
+        Files,
+        *FPaths::Combine(
+            GetSaveGameDirectory(), TEXT("EchoesCampaignSlot_*.bin")),
+        true,
+        false);
+    Files.Sort();
+    for (const FString& File : Files)
+    {
+        FString Encoded = File;
+        Encoded.RemoveFromStart(TEXT("EchoesCampaignSlot_"));
+        Encoded.RemoveFromEnd(TEXT(".bin"));
+        FString SlotName = Encoded.Replace(TEXT("_"), TEXT(" "));
+        // Names that used underscores directly decode identically; both
+        // forms address the same file, so the listed name stays loadable.
+        FEchoesCampaignProgress Progress;
+        FString Feedback;
+        if (!LoadWithBackup(
+                FPaths::Combine(GetSaveGameDirectory(), File),
+                Progress,
+                Feedback))
+        {
+            // Fail closed: an unreadable slot is not listed as loadable.
+            continue;
+        }
+        FSlotSummary& Summary = Summaries.AddDefaulted_GetRef();
+        Summary.SlotName = MoveTemp(SlotName);
+        Summary.DecisionCount = Progress.Decisions.Num();
+    }
+    return Summaries;
+}

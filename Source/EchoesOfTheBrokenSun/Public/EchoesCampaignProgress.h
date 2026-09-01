@@ -290,6 +290,39 @@ public:
         FEchoesCampaignProgress& OutProgress,
         FString& OutFeedback);
 
+    // --- Named campaign slots ------------------------------------------
+    // Slots are ordinary transactional ledgers under player-visible names,
+    // sharing SaveAtomic/LoadWithBackup and every container guarantee.
+
+    /** True when the name is 1-32 chars of letters, digits, space, - or _. */
+    [[nodiscard]] static bool IsValidSlotName(const FString& SlotName);
+
+    /** The slot's primary file path inside the save directory. */
+    [[nodiscard]] static FString GetSlotPath(const FString& SlotName);
+
+    /** Saves the progress under the named slot, overwriting transactionally. */
+    static bool SaveSlot(
+        const FString& SlotName,
+        const FEchoesCampaignProgress& Progress,
+        FString& OutFeedback);
+
+    /** Loads one named slot (with its own backup fallback). */
+    static bool LoadSlot(
+        const FString& SlotName,
+        FEchoesCampaignProgress& OutProgress,
+        FString& OutFeedback);
+
+    /** Deletes the named slot and its prior generation. */
+    static bool DeleteSlot(const FString& SlotName, FString& OutFeedback);
+
+    /** Every valid named slot on disk, with its decoded decision count. */
+    struct FSlotSummary
+    {
+        FString SlotName;
+        int32 DecisionCount = 0;
+    };
+    [[nodiscard]] static TArray<FSlotSummary> ListSlots();
+
 #if WITH_DEV_AUTOMATION_TESTS
     /** One-shot fault injection before rotating a validated primary. */
     static void FailNextBackupRotationForTesting();
