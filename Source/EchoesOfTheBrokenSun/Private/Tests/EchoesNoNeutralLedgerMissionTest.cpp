@@ -52,6 +52,20 @@ uint8 NoNeutralChoiceMask(echoes::sim::FutureWellChoice Choice)
     }
 }
 
+echoes::sim::Vec2 TestOwnedLedgerRallySite(
+    echoes::sim::FutureWellChoice Choice)
+{
+    using echoes::sim::FutureWellChoice;
+    using echoes::sim::Vec2;
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(32, 43);
+        default: return {};
+    }
+}
+
 FEchoesCampaignDecisionRecord MakeNoNeutralRecord(
     EEchoesCampaignMissionId Mission,
     echoes::sim::FutureWellChoice FoundingChoice,
@@ -196,8 +210,13 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
                             Vec2::FromTiles(38, 43) &&
                         Plan.FutureWellSite == Vec2::FromTiles(32, 49) &&
                         Plan.RallySite ==
-                            FEchoesNoNeutralLedgerMissionModel::
-                                RallySiteForProtocol(LumeChoice));
+                            TestOwnedLedgerRallySite(LumeChoice));
+                TestTrue(
+                    TEXT("Every alliance rally stays distinct from contributing districts and public evidence readbacks"),
+                    Plan.RallySite != Plan.FirstDistrictSite &&
+                        Plan.RallySite != Plan.SecondDistrictSite &&
+                        Plan.RallySite != Plan.MeridianEvidenceSite &&
+                        Plan.RallySite != Plan.KharuunEvidenceSite);
                 PlanKeys.Add(Plan.StablePlanKey);
                 ++PlanContracts;
             }
@@ -211,6 +230,18 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         TEXT("All 27 plans have stable unique keys"),
         PlanKeys.Num(),
         27);
+    FEchoesNoNeutralLedgerPlan Plan17;
+    TestTrue(
+        TEXT("Plan 17 maps Preserve and Reshape to the literal authored central rally"),
+        FEchoesNoNeutralLedgerMissionModel::TryPlanForLedger(
+            FutureWellChoice::Preserve,
+            0x7B,
+            FutureWellChoice::Reshape,
+            Plan17) &&
+            Plan17.StablePlanKey == 17 &&
+            Plan17.FoundingDoctrine == FutureWellChoice::Preserve &&
+            Plan17.LumeProtocol == FutureWellChoice::Reshape &&
+            Plan17.RallySite == Vec2::FromTiles(32, 43));
     FEchoesNoNeutralLedgerPlan InvalidPlan;
     TestFalse(
         TEXT("A reserve record with fewer than two contributing districts is rejected"),

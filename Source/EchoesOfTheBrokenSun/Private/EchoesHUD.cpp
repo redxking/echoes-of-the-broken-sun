@@ -2681,12 +2681,25 @@ void AEchoesHUD::DrawObjectiveTracker(
         const bool bWitnessesExtracted =
             Objective.bMeridianWitnessExtracted &&
             Objective.bKharuunWitnessExtracted;
+        FString PlayerLinkSites;
+        for (const auto& Site : Plan.PlayerPowerLinkSites)
+        {
+            if (!PlayerLinkSites.IsEmpty())
+            {
+                PlayerLinkSites += TEXT(", ");
+            }
+            PlayerLinkSites += FString::Printf(
+                TEXT("%d,%d"),
+                Site.x.FloorToInt(),
+                Site.y.FloorToInt());
+        }
         const FString NetworkState = bFailed
             ? TEXT("INTERFACES LOST")
             : bNetworksReady
                 ? TEXT("SYNCHRONIZED")
                 : FString::Printf(
-                      TEXT("MERIDIAN %s  KHARUUN %s"),
+                      TEXT("BUILD P %s  //  MERIDIAN %s  KHARUUN %s"),
+                      *PlayerLinkSites,
                       Objective.bMeridianRelaySynchronized
                           ? TEXT("UP") : TEXT("DOWN"),
                       Objective.bKharuunSpineSynchronized
@@ -4795,6 +4808,18 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingBridge != nullptr
             ? BriefingBridge->GetTermsOfContinuancePlan()
             : FEchoesTermsOfContinuancePlan{};
+    FString ContinuancePlayerLinkSites;
+    for (const auto& Site : ContinuancePlan.PlayerPowerLinkSites)
+    {
+        if (!ContinuancePlayerLinkSites.IsEmpty())
+        {
+            ContinuancePlayerLinkSites += TEXT(", ");
+        }
+        ContinuancePlayerLinkSites += FString::Printf(
+            TEXT("%d,%d"),
+            Site.x.FloorToInt(),
+            Site.y.FloorToInt());
+    }
     const FEchoesNamesWithoutBirthsPlan NamesPlan =
         BriefingBridge != nullptr
             ? BriefingBridge->GetNamesWithoutBirthsPlan()
@@ -5110,7 +5135,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   UnburiedRoadRoute.Roadhead.y.FloorToInt())
         : bTermsOfContinuance
             ? FString::Printf(
-                  TEXT("01  Use workers and [N] Power Links to synchronize both interfaces at %d,%d and %d,%d."),
+                  TEXT("01  Build [N] Power Links at %s; then synchronize interfaces at %d,%d and %d,%d."),
+                  *ContinuancePlayerLinkSites,
                   ContinuancePlan.MeridianRelaySite.x.FloorToInt(),
                   ContinuancePlan.MeridianRelaySite.y.FloorToInt(),
                   ContinuancePlan.KharuunSpineSite.x.FloorToInt(),
@@ -5770,6 +5796,37 @@ void AEchoesHUD::DrawTacticalMinimap(
         {
             const FEchoesTermsOfContinuancePlan Plan =
                 Bridge->GetTermsOfContinuancePlan();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            for (const auto& Site : Plan.PlayerPowerLinkSites)
+            {
+                bool bPlayerLinkComplete = false;
+                if (Simulation != nullptr)
+                {
+                    for (const echoes::sim::Entity& Entity :
+                         Simulation->Entities())
+                    {
+                        if (Entity.owner ==
+                                UEchoesSimulationSubsystem::LocalPlayerId &&
+                            Entity.faction ==
+                                echoes::sim::Faction::MeridianCompact &&
+                            Entity.type ==
+                                echoes::sim::EntityType::Dropoff &&
+                            Entity.position == Site &&
+                            Entity.hitPoints > 0 && Entity.completed)
+                        {
+                            bPlayerLinkComplete = true;
+                            break;
+                        }
+                    }
+                }
+                DrawMissionSite(
+                    Site,
+                    TEXT("P"),
+                    bPlayerLinkComplete
+                        ? FLinearColor(0.25f, 1.0f, 0.66f)
+                        : Border);
+            }
             DrawMissionSite(
                 Plan.MeridianRelaySite,
                 TEXT("A"),

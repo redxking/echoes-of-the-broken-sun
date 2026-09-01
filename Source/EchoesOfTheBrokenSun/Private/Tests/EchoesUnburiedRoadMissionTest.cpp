@@ -131,10 +131,41 @@ bool FEchoesUnburiedRoadMissionTest::RunTest(const FString& Parameters)
              FEchoesUnburiedRoadMissionModel::RouteForChoice(
                  echoes::sim::FutureWellChoice::Harvest).Roadhead ==
                  echoes::sim::Vec2::FromTiles(14, 28));
-    TestTrue(TEXT("Reshape selects the eastern folded verge"),
-             FEchoesUnburiedRoadMissionModel::RouteForChoice(
-                 echoes::sim::FutureWellChoice::Reshape).Roadhead ==
+    const FEchoesUnburiedRoadRoute ReshapeRoute =
+        FEchoesUnburiedRoadMissionModel::RouteForChoice(
+            echoes::sim::FutureWellChoice::Reshape);
+    TestTrue(TEXT("Reshape keeps the eastern folded-verge roadhead"),
+             ReshapeRoute.Roadhead ==
                  echoes::sim::Vec2::FromTiles(50, 28));
+    TestTrue(TEXT("Reshape turns into the defensible eastern build lane"),
+             ReshapeRoute.ListeningSpineSite ==
+                     echoes::sim::Vec2::FromTiles(49, 35) &&
+                 ReshapeRoute.MemoryShardSite ==
+                     echoes::sim::Vec2::FromTiles(44, 40));
+    const auto DistanceSquaredRaw = [](const echoes::sim::Vec2& First,
+                                       const echoes::sim::Vec2& Second)
+    {
+        const int64 DeltaX =
+            static_cast<int64>(First.x.Raw()) - Second.x.Raw();
+        const int64 DeltaY =
+            static_cast<int64>(First.y.Raw()) - Second.y.Raw();
+        return DeltaX * DeltaX + DeltaY * DeltaY;
+    };
+    const int64 DistinctMissionDomainRaw =
+        2LL * 3 * echoes::sim::kFixedScale;
+    TestTrue(TEXT("Reshape keeps distinct roadhead, Spine, and shard domains"),
+             DistanceSquaredRaw(
+                 ReshapeRoute.Roadhead,
+                 ReshapeRoute.ListeningSpineSite) >
+                     DistinctMissionDomainRaw * DistinctMissionDomainRaw &&
+                 DistanceSquaredRaw(
+                     ReshapeRoute.ListeningSpineSite,
+                     ReshapeRoute.MemoryShardSite) >
+                     DistinctMissionDomainRaw * DistinctMissionDomainRaw &&
+                 DistanceSquaredRaw(
+                     ReshapeRoute.MemoryShardSite,
+                     PreserveRoute.MemoryShardSite) >
+                     DistinctMissionDomainRaw * DistinctMissionDomainRaw);
 
     FEchoesUnburiedRoadMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission four"),

@@ -219,7 +219,9 @@ echoes::sim::Vec2 FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
         case EEchoesFinalResolution::Extinguishment:
             return Vec2::FromTiles(BaseX - 6, BaseY);
         case EEchoesFinalResolution::OpenEvolution:
-            return Vec2::FromTiles(BaseX + 6, BaseY);
+            // Keep the longest hold out of the northeast deployment lane and
+            // clear of the inherited Preserve approach objective.
+            return Vec2::FromTiles(BaseX - 6, BaseY + 5);
         case EEchoesFinalResolution::None:
             return {};
     }

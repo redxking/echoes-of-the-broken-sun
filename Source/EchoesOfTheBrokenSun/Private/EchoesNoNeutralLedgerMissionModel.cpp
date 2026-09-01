@@ -238,7 +238,9 @@ FEchoesNoNeutralLedgerMissionModel::RallySiteForProtocol(
     {
         case FutureWellChoice::Harvest: return Vec2::FromTiles(18, 56);
         case FutureWellChoice::Preserve: return Vec2::FromTiles(32, 56);
-        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 56);
+        case FutureWellChoice::Reshape:
+            // Shared M11-M15 objective stays in the protected central corridor.
+            return Vec2::FromTiles(32, 43);
         default: return {};
     }
 }

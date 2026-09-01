@@ -72,8 +72,8 @@ FEchoesUnburiedRoadRoute FEchoesUnburiedRoadMissionModel::RouteForChoice(
             return {
                 Choice,
                 Vec2::FromTiles(50, 28),
-                Vec2::FromTiles(50, 37),
-                Vec2::FromTiles(44, 43),
+                Vec2::FromTiles(49, 35),
+                Vec2::FromTiles(44, 40),
                 TEXT("folded_verge"),
                 TEXT("FOLDED VERGE")};
         default:

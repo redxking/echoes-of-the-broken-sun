@@ -78,8 +78,8 @@ FEchoesNamesWithoutBirthsMissionModel::PlanForChoice(
                 Choice,
                 echoes::sim::Vec2::FromTiles(48, 22),
                 echoes::sim::Vec2::FromTiles(45, 16),
-                echoes::sim::Vec2::FromTiles(50, 48),
-                echoes::sim::Vec2::FromTiles(42, 44),
+                echoes::sim::Vec2::FromTiles(39, 37),
+                echoes::sim::Vec2::FromTiles(46, 37),
                 TEXT("folded_register"),
                 TEXT("FOLDED REGISTER")};
         default:

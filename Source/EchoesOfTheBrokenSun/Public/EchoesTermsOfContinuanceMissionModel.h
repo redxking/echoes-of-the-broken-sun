@@ -38,6 +38,8 @@ struct FEchoesTermsOfContinuancePlan final
     echoes::sim::Vec2 MeridianRelaySite;
     echoes::sim::Vec2 KharuunSpineSite;
     echoes::sim::Vec2 WitnessExtractionSite;
+    TArray<echoes::sim::Vec2> PlayerPowerLinkSites;
+    TArray<echoes::sim::Vec2> SeedPowerLinkSites;
     uint64 ContinuanceWindowStartTick = 300;
     uint64 ContinuanceWindowEndTick = 900;
     const TCHAR* StableName = TEXT("unavailable");

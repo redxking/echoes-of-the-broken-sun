@@ -157,9 +157,15 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         return false;
     }
 
+    const FEchoesTermsOfContinuancePlan HarvestPlan =
+        FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
+            echoes::sim::FutureWellChoice::Harvest);
     const FEchoesTermsOfContinuancePlan PreservePlan =
         FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
             echoes::sim::FutureWellChoice::Preserve);
+    const FEchoesTermsOfContinuancePlan ReshapePlan =
+        FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
+            echoes::sim::FutureWellChoice::Reshape);
     TestTrue(TEXT("Preserve selects the central witness clause"),
              PreservePlan.MeridianRelaySite ==
                      echoes::sim::Vec2::FromTiles(32, 27) &&
@@ -168,15 +174,203 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  PreservePlan.WitnessExtractionSite ==
                      echoes::sim::Vec2::FromTiles(32, 47));
     TestTrue(TEXT("Harvest selects the western iron clause"),
-             FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
-                 echoes::sim::FutureWellChoice::Harvest)
-                     .MeridianRelaySite ==
-                 echoes::sim::Vec2::FromTiles(14, 27));
+             HarvestPlan.MeridianRelaySite ==
+                     echoes::sim::Vec2::FromTiles(14, 27) &&
+                 HarvestPlan.KharuunSpineSite ==
+                     echoes::sim::Vec2::FromTiles(14, 39) &&
+                 HarvestPlan.WitnessExtractionSite ==
+                     echoes::sim::Vec2::FromTiles(20, 47));
     TestTrue(TEXT("Reshape selects the eastern folded clause"),
-             FEchoesTermsOfContinuanceMissionModel::PlanForChoice(
-                 echoes::sim::FutureWellChoice::Reshape)
-                     .MeridianRelaySite ==
-                 echoes::sim::Vec2::FromTiles(50, 27));
+             ReshapePlan.MeridianRelaySite ==
+                     echoes::sim::Vec2::FromTiles(50, 27) &&
+                 ReshapePlan.KharuunSpineSite ==
+                     echoes::sim::Vec2::FromTiles(44, 38) &&
+                 ReshapePlan.WitnessExtractionSite ==
+                     echoes::sim::Vec2::FromTiles(44, 47));
+    TestTrue(
+        TEXT("Harvest retains its three player links and five authored seeds"),
+        HarvestPlan.PlayerPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(19, 21),
+                    echoes::sim::Vec2::FromTiles(17, 28),
+                    echoes::sim::Vec2::FromTiles(15, 34)} &&
+            HarvestPlan.SeedPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(18, 10),
+                    echoes::sim::Vec2::FromTiles(24, 15),
+                    echoes::sim::Vec2::FromTiles(29, 20),
+                    echoes::sim::Vec2::FromTiles(29, 36),
+                    echoes::sim::Vec2::FromTiles(29, 40)});
+    TestTrue(
+        TEXT("Preserve retains its central player link and five authored seeds"),
+        PreservePlan.PlayerPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(29, 28)} &&
+            PreservePlan.SeedPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(18, 10),
+                    echoes::sim::Vec2::FromTiles(24, 15),
+                    echoes::sim::Vec2::FromTiles(29, 20),
+                    echoes::sim::Vec2::FromTiles(29, 36),
+                    echoes::sim::Vec2::FromTiles(29, 40)});
+    TestTrue(
+        TEXT("Reshape owns one near-base player link and the eastern seed chain"),
+        ReshapePlan.PlayerPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(18, 10)} &&
+            ReshapePlan.SeedPowerLinkSites ==
+                TArray<echoes::sim::Vec2>{
+                    echoes::sim::Vec2::FromTiles(24, 15),
+                    echoes::sim::Vec2::FromTiles(30, 20),
+                    echoes::sim::Vec2::FromTiles(37, 23),
+                    echoes::sim::Vec2::FromTiles(44, 26),
+                    echoes::sim::Vec2::FromTiles(49, 32)});
+    bool bReshapeSitesAreUniqueAndDisjoint =
+        ReshapePlan.PlayerPowerLinkSites.Num() == 1 &&
+        !ReshapePlan.SeedPowerLinkSites.Contains(
+            ReshapePlan.PlayerPowerLinkSites[0]);
+    for (int32 SeedIndex = 0;
+         SeedIndex < ReshapePlan.SeedPowerLinkSites.Num();
+         ++SeedIndex)
+    {
+        for (int32 OtherIndex = SeedIndex + 1;
+             OtherIndex < ReshapePlan.SeedPowerLinkSites.Num();
+             ++OtherIndex)
+        {
+            bReshapeSitesAreUniqueAndDisjoint &=
+                ReshapePlan.SeedPowerLinkSites[SeedIndex] !=
+                ReshapePlan.SeedPowerLinkSites[OtherIndex];
+        }
+    }
+    TestTrue(
+        TEXT("Reshape's player link and seed footprints have distinct authored centers"),
+        bReshapeSitesAreUniqueAndDisjoint);
+    const TArray<echoes::sim::Vec2> HarvestRouteGraphSeedSites{
+        echoes::sim::Vec2::FromTiles(18, 10),
+        echoes::sim::Vec2::FromTiles(24, 15),
+        echoes::sim::Vec2::FromTiles(29, 20)};
+    const TArray<echoes::sim::Vec2> PreserveRouteGraphSeedSites{
+        echoes::sim::Vec2::FromTiles(18, 10),
+        echoes::sim::Vec2::FromTiles(24, 15),
+        echoes::sim::Vec2::FromTiles(29, 20),
+        echoes::sim::Vec2::FromTiles(29, 36),
+        echoes::sim::Vec2::FromTiles(29, 40)};
+    const TArray<echoes::sim::Vec2> ReshapeRouteGraphSeedSites{
+        echoes::sim::Vec2::FromTiles(24, 15),
+        echoes::sim::Vec2::FromTiles(30, 20),
+        echoes::sim::Vec2::FromTiles(37, 23),
+        echoes::sim::Vec2::FromTiles(44, 26),
+        echoes::sim::Vec2::FromTiles(49, 32)};
+    const auto IsWithinRouteHop = [](
+        const echoes::sim::Vec2& First,
+        const echoes::sim::Vec2& Second)
+    {
+        const int64 DeltaX =
+            First.x.FloorToInt() - Second.x.FloorToInt();
+        const int64 DeltaY =
+            First.y.FloorToInt() - Second.y.FloorToInt();
+        return DeltaX * DeltaX + DeltaY * DeltaY <= 64;
+    };
+    TArray<echoes::sim::Vec2> ReshapeRouteChain{
+        echoes::sim::Vec2::FromTiles(10, 10)};
+    ReshapeRouteChain.Append(ReshapePlan.PlayerPowerLinkSites);
+    ReshapeRouteChain.Append(ReshapePlan.SeedPowerLinkSites);
+    bool bReshapeChainIsPhysical = ReshapeRouteChain.Num() == 7;
+    for (int32 Index = 1;
+         Index < ReshapeRouteChain.Num();
+         ++Index)
+    {
+        bReshapeChainIsPhysical &= IsWithinRouteHop(
+            ReshapeRouteChain[Index - 1],
+            ReshapeRouteChain[Index]);
+    }
+    bReshapeChainIsPhysical &=
+        !ReshapePlan.SeedPowerLinkSites.IsEmpty() &&
+        IsWithinRouteHop(
+            ReshapePlan.SeedPowerLinkSites.Last(),
+            ReshapePlan.MeridianRelaySite) &&
+        IsWithinRouteHop(
+            ReshapePlan.SeedPowerLinkSites.Last(),
+            ReshapePlan.KharuunSpineSite);
+    TestTrue(
+        TEXT("Reshape's authored chain reaches both eastern interfaces in eight-tile hops"),
+        bReshapeChainIsPhysical);
+    const auto PlanConnectsBothInterfaces = [IsWithinRouteHop](
+        const FEchoesTermsOfContinuancePlan& Plan,
+        const TArray<echoes::sim::Vec2>& RouteGraphSeedSites)
+    {
+        TArray<echoes::sim::Vec2> NetworkSites{
+            echoes::sim::Vec2::FromTiles(10, 10)};
+        NetworkSites.Append(RouteGraphSeedSites);
+        NetworkSites.Append(Plan.PlayerPowerLinkSites);
+        TArray<uint8> Reachable;
+        Reachable.Init(0, NetworkSites.Num());
+        Reachable[0] = 1;
+        bool bChanged = true;
+        while (bChanged)
+        {
+            bChanged = false;
+            for (int32 CandidateIndex = 1;
+                 CandidateIndex < NetworkSites.Num();
+                 ++CandidateIndex)
+            {
+                if (Reachable[CandidateIndex] != 0)
+                {
+                    continue;
+                }
+                for (int32 ReachableIndex = 0;
+                     ReachableIndex < NetworkSites.Num();
+                     ++ReachableIndex)
+                {
+                    if (Reachable[ReachableIndex] != 0 &&
+                        IsWithinRouteHop(
+                            NetworkSites[ReachableIndex],
+                            NetworkSites[CandidateIndex]))
+                    {
+                        Reachable[CandidateIndex] = 1;
+                        bChanged = true;
+                        break;
+                    }
+                }
+            }
+        }
+        bool bRelayConnected = false;
+        bool bSpineConnected = false;
+        for (int32 Index = 0; Index < NetworkSites.Num(); ++Index)
+        {
+            if (Reachable[Index] == 0)
+            {
+                continue;
+            }
+            bRelayConnected |= IsWithinRouteHop(
+                NetworkSites[Index], Plan.MeridianRelaySite);
+            bSpineConnected |= IsWithinRouteHop(
+                NetworkSites[Index], Plan.KharuunSpineSite);
+        }
+        bool bAllPlayerSitesReachable = true;
+        const int32 PlayerSiteOffset =
+            1 + RouteGraphSeedSites.Num();
+        for (int32 PlayerIndex = 0;
+             PlayerIndex < Plan.PlayerPowerLinkSites.Num();
+             ++PlayerIndex)
+        {
+            bAllPlayerSitesReachable &=
+                Reachable[PlayerSiteOffset + PlayerIndex] != 0;
+        }
+        return bAllPlayerSitesReachable &&
+            bRelayConnected && bSpineConnected;
+    };
+    TestTrue(
+        TEXT("Every player-built route site and both interfaces are reachable without requiring off-route seeds"),
+        PlanConnectsBothInterfaces(
+            HarvestPlan,
+            HarvestRouteGraphSeedSites) &&
+            PlanConnectsBothInterfaces(
+                PreservePlan,
+                PreserveRouteGraphSeedSites) &&
+            PlanConnectsBothInterfaces(
+                ReshapePlan,
+                ReshapeRouteGraphSeedSites));
 
     FEchoesTermsOfContinuanceMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission five"),
@@ -236,6 +430,1018 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
 
     FString Feedback;
+    const auto BuildMissionFivePrerequisiteLedger = [&Feedback](
+        echoes::sim::FutureWellChoice Choice,
+        FEchoesCampaignProgress& OutProgress)
+    {
+        for (const EEchoesCampaignMissionId Mission : {
+                 EEchoesCampaignMissionId::WhatTheLedgerKeeps,
+                 EEchoesCampaignMissionId::SevenAccountsOfRain,
+                 EEchoesCampaignMissionId::ACityOnReserve,
+                 EEchoesCampaignMissionId::TheUnburiedRoad})
+        {
+            if (OutProgress.AppendDecision(
+                    MakeContinuanceRecord(Mission, Choice),
+                    Feedback) != EEchoesCampaignCommitStatus::Added)
+            {
+                return false;
+            }
+        }
+        return true;
+    };
+    const auto RunLiveBranchCoverage = [
+        this,
+        &CampaignPath,
+        &Feedback,
+        &BuildMissionFivePrerequisiteLedger](
+            echoes::sim::FutureWellChoice Choice,
+            const FEchoesTermsOfContinuancePlan& ExpectedPlan,
+            const TCHAR* BranchLabel)
+    {
+        const auto Check = [this, BranchLabel](
+            const TCHAR* Detail,
+            bool bCondition)
+        {
+            return TestTrue(
+                *FString::Printf(
+                    TEXT("%s live branch: %s"),
+                    BranchLabel,
+                    Detail),
+                bCondition);
+        };
+        FEchoesCampaignProgress BranchProgress;
+        if (!Check(
+                TEXT("the four-record prerequisite ledger is valid"),
+                BuildMissionFivePrerequisiteLedger(
+                    Choice, BranchProgress)) ||
+            !Check(
+                TEXT("the prerequisite ledger is stored"),
+                FEchoesCampaignProgressStore::SaveAtomic(
+                    CampaignPath,
+                    BranchProgress,
+                    Feedback)))
+        {
+            return false;
+        }
+        const FString BranchQuickSavePath =
+            ContinuanceQuickSavePath(BranchProgress);
+        if (!Check(
+                TEXT("the route owns a nonempty isolated checkpoint path"),
+                !BranchQuickSavePath.IsEmpty()))
+        {
+            return false;
+        }
+        FPreservedContinuanceFile PreservedBranchQuickSave(
+            BranchQuickSavePath);
+        FPreservedContinuanceFile PreservedBranchQuickSaveBackup(
+            BranchQuickSavePath + TEXT(".bak"));
+        FPreservedContinuanceFile PreservedBranchQuickSaveStagedBackup(
+            BranchQuickSavePath + TEXT(".bak.tmp"));
+        FPreservedContinuanceFile PreservedBranchQuickSaveTemporary(
+            BranchQuickSavePath + TEXT(".tmp"));
+        for (const FString& Path : {
+                 BranchQuickSavePath,
+                 BranchQuickSavePath + TEXT(".bak"),
+                 BranchQuickSavePath + TEXT(".bak.tmp"),
+                 BranchQuickSavePath + TEXT(".tmp")})
+        {
+            IFileManager::Get().Delete(*Path, false, true, true);
+        }
+
+        FTestWorldWrapper BranchWorld;
+        if (!BranchWorld.CreateTestWorld(EWorldType::Game))
+        {
+            BranchWorld.ForwardErrorMessages(this);
+            AddError(FString::Printf(
+                TEXT("Could not create the %s live branch world."),
+                BranchLabel));
+            return false;
+        }
+        UEchoesSimulationSubsystem* BranchBridge =
+            BranchWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(
+                *FString::Printf(
+                    TEXT("%s live branch owns a simulation subsystem"),
+                    BranchLabel),
+                BranchBridge) ||
+            !Check(
+                TEXT("Mission 05 can be selected"),
+                BranchBridge->SelectOperationMode(
+                    EEchoesOperationMode::CampaignTermsOfContinuance,
+                    Feedback)) ||
+            !Check(
+                TEXT("Mission 05 can start"),
+                BranchBridge->StartPrototypeScenario()))
+        {
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const FEchoesTermsOfContinuancePlan LivePlan =
+            BranchBridge->GetTermsOfContinuancePlan();
+        if (!Check(
+                TEXT("the live route identity matches its recorded choice"),
+                LivePlan.PriorChoice == Choice &&
+                    LivePlan.MeridianRelaySite ==
+                        ExpectedPlan.MeridianRelaySite &&
+                    LivePlan.KharuunSpineSite ==
+                        ExpectedPlan.KharuunSpineSite &&
+                    LivePlan.WitnessExtractionSite ==
+                        ExpectedPlan.WitnessExtractionSite &&
+                    LivePlan.PlayerPowerLinkSites ==
+                        ExpectedPlan.PlayerPowerLinkSites &&
+                    LivePlan.SeedPowerLinkSites ==
+                        ExpectedPlan.SeedPowerLinkSites))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const auto FindOwnedPowerLinkAt = [BranchBridge](
+            const echoes::sim::Vec2& Site)
+            -> const echoes::sim::Entity*
+        {
+            const echoes::sim::Simulation* Simulation =
+                BranchBridge->GetSimulation();
+            if (Simulation == nullptr)
+            {
+                return nullptr;
+            }
+            for (const echoes::sim::Entity& Entity :
+                 Simulation->Entities())
+            {
+                if (Entity.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Entity.faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    Entity.type == echoes::sim::EntityType::Dropoff &&
+                    Entity.position == Site)
+                {
+                    return &Entity;
+                }
+            }
+            return nullptr;
+        };
+        const auto HasExactLivingCompletedUnpoweredSeedTopology = [
+            BranchBridge,
+            &LivePlan]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                BranchBridge->GetSimulation();
+            if (Simulation == nullptr ||
+                LivePlan.SeedPowerLinkSites.Num() != 5)
+            {
+                return false;
+            }
+            TArray<echoes::sim::Vec2> ObservedSeedSites;
+            int32 BaseDropoffCount = 0;
+            for (const echoes::sim::Entity& Entity :
+                 Simulation->Entities())
+            {
+                if (Entity.owner !=
+                        UEchoesSimulationSubsystem::LocalPlayerId ||
+                    Entity.faction !=
+                        echoes::sim::Faction::MeridianCompact ||
+                    Entity.type != echoes::sim::EntityType::Dropoff ||
+                    Entity.hitPoints <= 0 || !Entity.completed)
+                {
+                    continue;
+                }
+                if (Entity.position ==
+                    echoes::sim::Vec2::FromTiles(6, 17))
+                {
+                    ++BaseDropoffCount;
+                    if (BaseDropoffCount > 1)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+                if (!LivePlan.SeedPowerLinkSites.Contains(
+                        Entity.position) ||
+                    ObservedSeedSites.Contains(Entity.position) ||
+                    Entity.aegisPowered)
+                {
+                    return false;
+                }
+                ObservedSeedSites.Add(Entity.position);
+            }
+            return BaseDropoffCount == 1 &&
+                ObservedSeedSites.Num() ==
+                    LivePlan.SeedPowerLinkSites.Num();
+        };
+        const auto ArePlayerSitesOpenAndBuildable = [
+            BranchBridge,
+            &LivePlan,
+            &FindOwnedPowerLinkAt]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                BranchBridge->GetSimulation();
+            if (Simulation == nullptr ||
+                LivePlan.PlayerPowerLinkSites.IsEmpty())
+            {
+                return false;
+            }
+            for (const echoes::sim::Vec2& PlayerSite :
+                 LivePlan.PlayerPowerLinkSites)
+            {
+                if (FindOwnedPowerLinkAt(PlayerSite) != nullptr ||
+                    Simulation->ValidatePlacement(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        echoes::sim::EntityType::Dropoff,
+                        PlayerSite) !=
+                        echoes::sim::PlacementResult::Valid)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreBothInterfacesInitiallyDown = [
+            BranchBridge,
+            &LivePlan]()
+        {
+            const FEchoesObjectiveSnapshot Objective =
+                BranchBridge->GetLocalObjectiveSnapshot();
+            const echoes::sim::Entity* Relay =
+                BranchBridge->FindEntity(
+                    Objective.MeridianContinuanceRelayId);
+            const echoes::sim::Entity* Spine =
+                BranchBridge->FindEntity(
+                    Objective.KharuunContinuanceSpineId);
+            return BranchBridge->GetTermsOfContinuancePhase() ==
+                    EEchoesTermsOfContinuancePhase::
+                        SynchronizeNetworks &&
+                !Objective.bMeridianRelaySynchronized &&
+                !Objective.bKharuunSpineSynchronized &&
+                Relay != nullptr &&
+                Relay->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Relay->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Relay->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Relay->position == LivePlan.MeridianRelaySite &&
+                Relay->hitPoints > 0 && Relay->completed &&
+                !Relay->aegisPowered &&
+                Spine != nullptr &&
+                Spine->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Spine->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Spine->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Spine->position == LivePlan.KharuunSpineSite &&
+                Spine->hitPoints > 0 && Spine->completed &&
+                !Spine->aegisPowered;
+        };
+        if (!Check(
+                TEXT("all and only route-owned seeds are living, completed, and unpowered"),
+                HasExactLivingCompletedUnpoweredSeedTopology()) ||
+            !Check(
+                TEXT("every authored player site is open and buildable"),
+                ArePlayerSitesOpenAndBuildable()))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (Choice == echoes::sim::FutureWellChoice::Reshape)
+        {
+            const TArray<echoes::sim::Vec2>
+                DeprecatedSharedReshapeSites{
+                    echoes::sim::Vec2::FromTiles(18, 10),
+                    echoes::sim::Vec2::FromTiles(29, 20),
+                    echoes::sim::Vec2::FromTiles(29, 36),
+                    echoes::sim::Vec2::FromTiles(29, 40)};
+            bool bDeprecatedSitesAbsent = true;
+            for (const echoes::sim::Vec2& Site :
+                 DeprecatedSharedReshapeSites)
+            {
+                bDeprecatedSitesAbsent &=
+                    FindOwnedPowerLinkAt(Site) == nullptr;
+            }
+            if (!Check(
+                    TEXT("the old shared Reshape links are absent"),
+                    bDeprecatedSitesAbsent) ||
+                !Check(
+                    TEXT("both eastern interfaces begin living but unpowered"),
+                    AreBothInterfacesInitiallyDown()) ||
+                !Check(
+                    TEXT("the pre-build Reshape checkpoint commits"),
+                    BranchBridge->QuickSaveScenario(Feedback) &&
+                        IFileManager::Get().FileExists(
+                            *BranchQuickSavePath)) ||
+                !Check(
+                    TEXT("the pre-build Reshape checkpoint restores its exact open topology"),
+                    BranchBridge->QuickLoadScenario(Feedback) &&
+                        HasExactLivingCompletedUnpoweredSeedTopology() &&
+                        ArePlayerSitesOpenAndBuildable() &&
+                        AreBothInterfacesInitiallyDown()))
+            {
+                BranchBridge->StopPrototypeScenario();
+                BranchWorld.ForwardErrorMessages(this);
+                return false;
+            }
+        }
+
+        const auto TickUntil = [BranchBridge](
+            const TFunction<bool()>& Predicate,
+            int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0;
+                 TickIndex < MaximumTicks;
+                 ++TickIndex)
+            {
+                if (Predicate())
+                {
+                    return true;
+                }
+                if (BranchBridge->GetTermsOfContinuancePhase() ==
+                    EEchoesTermsOfContinuancePhase::Failed)
+                {
+                    return false;
+                }
+                BranchBridge->Tick(0.05f);
+            }
+            return BranchBridge->GetTermsOfContinuancePhase() !=
+                    EEchoesTermsOfContinuancePhase::Failed &&
+                Predicate();
+        };
+        const auto AreAllPlayerLinksLivingCompletedUnpowered = [
+            &LivePlan,
+            &FindOwnedPowerLinkAt]()
+        {
+            for (const echoes::sim::Vec2& PlayerSite :
+                 LivePlan.PlayerPowerLinkSites)
+            {
+                const echoes::sim::Entity* PlayerLink =
+                    FindOwnedPowerLinkAt(PlayerSite);
+                if (PlayerLink == nullptr ||
+                    PlayerLink->hitPoints <= 0 ||
+                    !PlayerLink->completed ||
+                    PlayerLink->aegisPowered)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreAllAuthoredSeedsLivingCompletedUnpowered = [
+            &LivePlan,
+            &FindOwnedPowerLinkAt]()
+        {
+            for (const echoes::sim::Vec2& SeedSite :
+                 LivePlan.SeedPowerLinkSites)
+            {
+                const echoes::sim::Entity* Seed =
+                    FindOwnedPowerLinkAt(SeedSite);
+                if (Seed == nullptr || Seed->hitPoints <= 0 ||
+                    !Seed->completed ||
+                    Seed->aegisPowered)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreBothInterfacesLivingAndPowered = [
+            BranchBridge,
+            &LivePlan]()
+        {
+            const FEchoesObjectiveSnapshot Objective =
+                BranchBridge->GetLocalObjectiveSnapshot();
+            const echoes::sim::Entity* Relay =
+                BranchBridge->FindEntity(
+                    Objective.MeridianContinuanceRelayId);
+            const echoes::sim::Entity* Spine =
+                BranchBridge->FindEntity(
+                    Objective.KharuunContinuanceSpineId);
+            return Objective.bMeridianRelaySynchronized &&
+                Objective.bKharuunSpineSynchronized &&
+                Relay != nullptr &&
+                Relay->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Relay->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Relay->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Relay->position == LivePlan.MeridianRelaySite &&
+                Relay->hitPoints > 0 &&
+                Relay->completed && Relay->aegisPowered &&
+                Spine != nullptr &&
+                Spine->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Spine->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Spine->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Spine->position == LivePlan.KharuunSpineSite &&
+                Spine->hitPoints > 0 &&
+                Spine->completed && Spine->aegisPowered;
+        };
+        BranchBridge->SetScenarioPaused(false);
+        BranchBridge->Tick(0.05f);
+        TArray<echoes::sim::EntityId> SelectedWorkers;
+        for (int32 SiteIndex = 0;
+             SiteIndex < LivePlan.PlayerPowerLinkSites.Num();
+             ++SiteIndex)
+        {
+            const echoes::sim::Vec2 PlayerSite =
+                LivePlan.PlayerPowerLinkSites[SiteIndex];
+            echoes::sim::EntityId NearestWorkerId = 0;
+            int64 NearestDistanceSquared = TNumericLimits<int64>::Max();
+            for (const echoes::sim::Entity& Entity :
+                 BranchBridge->GetSimulation()->Entities())
+            {
+                if (Entity.owner !=
+                        UEchoesSimulationSubsystem::LocalPlayerId ||
+                    Entity.type != echoes::sim::EntityType::Worker ||
+                    Entity.hitPoints <= 0 || !Entity.completed ||
+                    SelectedWorkers.Contains(Entity.id))
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Entity.position.x.Raw()) -
+                    PlayerSite.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Entity.position.y.Raw()) -
+                    PlayerSite.y.Raw();
+                const int64 DistanceSquared =
+                    DeltaX * DeltaX + DeltaY * DeltaY;
+                if (DistanceSquared < NearestDistanceSquared ||
+                    (DistanceSquared == NearestDistanceSquared &&
+                     (NearestWorkerId == 0 ||
+                      Entity.id < NearestWorkerId)))
+                {
+                    NearestWorkerId = Entity.id;
+                    NearestDistanceSquared = DistanceSquared;
+                }
+            }
+            if (!Check(
+                    TEXT("each player site receives a nearest distinct worker"),
+                    NearestWorkerId != 0))
+            {
+                BranchBridge->StopPrototypeScenario();
+                BranchWorld.ForwardErrorMessages(this);
+                return false;
+            }
+            SelectedWorkers.Add(NearestWorkerId);
+            if (!Check(
+                    TEXT("ordinary construction accepts the authored player site"),
+                    BranchBridge->IssueBuildCommand(
+                        NearestWorkerId,
+                        echoes::sim::EntityType::Dropoff,
+                        BranchBridge->SimToWorld(PlayerSite),
+                        Feedback)))
+            {
+                BranchBridge->StopPrototypeScenario();
+                BranchWorld.ForwardErrorMessages(this);
+                return false;
+            }
+        }
+        if (Choice == echoes::sim::FutureWellChoice::Reshape &&
+            !Check(
+                TEXT("the queued near-base link exists while construction is incomplete"),
+                TickUntil(
+                    [&FindOwnedPowerLinkAt, &LivePlan]()
+                    {
+                        const echoes::sim::Entity* PlayerLink =
+                            FindOwnedPowerLinkAt(
+                                LivePlan.PlayerPowerLinkSites[0]);
+                        return PlayerLink != nullptr &&
+                            PlayerLink->hitPoints > 0 &&
+                            !PlayerLink->completed;
+                    },
+                    100)))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const bool bSynchronized = TickUntil(
+            [BranchBridge]()
+            {
+                const FEchoesObjectiveSnapshot Objective =
+                    BranchBridge->GetLocalObjectiveSnapshot();
+                return Objective.bMeridianRelaySynchronized &&
+                    Objective.bKharuunSpineSynchronized &&
+                    BranchBridge->GetTermsOfContinuancePhase() ==
+                        EEchoesTermsOfContinuancePhase::
+                            HoldContinuanceWindow;
+            },
+            700);
+        const bool bCompletedUnpoweredPlayerLinks =
+            bSynchronized &&
+            AreAllPlayerLinksLivingCompletedUnpowered();
+        const bool bLivingCompletedUnpoweredSeeds =
+            bSynchronized &&
+            AreAllAuthoredSeedsLivingCompletedUnpowered();
+        const FEchoesObjectiveSnapshot SynchronizedObjective =
+            BranchBridge->GetLocalObjectiveSnapshot();
+        const echoes::sim::Entity* MeridianRelay =
+            BranchBridge->FindEntity(
+                SynchronizedObjective.MeridianContinuanceRelayId);
+        const echoes::sim::Entity* KharuunSpine =
+            BranchBridge->FindEntity(
+                SynchronizedObjective.KharuunContinuanceSpineId);
+        if (!Check(
+                TEXT("ordinary construction synchronizes before T300"),
+                bSynchronized &&
+                    BranchBridge->GetSimulation()->CurrentTick() <
+                        LivePlan.ContinuanceWindowStartTick) ||
+            !Check(
+                TEXT("every player link is living, completed, and unpowered at its exact site"),
+                bCompletedUnpoweredPlayerLinks) ||
+            !Check(
+                TEXT("every authored seed is living, completed, and unpowered at its exact site"),
+                bLivingCompletedUnpoweredSeeds) ||
+            !Check(
+                TEXT("both treaty interfaces are living, completed, and powered"),
+                MeridianRelay != nullptr &&
+                    MeridianRelay->owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    MeridianRelay->faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    MeridianRelay->type ==
+                        echoes::sim::EntityType::UtilityStructure &&
+                    MeridianRelay->position ==
+                        LivePlan.MeridianRelaySite &&
+                    MeridianRelay->hitPoints > 0 &&
+                    MeridianRelay->completed &&
+                    MeridianRelay->aegisPowered &&
+                    KharuunSpine != nullptr &&
+                    KharuunSpine->owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    KharuunSpine->faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    KharuunSpine->type ==
+                        echoes::sim::EntityType::UtilityStructure &&
+                    KharuunSpine->position ==
+                        LivePlan.KharuunSpineSite &&
+                    KharuunSpine->hitPoints > 0 &&
+                    KharuunSpine->completed &&
+                    KharuunSpine->aegisPowered))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (Choice == echoes::sim::FutureWellChoice::Reshape &&
+            (!Check(
+                 TEXT("the completed Reshape network checkpoint commits before T300"),
+                 BranchBridge->QuickSaveScenario(Feedback)) ||
+             !Check(
+                 TEXT("the completed Reshape network checkpoint restores before T300"),
+                 BranchBridge->QuickLoadScenario(Feedback) &&
+                     BranchBridge->GetTermsOfContinuancePhase() ==
+                         EEchoesTermsOfContinuancePhase::
+                             HoldContinuanceWindow &&
+                     BranchBridge->GetSimulation()->CurrentTick() <
+                         LivePlan.ContinuanceWindowStartTick &&
+                     AreAllPlayerLinksLivingCompletedUnpowered() &&
+                     AreAllAuthoredSeedsLivingCompletedUnpowered() &&
+                     AreBothInterfacesLivingAndPowered())))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (!Check(
+                TEXT("the synchronized network holds through T900"),
+                TickUntil(
+                    [BranchBridge, LivePlan]()
+                    {
+                        return BranchBridge->
+                                   GetTermsOfContinuancePhase() ==
+                                   EEchoesTermsOfContinuancePhase::
+                                       ExtractWitnesses &&
+                            BranchBridge->GetSimulation()->CurrentTick() >=
+                                LivePlan.ContinuanceWindowEndTick;
+                    },
+                    1000)))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (!Check(
+                TEXT("every player-built link remains living, completed, and unpowered at T900"),
+                AreAllPlayerLinksLivingCompletedUnpowered()) ||
+            !Check(
+                TEXT("every authored seed remains living, completed, and unpowered at T900"),
+                AreAllAuthoredSeedsLivingCompletedUnpowered()) ||
+            !Check(
+                TEXT("both treaty interfaces remain living, completed, and powered at T900"),
+                AreBothInterfacesLivingAndPowered()))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const FEchoesObjectiveSnapshot ExtractionObjective =
+            BranchBridge->GetLocalObjectiveSnapshot();
+        const FVector ExtractionWorld =
+            BranchBridge->SimToWorld(LivePlan.WitnessExtractionSite);
+        if (!Check(
+                TEXT("the Meridian witness accepts extraction"),
+                BranchBridge->IssueCommand(
+                    echoes::sim::CommandType::Move,
+                    ExtractionObjective.MeridianContinuanceWitnessId,
+                    0,
+                    ExtractionWorld,
+                    echoes::sim::FutureWellChoice::Dormant,
+                    Feedback)) ||
+            !Check(
+                TEXT("the Kharuun witness accepts extraction"),
+                BranchBridge->IssueCommand(
+                    echoes::sim::CommandType::Move,
+                    ExtractionObjective.KharuunContinuanceWitnessId,
+                    0,
+                    ExtractionWorld,
+                    echoes::sim::FutureWellChoice::Dormant,
+                    Feedback)) ||
+            !Check(
+                TEXT("ordinary movement completes Mission 05"),
+                TickUntil(
+                    [BranchBridge]()
+                    {
+                        return BranchBridge->
+                                   GetTermsOfContinuancePhase() ==
+                            EEchoesTermsOfContinuancePhase::Complete;
+                    },
+                    1000)))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const FEchoesCampaignDecisionRecord* MissionRecord =
+            BranchBridge->GetCampaignProgress().FindDecision(
+                EEchoesCampaignMissionId::TermsOfContinuance);
+        FEchoesCampaignProgress ReloadedBranchProgress;
+        if (!Check(
+                TEXT("completion appends the route-specific Mission 05 decision"),
+                MissionRecord != nullptr &&
+                    MissionRecord->WellChoice == Choice &&
+                    MissionRecord->AvailableWellChoices ==
+                        ContinuanceChoiceMask(Choice)) ||
+            !Check(
+                TEXT("the route-specific five-record ledger reloads transactionally"),
+                FEchoesCampaignProgressStore::LoadWithBackup(
+                    CampaignPath,
+                    ReloadedBranchProgress,
+                    Feedback) &&
+                    ReloadedBranchProgress.Decisions.Num() == 5 &&
+                    ReloadedBranchProgress.FindDecision(
+                        EEchoesCampaignMissionId::
+                            TermsOfContinuance) != nullptr &&
+                    ReloadedBranchProgress.FindDecision(
+                        EEchoesCampaignMissionId::
+                            TermsOfContinuance)->WellChoice == Choice))
+        {
+            BranchBridge->StopPrototypeScenario();
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        BranchBridge->StopPrototypeScenario();
+        BranchWorld.ForwardErrorMessages(this);
+        return true;
+    };
+    if (!RunLiveBranchCoverage(
+            echoes::sim::FutureWellChoice::Harvest,
+            HarvestPlan,
+            TEXT("Harvest")) ||
+        !RunLiveBranchCoverage(
+            echoes::sim::FutureWellChoice::Preserve,
+            PreservePlan,
+            TEXT("Preserve")) ||
+        !RunLiveBranchCoverage(
+            echoes::sim::FutureWellChoice::Reshape,
+            ReshapePlan,
+            TEXT("Reshape")))
+    {
+        return false;
+    }
+
+    FEchoesCampaignProgress LegacyTopologyProgress;
+    if (!TestTrue(
+            TEXT("The legacy-topology fixture owns a Reshape prerequisite ledger"),
+            BuildMissionFivePrerequisiteLedger(
+                echoes::sim::FutureWellChoice::Reshape,
+                LegacyTopologyProgress)))
+    {
+        return false;
+    }
+    const FString LegacyTopologyQuickSavePath =
+        ContinuanceQuickSavePath(LegacyTopologyProgress);
+    FPreservedContinuanceFile PreservedLegacyTopologyQuickSave(
+        LegacyTopologyQuickSavePath);
+    FPreservedContinuanceFile PreservedLegacyTopologyQuickSaveBackup(
+        LegacyTopologyQuickSavePath + TEXT(".bak"));
+    FPreservedContinuanceFile PreservedLegacyTopologyStagedBackup(
+        LegacyTopologyQuickSavePath + TEXT(".bak.tmp"));
+    FPreservedContinuanceFile PreservedLegacyTopologyTemporary(
+        LegacyTopologyQuickSavePath + TEXT(".tmp"));
+    for (const FString& Path : {
+             LegacyTopologyQuickSavePath,
+             LegacyTopologyQuickSavePath + TEXT(".bak"),
+             LegacyTopologyQuickSavePath + TEXT(".bak.tmp"),
+             LegacyTopologyQuickSavePath + TEXT(".tmp")})
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+    }
+    TestTrue(
+        TEXT("The legacy-topology fixture stores its exact Reshape ledger"),
+        FEchoesCampaignProgressStore::SaveAtomic(
+            CampaignPath,
+            LegacyTopologyProgress,
+            Feedback));
+    {
+        FTestWorldWrapper LegacyTopologyWorld;
+        if (!LegacyTopologyWorld.CreateTestWorld(EWorldType::Game))
+        {
+            LegacyTopologyWorld.ForwardErrorMessages(this);
+            AddError(TEXT(
+                "Could not create the legacy Mission 05 topology world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* LegacyBridge =
+            LegacyTopologyWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(
+                TEXT("The legacy-topology world owns a simulation subsystem"),
+                LegacyBridge) ||
+            !TestTrue(
+                TEXT("The legacy-topology world selects Mission 05"),
+                LegacyBridge->SelectOperationMode(
+                    EEchoesOperationMode::CampaignTermsOfContinuance,
+                    Feedback)) ||
+            !TestTrue(
+                TEXT("The legacy-topology world starts Mission 05"),
+                LegacyBridge->StartPrototypeScenario()))
+        {
+            LegacyTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const TArray<echoes::sim::Vec2> PriorRevisionOneSeedSites{
+            echoes::sim::Vec2::FromTiles(24, 15),
+            echoes::sim::Vec2::FromTiles(30, 20),
+            echoes::sim::Vec2::FromTiles(37, 23),
+            echoes::sim::Vec2::FromTiles(44, 26),
+            echoes::sim::Vec2::FromTiles(50, 31)};
+        echoes::sim::Simulation* LegacySimulation =
+            const_cast<echoes::sim::Simulation*>(
+                LegacyBridge->GetSimulation());
+        bool bLegacyTopologyMaterialized =
+            PriorRevisionOneSeedSites.Num() ==
+                ReshapePlan.SeedPowerLinkSites.Num();
+        for (int32 Index = 0;
+             Index < ReshapePlan.SeedPowerLinkSites.Num();
+             ++Index)
+        {
+            echoes::sim::Entity* MutableSeed = nullptr;
+            for (const echoes::sim::Entity& Entity :
+                 LegacySimulation->Entities())
+            {
+                if (Entity.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Entity.faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    Entity.type == echoes::sim::EntityType::Dropoff &&
+                    Entity.position ==
+                        ReshapePlan.SeedPowerLinkSites[Index])
+                {
+                    MutableSeed = const_cast<echoes::sim::Entity*>(
+                        &Entity);
+                    break;
+                }
+            }
+            if (MutableSeed == nullptr)
+            {
+                bLegacyTopologyMaterialized = false;
+                continue;
+            }
+            MutableSeed->position = PriorRevisionOneSeedSites[Index];
+        }
+        echoes::sim::Entity* MutableSpine = nullptr;
+        const FEchoesObjectiveSnapshot LegacyObjective =
+            LegacyBridge->GetLocalObjectiveSnapshot();
+        for (const echoes::sim::Entity& Entity :
+             LegacySimulation->Entities())
+        {
+            if (Entity.id ==
+                LegacyObjective.KharuunContinuanceSpineId)
+            {
+                MutableSpine = const_cast<echoes::sim::Entity*>(
+                    &Entity);
+                break;
+            }
+        }
+        bLegacyTopologyMaterialized &= MutableSpine != nullptr;
+        if (MutableSpine != nullptr)
+        {
+            MutableSpine->position =
+                echoes::sim::Vec2::FromTiles(50, 39);
+        }
+        if (!TestTrue(
+                TEXT("The regression fixture materializes the exact prior revision-1 Reshape geometry"),
+                bLegacyTopologyMaterialized) ||
+            !TestTrue(
+                TEXT("The incompatible Reshape checkpoint can be written for load validation"),
+                LegacyBridge->QuickSaveScenario(Feedback)))
+        {
+            LegacyBridge->StopPrototypeScenario();
+            LegacyTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        TArray<uint8> LegacyContainerBytes;
+        bool bLegacyRevisionMaterialized =
+            FFileHelper::LoadFileToArray(
+                LegacyContainerBytes,
+                *LegacyTopologyQuickSavePath) &&
+            LegacyContainerBytes.Num() > 16;
+        if (bLegacyRevisionMaterialized)
+        {
+            constexpr int32 TopologyRevisionOffset = 11;
+            constexpr int32 ChecksumSize = 4;
+            LegacyContainerBytes[TopologyRevisionOffset] = 1;
+            const int32 ChecksumOffset =
+                LegacyContainerBytes.Num() - ChecksumSize;
+            const uint32 Checksum = FCrc::MemCrc32(
+                LegacyContainerBytes.GetData(),
+                ChecksumOffset);
+            for (int32 ByteIndex = 0;
+                 ByteIndex < ChecksumSize;
+                 ++ByteIndex)
+            {
+                LegacyContainerBytes[ChecksumOffset + ByteIndex] =
+                    static_cast<uint8>(
+                        Checksum >> (ByteIndex * 8));
+            }
+            bLegacyRevisionMaterialized =
+                FFileHelper::SaveArrayToFile(
+                    LegacyContainerBytes,
+                    *LegacyTopologyQuickSavePath);
+        }
+        if (!TestTrue(
+                TEXT("The incompatible fixture carries the prior revision-1 topology revision with a valid checksum"),
+                bLegacyRevisionMaterialized))
+        {
+            LegacyBridge->StopPrototypeScenario();
+            LegacyTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        TestFalse(
+            TEXT("QuickLoad rejects the prior revision-1 Reshape geometry"),
+            LegacyBridge->QuickLoadScenario(Feedback));
+        TestTrue(
+            TEXT("The incompatible topology rejection is explicit and stable"),
+            Feedback.Contains(TEXT("LOAD_TERMS_TOPOLOGY_MISMATCH")));
+        LegacyBridge->StopPrototypeScenario();
+        LegacyTopologyWorld.ForwardErrorMessages(this);
+    }
+    for (const FString& Path : {
+             LegacyTopologyQuickSavePath,
+             LegacyTopologyQuickSavePath + TEXT(".bak"),
+             LegacyTopologyQuickSavePath + TEXT(".bak.tmp"),
+             LegacyTopologyQuickSavePath + TEXT(".tmp")})
+    {
+        IFileManager::Get().Delete(*Path, false, true, true);
+    }
+    {
+        FTestWorldWrapper DegradedTopologyWorld;
+        if (!DegradedTopologyWorld.CreateTestWorld(EWorldType::Game))
+        {
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            AddError(TEXT(
+                "Could not create the degraded Mission 05 topology world."));
+            return false;
+        }
+        UEchoesSimulationSubsystem* DegradedBridge =
+            DegradedTopologyWorld.GetTestWorld()->GetSubsystem<
+                UEchoesSimulationSubsystem>();
+        if (!TestNotNull(
+                TEXT("The degraded-topology world owns a simulation subsystem"),
+                DegradedBridge) ||
+            !TestTrue(
+                TEXT("The degraded-topology world selects Mission 05"),
+                DegradedBridge->SelectOperationMode(
+                    EEchoesOperationMode::CampaignTermsOfContinuance,
+                    Feedback)) ||
+            !TestTrue(
+                TEXT("The degraded-topology world starts Mission 05"),
+                DegradedBridge->StartPrototypeScenario()))
+        {
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        echoes::sim::Entity* DamagedSeed = nullptr;
+        echoes::sim::Simulation* DegradedSimulation =
+            const_cast<echoes::sim::Simulation*>(
+                DegradedBridge->GetSimulation());
+        for (const echoes::sim::Entity& Entity :
+             DegradedSimulation->Entities())
+        {
+            if (Entity.owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Entity.type == echoes::sim::EntityType::Dropoff &&
+                Entity.position ==
+                    ReshapePlan.SeedPowerLinkSites[0])
+            {
+                DamagedSeed = const_cast<echoes::sim::Entity*>(
+                    &Entity);
+                break;
+            }
+        }
+        if (!TestNotNull(
+                TEXT("The degraded fixture locates a current Reshape seed"),
+                DamagedSeed))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        const echoes::sim::EntityId DamagedSeedId = DamagedSeed->id;
+        const echoes::sim::Vec2 DamagedSeedSite = DamagedSeed->position;
+        DamagedSeed->hitPoints = 0;
+        DegradedSimulation->Step();
+        const auto IsDamagedSeedAbsent = [
+            DegradedBridge,
+            DamagedSeedId,
+            DamagedSeedSite]()
+        {
+            if (DegradedBridge->FindEntity(DamagedSeedId) != nullptr)
+            {
+                return false;
+            }
+            const echoes::sim::Simulation* CurrentSimulation =
+                DegradedBridge->GetSimulation();
+            if (CurrentSimulation == nullptr)
+            {
+                return false;
+            }
+            for (const echoes::sim::Entity& Entity :
+                 CurrentSimulation->Entities())
+            {
+                if (Entity.type == echoes::sim::EntityType::Dropoff &&
+                    Entity.position == DamagedSeedSite)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if (!TestTrue(
+                TEXT("Simulation cleanup removes the damaged seed ID and authored-site Dropoff before checkpointing"),
+                IsDamagedSeedAbsent()))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        TArray<uint8> CurrentTopologyBytes;
+        const bool bCurrentDegradedCheckpointWritten =
+            DegradedBridge->QuickSaveScenario(Feedback) &&
+            FFileHelper::LoadFileToArray(
+                CurrentTopologyBytes,
+                *LegacyTopologyQuickSavePath) &&
+            CurrentTopologyBytes.Num() > 16 &&
+            CurrentTopologyBytes[11] == 2;
+        if (!TestTrue(
+                TEXT("A checkpoint without the cleaned-up seed is written with topology revision two"),
+                bCurrentDegradedCheckpointWritten))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (!TestTrue(
+                TEXT("QuickLoad accepts the current-format checkpoint without the cleaned-up seed"),
+                DegradedBridge->QuickLoadScenario(Feedback)))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (!TestTrue(
+                TEXT("QuickLoad preserves the cleaned-up seed absence and synchronization phase"),
+                IsDamagedSeedAbsent() &&
+                    DegradedBridge->GetTermsOfContinuancePhase() ==
+                        EEchoesTermsOfContinuancePhase::
+                            SynchronizeNetworks))
+        {
+            DegradedBridge->StopPrototypeScenario();
+            DegradedTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        DegradedBridge->StopPrototypeScenario();
+        DegradedTopologyWorld.ForwardErrorMessages(this);
+    }
+
     FEchoesCampaignProgress LockedProgress;
     for (const EEchoesCampaignMissionId Mission : {
              EEchoesCampaignMissionId::WhatTheLedgerKeeps,
@@ -493,7 +1699,8 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
              InterruptedBridge->GetSimulation()->Entities())
         {
             if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-                Entity.type == echoes::sim::EntityType::Worker)
+                Entity.type == echoes::sim::EntityType::Worker &&
+                Entity.hitPoints > 0 && Entity.completed)
             {
                 InterruptedWorkerId = Entity.id;
                 break;
@@ -507,10 +1714,12 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                          InterruptedWorkerId,
                          echoes::sim::EntityType::Dropoff,
                          InterruptedBridge->SimToWorld(
-                             echoes::sim::Vec2::FromTiles(29, 28)),
+                             PreservePlan.PlayerPowerLinkSites[0]),
                          Feedback));
         for (int32 TickIndex = 0;
              TickIndex < 700 &&
+             InterruptedBridge->GetTermsOfContinuancePhase() !=
+                 EEchoesTermsOfContinuancePhase::Failed &&
              (InterruptedBridge->GetTermsOfContinuancePhase() !=
                   EEchoesTermsOfContinuancePhase::HoldContinuanceWindow ||
               InterruptedBridge->GetSimulation()->CurrentTick() <
@@ -702,19 +1911,79 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  SeedProgress,
                  Feedback));
 
+    const auto FindOwnedMeridianDropoffAt = [Bridge](
+        const echoes::sim::Vec2& Site)
+        -> const echoes::sim::Entity*
+    {
+        for (const echoes::sim::Entity& Entity :
+             Bridge->GetSimulation()->Entities())
+        {
+            if (Entity.owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Entity.type == echoes::sim::EntityType::Dropoff &&
+                Entity.position == Site)
+            {
+                return &Entity;
+            }
+        }
+        return nullptr;
+    };
+    bool bPreserveSeedsSpawned = true;
+    for (const echoes::sim::Vec2& SeedSite :
+         PreservePlan.SeedPowerLinkSites)
+    {
+        const echoes::sim::Entity* Seed =
+            FindOwnedMeridianDropoffAt(SeedSite);
+        bPreserveSeedsSpawned &= Seed != nullptr &&
+            Seed->hitPoints > 0 && Seed->completed &&
+            !Seed->aegisPowered;
+    }
+    TestTrue(
+        TEXT("Preserve spawns every route-owned seed as a living, completed, unpowered Meridian Dropoff"),
+        bPreserveSeedsSpawned);
+    TestTrue(
+        TEXT("Preserve leaves its player Power Link site unbuilt"),
+        PreservePlan.PlayerPowerLinkSites.Num() == 1 &&
+            FindOwnedMeridianDropoffAt(
+                PreservePlan.PlayerPowerLinkSites[0]) == nullptr);
+
     echoes::sim::EntityId WorkerId = 0;
+    int64 NearestWorkerDistanceSquared = TNumericLimits<int64>::Max();
+    const echoes::sim::Vec2 PreservePlayerLinkSite =
+        PreservePlan.PlayerPowerLinkSites.IsEmpty()
+            ? echoes::sim::Vec2{}
+            : PreservePlan.PlayerPowerLinkSites[0];
     for (const echoes::sim::Entity& Entity :
          Bridge->GetSimulation()->Entities())
     {
         if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-            Entity.type == echoes::sim::EntityType::Worker)
+            Entity.type == echoes::sim::EntityType::Worker &&
+            Entity.hitPoints > 0 && Entity.completed)
         {
-            WorkerId = Entity.id;
-            break;
+            const int64 DeltaX =
+                static_cast<int64>(Entity.position.x.Raw()) -
+                PreservePlayerLinkSite.x.Raw();
+            const int64 DeltaY =
+                static_cast<int64>(Entity.position.y.Raw()) -
+                PreservePlayerLinkSite.y.Raw();
+            const int64 DistanceSquared =
+                DeltaX * DeltaX + DeltaY * DeltaY;
+            if (DistanceSquared < NearestWorkerDistanceSquared ||
+                (DistanceSquared == NearestWorkerDistanceSquared &&
+                 (WorkerId == 0 || Entity.id < WorkerId)))
+            {
+                WorkerId = Entity.id;
+                NearestWorkerDistanceSquared = DistanceSquared;
+            }
         }
     }
-    if (!TestTrue(TEXT("A treaty-grid construction worker is available"),
-                  WorkerId != 0))
+    if (!TestTrue(
+            TEXT("The nearest treaty-grid construction worker is available"),
+            WorkerId != 0 &&
+                NearestWorkerDistanceSquared <
+                    TNumericLimits<int64>::Max()))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -729,9 +1998,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             {
                 return true;
             }
+            if (Bridge->GetTermsOfContinuancePhase() ==
+                EEchoesTermsOfContinuancePhase::Failed)
+            {
+                return false;
+            }
             Bridge->Tick(0.05f);
         }
-        return Predicate();
+        return Bridge->GetTermsOfContinuancePhase() !=
+                EEchoesTermsOfContinuancePhase::Failed &&
+            Predicate();
     };
     Bridge->SetScenarioPaused(false);
     Bridge->Tick(0.05f);
@@ -747,16 +2023,33 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  WorkerId,
                  echoes::sim::EntityType::Dropoff,
                  Bridge->SimToWorld(
-                     echoes::sim::Vec2::FromTiles(29, 28)),
+                     PreservePlayerLinkSite),
                  Feedback));
+    const bool bSynchronizedThroughOrdinaryConstruction = TickUntil(
+        [Bridge]()
+        {
+            return Bridge->GetTermsOfContinuancePhase() ==
+                EEchoesTermsOfContinuancePhase::HoldContinuanceWindow;
+        },
+        700);
     TestTrue(TEXT("Ordinary construction synchronizes both interfaces"),
-             TickUntil(
-                 [Bridge]()
-                 {
-                     return Bridge->GetTermsOfContinuancePhase() ==
-                         EEchoesTermsOfContinuancePhase::HoldContinuanceWindow;
-                 },
-                 700));
+             bSynchronizedThroughOrdinaryConstruction);
+    TestTrue(
+        TEXT("The authored player Power Link completes unpowered at the plan site"),
+        [&FindOwnedMeridianDropoffAt, &PreservePlayerLinkSite]()
+        {
+            const echoes::sim::Entity* PlayerLink =
+                FindOwnedMeridianDropoffAt(PreservePlayerLinkSite);
+            return PlayerLink != nullptr &&
+                PlayerLink->hitPoints > 0 &&
+                PlayerLink->completed &&
+                !PlayerLink->aegisPowered;
+        }());
+    TestTrue(
+        TEXT("Both interfaces synchronize before the fixed treaty deadline"),
+        bSynchronizedThroughOrdinaryConstruction &&
+            Bridge->GetSimulation()->CurrentTick() <
+                PreservePlan.ContinuanceWindowStartTick);
     TestTrue(TEXT("The synchronized interfaces hold through the fixed window"),
              TickUntil(
                  [Bridge]()
