@@ -759,9 +759,9 @@ Add to this list rather than guessing. Each entry needs the question, the option
    - **Orpheus-3B / Zonos-v0.1** — Apache-2.0, best-in-class expressiveness among open models;
      3B-parameter scale means slow M1 Pro generation (minutes per batch) and heavier setup. Viable
      as a quality upgrade after Kokoro calibration if direction control proves insufficient.
-   Proposed path: run gate 17's calibration set through Kokoro-82M first; escalate to Orpheus only
-   if the directed-performance review rejects it. Awaiting your call before any weights are pulled
-   or any line is registered.
+   **RESOLVED 2026-09-01 (Angelis):** Kokoro-82M selected. Run gate 17's calibration set through
+   Kokoro-82M; escalate to Orpheus only if the directed-performance review rejects it. Weights may
+   now be pulled; record model id, weights hash, and license in the rights record on first use.
 2. **Typeface** (blocks A8, J2). A licensed or original typeface for game and site, license
    recorded. Decision owner: Angelis. **Candidates (2026-09-01 session), all SIL OFL 1.1 — free for
    commercial embedding in games and sites, no per-seat cost, attribution in the rights record:**
@@ -771,9 +771,9 @@ Add to this list rather than guessing. Each entry needs the question, the option
      coordinates; the most complete coverage if one family must do everything.
    - **Rajdhani** (OFL) — condensed technical sans, strong at small HUD sizes; weaker as body text.
    - **Exo 2** (OFL) — rounded technical sans, softer look; wide weight range.
-   Proposed pairing: Space Grotesk for interface chrome + IBM Plex Mono for tactical readouts,
-   both OFL with licenses vendored into `Docs/` and recorded in `AssetRegister.md`. No paid or
-   original commission appears necessary at the professional bar. Awaiting your call.
+   **RESOLVED 2026-09-01 (Angelis):** Space Grotesk for interface chrome + IBM Plex Mono for
+   tactical readouts, both SIL OFL 1.1, licenses vendored into `Docs/` and recorded in
+   `AssetRegister.md` on first embedding. No paid or original commission needed.
 3. **`site/` versus `website/`** (blocks J2). Two web properties exist. Decide the authoritative one,
    fold or retire the other, and record where it is hosted and deployed.
 4. **Niagara adoption** (A6). Permitted only where mesh VFX cannot carry an effect; each system is a
@@ -791,10 +791,14 @@ Add to this list rather than guessing. Each entry needs the question, the option
    M05 — smallest Bible-consistent cast, needs your approval as a canon extension; (b) author M05
    with an attributed minor speaker (new named proxy character) — a larger canon extension;
    (c) leave M05's dialogue as unattributed operations copy — weakest storytelling. Missions
-   02–04 and 06–15 have canonical casts and are not blocked. Decision owner: Angelis.
+   02–04 and 06–15 have canonical casts and are not blocked.
+   **RESOLVED 2026-09-01 (Angelis):** option (a), limited to Mara Vey alone — canon continuity is
+   extended so Mara Vey, as the Meridian treaty authority consistent with her Act I command arc,
+   carries Mission 05's spoken lines. No new named characters.
 8. **Demo versus full labeling.** This release contains the full fifteen-operation campaign and
-   skirmish. Decide the public name — "demo", "first release", or versioned title — before store and
-   site text is written, so no public label understates or oversells what ships.
+   skirmish. **RESOLVED 2026-09-01 (Angelis):** the public label is **Version 1.0 — full release**.
+   All store and site text is written against the 1.0 full-release claim set; nothing may be
+   labeled a demo.
 
 ## 10. Gate matrix
 
@@ -806,7 +810,7 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 |---|---|---|---|---|
 | 1 | Suite health: automation, native ×3, and content suites green on current `main`; standing requirement on every merge | E1 | — | PASS carried from demo gates 1–4 — 56/56 at `39955ea`, 57/57 at `a470eb9`, 58/58 with audio-mix and music/ambience tests; native 37/37 ×3; content 123/123; evidence `demo-gates-1-4-39955ea-*` |
 | 2 | Five-category submix graph with independent volumes | B1 | — | PASS carried from demo gate 14 — `Echoes.Runtime.Audio.MixArchitecture` green at `a470eb9`; evidence `demo-gate14-mix-architecture-*`; voice-bus ducking rules remain under gate 16 |
-| 3 | Exposure, tonemapping, and per-site lighting rig; no clipped highlights in packaged captures | A1 | 1 | NOT RUN |
+| 3 | Exposure, tonemapping, and per-site lighting rig; no clipped highlights in packaged captures | A1 | 1 | OPEN — packaged Glass Scar captures accepted 2026-09-01 at 1920×1080 and 2560×1440 plus a high-contrast 2560×1440 pass (clipped ≤0.0044%, ledger ART-A1-002, evidence `release-gate3-packaged-captures-*`); per-site lighting rigs for the remaining sites still owed |
 | 4 | No debug overlay or prototype text in shipping-configuration captures | A2 | 3 | NOT RUN |
 | 5 | Production texture/material families registered, byte-idempotent, reviewed per family | A3 | 3 | NOT RUN |
 | 6 | Every campaign site dressed to its stated identity; no bare collision floor | A4 | 5 | NOT RUN |
@@ -825,12 +829,12 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 | 19 | Script-to-voice coverage matrix complete — zero unvoiced dialogue lines | C3 | 18, 24 | NOT RUN |
 | 20 | Line sets generated, registered, loudness-normalized, review-passed per mission | C4 | 19 | NOT RUN |
 | 21 | Runtime voice on dialogue bus, exact subtitle sync, independent volume, full text experience with voice off | C5 | 20 | NOT RUN |
-| 22 | Sequencer pipeline reference sequence: trigger, playback, skip, return, no simulation mutation | D1 | 3 | NOT RUN |
+| 22 | Sequencer pipeline reference sequence: trigger, playback, skip, return, no simulation mutation | D1 | 3 | PASS 2026-09-01 — `Echoes.Runtime.Cinematics.ReferenceSequence` in 64/64: data-driven trigger, playback with real possessed-camera advancement, skip, exact pause-state restore, unchanged sim checksum (ledger CINE-D1-001; headless world, no rendered on-screen cinematic yet) |
 | 23 | Title sequence rendered, narrated, subtitled, ≤ 90 s, skippable | D2 | 22, 6, 20 | NOT RUN |
 | 24 | Mission text authored, schema-valid, consumed at runtime | E4 | 1 | NOT RUN |
 | 25 | Three act-transition sequences rendered with act themes and narration | D3 | 22, 6, 20, 12 | NOT RUN |
 | 26 | Four ending cinematics rendered; narrated claims bounded by ledger and Bible | D4 | 25, 27 | NOT RUN |
-| 27 | One complete recorded route per ending type; no reachable plan dead-ends | E2 | 1 | NOT RUN |
+| 27 | One complete recorded route per ending type; no reachable plan dead-ends | E2 | 1 | PASS 2026-09-01 — four recorded `FreshJourney` routes (one per ending) plus `Echoes.Runtime.Campaign.PlanMatrix` cross-model sweep: 27 reachable plans per fact context, every one keeps an ending available, unreachable tuples fail closed; printed 27-row matrix reaches all four endings (ledger PLAN-E2-001; model-level, not a per-plan six-mission playthrough) |
 | 28 | Cinematic accessibility matrix: skip, subtitles, reduced motion/flashing, clean return, budget hold | D5 | 23, 25, 26 | NOT RUN |
 | 29 | Trailer exported from in-engine footage; claims checked against the evidence register | D6 | 23, 25 | NOT RUN |
 | 30 | Difficulty and pacing pass: ordinary-player completion data per mission feeding tuning | E3 | 24, 10 | NOT RUN |
