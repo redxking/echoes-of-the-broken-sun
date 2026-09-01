@@ -3335,17 +3335,288 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 break;
             }
         }
-        if (!Require(
+        const TArray<EntityId> M08Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M08CoreId =
+            M08Cores.IsEmpty() ? 0 : M08Cores[0];
+        EntityId M08RelayId = 0;
+        FString M08FirstObservedFailure = TEXT("none");
+        uint64 M08FirstObservedFailureTick = 0;
+        EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
+            Bridge->GetShapeBesideUsPhase();
+        FString M08LastKnownCore = DescribeFreshJourneyEntity(
+            TEXT("core"), M08CoreId, Bridge->FindEntity(M08CoreId));
+        FString M08LastKnownTalar = DescribeFreshJourneyEntity(
+            TEXT("talar"),
+            M08Start.ShapeBesideUsTalarId,
+            Bridge->FindEntity(M08Start.ShapeBesideUsTalarId));
+        FString M08LastKnownWitnessA = DescribeFreshJourneyEntity(
+            TEXT("witnessA"),
+            M08Start.FirstStateWitnessId,
+            Bridge->FindEntity(M08Start.FirstStateWitnessId));
+        FString M08LastKnownWitnessB = DescribeFreshJourneyEntity(
+            TEXT("witnessB"),
+            M08Start.SecondStateWitnessId,
+            Bridge->FindEntity(M08Start.SecondStateWitnessId));
+        FString M08LastKnownWorker = DescribeFreshJourneyEntity(
+            TEXT("worker"), M08Worker, Bridge->FindEntity(M08Worker));
+        FString M08LastKnownRelay = TEXT("relay{id=0 unobserved}");
+        const auto ObserveMissionEightProtectedState = [
+            Bridge,
+            M08CoreId,
+            M08Plan,
+            M08Start,
+            M08Worker,
+            &M08RelayId,
+            &M08FirstObservedFailure,
+            &M08FirstObservedFailureTick,
+            &M08LastNonFailedPhase,
+            &M08LastKnownCore,
+            &M08LastKnownTalar,
+            &M08LastKnownWitnessA,
+            &M08LastKnownWitnessB,
+            &M08LastKnownWorker,
+            &M08LastKnownRelay]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            const auto UpdateLastKnown = [Bridge](
+                const TCHAR* Label,
+                EntityId Id,
+                FString& LastKnown)
+            {
+                const Entity* Current = Bridge->FindEntity(Id);
+                if (Current != nullptr)
+                {
+                    LastKnown = DescribeFreshJourneyEntity(
+                        Label, Id, Current);
+                }
+            };
+            UpdateLastKnown(
+                TEXT("core"), M08CoreId, M08LastKnownCore);
+            UpdateLastKnown(
+                TEXT("talar"),
+                M08Start.ShapeBesideUsTalarId,
+                M08LastKnownTalar);
+            UpdateLastKnown(
+                TEXT("witnessA"),
+                M08Start.FirstStateWitnessId,
+                M08LastKnownWitnessA);
+            UpdateLastKnown(
+                TEXT("witnessB"),
+                M08Start.SecondStateWitnessId,
+                M08LastKnownWitnessB);
+            UpdateLastKnown(
+                TEXT("worker"), M08Worker, M08LastKnownWorker);
+            if (M08RelayId == 0 && Simulation != nullptr)
+            {
+                for (const Entity& Candidate : Simulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.type == EntityType::UtilityStructure &&
+                        Candidate.position == M08Plan.EchoRelaySite)
+                    {
+                        M08RelayId = Candidate.id;
+                        break;
+                    }
+                }
+            }
+            if (M08RelayId != 0)
+            {
+                UpdateLastKnown(
+                    TEXT("relay"), M08RelayId, M08LastKnownRelay);
+            }
+
+            const EEchoesShapeBesideUsPhase CurrentPhase =
+                Bridge->GetShapeBesideUsPhase();
+            if (CurrentPhase != EEchoesShapeBesideUsPhase::Failed)
+            {
+                M08LastNonFailedPhase = CurrentPhase;
+            }
+            if (M08FirstObservedFailure != TEXT("none"))
+            {
+                return;
+            }
+            const auto ObserveProtected = [
+                Bridge,
+                Simulation,
+                &M08FirstObservedFailure,
+                &M08FirstObservedFailureTick](
+                    const TCHAR* Label,
+                    EntityId Id)
+            {
+                if (M08FirstObservedFailure != TEXT("none"))
+                {
+                    return;
+                }
+                const Entity* Current = Bridge->FindEntity(Id);
+                if (Id != 0 && Current != nullptr &&
+                    Current->hitPoints > 0)
+                {
+                    return;
+                }
+                M08FirstObservedFailureTick =
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0;
+                M08FirstObservedFailure =
+                    DescribeFreshJourneyEntity(Label, Id, Current);
+            };
+            ObserveProtected(TEXT("core"), M08CoreId);
+            ObserveProtected(
+                TEXT("talar"), M08Start.ShapeBesideUsTalarId);
+            ObserveProtected(
+                TEXT("witnessA"), M08Start.FirstStateWitnessId);
+            ObserveProtected(
+                TEXT("witnessB"), M08Start.SecondStateWitnessId);
+            if (M08FirstObservedFailure == TEXT("none") &&
+                Simulation != nullptr &&
+                Simulation->Outcome() !=
+                    echoes::sim::MatchOutcome::Ongoing)
+            {
+                M08FirstObservedFailureTick = Simulation->CurrentTick();
+                M08FirstObservedFailure = FString::Printf(
+                    TEXT("matchOutcome{value=%u}"),
+                    static_cast<uint8>(Simulation->Outcome()));
+            }
+        };
+        const auto WriteMissionEightDiagnostic = [
+            Bridge,
+            M08CoreId,
+            M08Plan,
+            M08Start,
+            M08Worker,
+            &M08RelayId,
+            &M08FirstObservedFailure,
+            &M08FirstObservedFailureTick,
+            &M08LastNonFailedPhase,
+            &M08LastKnownCore,
+            &M08LastKnownTalar,
+            &M08LastKnownWitnessA,
+            &M08LastKnownWitnessB,
+            &M08LastKnownWorker,
+            &M08LastKnownRelay,
+            &ObserveMissionEightProtectedState,
+            &Feedback]()
+        {
+            ObserveMissionEightProtectedState();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            const FString PriorFeedback =
+                Feedback.IsEmpty() ? TEXT("none") : Feedback;
+            Feedback = FString::Printf(
+                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s}"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr
+                        ? Simulation->StateChecksum()
+                        : 0),
+                Simulation != nullptr
+                    ? static_cast<uint8>(Simulation->Outcome())
+                    : 0xFF,
+                static_cast<uint8>(Bridge->GetShapeBesideUsPhase()),
+                static_cast<uint8>(M08LastNonFailedPhase),
+                M08Plan.FirstEchoSite.x.FloorToInt(),
+                M08Plan.FirstEchoSite.y.FloorToInt(),
+                M08Plan.EchoRelaySite.x.FloorToInt(),
+                M08Plan.EchoRelaySite.y.FloorToInt(),
+                M08Plan.FirstStateSite.x.FloorToInt(),
+                M08Plan.FirstStateSite.y.FloorToInt(),
+                M08Plan.SecondStateSite.x.FloorToInt(),
+                M08Plan.SecondStateSite.y.FloorToInt(),
+                M08Plan.ConvergenceSite.x.FloorToInt(),
+                M08Plan.ConvergenceSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    M08FirstObservedFailureTick),
+                *M08FirstObservedFailure,
+                *PriorFeedback,
+                *M08LastKnownCore,
+                *M08LastKnownTalar,
+                *M08LastKnownWitnessA,
+                *M08LastKnownWitnessB,
+                *M08LastKnownWorker,
+                *M08LastKnownRelay,
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"),
+                    M08CoreId,
+                    Bridge->FindEntity(M08CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("talar"),
+                    M08Start.ShapeBesideUsTalarId,
+                    Bridge->FindEntity(M08Start.ShapeBesideUsTalarId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("witnessA"),
+                    M08Start.FirstStateWitnessId,
+                    Bridge->FindEntity(M08Start.FirstStateWitnessId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("witnessB"),
+                    M08Start.SecondStateWitnessId,
+                    Bridge->FindEntity(M08Start.SecondStateWitnessId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("worker"),
+                    M08Worker,
+                    Bridge->FindEntity(M08Worker)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("relay"),
+                    M08RelayId,
+                    Bridge->FindEntity(M08RelayId)));
+        };
+        const auto RequireMissionEight = [
+            &Require,
+            &ObserveMissionEightProtectedState,
+            &WriteMissionEightDiagnostic](
+                bool bCondition,
+                const FString& Label)
+        {
+            ObserveMissionEightProtectedState();
+            if (!bCondition)
+            {
+                WriteMissionEightDiagnostic();
+            }
+            return Require(bCondition, Label);
+        };
+        const auto TickUntilMissionEightCondition = [
+            Bridge,
+            &ObserveMissionEightProtectedState](
+                const TFunction<bool()>& Predicate,
+                int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0;
+                 TickIndex < MaximumTicks;
+                 ++TickIndex)
+            {
+                ObserveMissionEightProtectedState();
+                if (Bridge->GetShapeBesideUsPhase() ==
+                    EEchoesShapeBesideUsPhase::Failed)
+                {
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                Bridge->Tick(0.05f);
+            }
+            ObserveMissionEightProtectedState();
+            return Bridge->GetShapeBesideUsPhase() !=
+                    EEchoesShapeBesideUsPhase::Failed &&
+                Predicate();
+        };
+        ObserveMissionEightProtectedState();
+        if (!RequireMissionEight(
                 M08Worker != 0,
                 TEXT("Mission 08 exposes a separate construction worker")) ||
-            !Require(
+            !RequireMissionEight(
                 Move(
                     M08Start.ShapeBesideUsTalarId,
                     M08Plan.FirstEchoSite),
                 TEXT("Mission 08 Talar accepts the first-echo route")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
@@ -3353,16 +3624,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3000),
                 TEXT("Mission 08 reaches relay construction")) ||
-            !Require(
+            !RequireMissionEight(
                 Bridge->IssueBuildCommand(
                     M08Worker,
                     EntityType::UtilityStructure,
                     Bridge->SimToWorld(M08Plan.EchoRelaySite),
                     Feedback),
                 TEXT("Mission 08 accepts the echo relay")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
@@ -3371,19 +3641,18 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3400),
                 TEXT("Mission 08 opens paired-state traversal")) ||
-            !Require(
+            !RequireMissionEight(
                 Move(
                     M08Start.FirstStateWitnessId,
                     M08Plan.FirstStateSite),
                 TEXT("Mission 08 first witness accepts its state")) ||
-            !Require(
+            !RequireMissionEight(
                 Move(
                     M08Start.SecondStateWitnessId,
                     M08Plan.SecondStateSite),
                 TEXT("Mission 08 second witness accepts its state")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
@@ -3391,14 +3660,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3600),
                 TEXT("Mission 08 traverses both states")) ||
-            !Require(
+            !RequireMissionEight(
                 Move(
                     M08Start.ShapeBesideUsTalarId,
                     M08Plan.ConvergenceSite),
                 TEXT("Mission 08 Talar accepts convergence")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
