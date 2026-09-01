@@ -1,0 +1,1240 @@
+{
+  "schema_version": 1,
+  "namespace": "echoes.narrative",
+  "content_id": "nar_m01_what_the_ledger_keeps",
+  "metadata": {
+    "author": "Angelis Pseftis",
+    "creator": "Angelis Pseftis",
+    "source_locale": "en-US",
+    "rights_status": "author_attributed_project_source",
+    "originality_review_status": "human_review_required",
+    "authority_path": "Docs/DevelopmentBible.md",
+    "content_status": "authored_source_only"
+  },
+  "runtime_binding": {
+    "mission_id": "WhatTheLedgerKeeps",
+    "operation_mode": "CampaignPrologue",
+    "phases": [
+      "Inactive",
+      "RecoverArchive",
+      "DecideFutureWell",
+      "Withdraw",
+      "Complete",
+      "Failed"
+    ],
+    "well_choices": [
+      "Harvest",
+      "Preserve",
+      "Reshape"
+    ],
+    "well_uncommitted_state": "Dormant",
+    "campaign_commit_statuses": [
+      "Added",
+      "AlreadyRecorded",
+      "ReplayConflict",
+      "StorageFailure"
+    ],
+    "runtime_consumed": false,
+    "localization_runtime_status": "unimplemented",
+    "failure_reason_binding": "requested"
+  },
+  "canon": {
+    "title": "What the Ledger Keeps",
+    "purpose": "Mara Vey commands a Meridian evacuation, recovers Talar Venn's displaced archive convoy, makes the first irreversible Future Well decision, and withdraws the archive carrier to Lume Reach.",
+    "player_pov": "mara_vey_command_authority",
+    "command_faction": "meridian_compact",
+    "archive_carrier_role": "meridian_scout",
+    "recovery_tile": {
+      "x": 22,
+      "y": 18
+    },
+    "evacuation_tile": {
+      "x": 6,
+      "y": 17
+    },
+    "carrier_must_hold_recovery_during_well_commit": true,
+    "hostile_core_destruction_substitutes_for_evacuation": false,
+    "hidden_moral_score": false,
+    "canonical_facts": [
+      "The city's failing reserve creates a credible reason to Harvest without making Harvest the canonical answer.",
+      "Talar asks for time to recover a displaced archive convoy.",
+      "Oruun opposes collapse propagation into a birthing cavern rather than seeking to seize Lume Reach.",
+      "The Meridian scout is the archive carrier; Mara is the player's command authority.",
+      "A worker must discover and commit Harvest, Preserve, or Reshape while the surviving carrier holds tile 22,18.",
+      "Success requires the carrier to reach tile 6,17 after the Well protocol commits.",
+      "Failure appends no campaign record; a successful authoritative completion may add, verify, conflict with, or fail to save a record."
+    ],
+    "prohibited_inferences": [
+      "Mara is physically represented by the archive-carrier unit.",
+      "Talar or Oruun has a named physical runtime actor in Mission 01.",
+      "Destroying the hostile Command Core completes the mission without evacuation.",
+      "Harvest, Preserve, or Reshape is labeled good, bad, canonical, or morally scored.",
+      "Authored dialogue, subtitles, voice, or cinematics are already consumed by the runtime.",
+      "Mission 01 establishes modeled downstream civilian, relationship, or faction-trust outcomes."
+    ]
+  },
+  "speakers": [
+    {
+      "id": "spk_mara_vey",
+      "display_name": "Mara Vey",
+      "faction_id": "meridian_compact",
+      "role_in_mission": "player_command_authority",
+      "command_authority": true,
+      "delivery_channel": "command_radio",
+      "physical_presence_status": "not_asserted_by_contract",
+      "voice_asset_status": "absent"
+    },
+    {
+      "id": "spk_talar_venn",
+      "display_name": "Talar Venn",
+      "faction_id": "meridian_compact",
+      "role_in_mission": "archive_recovery_requester",
+      "command_authority": false,
+      "delivery_channel": "operations_radio",
+      "physical_presence_status": "not_asserted_by_contract",
+      "voice_asset_status": "absent"
+    },
+    {
+      "id": "spk_oruun_seven_stones",
+      "display_name": "Oruun-of-Seven-Stones",
+      "faction_id": "kharuun_assemblies",
+      "role_in_mission": "birthing_cavern_interlocutor",
+      "command_authority": false,
+      "delivery_channel": "cross_faction_radio",
+      "physical_presence_status": "not_asserted_by_contract",
+      "voice_asset_status": "absent"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "nar_m01_evt_operation_started",
+      "runtime_signal": "operation_ready:CampaignPrologue:RecoverArchive",
+      "prerequisite_ids": [],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_archive_recovered",
+      "runtime_signal": "phase_entered:DecideFutureWell",
+      "prerequisite_ids": [
+        "nar_m01_evt_operation_started"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_well_decision_committed",
+      "runtime_signal": "phase_entered:Withdraw",
+      "prerequisite_ids": [
+        "nar_m01_evt_archive_recovered"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_withdrawal_complete",
+      "runtime_signal": "phase_entered:Complete",
+      "prerequisite_ids": [
+        "nar_m01_evt_well_decision_committed"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_mission_failed",
+      "runtime_signal": "phase_entered:Failed",
+      "prerequisite_ids": [
+        "nar_m01_evt_operation_started"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_campaign_result_presented",
+      "runtime_signal": "campaign_commit_status_presented",
+      "prerequisite_ids": [
+        "nar_m01_evt_withdrawal_complete"
+      ],
+      "occurrence": "once_per_completion",
+      "reset_behavior": "reset_on_mission_replay",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_evt_retry_requested",
+      "runtime_signal": "player_requested_mission_retry",
+      "prerequisite_ids": [
+        "nar_m01_evt_mission_failed"
+      ],
+      "occurrence": "repeatable_after_failure",
+      "reset_behavior": "starts_new_mission_attempt",
+      "binding_status": "authored_unbound"
+    }
+  ],
+  "ui_copy": {
+    "briefing": {
+      "id": "nar_m01_ui_briefing",
+      "loc_key": "nar_m01_ui_briefing",
+      "source_text": "Recover the displaced archive convoy at tile 22,18, commit one visible Future Well protocol while the carrier holds the site, then evacuate the carrier to Lume Reach at tile 6,17.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 220,
+        "localization_expansion_percent": 35
+      },
+      "binding_status": "authored_unbound"
+    },
+    "objectives": [
+      {
+        "id": "nar_m01_ui_objective_archive",
+        "loc_key": "nar_m01_ui_objective_archive",
+        "source_text": "Bring the Meridian scout carrying the archive to tile 22,18.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 90,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      },
+      {
+        "id": "nar_m01_ui_objective_well",
+        "loc_key": "nar_m01_ui_objective_well",
+        "source_text": "Hold the carrier at the recovery site while a worker commits Harvest, Preserve, or Reshape at the Future Well.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 150,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      },
+      {
+        "id": "nar_m01_ui_objective_withdraw",
+        "loc_key": "nar_m01_ui_objective_withdraw",
+        "source_text": "After the protocol commits, bring the surviving carrier to Lume Reach at tile 6,17.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 120,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      }
+    ]
+  },
+  "lines": [
+    {
+      "id": "nar_m01_line_talar_001",
+      "loc_key": "nar_m01_line_talar_001",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "operations_radio",
+      "source_text": "The evacuation ledger closed an archive convoy that never reached Lume Reach.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 105,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_001",
+      "loc_key": "nar_m01_line_mara_001",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "command_radio",
+      "source_text": "Then the ledger is wrong. Mark the recovery site.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_002",
+      "loc_key": "nar_m01_line_talar_002",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "operations_radio",
+      "source_text": "Tile twenty-two, eighteen. The carrier still answers. The city's reserve does not have long.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 125,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_002",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_001",
+      "loc_key": "nar_m01_line_oruun_001",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "Collapse that Well and the fracture reaches a birthing cavern.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 95,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_002",
+      "loc_key": "nar_m01_line_oruun_002",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "Seven accounts agree. I distrust the occasion.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 75,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_002",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_002",
+      "loc_key": "nar_m01_line_mara_002",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "delivery_channel": "command_radio",
+      "source_text": "Carrier first. Well second. Withdrawal before the reserve fails.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 95,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_002",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_003",
+      "loc_key": "nar_m01_line_talar_003",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_archive_recovered",
+      "delivery_channel": "operations_radio",
+      "source_text": "The carrier is holding the recovery site. The convoy records are intact.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 105,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_003",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_003",
+      "loc_key": "nar_m01_line_mara_003",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_archive_recovered",
+      "delivery_channel": "command_radio",
+      "source_text": "Keep the carrier there. Put all three Well protocols on the board, with their costs.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 120,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_003",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_003",
+      "loc_key": "nar_m01_line_oruun_003",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_archive_recovered",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "A rare courtesy. Every answer is dangerous.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 75,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_003",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_harvest_001",
+      "loc_key": "nar_m01_line_mara_harvest_001",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "command_radio",
+      "source_text": "Harvest. Take the Dawn. The reserve gets time; the Well does not.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 85,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_harvest_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_harvest_001",
+      "loc_key": "nar_m01_line_oruun_harvest_001",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "The city gains time. The cavern loses a possibility. Record both.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 110,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_harvest_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_harvest_001",
+      "loc_key": "nar_m01_line_talar_harvest_001",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "operations_radio",
+      "source_text": "Both are in the ledger.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 55,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_harvest_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_preserve_001",
+      "loc_key": "nar_m01_line_mara_preserve_001",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "command_radio",
+      "source_text": "Preserve. Keep the Well intact. We hold this ground without immediate reserve relief.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 95,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_preserve_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_preserve_001",
+      "loc_key": "nar_m01_line_oruun_preserve_001",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "Possibility survives, and every force here has reason to keep fighting.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_preserve_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_preserve_001",
+      "loc_key": "nar_m01_line_talar_preserve_001",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "operations_radio",
+      "source_text": "The delay and the open Well are recorded.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 55,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_preserve_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_reshape_001",
+      "loc_key": "nar_m01_line_mara_reshape_001",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "command_radio",
+      "source_text": "Reshape. We spend Dawn for a temporary option. Publish the expiry.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 100,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_reshape_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_reshape_001",
+      "loc_key": "nar_m01_line_oruun_reshape_001",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "Then no one mistakes a borrowed path for a permanent one.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 75,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_reshape_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_reshape_001",
+      "loc_key": "nar_m01_line_talar_reshape_001",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "operations_radio",
+      "source_text": "Cost and expiry recorded. The carrier is ready.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 65,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_reshape_001",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_004",
+      "loc_key": "nar_m01_line_mara_004",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "command_radio",
+      "source_text": "Carrier, turn for Lume Reach. Everyone else holds the corridor, then follows.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 105,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_004",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_004",
+      "loc_key": "nar_m01_line_talar_004",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "operations_radio",
+      "source_text": "Archive sealed. Transfer receipt open.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 65,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_004",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_oruun_004",
+      "loc_key": "nar_m01_line_oruun_004",
+      "speaker_id": "spk_oruun_seven_stones",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "delivery_channel": "cross_faction_radio",
+      "source_text": "The path is open. The consequence is not finished.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_oruun_004",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_005",
+      "loc_key": "nar_m01_line_talar_005",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_withdrawal_complete",
+      "delivery_channel": "operations_radio",
+      "source_text": "Carrier confirmed at Lume Reach. The archive is secure.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 85,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_005",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_005",
+      "loc_key": "nar_m01_line_mara_005",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_withdrawal_complete",
+      "delivery_channel": "command_radio",
+      "source_text": "Close the operation. Keep the Well decision visible.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_005",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_fail_core",
+      "loc_key": "nar_m01_line_mara_fail_core",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_mission_failed",
+      "delivery_channel": "command_radio",
+      "source_text": "Anchor lost. The withdrawal line has no root. Break contact.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_fail_core",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_talar_fail_carrier",
+      "loc_key": "nar_m01_line_talar_fail_carrier",
+      "speaker_id": "spk_talar_venn",
+      "trigger_id": "nar_m01_evt_mission_failed",
+      "delivery_channel": "operations_radio",
+      "source_text": "Carrier signal lost. The archive is gone.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 70,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_talar_fail_carrier",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_fail_well",
+      "loc_key": "nar_m01_line_mara_fail_well",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_mission_failed",
+      "delivery_channel": "command_radio",
+      "source_text": "Well control is gone. The choice is no longer ours. Withdraw what remains.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 105,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_fail_well",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_fail_terminal",
+      "loc_key": "nar_m01_line_mara_fail_terminal",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_mission_failed",
+      "delivery_channel": "command_radio",
+      "source_text": "The field is decided. The carrier never reached Lume Reach. This operation failed.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 115,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_fail_terminal",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_line_mara_fail_generic",
+      "loc_key": "nar_m01_line_mara_fail_generic",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_m01_evt_mission_failed",
+      "delivery_channel": "command_radio",
+      "source_text": "The completion conditions are broken. Withdraw what remains.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_m01_vo_mara_fail_generic",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    }
+  ],
+  "dialogue_sequences": [
+    {
+      "id": "nar_m01_seq_opening",
+      "beat": "opening_brief",
+      "trigger_id": "nar_m01_evt_operation_started",
+      "line_ids": [
+        "nar_m01_line_talar_001",
+        "nar_m01_line_mara_001",
+        "nar_m01_line_talar_002",
+        "nar_m01_line_oruun_001",
+        "nar_m01_line_oruun_002",
+        "nar_m01_line_mara_002"
+      ],
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_seq_archive_recovered",
+      "beat": "archive_recovered",
+      "trigger_id": "nar_m01_evt_archive_recovered",
+      "line_ids": [
+        "nar_m01_line_talar_003",
+        "nar_m01_line_mara_003",
+        "nar_m01_line_oruun_003"
+      ],
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_seq_withdrawal",
+      "beat": "withdrawal_order",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "line_ids": [
+        "nar_m01_line_mara_004",
+        "nar_m01_line_talar_004",
+        "nar_m01_line_oruun_004"
+      ],
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_m01_seq_complete",
+      "beat": "mission_complete",
+      "trigger_id": "nar_m01_evt_withdrawal_complete",
+      "line_ids": [
+        "nar_m01_line_talar_005",
+        "nar_m01_line_mara_005"
+      ],
+      "binding_status": "authored_unbound"
+    }
+  ],
+  "branch_variants": {
+    "Harvest": {
+      "choice": "Harvest",
+      "current_runtime_behavior": "Current source applies Harvest immediately, grants 500 Dawn, collapses the Well permanently, and scars nearby open terrain.",
+      "design_target_tradeoff": "Target behavior adds a public 180-tick commitment before the same irreversible collapse.",
+      "runtime_alignment": "requires_telegraph_before_binding",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "dialogue_line_ids": [
+        "nar_m01_line_mara_harvest_001",
+        "nar_m01_line_oruun_harvest_001",
+        "nar_m01_line_talar_harvest_001"
+      ],
+      "design_target_choice_ui": {
+        "id": "nar_m01_ui_choice_harvest",
+        "loc_key": "nar_m01_ui_choice_harvest",
+        "source_text": "Harvest: gain 500 Dawn after the public 180-tick commitment; the Well collapses permanently.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 140,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      },
+      "binding_status": "authored_unbound"
+    },
+    "Preserve": {
+      "choice": "Preserve",
+      "current_runtime_behavior": "Current source keeps the Well intact and, while controlled, grants 15 Dawn every 300 ticks plus faction-dependent intelligence within 1,400 cm.",
+      "design_target_tradeoff": "Target behavior retains the implemented cadence and makes continued control, delayed value, and changing ownership explicit to the player.",
+      "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "dialogue_line_ids": [
+        "nar_m01_line_mara_preserve_001",
+        "nar_m01_line_oruun_preserve_001",
+        "nar_m01_line_talar_preserve_001"
+      ],
+      "design_target_choice_ui": {
+        "id": "nar_m01_ui_choice_preserve",
+        "loc_key": "nar_m01_ui_choice_preserve",
+        "source_text": "Preserve: keep the Well intact; while controlled, receive 15 Dawn every 300 ticks and faction-dependent intelligence within 1,400 cm.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 180,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      },
+      "binding_status": "authored_unbound"
+    },
+    "Reshape": {
+      "choice": "Reshape",
+      "current_runtime_behavior": "Current source spends 120 Dawn immediately, manifests the authored terrain possibility for 1,800 ticks, and uses deterministic fallback displacement at expiry.",
+      "design_target_tradeoff": "Target behavior adds a public 180-tick commitment and a pre-expiry warning before the implemented deterministic fallback displacement.",
+      "runtime_alignment": "requires_telegraph_and_expiry_warning_before_binding",
+      "trigger_id": "nar_m01_evt_well_decision_committed",
+      "dialogue_line_ids": [
+        "nar_m01_line_mara_reshape_001",
+        "nar_m01_line_oruun_reshape_001",
+        "nar_m01_line_talar_reshape_001"
+      ],
+      "design_target_choice_ui": {
+        "id": "nar_m01_ui_choice_reshape",
+        "loc_key": "nar_m01_ui_choice_reshape",
+        "source_text": "Reshape: spend 120 Dawn to manifest the map-authored possibility for 1,800 ticks after the public 180-tick commitment; expiration is warned and uses authored fallback displacement.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 220,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      },
+      "binding_status": "authored_unbound"
+    }
+  },
+  "result_variants": [
+    {
+      "status": "Added",
+      "copy": {
+        "id": "nar_m01_ui_result_added",
+        "loc_key": "nar_m01_ui_result_added",
+        "source_text": "Campaign ledger committed: {well_choice}. The decision is now part of this campaign.",
+        "placeholders": {
+          "well_choice": "Harvest, Preserve, or Reshape"
+        },
+        "text_budget": {
+          "max_characters": 125,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      }
+    },
+    {
+      "status": "AlreadyRecorded",
+      "copy": {
+        "id": "nar_m01_ui_result_already_recorded",
+        "loc_key": "nar_m01_ui_result_already_recorded",
+        "source_text": "Campaign ledger verified: {well_choice} was already recorded. No duplicate was added.",
+        "placeholders": {
+          "well_choice": "Harvest, Preserve, or Reshape"
+        },
+        "text_budget": {
+          "max_characters": 135,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      }
+    },
+    {
+      "status": "ReplayConflict",
+      "copy": {
+        "id": "nar_m01_ui_result_replay_conflict",
+        "loc_key": "nar_m01_ui_result_replay_conflict",
+        "source_text": "This replay completed with {local_choice}; the campaign ledger remains {recorded_choice}.",
+        "placeholders": {
+          "local_choice": "Harvest, Preserve, or Reshape",
+          "recorded_choice": "Harvest, Preserve, or Reshape"
+        },
+        "text_budget": {
+          "max_characters": 140,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      }
+    },
+    {
+      "status": "StorageFailure",
+      "copy": {
+        "id": "nar_m01_ui_result_storage_failure",
+        "loc_key": "nar_m01_ui_result_storage_failure",
+        "source_text": "Mission complete locally. Campaign progress was not saved; durable history remains unconfirmed.",
+        "placeholders": {},
+        "text_budget": {
+          "max_characters": 140,
+          "localization_expansion_percent": 35
+        },
+        "binding_status": "authored_unbound"
+      }
+    }
+  ],
+  "failure_retry": {
+    "failure_variants": [
+      {
+        "id": "nar_m01_fail_local_core_lost",
+        "reason_code": "local_core_lost",
+        "source_condition": "The local Command Core is absent or has no hit points.",
+        "binding_status": "reason_code_requested",
+        "dialogue_line_ids": [
+          "nar_m01_line_mara_fail_core"
+        ]
+      },
+      {
+        "id": "nar_m01_fail_archive_carrier_lost",
+        "reason_code": "archive_carrier_lost",
+        "source_condition": "The archive carrier is absent or has no hit points.",
+        "binding_status": "reason_code_requested",
+        "dialogue_line_ids": [
+          "nar_m01_line_talar_fail_carrier"
+        ]
+      },
+      {
+        "id": "nar_m01_fail_future_well_lost",
+        "reason_code": "future_well_lost",
+        "source_condition": "A committed Future Well is controlled by a nonlocal player.",
+        "binding_status": "reason_code_requested",
+        "dialogue_line_ids": [
+          "nar_m01_line_mara_fail_well"
+        ]
+      },
+      {
+        "id": "nar_m01_fail_terminal_match_outcome",
+        "reason_code": "terminal_match_outcome",
+        "source_condition": "The skirmish outcome is no longer ongoing before mission completion.",
+        "binding_status": "reason_code_requested",
+        "dialogue_line_ids": [
+          "nar_m01_line_mara_fail_terminal"
+        ]
+      },
+      {
+        "id": "nar_m01_fail_generic",
+        "reason_code": "generic",
+        "source_condition": "The mission entered Failed without a presentation-safe reason code.",
+        "binding_status": "fallback_available",
+        "dialogue_line_ids": [
+          "nar_m01_line_mara_fail_generic"
+        ]
+      }
+    ],
+    "retry_copy": {
+      "id": "nar_m01_ui_retry",
+      "loc_key": "nar_m01_ui_retry",
+      "source_text": "Retry Mission 01 from its deterministic initial state. A failed attempt does not add or alter a campaign record.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 160,
+        "localization_expansion_percent": 35
+      },
+      "binding_status": "authored_unbound"
+    },
+    "campaign_state_effect": "A failed Mission 01 attempt appends no campaign decision record.",
+    "runtime_delivery_status": "unimplemented"
+  },
+  "cinematic": {
+    "id": "nar_m01_cin_opening",
+    "title": "What the Ledger Keeps — Opening Brief",
+    "trigger_id": "nar_m01_evt_operation_started",
+    "format": "in_engine_storyboard",
+    "implementation_status": "absent",
+    "binding_status": "authored_unbound",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+      {
+        "id": "nar_m01_shot_001",
+        "editorial_target_seconds": 5,
+        "visual_direction": "Hold on the Glass Scar and the evacuation corridor. Show objective geometry, not a named character body.",
+        "line_ids": [
+          "nar_m01_line_talar_001",
+          "nar_m01_line_mara_001"
+        ],
+        "visual_hook_ids": [
+          "vis_m01_glass_scar_overview"
+        ],
+        "audio_hook_ids": [
+          "aud_m01_ambience_glass_scar"
+        ]
+      },
+      {
+        "id": "nar_m01_shot_002",
+        "editorial_target_seconds": 4,
+        "visual_direction": "Move to the recovery-site marker at tile 22,18 and the anonymous archive-carrier contact. Keep Mara as command voice only.",
+        "line_ids": [
+          "nar_m01_line_talar_002"
+        ],
+        "visual_hook_ids": [
+          "vis_m01_archive_route_overlay"
+        ],
+        "audio_hook_ids": [
+          "aud_m01_ambience_glass_scar"
+        ]
+      },
+      {
+        "id": "nar_m01_shot_003",
+        "editorial_target_seconds": 6,
+        "visual_direction": "Frame the Future Well and a legible propagation line toward the Kharuun birthing cavern. Oruun remains radio-only.",
+        "line_ids": [
+          "nar_m01_line_oruun_001",
+          "nar_m01_line_oruun_002"
+        ],
+        "visual_hook_ids": [
+          "vis_m01_future_well_propagation"
+        ],
+        "audio_hook_ids": [
+          "aud_m01_ambience_glass_scar"
+        ]
+      },
+      {
+        "id": "nar_m01_shot_004",
+        "editorial_target_seconds": 3,
+        "visual_direction": "Return immediately to the tactical view on Mara's carrier-first order and restore full player control without implying a pre-rendered sequence.",
+        "line_ids": [
+          "nar_m01_line_mara_002"
+        ],
+        "visual_hook_ids": [
+          "vis_m01_tactical_handoff"
+        ],
+        "audio_hook_ids": [
+          "aud_m01_ambience_glass_scar"
+        ]
+      }
+    ]
+  },
+  "asset_hooks": [
+    {
+      "id": "vis_m01_glass_scar_overview",
+      "kind": "visual",
+      "asset_status": "absent",
+      "binding_status": "unimplemented"
+    },
+    {
+      "id": "vis_m01_archive_route_overlay",
+      "kind": "visual",
+      "asset_status": "absent",
+      "binding_status": "unimplemented"
+    },
+    {
+      "id": "vis_m01_future_well_propagation",
+      "kind": "visual",
+      "asset_status": "absent",
+      "binding_status": "unimplemented"
+    },
+    {
+      "id": "vis_m01_tactical_handoff",
+      "kind": "visual",
+      "asset_status": "absent",
+      "binding_status": "unimplemented"
+    },
+    {
+      "id": "aud_m01_ambience_glass_scar",
+      "kind": "audio",
+      "asset_status": "absent",
+      "binding_status": "unimplemented"
+    }
+  ],
+  "projections": {
+    "subtitle_source": "lines[].source_text",
+    "transcript_source": "lines[].source_text",
+    "duplication_policy": "generated_from_canonical_source_text"
+  },
+  "implementation": {
+    "mechanics": "implemented_current_source_with_known_presentation_gaps",
+    "narrative_contract": "authored_source_only",
+    "runtime_consumption": "unimplemented",
+    "subtitles": "authored_unbound",
+    "voice_assets": "absent",
+    "cinematics": "absent",
+    "localization_pipeline": "unimplemented",
+    "well_telegraphs": "unimplemented",
+    "reshape_expiry_warning": "unimplemented",
+    "manual_observation": "not_run",
+    "packaged_build": "not_run"
+  }
+}
