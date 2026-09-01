@@ -5377,6 +5377,50 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             TestOwnedNoNeutralRallySite(Spec.LumeChoice);
         const Vec2 M12WellApproach =
             TestOwnedFutureWonWellApproach(Spec.LumeChoice);
+        // Nearest passable stand: the Lume-reach terrain seals different
+        // tile strips per inherited branch (the Reshape fold blocks
+        // x=30-34, y=34-35, which contains the Transit contribution site),
+        // so an inherited plan site can be unwalkable on exactly one route
+        // variant. The mission facts measure presence within the 3-tile
+        // site radius, so the Move destination is the site itself when
+        // passable, else the nearest passable tile within that radius
+        // (ring search, fixed scan order, deterministic) — the same thing
+        // a player does when a fold seals the tile: stand beside it.
+        const auto NearestPassableStand = [Bridge](const Vec2& Site)
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr ||
+                Simulation->IsPositionPassable(Site))
+            {
+                return Site;
+            }
+            const int32 SiteTileX = Site.x.FloorToInt();
+            const int32 SiteTileY = Site.y.FloorToInt();
+            for (int32 Ring = 1; Ring <= 3; ++Ring)
+            {
+                for (int32 OffsetY = -Ring; OffsetY <= Ring; ++OffsetY)
+                {
+                    for (int32 OffsetX = -Ring; OffsetX <= Ring; ++OffsetX)
+                    {
+                        if (FMath::Max(
+                                FMath::Abs(OffsetX),
+                                FMath::Abs(OffsetY)) != Ring ||
+                            OffsetX * OffsetX + OffsetY * OffsetY > 9)
+                        {
+                            continue;
+                        }
+                        const Vec2 Candidate = Vec2::FromTiles(
+                            SiteTileX + OffsetX, SiteTileY + OffsetY);
+                        if (Simulation->IsPositionPassable(Candidate))
+                        {
+                            return Candidate;
+                        }
+                    }
+                }
+            }
+            return Site;
+        };
         if (!Require(
                 M12Plan.FutureWellSite == ExpectedM12WellSite,
                 FString::Printf(
@@ -5518,12 +5562,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             !Require(
                 Move(
                     M12Start.FutureWonOruunId,
-                    M12Plan.FirstDistrictInputSite),
+                    NearestPassableStand(
+                        M12Plan.FirstDistrictInputSite)),
                 TEXT("Mission 12 Oruun accepts the first readback")) ||
             !Require(
                 Move(
                     M12Start.FutureWonVerifierId,
-                    M12Plan.SecondDistrictInputSite),
+                    NearestPassableStand(
+                        M12Plan.SecondDistrictInputSite)),
                 TEXT("Mission 12 verifier accepts the second readback")) ||
             !Require(
                 TickUntil(
