@@ -3375,7 +3375,16 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const TArray<int32> M08WorkerEscortIndices = {0, 1};
         const TArray<int32> M08WitnessAEscortIndices = {1};
         const TArray<int32> M08WitnessBEscortIndices = {2};
+        const TArray<int32> M08ConvergenceEscortIndices = {3};
         const TArray<int32> M08NoEscortIndices;
+        // 2.5-tile convergence approach standoff: with the pacer's
+        // one-eighth-tile arrival slack Talar halts 2.5-2.63 tiles from the
+        // plan convergence site — inside the 3-tile mission radius, inside
+        // both witness escorts' 6-tile ward-centered Guard scans, and clear
+        // of the opposing posture rally. Plan offsets are congruent across
+        // all mission branches, so this is branch- and seed-agnostic.
+        const int32 M08ConvergenceStandoffRaw =
+            (5 * echoes::sim::kFixedScale) / 2;
         EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
             Bridge->GetShapeBesideUsPhase();
         FString M08LastKnownCore = DescribeFreshJourneyEntity(
@@ -4095,28 +4104,59 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 {
                     return FailLeg(TEXT("BUDGET_EXHAUSTED"));
                 }
-                if (!Move(LeadId, StepDestination))
+                // The computed checkpoint governs pacing; the Move
+                // destination may need to be a farther same-line rung, or
+                // the leg Goal itself, when the checkpoint tile is
+                // scar-blocked — Move validation rejects blocked
+                // DESTINATIONS while the simulation's own pathfinding routes
+                // around blocked tiles en route, so a farther passable
+                // destination lets the lead detour through a crossing. The
+                // checkpoint/displacement waits below keep each increment
+                // bounded regardless of the path taken.
+                const Vec2 StepCheckpoint = StepDestination;
+                const Vec2 StepStartPosition = Lead->position;
+                bool bMoveAccepted = Move(LeadId, StepDestination);
+                if (!bMoveAccepted)
                 {
-                    const FString StepRejection = FString::Printf(
-                        TEXT("step=(%d,%d) rejection=%s"),
-                        StepDestination.x.FloorToInt(),
-                        StepDestination.y.FloorToInt(),
+                    const FString CheckpointRejection = FString::Printf(
+                        TEXT("checkpoint=(%d,%d) rejection=%s"),
+                        StepCheckpoint.x.FloorToInt(),
+                        StepCheckpoint.y.FloorToInt(),
                         *Feedback);
-                    Vec2 HalfStepDestination = StepDestination;
-                    if (!ComputeMissionEightConvoyStep(
-                            Lead->position,
-                            Goal,
-                            StandoffRaw,
-                            M08ConvoyIncrementRaw / 2,
-                            HalfStepDestination) ||
-                        !Move(LeadId, HalfStepDestination))
+                    Vec2 PreviousAttempt = StepDestination;
+                    for (int32 RungMultiplier = 2;
+                         !bMoveAccepted && RungMultiplier <= 4;
+                         ++RungMultiplier)
+                    {
+                        Vec2 RungDestination = Goal;
+                        if (RungMultiplier <= 3 &&
+                            !ComputeMissionEightConvoyStep(
+                                StepStartPosition,
+                                Goal,
+                                StandoffRaw,
+                                M08ConvoyIncrementRaw * RungMultiplier,
+                                RungDestination))
+                        {
+                            continue;
+                        }
+                        if (RungDestination == PreviousAttempt)
+                        {
+                            continue;
+                        }
+                        PreviousAttempt = RungDestination;
+                        bMoveAccepted = Move(LeadId, RungDestination);
+                        if (bMoveAccepted)
+                        {
+                            StepDestination = RungDestination;
+                        }
+                    }
+                    if (!bMoveAccepted)
                     {
                         FailLeg(TEXT("STEP_REJECTED"));
                         Feedback += TEXT(" ");
-                        Feedback += StepRejection;
+                        Feedback += CheckpointRejection;
                         return false;
                     }
-                    StepDestination = HalfStepDestination;
                 }
                 ++IncrementCount;
                 for (int32 WarmupIndex = 0;
@@ -4127,17 +4167,19 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Bridge->Tick(0.05f);
                     --RemainingTicks;
                 }
-                const Vec2 StepGoal = StepDestination;
                 const bool bFinalStep =
-                    StandoffRaw == 0 && StepGoal == Goal;
+                    StandoffRaw == 0 && StepCheckpoint == Goal;
                 if (!TickMissionEightWithinBudget(
                         RemainingTicks,
                         [Bridge,
                          LeadId,
-                         StepGoal,
+                         StepCheckpoint,
+                         StepStartPosition,
+                         Goal,
                          bFinalStep,
                          &EscortIndices,
-                         &MissionEightConvoyCasualty]()
+                         &MissionEightConvoyCasualty,
+                         M08ConvoyIncrementRaw]()
                         {
                             if (MissionEightConvoyCasualty(
                                     LeadId, EscortIndices))
@@ -4151,9 +4193,29 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             {
                                 return true;
                             }
-                            return bFinalStep
-                                ? Current->position == StepGoal
-                                : IsAtSite(Bridge, LeadId, StepGoal, 1);
+                            if (bFinalStep)
+                            {
+                                return Current->position == Goal;
+                            }
+                            if (IsAtSite(
+                                    Bridge, LeadId, StepCheckpoint, 1))
+                            {
+                                return true;
+                            }
+                            const int64 DisplacementX =
+                                static_cast<int64>(
+                                    Current->position.x.Raw()) -
+                                StepStartPosition.x.Raw();
+                            const int64 DisplacementY =
+                                static_cast<int64>(
+                                    Current->position.y.Raw()) -
+                                StepStartPosition.y.Raw();
+                            const int64 IncrementSquared =
+                                static_cast<int64>(M08ConvoyIncrementRaw) *
+                                M08ConvoyIncrementRaw;
+                            return DisplacementX * DisplacementX +
+                                    DisplacementY * DisplacementY >=
+                                IncrementSquared;
                         }))
                 {
                     return FailLeg(TEXT("STEP_TIMEOUT"));
@@ -4505,9 +4567,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     }),
                 TEXT("Mission 08 traverses both states")) ||
             !RequireMissionEight(
-                Move(
+                PaceMissionEightConvoy(
+                    TEXT("talar-convergence"),
                     M08Start.ShapeBesideUsTalarId,
-                    M08Plan.ConvergenceSite),
+                    true,
+                    M08Plan.ConvergenceSite,
+                    M08ConvergenceStandoffRaw,
+                    M08ConvergenceEscortIndices,
+                    M08CompletionBudgetTicks,
+                    M08TalarConvoyIncrements),
                 TEXT("Mission 08 Talar accepts convergence")) ||
             !RequireMissionEight(
                 TickMissionEightWithinBudget(
