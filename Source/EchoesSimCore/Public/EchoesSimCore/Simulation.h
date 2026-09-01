@@ -733,6 +733,12 @@ public:
     bool AddPlayer(PlayerId player, Faction faction, ResourcePool startingResources);
     [[nodiscard]] const PlayerState* FindPlayer(PlayerId player) const;
 
+    /** Test-only authoritative mutation. Fixtures exercising failure and
+     *  recovery paths may edit one entity directly; production presentation
+     *  code must never call this — commands remain the only gameplay path. */
+    [[nodiscard]] Entity* MutableEntityForTesting(EntityId id) {
+        return MutableEntity(id);
+    }
     EntityId SpawnEntity(PlayerId owner,
                          Faction faction,
                          EntityType type,
