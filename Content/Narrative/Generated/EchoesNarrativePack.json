@@ -1,0 +1,2156 @@
+{
+ "author": "Angelis Pseftis",
+ "authored_missions": 14,
+ "line_count": 290,
+ "operations": {
+  "CampaignAssemblyOfTheMissing": {
+   "briefing": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
+   "content_id": "nar_m13_assembly_of_the_missing",
+   "failures": {
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "oruun_lost": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "public_interface_lost": "Either neutral public-record interface is destroyed.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "verifier_lost": "The distinct Kharuun verifier is destroyed."
+   },
+   "lines": [
+    {
+     "id": "nar_m13_line_op_missing_001",
+     "signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The erased census, the curated quiet, the shape beside us — they converge here. The missing are assembling, and nobody's record admits they exist."
+    },
+    {
+     "id": "nar_m13_line_op_receipt_002",
+     "signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "So we build the admission. Paired readback at both public records, a Spine linked to the Crownfall index, and one observation receipt completed in the open."
+    },
+    {
+     "id": "nar_m13_line_op_witness_003",
+     "signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The verifier and I witness from separate sites. One pair of eyes is a claim. Two, apart, on the public record — that is a fact with structure."
+    },
+    {
+     "id": "nar_m13_line_op_care_004",
+     "signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "We observe. We do not name, number, or claim the missing. The receipt records that an assembly was witnessed. It does not presume to say more."
+    },
+    {
+     "id": "nar_m13_line_readback_001",
+     "signal": "phase_entered:LinkCrownfallIndex",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Paired readback established — Meridian record by me, Kharuun by the verifier. Both channels public, both live."
+    },
+    {
+     "id": "nar_m13_line_readback_002",
+     "signal": "phase_entered:LinkCrownfallIndex",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the Spine. An ordinary worker raises it within reach of the index. Ordinary hands, on purpose — this link should not need heroes to exist."
+    },
+    {
+     "id": "nar_m13_line_linked_001",
+     "signal": "phase_entered:ObserveAssembly",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Spine stands and the Crownfall index answers it. The link is durable — the assembly now touches a record that outlives tonight."
+    },
+    {
+     "id": "nar_m13_line_linked_002",
+     "signal": "phase_entered:ObserveAssembly",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Witness sites, both of us, separately. Whatever assembles, we watch it onto the public record and add nothing of our own."
+    },
+    {
+     "id": "nar_m13_line_complete_observed_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The receipt is complete: paired observation, both witness sites, one public record. The assembly of the missing is witnessed."
+    },
+    {
+     "id": "nar_m13_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "We did not learn who they are. We made it impossible to say, in public, that no one saw them. Some nights that is the whole of the work."
+    },
+    {
+     "id": "nar_m13_line_complete_accounts_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "My seven accounts are silent, all together, for the second time I can remember. The first was the quiet we measured. I note the pattern and claim nothing."
+    },
+    {
+     "id": "nar_m13_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. The assembly goes unwitnessed on the public record tonight."
+    },
+    {
+     "id": "nar_m13_line_fail_oruun_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am cut off. Half the paired observation is no observation; the receipt cannot complete."
+    },
+    {
+     "id": "nar_m13_line_fail_verifier_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The verifier is lost. The receipt requires two, apart, and we are one."
+    },
+    {
+     "id": "nar_m13_line_fail_interface_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A public interface is destroyed. A witness without a record is only a memory, and we have learned what happens to those."
+    },
+    {
+     "id": "nar_m13_line_fail_terminal_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. The assembly disperses unrecorded."
+    },
+    {
+     "id": "nar_m13_line_fail_generic_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. The missing keep their own count."
+    }
+   ],
+   "mission_id": "AssemblyOfTheMissing",
+   "objectives": [
+    "Establish paired readback at both public-record interfaces.",
+    "Raise a Listening Spine within three tiles of the Crownfall index.",
+    "Complete one public observation receipt from separate witness sites."
+   ],
+   "results": {
+    "Added": "The observation receipt is recorded: paired readback, a durable Crownfall link, and an assembly witnessed from separate sites onto the public record. Who the missing are remains exactly as open as before — but no longer deniable.",
+    "AlreadyRecorded": "This receipt was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The receipt completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The receipt did not complete. Retry the operation; the twelve-record ledger and its derived sites remain as recorded.",
+   "title": "Assembly of the Missing"
+  },
+  "CampaignChoirAtLumeReach": {
+   "briefing": "Lume Reach holds a Well, a Choir presence that answers, and the liability our Mission 09 deferral left standing. Establish contact on the inherited approach, resolve the liability, raise both anchors, and commit a new Well protocol — then stand at its public resolution.",
+   "content_id": "nar_m10_the_choir_at_lume_reach",
+   "failures": {
+    "future_well_lost": "The Lume Well is destroyed before the protocol is resolved.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "oruun_lost": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "reshape_window_expired": "The Reshape protocol's resolution window expires before the public resolution.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "waystone_lost": "The Waystone is destroyed before or after the liability is resolved."
+   },
+   "lines": [
+    {
+     "id": "nar_m10_line_op_reach_001",
+     "signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Lume Reach. A settlement, a Well, and a neighbor that answers when addressed. Three reasons to walk carefully, and we have business with all three."
+    },
+    {
+     "id": "nar_m10_line_op_liaison_002",
+     "signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+     "speaker": "Mara Vey",
+     "text": "Meridian units in your area are quarantine posture, not policy. I am off-map and staying there. What you commit at that Well is committed under Kharuun authority."
+    },
+    {
+     "id": "nar_m10_line_op_liability_003",
+     "signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "We also carry a debt: the district your allocation deferred still has a liability standing. We resolve it before we touch the Well. Order matters."
+    },
+    {
+     "id": "nar_m10_line_op_choice_004",
+     "signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "And when the Well offers its three futures, the choice will be ours alone. My accounts are already arguing. Good. That is what they are for."
+    },
+    {
+     "id": "nar_m10_line_contact_001",
+     "signal": "phase_entered:ResolveDeferredLiability",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Contact established on the approach. The presence acknowledged us — not warmly, not coldly. Precisely."
+    },
+    {
+     "id": "nar_m10_line_contact_002",
+     "signal": "phase_entered:ResolveDeferredLiability",
+     "speaker": "Mara Vey",
+     "text": "Logged from off-map: contact is yours, attribution is yours. The Compact record will say exactly that and nothing more."
+    },
+    {
+     "id": "nar_m10_line_liability_001",
+     "signal": "phase_entered:RaiseFirstAnchor",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone stands at the deferred district's liability. What the allocation left dark now has an anchor in it. Not power. An anchor. It is a start."
+    },
+    {
+     "id": "nar_m10_line_liability_002",
+     "signal": "phase_entered:RaiseFirstAnchor",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the anchors, in sequence. The Reach listens best through two spines, and we intend to be heard accurately."
+    },
+    {
+     "id": "nar_m10_line_anchor1_001",
+     "signal": "phase_entered:RaiseSecondAnchor",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "First anchor is up. The strata under Lume Reach carry old resonance — the settlement hums back."
+    },
+    {
+     "id": "nar_m10_line_anchor2_001",
+     "signal": "phase_entered:CommitFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Second anchor holds. The pair is tuned, and the Well is within reach of an honest signal."
+    },
+    {
+     "id": "nar_m10_line_anchor2_002",
+     "signal": "phase_entered:CommitFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Well offers three protocols. Read all three before anyone touches anything. We commit once."
+    },
+    {
+     "id": "nar_m10_line_harvest_a",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Harvest, then. Draw the Reach's held futures as yield, and let the settlement spend what it can no longer keep."
+    },
+    {
+     "id": "nar_m10_line_harvest_b",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The resolution site is south and ashward. We finish what we committed, publicly, where the Reach can watch."
+    },
+    {
+     "id": "nar_m10_line_preserve_a",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Preserve. The Reach's futures stay held, unspent, and the Well keeps its weight. Some debts are best left uncollected."
+    },
+    {
+     "id": "nar_m10_line_preserve_b",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The resolution stands at the held vault's public site. We go and close it properly."
+    },
+    {
+     "id": "nar_m10_line_reshape_a",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Reshape. The Reach's ground will open where it was closed, for a while, and the while has an ending. Move with intent."
+    },
+    {
+     "id": "nar_m10_line_reshape_b",
+     "signal": "phase_entered:ResolveFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The reshape window is finite. The resolution site is foldward and south — we do not stop to admire the new geometry."
+    },
+    {
+     "id": "nar_m10_line_complete_resolve_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The protocol is publicly resolved. Lume Reach watched us commit, and watched us finish. That is the tenth decision, recorded."
+    },
+    {
+     "id": "nar_m10_line_complete_choir_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The presence observed the whole of it and said nothing. I find I respect that. My accounts find seven different things to say about it."
+    },
+    {
+     "id": "nar_m10_line_complete_liaison_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Off-map acknowledgment: decision logged as Kharuun-committed, Choir-witnessed, liability resolved. The Compact adds nothing further."
+    },
+    {
+     "id": "nar_m10_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. The Reach keeps its Well and its silence."
+    },
+    {
+     "id": "nar_m10_line_fail_oruun_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am cut off from the operation. A Well decision without its author present is not one we will fake."
+    },
+    {
+     "id": "nar_m10_line_fail_waystone_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is destroyed. The liability stands unresolved, and the order of things is broken."
+    },
+    {
+     "id": "nar_m10_line_fail_well_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Well is lost. Whatever future it held for the Reach is no longer ours to commit or to refuse."
+    },
+    {
+     "id": "nar_m10_line_fail_window_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The reshape window expired with the resolution unmade. The ground closed on its own schedule, as it warned us it would."
+    },
+    {
+     "id": "nar_m10_line_fail_terminal_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. Lume Reach's questions keep for another day."
+    },
+    {
+     "id": "nar_m10_line_fail_generic_007",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. We withdraw from the Reach with the debt still on the books."
+    }
+   ],
+   "mission_id": "ChoirAtLumeReach",
+   "objectives": [
+    "Establish contact at the inherited approach site.",
+    "Re-root the Waystone at the deferred district's liability.",
+    "Raise the first Listening Spine anchor.",
+    "Raise the second Listening Spine anchor in sequence.",
+    "Commit a new Lume Well protocol from the three offered choices.",
+    "Reach the committed protocol's public resolution site."
+   ],
+   "results": {
+    "Added": "The tenth Well decision is recorded: committed under Kharuun authority, publicly resolved, Choir-witnessed, with the Mission 09 liability resolved on the way. What the protocol costs Lume Reach over time stays an open entry.",
+    "AlreadyRecorded": "This Well decision was already in the campaign ledger. The replay changes nothing recorded; the earlier protocol stands.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The protocol was resolved but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The Reach closed this attempt unresolved. Retry the operation; the founding approach, the deferred liability, and the Well's three offers remain as recorded.",
+   "title": "The Choir at Lume Reach"
+  },
+  "CampaignCityReserve": {
+   "briefing": "The ark-city grid is on reserve and failing. The founding decision fixed the order the districts come back: reconnect each district interface in that order and keep every structure standing. The order is inherited; the work is now.",
+   "content_id": "nar_m03_a_city_on_reserve",
+   "failures": {
+    "district_structure_lost": "A Life Support, Transit, or Archive district structure is destroyed.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m03_line_op_grid_001",
+     "signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+     "speaker": "Mara Vey",
+     "text": "Three districts, one reserve, and less margin than the gauges admit. We bring them back in the order we inherited, not the order we would argue for."
+    },
+    {
+     "id": "nar_m03_line_op_order_002",
+     "signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+     "speaker": "Mara Vey",
+     "text": "The founding decision fixed the sequence. I have opinions about it. Opinions do not power a district."
+    },
+    {
+     "id": "nar_m03_line_op_method_003",
+     "signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+     "speaker": "Mara Vey",
+     "text": "Workers to the first interface. Escort stays with them. Nothing improvised until the third district holds."
+    },
+    {
+     "id": "nar_m03_line_op_stakes_004",
+     "signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+     "speaker": "Mara Vey",
+     "text": "Every structure out there is load-bearing. Lose one and the plan is no longer a plan."
+    },
+    {
+     "id": "nar_m03_line_prio_confirm_001",
+     "signal": "phase_entered:StabilizeSecondary",
+     "speaker": "Mara Vey",
+     "text": "First district is powered and holding. The draw is inside tolerance. Move the crew on."
+    },
+    {
+     "id": "nar_m03_line_prio_next_002",
+     "signal": "phase_entered:StabilizeSecondary",
+     "speaker": "Mara Vey",
+     "text": "Second interface next. Same procedure, same discipline. The grid does not care that we are tired."
+    },
+    {
+     "id": "nar_m03_line_second_confirm_001",
+     "signal": "phase_entered:StabilizeFinal",
+     "speaker": "Mara Vey",
+     "text": "Two districts up. The reserve is carrying both without complaint, which is more than I promised anyone."
+    },
+    {
+     "id": "nar_m03_line_second_final_002",
+     "signal": "phase_entered:StabilizeFinal",
+     "speaker": "Mara Vey",
+     "text": "One interface left. Finish the sequence exactly as inherited, and then we can argue about what it cost."
+    },
+    {
+     "id": "nar_m03_line_complete_grid_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Third district is powered. The grid is stable in the inherited order, all structures standing."
+    },
+    {
+     "id": "nar_m03_line_complete_cost_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Three districts back is not a city recovered. It is three districts back. I will take it, and log the difference."
+    },
+    {
+     "id": "nar_m03_line_complete_order_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "The order held. Whether it was the right order is a question the record keeps open, and so will I."
+    },
+    {
+     "id": "nar_m03_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The command core is down. Without command authority the reconnection sequence cannot continue."
+    },
+    {
+     "id": "nar_m03_line_fail_district_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "We lost a district structure. The inherited plan has no branch for a missing district. This attempt is over."
+    },
+    {
+     "id": "nar_m03_line_fail_terminal_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The engagement has gone terminal. The grid stays on reserve tonight."
+    },
+    {
+     "id": "nar_m03_line_fail_generic_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The operation has failed. Stand the crews down; we will run the sequence again."
+    }
+   ],
+   "mission_id": "ACityOnReserve",
+   "objectives": [
+    "Power the first district interface in the inherited priority order.",
+    "Power the second district interface while the first holds.",
+    "Power the final district interface and keep all three standing."
+   ],
+   "results": {
+    "Added": "The stabilization is recorded. Three districts run in the inherited order, and the reserve holds for now. What the order deferred, and who it deferred, stays in the record as an open cost.",
+    "AlreadyRecorded": "This stabilization was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The grid was stabilized but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The grid is still on reserve. Retry the operation; the founding decision and its inherited priority order remain as recorded.",
+   "title": "A City on Reserve"
+  },
+  "CampaignFutureThatWon": {
+   "briefing": "The Chancellor's apparatus demonstrates a future in public, and the record it points at is ours. Establish independent readback at both interfaces, verify the recorded inputs, bind only the recorded protocol, hold the fixed window, and watch both districts read it back.",
+   "content_id": "nar_m12_the_future_that_won",
+   "failures": {
+    "conflicting_protocol_bound": "A protocol conflicting with the Mission 10 record is bound at the Well.",
+    "future_well_lost": "The separate Future Well is destroyed before the readbacks are observed.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "oruun_lost": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "public_interface_lost": "Either neutral public interface is destroyed.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "verifier_lost": "The distinct Kharuun verifier is destroyed."
+   },
+   "lines": [
+    {
+     "id": "nar_m12_line_op_won_001",
+     "signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+     "speaker": "Chancellor Cael Rhyse",
+     "text": "Citizens: the future is not a question. It is a result. You are watching it demonstrate itself, and the demonstration reads from your own districts' records."
+    },
+    {
+     "id": "nar_m12_line_op_apparatus_002",
+     "signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "That is the Chancellor's apparatus talking — a public machine with a persuasive voice. What it demonstrates, we will verify independently or not believe."
+    },
+    {
+     "id": "nar_m12_line_op_method_003",
+     "signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Two readbacks, two of us: I take one neutral interface, the verifier takes the other. Then the inputs, then the protocol, then we hold it stable and watch."
+    },
+    {
+     "id": "nar_m12_line_op_exact_004",
+     "signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Well accepts what Lume Reach recorded and nothing else. If the demonstration needs a different protocol, then the demonstration is wrong."
+    },
+    {
+     "id": "nar_m12_line_readback_001",
+     "signal": "phase_entered:VerifyRecordedInputs",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Independent readback established at both interfaces. Two channels, two witnesses, no shared assumptions."
+    },
+    {
+     "id": "nar_m12_line_readback_002",
+     "signal": "phase_entered:VerifyRecordedInputs",
+     "speaker": "Chancellor Cael Rhyse",
+     "text": "Note how the verification proceeds exactly as the demonstration predicted. Skepticism, too, is part of the result."
+    },
+    {
+     "id": "nar_m12_line_inputs_001",
+     "signal": "phase_entered:BindRecordedProtocol",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Both recorded inputs verify against the ledger. The apparatus points at true records. That is precisely what makes it worth watching carefully."
+    },
+    {
+     "id": "nar_m12_line_inputs_002",
+     "signal": "phase_entered:BindRecordedProtocol",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the binding. Recorded protocol, separate Well, in the open."
+    },
+    {
+     "id": "nar_m12_line_bound_001",
+     "signal": "phase_entered:HoldStabilityWindow",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The protocol is bound. The activation receipt is live, and the window starts now: three hundred fixed ticks, counted by the simulation and nobody's speech."
+    },
+    {
+     "id": "nar_m12_line_bound_002",
+     "signal": "phase_entered:HoldStabilityWindow",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Hold everything that matters. A stability window proves stability only if nothing is quietly propped up during it."
+    },
+    {
+     "id": "nar_m12_line_held_001",
+     "signal": "phase_entered:ObserveDistrictReadbacks",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The window held, all three hundred ticks, with the receipt intact throughout. That fact is now ours, not the apparatus's."
+    },
+    {
+     "id": "nar_m12_line_held_002",
+     "signal": "phase_entered:ObserveDistrictReadbacks",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Scouts to the district readbacks. We finish by observing what the districts themselves report, not what is reported about them."
+    },
+    {
+     "id": "nar_m12_line_complete_observed_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Both district readbacks observed, paired, and logged. The bound protocol held and the districts read it back true."
+    },
+    {
+     "id": "nar_m12_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "For the record: we verified a protocol, a window, and two readbacks. We did not verify a future. Those are different sizes of claim, whatever the apparatus says."
+    },
+    {
+     "id": "nar_m12_line_complete_rhyse_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Chancellor Cael Rhyse",
+     "text": "The result stands, verified by its skeptics. The future that won thanks you for your diligence. It can afford to."
+    },
+    {
+     "id": "nar_m12_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. The demonstration continues without its audit, which should worry everyone."
+    },
+    {
+     "id": "nar_m12_line_fail_oruun_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am cut off. Independent readback with one reader is a contradiction in terms."
+    },
+    {
+     "id": "nar_m12_line_fail_verifier_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The verifier is lost. One witness is testimony; two were the method. The attempt ends."
+    },
+    {
+     "id": "nar_m12_line_fail_well_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Well is lost. There is nothing left to bind the record to."
+    },
+    {
+     "id": "nar_m12_line_fail_interface_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A public interface is destroyed. A readback nobody can read proves nothing. We stop."
+    },
+    {
+     "id": "nar_m12_line_fail_conflict_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A conflicting protocol was bound. The record does not say that, so neither may we. The attempt is void."
+    },
+    {
+     "id": "nar_m12_line_fail_terminal_007",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. The demonstration has lost its stage."
+    },
+    {
+     "id": "nar_m12_line_fail_generic_008",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. The future that won will have to win without our verification today."
+    }
+   ],
+   "mission_id": "TheFutureThatWon",
+   "objectives": [
+    "Establish independent readback at both neutral interfaces.",
+    "Verify both recorded district inputs.",
+    "Bind only the recorded protocol at the separate Well.",
+    "Hold the activation receipt for the fixed window.",
+    "Observe both district readbacks with the two scouts."
+   ],
+   "results": {
+    "Added": "The verification is recorded: independent readback, verified inputs, the recorded protocol bound and held for its full window, and both district readbacks observed. What the demonstration claims beyond that is not in this record.",
+    "AlreadyRecorded": "This verification was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The observation completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The verification did not complete. Retry the operation; the eleven-record ledger, the recorded protocol, and the fixed window remain as recorded.",
+   "title": "The Future That Won"
+  },
+  "CampaignNamesWithoutBirths": {
+   "briefing": "Somewhere in this district, names were recorded that no birth explains, and then the record of them was erased. Follow the trace the founding decision left reachable: locate the census, power the archive, shelter who the search exposes, and take the evidence out whole.",
+   "content_id": "nar_m06_names_without_births",
+   "failures": {
+    "archive_lost": "The census archive structure is destroyed.",
+    "civilian_proxy_lost": "Either exposed civilian proxy is destroyed.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "talar_lost": "Talar Venn is destroyed while the operation is active.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m06_line_op_names_001",
+     "signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+     "speaker": "Talar Venn",
+     "text": "The register lists names with no births behind them. Someone recorded these people. Someone else made sure the recording did not keep."
+    },
+    {
+     "id": "nar_m06_line_op_method_002",
+     "signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+     "speaker": "Talar Venn",
+     "text": "We are not here to decide what it means. We are here to find the census, keep it powered, and carry out what remains of it."
+    },
+    {
+     "id": "nar_m06_line_op_care_003",
+     "signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+     "speaker": "Talar Venn",
+     "text": "If the search exposes anyone living, they come under shelter before any record moves. Records wait better than people do."
+    },
+    {
+     "id": "nar_m06_line_op_quiet_004",
+     "signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+     "speaker": "Talar Venn",
+     "text": "Whoever erased this worked carefully. We will work more carefully."
+    },
+    {
+     "id": "nar_m06_line_census_found_001",
+     "signal": "phase_entered:StabilizeArchive",
+     "speaker": "Talar Venn",
+     "text": "Found it. The census block is intact under the fill. The names are here, and the gaps around them have edges."
+    },
+    {
+     "id": "nar_m06_line_census_power_002",
+     "signal": "phase_entered:StabilizeArchive",
+     "speaker": "Talar Venn",
+     "text": "The archive needs power before it will give anything up. The link site is marked; get a worker on it."
+    },
+    {
+     "id": "nar_m06_line_archive_up_001",
+     "signal": "phase_entered:ShelterCivilians",
+     "speaker": "Talar Venn",
+     "text": "Archive is powered and reading. It has been waiting a long time to be asked."
+    },
+    {
+     "id": "nar_m06_line_archive_exposed_002",
+     "signal": "phase_entered:ShelterCivilians",
+     "speaker": "Talar Venn",
+     "text": "The trace touched two residences. Both occupied. Shelter them first; the record has kept this long and will keep an hour more."
+    },
+    {
+     "id": "nar_m06_line_shelter_done_001",
+     "signal": "phase_entered:ExtractEvidence",
+     "speaker": "Talar Venn",
+     "text": "Both proxies are under shelter and holding. Nobody else appears on the trace."
+    },
+    {
+     "id": "nar_m06_line_shelter_extract_002",
+     "signal": "phase_entered:ExtractEvidence",
+     "speaker": "Talar Venn",
+     "text": "Now the extraction. I will take the evidence out myself. Some things should not pass through more hands than they must."
+    },
+    {
+     "id": "nar_m06_line_complete_evidence_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "The evidence is out and intact. Names without births, in the original hand, with the erasure marks preserved."
+    },
+    {
+     "id": "nar_m06_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "This does not tell us who erased them, or why. It tells us the erasure happened, and now it cannot happen quietly again."
+    },
+    {
+     "id": "nar_m06_line_complete_persist_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "I will file it under its own name. The register deserves at least that."
+    },
+    {
+     "id": "nar_m06_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The command core is down. The trace stops here, and the record stays in the ground."
+    },
+    {
+     "id": "nar_m06_line_fail_talar_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "I am cut off from the operation. Without the archivist, there is no extraction worth the name."
+    },
+    {
+     "id": "nar_m06_line_fail_archive_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The archive is destroyed. Whatever it still held of the census is gone with it, and that loss is now also part of the record."
+    },
+    {
+     "id": "nar_m06_line_fail_civilian_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "We lost one of the people the trace exposed. I will not call an extraction after that a success. The attempt ends."
+    },
+    {
+     "id": "nar_m06_line_fail_terminal_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The engagement has gone terminal. The register keeps its silence tonight."
+    },
+    {
+     "id": "nar_m06_line_fail_generic_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The operation has failed. The names remain unexplained, and unclaimed."
+    }
+   ],
+   "mission_id": "NamesWithoutBirths",
+   "objectives": [
+    "Locate the census evidence along the inherited trace.",
+    "Power the archive that holds the record.",
+    "Shelter both exposed civilian proxies.",
+    "Bring Talar to the extraction site with the evidence intact."
+   ],
+   "results": {
+    "Added": "The extraction is recorded. The census evidence is out, its erasure marks preserved, and both exposed proxies are sheltered. Who erased the names, and why, remains an open entry.",
+    "AlreadyRecorded": "This extraction was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The evidence was extracted but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The trace closed on this attempt. Retry the operation; the founding decision and its inherited census geometry remain as recorded.",
+   "title": "Names Without Births"
+  },
+  "CampaignNoNeutralLedger": {
+   "briefing": "Ten records, no neutral reading. The doctrine picks our route, the allocation our contributors, the Lume protocol itself. Walk it exactly: secure, integrate, attest both neutral interfaces, apply only what was recorded, and rally the coalition where the protocol says.",
+   "content_id": "nar_m11_no_neutral_ledger",
+   "failures": {
+    "conflicting_protocol_applied": "A protocol conflicting with the Mission 10 record is applied at the Well.",
+    "future_well_lost": "The Future Well is destroyed before the recorded protocol is applied.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "ledger_witness_lost": "The distinct Kharuun ledger witness is destroyed.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "oruun_lost": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "public_interface_lost": "Either neutral public evidence interface is destroyed.",
+    "reshape_window_expired": "The Reshape rally window expires before the coalition rallies.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "waystone_lost": "The Waystone is destroyed while the operation is active."
+   },
+   "lines": [
+    {
+     "id": "nar_m11_line_op_ledger_001",
+     "signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Ten records in the ledger, and every one of them takes a side. There is no neutral reading left. There is only walking what was written, in the open."
+    },
+    {
+     "id": "nar_m11_line_op_plans_002",
+     "signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Doctrine, districts, protocol: twenty-seven ways those combine, and ours is fixed by what we actually did. My accounts appreciate the honesty of arithmetic."
+    },
+    {
+     "id": "nar_m11_line_op_witness_003",
+     "signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Two evidence interfaces, two witnesses. I attest one; a second Kharuun witness attests the other. Nobody attests their own claim today."
+    },
+    {
+     "id": "nar_m11_line_op_exact_004",
+     "signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "And at the Well, we apply the Lume protocol as recorded. Not improved. Not corrected. As recorded."
+    },
+    {
+     "id": "nar_m11_line_route_001",
+     "signal": "phase_entered:IntegrateDistrictContributions",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The inherited route is secured. The doctrine that chose it is three missions old and still making our decisions. That is what a ledger is for."
+    },
+    {
+     "id": "nar_m11_line_route_002",
+     "signal": "phase_entered:IntegrateDistrictContributions",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "District contributions next. The two the allocation powered owe the coalition their share; the deferred one owes nothing and gives nothing."
+    },
+    {
+     "id": "nar_m11_line_districts_001",
+     "signal": "phase_entered:AttestEvidenceChannels",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Both contributions are integrated. The deferred district's absence is itself an entry — the ledger keeps what we chose not to power."
+    },
+    {
+     "id": "nar_m11_line_districts_002",
+     "signal": "phase_entered:AttestEvidenceChannels",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "To the evidence channels. Both interfaces, both witnesses, in the open, where either faction can read the attestation."
+    },
+    {
+     "id": "nar_m11_line_evidence_001",
+     "signal": "phase_entered:ApplyRecordedProtocol",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Both channels attested — Meridian interface by me, Kharuun by the second witness. The record now says witnessed, which is all attestation ever says."
+    },
+    {
+     "id": "nar_m11_line_evidence_002",
+     "signal": "phase_entered:ApplyRecordedProtocol",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the Well. The recorded protocol, exactly, and nothing beside it."
+    },
+    {
+     "id": "nar_m11_line_protocol_001",
+     "signal": "phase_entered:RallyCoalition",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The recorded protocol is applied. The Well accepted what Lume Reach committed, because it is the same commitment, kept."
+    },
+    {
+     "id": "nar_m11_line_protocol_002",
+     "signal": "phase_entered:RallyCoalition",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Rally the coalition at the protocol's public site. An assembly that would not gather in the open is not one I would trust to hold."
+    },
+    {
+     "id": "nar_m11_line_complete_rally_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The coalition stands rallied at the public site. Local, bounded, and assembled over an honest ledger."
+    },
+    {
+     "id": "nar_m11_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "This is not a unified command, and no one here pretends otherwise. It is two factions standing where both can see the same records. Today, that is enough."
+    },
+    {
+     "id": "nar_m11_line_complete_accounts_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "My accounts disagree about what happens next. All seven agree about what just happened. I will take that ratio."
+    },
+    {
+     "id": "nar_m11_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. The ledger keeps its records and loses its walker."
+    },
+    {
+     "id": "nar_m11_line_fail_oruun_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am cut off. An attestation chain with a missing witness is not one; the attempt ends."
+    },
+    {
+     "id": "nar_m11_line_fail_waystone_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is destroyed. The inherited route loses its anchor, and the plan its footing."
+    },
+    {
+     "id": "nar_m11_line_fail_witness_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The ledger witness is lost. Half the attestation cannot stand for the whole. We stop."
+    },
+    {
+     "id": "nar_m11_line_fail_well_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Well is lost. The recorded protocol has nowhere left to be applied."
+    },
+    {
+     "id": "nar_m11_line_fail_interface_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A public evidence interface is destroyed. Evidence nobody can read is not evidence; the channel is broken."
+    },
+    {
+     "id": "nar_m11_line_fail_conflict_007",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A conflicting protocol was applied. The ledger does not bend to preference — the attempt is void, as it should be."
+    },
+    {
+     "id": "nar_m11_line_fail_window_008",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The reshape window expired with the rally unmade. The ground kept its own schedule."
+    },
+    {
+     "id": "nar_m11_line_fail_terminal_009",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. The coalition does not assemble under a falling sky."
+    },
+    {
+     "id": "nar_m11_line_fail_generic_010",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. The ledger waits, unwalked."
+    }
+   ],
+   "mission_id": "NoNeutralLedger",
+   "objectives": [
+    "Secure the founding doctrine's inherited route.",
+    "Integrate both powered districts' contributions.",
+    "Attest both neutral evidence interfaces with distinct witnesses.",
+    "Apply only the recorded Lume protocol at the Well.",
+    "Rally the coalition at the protocol's public site."
+   ],
+   "results": {
+    "Added": "The coalition assembly is recorded: route secured, both contributions integrated, both channels attested, the recorded protocol applied, and the rally held in the open. What the coalition becomes is not in this record.",
+    "AlreadyRecorded": "This assembly was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The rally completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The assembly did not complete. Retry the operation; the ten-record ledger and its one exact plan remain as recorded.",
+   "title": "No Neutral Ledger"
+  },
+  "CampaignPrologue": {
+   "briefing": "Recover the displaced archive convoy at tile 22,18, commit one visible Future Well protocol while the carrier holds the site, then evacuate the carrier to Lume Reach at tile 6,17.",
+   "content_id": "nar_m01_what_the_ledger_keeps",
+   "failures": {
+    "archive_carrier_lost": "The archive carrier is absent or has no hit points.",
+    "future_well_lost": "A committed Future Well is controlled by a nonlocal player.",
+    "generic": "The mission entered Failed without a presentation-safe reason code.",
+    "local_core_lost": "The local Command Core is absent or has no hit points.",
+    "terminal_match_outcome": "The skirmish outcome is no longer ongoing before mission completion."
+   },
+   "lines": [
+    {
+     "id": "nar_m01_line_talar_001",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Talar Venn",
+     "text": "The evacuation ledger closed an archive convoy that never reached Lume Reach."
+    },
+    {
+     "id": "nar_m01_line_mara_001",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Mara Vey",
+     "text": "Then the ledger is wrong. Mark the recovery site."
+    },
+    {
+     "id": "nar_m01_line_talar_002",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Talar Venn",
+     "text": "Tile twenty-two, eighteen. The carrier still answers. The city's reserve does not have long."
+    },
+    {
+     "id": "nar_m01_line_oruun_001",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Collapse that Well and the fracture reaches a birthing cavern."
+    },
+    {
+     "id": "nar_m01_line_oruun_002",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Seven accounts agree. I distrust the occasion."
+    },
+    {
+     "id": "nar_m01_line_mara_002",
+     "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+     "speaker": "Mara Vey",
+     "text": "Carrier first. Well second. Withdrawal before the reserve fails."
+    },
+    {
+     "id": "nar_m01_line_talar_003",
+     "signal": "phase_entered:DecideFutureWell",
+     "speaker": "Talar Venn",
+     "text": "The carrier is holding the recovery site. The convoy records are intact."
+    },
+    {
+     "id": "nar_m01_line_mara_003",
+     "signal": "phase_entered:DecideFutureWell",
+     "speaker": "Mara Vey",
+     "text": "Keep the carrier there. Put all three Well protocols on the board, with their costs."
+    },
+    {
+     "id": "nar_m01_line_oruun_003",
+     "signal": "phase_entered:DecideFutureWell",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "A rare courtesy. Every answer is dangerous."
+    },
+    {
+     "id": "nar_m01_line_mara_harvest_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Mara Vey",
+     "text": "Harvest. Take the Dawn. The reserve gets time; the Well does not."
+    },
+    {
+     "id": "nar_m01_line_oruun_harvest_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The city gains time. The cavern loses a possibility. Record both."
+    },
+    {
+     "id": "nar_m01_line_talar_harvest_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Talar Venn",
+     "text": "Both are in the ledger."
+    },
+    {
+     "id": "nar_m01_line_mara_preserve_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Mara Vey",
+     "text": "Preserve. Keep the Well intact. We hold this ground without immediate reserve relief."
+    },
+    {
+     "id": "nar_m01_line_oruun_preserve_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Possibility survives, and every force here has reason to keep fighting."
+    },
+    {
+     "id": "nar_m01_line_talar_preserve_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Talar Venn",
+     "text": "The delay and the open Well are recorded."
+    },
+    {
+     "id": "nar_m01_line_mara_reshape_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Mara Vey",
+     "text": "Reshape. We spend Dawn for a temporary option. Publish the expiry."
+    },
+    {
+     "id": "nar_m01_line_oruun_reshape_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Then no one mistakes a borrowed path for a permanent one."
+    },
+    {
+     "id": "nar_m01_line_talar_reshape_001",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Talar Venn",
+     "text": "Cost and expiry recorded. The carrier is ready."
+    },
+    {
+     "id": "nar_m01_line_mara_004",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Mara Vey",
+     "text": "Carrier, turn for Lume Reach. Everyone else holds the corridor, then follows."
+    },
+    {
+     "id": "nar_m01_line_talar_004",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Talar Venn",
+     "text": "Archive sealed. Transfer receipt open."
+    },
+    {
+     "id": "nar_m01_line_oruun_004",
+     "signal": "phase_entered:Withdraw",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The path is open. The consequence is not finished."
+    },
+    {
+     "id": "nar_m01_line_talar_005",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "Carrier confirmed at Lume Reach. The archive is secure."
+    },
+    {
+     "id": "nar_m01_line_mara_005",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Close the operation. Keep the Well decision visible."
+    },
+    {
+     "id": "nar_m01_line_mara_fail_core",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "Anchor lost. The withdrawal line has no root. Break contact."
+    },
+    {
+     "id": "nar_m01_line_talar_fail_carrier",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "Carrier signal lost. The archive is gone."
+    },
+    {
+     "id": "nar_m01_line_mara_fail_well",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "Well control is gone. The choice is no longer ours. Withdraw what remains."
+    },
+    {
+     "id": "nar_m01_line_mara_fail_terminal",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The field is decided. The carrier never reached Lume Reach. This operation failed."
+    },
+    {
+     "id": "nar_m01_line_mara_fail_generic",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The completion conditions are broken. Withdraw what remains."
+    }
+   ],
+   "mission_id": "WhatTheLedgerKeeps",
+   "objectives": [
+    "Bring the Meridian scout carrying the archive to tile 22,18.",
+    "Hold the carrier at the recovery site while a worker commits Harvest, Preserve, or Reshape at the Future Well.",
+    "After the protocol commits, bring the surviving carrier to Lume Reach at tile 6,17."
+   ],
+   "results": {
+    "Added": "Campaign ledger committed: {well_choice}. The decision is now part of this campaign.",
+    "AlreadyRecorded": "Campaign ledger verified: {well_choice} was already recorded. No duplicate was added.",
+    "ReplayConflict": "This replay completed with {local_choice}; the campaign ledger remains {recorded_choice}.",
+    "StorageFailure": "Mission complete locally. Campaign progress was not saved; durable history remains unconfirmed."
+   },
+   "retry": "Retry Mission 01 from its deterministic initial state. A failed attempt does not add or alter a campaign record.",
+   "title": "What the Ledger Keeps"
+  },
+  "CampaignReserveAuthority": {
+   "briefing": "The reserve cannot carry three districts. The doctrine we inherited recommends an order; the choice is ours, and it will not be reversible. Secure the authority site, power exactly two districts, and Mara confirms the one we defer, standing in it.",
+   "content_id": "nar_m09_reserve_authority",
+   "failures": {
+    "district_structure_lost": "A Life Support, Transit, or Archive district structure is destroyed.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "mara_lost": "Mara Vey is destroyed while the operation is active.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m09_line_op_reserve_001",
+     "signal": "operation_ready:CampaignReserveAuthority:SecureAuthority",
+     "speaker": "Mara Vey",
+     "text": "The reserve carries two districts, not three. That is not a doctrine or an opinion; it is a gauge reading."
+    },
+    {
+     "id": "nar_m09_line_op_doctrine_002",
+     "signal": "operation_ready:CampaignReserveAuthority:SecureAuthority",
+     "speaker": "Mara Vey",
+     "text": "The founding decision recommends an order. Recommends. The allocation is mine to make and mine to answer for, and it will not be reversible."
+    },
+    {
+     "id": "nar_m09_line_op_authority_003",
+     "signal": "operation_ready:CampaignReserveAuthority:SecureAuthority",
+     "speaker": "Mara Vey",
+     "text": "First the authority site. I will not shed a district's load on an ordinary work order. If it is done, it is done under authority, in the record, with my name on it."
+    },
+    {
+     "id": "nar_m09_line_op_weight_004",
+     "signal": "operation_ready:CampaignReserveAuthority:SecureAuthority",
+     "speaker": "Mara Vey",
+     "text": "Whichever district we defer, someone in it is awake right now assuming the power returns. Keep that in mind and keep working."
+    },
+    {
+     "id": "nar_m09_line_auth_secured_001",
+     "signal": "phase_entered:AllocateFirstDistrict",
+     "speaker": "Mara Vey",
+     "text": "Authority is secured. The allocation channel is open, and everything from here forward is on the record."
+    },
+    {
+     "id": "nar_m09_line_auth_choose_002",
+     "signal": "phase_entered:AllocateFirstDistrict",
+     "speaker": "Mara Vey",
+     "text": "Two relays get workers. The doctrine says where to start; I have read it. Now I decide."
+    },
+    {
+     "id": "nar_m09_line_first_done_001",
+     "signal": "phase_entered:AllocateSecondDistrict",
+     "speaker": "Mara Vey",
+     "text": "First district is powered and drawing steady. One more, and then the hard part of this arithmetic."
+    },
+    {
+     "id": "nar_m09_line_second_done_001",
+     "signal": "phase_entered:ReachDeferredDistrict",
+     "speaker": "Mara Vey",
+     "text": "Second district is up. The reserve is at its ceiling. The third district stays dark by my allocation."
+    },
+    {
+     "id": "nar_m09_line_second_walk_002",
+     "signal": "phase_entered:ReachDeferredDistrict",
+     "speaker": "Mara Vey",
+     "text": "I am going to the deferred district myself. If I can defer it from a desk, I can stand in it."
+    },
+    {
+     "id": "nar_m09_line_complete_deferred_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "I am in the deferred district. Structures intact, systems on reserve, holding. Dark, but standing."
+    },
+    {
+     "id": "nar_m09_line_complete_record_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "Log the allocation as final: two powered, one deferred, confirmed intact by my own eyes. The record does not say it was right. It says it was mine."
+    },
+    {
+     "id": "nar_m09_line_complete_cost_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "We bought the grid a future with one district's present. Price recorded. Change not given."
+    },
+    {
+     "id": "nar_m09_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The command core is down. Allocation without authority is just load-shedding with better handwriting. We stop here."
+    },
+    {
+     "id": "nar_m09_line_fail_mara_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "I am cut off from the operation. The allocation needs its author standing, and I am not."
+    },
+    {
+     "id": "nar_m09_line_fail_district_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "We lost a district structure. The arithmetic just changed underneath the allocation. This attempt is void."
+    },
+    {
+     "id": "nar_m09_line_fail_terminal_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The engagement has gone terminal. The reserve question stays open, which is the worst answer available."
+    },
+    {
+     "id": "nar_m09_line_fail_generic_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Mara Vey",
+     "text": "The operation has failed. Nobody's district got deferred today, and nobody's got powered either."
+    }
+   ],
+   "mission_id": "ReserveAuthority",
+   "objectives": [
+    "Secure the branch authority site.",
+    "Power the first district relay of your allocation.",
+    "Power the second district relay of your allocation.",
+    "Bring Mara to the deferred district and confirm it intact."
+   ],
+   "results": {
+    "Added": "The allocation is recorded: two districts powered, one deferred, confirmed intact in person. The record carries the author and the arithmetic, not a verdict. What deferral costs the dark district stays an open entry.",
+    "AlreadyRecorded": "This allocation was already in the campaign ledger. The replay changes nothing recorded; the earlier allocation stands.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The allocation completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The allocation was not completed. Retry the operation; the advisory doctrine and the reserve arithmetic remain as recorded.",
+   "title": "Reserve Authority"
+  },
+  "CampaignSevenAccounts": {
+   "briefing": "The migration moves today, and the seven inherited accounts disagree about the ground. Hold the route, root the Waystone at the anchor the founding decision left, and bring the memory bearer to the account site.",
+   "content_id": "nar_m02_seven_accounts_of_rain",
+   "failures": {
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "memory_bearer_lost": "The memory bearer is destroyed before the recall is made.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "waystone_lost": "The Waystone is destroyed before or after rooting."
+   },
+   "lines": [
+    {
+     "id": "nar_m02_line_oruun_op_orders_001",
+     "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Seven accounts of this basin, and no two agree where the ground will hold. We walk the route my predecessors argue about."
+    },
+    {
+     "id": "nar_m02_line_oruun_op_accounts_002",
+     "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The third account says rain cut the western shelf. The fifth says the shelf never existed. Both of them are certain. I have learned to be neither."
+    },
+    {
+     "id": "nar_m02_line_oruun_op_waystone_003",
+     "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Uproot the Waystone and carry it to the anchor the founding decision left us. The route we inherited decides where we may stand."
+    },
+    {
+     "id": "nar_m02_line_oruun_op_stakes_004",
+     "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The herds move today whether we are ready or not. A migration route is only a route while someone holds it open."
+    },
+    {
+     "id": "nar_m02_line_oruun_op_humor_005",
+     "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "My second account insists this ridge is a riverbed. If we drown on dry stone, it will at least settle one family argument."
+    },
+    {
+     "id": "nar_m02_line_oruun_rooted_confirm_001",
+     "signal": "phase_entered:RecallMemory",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is rooted at the anchor. The ground agrees with at least one of my accounts. Progress, of a kind."
+    },
+    {
+     "id": "nar_m02_line_oruun_rooted_bearer_002",
+     "signal": "phase_entered:RecallMemory",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the bearer walks. The account site is close, and the accounts that survive are the ones a living witness carries."
+    },
+    {
+     "id": "nar_m02_line_oruun_rooted_terrain_003",
+     "signal": "phase_entered:RecallMemory",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Watch the route edges. Whatever the accounts disagree on, hostile ground is a fact we can all verify together."
+    },
+    {
+     "id": "nar_m02_line_oruun_rooted_memory_004",
+     "signal": "phase_entered:RecallMemory",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "What we recall at the site will not settle which account was true. It will only add an eighth. That is how memory works here."
+    },
+    {
+     "id": "nar_m02_line_oruun_complete_recall_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The bearer stands at the account site. The recall is made, and the route held long enough to make it."
+    },
+    {
+     "id": "nar_m02_line_oruun_complete_accounts_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Seven accounts disagreed about this ground. We have not proven any of them right. We have proven the route can still be walked."
+    },
+    {
+     "id": "nar_m02_line_oruun_complete_forward_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The herds pass. The Waystone holds. I will argue with my predecessors about the rest on the way home."
+    },
+    {
+     "id": "nar_m02_line_oruun_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. Without it there is no authority to hold the route open. The migration finds another way, or does not."
+    },
+    {
+     "id": "nar_m02_line_oruun_fail_bearer_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The memory bearer is lost. An account that reaches no witness is not recalled. This attempt ends here."
+    },
+    {
+     "id": "nar_m02_line_oruun_fail_waystone_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is destroyed. Without it the route has no anchor, and the accounts have nothing to argue over."
+    },
+    {
+     "id": "nar_m02_line_oruun_fail_terminal_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. Whatever the accounts say about this ground, no one holds it now."
+    },
+    {
+     "id": "nar_m02_line_oruun_fail_generic_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. The route closes behind us. We will read the accounts again and return."
+    }
+   ],
+   "mission_id": "SevenAccountsOfRain",
+   "objectives": [
+    "Uproot the Waystone and root it at the inherited route anchor.",
+    "Bring the memory bearer to the account site while the route holds."
+   ],
+   "results": {
+    "Added": "The recall is recorded. The route held long enough to make it, and the account joins the seven that disagree. The migration passed; what it cost the rear families is not yet counted.",
+    "AlreadyRecorded": "This recall was already in the campaign ledger. The replay changes nothing recorded; the earlier account remains the one that stands.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The recall completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The route closed on this attempt. Read the accounts again and retry the operation; the founding decision and its inherited route remain as recorded.",
+   "title": "Seven Accounts of Rain"
+  },
+  "CampaignSeveralVoicesOneCommand": {
+   "briefing": "The Choir asks to be commanded, once, precisely: a Soldier voice resolving Possible, a Heavy voice holding Manifest, Neme at the command site, and a Phase Anchor at the crisis. Research both looms, place every voice exactly, and hold the contract for one hundred sixty fixed ticks.",
+   "content_id": "nar_m14_several_voices_one_command",
+   "failures": {
+    "crisis_contract_breached": "Any protected element or required site is breached after the hold begins; the failure is irreversible even if repaired.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "neme_lost": "Neme is destroyed or leaves the command site under contract.",
+    "protected_voice_lost": "The protected Possible or Manifest voice is destroyed.",
+    "research_loom_lost": "The research loom is destroyed.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m14_line_op_voices_001",
+     "signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+     "speaker": "Neme",
+     "text": "We are several voices. Today we require one command, and we have selected yours through me. This is not surrender. It is an experiment with exact terms."
+    },
+    {
+     "id": "nar_m14_line_op_terms_002",
+     "signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+     "speaker": "Neme",
+     "text": "One voice will become Possible. One will remain Manifest. The two states do not agree. They will stand in disagreement, in the open, at their own sites."
+    },
+    {
+     "id": "nar_m14_line_op_loom_003",
+     "signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+     "speaker": "Neme",
+     "text": "The research loom holds what we could not decide alone. Begin with Held Alternatives. The Soldier voice selected this procedure from the alternatives it was offered — I report the selection, and leave the naming of it to your record-keepers."
+    },
+    {
+     "id": "nar_m14_line_op_precision_004",
+     "signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+     "speaker": "Neme",
+     "text": "Every placement is exact. Every protection is literal. The contract does not forgive, and we did not write it to."
+    },
+    {
+     "id": "nar_m14_line_alternatives_001",
+     "signal": "phase_entered:ResolveIncompatibleVoices",
+     "speaker": "Neme",
+     "text": "Held Alternatives is complete. The Soldier voice now carries its unrealized selves openly. It reports the sensation as: crowded, and clearer."
+    },
+    {
+     "id": "nar_m14_line_alternatives_002",
+     "signal": "phase_entered:ResolveIncompatibleVoices",
+     "speaker": "Neme",
+     "text": "Now the resolutions. Possible to its site; Manifest to its own. Distance is part of the honesty."
+    },
+    {
+     "id": "nar_m14_line_resolved_001",
+     "signal": "phase_entered:ResearchSharedResolution",
+     "speaker": "Neme",
+     "text": "Both voices stand resolved and placed: one Possible, one Manifest, incompatible and simultaneous. The condition we could never hold alone is holding."
+    },
+    {
+     "id": "nar_m14_line_resolved_002",
+     "signal": "phase_entered:ResearchSharedResolution",
+     "speaker": "Neme",
+     "text": "Shared Resolution next. It was unavailable until this exact arrangement existed. Now the loom will accept it."
+    },
+    {
+     "id": "nar_m14_line_resolution_001",
+     "signal": "phase_entered:AnchorCrisis",
+     "speaker": "Neme",
+     "text": "Shared Resolution is researched. Several voices, one command, and the command is: remain yourselves, together. We are testing whether that is possible."
+    },
+    {
+     "id": "nar_m14_line_resolution_002",
+     "signal": "phase_entered:AnchorCrisis",
+     "speaker": "Neme",
+     "text": "The Phase Anchor now, at the crisis site. An ordinary worker raises it. The Crownfall does not distinguish between heroic and ordinary hands, and neither do we."
+    },
+    {
+     "id": "nar_m14_line_anchored_001",
+     "signal": "phase_entered:HoldSharedResolution",
+     "speaker": "Neme",
+     "text": "The anchor is complete and the window opens: one hundred sixty fixed ticks. From this tick, every protection is irreversible. Repair does not restore a broken contract."
+    },
+    {
+     "id": "nar_m14_line_anchored_002",
+     "signal": "phase_entered:HoldSharedResolution",
+     "speaker": "Neme",
+     "text": "Hold. Everything. Exactly. Where. It. Stands."
+    },
+    {
+     "id": "nar_m14_line_complete_held_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "The window closed with the contract intact. Two incompatible identities held under one command for the full crisis, and nothing protected was lost."
+    },
+    {
+     "id": "nar_m14_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "This does not decide our fate. It establishes one fact: we can be commanded without being collapsed. The fact is now in your record and ours."
+    },
+    {
+     "id": "nar_m14_line_complete_neme_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "I selected many phrasings for this moment. The accurate one is: thank you for holding still with us."
+    },
+    {
+     "id": "nar_m14_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The local core is lost. The contract had exact terms, and this was outside them."
+    },
+    {
+     "id": "nar_m14_line_fail_voice_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "A protected voice is gone. The disagreement we were holding has lost a party, and the experiment with it."
+    },
+    {
+     "id": "nar_m14_line_fail_neme_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "I am removed from the command site. The one command has no voice to carry it; the several remain, uncommanded."
+    },
+    {
+     "id": "nar_m14_line_fail_loom_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The research loom is destroyed. What we could not decide alone is again undecidable."
+    },
+    {
+     "id": "nar_m14_line_fail_contract_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The crisis contract is breached. The terms were exact, and exactness was the point. The operation fails, permanently, as written."
+    },
+    {
+     "id": "nar_m14_line_fail_terminal_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The engagement is terminal. The crisis proceeds without its anchor."
+    },
+    {
+     "id": "nar_m14_line_fail_generic_007",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The operation has failed. The voices disperse to their separate certainties."
+    }
+   ],
+   "mission_id": "SeveralVoicesOneCommand",
+   "objectives": [
+    "Research Held Alternatives on the protected Soldier voice.",
+    "Resolve Possible and Manifest at their separate inherited sites.",
+    "Research Shared Resolution over the incompatible identities.",
+    "Raise the Phase Anchor at the Crownfall crisis site.",
+    "Hold every protected element for the fixed crisis window."
+   ],
+   "results": {
+    "Added": "The crisis contract is recorded complete: both incompatible identities held at their sites, Neme at command, the anchor standing, the full window held. What this means for the Choir's fate is exactly what Mission 15 has not yet decided.",
+    "AlreadyRecorded": "This contract was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The window held but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The contract did not hold. Retry the operation; the thirteen-record ledger and the exact terms remain as recorded.",
+   "title": "Several Voices, One Command"
+  },
+  "CampaignShapeBesideUs": {
+   "briefing": "Something walks beside our proxies through ground that exists twice. Neme offers guidance through the overlap; the offer is the first reciprocal contact we can act on. Reach the first echo, raise the relay, traverse both paired states, and Talar walks to the convergence.",
+   "content_id": "nar_m08_the_shape_beside_us",
+   "failures": {
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "state_witness_lost": "Either paired-state witness is destroyed.",
+    "talar_lost": "Talar Venn is destroyed while the operation is active.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m08_line_op_beside_001",
+     "signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+     "speaker": "Talar Venn",
+     "text": "The survey teams keep reporting the same thing: ground that reads as two places at once, and movement beside them that matches no roster."
+    },
+    {
+     "id": "nar_m08_line_op_offer_002",
+     "signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+     "speaker": "Neme",
+     "text": "You are reading one page of a document that has two. I can hold the pages apart while you walk. This is an offer. It has been an offer for some time."
+    },
+    {
+     "id": "nar_m08_line_op_terms_003",
+     "signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+     "speaker": "Talar Venn",
+     "text": "We accept guidance, not custody. Our proxies walk the route; you tell us where the pages turn. Everything gets recorded."
+    },
+    {
+     "id": "nar_m08_line_op_neme_004",
+     "signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+     "speaker": "Neme",
+     "text": "Recorded. Yes. Record that the echo is not an attack. It is an address. Approach the first one and I will show you the difference."
+    },
+    {
+     "id": "nar_m08_line_echo_001",
+     "signal": "phase_entered:RaiseEchoRelay",
+     "speaker": "Talar Venn",
+     "text": "First echo observed and logged. It repeats our proxy's approach four seconds ahead of the approach. I am filing that sentence exactly as written."
+    },
+    {
+     "id": "nar_m08_line_echo_relay_002",
+     "signal": "phase_entered:RaiseEchoRelay",
+     "speaker": "Neme",
+     "text": "Now the relay. The echo you saw is thin. The relay lets it carry weight without tearing. Build where I marked; the mark is load-bearing."
+    },
+    {
+     "id": "nar_m08_line_relay_001",
+     "signal": "phase_entered:TraversePairedStates",
+     "speaker": "Talar Venn",
+     "text": "Relay is up. The overlap reads steadier through it — both states now report on the same channel, politely taking turns."
+    },
+    {
+     "id": "nar_m08_line_relay_guide_002",
+     "signal": "phase_entered:TraversePairedStates",
+     "speaker": "Neme",
+     "text": "The paired states next. Send one witness into each. They will each see a valid ground. Both grounds are telling the truth. Walk them anyway."
+    },
+    {
+     "id": "nar_m08_line_states_001",
+     "signal": "phase_entered:ReachConvergence",
+     "speaker": "Talar Venn",
+     "text": "Both witnesses are through. Their traversal logs disagree on the terrain and agree on the distance. I have stopped expecting those to match."
+    },
+    {
+     "id": "nar_m08_line_states_converge_002",
+     "signal": "phase_entered:ReachConvergence",
+     "speaker": "Neme",
+     "text": "The convergence accepts one visitor, and it should be the one who keeps the records. Come yourself, archivist. Bring the disagreement with you."
+    },
+    {
+     "id": "nar_m08_line_complete_convergence_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "I am at the convergence. Both states resolve here — the same ground, agreeing with itself again. Contact was reciprocal, repeatable, and is now on file."
+    },
+    {
+     "id": "nar_m08_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "For the record: we made contact through the overlap. We did not learn who the Choir is, what it wants, or what it was denied. We learned it answers."
+    },
+    {
+     "id": "nar_m08_line_complete_neme_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "You walked both pages and wrote down both. That is more than most of the living have done for us. The address stands open."
+    },
+    {
+     "id": "nar_m08_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The command core is down. The overlap stays open, and unwalked."
+    },
+    {
+     "id": "nar_m08_line_fail_talar_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "I am cut off from the traversal. The convergence will not accept a record-keeper who is not there."
+    },
+    {
+     "id": "nar_m08_line_fail_witness_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "We lost a state witness. Half a traversal is not a traversal; I will not log it as one."
+    },
+    {
+     "id": "nar_m08_line_fail_terminal_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The engagement has gone terminal. The pages close on their own."
+    },
+    {
+     "id": "nar_m08_line_fail_generic_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Talar Venn",
+     "text": "The operation has failed. The shape beside us remains beside us, unaddressed."
+    }
+   ],
+   "mission_id": "TheShapeBesideUs",
+   "objectives": [
+    "Reach and observe the first echo along the inherited geometry.",
+    "Raise the echo relay at its site.",
+    "Traverse both paired states with the state witnesses.",
+    "Bring Talar to the convergence while the overlap holds."
+   ],
+   "results": {
+    "Added": "The traversal is recorded. Reciprocal contact through the overlap is established, repeatable, and filed with both traversal logs preserved — including where they disagree. Who the Choir is remains an open entry.",
+    "AlreadyRecorded": "This traversal was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The convergence was reached but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The overlap closed on this attempt. Retry the operation; the founding decision and its inherited geometry remain as recorded, and the offer of guidance stands.",
+   "title": "The Shape Beside Us"
+  },
+  "CampaignShapeOfSilence": {
+   "briefing": "The Compact lost a census. Our communal memory lost a neighborhood, and lost the memory of losing it. The two silences correspond. Root the Waystone, raise the Spine, set two witnesses where the accounts thin, and Oruun walks to the confluence to hear the shape.",
+   "content_id": "nar_m07_the_shape_of_silence",
+   "failures": {
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "memory_witness_lost": "Either memory witness is destroyed.",
+    "oruun_lost": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "waystone_lost": "The Waystone is destroyed before or after rooting."
+   },
+   "lines": [
+    {
+     "id": "nar_m07_line_op_silence_001",
+     "signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "My accounts remember this district street by street. Then, for one neighborhood, all seven go quiet at once. Seven accounts do not agree on anything. Except, apparently, this."
+    },
+    {
+     "id": "nar_m07_line_op_census_002",
+     "signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Talar's erased census and our curated quiet share a border. I do not know what that correspondence means. I intend to stand where I can hear it."
+    },
+    {
+     "id": "nar_m07_line_op_method_003",
+     "signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Waystone to the anchor, then the Spine. We do this in the old order: anchor, listen, witness, walk."
+    },
+    {
+     "id": "nar_m07_line_op_witness_004",
+     "signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Two witnesses, at the two places where the accounts thin. Not to speak. To stand where speaking stopped."
+    },
+    {
+     "id": "nar_m07_line_rooted_001",
+     "signal": "phase_entered:RaiseListeningSpine",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone holds the anchor. The hollow has a center now, whatever else it is missing."
+    },
+    {
+     "id": "nar_m07_line_rooted_spine_002",
+     "signal": "phase_entered:RaiseListeningSpine",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Raise the Spine. If the silence has a shape, the strata will carry its outline."
+    },
+    {
+     "id": "nar_m07_line_spine_001",
+     "signal": "phase_entered:PositionMemoryWitnesses",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Spine is listening. There is something under the quiet — not a voice. The place where a voice was expected."
+    },
+    {
+     "id": "nar_m07_line_spine_witnesses_002",
+     "signal": "phase_entered:PositionMemoryWitnesses",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Witnesses to their sites. Slowly. The accounts thin exactly where I asked them to stand, and I do not like what that implies about who curated them."
+    },
+    {
+     "id": "nar_m07_line_witnesses_001",
+     "signal": "phase_entered:ReachConfluence",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Both witnesses are placed. The geometry is complete except for me."
+    },
+    {
+     "id": "nar_m07_line_witnesses_walk_002",
+     "signal": "phase_entered:ReachConfluence",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I will walk the last leg myself. If the silence answers to anyone, it should answer to someone carrying seven ways to disagree with it."
+    },
+    {
+     "id": "nar_m07_line_complete_confluence_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am at the confluence. The witnesses hold, the Spine reads, and the silence has a shape: bounded, deliberate, and older than my accounts."
+    },
+    {
+     "id": "nar_m07_line_complete_bounds_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I cannot tell you what was removed, or by whom. I can now tell you where removal stops. That is a smaller fact, and a harder one."
+    },
+    {
+     "id": "nar_m07_line_complete_record_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Enter the outline in the accounts. All seven. Let them disagree about everything but the border."
+    },
+    {
+     "id": "nar_m07_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. The geometry cannot be held without authority behind it."
+    },
+    {
+     "id": "nar_m07_line_fail_oruun_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "I am cut off from the walk. The confluence keeps its shape unheard."
+    },
+    {
+     "id": "nar_m07_line_fail_waystone_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is destroyed. The hollow loses its center, and the listening geometry with it."
+    },
+    {
+     "id": "nar_m07_line_fail_witness_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "We lost a witness. The silence stays unmeasured; I will not pretend two ears were one."
+    },
+    {
+     "id": "nar_m07_line_fail_terminal_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. The hollow keeps its quiet."
+    },
+    {
+     "id": "nar_m07_line_fail_generic_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. The shape of the silence remains its own."
+    }
+   ],
+   "mission_id": "TheShapeOfSilence",
+   "objectives": [
+    "Root the Waystone at the hollow's inherited anchor.",
+    "Raise a Listening Spine over the thinned accounts.",
+    "Position both memory witnesses at their sites.",
+    "Bring Oruun to the confluence while the geometry holds."
+   ],
+   "results": {
+    "Added": "The confluence is recorded. The silence now has a measured border in all seven accounts, and the correspondence with the erased census is documented. What was removed, and by whom, remains open.",
+    "AlreadyRecorded": "This confluence was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The confluence was reached but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The hollow closed on this attempt. Retry the operation; the founding decision and its inherited listening geometry remain as recorded.",
+   "title": "The Shape of Silence"
+  },
+  "CampaignTheBrokenSun": {
+   "briefing": "The Crownfall is the last contract. Secure the approach, assemble all three accords with the witnesses protected, confirm the earned ending twice — it cannot be unsaid — raise its Resolution Conduit, and hold everything the contract names until the sky believes you.",
+   "content_id": "nar_m15_the_broken_sun",
+   "failures": {
+    "command_force_lost": "The bounded Choir command force is broken.",
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "protected_witness_lost": "Mara, Oruun, Talar, or Neme is destroyed while protected.",
+    "resolution_contract_breached": "The approach anchor, accord, eligibility, or conduit contract is breached after becoming irreversible.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain."
+   },
+   "lines": [
+    {
+     "id": "nar_m15_line_op_crownfall_001",
+     "signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+     "speaker": "Neme",
+     "text": "This is the Crownfall. Every record your campaign kept is now load-bearing. We advised exact phrasing from the beginning; today you learn why."
+    },
+    {
+     "id": "nar_m15_line_op_mara_002",
+     "signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+     "speaker": "Mara Vey",
+     "text": "Witness station one, standing. I spent fifteen operations making uncertainty governable. I am here to watch what that bought, not to steer it."
+    },
+    {
+     "id": "nar_m15_line_op_oruun_003",
+     "signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Witness station two. My accounts have argued the whole way here, and they have agreed to watch the ending together. All seven. That has never happened."
+    },
+    {
+     "id": "nar_m15_line_op_talar_004",
+     "signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+     "speaker": "Talar Venn",
+     "text": "The public record is open and I will keep it faithfully. Whatever is selected, the register will say what was done, by whom, under which earned eligibility. Nothing more, and absolutely nothing less."
+    },
+    {
+     "id": "nar_m15_line_approach_001",
+     "signal": "phase_entered:AssembleAccord",
+     "speaker": "Neme",
+     "text": "The Approach Anchor is bound and irreversible. The Crownfall accepts that we intend to finish. From here, intent is a structural property."
+    },
+    {
+     "id": "nar_m15_line_approach_002",
+     "signal": "phase_entered:AssembleAccord",
+     "speaker": "Neme",
+     "text": "Assemble the accords: Possible at the Meridian site, Manifest at the Kharuun site, myself at ours. Three form languages, one frame, as the sky prefers it."
+    },
+    {
+     "id": "nar_m15_line_accord_001",
+     "signal": "phase_entered:ChooseFinalResolution",
+     "speaker": "Neme",
+     "text": "The accord stands assembled and witnessed. Every faction's shape is present; none is subordinated. The eligible endings are now readable at the archive."
+    },
+    {
+     "id": "nar_m15_line_accord_002",
+     "signal": "phase_entered:ChooseFinalResolution",
+     "speaker": "Talar Venn",
+     "text": "Confirmed from the record: your earned subset is displayed exactly as the ledger supports it. Read all of it before selecting. Selection is confirmed twice and cannot be unsaid."
+    },
+    {
+     "id": "nar_m15_line_restoration_a",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "Restoration. The held futures return to the ground they were taken from, and the Wells begin giving back. What was deferred will wake to a different arithmetic."
+    },
+    {
+     "id": "nar_m15_line_restoration_b",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "The conduit rises at the northern convergence. The hold is the longest but one — what returns, returns slowly, and must be guarded the whole way."
+    },
+    {
+     "id": "nar_m15_line_stabilization_a",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "Controlled Stabilization. The Crownfall is held at its current pitch — no restoration, no collapse, a managed wound. It is the ending that asks the least and promises the same."
+    },
+    {
+     "id": "nar_m15_line_stabilization_b",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "The conduit rises at the central convergence. The base hold, no more. Stability is the one future that arrives on schedule."
+    },
+    {
+     "id": "nar_m15_line_extinguishment_a",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "Extinguishment. The remaining held futures are spent to close the Crownfall for good. The sky stops arguing. So does everything that argued through it."
+    },
+    {
+     "id": "nar_m15_line_extinguishment_b",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "The conduit rises at the western convergence. Hold it firmly. An ending that silences deserves to be watched every tick of the way down."
+    },
+    {
+     "id": "nar_m15_line_evolution_a",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "Open Evolution. The Crownfall is released to continue becoming, unmanaged, with everything that implies and nothing that guarantees. We find this one difficult to phrase. That is the point of it."
+    },
+    {
+     "id": "nar_m15_line_evolution_b",
+     "signal": "phase_entered:RaiseResolutionConduit",
+     "speaker": "Neme",
+     "text": "The conduit rises at the southwestern convergence, and the hold is the longest of the four. What is being released takes its time deciding what it is."
+    },
+    {
+     "id": "nar_m15_line_conduit_001",
+     "signal": "phase_entered:HoldFinalResolution",
+     "speaker": "Neme",
+     "text": "The Resolution Conduit is complete and irreversible. The final hold begins on the next fixed tick. Everything the contract names is now literal."
+    },
+    {
+     "id": "nar_m15_line_conduit_002",
+     "signal": "phase_entered:HoldFinalResolution",
+     "speaker": "Mara Vey",
+     "text": "All witness stations confirm position. For the record: we stand where we said we would. Hold your line and finish it."
+    },
+    {
+     "id": "nar_m15_line_complete_held_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "The hold is complete. The contract closed with every protected element standing, and the selected ending is now the recorded one."
+    },
+    {
+     "id": "nar_m15_line_complete_witness_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Witnessed, all of it, by three factions and seven accounts. What it becomes is tomorrow's argument. What it was is now safely written."
+    },
+    {
+     "id": "nar_m15_line_complete_record_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "The register closes on operation fifteen: ending selected, eligibility earned, contract held. The unchosen endings remain unchosen, and the record says so plainly."
+    },
+    {
+     "id": "nar_m15_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The local core is lost. The Crownfall does not renegotiate. The contract fails as written."
+    },
+    {
+     "id": "nar_m15_line_fail_witness_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "A protected witness is gone. The accord was witnessed or it was nothing; it is now nothing."
+    },
+    {
+     "id": "nar_m15_line_fail_force_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The command force is broken. Several voices, no command, and a sky still waiting."
+    },
+    {
+     "id": "nar_m15_line_fail_contract_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The final contract is breached. It was irreversible; so is this. The attempt records its own failure exactly."
+    },
+    {
+     "id": "nar_m15_line_fail_terminal_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The engagement is terminal. The Crownfall keeps its argument for whoever comes next."
+    },
+    {
+     "id": "nar_m15_line_fail_generic_006",
+     "signal": "phase_entered:Failed",
+     "speaker": "Neme",
+     "text": "The operation has failed. No ending was committed; the campaign record stands where it stood."
+    }
+   ],
+   "mission_id": "TheBrokenSun",
+   "objectives": [
+    "Secure the Crownfall approach with an Approach Anchor.",
+    "Assemble the Meridian, Kharuun, and Choir accords at their witnessed sites.",
+    "Confirm one eligible ending twice.",
+    "Raise the selected ending's Resolution Conduit.",
+    "Hold the final contract for its full route-dependent duration."
+   ],
+   "results": {
+    "Added": "The final resolution is recorded: selected from the earned subset, confirmed twice, its conduit raised and its contract held in full, witnessed by all three factions. The unchosen endings remain unchosen, and the record preserves exactly that.",
+    "AlreadyRecorded": "This resolution was already in the campaign ledger. The replay changes nothing recorded; the earlier ending stands.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing ending remains authoritative.",
+    "StorageFailure": "The contract held but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The final contract did not hold. Retry the operation; the fourteen-record ledger, the earned eligibility subset, and the route-dependent durations remain as recorded.",
+   "title": "The Broken Sun"
+  },
+  "CampaignUnburiedRoad": {
+   "briefing": "A memory shard is missing from the record, and the road to it runs subsurface. Take the road the founding decision selected: root the Waystone at the roadhead, raise a Listening Spine over the vaults, and walk the bearer to the shard.",
+   "content_id": "nar_m04_the_unburied_road",
+   "failures": {
+    "generic": "Any other failure surface without a bound stable reason.",
+    "local_core_lost": "The local command core is destroyed while the operation is active.",
+    "memory_bearer_lost": "The memory bearer is destroyed before the shard is recovered.",
+    "terminal_match_outcome": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "waystone_lost": "The Waystone is destroyed before or after rooting."
+   },
+   "lines": [
+    {
+     "id": "nar_m04_line_op_road_001",
+     "signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Something is missing from the record, and the record knows it. A shard, unburied by nobody, waiting on a road we stopped walking."
+    },
+    {
+     "id": "nar_m04_line_op_inherit_002",
+     "signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The founding decision picked our road for us. My accounts have opinions about all three. Today we only get to test one."
+    },
+    {
+     "id": "nar_m04_line_op_method_003",
+     "signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Waystone first, at the roadhead. A road without an anchor is a rumor with a direction."
+    },
+    {
+     "id": "nar_m04_line_op_vaults_004",
+     "signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The vaults under this ground are older than my oldest account, and she claims to remember the sun before it broke. Walk carefully."
+    },
+    {
+     "id": "nar_m04_line_road_confirm_001",
+     "signal": "phase_entered:RaiseListeningSpine",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Roadhead is anchored. The Waystone took to the ground like it remembered it. Perhaps it does."
+    },
+    {
+     "id": "nar_m04_line_road_spine_002",
+     "signal": "phase_entered:RaiseListeningSpine",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Now the Listening Spine. Before we take anything from this road, we owe it the courtesy of hearing what it holds."
+    },
+    {
+     "id": "nar_m04_line_spine_confirm_001",
+     "signal": "phase_entered:RecoverMemoryShard",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Spine is up and listening. The strata carry more voices than my seven, and none of them agree either. Reassuring, in its way."
+    },
+    {
+     "id": "nar_m04_line_spine_bearer_002",
+     "signal": "phase_entered:RecoverMemoryShard",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Bearer forward, to the shard site. Slow steps. What was left unburied this long can wait a few minutes more for care."
+    },
+    {
+     "id": "nar_m04_line_complete_shard_001",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The bearer holds the shard. The road gave up what it kept, and the record has one gap fewer."
+    },
+    {
+     "id": "nar_m04_line_complete_dispute_002",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "One shard recovered does not settle what the Assembly argues about. It gives the argument better material. That is the most memory ever does."
+    },
+    {
+     "id": "nar_m04_line_complete_road_003",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Mark the road open in the accounts. Eighth account, first entry: the way is walkable, and we walked it."
+    },
+    {
+     "id": "nar_m04_line_fail_core_001",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The command core is gone. A road with no authority behind it closes on its own."
+    },
+    {
+     "id": "nar_m04_line_fail_bearer_002",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The memory bearer is lost. The shard stays where it lay, and the gap in the record keeps its shape."
+    },
+    {
+     "id": "nar_m04_line_fail_waystone_003",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The Waystone is destroyed. The roadhead is an anchor no longer; the road is a rumor again."
+    },
+    {
+     "id": "nar_m04_line_fail_terminal_004",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The engagement has gone terminal. Whatever the road holds, it keeps it today."
+    },
+    {
+     "id": "nar_m04_line_fail_generic_005",
+     "signal": "phase_entered:Failed",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "The operation has failed. We withdraw, and the road stays unburied and unwalked."
+    }
+   ],
+   "mission_id": "TheUnburiedRoad",
+   "objectives": [
+    "Uproot the Waystone and root it at the inherited roadhead.",
+    "Raise a Listening Spine at the survey site while the road holds.",
+    "Bring the memory bearer to the shard site to make the recovery."
+   ],
+   "results": {
+    "Added": "The recovery is recorded. The shard is out of the ground and in the bearer's keeping, and the road is marked walkable. What the shard means is a dispute the record now has to hold.",
+    "AlreadyRecorded": "This recovery was already in the campaign ledger. The replay changes nothing recorded.",
+    "ReplayConflict": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "StorageFailure": "The shard was recovered but campaign storage refused the record. Nothing was saved; the attempt stands only in this session."
+   },
+   "retry": "The road closed on this attempt. Retry the operation; the founding decision and its inherited road remain as recorded.",
+   "title": "The Unburied Road"
+  }
+ },
+ "pack_format": "echoes-narrative-pack",
+ "pack_version": 1
+}

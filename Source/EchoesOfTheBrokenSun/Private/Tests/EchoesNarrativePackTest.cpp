@@ -1,0 +1,157 @@
+#if WITH_DEV_AUTOMATION_TESTS
+
+#include "Misc/AutomationTest.h"
+
+#include "EchoesNarrativeSubsystem.h"
+#include "EchoesGameInstance.h"
+#include "Engine/GameInstance.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FEchoesNarrativePackTest,
+    "Echoes.Runtime.Narrative.PackBinding",
+    EAutomationTestFlags::EditorContext |
+        EAutomationTestFlags::ClientContext |
+        EAutomationTestFlags::EngineFilter)
+
+bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+
+    UGameInstance* GameInstance = NewObject<UGameInstance>(GEngine);
+    GameInstance->InitializeStandalone();
+    UEchoesNarrativeSubsystem* Narrative =
+        GameInstance->GetSubsystem<UEchoesNarrativeSubsystem>();
+    if (!TestNotNull(TEXT("Narrative subsystem is available"), Narrative))
+    {
+        GameInstance->Shutdown();
+        return false;
+    }
+
+    TestTrue(
+        *FString::Printf(
+            TEXT("The narrative pack loads and digest-verifies (error=%s)"),
+            *Narrative->GetLoadError()),
+        Narrative->IsReady());
+    TestEqual(TEXT("Fourteen authored operations are bound"),
+              Narrative->GetOperationCount(),
+              14);
+    TestEqual(TEXT("The full authored line count is carried"),
+              Narrative->GetTotalLineCount(),
+              290);
+    TestEqual(TEXT("The pack digest is a full SHA-256"),
+              Narrative->GetPackDigest().Len(),
+              64);
+
+    // Every campaign operation with an authored contract binds completely.
+    const EEchoesOperationMode Authored[] = {
+        EEchoesOperationMode::CampaignPrologue,
+        EEchoesOperationMode::CampaignSevenAccounts,
+        EEchoesOperationMode::CampaignCityReserve,
+        EEchoesOperationMode::CampaignUnburiedRoad,
+        EEchoesOperationMode::CampaignNamesWithoutBirths,
+        EEchoesOperationMode::CampaignShapeOfSilence,
+        EEchoesOperationMode::CampaignShapeBesideUs,
+        EEchoesOperationMode::CampaignReserveAuthority,
+        EEchoesOperationMode::CampaignChoirAtLumeReach,
+        EEchoesOperationMode::CampaignNoNeutralLedger,
+        EEchoesOperationMode::CampaignFutureThatWon,
+        EEchoesOperationMode::CampaignAssemblyOfTheMissing,
+        EEchoesOperationMode::CampaignSeveralVoicesOneCommand,
+        EEchoesOperationMode::CampaignTheBrokenSun,
+    };
+    const TCHAR* CommitStatuses[] = {
+        TEXT("Added"),
+        TEXT("AlreadyRecorded"),
+        TEXT("ReplayConflict"),
+        TEXT("StorageFailure"),
+    };
+    for (const EEchoesOperationMode Operation : Authored)
+    {
+        const FString Key =
+            UEchoesNarrativeSubsystem::OperationPackKey(Operation);
+        TestTrue(
+            *FString::Printf(TEXT("%s has a bound contract"), *Key),
+            Narrative->HasOperation(Operation));
+        TestFalse(
+            *FString::Printf(TEXT("%s carries a title"), *Key),
+            Narrative->GetTitle(Operation).IsEmpty());
+        TestFalse(
+            *FString::Printf(TEXT("%s carries a briefing"), *Key),
+            Narrative->GetBriefing(Operation).IsEmpty());
+        TestTrue(
+            *FString::Printf(TEXT("%s carries objectives"), *Key),
+            Narrative->GetObjectives(Operation).Num() >= 2);
+        TestFalse(
+            *FString::Printf(TEXT("%s carries retry copy"), *Key),
+            Narrative->GetRetryCopy(Operation).IsEmpty());
+        for (const TCHAR* Status : CommitStatuses)
+        {
+            TestFalse(
+                *FString::Printf(
+                    TEXT("%s carries %s result copy"), *Key, Status),
+                Narrative->GetResultCopy(Operation, Status).IsEmpty());
+        }
+        TestFalse(
+            *FString::Printf(TEXT("%s carries a generic failure"), *Key),
+            Narrative->GetFailureCondition(Operation, TEXT("generic"))
+                .IsEmpty());
+        const TArray<FEchoesNarrativeLine>* Lines =
+            Narrative->GetLines(Operation);
+        if (!TestNotNull(
+                *FString::Printf(TEXT("%s carries lines"), *Key), Lines))
+        {
+            continue;
+        }
+        TestTrue(
+            *FString::Printf(TEXT("%s carries at least 15 lines"), *Key),
+            Lines->Num() >= 15);
+        // Every line's signal is one of the stable source-signal shapes.
+        for (const FEchoesNarrativeLine& Line : *Lines)
+        {
+            const bool bKnownShape =
+                Line.Signal.StartsWith(TEXT("phase_entered:")) ||
+                Line.Signal.StartsWith(TEXT("operation_ready:")) ||
+                Line.Signal == TEXT("campaign_commit_status_presented") ||
+                Line.Signal == TEXT("player_requested_mission_retry");
+            if (!bKnownShape)
+            {
+                AddError(FString::Printf(
+                    TEXT("%s line %s carries unknown signal %s"),
+                    *Key,
+                    *Line.Id,
+                    *Line.Signal));
+            }
+        }
+        // The operation-start signal binds at least one line and names this
+        // operation's own mode.
+        const FString StartPrefix =
+            FString::Printf(TEXT("operation_ready:%s:"), *Key);
+        int32 StartLines = 0;
+        for (const FEchoesNarrativeLine& Line : *Lines)
+        {
+            if (Line.Signal.StartsWith(StartPrefix))
+            {
+                ++StartLines;
+            }
+        }
+        TestTrue(
+            *FString::Printf(
+                TEXT("%s binds opening lines to its own start signal"), *Key),
+            StartLines >= 1);
+    }
+
+    // Skirmish deliberately has no narrative contract.
+    TestFalse(TEXT("Skirmish has no narrative contract"),
+              Narrative->HasOperation(EEchoesOperationMode::Skirmish));
+
+    // The Terms of Continuance contract is not yet authored (open decision 7)
+    // and must fail closed as absent rather than half-bound.
+    TestFalse(TEXT("Terms of Continuance is honestly absent"),
+              Narrative->HasOperation(
+                  EEchoesOperationMode::CampaignTermsOfContinuance));
+
+    GameInstance->Shutdown();
+    return true;
+}
+
+#endif

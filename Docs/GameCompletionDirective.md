@@ -745,10 +745,35 @@ Add to this list rather than guessing. Each entry needs the question, the option
 
 1. **TTS model selection** (blocks C1). Requirement: open weights, local execution on the M1 Pro,
    license compatible with commercial shipping of generated audio, quality sufficient for directed
-   character performance. Candidates are to be evaluated and the choice recorded with weights hash and
-   license text in `AssetRegister.md`. Decision owner: Angelis, on a session's written evaluation.
-2. **Typeface** (blocks A8, J2). A licensed or original typeface for game and site, license recorded.
-   Unresolved; candidates and costs to be presented.
+   character performance. Decision owner: Angelis. **Written evaluation (2026-09-01 session):**
+   - **Kokoro-82M** — Apache-2.0 weights, ~82M parameters, runs comfortably on the M1 Pro CPU/GPU,
+     strong clarity for its size, multiple built-in voices, deterministic under a fixed seed path.
+     Weakest at expressive direction (limited emotion control); strongest license/effort ratio.
+     **Recommended default** if calibration lines pass a listening review.
+   - **Piper** — MIT, very fast, tiny models, fully offline; quality noticeably synthetic for
+     principal characters, adequate for fallback or accessibility narration. Keep as a backstop.
+   - **XTTS-v2 (Coqui)** — strong quality and voice cloning, but the Coqui Public Model License
+     prohibits commercial use — **fails the license requirement outright**.
+   - **Bark (Suno)** — MIT, expressive, but slow, nondeterministic-leaning, and unstable for long
+     directed lines; a poor fit for a reproducible pipeline.
+   - **Orpheus-3B / Zonos-v0.1** — Apache-2.0, best-in-class expressiveness among open models;
+     3B-parameter scale means slow M1 Pro generation (minutes per batch) and heavier setup. Viable
+     as a quality upgrade after Kokoro calibration if direction control proves insufficient.
+   Proposed path: run gate 17's calibration set through Kokoro-82M first; escalate to Orpheus only
+   if the directed-performance review rejects it. Awaiting your call before any weights are pulled
+   or any line is registered.
+2. **Typeface** (blocks A8, J2). A licensed or original typeface for game and site, license
+   recorded. Decision owner: Angelis. **Candidates (2026-09-01 session), all SIL OFL 1.1 — free for
+   commercial embedding in games and sites, no per-seat cost, attribution in the rights record:**
+   - **Space Grotesk** (OFL) — engineered-geometric sans; suits the Compact's
+     ledger-and-instrument HUD language. Recommended for UI chrome.
+   - **IBM Plex Sans + Plex Mono** (OFL) — a complete family with a mono cut for readouts and
+     coordinates; the most complete coverage if one family must do everything.
+   - **Rajdhani** (OFL) — condensed technical sans, strong at small HUD sizes; weaker as body text.
+   - **Exo 2** (OFL) — rounded technical sans, softer look; wide weight range.
+   Proposed pairing: Space Grotesk for interface chrome + IBM Plex Mono for tactical readouts,
+   both OFL with licenses vendored into `Docs/` and recorded in `AssetRegister.md`. No paid or
+   original commission appears necessary at the professional bar. Awaiting your call.
 3. **`site/` versus `website/`** (blocks J2). Two web properties exist. Decide the authoritative one,
    fold or retire the other, and record where it is hosted and deployed.
 4. **Niagara adoption** (A6). Permitted only where mesh VFX cannot carry an effect; each system is a
