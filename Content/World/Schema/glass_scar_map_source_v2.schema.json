@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echoes.invalid/schema/world/glass-scar-map-source-v2",
+  "title": "Echoes Glass Scar proposed map source contract v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "map_id",
+    "display_name",
+    "authority",
+    "runtime_binding",
+    "base_descriptor",
+    "canonicalization",
+    "grid",
+    "movement_classes",
+    "height_bands",
+    "regions",
+    "blocked_zones",
+    "portals",
+    "objectives",
+    "camera_bounds",
+    "claim_boundary"
+  ],
+  "properties": {
+    "schema_id": {"const": "echoes.world.map-source.v2"},
+    "schema_version": {"const": 2},
+    "map_id": {"const": "glass-scar"},
+    "display_name": {"const": "Glass Scar"},
+    "authority": {"const": "proposed-source-contract"},
+    "runtime_binding": {"const": "none"},
+    "base_descriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "canonical_sha256"],
+      "properties": {
+        "path": {
+          "const": "Content/World/Source/GlassScar/glass_scar_map_pack_v1.json"
+        },
+        "canonical_sha256": {
+          "const": "6710b95a3a2e64acdfa044a1d0c302fff529daadd7d77d987d8c4e329098bf7d"
+        }
+      }
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "algorithm",
+        "encoding",
+        "object_keys",
+        "arrays",
+        "whitespace",
+        "terminal_newline",
+        "digest_scope",
+        "output_file",
+        "digest_file"
+      ],
+      "properties": {
+        "profile": {"const": "echoes-compiled-json-v1"},
+        "algorithm": {"const": "sha256"},
+        "encoding": {"const": "utf-8"},
+        "object_keys": {"const": "lexicographic"},
+        "arrays": {"const": "contract-ordered"},
+        "whitespace": {"const": "none"},
+        "terminal_newline": {"const": false},
+        "digest_scope": {"const": "exact-compiled-file-bytes"},
+        "output_file": {"const": "glass_scar_compiled_map_pack_v1.json"},
+        "digest_file": {"const": "glass_scar_compiled_map_pack_v1.sha256"}
+      }
+    },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width_tiles",
+        "height_tiles",
+        "coordinate_origin",
+        "layout",
+        "index_formula",
+        "movement_cost_semantics",
+        "simulation_tile_centimeters",
+        "presentation_tile_world_units"
+      ],
+      "properties": {
+        "width_tiles": {"const": 64},
+        "height_tiles": {"const": 64},
+        "coordinate_origin": {"const": "southwest"},
+        "layout": {"const": "row-major-yx"},
+        "index_formula": {"const": "y*width+x"},
+        "movement_cost_semantics": {"const": "destination-tile-entry-cost"},
+        "simulation_tile_centimeters": {"const": 100},
+        "presentation_tile_world_units": {"const": 200}
+      }
+    },
+    "movement_classes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/movement_class"}
+    },
+    "height_bands": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/height_band"}
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/region"}
+    },
+    "blocked_zones": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/blocked_zone"}
+    },
+    "portals": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/portal"}
+    },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/objective"}
+    },
+    "camera_bounds": {"$ref": "#/$defs/camera_bounds"},
+    "claim_boundary": {"$ref": "#/$defs/claim_boundary"}
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stable_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "tile": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"type": "integer", "minimum": 0, "maximum": 63},
+        {"type": "integer", "minimum": 0, "maximum": 63}
+      ]
+    },
+    "rectangle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_x", "max_x", "min_y", "max_y"],
+      "properties": {
+        "min_x": {"type": "integer", "minimum": 0, "maximum": 63},
+        "max_x": {"type": "integer", "minimum": 0, "maximum": 63},
+        "min_y": {"type": "integer", "minimum": 0, "maximum": 63},
+        "max_y": {"type": "integer", "minimum": 0, "maximum": 63}
+      }
+    },
+    "movement_class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "bit"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+        "bit": {"type": "integer", "minimum": 0, "maximum": 30}
+      }
+    },
+    "height_band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "relative_level"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 15},
+        "relative_level": {"type": "integer", "minimum": -8, "maximum": 7}
+      }
+    },
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ordinal",
+        "rectangle",
+        "seed_tile",
+        "movement_classes",
+        "base_move_cost",
+        "height_band_id"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 1, "maximum": 64},
+        "rectangle": {"$ref": "#/$defs/rectangle"},
+        "seed_tile": {"$ref": "#/$defs/tile"},
+        "movement_classes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/stable_id"}
+        },
+        "base_move_cost": {"type": "integer", "minimum": 1, "maximum": 255},
+        "height_band_id": {"$ref": "#/$defs/stable_id"}
+      }
+    },
+    "blocked_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "rectangle", "height_band_id"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 63},
+        "rectangle": {"$ref": "#/$defs/rectangle"},
+        "height_band_id": {"$ref": "#/$defs/stable_id"}
+      }
+    },
+    "edge_pair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/tile"},
+        {"$ref": "#/$defs/tile"}
+      ]
+    },
+    "portal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "region_ids", "edge_pairs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 127},
+        "region_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/stable_id"}
+        },
+        "edge_pairs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/edge_pair"}
+        }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "tile", "region_id"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 15},
+        "tile": {"$ref": "#/$defs/tile"},
+        "region_id": {"$ref": "#/$defs/stable_id"}
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ordinal",
+        "type",
+        "primary_tile",
+        "primary_region_id",
+        "fallback_policy",
+        "fallbacks"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 63},
+        "type": {"enum": ["future-well"]},
+        "primary_tile": {"$ref": "#/$defs/tile"},
+        "primary_region_id": {"$ref": "#/$defs/stable_id"},
+        "fallback_policy": {"const": "first-passable-in-order"},
+        "fallbacks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/fallback"}
+        }
+      }
+    },
+    "camera_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coordinate_semantics",
+        "min_x",
+        "min_y",
+        "max_x_exclusive",
+        "max_y_exclusive"
+      ],
+      "properties": {
+        "coordinate_semantics": {"const": "half-open-tile-edges"},
+        "min_x": {"type": "integer", "minimum": 0, "maximum": 63},
+        "min_y": {"type": "integer", "minimum": 0, "maximum": 63},
+        "max_x_exclusive": {"type": "integer", "minimum": 1, "maximum": 64},
+        "max_y_exclusive": {"type": "integer", "minimum": 1, "maximum": 64}
+      }
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposed_contract",
+        "compiled_fixture_is_source_data",
+        "not_evidence_for"
+      ],
+      "properties": {
+        "proposed_contract": {"const": true},
+        "compiled_fixture_is_source_data": {"const": true},
+        "not_evidence_for": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "runtime-authority",
+              "runtime-consumption",
+              "network-compatibility",
+              "current-movement-costs",
+              "current-height-or-slope",
+              "current-region-or-portal-routing",
+              "objective-fallback-execution",
+              "camera-clamp-or-readability",
+              "unreal-navmesh",
+              "ai-or-formation-traversal",
+              "rendered-or-playable-map",
+              "packaged-or-performance-qualified",
+              "release-readiness"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
