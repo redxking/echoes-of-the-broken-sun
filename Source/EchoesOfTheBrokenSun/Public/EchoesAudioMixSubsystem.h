@@ -29,6 +29,7 @@ class ECHOESOFTHEBROKENSUN_API UEchoesAudioMixSubsystem final
 
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+    virtual void Deinitialize() override;
 
     /** Re-reads the player's settings and reapplies every category gain. */
     void ApplyPlayerVolumes();

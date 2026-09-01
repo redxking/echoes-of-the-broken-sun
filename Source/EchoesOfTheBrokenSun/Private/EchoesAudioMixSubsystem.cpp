@@ -1,5 +1,6 @@
 #include "EchoesAudioMixSubsystem.h"
 
+#include "AudioDevice.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "Engine/World.h"
@@ -47,6 +48,43 @@ void UEchoesAudioMixSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         GetAppliedCategoryGain(EEchoesAudioCategory::Ambience),
         GetAppliedCategoryGain(EEchoesAudioCategory::Effects),
         bAppliedReducedDynamicRange ? TEXT("true") : TEXT("false"));
+}
+
+void UEchoesAudioMixSubsystem::Deinitialize()
+{
+    // Applying a submix volume makes the audio device load and root the
+    // submix object. A rooted per-world submix outlives its world and trips
+    // the editor's world-leak check, so teardown must unregister each submix
+    // and drop any root the device left behind before the world is destroyed.
+    UWorld* World = GetWorld();
+    FAudioDevice* AudioDevice =
+        World != nullptr ? World->GetAudioDeviceRaw() : nullptr;
+
+    auto ReleaseSubmix = [AudioDevice](USoundSubmix* Submix)
+    {
+        if (Submix == nullptr)
+        {
+            return;
+        }
+        if (AudioDevice != nullptr)
+        {
+            AudioDevice->UnregisterSoundSubmix(Submix, false);
+        }
+        if (Submix->IsRooted())
+        {
+            Submix->RemoveFromRoot();
+        }
+    };
+
+    for (const TObjectPtr<USoundSubmix>& Submix : CategorySubmixes)
+    {
+        ReleaseSubmix(Submix.Get());
+    }
+    ReleaseSubmix(MasterSubmix.Get());
+    CategorySubmixes.Reset();
+    MasterSubmix = nullptr;
+
+    Super::Deinitialize();
 }
 
 void UEchoesAudioMixSubsystem::BuildGraph()
