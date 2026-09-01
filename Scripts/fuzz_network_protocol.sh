@@ -105,7 +105,7 @@ fi
 if [ -z "${evidence_root}" ]; then
     head_sha="$(git -C "${project_dir}" rev-parse --short=7 HEAD)"
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    evidence_root="${project_dir}/../WorkstreamControl/evidence/network-fuzz-${head_sha}-${stamp}"
+    evidence_root="$(dirname "$(git -C "${project_dir}" rev-parse --path-format=absolute --git-common-dir)")/../WorkstreamControl/evidence/network-fuzz-${head_sha}-${stamp}"
 fi
 mkdir -p "${evidence_root}"
 
@@ -139,7 +139,7 @@ for index in "${!target_names[@]}"; do
         "${evidence_root}/fuzz-${name}.log" | tail -n 3 || true
 done
 
-(cd "${evidence_root}" && find . -type f -exec shasum -a 256 {} \; \
+(cd "${evidence_root}" && find . -type f ! -name evidence-sha256.txt.tmp -exec shasum -a 256 {} \; \
     | sort -k 2 > evidence-sha256.txt.tmp &&
     mv evidence-sha256.txt.tmp evidence-sha256.txt)
 
