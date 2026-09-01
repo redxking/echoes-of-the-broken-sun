@@ -1,0 +1,174 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "Glass Scar campaign overlay variants",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract mirroring the runtime terrain authors in EchoesSimulationSubsystem.cpp (ConfigureGlassScar, ApplyUnburiedRoadTerrain, ApplySevenAccountsTerrain, ConfigureLumeReach) as of commit 7824094. The runtime code remains the live authority; this file is checked-in contract data, not runtime output.",
+  "base_contracts": {
+    "glass-scar-v1": {
+      "compiled_pack_path": "Content/World/Generated/GlassScar/glass_scar_compiled_map_pack_v1.json",
+      "compiled_pack_sha256": "6dbbe2f1a5bd7faec122e6050e5c2d27d4d56e3e94da357b239673ec4b6ab621"
+    },
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-core", "x": 10, "y": 10},
+    {"id": "opponent-core", "x": 54, "y": 54},
+    {"id": "future-well", "x": 32, "y": 32}
+  ],
+  "variants": [
+    {
+      "id": "unburied-road-harvest",
+      "family": "unburied-road",
+      "branch": "harvest",
+      "operations_note": "M04-M08 and ReserveAuthority under a recorded Harvest choice: only the western crossing (x=12-15) stays open.",
+      "base": "glass-scar-v1",
+      "ops": [
+        {"op": "block", "x0": 29, "x1": 35, "y0": 30, "y1": 34},
+        {"op": "block", "x0": 48, "x1": 51, "y0": 30, "y1": 34}
+      ],
+      "expected_blocked_cells": 220,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": ["future-well"]
+    },
+    {
+      "id": "unburied-road-preserve",
+      "family": "unburied-road",
+      "branch": "preserve",
+      "operations_note": "Only the central crossing (x=29-35) stays open.",
+      "base": "glass-scar-v1",
+      "ops": [
+        {"op": "block", "x0": 12, "x1": 15, "y0": 30, "y1": 34},
+        {"op": "block", "x0": 48, "x1": 51, "y0": 30, "y1": 34}
+      ],
+      "expected_blocked_cells": 205,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    },
+    {
+      "id": "unburied-road-reshape",
+      "family": "unburied-road",
+      "branch": "reshape",
+      "operations_note": "Only the eastern crossing (x=48-51) stays open; the M08 folded-echo geometry.",
+      "base": "glass-scar-v1",
+      "ops": [
+        {"op": "block", "x0": 12, "x1": 15, "y0": 30, "y1": 34},
+        {"op": "block", "x0": 29, "x1": 35, "y0": 30, "y1": 34}
+      ],
+      "expected_blocked_cells": 220,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": ["future-well"]
+    },
+    {
+      "id": "seven-accounts-harvest",
+      "family": "seven-accounts",
+      "branch": "harvest",
+      "operations_note": "The central Future Well span is sealed after a Harvest prologue.",
+      "base": "glass-scar-v1",
+      "ops": [
+        {"op": "block", "x0": 29, "x1": 35, "y0": 30, "y1": 34}
+      ],
+      "expected_blocked_cells": 200,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": ["future-well"]
+    },
+    {
+      "id": "seven-accounts-preserve",
+      "family": "seven-accounts",
+      "branch": "preserve",
+      "operations_note": "No terrain delta; identical to the base Glass Scar contract.",
+      "base": "glass-scar-v1",
+      "ops": [],
+      "expected_blocked_cells": 165,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    },
+    {
+      "id": "seven-accounts-reshape",
+      "family": "seven-accounts",
+      "branch": "reshape",
+      "operations_note": "Four scar columns reopen beside the central crossing after a Reshape prologue.",
+      "base": "glass-scar-v1",
+      "ops": [
+        {"op": "open", "x0": 27, "x1": 28, "y0": 30, "y1": 34},
+        {"op": "open", "x0": 36, "x1": 37, "y0": 30, "y1": 34}
+      ],
+      "expected_blocked_cells": 145,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    },
+    {
+      "id": "lume-reach-harvest",
+      "family": "lume-reach",
+      "branch": "harvest",
+      "operations_note": "Standalone city layout for LumeReach, NoNeutralLedger, FutureThatWon, AssemblyOfTheMissing, SeveralVoicesOneCommand, and TheBrokenSun: gated wall rows y=28-30 with public gates at x=16-19, 30-34, 45-48; two district pillars; Harvest scar column x=29-30, y=34-38.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 8, "x1": 15, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 29, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 35, "x1": 44, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 49, "x1": 55, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 25, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 39, "x1": 44, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 29, "x1": 30, "y0": 34, "y1": 38}
+      ],
+      "expected_blocked_cells": 223,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    },
+    {
+      "id": "lume-reach-preserve",
+      "family": "lume-reach",
+      "branch": "preserve",
+      "operations_note": "Preserve scar column x=33-34, y=34-38 on the standalone city layout.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 8, "x1": 15, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 29, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 35, "x1": 44, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 49, "x1": 55, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 25, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 39, "x1": 44, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 33, "x1": 34, "y0": 34, "y1": 38}
+      ],
+      "expected_blocked_cells": 223,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    },
+    {
+      "id": "lume-reach-reshape",
+      "family": "lume-reach",
+      "branch": "reshape",
+      "operations_note": "Reshape scar band x=30-34, y=34-35 on the standalone city layout.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 8, "x1": 15, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 29, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 35, "x1": 44, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 49, "x1": 55, "y0": 28, "y1": 30},
+        {"op": "block", "x0": 20, "x1": 25, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 39, "x1": 44, "y0": 36, "y1": 44},
+        {"op": "block", "x0": 30, "x1": 34, "y0": 34, "y1": 35}
+      ],
+      "expected_blocked_cells": 223,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "mission plan sites or objective placement",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

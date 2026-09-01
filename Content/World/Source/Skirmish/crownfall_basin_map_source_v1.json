@@ -1,0 +1,65 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "Crownfall Basin skirmish preset",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract mirroring FEchoesSkirmishSetupModel::IsBlockedTile(CrownfallBasin) and its placement tables as of commit 7824094. The runtime code remains the live authority.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-core", "x": 10, "y": 52},
+    {"id": "opponent-core", "x": 54, "y": 12},
+    {"id": "future-well", "x": 32, "y": 39},
+    {"id": "resource-0", "x": 15, "y": 46},
+    {"id": "resource-1", "x": 20, "y": 53},
+    {"id": "resource-2", "x": 20, "y": 34},
+    {"id": "resource-3", "x": 32, "y": 27},
+    {"id": "resource-4", "x": 34, "y": 48},
+    {"id": "resource-5", "x": 44, "y": 30},
+    {"id": "resource-6", "x": 48, "y": 17},
+    {"id": "resource-7", "x": 56, "y": 22}
+  ],
+  "variants": [
+    {
+      "id": "skirmish-crownfall-basin",
+      "family": "skirmish",
+      "branch": "none",
+      "operations_note": "Two vertical ridges (x=27-29 and x=35-37, y=6-57) pierced by three gates (y=13-17, 30-34, 46-50), a north shelf wall (y=39-41, x=10-22 with a gap at x=15-17), and a south shelf wall (y=22-24, x=42-54 with a gap at x=47-49).",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 27, "x1": 29, "y0": 6, "y1": 12},
+        {"op": "block", "x0": 27, "x1": 29, "y0": 18, "y1": 29},
+        {"op": "block", "x0": 27, "x1": 29, "y0": 35, "y1": 45},
+        {"op": "block", "x0": 27, "x1": 29, "y0": 51, "y1": 57},
+        {"op": "block", "x0": 35, "x1": 37, "y0": 6, "y1": 12},
+        {"op": "block", "x0": 35, "x1": 37, "y0": 18, "y1": 29},
+        {"op": "block", "x0": 35, "x1": 37, "y0": 35, "y1": 45},
+        {"op": "block", "x0": 35, "x1": 37, "y0": 51, "y1": 57},
+        {"op": "block", "x0": 10, "x1": 14, "y0": 39, "y1": 41},
+        {"op": "block", "x0": 18, "x1": 22, "y0": 39, "y1": 41},
+        {"op": "block", "x0": 42, "x1": 46, "y0": 22, "y1": 24},
+        {"op": "block", "x0": 50, "x1": 54, "y0": 22, "y1": 24}
+      ],
+      "expected_blocked_cells": 282,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

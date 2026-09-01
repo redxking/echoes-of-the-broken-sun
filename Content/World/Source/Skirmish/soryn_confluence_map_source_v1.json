@@ -1,0 +1,63 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "Soryn Confluence skirmish preset",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract mirroring FEchoesSkirmishSetupModel::IsBlockedTile(SorynConfluence) and its placement tables as of commit 7824094. The runtime code remains the live authority.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-core", "x": 8, "y": 32},
+    {"id": "opponent-core", "x": 56, "y": 32},
+    {"id": "future-well", "x": 32, "y": 32},
+    {"id": "resource-0", "x": 15, "y": 18},
+    {"id": "resource-1", "x": 17, "y": 47},
+    {"id": "resource-2", "x": 26, "y": 27},
+    {"id": "resource-3", "x": 27, "y": 37},
+    {"id": "resource-4", "x": 37, "y": 27},
+    {"id": "resource-5", "x": 38, "y": 37},
+    {"id": "resource-6", "x": 47, "y": 17},
+    {"id": "resource-7", "x": 49, "y": 46}
+  ],
+  "variants": [
+    {
+      "id": "skirmish-soryn-confluence",
+      "family": "skirmish",
+      "branch": "none",
+      "operations_note": "A central walled ring (horizontal walls y=19-20 and y=43-44 over x=20-43, vertical walls x=20-21 and x=42-43 over y=19-44) with a north/south gate at x=30-33 and a west/east gate at y=30-33, plus a west shard (x=9-16, y=25-27) and an east shard (x=47-54, y=36-38). Overlapping wall rectangles are set-unioned.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 20, "x1": 29, "y0": 19, "y1": 20},
+        {"op": "block", "x0": 34, "x1": 43, "y0": 19, "y1": 20},
+        {"op": "block", "x0": 20, "x1": 29, "y0": 43, "y1": 44},
+        {"op": "block", "x0": 34, "x1": 43, "y0": 43, "y1": 44},
+        {"op": "block", "x0": 20, "x1": 21, "y0": 19, "y1": 29},
+        {"op": "block", "x0": 20, "x1": 21, "y0": 34, "y1": 44},
+        {"op": "block", "x0": 42, "x1": 43, "y0": 19, "y1": 29},
+        {"op": "block", "x0": 42, "x1": 43, "y0": 34, "y1": 44},
+        {"op": "block", "x0": 9, "x1": 16, "y0": 25, "y1": 27},
+        {"op": "block", "x0": 47, "x1": 54, "y0": 36, "y1": 38}
+      ],
+      "expected_blocked_cells": 200,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}
