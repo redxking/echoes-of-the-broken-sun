@@ -859,6 +859,25 @@ private:
     [[nodiscard]] FEchoesUnburiedRoadMissionFacts GatherUnburiedRoadFacts() const;
     [[nodiscard]] FEchoesTermsOfContinuanceMissionFacts
     GatherTermsOfContinuanceFacts() const;
+    [[nodiscard]] FEchoesNamesWithoutBirthsMissionFacts
+    GatherNamesWithoutBirthsFacts() const;
+    [[nodiscard]] FEchoesShapeOfSilenceMissionFacts
+    GatherShapeOfSilenceFacts() const;
+    [[nodiscard]] FEchoesShapeBesideUsMissionFacts
+    GatherShapeBesideUsFacts() const;
+    [[nodiscard]] FEchoesReserveAuthorityMissionFacts
+    GatherReserveAuthorityFacts() const;
+    [[nodiscard]] FEchoesChoirAtLumeReachMissionFacts
+    GatherChoirAtLumeReachFacts() const;
+    [[nodiscard]] FEchoesNoNeutralLedgerMissionFacts
+    GatherNoNeutralLedgerFacts() const;
+    [[nodiscard]] FEchoesFutureThatWonMissionFacts
+    GatherFutureThatWonFacts() const;
+    [[nodiscard]] FEchoesAssemblyOfTheMissingMissionFacts
+    GatherAssemblyOfTheMissingFacts() const;
+    [[nodiscard]] FEchoesSeveralVoicesOneCommandMissionFacts
+    GatherSeveralVoicesOneCommandFacts() const;
+    [[nodiscard]] FEchoesBrokenSunMissionFacts GatherBrokenSunFacts() const;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
     bool bStressScenario = false;

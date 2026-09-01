@@ -93,6 +93,16 @@ RUNTIME_BOUND_FAILURE_MISSIONS = {
     "m03_a_city_on_reserve",
     "m04_the_unburied_road",
     "m05_terms_of_continuance",
+    "m06_names_without_births",
+    "m07_the_shape_of_silence",
+    "m08_the_shape_beside_us",
+    "m09_reserve_authority",
+    "m10_the_choir_at_lume_reach",
+    "m11_no_neutral_ledger",
+    "m12_the_future_that_won",
+    "m13_assembly_of_the_missing",
+    "m14_several_voices_one_command",
+    "m15_the_broken_sun",
 }
 
 EXPECTED_CHARACTER_IDS = {

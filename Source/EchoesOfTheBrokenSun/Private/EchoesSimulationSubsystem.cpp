@@ -9697,9 +9697,333 @@ FString UEchoesSimulationSubsystem::GetMissionFailureReasonCode() const
             }
             return TEXT("generic");
         }
+        case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        {
+            const FEchoesNamesWithoutBirthsMissionFacts Facts =
+                GatherNamesWithoutBirthsFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bTalarIntact)
+            {
+                return TEXT("talar_lost");
+            }
+            if (!Facts.bArchiveIntact)
+            {
+                return TEXT("archive_lost");
+            }
+            if (!Facts.bFirstCivilianIntact || !Facts.bSecondCivilianIntact)
+            {
+                return TEXT("civilian_proxy_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignShapeOfSilence:
+        {
+            const FEchoesShapeOfSilenceMissionFacts Facts =
+                GatherShapeOfSilenceFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bOruunIntact)
+            {
+                return TEXT("oruun_lost");
+            }
+            if (!Facts.bWaystoneIntact)
+            {
+                return TEXT("waystone_lost");
+            }
+            if (!Facts.bFirstWitnessIntact || !Facts.bSecondWitnessIntact)
+            {
+                return TEXT("memory_witness_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignShapeBesideUs:
+        {
+            const FEchoesShapeBesideUsMissionFacts Facts =
+                GatherShapeBesideUsFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bTalarIntact)
+            {
+                return TEXT("talar_lost");
+            }
+            if (!Facts.bFirstStateWitnessIntact ||
+                !Facts.bSecondStateWitnessIntact)
+            {
+                return TEXT("state_witness_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignReserveAuthority:
+        {
+            const FEchoesReserveAuthorityMissionFacts Facts =
+                GatherReserveAuthorityFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bMaraIntact)
+            {
+                return TEXT("mara_lost");
+            }
+            if (!Facts.bLifeSupportIntact || !Facts.bTransitIntact ||
+                !Facts.bArchiveIntact)
+            {
+                return TEXT("district_structure_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        {
+            const FEchoesChoirAtLumeReachMissionFacts Facts =
+                GatherChoirAtLumeReachFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bOruunIntact)
+            {
+                return TEXT("oruun_lost");
+            }
+            if (!Facts.bWaystoneIntact)
+            {
+                return TEXT("waystone_lost");
+            }
+            if (!Facts.bFutureWellIntact)
+            {
+                return TEXT("future_well_lost");
+            }
+            if (Facts.bReshapeWindowExpired)
+            {
+                return TEXT("reshape_window_expired");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignNoNeutralLedger:
+        {
+            const FEchoesNoNeutralLedgerMissionFacts Facts =
+                GatherNoNeutralLedgerFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bOruunIntact)
+            {
+                return TEXT("oruun_lost");
+            }
+            if (!Facts.bWaystoneIntact)
+            {
+                return TEXT("waystone_lost");
+            }
+            if (!Facts.bLedgerWitnessIntact)
+            {
+                return TEXT("ledger_witness_lost");
+            }
+            if (!Facts.bFutureWellIntact)
+            {
+                return TEXT("future_well_lost");
+            }
+            if (!Facts.bPublicInterfacesIntact)
+            {
+                return TEXT("public_interface_lost");
+            }
+            if (Facts.bConflictingProtocolApplied)
+            {
+                return TEXT("conflicting_protocol_applied");
+            }
+            if (Facts.bReshapeWindowExpired)
+            {
+                return TEXT("reshape_window_expired");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignFutureThatWon:
+        {
+            const FEchoesFutureThatWonMissionFacts Facts =
+                GatherFutureThatWonFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bOruunIntact)
+            {
+                return TEXT("oruun_lost");
+            }
+            if (!Facts.bVerifierIntact)
+            {
+                return TEXT("verifier_lost");
+            }
+            if (!Facts.bFutureWellIntact)
+            {
+                return TEXT("future_well_lost");
+            }
+            if (!Facts.bPublicInterfacesIntact)
+            {
+                return TEXT("public_interface_lost");
+            }
+            if (Facts.bConflictingProtocolBound)
+            {
+                return TEXT("conflicting_protocol_bound");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        {
+            const FEchoesAssemblyOfTheMissingMissionFacts Facts =
+                GatherAssemblyOfTheMissingFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bOruunIntact)
+            {
+                return TEXT("oruun_lost");
+            }
+            if (!Facts.bVerifierIntact)
+            {
+                return TEXT("verifier_lost");
+            }
+            if (!Facts.bPublicInterfacesIntact)
+            {
+                return TEXT("public_interface_lost");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        {
+            const FEchoesSeveralVoicesOneCommandMissionFacts Facts =
+                GatherSeveralVoicesOneCommandFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bPossibleVoiceIntact || !Facts.bManifestVoiceIntact)
+            {
+                return TEXT("protected_voice_lost");
+            }
+            if (!Facts.bNemeIntact)
+            {
+                return TEXT("neme_lost");
+            }
+            if (!Facts.bResearchLoomIntact)
+            {
+                return TEXT("research_loom_lost");
+            }
+            if (Facts.bCrisisContractFailed)
+            {
+                return TEXT("crisis_contract_breached");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
+        case EEchoesOperationMode::CampaignTheBrokenSun:
+        {
+            const FEchoesBrokenSunMissionFacts Facts = GatherBrokenSunFacts();
+            if (!Facts.bOperationActive)
+            {
+                return TEXT("generic");
+            }
+            if (!Facts.bLocalCoreIntact)
+            {
+                return TEXT("local_core_lost");
+            }
+            if (!Facts.bMaraIntact || !Facts.bOruunIntact ||
+                !Facts.bTalarIntact || !Facts.bNemeIntact)
+            {
+                return TEXT("protected_witness_lost");
+            }
+            if (!Facts.bCommandForceIntact)
+            {
+                return TEXT("command_force_lost");
+            }
+            if (Facts.bResolutionContractFailed)
+            {
+                return TEXT("resolution_contract_breached");
+            }
+            if (!Facts.bSkirmishStillOngoing)
+            {
+                return TEXT("terminal_match_outcome");
+            }
+            return TEXT("generic");
+        }
         default:
-            // Missions 06-15 bind in a later slice; their contracts keep the
-            // guaranteed generic failure variant meanwhile.
             return TEXT("generic");
     }
 }
@@ -10611,8 +10935,8 @@ UEchoesSimulationSubsystem::GetTermsOfContinuancePhase() const
 }
 
 
-EEchoesNamesWithoutBirthsPhase
-UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
+FEchoesNamesWithoutBirthsMissionFacts
+UEchoesSimulationSubsystem::GatherNamesWithoutBirthsFacts() const
 {
     FEchoesNamesWithoutBirthsMissionFacts Facts;
     Facts.bOperationActive =
@@ -10621,7 +10945,7 @@ UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesNamesWithoutBirthsPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesNamesWithoutBirthsPlan Plan =
@@ -10678,11 +11002,17 @@ UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
             break;
         }
     }
-    return FEchoesNamesWithoutBirthsMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesNamesWithoutBirthsPhase
+UEchoesSimulationSubsystem::GetNamesWithoutBirthsPhase() const
+{
+    return FEchoesNamesWithoutBirthsMissionModel::DeterminePhase(GatherNamesWithoutBirthsFacts());
 }
 
-EEchoesShapeOfSilencePhase
-UEchoesSimulationSubsystem::GetShapeOfSilencePhase() const
+
+FEchoesShapeOfSilenceMissionFacts
+UEchoesSimulationSubsystem::GatherShapeOfSilenceFacts() const
 {
     FEchoesShapeOfSilenceMissionFacts Facts;
     Facts.bOperationActive =
@@ -10691,7 +11021,7 @@ UEchoesSimulationSubsystem::GetShapeOfSilencePhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesShapeOfSilencePhase::Inactive;
+        return Facts;
     }
 
     const FEchoesShapeOfSilencePlan Plan = GetShapeOfSilencePlan();
@@ -10753,11 +11083,17 @@ UEchoesSimulationSubsystem::GetShapeOfSilencePhase() const
             ShapeOfSilenceSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesShapeOfSilenceMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesShapeOfSilencePhase
+UEchoesSimulationSubsystem::GetShapeOfSilencePhase() const
+{
+    return FEchoesShapeOfSilenceMissionModel::DeterminePhase(GatherShapeOfSilenceFacts());
 }
 
-EEchoesShapeBesideUsPhase
-UEchoesSimulationSubsystem::GetShapeBesideUsPhase() const
+
+FEchoesShapeBesideUsMissionFacts
+UEchoesSimulationSubsystem::GatherShapeBesideUsFacts() const
 {
     FEchoesShapeBesideUsMissionFacts Facts;
     Facts.bOperationActive =
@@ -10766,7 +11102,7 @@ UEchoesSimulationSubsystem::GetShapeBesideUsPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesShapeBesideUsPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesShapeBesideUsPlan Plan = GetShapeBesideUsPlan();
@@ -10826,11 +11162,17 @@ UEchoesSimulationSubsystem::GetShapeBesideUsPhase() const
             ShapeBesideUsSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesShapeBesideUsMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesShapeBesideUsPhase
+UEchoesSimulationSubsystem::GetShapeBesideUsPhase() const
+{
+    return FEchoesShapeBesideUsMissionModel::DeterminePhase(GatherShapeBesideUsFacts());
 }
 
-EEchoesReserveAuthorityPhase
-UEchoesSimulationSubsystem::GetReserveAuthorityPhase() const
+
+FEchoesReserveAuthorityMissionFacts
+UEchoesSimulationSubsystem::GatherReserveAuthorityFacts() const
 {
     FEchoesReserveAuthorityMissionFacts Facts;
     Facts.bOperationActive =
@@ -10839,7 +11181,7 @@ UEchoesSimulationSubsystem::GetReserveAuthorityPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesReserveAuthorityPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesReserveAuthorityPlan Plan = GetReserveAuthorityPlan();
@@ -10889,11 +11231,17 @@ UEchoesSimulationSubsystem::GetReserveAuthorityPhase() const
     }
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesReserveAuthorityMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesReserveAuthorityPhase
+UEchoesSimulationSubsystem::GetReserveAuthorityPhase() const
+{
+    return FEchoesReserveAuthorityMissionModel::DeterminePhase(GatherReserveAuthorityFacts());
 }
 
-EEchoesChoirAtLumeReachPhase
-UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
+
+FEchoesChoirAtLumeReachMissionFacts
+UEchoesSimulationSubsystem::GatherChoirAtLumeReachFacts() const
 {
     FEchoesChoirAtLumeReachMissionFacts Facts;
     Facts.bOperationActive =
@@ -10902,7 +11250,7 @@ UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesChoirAtLumeReachPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesChoirAtLumeReachPlan Plan = GetChoirAtLumeReachPlan();
@@ -10982,11 +11330,17 @@ UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
         Facts.bSecondAnchorRaised || Facts.bFutureWellProtocolChosen;
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesChoirAtLumeReachMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesChoirAtLumeReachPhase
+UEchoesSimulationSubsystem::GetChoirAtLumeReachPhase() const
+{
+    return FEchoesChoirAtLumeReachMissionModel::DeterminePhase(GatherChoirAtLumeReachFacts());
 }
 
-EEchoesNoNeutralLedgerPhase
-UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
+
+FEchoesNoNeutralLedgerMissionFacts
+UEchoesSimulationSubsystem::GatherNoNeutralLedgerFacts() const
 {
     FEchoesNoNeutralLedgerMissionFacts Facts;
     Facts.bOperationActive =
@@ -10995,7 +11349,7 @@ UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesNoNeutralLedgerPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesNoNeutralLedgerPlan Plan = GetNoNeutralLedgerPlan();
@@ -11127,11 +11481,17 @@ UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
         Well->reshapeUntilTick == 0 && !Facts.bCoalitionRallied;
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesNoNeutralLedgerMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesNoNeutralLedgerPhase
+UEchoesSimulationSubsystem::GetNoNeutralLedgerPhase() const
+{
+    return FEchoesNoNeutralLedgerMissionModel::DeterminePhase(GatherNoNeutralLedgerFacts());
 }
 
-EEchoesFutureThatWonPhase
-UEchoesSimulationSubsystem::GetFutureThatWonPhase() const
+
+FEchoesFutureThatWonMissionFacts
+UEchoesSimulationSubsystem::GatherFutureThatWonFacts() const
 {
     FEchoesFutureThatWonMissionFacts Facts;
     Facts.bOperationActive =
@@ -11140,7 +11500,7 @@ UEchoesSimulationSubsystem::GetFutureThatWonPhase() const
         bScenarioReady && Simulation.IsValid();
     if (!Facts.bOperationActive)
     {
-        return EEchoesFutureThatWonPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesFutureThatWonPlan Plan = GetFutureThatWonPlan();
@@ -11278,11 +11638,17 @@ UEchoesSimulationSubsystem::GetFutureThatWonPhase() const
         Well->reshapeUntilTick == 0 && !Facts.bStabilityWindowHeld;
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesFutureThatWonMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesFutureThatWonPhase
+UEchoesSimulationSubsystem::GetFutureThatWonPhase() const
+{
+    return FEchoesFutureThatWonMissionModel::DeterminePhase(GatherFutureThatWonFacts());
 }
 
-EEchoesAssemblyOfTheMissingPhase
-UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPhase() const
+
+FEchoesAssemblyOfTheMissingMissionFacts
+UEchoesSimulationSubsystem::GatherAssemblyOfTheMissingFacts() const
 {
     FEchoesAssemblyOfTheMissingMissionFacts Facts;
     Facts.bOperationActive =
@@ -11292,7 +11658,7 @@ UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPhase() const
         IsAssemblyOfTheMissingUnlocked();
     if (!Facts.bOperationActive)
     {
-        return EEchoesAssemblyOfTheMissingPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesAssemblyOfTheMissingPlan Plan =
@@ -11374,11 +11740,17 @@ UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPhase() const
             AssemblyOfTheMissingSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesAssemblyOfTheMissingMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesAssemblyOfTheMissingPhase
+UEchoesSimulationSubsystem::GetAssemblyOfTheMissingPhase() const
+{
+    return FEchoesAssemblyOfTheMissingMissionModel::DeterminePhase(GatherAssemblyOfTheMissingFacts());
 }
 
-EEchoesSeveralVoicesOneCommandPhase
-UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
+
+FEchoesSeveralVoicesOneCommandMissionFacts
+UEchoesSimulationSubsystem::GatherSeveralVoicesOneCommandFacts() const
 {
     FEchoesSeveralVoicesOneCommandMissionFacts Facts;
     Facts.bOperationActive =
@@ -11388,7 +11760,7 @@ UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
         IsSeveralVoicesOneCommandUnlocked();
     if (!Facts.bOperationActive)
     {
-        return EEchoesSeveralVoicesOneCommandPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesSeveralVoicesOneCommandPlan Plan =
@@ -11499,10 +11871,16 @@ UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
     Facts.bCrisisContractFailed =
         bSeveralVoicesCrisisContractFailed;
-    return FEchoesSeveralVoicesOneCommandMissionModel::DeterminePhase(Facts);
+    return Facts;
+}
+EEchoesSeveralVoicesOneCommandPhase
+UEchoesSimulationSubsystem::GetSeveralVoicesOneCommandPhase() const
+{
+    return FEchoesSeveralVoicesOneCommandMissionModel::DeterminePhase(GatherSeveralVoicesOneCommandFacts());
 }
 
-EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const
+
+FEchoesBrokenSunMissionFacts UEchoesSimulationSubsystem::GatherBrokenSunFacts() const
 {
     FEchoesBrokenSunMissionFacts Facts;
     Facts.bOperationActive =
@@ -11510,7 +11888,7 @@ EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const
         bScenarioReady && Simulation.IsValid() && IsBrokenSunUnlocked();
     if (!Facts.bOperationActive)
     {
-        return EEchoesBrokenSunPhase::Inactive;
+        return Facts;
     }
 
     const FEchoesBrokenSunPlan Plan = GetBrokenSunPlan();
@@ -11678,8 +12056,13 @@ EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const
         bBrokenSunResolutionContractFailed;
     Facts.bSkirmishStillOngoing =
         Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
-    return FEchoesBrokenSunMissionModel::DeterminePhase(Facts);
+    return Facts;
 }
+EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const
+{
+    return FEchoesBrokenSunMissionModel::DeterminePhase(GatherBrokenSunFacts());
+}
+
 
 FEchoesObjectiveSnapshot
 UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
