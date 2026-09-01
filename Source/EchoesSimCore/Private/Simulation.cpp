@@ -438,7 +438,17 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
         static_cast<std::int64_t>(first.x.Raw()) - second.x.Raw();
     const std::int64_t deltaY =
         static_cast<std::int64_t>(first.y.Raw()) - second.y.Raw();
-    return static_cast<std::uint64_t>(deltaX * deltaX + deltaY * deltaY);
+    const std::uint64_t magnitudeX =
+        deltaX < 0 ? std::uint64_t{0} - static_cast<std::uint64_t>(deltaX)
+                   : static_cast<std::uint64_t>(deltaX);
+    const std::uint64_t magnitudeY =
+        deltaY < 0 ? std::uint64_t{0} - static_cast<std::uint64_t>(deltaY)
+                   : static_cast<std::uint64_t>(deltaY);
+    const std::uint64_t squaredX = magnitudeX * magnitudeX;
+    const std::uint64_t squaredY = magnitudeY * magnitudeY;
+    return squaredY > std::numeric_limits<std::uint64_t>::max() - squaredX
+               ? std::numeric_limits<std::uint64_t>::max()
+               : squaredX + squaredY;
 }
 
 [[nodiscard]] std::uint64_t StatelessAiValueFor(const PlayerView& view,
@@ -1678,13 +1688,13 @@ MineralCoverResult Simulation::ValidateMineralCover(
         return MineralCoverResult::CooldownActive;
     }
     const MineralCoverRules& rules = config_.rules.mineralCover;
+    if (!IsInsideMap(position, rules.halfExtentRaw)) {
+        return MineralCoverResult::InvalidPosition;
+    }
     const std::int64_t castRange = rules.castRangeRaw;
     if (DistanceSquaredRaw(cairnback->position, position) >
         static_cast<std::uint64_t>(castRange * castRange)) {
         return MineralCoverResult::OutsideCastRange;
-    }
-    if (!IsInsideMap(position, rules.halfExtentRaw)) {
-        return MineralCoverResult::InvalidPosition;
     }
     const std::int32_t tileX = position.x.FloorToInt();
     const std::int32_t tileY = position.y.FloorToInt();
@@ -2131,11 +2141,7 @@ bool Simulation::QueueCommand(const Command& command, std::string* rejectionReas
 }
 
 std::uint64_t Simulation::DistanceSquaredRaw(Vec2 first, Vec2 second) const {
-    const std::int64_t deltaX =
-        static_cast<std::int64_t>(first.x.Raw()) - second.x.Raw();
-    const std::int64_t deltaY =
-        static_cast<std::int64_t>(first.y.Raw()) - second.y.Raw();
-    return static_cast<std::uint64_t>(deltaX * deltaX + deltaY * deltaY);
+    return DistanceSquaredRawFor(first, second);
 }
 
 bool Simulation::InInteractionRange(const Entity& first,
