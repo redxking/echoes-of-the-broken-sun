@@ -1,0 +1,1121 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m12_the_future_that_won",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TheFutureThatWon",
+  "operation_mode": "CampaignFutureThatWon",
+  "phases": [
+   "Inactive",
+   "EstablishIndependentReadback",
+   "VerifyRecordedInputs",
+   "BindRecordedProtocol",
+   "HoldStabilityWindow",
+   "ObserveDistrictReadbacks",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Future That Won",
+  "purpose": "Oruun-of-Seven-Stones and a distinct Kharuun verifier establish independent readback at the neutral public interfaces, verify the two recorded district inputs, bind only the recorded protocol at the separate Future Well, hold its activation stable for the fixed window, and observe both district readbacks — while Chancellor Rhyse is present only as attributable public demonstrator apparatus.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "readback_sites": {
+   "meridian": {
+    "x": 26,
+    "y": 43
+   },
+   "kharuun": {
+    "x": 38,
+    "y": 43
+   }
+  },
+  "restoration_demonstrator_site": {
+   "x": 32,
+   "y": 49
+  },
+  "stability_window_ticks": 300,
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the exact eleven-record ledger; its plan is derived from the Mission 11 plan, inheriting doctrine, districts, and the recorded protocol.",
+   "Independent readback is established by Oruun and a distinct Kharuun verifier at the neutral Meridian interface at tile 26,43 and the Kharuun interface at tile 38,43.",
+   "The two recorded district inputs are the exact sites the Mission 09 allocation powered, carried through the Mission 11 plan.",
+   "The separate Future Well accepts only the Mission 10 recorded protocol, and binding a conflicting protocol fails the attempt.",
+   "The activation receipt must hold for exactly 300 fixed ticks.",
+   "Completion requires both district readbacks observed by the two scouts after the window holds.",
+   "Losing the local core, Oruun, the verifier, the Well, or a public interface, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "Chancellor Rhyse is represented only by attributable neutral public demonstrator apparatus; no personal presence, consent, or command is asserted.",
+   "No population restoration, civilian count, or survival claim follows from the demonstrator or the readbacks.",
+   "The held window establishes local protocol stability for 300 ticks, not permanence.",
+   "No trust, consent, or ethical justification between factions is established.",
+   "The demonstrator's public claims are its own; observation of them does not make them true.",
+   "No mixed-faction command is established."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_cael_rhyse",
+   "display_name": "Chancellor Cael Rhyse",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "neutral_public_demonstrator_voice",
+   "command_authority": false,
+   "delivery_channel": "public_address",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m12_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_readback_established",
+   "runtime_signal": "phase_entered:VerifyRecordedInputs",
+   "prerequisite_ids": [
+    "nar_m12_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_inputs_verified",
+   "runtime_signal": "phase_entered:BindRecordedProtocol",
+   "prerequisite_ids": [
+    "nar_m12_evt_readback_established"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_protocol_bound",
+   "runtime_signal": "phase_entered:HoldStabilityWindow",
+   "prerequisite_ids": [
+    "nar_m12_evt_inputs_verified"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_window_held",
+   "runtime_signal": "phase_entered:ObserveDistrictReadbacks",
+   "prerequisite_ids": [
+    "nar_m12_evt_protocol_bound"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_readbacks_observed",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m12_evt_window_held"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m12_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m12_evt_readbacks_observed"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m12_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m12_ui_briefing",
+   "loc_key": "nar_m12_ui_briefing",
+   "source_text": "The Chancellor's apparatus demonstrates a future in public, and the record it points at is ours. Establish independent readback at both interfaces, verify the recorded inputs, bind only the recorded protocol, hold the fixed window, and watch both districts read it back.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m12_ui_obj_establish_readback",
+    "loc_key": "nar_m12_ui_obj_establish_readback",
+    "source_text": "Establish independent readback at both neutral interfaces.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 98,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m12_ui_obj_verify_inputs",
+    "loc_key": "nar_m12_ui_obj_verify_inputs",
+    "source_text": "Verify both recorded district inputs.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 77,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m12_ui_obj_bind_protocol",
+    "loc_key": "nar_m12_ui_obj_bind_protocol",
+    "source_text": "Bind only the recorded protocol at the separate Well.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 93,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m12_ui_obj_hold_window",
+    "loc_key": "nar_m12_ui_obj_hold_window",
+    "source_text": "Hold the activation receipt for the fixed window.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 89,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m12_ui_obj_observe_readbacks",
+    "loc_key": "nar_m12_ui_obj_observe_readbacks",
+    "source_text": "Observe both district readbacks with the two scouts.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 92,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m12_line_op_won_001",
+   "loc_key": "nar_m12_line_op_won_001",
+   "speaker_id": "spk_cael_rhyse",
+   "trigger_id": "nar_m12_evt_operation_started",
+   "delivery_channel": "public_address",
+   "source_text": "Citizens: the future is not a question. It is a result. You are watching it demonstrate itself, and the demonstration reads from your own districts' records.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 197,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_op_won_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_op_apparatus_002",
+   "loc_key": "nar_m12_line_op_apparatus_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "That is the Chancellor's apparatus talking — a public machine with a persuasive voice. What it demonstrates, we will verify independently or not believe.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 193,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_op_apparatus_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_op_method_003",
+   "loc_key": "nar_m12_line_op_method_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Two readbacks, two of us: I take one neutral interface, the verifier takes the other. Then the inputs, then the protocol, then we hold it stable and watch.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 195,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_op_method_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_op_exact_004",
+   "loc_key": "nar_m12_line_op_exact_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The Well accepts what Lume Reach recorded and nothing else. If the demonstration needs a different protocol, then the demonstration is wrong.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 181,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_op_exact_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_readback_001",
+   "loc_key": "nar_m12_line_readback_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_readback_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Independent readback established at both interfaces. Two channels, two witnesses, no shared assumptions.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 144,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_readback_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_readback_002",
+   "loc_key": "nar_m12_line_readback_002",
+   "speaker_id": "spk_cael_rhyse",
+   "trigger_id": "nar_m12_evt_readback_established",
+   "delivery_channel": "public_address",
+   "source_text": "Note how the verification proceeds exactly as the demonstration predicted. Skepticism, too, is part of the result.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 154,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_readback_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_inputs_001",
+   "loc_key": "nar_m12_line_inputs_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_inputs_verified",
+   "delivery_channel": "command_radio",
+   "source_text": "Both recorded inputs verify against the ledger. The apparatus points at true records. That is precisely what makes it worth watching carefully.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 183,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_inputs_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_inputs_002",
+   "loc_key": "nar_m12_line_inputs_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_inputs_verified",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the binding. Recorded protocol, separate Well, in the open.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 103,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_inputs_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_bound_001",
+   "loc_key": "nar_m12_line_bound_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_protocol_bound",
+   "delivery_channel": "command_radio",
+   "source_text": "The protocol is bound. The activation receipt is live, and the window starts now: three hundred fixed ticks, counted by the simulation and nobody's speech.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 195,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_bound_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_bound_002",
+   "loc_key": "nar_m12_line_bound_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_protocol_bound",
+   "delivery_channel": "command_radio",
+   "source_text": "Hold everything that matters. A stability window proves stability only if nothing is quietly propped up during it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 154,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_bound_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_held_001",
+   "loc_key": "nar_m12_line_held_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_window_held",
+   "delivery_channel": "command_radio",
+   "source_text": "The window held, all three hundred ticks, with the receipt intact throughout. That fact is now ours, not the apparatus's.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 161,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_held_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_held_002",
+   "loc_key": "nar_m12_line_held_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_window_held",
+   "delivery_channel": "command_radio",
+   "source_text": "Scouts to the district readbacks. We finish by observing what the districts themselves report, not what is reported about them.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 167,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_held_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_complete_observed_001",
+   "loc_key": "nar_m12_line_complete_observed_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_readbacks_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "Both district readbacks observed, paired, and logged. The bound protocol held and the districts read it back true.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 154,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_complete_observed_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_complete_bounds_002",
+   "loc_key": "nar_m12_line_complete_bounds_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_readbacks_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "For the record: we verified a protocol, a window, and two readbacks. We did not verify a future. Those are different sizes of claim, whatever the apparatus says.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 201,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_complete_rhyse_003",
+   "loc_key": "nar_m12_line_complete_rhyse_003",
+   "speaker_id": "spk_cael_rhyse",
+   "trigger_id": "nar_m12_evt_readbacks_observed",
+   "delivery_channel": "public_address",
+   "source_text": "The result stands, verified by its skeptics. The future that won thanks you for your diligence. It can afford to.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 153,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_complete_rhyse_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_core_001",
+   "loc_key": "nar_m12_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. The demonstration continues without its audit, which should worry everyone.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_oruun_002",
+   "loc_key": "nar_m12_line_fail_oruun_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off. Independent readback with one reader is a contradiction in terms.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 119,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_oruun_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_verifier_003",
+   "loc_key": "nar_m12_line_fail_verifier_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The verifier is lost. One witness is testimony; two were the method. The attempt ends.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_verifier_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_well_004",
+   "loc_key": "nar_m12_line_fail_well_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Well is lost. There is nothing left to bind the record to.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 102,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_well_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_interface_005",
+   "loc_key": "nar_m12_line_fail_interface_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A public interface is destroyed. A readback nobody can read proves nothing. We stop.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 124,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_interface_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_conflict_006",
+   "loc_key": "nar_m12_line_fail_conflict_006",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A conflicting protocol was bound. The record does not say that, so neither may we. The attempt is void.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 143,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_conflict_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_terminal_007",
+   "loc_key": "nar_m12_line_fail_terminal_007",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The demonstration has lost its stage.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 111,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_terminal_007",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_line_fail_generic_008",
+   "loc_key": "nar_m12_line_fail_generic_008",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m12_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The future that won will have to win without our verification today.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 134,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m12_vo_fail_generic_008",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m12_seq_opening",
+   "beat": "a_result_demands_an_audit",
+   "trigger_id": "nar_m12_evt_operation_started",
+   "line_ids": [
+    "nar_m12_line_op_won_001",
+    "nar_m12_line_op_apparatus_002",
+    "nar_m12_line_op_method_003",
+    "nar_m12_line_op_exact_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_seq_readback",
+   "beat": "two_channels_no_shared_assumptions",
+   "trigger_id": "nar_m12_evt_readback_established",
+   "line_ids": [
+    "nar_m12_line_readback_001",
+    "nar_m12_line_readback_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_seq_inputs",
+   "beat": "true_records_watched_carefully",
+   "trigger_id": "nar_m12_evt_inputs_verified",
+   "line_ids": [
+    "nar_m12_line_inputs_001",
+    "nar_m12_line_inputs_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_seq_binding",
+   "beat": "window_counted_by_simulation",
+   "trigger_id": "nar_m12_evt_protocol_bound",
+   "line_ids": [
+    "nar_m12_line_bound_001",
+    "nar_m12_line_bound_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_seq_holding",
+   "beat": "stability_unpropped",
+   "trigger_id": "nar_m12_evt_window_held",
+   "line_ids": [
+    "nar_m12_line_held_001",
+    "nar_m12_line_held_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m12_seq_completion",
+   "beat": "verified_protocol_not_future",
+   "trigger_id": "nar_m12_evt_readbacks_observed",
+   "line_ids": [
+    "nar_m12_line_complete_observed_001",
+    "nar_m12_line_complete_bounds_002",
+    "nar_m12_line_complete_rhyse_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m12_result_added",
+    "loc_key": "nar_m12_result_added",
+    "source_text": "The verification is recorded: independent readback, verified inputs, the recorded protocol bound and held for its full window, and both district readbacks observed. What the demonstration claims beyond that is not in this record.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m12_result_alreadyrecorded",
+    "loc_key": "nar_m12_result_alreadyrecorded",
+    "source_text": "This verification was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m12_result_replayconflict",
+    "loc_key": "nar_m12_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m12_result_storagefailure",
+    "loc_key": "nar_m12_result_storagefailure",
+    "source_text": "The observation completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m12_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_oruun",
+    "reason_code": "oruun_lost",
+    "source_condition": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_oruun_002"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_verifier",
+    "reason_code": "verifier_lost",
+    "source_condition": "The distinct Kharuun verifier is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_verifier_003"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_well",
+    "reason_code": "future_well_lost",
+    "source_condition": "The separate Future Well is destroyed before the readbacks are observed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_well_004"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_interface",
+    "reason_code": "public_interface_lost",
+    "source_condition": "Either neutral public interface is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_interface_005"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_conflict",
+    "reason_code": "conflicting_protocol_bound",
+    "source_condition": "A protocol conflicting with the Mission 10 record is bound at the Well.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_conflict_006"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_terminal_007"
+    ]
+   },
+   {
+    "id": "nar_m12_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m12_line_fail_generic_008"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m12_retry",
+   "loc_key": "nar_m12_retry",
+   "source_text": "The verification did not complete. Retry the operation; the eleven-record ledger, the recorded protocol, and the fixed window remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 12 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m12_cine_opening",
+  "title": "The Future That Won, a demonstration and its audit",
+  "trigger_id": "nar_m12_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m12_shot_apparatus",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A neutral public demonstrator apparatus dominates a plaza: engineered Meridian framing, its display surfaces cycling verified records with unhurried confidence.",
+    "line_ids": [
+     "nar_m12_line_op_won_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m12_demonstrator_plaza"
+    ],
+    "audio_hook_ids": [
+     "aud_m12_ambience_plaza"
+    ]
+   },
+   {
+    "id": "nar_m12_shot_audit",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Oruun's column enters the plaza's edge; two scouts split toward the paired readback interfaces without ceremony.",
+    "line_ids": [
+     "nar_m12_line_op_apparatus_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m12_audit_column"
+    ],
+    "audio_hook_ids": [
+     "aud_m12_ambience_plaza"
+    ]
+   },
+   {
+    "id": "nar_m12_shot_interfaces",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The two neutral readback interfaces in one frame, Meridian brackets and Kharuun facets, both dark and waiting.",
+    "line_ids": [
+     "nar_m12_line_op_method_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m12_paired_readbacks"
+    ],
+    "audio_hook_ids": [
+     "aud_m12_ambience_plaza"
+    ]
+   },
+   {
+    "id": "nar_m12_shot_well",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The separate Well beyond the plaza, still and unbound; the apparatus's glow does not reach it.",
+    "line_ids": [
+     "nar_m12_line_op_exact_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m12_separate_well"
+    ],
+    "audio_hook_ids": [
+     "aud_m12_ambience_plaza"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m12_demonstrator_plaza",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m12_audit_column",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m12_paired_readbacks",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m12_separate_well",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m12_ambience_plaza",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

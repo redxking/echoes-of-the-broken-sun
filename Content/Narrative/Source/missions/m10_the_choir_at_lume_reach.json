@@ -1,0 +1,1338 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m10_the_choir_at_lume_reach",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "ChoirAtLumeReach",
+  "operation_mode": "CampaignChoirAtLumeReach",
+  "phases": [
+   "Inactive",
+   "EstablishContact",
+   "ResolveDeferredLiability",
+   "RaiseFirstAnchor",
+   "RaiseSecondAnchor",
+   "CommitFutureWell",
+   "ResolveFutureWell",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [
+   "Harvest",
+   "Preserve",
+   "Reshape"
+  ],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Choir at Lume Reach",
+  "purpose": "Oruun-of-Seven-Stones commands a Kharuun force at Lume Reach with Mara Vey as an off-map liaison: establish branch-specific contact, re-root the Waystone at the Mission 09 deferred district's liability, raise two Listening Spine anchors in sequence, commit a new Lume Well protocol from all three choices, and reach that protocol's public resolution.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "contact_site_by_founding_choice": {
+   "harvest": {
+    "x": 18,
+    "y": 20
+   },
+   "preserve": {
+    "x": 32,
+    "y": 20
+   },
+   "reshape": {
+    "x": 46,
+    "y": 20
+   }
+  },
+  "liability_site_by_deferred_district": {
+   "life_support": {
+    "x": 18,
+    "y": 34
+   },
+   "transit": {
+    "x": 32,
+    "y": 33
+   },
+   "archive": {
+    "x": 46,
+    "y": 34
+   }
+  },
+  "first_anchor_site": {
+   "x": 28,
+   "y": 39
+  },
+  "second_anchor_site": {
+   "x": 36,
+   "y": 39
+  },
+  "future_well_site": {
+   "x": 32,
+   "y": 43
+  },
+  "resolution_site_by_protocol": {
+   "harvest": {
+    "x": 18,
+    "y": 50
+   },
+   "preserve": {
+    "x": 32,
+    "y": 50
+   },
+   "reshape": {
+    "x": 46,
+    "y": 50
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision for its approach and the Mission 09 allocation for its liability site.",
+   "The Harvest founding decision selects the Ashward approach with contact at tile 18,20; Preserve the Held-Vault approach at 32,20; Reshape the Foldward approach at 46,20.",
+   "The deferred district's liability stands at tile 18,34 for Life Support, 32,33 for Transit, or 46,34 for Archive.",
+   "The two Listening Spine anchors rise in sequence at tiles 28,39 and 36,39, and the Lume Well stands at tile 32,43.",
+   "The new Well protocol is committed from all three offered choices, and each protocol's public resolution site differs: Harvest at 18,50, Preserve at 32,50, Reshape at 46,50.",
+   "The Reshape protocol's resolution window can expire, failing the attempt.",
+   "Losing the local core, Oruun, the Waystone, or the Well, or reaching a terminal engagement outcome, fails the attempt irreversibly, and success records a separate tenth irreversible Well decision."
+  ],
+  "prohibited_inferences": [
+   "The local Choir remains a public contact and infrastructure presence, never playable or commandable.",
+   "The mechanically opposing Meridian units are quarantine proxies; their presence does not establish Mara's involvement or Compact-wide action.",
+   "No Choir identity, intent, or unified voice is established by the contact.",
+   "The committed protocol is not established as the right choice; each carries its own recorded consequence.",
+   "No claim about Lume Reach's civilian population follows from the protocol resolution.",
+   "The tenth Well decision does not resolve or supersede the founding decision."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_mara_vey",
+   "display_name": "Mara Vey",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "offmap_meridian_liaison",
+   "command_authority": false,
+   "delivery_channel": "operations_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m10_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_contact_established",
+   "runtime_signal": "phase_entered:ResolveDeferredLiability",
+   "prerequisite_ids": [
+    "nar_m10_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_liability_resolved",
+   "runtime_signal": "phase_entered:RaiseFirstAnchor",
+   "prerequisite_ids": [
+    "nar_m10_evt_contact_established"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_first_anchor_raised",
+   "runtime_signal": "phase_entered:RaiseSecondAnchor",
+   "prerequisite_ids": [
+    "nar_m10_evt_liability_resolved"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_second_anchor_raised",
+   "runtime_signal": "phase_entered:CommitFutureWell",
+   "prerequisite_ids": [
+    "nar_m10_evt_first_anchor_raised"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_protocol_committed",
+   "runtime_signal": "phase_entered:ResolveFutureWell",
+   "prerequisite_ids": [
+    "nar_m10_evt_second_anchor_raised"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_protocol_resolved",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m10_evt_protocol_committed"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m10_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m10_evt_protocol_resolved"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m10_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m10_ui_briefing",
+   "loc_key": "nar_m10_ui_briefing",
+   "source_text": "Lume Reach holds a Well, a Choir presence that answers, and the liability our Mission 09 deferral left standing. Establish contact on the inherited approach, resolve the liability, raise both anchors, and commit a new Well protocol — then stand at its public resolution.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m10_ui_obj_establish_contact",
+    "loc_key": "nar_m10_ui_obj_establish_contact",
+    "source_text": "Establish contact at the inherited approach site.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 89,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m10_ui_obj_resolve_liability",
+    "loc_key": "nar_m10_ui_obj_resolve_liability",
+    "source_text": "Re-root the Waystone at the deferred district's liability.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 98,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m10_ui_obj_raise_first_anchor",
+    "loc_key": "nar_m10_ui_obj_raise_first_anchor",
+    "source_text": "Raise the first Listening Spine anchor.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 79,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m10_ui_obj_raise_second_anchor",
+    "loc_key": "nar_m10_ui_obj_raise_second_anchor",
+    "source_text": "Raise the second Listening Spine anchor in sequence.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 92,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m10_ui_obj_commit_protocol",
+    "loc_key": "nar_m10_ui_obj_commit_protocol",
+    "source_text": "Commit a new Lume Well protocol from the three offered choices.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 103,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m10_ui_obj_resolve_protocol",
+    "loc_key": "nar_m10_ui_obj_resolve_protocol",
+    "source_text": "Reach the committed protocol's public resolution site.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 94,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m10_line_op_reach_001",
+   "loc_key": "nar_m10_line_op_reach_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Lume Reach. A settlement, a Well, and a neighbor that answers when addressed. Three reasons to walk carefully, and we have business with all three.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 187,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_op_reach_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_op_liaison_002",
+   "loc_key": "nar_m10_line_op_liaison_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m10_evt_operation_started",
+   "delivery_channel": "operations_radio",
+   "source_text": "Meridian units in your area are quarantine posture, not policy. I am off-map and staying there. What you commit at that Well is committed under Kharuun authority.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 202,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_op_liaison_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_op_liability_003",
+   "loc_key": "nar_m10_line_op_liability_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "We also carry a debt: the district your allocation deferred still has a liability standing. We resolve it before we touch the Well. Order matters.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 186,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_op_liability_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_op_choice_004",
+   "loc_key": "nar_m10_line_op_choice_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "And when the Well offers its three futures, the choice will be ours alone. My accounts are already arguing. Good. That is what they are for.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 180,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_op_choice_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_contact_001",
+   "loc_key": "nar_m10_line_contact_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_contact_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Contact established on the approach. The presence acknowledged us — not warmly, not coldly. Precisely.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 142,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_contact_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_contact_002",
+   "loc_key": "nar_m10_line_contact_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m10_evt_contact_established",
+   "delivery_channel": "operations_radio",
+   "source_text": "Logged from off-map: contact is yours, attribution is yours. The Compact record will say exactly that and nothing more.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_contact_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_liability_001",
+   "loc_key": "nar_m10_line_liability_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_liability_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone stands at the deferred district's liability. What the allocation left dark now has an anchor in it. Not power. An anchor. It is a start.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 189,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_liability_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_liability_002",
+   "loc_key": "nar_m10_line_liability_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_liability_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the anchors, in sequence. The Reach listens best through two spines, and we intend to be heard accurately.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_liability_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_anchor1_001",
+   "loc_key": "nar_m10_line_anchor1_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_first_anchor_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "First anchor is up. The strata under Lume Reach carry old resonance — the settlement hums back.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 135,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_anchor1_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_anchor2_001",
+   "loc_key": "nar_m10_line_anchor2_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_second_anchor_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "Second anchor holds. The pair is tuned, and the Well is within reach of an honest signal.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 129,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_anchor2_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_anchor2_002",
+   "loc_key": "nar_m10_line_anchor2_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_second_anchor_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "The Well offers three protocols. Read all three before anyone touches anything. We commit once.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 135,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_anchor2_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_harvest_a",
+   "loc_key": "nar_m10_line_harvest_a",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "Harvest, then. Draw the Reach's held futures as yield, and let the settlement spend what it can no longer keep.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 151,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_harvest_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_harvest_b",
+   "loc_key": "nar_m10_line_harvest_b",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "The resolution site is south and ashward. We finish what we committed, publicly, where the Reach can watch.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 147,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_harvest_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_preserve_a",
+   "loc_key": "nar_m10_line_preserve_a",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "Preserve. The Reach's futures stay held, unspent, and the Well keeps its weight. Some debts are best left uncollected.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 158,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_preserve_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_preserve_b",
+   "loc_key": "nar_m10_line_preserve_b",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "The resolution stands at the held vault's public site. We go and close it properly.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 123,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_preserve_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_reshape_a",
+   "loc_key": "nar_m10_line_reshape_a",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "Reshape. The Reach's ground will open where it was closed, for a while, and the while has an ending. Move with intent.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 158,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_reshape_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_reshape_b",
+   "loc_key": "nar_m10_line_reshape_b",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "delivery_channel": "command_radio",
+   "source_text": "The reshape window is finite. The resolution site is foldward and south — we do not stop to admire the new geometry.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 156,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_reshape_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_complete_resolve_001",
+   "loc_key": "nar_m10_line_complete_resolve_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "The protocol is publicly resolved. Lume Reach watched us commit, and watched us finish. That is the tenth decision, recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 165,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_complete_resolve_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_complete_choir_002",
+   "loc_key": "nar_m10_line_complete_choir_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_protocol_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "The presence observed the whole of it and said nothing. I find I respect that. My accounts find seven different things to say about it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 175,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_complete_choir_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_complete_liaison_003",
+   "loc_key": "nar_m10_line_complete_liaison_003",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m10_evt_protocol_resolved",
+   "delivery_channel": "operations_radio",
+   "source_text": "Off-map acknowledgment: decision logged as Kharuun-committed, Choir-witnessed, liability resolved. The Compact adds nothing further.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 172,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_complete_liaison_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_core_001",
+   "loc_key": "nar_m10_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. The Reach keeps its Well and its silence.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 107,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_oruun_002",
+   "loc_key": "nar_m10_line_fail_oruun_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off from the operation. A Well decision without its author present is not one we will fake.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 140,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_oruun_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_waystone_003",
+   "loc_key": "nar_m10_line_fail_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is destroyed. The liability stands unresolved, and the order of things is broken.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 134,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_well_004",
+   "loc_key": "nar_m10_line_fail_well_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Well is lost. Whatever future it held for the Reach is no longer ours to commit or to refuse.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 137,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_well_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_window_005",
+   "loc_key": "nar_m10_line_fail_window_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The reshape window expired with the resolution unmade. The ground closed on its own schedule, as it warned us it would.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_window_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_terminal_006",
+   "loc_key": "nar_m10_line_fail_terminal_006",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. Lume Reach's questions keep for another day.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 118,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_terminal_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_line_fail_generic_007",
+   "loc_key": "nar_m10_line_fail_generic_007",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m10_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. We withdraw from the Reach with the debt still on the books.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m10_vo_fail_generic_007",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m10_seq_opening",
+   "beat": "three_reasons_to_walk_carefully",
+   "trigger_id": "nar_m10_evt_operation_started",
+   "line_ids": [
+    "nar_m10_line_op_reach_001",
+    "nar_m10_line_op_liaison_002",
+    "nar_m10_line_op_liability_003",
+    "nar_m10_line_op_choice_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_seq_contact",
+   "beat": "precise_acknowledgment",
+   "trigger_id": "nar_m10_evt_contact_established",
+   "line_ids": [
+    "nar_m10_line_contact_001",
+    "nar_m10_line_contact_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_seq_liability",
+   "beat": "debt_before_well",
+   "trigger_id": "nar_m10_evt_liability_resolved",
+   "line_ids": [
+    "nar_m10_line_liability_001",
+    "nar_m10_line_liability_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_seq_first_anchor",
+   "beat": "settlement_hums_back",
+   "trigger_id": "nar_m10_evt_first_anchor_raised",
+   "line_ids": [
+    "nar_m10_line_anchor1_001"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_seq_second_anchor",
+   "beat": "tuned_pair_honest_signal",
+   "trigger_id": "nar_m10_evt_second_anchor_raised",
+   "line_ids": [
+    "nar_m10_line_anchor2_001",
+    "nar_m10_line_anchor2_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m10_seq_completion",
+   "beat": "tenth_decision_witnessed",
+   "trigger_id": "nar_m10_evt_protocol_resolved",
+   "line_ids": [
+    "nar_m10_line_complete_resolve_001",
+    "nar_m10_line_complete_choir_002",
+    "nar_m10_line_complete_liaison_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {
+  "Harvest": {
+   "choice": "Harvest",
+   "current_runtime_behavior": "Current source commits the Lume Well to Harvest and requires the public resolution at tile 18,50 while the force, Waystone, and Well survive.",
+   "design_target_tradeoff": "Design target: the Reach's held futures become immediate yield, and the settlement's Well weight is spent rather than kept.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "dialogue_line_ids": [
+    "nar_m10_line_harvest_a",
+    "nar_m10_line_harvest_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m10_ui_choice_harvest",
+    "loc_key": "nar_m10_ui_choice_harvest",
+    "source_text": "Commit the Lume Well to Harvest.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 72,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  },
+  "Preserve": {
+   "choice": "Preserve",
+   "current_runtime_behavior": "Current source commits the Lume Well to Preserve and requires the public resolution at tile 32,50 while the force, Waystone, and Well survive.",
+   "design_target_tradeoff": "Design target: the Reach's futures stay held and unspent, and the Well keeps its weight against later need.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "dialogue_line_ids": [
+    "nar_m10_line_preserve_a",
+    "nar_m10_line_preserve_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m10_ui_choice_preserve",
+    "loc_key": "nar_m10_ui_choice_preserve",
+    "source_text": "Commit the Lume Well to Preserve.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 73,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  },
+  "Reshape": {
+   "choice": "Reshape",
+   "current_runtime_behavior": "Current source commits the Lume Well to Reshape, opens reshaped ground for a finite window, and requires the public resolution at tile 46,50 before the window expires.",
+   "design_target_tradeoff": "Design target: the Reach's ground opens where it was closed, for a bounded time whose ending is part of the commitment.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m10_evt_protocol_committed",
+   "dialogue_line_ids": [
+    "nar_m10_line_reshape_a",
+    "nar_m10_line_reshape_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m10_ui_choice_reshape",
+    "loc_key": "nar_m10_ui_choice_reshape",
+    "source_text": "Commit the Lume Well to Reshape.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 72,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  }
+ },
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m10_result_added",
+    "loc_key": "nar_m10_result_added",
+    "source_text": "The tenth Well decision is recorded: committed under Kharuun authority, publicly resolved, Choir-witnessed, with the Mission 09 liability resolved on the way. What the protocol costs Lume Reach over time stays an open entry.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m10_result_alreadyrecorded",
+    "loc_key": "nar_m10_result_alreadyrecorded",
+    "source_text": "This Well decision was already in the campaign ledger. The replay changes nothing recorded; the earlier protocol stands.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m10_result_replayconflict",
+    "loc_key": "nar_m10_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m10_result_storagefailure",
+    "loc_key": "nar_m10_result_storagefailure",
+    "source_text": "The protocol was resolved but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m10_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_oruun",
+    "reason_code": "oruun_lost",
+    "source_condition": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_oruun_002"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_waystone",
+    "reason_code": "waystone_lost",
+    "source_condition": "The Waystone is destroyed before or after the liability is resolved.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_waystone_003"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_well",
+    "reason_code": "future_well_lost",
+    "source_condition": "The Lume Well is destroyed before the protocol is resolved.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_well_004"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_window",
+    "reason_code": "reshape_window_expired",
+    "source_condition": "The Reshape protocol's resolution window expires before the public resolution.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_window_005"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_terminal_006"
+    ]
+   },
+   {
+    "id": "nar_m10_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m10_line_fail_generic_007"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m10_retry",
+   "loc_key": "nar_m10_retry",
+   "source_text": "The Reach closed this attempt unresolved. Retry the operation; the founding approach, the deferred liability, and the Well's three offers remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 10 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m10_cine_opening",
+  "title": "The Choir at Lume Reach, a neighbor that answers",
+  "trigger_id": "nar_m10_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m10_shot_reach",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Lume Reach at evening: pale-ceramic civic frames under charcoal ridges, warm interior light in the inhabited quarters, and the Well's glow standing south of the settlement.",
+    "line_ids": [
+     "nar_m10_line_op_reach_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m10_lume_reach_evening"
+    ],
+    "audio_hook_ids": [
+     "aud_m10_ambience_reach"
+    ]
+   },
+   {
+    "id": "nar_m10_shot_quarantine",
+    "editorial_target_seconds": 7,
+    "visual_direction": "A thin Meridian quarantine line holds at a distance, engineered silhouettes deliberately separate from the settlement's life.",
+    "line_ids": [
+     "nar_m10_line_op_liaison_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m10_quarantine_line"
+    ],
+    "audio_hook_ids": [
+     "aud_m10_ambience_reach"
+    ]
+   },
+   {
+    "id": "nar_m10_shot_liability",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The deferred district's liability site: a dark interface with its status band unlit, the Mission 09 deferral still legible in its stillness.",
+    "line_ids": [
+     "nar_m10_line_op_liability_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m10_standing_liability"
+    ],
+    "audio_hook_ids": [
+     "aud_m10_ambience_reach"
+    ]
+   },
+   {
+    "id": "nar_m10_shot_well",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The Lume Well in close frame, three protocol states shimmering faintly over it in turn; the frame gives none of them precedence.",
+    "line_ids": [
+     "nar_m10_line_op_choice_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m10_lume_well_offers"
+    ],
+    "audio_hook_ids": [
+     "aud_m10_ambience_reach"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m10_lume_reach_evening",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m10_quarantine_line",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m10_standing_liability",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m10_lume_well_offers",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m10_ambience_reach",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

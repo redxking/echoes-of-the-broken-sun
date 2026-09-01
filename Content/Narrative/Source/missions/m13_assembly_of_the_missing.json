@@ -1,0 +1,877 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m13_assembly_of_the_missing",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "AssemblyOfTheMissing",
+  "operation_mode": "CampaignAssemblyOfTheMissing",
+  "phases": [
+   "Inactive",
+   "EstablishPublicRecordReadback",
+   "LinkCrownfallIndex",
+   "ObserveAssembly",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "Assembly of the Missing",
+  "purpose": "Oruun-of-Seven-Stones and a distinct Kharuun verifier establish paired readback at the neutral Meridian and Kharuun public-record interfaces, an ordinary worker raises a Listening Spine within reach of the neutral Crownfall public index, and both then complete one public observation receipt from separate assembly witness sites.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "spine_link_distance_tiles": 3,
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the exact twelve-record ledger; its sites derive from the Mission 11 and Mission 12 plans.",
+   "The public-record readback interfaces are the neutral Meridian and Kharuun sites carried from the Mission 12 plan.",
+   "The Crownfall public index stands at the Mission 11 coalition rally site, and the Listening Spine must rise within three tiles of it.",
+   "Command authority stays bounded to Oruun; the verifier is a distinct Kharuun unit, and readback is established by both at separate interfaces.",
+   "After the durable link exists, Oruun and the verifier move to separate assembly witness sites and complete one public observation receipt.",
+   "The result records public readback, Crownfall linkage, and paired observation only.",
+   "Losing the local core, Oruun, the verifier, or a public interface, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "No authorship or responsibility for the missing is assigned by the assembly.",
+   "No consent or trust between factions or with the missing is established.",
+   "Civilian or survivor state beyond the bounded receipt is not modeled and may not be claimed.",
+   "The observation receipt is not cryptographic proof of anything beyond its own completion.",
+   "No mixed-faction command is created; the Hollow Choir is not made playable.",
+   "The assembly does not resolve the Kharuun memory dispute or the census erasures."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m13_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_readback_established",
+   "runtime_signal": "phase_entered:LinkCrownfallIndex",
+   "prerequisite_ids": [
+    "nar_m13_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_index_linked",
+   "runtime_signal": "phase_entered:ObserveAssembly",
+   "prerequisite_ids": [
+    "nar_m13_evt_readback_established"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_assembly_observed",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m13_evt_index_linked"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m13_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m13_evt_assembly_observed"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m13_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m13_ui_briefing",
+   "loc_key": "nar_m13_ui_briefing",
+   "source_text": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m13_ui_obj_establish_readback",
+    "loc_key": "nar_m13_ui_obj_establish_readback",
+    "source_text": "Establish paired readback at both public-record interfaces.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 99,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m13_ui_obj_link_index",
+    "loc_key": "nar_m13_ui_obj_link_index",
+    "source_text": "Raise a Listening Spine within three tiles of the Crownfall index.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 106,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m13_ui_obj_observe_assembly",
+    "loc_key": "nar_m13_ui_obj_observe_assembly",
+    "source_text": "Complete one public observation receipt from separate witness sites.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 108,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m13_line_op_missing_001",
+   "loc_key": "nar_m13_line_op_missing_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The erased census, the curated quiet, the shape beside us — they converge here. The missing are assembling, and nobody's record admits they exist.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 186,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_op_missing_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_op_receipt_002",
+   "loc_key": "nar_m13_line_op_receipt_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "So we build the admission. Paired readback at both public records, a Spine linked to the Crownfall index, and one observation receipt completed in the open.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 196,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_op_receipt_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_op_witness_003",
+   "loc_key": "nar_m13_line_op_witness_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The verifier and I witness from separate sites. One pair of eyes is a claim. Two, apart, on the public record — that is a fact with structure.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_op_witness_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_op_care_004",
+   "loc_key": "nar_m13_line_op_care_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "We observe. We do not name, number, or claim the missing. The receipt records that an assembly was witnessed. It does not presume to say more.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_op_care_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_readback_001",
+   "loc_key": "nar_m13_line_readback_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_readback_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Paired readback established — Meridian record by me, Kharuun by the verifier. Both channels public, both live.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_readback_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_readback_002",
+   "loc_key": "nar_m13_line_readback_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_readback_established",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the Spine. An ordinary worker raises it within reach of the index. Ordinary hands, on purpose — this link should not need heroes to exist.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_readback_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_linked_001",
+   "loc_key": "nar_m13_line_linked_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_index_linked",
+   "delivery_channel": "command_radio",
+   "source_text": "The Spine stands and the Crownfall index answers it. The link is durable — the assembly now touches a record that outlives tonight.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 171,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_linked_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_linked_002",
+   "loc_key": "nar_m13_line_linked_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_index_linked",
+   "delivery_channel": "command_radio",
+   "source_text": "Witness sites, both of us, separately. Whatever assembles, we watch it onto the public record and add nothing of our own.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 161,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_linked_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_complete_observed_001",
+   "loc_key": "nar_m13_line_complete_observed_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_assembly_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "The receipt is complete: paired observation, both witness sites, one public record. The assembly of the missing is witnessed.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 165,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_complete_observed_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_complete_bounds_002",
+   "loc_key": "nar_m13_line_complete_bounds_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_assembly_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "We did not learn who they are. We made it impossible to say, in public, that no one saw them. Some nights that is the whole of the work.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 176,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_complete_accounts_003",
+   "loc_key": "nar_m13_line_complete_accounts_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_assembly_observed",
+   "delivery_channel": "command_radio",
+   "source_text": "My seven accounts are silent, all together, for the second time I can remember. The first was the quiet we measured. I note the pattern and claim nothing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 194,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_complete_accounts_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_core_001",
+   "loc_key": "nar_m13_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. The assembly goes unwitnessed on the public record tonight.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 125,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_oruun_002",
+   "loc_key": "nar_m13_line_fail_oruun_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off. Half the paired observation is no observation; the receipt cannot complete.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 129,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_oruun_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_verifier_003",
+   "loc_key": "nar_m13_line_fail_verifier_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The verifier is lost. The receipt requires two, apart, and we are one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 110,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_verifier_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_interface_004",
+   "loc_key": "nar_m13_line_fail_interface_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A public interface is destroyed. A witness without a record is only a memory, and we have learned what happens to those.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 160,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_interface_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_terminal_005",
+   "loc_key": "nar_m13_line_fail_terminal_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The assembly disperses unrecorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 108,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_terminal_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_line_fail_generic_006",
+   "loc_key": "nar_m13_line_fail_generic_006",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m13_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The missing keep their own count.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 99,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m13_vo_fail_generic_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m13_seq_opening",
+   "beat": "an_admission_with_structure",
+   "trigger_id": "nar_m13_evt_operation_started",
+   "line_ids": [
+    "nar_m13_line_op_missing_001",
+    "nar_m13_line_op_receipt_002",
+    "nar_m13_line_op_witness_003",
+    "nar_m13_line_op_care_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_seq_readback",
+   "beat": "both_channels_public",
+   "trigger_id": "nar_m13_evt_readback_established",
+   "line_ids": [
+    "nar_m13_line_readback_001",
+    "nar_m13_line_readback_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_seq_linkage",
+   "beat": "ordinary_hands_durable_link",
+   "trigger_id": "nar_m13_evt_index_linked",
+   "line_ids": [
+    "nar_m13_line_linked_001",
+    "nar_m13_line_linked_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m13_seq_completion",
+   "beat": "witnessed_onto_the_record",
+   "trigger_id": "nar_m13_evt_assembly_observed",
+   "line_ids": [
+    "nar_m13_line_complete_observed_001",
+    "nar_m13_line_complete_bounds_002",
+    "nar_m13_line_complete_accounts_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m13_result_added",
+    "loc_key": "nar_m13_result_added",
+    "source_text": "The observation receipt is recorded: paired readback, a durable Crownfall link, and an assembly witnessed from separate sites onto the public record. Who the missing are remains exactly as open as before — but no longer deniable.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m13_result_alreadyrecorded",
+    "loc_key": "nar_m13_result_alreadyrecorded",
+    "source_text": "This receipt was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m13_result_replayconflict",
+    "loc_key": "nar_m13_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m13_result_storagefailure",
+    "loc_key": "nar_m13_result_storagefailure",
+    "source_text": "The receipt completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m13_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m13_fail_oruun",
+    "reason_code": "oruun_lost",
+    "source_condition": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_oruun_002"
+    ]
+   },
+   {
+    "id": "nar_m13_fail_verifier",
+    "reason_code": "verifier_lost",
+    "source_condition": "The distinct Kharuun verifier is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_verifier_003"
+    ]
+   },
+   {
+    "id": "nar_m13_fail_interface",
+    "reason_code": "public_interface_lost",
+    "source_condition": "Either neutral public-record interface is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_interface_004"
+    ]
+   },
+   {
+    "id": "nar_m13_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_terminal_005"
+    ]
+   },
+   {
+    "id": "nar_m13_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m13_line_fail_generic_006"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m13_retry",
+   "loc_key": "nar_m13_retry",
+   "source_text": "The receipt did not complete. Retry the operation; the twelve-record ledger and its derived sites remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 13 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m13_cine_opening",
+  "title": "Assembly of the Missing, witnessed onto the record",
+  "trigger_id": "nar_m13_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m13_shot_convergence",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Three earlier absences render as thin overlays converging on one ground: the census void, the measured quiet, the doubled terrain — edges meeting at the assembly site.",
+    "line_ids": [
+     "nar_m13_line_op_missing_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m13_converging_absences"
+    ],
+    "audio_hook_ids": [
+     "aud_m13_ambience_assembly"
+    ]
+   },
+   {
+    "id": "nar_m13_shot_records",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The two public-record interfaces stand lit in the middle distance, Meridian brackets and Kharuun facets both reading, for once, the same event.",
+    "line_ids": [
+     "nar_m13_line_op_receipt_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m13_public_records"
+    ],
+    "audio_hook_ids": [
+     "aud_m13_ambience_assembly"
+    ]
+   },
+   {
+    "id": "nar_m13_shot_spine",
+    "editorial_target_seconds": 7,
+    "visual_direction": "An ordinary worker raises the Listening Spine near the Crownfall index; the index's magenta-fracture glow steadies as the link takes.",
+    "line_ids": [
+     "nar_m13_line_op_witness_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m13_index_link"
+    ],
+    "audio_hook_ids": [
+     "aud_m13_ambience_assembly"
+    ]
+   },
+   {
+    "id": "nar_m13_shot_witnesses",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Two witness sites far apart, each holding one still figure; between them, the assembly ground waits, almost occupied.",
+    "line_ids": [
+     "nar_m13_line_op_care_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m13_separate_witnesses"
+    ],
+    "audio_hook_ids": [
+     "aud_m13_ambience_assembly"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m13_converging_absences",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m13_public_records",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m13_index_link",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m13_separate_witnesses",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m13_ambience_assembly",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

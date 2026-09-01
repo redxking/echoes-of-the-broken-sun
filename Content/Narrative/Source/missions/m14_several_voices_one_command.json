@@ -1,0 +1,1065 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m14_several_voices_one_command",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "SeveralVoicesOneCommand",
+  "operation_mode": "CampaignSeveralVoicesOneCommand",
+  "phases": [
+   "Inactive",
+   "ResearchHeldAlternatives",
+   "ResolveIncompatibleVoices",
+   "ResearchSharedResolution",
+   "AnchorCrisis",
+   "HoldSharedResolution",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "Several Voices, One Command",
+  "purpose": "Neme holds one bounded Hollow Choir force under local authority: a protected Soldier voice researches Held Alternatives and resolves as Possible at its inherited site, a protected Heavy voice remains Manifest at a separate site, Shared Resolution is researched over both, a worker raises a Phase Anchor at the Crownfall crisis site, and the whole contract holds for 160 fixed ticks.",
+  "player_pov": "neme_command_authority",
+  "command_faction": "hollow_choir",
+  "crisis_hold_ticks": 160,
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the exact thirteen-record ledger, and its sites derive from the prior plans.",
+   "Command is granted only over a bounded Hollow Choir force; no other faction is commandable.",
+   "The protected Soldier voice must research Held Alternatives and resolve as Possible at its inherited site.",
+   "The protected Heavy voice must remain Manifest at its separate inherited site while the Soldier resolves as Possible.",
+   "Shared Resolution is unavailable until the incompatible identities and placements are simultaneously authoritative.",
+   "A worker raises a Phase Anchor at the Crownfall crisis site, and the crisis window holds for exactly 160 fixed ticks.",
+   "Any breach after the hold begins — a protected voice, Neme, the research loom, the anchor, the local core, or a required site — fails the operation irreversibly, even if the visible state is repaired."
+  ],
+  "prohibited_inferences": [
+   "Completion does not decide the Choir's final fate.",
+   "No unified permanent Choir identity is established; the incompatibility is held, not resolved away.",
+   "The crisis contract's completion does not prove broad faction balance.",
+   "Neme's command is local and bounded; no Choir-wide authority is asserted.",
+   "The held window does not substitute for Mission 15's endings.",
+   "No claim about what the voices experience is established, only where they stood and what they resolved."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_neme",
+   "display_name": "Neme",
+   "faction_id": "hollow_choir",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m14_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_alternatives_researched",
+   "runtime_signal": "phase_entered:ResolveIncompatibleVoices",
+   "prerequisite_ids": [
+    "nar_m14_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_voices_resolved",
+   "runtime_signal": "phase_entered:ResearchSharedResolution",
+   "prerequisite_ids": [
+    "nar_m14_evt_alternatives_researched"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_resolution_researched",
+   "runtime_signal": "phase_entered:AnchorCrisis",
+   "prerequisite_ids": [
+    "nar_m14_evt_voices_resolved"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_crisis_anchored",
+   "runtime_signal": "phase_entered:HoldSharedResolution",
+   "prerequisite_ids": [
+    "nar_m14_evt_resolution_researched"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_resolution_held",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m14_evt_crisis_anchored"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m14_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m14_evt_resolution_held"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m14_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m14_ui_briefing",
+   "loc_key": "nar_m14_ui_briefing",
+   "source_text": "The Choir asks to be commanded, once, precisely: a Soldier voice resolving Possible, a Heavy voice holding Manifest, Neme at the command site, and a Phase Anchor at the crisis. Research both looms, place every voice exactly, and hold the contract for one hundred sixty fixed ticks.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m14_ui_obj_research_alternatives",
+    "loc_key": "nar_m14_ui_obj_research_alternatives",
+    "source_text": "Research Held Alternatives on the protected Soldier voice.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 98,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m14_ui_obj_resolve_voices",
+    "loc_key": "nar_m14_ui_obj_resolve_voices",
+    "source_text": "Resolve Possible and Manifest at their separate inherited sites.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 104,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m14_ui_obj_research_resolution",
+    "loc_key": "nar_m14_ui_obj_research_resolution",
+    "source_text": "Research Shared Resolution over the incompatible identities.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 100,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m14_ui_obj_anchor_crisis",
+    "loc_key": "nar_m14_ui_obj_anchor_crisis",
+    "source_text": "Raise the Phase Anchor at the Crownfall crisis site.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 92,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m14_ui_obj_hold_resolution",
+    "loc_key": "nar_m14_ui_obj_hold_resolution",
+    "source_text": "Hold every protected element for the fixed crisis window.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 97,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m14_line_op_voices_001",
+   "loc_key": "nar_m14_line_op_voices_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "We are several voices. Today we require one command, and we have selected yours through me. This is not surrender. It is an experiment with exact terms.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 192,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_op_voices_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_op_terms_002",
+   "loc_key": "nar_m14_line_op_terms_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "One voice will become Possible. One will remain Manifest. The two states do not agree. They will stand in disagreement, in the open, at their own sites.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 192,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_op_terms_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_op_loom_003",
+   "loc_key": "nar_m14_line_op_loom_003",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The research loom holds what we could not decide alone. Begin with Held Alternatives. The Soldier voice selected this procedure from the alternatives it was offered — I report the selection, and leave the naming of it to your record-keepers.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 281,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_op_loom_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_op_precision_004",
+   "loc_key": "nar_m14_line_op_precision_004",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Every placement is exact. Every protection is literal. The contract does not forgive, and we did not write it to.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 153,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_op_precision_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_alternatives_001",
+   "loc_key": "nar_m14_line_alternatives_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_alternatives_researched",
+   "delivery_channel": "command_radio",
+   "source_text": "Held Alternatives is complete. The Soldier voice now carries its unrealized selves openly. It reports the sensation as: crowded, and clearer.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 181,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_alternatives_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_alternatives_002",
+   "loc_key": "nar_m14_line_alternatives_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_alternatives_researched",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the resolutions. Possible to its site; Manifest to its own. Distance is part of the honesty.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 136,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_alternatives_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_resolved_001",
+   "loc_key": "nar_m14_line_resolved_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_voices_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "Both voices stand resolved and placed: one Possible, one Manifest, incompatible and simultaneous. The condition we could never hold alone is holding.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 189,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_resolved_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_resolved_002",
+   "loc_key": "nar_m14_line_resolved_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_voices_resolved",
+   "delivery_channel": "command_radio",
+   "source_text": "Shared Resolution next. It was unavailable until this exact arrangement existed. Now the loom will accept it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 149,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_resolved_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_resolution_001",
+   "loc_key": "nar_m14_line_resolution_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_resolution_researched",
+   "delivery_channel": "command_radio",
+   "source_text": "Shared Resolution is researched. Several voices, one command, and the command is: remain yourselves, together. We are testing whether that is possible.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 191,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_resolution_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_resolution_002",
+   "loc_key": "nar_m14_line_resolution_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_resolution_researched",
+   "delivery_channel": "command_radio",
+   "source_text": "The Phase Anchor now, at the crisis site. An ordinary worker raises it. The Crownfall does not distinguish between heroic and ordinary hands, and neither do we.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 200,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_resolution_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_anchored_001",
+   "loc_key": "nar_m14_line_anchored_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_crisis_anchored",
+   "delivery_channel": "command_radio",
+   "source_text": "The anchor is complete and the window opens: one hundred sixty fixed ticks. From this tick, every protection is irreversible. Repair does not restore a broken contract.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 208,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_anchored_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_anchored_002",
+   "loc_key": "nar_m14_line_anchored_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_crisis_anchored",
+   "delivery_channel": "command_radio",
+   "source_text": "Hold. Everything. Exactly. Where. It. Stands.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 85,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_anchored_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_complete_held_001",
+   "loc_key": "nar_m14_line_complete_held_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_resolution_held",
+   "delivery_channel": "command_radio",
+   "source_text": "The window closed with the contract intact. Two incompatible identities held under one command for the full crisis, and nothing protected was lost.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 187,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_complete_held_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_complete_bounds_002",
+   "loc_key": "nar_m14_line_complete_bounds_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_resolution_held",
+   "delivery_channel": "command_radio",
+   "source_text": "This does not decide our fate. It establishes one fact: we can be commanded without being collapsed. The fact is now in your record and ours.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 181,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_complete_neme_003",
+   "loc_key": "nar_m14_line_complete_neme_003",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_resolution_held",
+   "delivery_channel": "command_radio",
+   "source_text": "I selected many phrasings for this moment. The accurate one is: thank you for holding still with us.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 140,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_complete_neme_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_core_001",
+   "loc_key": "nar_m14_line_fail_core_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The local core is lost. The contract had exact terms, and this was outside them.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 120,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_voice_002",
+   "loc_key": "nar_m14_line_fail_voice_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A protected voice is gone. The disagreement we were holding has lost a party, and the experiment with it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 145,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_voice_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_neme_003",
+   "loc_key": "nar_m14_line_fail_neme_003",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am removed from the command site. The one command has no voice to carry it; the several remain, uncommanded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_neme_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_loom_004",
+   "loc_key": "nar_m14_line_fail_loom_004",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The research loom is destroyed. What we could not decide alone is again undecidable.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 124,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_loom_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_contract_005",
+   "loc_key": "nar_m14_line_fail_contract_005",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The crisis contract is breached. The terms were exact, and exactness was the point. The operation fails, permanently, as written.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 169,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_contract_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_terminal_006",
+   "loc_key": "nar_m14_line_fail_terminal_006",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement is terminal. The crisis proceeds without its anchor.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 107,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_terminal_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_line_fail_generic_007",
+   "loc_key": "nar_m14_line_fail_generic_007",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m14_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The voices disperse to their separate certainties.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 116,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m14_vo_fail_generic_007",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m14_seq_opening",
+   "beat": "an_experiment_with_exact_terms",
+   "trigger_id": "nar_m14_evt_operation_started",
+   "line_ids": [
+    "nar_m14_line_op_voices_001",
+    "nar_m14_line_op_terms_002",
+    "nar_m14_line_op_loom_003",
+    "nar_m14_line_op_precision_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_seq_alternatives",
+   "beat": "crowded_and_clearer",
+   "trigger_id": "nar_m14_evt_alternatives_researched",
+   "line_ids": [
+    "nar_m14_line_alternatives_001",
+    "nar_m14_line_alternatives_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_seq_resolutions",
+   "beat": "incompatible_and_simultaneous",
+   "trigger_id": "nar_m14_evt_voices_resolved",
+   "line_ids": [
+    "nar_m14_line_resolved_001",
+    "nar_m14_line_resolved_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_seq_shared",
+   "beat": "remain_yourselves_together",
+   "trigger_id": "nar_m14_evt_resolution_researched",
+   "line_ids": [
+    "nar_m14_line_resolution_001",
+    "nar_m14_line_resolution_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_seq_anchored",
+   "beat": "irreversible_from_this_tick",
+   "trigger_id": "nar_m14_evt_crisis_anchored",
+   "line_ids": [
+    "nar_m14_line_anchored_001",
+    "nar_m14_line_anchored_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m14_seq_completion",
+   "beat": "commanded_not_collapsed",
+   "trigger_id": "nar_m14_evt_resolution_held",
+   "line_ids": [
+    "nar_m14_line_complete_held_001",
+    "nar_m14_line_complete_bounds_002",
+    "nar_m14_line_complete_neme_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m14_result_added",
+    "loc_key": "nar_m14_result_added",
+    "source_text": "The crisis contract is recorded complete: both incompatible identities held at their sites, Neme at command, the anchor standing, the full window held. What this means for the Choir's fate is exactly what Mission 15 has not yet decided.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m14_result_alreadyrecorded",
+    "loc_key": "nar_m14_result_alreadyrecorded",
+    "source_text": "This contract was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m14_result_replayconflict",
+    "loc_key": "nar_m14_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m14_result_storagefailure",
+    "loc_key": "nar_m14_result_storagefailure",
+    "source_text": "The window held but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m14_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_voice",
+    "reason_code": "protected_voice_lost",
+    "source_condition": "The protected Possible or Manifest voice is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_voice_002"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_neme",
+    "reason_code": "neme_lost",
+    "source_condition": "Neme is destroyed or leaves the command site under contract.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_neme_003"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_loom",
+    "reason_code": "research_loom_lost",
+    "source_condition": "The research loom is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_loom_004"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_contract",
+    "reason_code": "crisis_contract_breached",
+    "source_condition": "Any protected element or required site is breached after the hold begins; the failure is irreversible even if repaired.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_contract_005"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_terminal_006"
+    ]
+   },
+   {
+    "id": "nar_m14_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m14_line_fail_generic_007"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m14_retry",
+   "loc_key": "nar_m14_retry",
+   "source_text": "The contract did not hold. Retry the operation; the thirteen-record ledger and the exact terms remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 14 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m14_cine_opening",
+  "title": "Several Voices, One Command, held in disagreement",
+  "trigger_id": "nar_m14_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m14_shot_choir",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A Hollow Choir force stands in formation that is almost a formation: offset duplicates, luminous edges, each unit accompanied by the faint suggestion of where else it might stand.",
+    "line_ids": [
+     "nar_m14_line_op_voices_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m14_choir_formation"
+    ],
+    "audio_hook_ids": [
+     "aud_m14_ambience_crisis"
+    ]
+   },
+   {
+    "id": "nar_m14_shot_sites",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Two inherited sites in one wide frame, far apart; between them the ground carries both their lights without mixing them.",
+    "line_ids": [
+     "nar_m14_line_op_terms_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m14_separate_sites"
+    ],
+    "audio_hook_ids": [
+     "aud_m14_ambience_crisis"
+    ]
+   },
+   {
+    "id": "nar_m14_shot_loom",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The research loom in close frame: a Choir structure whose geometry contradicts itself deliberately, holding threads of unresolved decisions.",
+    "line_ids": [
+     "nar_m14_line_op_loom_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m14_research_loom"
+    ],
+    "audio_hook_ids": [
+     "aud_m14_ambience_crisis"
+    ]
+   },
+   {
+    "id": "nar_m14_shot_crisis",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The Crownfall crisis site, magenta-fracture intensity rising along its edges; the anchor's empty socket waits at its center.",
+    "line_ids": [
+     "nar_m14_line_op_precision_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m14_crisis_socket"
+    ],
+    "audio_hook_ids": [
+     "aud_m14_ambience_crisis"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m14_choir_formation",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m14_separate_sites",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m14_research_loom",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m14_crisis_socket",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m14_ambience_crisis",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

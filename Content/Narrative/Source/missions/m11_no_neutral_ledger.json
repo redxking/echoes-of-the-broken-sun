@@ -1,0 +1,1214 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m11_no_neutral_ledger",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "NoNeutralLedger",
+  "operation_mode": "CampaignNoNeutralLedger",
+  "phases": [
+   "Inactive",
+   "SecureInheritedRoute",
+   "IntegrateDistrictContributions",
+   "AttestEvidenceChannels",
+   "ApplyRecordedProtocol",
+   "RallyCoalition",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "No Neutral Ledger",
+  "purpose": "Oruun-of-Seven-Stones turns the exact ten-record campaign ledger into one of twenty-seven explicit plans: secure the founding doctrine's inherited route, integrate the two powered districts' contributions, attest both neutral evidence channels, apply only the recorded Lume protocol, and rally the coalition at its public site.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "route_site_by_founding_doctrine": {
+   "harvest": {
+    "x": 18,
+    "y": 30
+   },
+   "preserve": {
+    "x": 32,
+    "y": 30
+   },
+   "reshape": {
+    "x": 46,
+    "y": 30
+   }
+  },
+  "district_contribution_sites": {
+   "life_support": {
+    "x": 18,
+    "y": 35
+   },
+   "transit": {
+    "x": 32,
+    "y": 33
+   },
+   "archive": {
+    "x": 46,
+    "y": 35
+   }
+  },
+  "meridian_evidence_site": {
+   "x": 26,
+   "y": 43
+  },
+  "kharuun_evidence_site": {
+   "x": 38,
+   "y": 43
+  },
+  "future_well_site": {
+   "x": 32,
+   "y": 49
+  },
+  "rally_site_by_recorded_protocol": {
+   "harvest": {
+    "x": 18,
+    "y": 56
+   },
+   "preserve": {
+    "x": 32,
+    "y": 56
+   },
+   "reshape": {
+    "x": 32,
+    "y": 43
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the exact ten-record ledger: the founding doctrine selects the route, the Mission 09 allocation selects the two contributing districts, and the Mission 10 protocol is the only one that may be applied.",
+   "The twenty-seven plans are explicit combinations of doctrine, districts, and protocol; no hidden trust score or survivor roster exists.",
+   "The inherited route stands at tile 18,30 under Harvest doctrine, 32,30 under Preserve, or 46,30 under Reshape.",
+   "District contributions integrate at tile 18,35 for Life Support, 32,33 for Transit, and 46,35 for Archive; only the two powered districts contribute.",
+   "The neutral Meridian evidence interface stands at tile 26,43 and the Kharuun interface at tile 38,43; both must be attested by Oruun and a distinct Kharuun witness.",
+   "Applying a protocol that conflicts with the Mission 10 record fails the attempt, and the Reshape rally window can expire.",
+   "Losing the local core, Oruun, the Waystone, the ledger witness, the Well, or a public interface, or reaching a terminal engagement outcome, fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "No mixed-faction command is established; the coalition is a bounded local assembly.",
+   "The Hollow Choir does not become playable and takes no commanded part.",
+   "No numeric faction trust exists or may be implied.",
+   "The coalition's composition beyond the assembled units is not modeled; no optional survivor roster exists.",
+   "Attestation records that evidence was witnessed, not that it is true.",
+   "The applied protocol carries the Mission 10 record's authority, not a fresh judgment of its rightness."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m11_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_route_secured",
+   "runtime_signal": "phase_entered:IntegrateDistrictContributions",
+   "prerequisite_ids": [
+    "nar_m11_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_districts_integrated",
+   "runtime_signal": "phase_entered:AttestEvidenceChannels",
+   "prerequisite_ids": [
+    "nar_m11_evt_route_secured"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_evidence_attested",
+   "runtime_signal": "phase_entered:ApplyRecordedProtocol",
+   "prerequisite_ids": [
+    "nar_m11_evt_districts_integrated"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_protocol_applied",
+   "runtime_signal": "phase_entered:RallyCoalition",
+   "prerequisite_ids": [
+    "nar_m11_evt_evidence_attested"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_coalition_rallied",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m11_evt_protocol_applied"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m11_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m11_evt_coalition_rallied"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m11_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m11_ui_briefing",
+   "loc_key": "nar_m11_ui_briefing",
+   "source_text": "Ten records, no neutral reading. The doctrine picks our route, the allocation our contributors, the Lume protocol itself. Walk it exactly: secure, integrate, attest both neutral interfaces, apply only what was recorded, and rally the coalition where the protocol says.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m11_ui_obj_secure_route",
+    "loc_key": "nar_m11_ui_obj_secure_route",
+    "source_text": "Secure the founding doctrine's inherited route.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 87,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m11_ui_obj_integrate_districts",
+    "loc_key": "nar_m11_ui_obj_integrate_districts",
+    "source_text": "Integrate both powered districts' contributions.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 88,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m11_ui_obj_attest_evidence",
+    "loc_key": "nar_m11_ui_obj_attest_evidence",
+    "source_text": "Attest both neutral evidence interfaces with distinct witnesses.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 104,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m11_ui_obj_apply_protocol",
+    "loc_key": "nar_m11_ui_obj_apply_protocol",
+    "source_text": "Apply only the recorded Lume protocol at the Well.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 90,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m11_ui_obj_rally_coalition",
+    "loc_key": "nar_m11_ui_obj_rally_coalition",
+    "source_text": "Rally the coalition at the protocol's public site.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 90,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m11_line_op_ledger_001",
+   "loc_key": "nar_m11_line_op_ledger_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Ten records in the ledger, and every one of them takes a side. There is no neutral reading left. There is only walking what was written, in the open.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 189,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_op_ledger_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_op_plans_002",
+   "loc_key": "nar_m11_line_op_plans_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Doctrine, districts, protocol: twenty-seven ways those combine, and ours is fixed by what we actually did. My accounts appreciate the honesty of arithmetic.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 196,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_op_plans_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_op_witness_003",
+   "loc_key": "nar_m11_line_op_witness_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Two evidence interfaces, two witnesses. I attest one; a second Kharuun witness attests the other. Nobody attests their own claim today.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 175,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_op_witness_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_op_exact_004",
+   "loc_key": "nar_m11_line_op_exact_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "And at the Well, we apply the Lume protocol as recorded. Not improved. Not corrected. As recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 138,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_op_exact_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_route_001",
+   "loc_key": "nar_m11_line_route_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_route_secured",
+   "delivery_channel": "command_radio",
+   "source_text": "The inherited route is secured. The doctrine that chose it is three missions old and still making our decisions. That is what a ledger is for.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_route_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_route_002",
+   "loc_key": "nar_m11_line_route_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_route_secured",
+   "delivery_channel": "command_radio",
+   "source_text": "District contributions next. The two the allocation powered owe the coalition their share; the deferred one owes nothing and gives nothing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 179,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_route_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_districts_001",
+   "loc_key": "nar_m11_line_districts_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_districts_integrated",
+   "delivery_channel": "command_radio",
+   "source_text": "Both contributions are integrated. The deferred district's absence is itself an entry — the ledger keeps what we chose not to power.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 172,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_districts_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_districts_002",
+   "loc_key": "nar_m11_line_districts_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_districts_integrated",
+   "delivery_channel": "command_radio",
+   "source_text": "To the evidence channels. Both interfaces, both witnesses, in the open, where either faction can read the attestation.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 158,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_districts_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_evidence_001",
+   "loc_key": "nar_m11_line_evidence_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_evidence_attested",
+   "delivery_channel": "command_radio",
+   "source_text": "Both channels attested — Meridian interface by me, Kharuun by the second witness. The record now says witnessed, which is all attestation ever says.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 188,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_evidence_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_evidence_002",
+   "loc_key": "nar_m11_line_evidence_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_evidence_attested",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the Well. The recorded protocol, exactly, and nothing beside it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 108,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_evidence_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_protocol_001",
+   "loc_key": "nar_m11_line_protocol_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_protocol_applied",
+   "delivery_channel": "command_radio",
+   "source_text": "The recorded protocol is applied. The Well accepted what Lume Reach committed, because it is the same commitment, kept.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 159,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_protocol_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_protocol_002",
+   "loc_key": "nar_m11_line_protocol_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_protocol_applied",
+   "delivery_channel": "command_radio",
+   "source_text": "Rally the coalition at the protocol's public site. An assembly that would not gather in the open is not one I would trust to hold.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 170,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_protocol_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_complete_rally_001",
+   "loc_key": "nar_m11_line_complete_rally_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_coalition_rallied",
+   "delivery_channel": "command_radio",
+   "source_text": "The coalition stands rallied at the public site. Local, bounded, and assembled over an honest ledger.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_complete_rally_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_complete_bounds_002",
+   "loc_key": "nar_m11_line_complete_bounds_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_coalition_rallied",
+   "delivery_channel": "command_radio",
+   "source_text": "This is not a unified command, and no one here pretends otherwise. It is two factions standing where both can see the same records. Today, that is enough.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 194,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_complete_bounds_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_complete_accounts_003",
+   "loc_key": "nar_m11_line_complete_accounts_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_coalition_rallied",
+   "delivery_channel": "command_radio",
+   "source_text": "My accounts disagree about what happens next. All seven agree about what just happened. I will take that ratio.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 151,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_complete_accounts_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_core_001",
+   "loc_key": "nar_m11_line_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. The ledger keeps its records and loses its walker.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 116,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_oruun_002",
+   "loc_key": "nar_m11_line_fail_oruun_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "I am cut off. An attestation chain with a missing witness is not one; the attempt ends.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 127,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_oruun_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_waystone_003",
+   "loc_key": "nar_m11_line_fail_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is destroyed. The inherited route loses its anchor, and the plan its footing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 130,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_witness_004",
+   "loc_key": "nar_m11_line_fail_witness_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The ledger witness is lost. Half the attestation cannot stand for the whole. We stop.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 125,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_witness_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_well_005",
+   "loc_key": "nar_m11_line_fail_well_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Well is lost. The recorded protocol has nowhere left to be applied.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 111,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_well_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_interface_006",
+   "loc_key": "nar_m11_line_fail_interface_006",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A public evidence interface is destroyed. Evidence nobody can read is not evidence; the channel is broken.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 146,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_interface_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_conflict_007",
+   "loc_key": "nar_m11_line_fail_conflict_007",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A conflicting protocol was applied. The ledger does not bend to preference — the attempt is void, as it should be.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 154,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_conflict_007",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_window_008",
+   "loc_key": "nar_m11_line_fail_window_008",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The reshape window expired with the rally unmade. The ground kept its own schedule.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 123,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_window_008",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_terminal_009",
+   "loc_key": "nar_m11_line_fail_terminal_009",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. The coalition does not assemble under a falling sky.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 126,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_terminal_009",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_line_fail_generic_010",
+   "loc_key": "nar_m11_line_fail_generic_010",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m11_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The ledger waits, unwalked.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 93,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m11_vo_fail_generic_010",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m11_seq_opening",
+   "beat": "arithmetic_of_ten_records",
+   "trigger_id": "nar_m11_evt_operation_started",
+   "line_ids": [
+    "nar_m11_line_op_ledger_001",
+    "nar_m11_line_op_plans_002",
+    "nar_m11_line_op_witness_003",
+    "nar_m11_line_op_exact_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_seq_route",
+   "beat": "doctrine_still_deciding",
+   "trigger_id": "nar_m11_evt_route_secured",
+   "line_ids": [
+    "nar_m11_line_route_001",
+    "nar_m11_line_route_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_seq_districts",
+   "beat": "absence_is_an_entry",
+   "trigger_id": "nar_m11_evt_districts_integrated",
+   "line_ids": [
+    "nar_m11_line_districts_001",
+    "nar_m11_line_districts_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_seq_evidence",
+   "beat": "witnessed_not_true",
+   "trigger_id": "nar_m11_evt_evidence_attested",
+   "line_ids": [
+    "nar_m11_line_evidence_001",
+    "nar_m11_line_evidence_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_seq_protocol",
+   "beat": "commitment_kept",
+   "trigger_id": "nar_m11_evt_protocol_applied",
+   "line_ids": [
+    "nar_m11_line_protocol_001",
+    "nar_m11_line_protocol_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m11_seq_completion",
+   "beat": "open_assembly",
+   "trigger_id": "nar_m11_evt_coalition_rallied",
+   "line_ids": [
+    "nar_m11_line_complete_rally_001",
+    "nar_m11_line_complete_bounds_002",
+    "nar_m11_line_complete_accounts_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m11_result_added",
+    "loc_key": "nar_m11_result_added",
+    "source_text": "The coalition assembly is recorded: route secured, both contributions integrated, both channels attested, the recorded protocol applied, and the rally held in the open. What the coalition becomes is not in this record.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m11_result_alreadyrecorded",
+    "loc_key": "nar_m11_result_alreadyrecorded",
+    "source_text": "This assembly was already in the campaign ledger. The replay changes nothing recorded.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m11_result_replayconflict",
+    "loc_key": "nar_m11_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m11_result_storagefailure",
+    "loc_key": "nar_m11_result_storagefailure",
+    "source_text": "The rally completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m11_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_oruun",
+    "reason_code": "oruun_lost",
+    "source_condition": "Oruun-of-Seven-Stones is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_oruun_002"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_waystone",
+    "reason_code": "waystone_lost",
+    "source_condition": "The Waystone is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_waystone_003"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_witness",
+    "reason_code": "ledger_witness_lost",
+    "source_condition": "The distinct Kharuun ledger witness is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_witness_004"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_well",
+    "reason_code": "future_well_lost",
+    "source_condition": "The Future Well is destroyed before the recorded protocol is applied.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_well_005"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_interface",
+    "reason_code": "public_interface_lost",
+    "source_condition": "Either neutral public evidence interface is destroyed.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_interface_006"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_conflict",
+    "reason_code": "conflicting_protocol_applied",
+    "source_condition": "A protocol conflicting with the Mission 10 record is applied at the Well.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_conflict_007"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_window",
+    "reason_code": "reshape_window_expired",
+    "source_condition": "The Reshape rally window expires before the coalition rallies.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_window_008"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_terminal_009"
+    ]
+   },
+   {
+    "id": "nar_m11_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m11_line_fail_generic_010"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m11_retry",
+   "loc_key": "nar_m11_retry",
+   "source_text": "The assembly did not complete. Retry the operation; the ten-record ledger and its one exact plan remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 11 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m11_cine_opening",
+  "title": "No Neutral Ledger, twenty-seven readings and one walk",
+  "trigger_id": "nar_m11_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m11_shot_ledger",
+    "editorial_target_seconds": 9,
+    "visual_direction": "A ledger surface fills the frame: ten entries in three hands, each one annotated by both factions; no entry stands unmarked.",
+    "line_ids": [
+     "nar_m11_line_op_ledger_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m11_ten_records"
+    ],
+    "audio_hook_ids": [
+     "aud_m11_ambience_ledger"
+    ]
+   },
+   {
+    "id": "nar_m11_shot_lattice",
+    "editorial_target_seconds": 8,
+    "visual_direction": "A lattice of twenty-seven plan lines resolves over the district map; twenty-six dim as the recorded combination brightens.",
+    "line_ids": [
+     "nar_m11_line_op_plans_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m11_plan_lattice"
+    ],
+    "audio_hook_ids": [
+     "aud_m11_ambience_ledger"
+    ]
+   },
+   {
+    "id": "nar_m11_shot_interfaces",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The two neutral evidence interfaces face each other across open ground, Meridian rectangular brackets west, Kharuun paired facets east.",
+    "line_ids": [
+     "nar_m11_line_op_witness_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m11_paired_interfaces"
+    ],
+    "audio_hook_ids": [
+     "aud_m11_ambience_ledger"
+    ]
+   },
+   {
+    "id": "nar_m11_shot_well",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The Well south of the interfaces, its committed protocol state steady; the frame holds it without ceremony.",
+    "line_ids": [
+     "nar_m11_line_op_exact_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m11_recorded_well"
+    ],
+    "audio_hook_ids": [
+     "aud_m11_ambience_ledger"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m11_ten_records",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m11_plan_lattice",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m11_paired_interfaces",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m11_recorded_well",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m11_ambience_ledger",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

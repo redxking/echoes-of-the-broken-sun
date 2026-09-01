@@ -1,0 +1,1295 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m15_the_broken_sun",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "TheBrokenSun",
+  "operation_mode": "CampaignTheBrokenSun",
+  "phases": [
+   "Inactive",
+   "SecureCrownfallApproach",
+   "AssembleAccord",
+   "ChooseFinalResolution",
+   "RaiseResolutionConduit",
+   "HoldFinalResolution",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "The Broken Sun",
+  "purpose": "Neme commands the local Hollow Choir through the Crownfall's final contract while Mara, Oruun, and Talar stand protected as witnesses: secure the approach with an Approach Anchor, assemble the three-faction accord, confirm one eligible ending twice, raise that ending's distinct Resolution Conduit, and hold the exact contract for its route-dependent duration.",
+  "player_pov": "neme_command_authority",
+  "command_faction": "hollow_choir",
+  "base_hold_ticks_by_deferred_district": {
+   "life_support": 320,
+   "transit": 280,
+   "archive": 240
+  },
+  "hold_ticks_delta_by_resolution": {
+   "restoration": 80,
+   "controlled_stabilization": 0,
+   "extinguishment": 40,
+   "open_evolution": 120
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the exact fourteen-record ledger and retains twenty-seven plans from the doctrine, powered-district, and Lume-protocol axes.",
+   "The earned endings are an explicit subset: Controlled Stabilization is always available; Restoration requires the Preserve protocol with Life Support powered; Extinguishment requires Harvest doctrine or protocol; Open Evolution requires Reshape doctrine or protocol.",
+   "The accord sites, approach anchor, and final convergence derive from the prior plans, and the ordered objectives can never be satisfied by one structure.",
+   "The selected ending must be confirmed twice before its Resolution Conduit may rise, and each ending's conduit stands at a distinct convergence offset.",
+   "The hold duration is route-dependent: a base of 320, 280, or 240 fixed ticks by deferred district, plus 80 for Restoration, 0 for Controlled Stabilization, 40 for Extinguishment, or 120 for Open Evolution.",
+   "The force, all three witnesses, the local core, and the nonterminal world are protected from the first fixed step; the anchor, accord, eligibility, and conduit each become irreversible in turn.",
+   "Any applicable breach fails irreversibly, and success records only the selected ending and its availability context."
+  ],
+  "prohibited_inferences": [
+   "The unchosen endings do not occur and their consequences remain unresolved.",
+   "No ending is the canonical or correct resolution; the ledger records which was earned and selected, not which was right.",
+   "Wider social consequences of the selected ending are not modeled and may not be claimed.",
+   "The witnesses' presence does not assert their factions' consent to the selected ending.",
+   "The Choir's fate beyond the selected ending's recorded contract is not established.",
+   "Completion does not turn the campaign's chain of bounded records into a claim of moral resolution."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_neme",
+   "display_name": "Neme",
+   "faction_id": "hollow_choir",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_mara_vey",
+   "display_name": "Mara Vey",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "protected_neutral_witness",
+   "command_authority": false,
+   "delivery_channel": "operations_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "protected_neutral_witness",
+   "command_authority": false,
+   "delivery_channel": "cross_faction_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  },
+  {
+   "id": "spk_talar_venn",
+   "display_name": "Talar Venn",
+   "faction_id": "meridian_compact",
+   "role_in_mission": "protected_record_keeper",
+   "command_authority": false,
+   "delivery_channel": "operations_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m15_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_approach_secured",
+   "runtime_signal": "phase_entered:AssembleAccord",
+   "prerequisite_ids": [
+    "nar_m15_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_accord_assembled",
+   "runtime_signal": "phase_entered:ChooseFinalResolution",
+   "prerequisite_ids": [
+    "nar_m15_evt_approach_secured"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_resolution_selected",
+   "runtime_signal": "phase_entered:RaiseResolutionConduit",
+   "prerequisite_ids": [
+    "nar_m15_evt_accord_assembled"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_conduit_raised",
+   "runtime_signal": "phase_entered:HoldFinalResolution",
+   "prerequisite_ids": [
+    "nar_m15_evt_resolution_selected"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_resolution_held",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m15_evt_conduit_raised"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m15_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m15_evt_resolution_held"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m15_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m15_ui_briefing",
+   "loc_key": "nar_m15_ui_briefing",
+   "source_text": "The Crownfall is the last contract. Secure the approach, assemble all three accords with the witnesses protected, confirm the earned ending twice — it cannot be unsaid — raise its Resolution Conduit, and hold everything the contract names until the sky believes you.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 300,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m15_ui_obj_secure_approach",
+    "loc_key": "nar_m15_ui_obj_secure_approach",
+    "source_text": "Secure the Crownfall approach with an Approach Anchor.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 94,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m15_ui_obj_assemble_accord",
+    "loc_key": "nar_m15_ui_obj_assemble_accord",
+    "source_text": "Assemble the Meridian, Kharuun, and Choir accords at their witnessed sites.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 115,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m15_ui_obj_choose_resolution",
+    "loc_key": "nar_m15_ui_obj_choose_resolution",
+    "source_text": "Confirm one eligible ending twice.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 74,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m15_ui_obj_raise_conduit",
+    "loc_key": "nar_m15_ui_obj_raise_conduit",
+    "source_text": "Raise the selected ending's Resolution Conduit.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 87,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m15_ui_obj_hold_resolution",
+    "loc_key": "nar_m15_ui_obj_hold_resolution",
+    "source_text": "Hold the final contract for its full route-dependent duration.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 102,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m15_line_op_crownfall_001",
+   "loc_key": "nar_m15_line_op_crownfall_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "This is the Crownfall. Every record your campaign kept is now load-bearing. We advised exact phrasing from the beginning; today you learn why.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_op_crownfall_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_op_mara_002",
+   "loc_key": "nar_m15_line_op_mara_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m15_evt_operation_started",
+   "delivery_channel": "operations_radio",
+   "source_text": "Witness station one, standing. I spent fifteen operations making uncertainty governable. I am here to watch what that bought, not to steer it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 182,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_op_mara_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_op_oruun_003",
+   "loc_key": "nar_m15_line_op_oruun_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m15_evt_operation_started",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "Witness station two. My accounts have argued the whole way here, and they have agreed to watch the ending together. All seven. That has never happened.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 191,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_op_oruun_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_op_talar_004",
+   "loc_key": "nar_m15_line_op_talar_004",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m15_evt_operation_started",
+   "delivery_channel": "operations_radio",
+   "source_text": "The public record is open and I will keep it faithfully. Whatever is selected, the register will say what was done, by whom, under which earned eligibility. Nothing more, and absolutely nothing less.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 239,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_op_talar_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_approach_001",
+   "loc_key": "nar_m15_line_approach_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_approach_secured",
+   "delivery_channel": "command_radio",
+   "source_text": "The Approach Anchor is bound and irreversible. The Crownfall accepts that we intend to finish. From here, intent is a structural property.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 178,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_approach_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_approach_002",
+   "loc_key": "nar_m15_line_approach_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_approach_secured",
+   "delivery_channel": "command_radio",
+   "source_text": "Assemble the accords: Possible at the Meridian site, Manifest at the Kharuun site, myself at ours. Three form languages, one frame, as the sky prefers it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 194,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_approach_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_accord_001",
+   "loc_key": "nar_m15_line_accord_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_accord_assembled",
+   "delivery_channel": "command_radio",
+   "source_text": "The accord stands assembled and witnessed. Every faction's shape is present; none is subordinated. The eligible endings are now readable at the archive.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 192,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_accord_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_accord_002",
+   "loc_key": "nar_m15_line_accord_002",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m15_evt_accord_assembled",
+   "delivery_channel": "operations_radio",
+   "source_text": "Confirmed from the record: your earned subset is displayed exactly as the ledger supports it. Read all of it before selecting. Selection is confirmed twice and cannot be unsaid.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 217,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_accord_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_restoration_a",
+   "loc_key": "nar_m15_line_restoration_a",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "Restoration. The held futures return to the ground they were taken from, and the Wells begin giving back. What was deferred will wake to a different arithmetic.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 200,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_restoration_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_restoration_b",
+   "loc_key": "nar_m15_line_restoration_b",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "The conduit rises at the northern convergence. The hold is the longest but one — what returns, returns slowly, and must be guarded the whole way.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 185,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_restoration_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_stabilization_a",
+   "loc_key": "nar_m15_line_stabilization_a",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "Controlled Stabilization. The Crownfall is held at its current pitch — no restoration, no collapse, a managed wound. It is the ending that asks the least and promises the same.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 216,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_stabilization_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_stabilization_b",
+   "loc_key": "nar_m15_line_stabilization_b",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "The conduit rises at the central convergence. The base hold, no more. Stability is the one future that arrives on schedule.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 163,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_stabilization_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_extinguishment_a",
+   "loc_key": "nar_m15_line_extinguishment_a",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "Extinguishment. The remaining held futures are spent to close the Crownfall for good. The sky stops arguing. So does everything that argued through it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 191,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_extinguishment_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_extinguishment_b",
+   "loc_key": "nar_m15_line_extinguishment_b",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "The conduit rises at the western convergence. Hold it firmly. An ending that silences deserves to be watched every tick of the way down.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 176,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_extinguishment_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_evolution_a",
+   "loc_key": "nar_m15_line_evolution_a",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "Open Evolution. The Crownfall is released to continue becoming, unmanaged, with everything that implies and nothing that guarantees. We find this one difficult to phrase. That is the point of it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 235,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_evolution_a",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_evolution_b",
+   "loc_key": "nar_m15_line_evolution_b",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "delivery_channel": "command_radio",
+   "source_text": "The conduit rises at the southwestern convergence, and the hold is the longest of the four. What is being released takes its time deciding what it is.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 190,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_evolution_b",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_conduit_001",
+   "loc_key": "nar_m15_line_conduit_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_conduit_raised",
+   "delivery_channel": "command_radio",
+   "source_text": "The Resolution Conduit is complete and irreversible. The final hold begins on the next fixed tick. Everything the contract names is now literal.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 184,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_conduit_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_conduit_002",
+   "loc_key": "nar_m15_line_conduit_002",
+   "speaker_id": "spk_mara_vey",
+   "trigger_id": "nar_m15_evt_conduit_raised",
+   "delivery_channel": "operations_radio",
+   "source_text": "All witness stations confirm position. For the record: we stand where we said we would. Hold your line and finish it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 157,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_conduit_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_complete_held_001",
+   "loc_key": "nar_m15_line_complete_held_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_resolution_held",
+   "delivery_channel": "command_radio",
+   "source_text": "The hold is complete. The contract closed with every protected element standing, and the selected ending is now the recorded one.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 169,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_complete_held_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_complete_witness_002",
+   "loc_key": "nar_m15_line_complete_witness_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m15_evt_resolution_held",
+   "delivery_channel": "cross_faction_radio",
+   "source_text": "Witnessed, all of it, by three factions and seven accounts. What it becomes is tomorrow's argument. What it was is now safely written.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 174,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_complete_witness_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_complete_record_003",
+   "loc_key": "nar_m15_line_complete_record_003",
+   "speaker_id": "spk_talar_venn",
+   "trigger_id": "nar_m15_evt_resolution_held",
+   "delivery_channel": "operations_radio",
+   "source_text": "The register closes on operation fifteen: ending selected, eligibility earned, contract held. The unchosen endings remain unchosen, and the record says so plainly.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 203,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_complete_record_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_core_001",
+   "loc_key": "nar_m15_line_fail_core_001",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The local core is lost. The Crownfall does not renegotiate. The contract fails as written.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 130,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_witness_002",
+   "loc_key": "nar_m15_line_fail_witness_002",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "A protected witness is gone. The accord was witnessed or it was nothing; it is now nothing.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 131,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_witness_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_force_003",
+   "loc_key": "nar_m15_line_fail_force_003",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command force is broken. Several voices, no command, and a sky still waiting.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 121,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_force_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_contract_004",
+   "loc_key": "nar_m15_line_fail_contract_004",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The final contract is breached. It was irreversible; so is this. The attempt records its own failure exactly.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 149,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_contract_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_terminal_005",
+   "loc_key": "nar_m15_line_fail_terminal_005",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement is terminal. The Crownfall keeps its argument for whoever comes next.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 124,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_terminal_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_line_fail_generic_006",
+   "loc_key": "nar_m15_line_fail_generic_006",
+   "speaker_id": "spk_neme",
+   "trigger_id": "nar_m15_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. No ending was committed; the campaign record stands where it stood.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 133,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m15_vo_fail_generic_006",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m15_seq_opening",
+   "beat": "every_record_load_bearing",
+   "trigger_id": "nar_m15_evt_operation_started",
+   "line_ids": [
+    "nar_m15_line_op_crownfall_001",
+    "nar_m15_line_op_mara_002",
+    "nar_m15_line_op_oruun_003",
+    "nar_m15_line_op_talar_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_seq_approach",
+   "beat": "intent_becomes_structural",
+   "trigger_id": "nar_m15_evt_approach_secured",
+   "line_ids": [
+    "nar_m15_line_approach_001",
+    "nar_m15_line_approach_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_seq_accord",
+   "beat": "three_shapes_one_frame",
+   "trigger_id": "nar_m15_evt_accord_assembled",
+   "line_ids": [
+    "nar_m15_line_accord_001",
+    "nar_m15_line_accord_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_seq_conduit",
+   "beat": "the_hold_is_literal",
+   "trigger_id": "nar_m15_evt_conduit_raised",
+   "line_ids": [
+    "nar_m15_line_conduit_001",
+    "nar_m15_line_conduit_002"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m15_seq_completion",
+   "beat": "written_not_resolved",
+   "trigger_id": "nar_m15_evt_resolution_held",
+   "line_ids": [
+    "nar_m15_line_complete_held_001",
+    "nar_m15_line_complete_witness_002",
+    "nar_m15_line_complete_record_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {
+  "Restoration": {
+   "choice": "Restoration",
+   "current_runtime_behavior": "Current source requires the Preserve protocol with Life Support powered for eligibility, raises the conduit at the base convergence tile, and holds for the base duration plus 80 fixed ticks.",
+   "design_target_tradeoff": "Design target: the held futures return to the ground they were taken from, slowly and guarded, at the longest cost but one.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "dialogue_line_ids": [
+    "nar_m15_line_restoration_a",
+    "nar_m15_line_restoration_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m15_ui_choice_restoration",
+    "loc_key": "nar_m15_ui_choice_restoration",
+    "source_text": "Confirm Restoration as the final resolution.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 84,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  },
+  "ControlledStabilization": {
+   "choice": "ControlledStabilization",
+   "current_runtime_behavior": "Current source keeps Controlled Stabilization always eligible, raises the conduit five tiles north of the base convergence, and holds for exactly the base duration.",
+   "design_target_tradeoff": "Design target: the Crownfall is held at its current pitch, a managed wound that asks the least and promises the same.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "dialogue_line_ids": [
+    "nar_m15_line_stabilization_a",
+    "nar_m15_line_stabilization_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m15_ui_choice_controlledstabilization",
+    "loc_key": "nar_m15_ui_choice_controlledstabilization",
+    "source_text": "Confirm Controlled Stabilization as the final resolution.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 97,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  },
+  "Extinguishment": {
+   "choice": "Extinguishment",
+   "current_runtime_behavior": "Current source requires Harvest doctrine or protocol for eligibility, raises the conduit six tiles west of the base convergence, and holds for the base duration plus 40 fixed ticks.",
+   "design_target_tradeoff": "Design target: the remaining held futures are spent to close the Crownfall permanently, silencing what argued through it.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "dialogue_line_ids": [
+    "nar_m15_line_extinguishment_a",
+    "nar_m15_line_extinguishment_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m15_ui_choice_extinguishment",
+    "loc_key": "nar_m15_ui_choice_extinguishment",
+    "source_text": "Confirm Extinguishment as the final resolution.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 87,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  },
+  "OpenEvolution": {
+   "choice": "OpenEvolution",
+   "current_runtime_behavior": "Current source requires Reshape doctrine or protocol for eligibility, raises the conduit six tiles west and five south of the base convergence, and holds for the base duration plus 120 fixed ticks.",
+   "design_target_tradeoff": "Design target: the Crownfall is released to continue becoming, unmanaged, with the longest hold of the four and no guarantee attached.",
+   "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
+   "trigger_id": "nar_m15_evt_resolution_selected",
+   "dialogue_line_ids": [
+    "nar_m15_line_evolution_a",
+    "nar_m15_line_evolution_b"
+   ],
+   "design_target_choice_ui": {
+    "id": "nar_m15_ui_choice_openevolution",
+    "loc_key": "nar_m15_ui_choice_openevolution",
+    "source_text": "Confirm Open Evolution as the final resolution.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 87,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   "binding_status": "authored_unbound"
+  }
+ },
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m15_result_added",
+    "loc_key": "nar_m15_result_added",
+    "source_text": "The final resolution is recorded: selected from the earned subset, confirmed twice, its conduit raised and its contract held in full, witnessed by all three factions. The unchosen endings remain unchosen, and the record preserves exactly that.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m15_result_alreadyrecorded",
+    "loc_key": "nar_m15_result_alreadyrecorded",
+    "source_text": "This resolution was already in the campaign ledger. The replay changes nothing recorded; the earlier ending stands.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m15_result_replayconflict",
+    "loc_key": "nar_m15_result_replayconflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing ending remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m15_result_storagefailure",
+    "loc_key": "nar_m15_result_storagefailure",
+    "source_text": "The contract held but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 300,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m15_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m15_fail_witness",
+    "reason_code": "protected_witness_lost",
+    "source_condition": "Mara, Oruun, Talar, or Neme is destroyed while protected.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_witness_002"
+    ]
+   },
+   {
+    "id": "nar_m15_fail_force",
+    "reason_code": "command_force_lost",
+    "source_condition": "The bounded Choir command force is broken.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_force_003"
+    ]
+   },
+   {
+    "id": "nar_m15_fail_contract",
+    "reason_code": "resolution_contract_breached",
+    "source_condition": "The approach anchor, accord, eligibility, or conduit contract is breached after becoming irreversible.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_contract_004"
+    ]
+   },
+   {
+    "id": "nar_m15_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_terminal_005"
+    ]
+   },
+   {
+    "id": "nar_m15_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m15_line_fail_generic_006"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m15_retry",
+   "loc_key": "nar_m15_retry",
+   "source_text": "The final contract did not hold. Retry the operation; the fourteen-record ledger, the earned eligibility subset, and the route-dependent durations remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 280,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 15 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m15_cine_opening",
+  "title": "The Broken Sun, the last contract",
+  "trigger_id": "nar_m15_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m15_shot_sky",
+    "editorial_target_seconds": 10,
+    "visual_direction": "The Crownfall fills the upper frame: stellar fragments in slow suspension, magenta-fracture light at its brightest of the campaign, the ground below carrying its glow like held breath.",
+    "line_ids": [
+     "nar_m15_line_op_crownfall_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m15_crownfall_sky"
+    ],
+    "audio_hook_ids": [
+     "aud_m15_ambience_crownfall"
+    ]
+   },
+   {
+    "id": "nar_m15_shot_witnesses",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Three witness stations in one wide frame — bracketed Meridian, faceted Kharuun, offset Choir — each holding one still figure, none nearer the center than another.",
+    "line_ids": [
+     "nar_m15_line_op_mara_002",
+     "nar_m15_line_op_oruun_003"
+    ],
+    "visual_hook_ids": [
+     "vis_m15_witness_stations"
+    ],
+    "audio_hook_ids": [
+     "aud_m15_ambience_crownfall"
+    ]
+   },
+   {
+    "id": "nar_m15_shot_register",
+    "editorial_target_seconds": 7,
+    "visual_direction": "The public record interface, open, its surface ready; Talar's station light steady beside it.",
+    "line_ids": [
+     "nar_m15_line_op_talar_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m15_open_register"
+    ],
+    "audio_hook_ids": [
+     "aud_m15_ambience_crownfall"
+    ]
+   },
+   {
+    "id": "nar_m15_shot_approach",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The Crownfall approach: a path of vitrified ground rising toward the accord sites, the anchor socket waiting at its head under the fractured sky.",
+    "line_ids": [
+     "nar_m15_line_op_crownfall_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m15_approach_path"
+    ],
+    "audio_hook_ids": [
+     "aud_m15_ambience_crownfall"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m15_crownfall_sky",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m15_witness_stations",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m15_open_register",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m15_approach_path",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m15_ambience_crownfall",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}
