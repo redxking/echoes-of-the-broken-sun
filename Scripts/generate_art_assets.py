@@ -24,7 +24,7 @@ TEXTURE_ROOT = f"{ART_ROOT}/Textures"
 SURFACE_TEXTURED_REVISION = "surface-textured-v6"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
-WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v4"
+WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v6"
 ASH_CUT_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarAshCut"
 ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Basalt",
@@ -1711,7 +1711,7 @@ def create_world_surface_material() -> unreal.Material:
             material, unreal.MaterialExpressionScalarParameter, -220, 760
         )
         glow_strength.set_editor_property("parameter_name", "GroundGlowStrength")
-        glow_strength.set_editor_property("default_value", 2.4)
+        glow_strength.set_editor_property("default_value", 0.9)
         glow_masked = lib.create_material_expression(
             material, unreal.MaterialExpressionMultiply, -80, 700
         )

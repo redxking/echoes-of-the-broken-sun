@@ -12,7 +12,7 @@ import struct
 import zlib
 
 SIZE = 512
-REVISION_TEXTURES = "surface-textures-v5"
+REVISION_TEXTURES = "surface-textures-v7"
 
 
 # --- Deterministic PRNG / noise -------------------------------------------
@@ -213,21 +213,21 @@ def glass_scar_ground() -> dict[str, list[tuple[int, int, int]]]:
     for y in range(SIZE):
         for x in range(SIZE):
             u, v = x / SIZE, y / SIZE
-            body = 0.028 + fbm(u * 10, v * 10, seed + 5) * 0.035
+            body = 0.020 + fbm(u * 10, v * 10, seed + 5) * 0.026
             vein = crack[y * SIZE + x]
-            glow = vein ** 1.4
-            r = body * 1.02 + glow * 0.95
-            g = body * 1.05 + glow * 0.55
-            b = body * 1.22 + glow * 0.12
+            glow = vein ** 2.2
+            r = body * 0.9 + glow * 0.50
+            g = body * 1.0 + glow * 0.22
+            b = body * 1.5 + glow * 0.06
             base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
-            height.append(-vein * 0.4 + fbm(u * 18, v * 18, seed + 8) * 0.3)
-            rough = 0.62 + fbm(u * 24, v * 24, seed + 11) * 0.2 - glow * 0.3
+            height.append(-vein * 0.22 + fbm(u * 18, v * 18, seed + 8) * 0.18)
+            rough = 0.85 + fbm(u * 24, v * 24, seed + 11) * 0.1 + vein * 0.05
             mre.append((
                 _clamp8(0.02),
                 _clamp8(max(0.05, min(1.0, rough))),
                 _clamp8(glow),
             ))
-    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.6)}
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 0.9)}
 
 
 FAMILIES = {

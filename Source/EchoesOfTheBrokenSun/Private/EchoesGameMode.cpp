@@ -2263,10 +2263,13 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     }
     // Glass Scar rig: the fractured sun's gold key against a cool indigo
     // ambient, per the authored Crownfall-sky direction (A1).
-    SunComponent->SetIntensity(11.0f);
-    SunComponent->SetLightColor(FLinearColor(1.0f, 0.74f, 0.46f));
-    Sky->GetLightComponent()->SetIntensity(1.35f);
-    Sky->GetLightComponent()->SetLightColor(FLinearColor(0.52f, 0.62f, 0.85f));
+    // Frame hierarchy: a gentler warm key keeps actor faces warm while the
+    // stronger cool fill lets the dark terrain recede — layer separation by
+    // temperature as well as value.
+    SunComponent->SetIntensity(10.0f);
+    SunComponent->SetLightColor(FLinearColor(1.0f, 0.82f, 0.62f));
+    Sky->GetLightComponent()->SetIntensity(1.6f);
+    Sky->GetLightComponent()->SetLightColor(FLinearColor(0.48f, 0.60f, 0.88f));
 
     UE_LOG(
         LogEchoes,
