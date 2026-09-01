@@ -1,5 +1,7 @@
 #include "EchoesRTSCameraPawn.h"
 
+#include "AssetCompilingManager.h"
+
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
@@ -320,6 +322,13 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
 #if !UE_BUILD_SHIPPING
     if (bArtReviewMode && !bArtReviewScreenshotRequested)
     {
+        // Editor sessions compile meshes, textures, and shaders
+        // asynchronously; a capture before the queue drains photographs
+        // fallback materials. Hold the timer until everything is built.
+        if (FAssetCompilingManager::Get().GetNumRemainingAssets() > 0)
+        {
+            ArtReviewElapsedSeconds = 0.0f;
+        }
         ArtReviewElapsedSeconds += DeltaSeconds;
         if (ArtReviewElapsedSeconds >= 1.5f)
         {

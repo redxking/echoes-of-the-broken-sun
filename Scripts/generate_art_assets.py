@@ -8,13 +8,20 @@ Python are editor-time dependencies, not runtime authority.
 from __future__ import annotations
 
 import math
+import os
+import sys
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
 import unreal
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import echoes_texture_synth as texture_synth
+
 
 ART_ROOT = "/Game/Art/Generated"
+TEXTURE_ROOT = f"{ART_ROOT}/Textures"
+SURFACE_TEXTURED_REVISION = "surface-textured-v3"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
 WORLD_MATERIAL_ASSET_REVISION = "world-surface-instancing-v1"
@@ -1288,10 +1295,242 @@ ASSETS = (
 )
 
 
-def create_surface_material() -> unreal.Material:
+def texture_source_dir() -> str:
+    return os.path.join(
+        unreal.SystemLibrary.get_project_content_directory(),
+        "Art", "Source", "Textures",
+    )
+
+
+def import_surface_textures() -> dict[str, unreal.Texture2D]:
+    """Synthesize (byte-idempotent) and import the A3 surface texture maps."""
+    source_dir = texture_source_dir()
+    os.makedirs(source_dir, exist_ok=True)
+    imported: dict[str, unreal.Texture2D] = {}
+    for family in texture_synth.FAMILIES:
+        maps = texture_synth.render_family(family)
+        for suffix, payload in maps.items():
+            file_path = os.path.join(source_dir, f"{family}_{suffix}.png")
+            if not (
+                os.path.exists(file_path)
+                and open(file_path, "rb").read() == payload
+            ):
+                with open(file_path, "wb") as output:
+                    output.write(payload)
+            asset_name = f"{family}_{suffix}"
+            asset_path = f"{TEXTURE_ROOT}/{asset_name}"
+            existing = (
+                unreal.EditorAssetLibrary.load_asset(asset_path)
+                if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+                else None
+            )
+            if existing is not None and unreal.EditorAssetLibrary.get_metadata_tag(
+                existing, "Echoes.AssetRevision"
+            ) == texture_synth.REVISION_TEXTURES:
+                imported[asset_name] = existing
+                unreal.log(
+                    f"[ECHOES_ART_TEXTURE] path={asset_path} action=reused"
+                )
+                continue
+            task = unreal.AssetImportTask()
+            task.filename = file_path
+            task.destination_path = TEXTURE_ROOT
+            task.destination_name = asset_name
+            task.replace_existing = existing is not None
+            task.automated = True
+            task.save = False
+            unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+            texture = unreal.load_asset(asset_path)
+            if not isinstance(texture, unreal.Texture2D):
+                raise RuntimeError(f"Texture import failed: {asset_path}")
+            if suffix == "Normal":
+                texture.set_editor_property(
+                    "compression_settings",
+                    unreal.TextureCompressionSettings.TC_NORMALMAP,
+                )
+                texture.set_editor_property("srgb", False)
+                texture.set_editor_property("flip_green_channel", True)
+            elif suffix == "MRE":
+                texture.set_editor_property(
+                    "compression_settings",
+                    unreal.TextureCompressionSettings.TC_MASKS,
+                )
+                texture.set_editor_property("srgb", False)
+            for tag, value in (
+                ("Echoes.Creator", "Angelis Pseftis"),
+                ("Echoes.Provenance", "Original deterministic project synthesis"),
+                ("Echoes.RuntimeAuthority", "Presentation only"),
+                ("Echoes.AssetRevision", texture_synth.REVISION_TEXTURES),
+            ):
+                unreal.EditorAssetLibrary.set_metadata_tag(texture, tag, value)
+            unreal.EditorAssetLibrary.save_loaded_asset(texture, False)
+            imported[asset_name] = texture
+            unreal.log(
+                f"[ECHOES_ART_TEXTURE] path={asset_path} action=imported"
+            )
+    unreal.log(
+        f"[ECHOES_ART_TEXTURES_READY] families={len(texture_synth.FAMILIES)} "
+        f"maps={len(imported)} revision={texture_synth.REVISION_TEXTURES}"
+    )
+    return imported
+
+
+def _texture_parameter(
+    material: unreal.Material,
+    name: str,
+    texture: unreal.Texture2D,
+    x: int,
+    y: int,
+    sampler: unreal.MaterialSamplerType,
+) -> unreal.MaterialExpressionTextureSampleParameter2D:
+    node = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionTextureSampleParameter2D, x, y
+    )
+    node.set_editor_property("parameter_name", name)
+    node.set_editor_property("texture", texture)
+    node.set_editor_property("sampler_type", sampler)
+    return node
+
+
+def rebuild_textured_surface_master(
+    material: unreal.Material, textures: dict[str, unreal.Texture2D]
+) -> None:
+    """Rebuild M_EchoesSurface in place around the A3 texture maps.
+
+    Parameter names stay exactly compatible with every existing instance:
+    Color, Metallic, Roughness, EmissiveStrength keep their meanings; the
+    ceramic family is the default map set and instances may override the
+    texture parameters per family later.
+    """
+    lib = unreal.MaterialEditingLibrary
+
+    color = lib.create_material_expression(
+        material, unreal.MaterialExpressionVectorParameter, -900, -260
+    )
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property(
+        "default_value", unreal.LinearColor(0.18, 0.48, 0.58, 1.0)
+    )
+    metallic = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -900, -40
+    )
+    metallic.set_editor_property("parameter_name", "Metallic")
+    metallic.set_editor_property("default_value", 0.25)
+    roughness = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -900, 60
+    )
+    roughness.set_editor_property("parameter_name", "Roughness")
+    roughness.set_editor_property("default_value", 0.42)
+    emission = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -900, -150
+    )
+    emission.set_editor_property("parameter_name", "EmissiveStrength")
+    emission.set_editor_property("default_value", 0.0)
+    uv_scale = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -1140, 170
+    )
+    uv_scale.set_editor_property("parameter_name", "UVScale")
+    uv_scale.set_editor_property("default_value", 0.01)
+
+    texcoord = lib.create_material_expression(
+        material, unreal.MaterialExpressionTextureCoordinate, -1140, 260
+    )
+    uv = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -980, 220
+    )
+    lib.connect_material_expressions(texcoord, "", uv, "A")
+    lib.connect_material_expressions(uv_scale, "", uv, "B")
+
+    base_map = _texture_parameter(
+        material, "BaseColorMap",
+        textures["T_EchoesCeramicCivic_BaseColor"], -760, 180,
+        unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+    )
+    mre_map = _texture_parameter(
+        material, "MREMap",
+        textures["T_EchoesCeramicCivic_MRE"], -760, 420,
+        unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+    )
+    normal_map = _texture_parameter(
+        material, "NormalMap",
+        textures["T_EchoesCeramicCivic_Normal"], -760, 660,
+        unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+    )
+    for node in (base_map, mre_map, normal_map):
+        lib.connect_material_expressions(uv, "", node, "UVs")
+
+    tinted = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -420, -160
+    )
+    lib.connect_material_expressions(color, "", tinted, "A")
+    lib.connect_material_expressions(base_map, "RGB", tinted, "B")
+    lib.connect_material_property(tinted, "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    rough_bias = lib.create_material_expression(
+        material, unreal.MaterialExpressionAdd, -600, 470
+    )
+    rough_bias.set_editor_property("const_b", 0.5)
+    lib.connect_material_expressions(mre_map, "G", rough_bias, "A")
+    rough_mul = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -420, 430
+    )
+    lib.connect_material_expressions(roughness, "", rough_mul, "A")
+    lib.connect_material_expressions(rough_bias, "", rough_mul, "B")
+    lib.connect_material_property(
+        rough_mul, "", unreal.MaterialProperty.MP_ROUGHNESS
+    )
+    lib.connect_material_property(
+        metallic, "", unreal.MaterialProperty.MP_METALLIC
+    )
+    lib.connect_material_property(
+        normal_map, "", unreal.MaterialProperty.MP_NORMAL
+    )
+
+    emissive_gain = lib.create_material_expression(
+        material, unreal.MaterialExpressionAdd, -600, 560
+    )
+    emissive_gain.set_editor_property("const_b", 1.0)
+    lib.connect_material_expressions(mre_map, "B", emissive_gain, "A")
+    emissive_scaled = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -420, 540
+    )
+    lib.connect_material_expressions(emission, "", emissive_scaled, "A")
+    lib.connect_material_expressions(emissive_gain, "", emissive_scaled, "B")
+    emissive = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -240, -60
+    )
+    lib.connect_material_expressions(tinted, "", emissive, "A")
+    lib.connect_material_expressions(emissive_scaled, "", emissive, "B")
+    lib.connect_material_property(
+        emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+    )
+
+    lib.layout_material_expressions(material)
+    lib.recompile_material(material)
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        material, "Echoes.AssetRevision", SURFACE_TEXTURED_REVISION
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
+    unreal.log(
+        f"[ECHOES_SURFACE_TEXTURED] path={MATERIAL_PATH} "
+        f"revision={SURFACE_TEXTURED_REVISION} action=rebuilt"
+    )
+
+
+def create_surface_material(
+    textures: dict[str, unreal.Texture2D]
+) -> unreal.Material:
     if unreal.EditorAssetLibrary.does_asset_exist(MATERIAL_PATH):
         existing = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
         if isinstance(existing, unreal.Material):
+            revision = unreal.EditorAssetLibrary.get_metadata_tag(
+                existing, "Echoes.AssetRevision"
+            )
+            if revision != SURFACE_TEXTURED_REVISION:
+                raise RuntimeError(
+                    "Stale surface master survived the purge pass: "
+                    f"{MATERIAL_PATH} (recorded {revision})"
+                )
             unreal.log(f"[ECHOES_ART_MATERIAL] path={MATERIAL_PATH} action=reused")
             return existing
         raise RuntimeError(f"Existing asset is not a Material: {MATERIAL_PATH}")
@@ -1305,54 +1544,7 @@ def create_surface_material() -> unreal.Material:
     )
     if material is None:
         raise RuntimeError("Could not create M_EchoesSurface")
-
-    color = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionVectorParameter, -520, -180
-    )
-    color.set_editor_property("parameter_name", "Color")
-    color.set_editor_property("default_value", unreal.LinearColor(0.18, 0.48, 0.58, 1.0))
-
-    metallic = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, 20
-    )
-    metallic.set_editor_property("parameter_name", "Metallic")
-    metallic.set_editor_property("default_value", 0.25)
-
-    roughness = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, 130
-    )
-    roughness.set_editor_property("parameter_name", "Roughness")
-    roughness.set_editor_property("default_value", 0.42)
-
-    emission = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionScalarParameter, -520, -70
-    )
-    emission.set_editor_property("parameter_name", "EmissiveStrength")
-    emission.set_editor_property("default_value", 0.0)
-
-    multiply = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionMultiply, -240, -100
-    )
-    unreal.MaterialEditingLibrary.connect_material_expressions(color, "", multiply, "A")
-    unreal.MaterialEditingLibrary.connect_material_expressions(emission, "", multiply, "B")
-    unreal.MaterialEditingLibrary.connect_material_property(
-        color, "", unreal.MaterialProperty.MP_BASE_COLOR
-    )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        metallic, "", unreal.MaterialProperty.MP_METALLIC
-    )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        roughness, "", unreal.MaterialProperty.MP_ROUGHNESS
-    )
-    unreal.MaterialEditingLibrary.connect_material_property(
-        multiply, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
-    )
-    unreal.MaterialEditingLibrary.layout_material_expressions(material)
-    unreal.MaterialEditingLibrary.recompile_material(material)
-    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Creator", "Angelis Pseftis")
-    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Provenance", "Original scripted Unreal material")
-    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Status", "Vertical-slice art candidate")
-    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
+    rebuild_textured_surface_master(material, textures)
     return material
 
 
@@ -2370,7 +2562,8 @@ def main() -> None:
         "7 Glass Scar environment assets, 8 selection/command VFX assets, "
         "and 3 destruction VFX assets"
     )
-    surface_material = create_surface_material()
+    surface_textures = import_surface_textures()
+    surface_material = create_surface_material(surface_textures)
     world_surface_material = create_world_surface_material()
     ash_cut_materials = create_ash_cut_materials()
     buried_causeway_materials = create_buried_causeway_materials()

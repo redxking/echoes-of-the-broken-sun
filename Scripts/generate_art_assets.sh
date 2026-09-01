@@ -15,54 +15,68 @@ fi
 
 mkdir -p "$project_root/Saved/Logs"
 
+purge="$project_root/Scripts/purge_stale_art_masters.py"
+purge_log="$project_root/Saved/Logs/ArtAssetPurge.log"
+
 "$editor" "$project" \
-  -unattended -nop4 -nosplash -nullrhi -NoSound \
+  -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+  -ExecutePythonScript="$purge" \
+  -abslog="$purge_log"
+
+if ! grep -q '\[ECHOES_ART_PURGE_READY\]' "$purge_log"; then
+  print -u2 "The stale-art purge pass did not complete."
+  print -u2 "Inspect: $purge_log"
+  exit 3
+fi
+
+"$editor" "$project" \
+  -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! rg -q '\[ECHOES_ART_COMPLETE\] generated=47 roster=24 landmarks=4 environment=7 vfx=9 destructionVfx=3' "$log"; then
+if ! grep -Eq '\[ECHOES_ART_COMPLETE\] generated=47 roster=24 landmarks=4 environment=7 vfx=9 destructionVfx=3' "$log"; then
   print -u2 "The Unreal art generator did not report all 47 assets."
   print -u2 "Inspect: $log"
   exit 3
 fi
 
-if ! rg -q '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-instancing-v1.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
+if ! grep -Eq '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-instancing-v1.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
   print -u2 "The world-surface material is not qualified for instanced terrain."
   print -u2 "Inspect: $log"
   exit 10
 fi
 
-if ! rg -q '\[ECHOES_DESTRUCTION_VFX_READY\].*revision=destruction-vfx-v1.*assets=3 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
+if ! grep -Eq '\[ECHOES_DESTRUCTION_VFX_READY\].*revision=destruction-vfx-v1.*assets=3 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
   print -u2 "The destruction VFX asset audit did not pass."
   print -u2 "Inspect: $log"
   exit 7
 fi
 
-if ! rg -q '\[ECHOES_PRESENTATION_VFX_READY\].*revision=selection-command-vfx-v2.*assets=9 selection=1 commands=7 orbit=1 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
+if ! grep -Eq '\[ECHOES_PRESENTATION_VFX_READY\].*revision=selection-command-vfx-v2.*assets=9 selection=1 commands=7 orbit=1 lods=2 simpleCollision=0.*reducedMotion=steady.*reducedFlashing=steadyLowEmission' "$log"; then
   print -u2 "The selection and command VFX asset audit did not pass."
   print -u2 "Inspect: $log"
   exit 6
 fi
 
-if ! rg -q '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+if ! grep -Eq '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
   print -u2 "The Ash Cut route-kit audit did not pass."
   print -u2 "Inspect: $log"
   exit 5
 fi
 
-if ! rg -q '\[ECHOES_BURIED_CAUSEWAY_READY\].*revision=buried-causeway-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+if ! grep -Eq '\[ECHOES_BURIED_CAUSEWAY_READY\].*revision=buried-causeway-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
   print -u2 "The Buried Causeway route-kit audit did not pass."
   print -u2 "Inspect: $log"
   exit 8
 fi
 
-if ! rg -q '\[ECHOES_FOLDED_VERGE_READY\].*revision=folded-verge-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+if ! grep -Eq '\[ECHOES_FOLDED_VERGE_READY\].*revision=folded-verge-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
   print -u2 "The Folded Verge route-kit audit did not pass."
   print -u2 "Inspect: $log"
   exit 9
 fi
 
-if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEditorAssetSubsystem: Error:' "$log"; then
+if grep -Eq 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEditorAssetSubsystem: Error:' "$log"; then
   print -u2 "The Unreal art generator reported an error."
   print -u2 "Inspect: $log"
   exit 4
