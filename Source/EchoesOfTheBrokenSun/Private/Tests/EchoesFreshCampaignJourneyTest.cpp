@@ -1623,6 +1623,119 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         // Mission 05: Terms of Continuance.
         const FEchoesTermsOfContinuancePlan M05Plan =
             Bridge->GetTermsOfContinuancePlan();
+        Vec2 M05ExpectedMeridianRelaySite;
+        Vec2 M05ExpectedKharuunSpineSite;
+        Vec2 M05ExpectedWitnessExtractionSite;
+        TArray<Vec2> M05ExpectedPlayerPowerLinkSites;
+        TArray<Vec2> M05ExpectedSeedPowerLinkSites;
+        TArray<Vec2> M05ExpectedPoweredSeedPowerLinkSites;
+        switch (Spec.FoundingChoice)
+        {
+            case FutureWellChoice::Harvest:
+                M05ExpectedMeridianRelaySite =
+                    Vec2::FromTiles(14, 27);
+                M05ExpectedKharuunSpineSite =
+                    Vec2::FromTiles(14, 39);
+                M05ExpectedWitnessExtractionSite =
+                    Vec2::FromTiles(20, 47);
+                M05ExpectedPlayerPowerLinkSites = {
+                    Vec2::FromTiles(19, 21),
+                    Vec2::FromTiles(17, 28),
+                    Vec2::FromTiles(15, 34)};
+                M05ExpectedSeedPowerLinkSites = {
+                    Vec2::FromTiles(18, 10),
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(29, 20),
+                    Vec2::FromTiles(29, 36),
+                    Vec2::FromTiles(29, 40)};
+                M05ExpectedPoweredSeedPowerLinkSites = {
+                    Vec2::FromTiles(18, 10),
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(29, 20)};
+                break;
+            case FutureWellChoice::Preserve:
+                M05ExpectedMeridianRelaySite =
+                    Vec2::FromTiles(32, 27);
+                M05ExpectedKharuunSpineSite =
+                    Vec2::FromTiles(32, 39);
+                M05ExpectedWitnessExtractionSite =
+                    Vec2::FromTiles(32, 47);
+                M05ExpectedPlayerPowerLinkSites = {
+                    Vec2::FromTiles(29, 28)};
+                M05ExpectedSeedPowerLinkSites = {
+                    Vec2::FromTiles(18, 10),
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(29, 20),
+                    Vec2::FromTiles(29, 36),
+                    Vec2::FromTiles(29, 40)};
+                M05ExpectedPoweredSeedPowerLinkSites = {
+                    Vec2::FromTiles(18, 10),
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(29, 20),
+                    Vec2::FromTiles(29, 36),
+                    Vec2::FromTiles(29, 40)};
+                break;
+            case FutureWellChoice::Reshape:
+                M05ExpectedMeridianRelaySite =
+                    Vec2::FromTiles(50, 27);
+                M05ExpectedKharuunSpineSite =
+                    Vec2::FromTiles(50, 39);
+                M05ExpectedWitnessExtractionSite =
+                    Vec2::FromTiles(44, 47);
+                M05ExpectedPlayerPowerLinkSites = {
+                    Vec2::FromTiles(18, 10)};
+                M05ExpectedSeedPowerLinkSites = {
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(30, 20),
+                    Vec2::FromTiles(37, 23),
+                    Vec2::FromTiles(44, 26),
+                    Vec2::FromTiles(50, 31)};
+                M05ExpectedPoweredSeedPowerLinkSites = {
+                    Vec2::FromTiles(24, 15),
+                    Vec2::FromTiles(30, 20),
+                    Vec2::FromTiles(37, 23),
+                    Vec2::FromTiles(44, 26),
+                    Vec2::FromTiles(50, 31)};
+                break;
+            default:
+                break;
+        }
+        if (!Require(
+                M05Plan.PriorChoice == Spec.FoundingChoice &&
+                    M05Plan.MeridianRelaySite ==
+                        M05ExpectedMeridianRelaySite &&
+                    M05Plan.KharuunSpineSite ==
+                        M05ExpectedKharuunSpineSite &&
+                    M05Plan.WitnessExtractionSite ==
+                        M05ExpectedWitnessExtractionSite &&
+                    M05Plan.PlayerPowerLinkSites ==
+                        M05ExpectedPlayerPowerLinkSites &&
+                    M05Plan.SeedPowerLinkSites ==
+                        M05ExpectedSeedPowerLinkSites,
+                TEXT("Mission 05 plan matches independent branch literals")))
+        {
+            return false;
+        }
+        bool bExpectedSeedPowerSpecValid =
+            M05ExpectedPoweredSeedPowerLinkSites.Num() ==
+                (Spec.FoundingChoice == FutureWellChoice::Harvest
+                    ? 3
+                    : 5);
+        TArray<Vec2> M05UniqueExpectedPoweredSeedSites;
+        for (const Vec2& SeedSite :
+             M05ExpectedPoweredSeedPowerLinkSites)
+        {
+            bExpectedSeedPowerSpecValid &=
+                M05ExpectedSeedPowerLinkSites.Contains(SeedSite) &&
+                !M05UniqueExpectedPoweredSeedSites.Contains(SeedSite);
+            M05UniqueExpectedPoweredSeedSites.Add(SeedSite);
+        }
+        if (!Require(
+                bExpectedSeedPowerSpecValid,
+                TEXT("Mission 05 branch power expectations are explicit and unique")))
+        {
+            return false;
+        }
         const FEchoesObjectiveSnapshot M05StartSnapshot =
             Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M05Workers =
@@ -1644,6 +1757,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         TArray<EntityId> M05SelectedSiteEntityIds;
         TArray<FString> M05LastKnownWorkers;
         TArray<FString> M05LastKnownSites;
+        TArray<EntityId> M05SeedEntityIds;
+        TArray<FString> M05LastKnownSeeds;
         FString M05FirstObservedLoss = TEXT("none");
         uint64 M05FirstObservedLossTick = 0;
         const auto DescribeMissionFiveEntity = [Bridge](
@@ -1676,6 +1791,49 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Current->order.destination.x.FloorToInt(),
                 Current->order.destination.y.FloorToInt());
         };
+        const echoes::sim::Simulation* M05StartSimulation =
+            Bridge->GetSimulation();
+        for (int32 SeedIndex = 0;
+             SeedIndex < M05Plan.SeedPowerLinkSites.Num();
+             ++SeedIndex)
+        {
+            EntityId SeedId = 0;
+            if (M05StartSimulation != nullptr)
+            {
+                for (const Entity& Candidate :
+                     M05StartSimulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.faction ==
+                            echoes::sim::Faction::MeridianCompact &&
+                        Candidate.type == EntityType::Dropoff &&
+                        Candidate.position ==
+                            M05Plan.SeedPowerLinkSites[SeedIndex])
+                    {
+                        SeedId = Candidate.id;
+                        break;
+                    }
+                }
+            }
+            M05SeedEntityIds.Add(SeedId);
+            const FString SeedLabel = FString::Printf(
+                TEXT("seed%d"), SeedIndex + 1);
+            M05LastKnownSeeds.Add(DescribeMissionFiveEntity(
+                *SeedLabel, SeedId));
+            if (SeedId == 0 && M05FirstObservedLoss == TEXT("none"))
+            {
+                M05FirstObservedLossTick =
+                    M05StartSimulation != nullptr
+                        ? M05StartSimulation->CurrentTick()
+                        : 0;
+                M05FirstObservedLoss = FString::Printf(
+                    TEXT("%s{id=0 observed=%s lastKnown=%s}"),
+                    *SeedLabel,
+                    *DescribeMissionFiveEntity(*SeedLabel, 0),
+                    *M05LastKnownSeeds.Last());
+            }
+        }
         FString M05LastKnownCore = DescribeMissionFiveEntity(
             TEXT("core"), M05CoreId);
         FString M05LastKnownMeridianRelay = DescribeMissionFiveEntity(
@@ -1698,6 +1856,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M05SelectedSiteEntityIds,
             &M05LastKnownWorkers,
             &M05LastKnownSites,
+            &M05SeedEntityIds,
+            &M05LastKnownSeeds,
             &M05FirstObservedLoss,
             &M05FirstObservedLossTick,
             &M05LastKnownCore,
@@ -1797,6 +1957,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 TEXT("kharuunWitness"),
                 M05KharuunWitnessId,
                 M05LastKnownKharuunWitness);
+            for (int32 SeedIndex = 0;
+                 SeedIndex < M05SeedEntityIds.Num();
+                 ++SeedIndex)
+            {
+                const FString SeedLabel = FString::Printf(
+                    TEXT("seed%d"), SeedIndex + 1);
+                ObserveTrackedEntity(
+                    *SeedLabel,
+                    M05SeedEntityIds[SeedIndex],
+                    M05LastKnownSeeds[SeedIndex]);
+            }
 
             const echoes::sim::Simulation* Simulation =
                 Bridge->GetSimulation();
@@ -1820,7 +1991,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                                 UEchoesSimulationSubsystem::LocalPlayerId &&
                             Candidate.type == EntityType::Dropoff &&
                             Candidate.position ==
-                                M05SelectedBuildSites[Index])
+                                M05SelectedBuildSites[Index] &&
+                            Candidate.hitPoints > 0)
                         {
                             M05SelectedSiteEntityIds[Index] = Candidate.id;
                             break;
@@ -1850,6 +2022,9 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M05SelectedSiteEntityIds,
             &M05LastKnownWorkers,
             &M05LastKnownSites,
+            &M05SeedEntityIds,
+            &M05LastKnownSeeds,
+            &M05ExpectedPoweredSeedPowerLinkSites,
             &M05FirstObservedLoss,
             &M05FirstObservedLossTick,
             &M05LastKnownCore,
@@ -1859,9 +2034,13 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M05LastKnownKharuunWitness,
             &DescribeMissionFiveEntity,
             &ObserveMissionFiveState,
-            &Feedback](EEchoesTermsOfContinuancePhase ExpectedPhase)
+            &Feedback,
+            M05Plan](EEchoesTermsOfContinuancePhase ExpectedPhase)
         {
             ObserveMissionFiveState();
+            FString AuthoredSeedSummary;
+            FString LastKnownSeedSummary;
+            FString CurrentSeedSummary;
             FString SelectedBuildSummary;
             FString LastKnownWorkerSummary;
             FString LastKnownSiteSummary;
@@ -1877,6 +2056,39 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 }
                 Summary += Item;
             };
+            for (int32 SeedIndex = 0;
+                 SeedIndex < M05SeedEntityIds.Num();
+                 ++SeedIndex)
+            {
+                const FString SeedLabel = FString::Printf(
+                    TEXT("seed%d"), SeedIndex + 1);
+                AppendSummary(
+                    AuthoredSeedSummary,
+                    FString::Printf(
+                        TEXT("seed%d{site=(%d,%d) entityId=%u expectedPowered=%s}"),
+                        SeedIndex + 1,
+                        M05Plan.SeedPowerLinkSites[SeedIndex].x.FloorToInt(),
+                        M05Plan.SeedPowerLinkSites[SeedIndex].y.FloorToInt(),
+                        M05SeedEntityIds[SeedIndex],
+                        M05ExpectedPoweredSeedPowerLinkSites.Contains(
+                            M05Plan.SeedPowerLinkSites[SeedIndex])
+                            ? TEXT("true")
+                            : TEXT("false")));
+                AppendSummary(
+                    LastKnownSeedSummary,
+                    M05LastKnownSeeds[SeedIndex]);
+                AppendSummary(
+                    CurrentSeedSummary,
+                    DescribeMissionFiveEntity(
+                        *SeedLabel,
+                        M05SeedEntityIds[SeedIndex]));
+            }
+            if (AuthoredSeedSummary.IsEmpty())
+            {
+                AuthoredSeedSummary = TEXT("none");
+                LastKnownSeedSummary = TEXT("none");
+                CurrentSeedSummary = TEXT("none");
+            }
             for (int32 Index = 0;
                  Index < M05SelectedWorkerIds.Num();
                  ++Index)
@@ -1924,16 +2136,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 CurrentSiteSummary = TEXT("none");
             }
             const FString LastKnownSummary = FString::Printf(
-                TEXT("%s %s %s %s %s workers=[%s] sites=[%s]"),
+                TEXT("%s %s %s %s %s seeds=[%s] workers=[%s] sites=[%s]"),
                 *M05LastKnownCore,
                 *M05LastKnownMeridianRelay,
                 *M05LastKnownKharuunSpine,
                 *M05LastKnownMeridianWitness,
                 *M05LastKnownKharuunWitness,
+                *LastKnownSeedSummary,
                 *LastKnownWorkerSummary,
                 *LastKnownSiteSummary);
             const FString CurrentSummary = FString::Printf(
-                TEXT("%s %s %s %s %s workers=[%s] sites=[%s]"),
+                TEXT("%s %s %s %s %s seeds=[%s] workers=[%s] sites=[%s]"),
                 *DescribeMissionFiveEntity(TEXT("core"), M05CoreId),
                 *DescribeMissionFiveEntity(
                     TEXT("meridianRelay"), M05MeridianRelayId),
@@ -1943,6 +2156,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     TEXT("meridianWitness"), M05MeridianWitnessId),
                 *DescribeMissionFiveEntity(
                     TEXT("kharuunWitness"), M05KharuunWitnessId),
+                *CurrentSeedSummary,
                 *CurrentWorkerSummary,
                 *CurrentSiteSummary);
             const FString PriorFeedback =
@@ -1950,7 +2164,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             const echoes::sim::Simulation* Simulation =
                 Bridge->GetSimulation();
             Feedback = FString::Printf(
-                TEXT("[M05_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expectedPhase=%u priorFeedback=%s firstObservedLossTick=%llu firstObservedLoss=%s selectedBuilds=[%s] lastKnown={%s} current={%s}"),
+                TEXT("[M05_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expectedPhase=%u priorFeedback=%s firstObservedLossTick=%llu firstObservedLoss=%s authoredSeeds=[%s] selectedBuilds=[%s] lastKnown={%s} current={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr ? Simulation->CurrentTick() : 0),
                 Simulation != nullptr
@@ -1963,12 +2177,131 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 static_cast<unsigned long long>(
                     M05FirstObservedLossTick),
                 *M05FirstObservedLoss,
+                *AuthoredSeedSummary,
                 *SelectedBuildSummary,
                 *LastKnownSummary,
                 *CurrentSummary);
         };
+        const auto AreMissionFiveSeedsLiving = [
+            Bridge,
+            &M05SeedEntityIds,
+            M05Plan]()
+        {
+            if (M05SeedEntityIds.Num() !=
+                    M05Plan.SeedPowerLinkSites.Num() ||
+                M05SeedEntityIds.IsEmpty())
+            {
+                return false;
+            }
+            for (const EntityId SeedId : M05SeedEntityIds)
+            {
+                const Entity* Seed = Bridge->FindEntity(SeedId);
+                if (Seed == nullptr || Seed->hitPoints <= 0 ||
+                    !Seed->completed)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreMissionFiveSeedsInExpectedPowerState = [
+            Bridge,
+            &AreMissionFiveSeedsLiving,
+            &M05SeedEntityIds,
+            &M05ExpectedPoweredSeedPowerLinkSites,
+            M05Plan]()
+        {
+            if (!AreMissionFiveSeedsLiving() ||
+                M05SeedEntityIds.Num() !=
+                    M05Plan.SeedPowerLinkSites.Num())
+            {
+                return false;
+            }
+            for (int32 SeedIndex = 0;
+                 SeedIndex < M05SeedEntityIds.Num();
+                 ++SeedIndex)
+            {
+                const Entity* Seed = Bridge->FindEntity(
+                    M05SeedEntityIds[SeedIndex]);
+                const bool bExpectedPowered =
+                    M05ExpectedPoweredSeedPowerLinkSites.Contains(
+                        M05Plan.SeedPowerLinkSites[SeedIndex]);
+                if (Seed == nullptr ||
+                    Seed->aegisPowered != bExpectedPowered)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreMissionFivePlayerLinksLivingCompletedPowered = [
+            Bridge,
+            M05Plan]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr ||
+                M05Plan.PlayerPowerLinkSites.IsEmpty())
+            {
+                return false;
+            }
+            for (const Vec2& PlayerSite :
+                 M05Plan.PlayerPowerLinkSites)
+            {
+                bool bPlayerLinkReady = false;
+                for (const Entity& Candidate :
+                     Simulation->Entities())
+                {
+                    if (Candidate.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Candidate.faction ==
+                            echoes::sim::Faction::MeridianCompact &&
+                        Candidate.type == EntityType::Dropoff &&
+                        Candidate.position == PlayerSite &&
+                        Candidate.hitPoints > 0 &&
+                        Candidate.completed &&
+                        Candidate.aegisPowered)
+                    {
+                        bPlayerLinkReady = true;
+                        break;
+                    }
+                }
+                if (!bPlayerLinkReady)
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto AreMissionFiveInterfacesLivingCompletedPowered = [
+            Bridge]()
+        {
+            const FEchoesObjectiveSnapshot Snapshot =
+                Bridge->GetLocalObjectiveSnapshot();
+            const Entity* MeridianRelay = Bridge->FindEntity(
+                Snapshot.MeridianContinuanceRelayId);
+            const Entity* KharuunSpine = Bridge->FindEntity(
+                Snapshot.KharuunContinuanceSpineId);
+            const auto IsReadyInterface = [](const Entity* Interface)
+            {
+                return Interface != nullptr &&
+                    Interface->owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Interface->faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    Interface->type == EntityType::UtilityStructure &&
+                    Interface->hitPoints > 0 &&
+                    Interface->completed &&
+                    Interface->aegisPowered;
+            };
+            return Snapshot.bMeridianRelaySynchronized &&
+                Snapshot.bKharuunSpineSynchronized &&
+                IsReadyInterface(MeridianRelay) &&
+                IsReadyInterface(KharuunSpine);
+        };
         const auto TickUntilMissionFiveCondition = [
             Bridge,
+            &AreMissionFiveSeedsLiving,
             &ObserveMissionFiveState,
             &WriteMissionFiveDiagnostic](
                 const TFunction<bool()>& Predicate,
@@ -1980,6 +2313,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                  ++TickIndex)
             {
                 ObserveMissionFiveState();
+                if (!AreMissionFiveSeedsLiving())
+                {
+                    WriteMissionFiveDiagnostic(ExpectedPhase);
+                    return false;
+                }
                 if (Bridge->GetTermsOfContinuancePhase() ==
                     EEchoesTermsOfContinuancePhase::Failed)
                 {
@@ -1993,6 +2331,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Bridge->Tick(0.05f);
             }
             ObserveMissionFiveState();
+            if (!AreMissionFiveSeedsLiving())
+            {
+                WriteMissionFiveDiagnostic(ExpectedPhase);
+                return false;
+            }
             if (Bridge->GetTermsOfContinuancePhase() ==
                 EEchoesTermsOfContinuancePhase::Failed)
             {
@@ -2030,79 +2373,147 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         };
         if (!Require(
                 AcceptMissionFiveCondition(
-                    !M05Workers.IsEmpty(),
+                    !M05Plan.PlayerPowerLinkSites.IsEmpty(),
                     EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
-                TEXT("Mission 05 exposes treaty-grid workers")))
+                TEXT("Mission 05 exposes authored player Power Link sites")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    M05Workers.Num() >=
+                        M05Plan.PlayerPowerLinkSites.Num(),
+                    EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
+                TEXT("Mission 05 exposes one distinct worker per player Power Link")))
+        {
+            return false;
+        }
+        const auto IsCompletedOwnedPowerLinkAt = [Bridge](const Vec2& Site)
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr)
+            {
+                return false;
+            }
+            for (const Entity& Candidate : Simulation->Entities())
+            {
+                if (Candidate.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Candidate.type == EntityType::Dropoff &&
+                    Candidate.position == Site &&
+                    Candidate.hitPoints > 0 && Candidate.completed)
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
+        bool bAuthoredSeedsReady = true;
+        for (const Vec2& SeedSite : M05Plan.SeedPowerLinkSites)
+        {
+            bAuthoredSeedsReady &=
+                IsCompletedOwnedPowerLinkAt(SeedSite);
+        }
+        bool bPlayerSitesOpen = true;
+        for (const Vec2& PlayerSite : M05Plan.PlayerPowerLinkSites)
+        {
+            bPlayerSitesOpen &=
+                Bridge->GetSimulation()->IsPositionPassable(PlayerSite) &&
+                !IsCompletedOwnedPowerLinkAt(PlayerSite);
+        }
+        if (!Require(
+                AcceptMissionFiveCondition(
+                    bAuthoredSeedsReady,
+                    EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
+                TEXT("Mission 05 spawns every route-owned seed Power Link")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    bPlayerSitesOpen,
+                    EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
+                TEXT("Mission 05 leaves every authored player Power Link site buildable")))
         {
             return false;
         }
         ObserveMissionFiveState();
         Bridge->Tick(0.05f);
         ObserveMissionFiveState();
-        if (Spec.FoundingChoice == FutureWellChoice::Harvest)
+        const auto FindNearestAvailableWorker = [
+            Bridge,
+            &M05Workers,
+            &M05SelectedWorkerIds](const Vec2& Site)
         {
-            const Vec2 HarvestLinks[] = {
-                Vec2::FromTiles(19, 21),
-                Vec2::FromTiles(17, 28),
-                Vec2::FromTiles(15, 34)};
+            EntityId NearestWorkerId = 0;
+            int64 NearestDistanceSquared =
+                TNumericLimits<int64>::Max();
+            for (const EntityId WorkerId : M05Workers)
+            {
+                if (M05SelectedWorkerIds.Contains(WorkerId))
+                {
+                    continue;
+                }
+                const Entity* Worker = Bridge->FindEntity(WorkerId);
+                if (Worker == nullptr || Worker->hitPoints <= 0 ||
+                    !Worker->completed)
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Worker->position.x.Raw()) -
+                    Site.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Worker->position.y.Raw()) -
+                    Site.y.Raw();
+                const int64 DistanceSquared =
+                    DeltaX * DeltaX + DeltaY * DeltaY;
+                if (DistanceSquared < NearestDistanceSquared ||
+                    (DistanceSquared == NearestDistanceSquared &&
+                     (NearestWorkerId == 0 || WorkerId < NearestWorkerId)))
+                {
+                    NearestWorkerId = WorkerId;
+                    NearestDistanceSquared = DistanceSquared;
+                }
+            }
+            return NearestWorkerId;
+        };
+        for (int32 Index = 0;
+             Index < M05Plan.PlayerPowerLinkSites.Num();
+             ++Index)
+        {
+            const Vec2 PlayerSite =
+                M05Plan.PlayerPowerLinkSites[Index];
+            const EntityId WorkerId =
+                FindNearestAvailableWorker(PlayerSite);
             if (!Require(
                     AcceptMissionFiveCondition(
-                        M05Workers.Num() >= 3,
-                        EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
-                    TEXT("Harvest treaty route exposes three workers")))
+                        WorkerId != 0,
+                        EEchoesTermsOfContinuancePhase::
+                            SynchronizeNetworks),
+                    FString::Printf(
+                        TEXT("Mission 05 player Power Link %d has a distinct nearest worker"),
+                        Index + 1)))
             {
                 return false;
             }
-            for (int32 Index = 0; Index < 3; ++Index)
-            {
-                M05SelectedWorkerIds.Add(M05Workers[Index]);
-                M05SelectedBuildSites.Add(HarvestLinks[Index]);
-                M05SelectedSiteEntityIds.Add(0);
-                M05LastKnownWorkers.Add(DescribeMissionFiveEntity(
-                    *FString::Printf(TEXT("worker%d"), Index + 1),
-                    M05Workers[Index]));
-                M05LastKnownSites.Add(DescribeMissionFiveEntity(
-                    *FString::Printf(TEXT("site%d"), Index + 1),
-                    0));
-                ObserveMissionFiveState();
-                if (!Require(
-                        AcceptMissionFiveCommand(
-                            Bridge->IssueBuildCommand(
-                                M05Workers[Index],
-                                EntityType::Dropoff,
-                                Bridge->SimToWorld(HarvestLinks[Index]),
-                                Feedback),
-                            EEchoesTermsOfContinuancePhase::
-                                SynchronizeNetworks),
-                        FString::Printf(
-                            TEXT("Harvest treaty link %d is accepted"),
-                            Index + 1)))
-                {
-                    return false;
-                }
-            }
-        }
-        else
-        {
-            const Vec2 CentralTreatyLink = Vec2::FromTiles(29, 28);
-            M05SelectedWorkerIds.Add(M05Workers[0]);
-            M05SelectedBuildSites.Add(CentralTreatyLink);
+            M05SelectedWorkerIds.Add(WorkerId);
+            M05SelectedBuildSites.Add(PlayerSite);
             M05SelectedSiteEntityIds.Add(0);
             M05LastKnownWorkers.Add(DescribeMissionFiveEntity(
-                TEXT("worker1"), M05Workers[0]));
+                *FString::Printf(TEXT("worker%d"), Index + 1),
+                WorkerId));
             M05LastKnownSites.Add(DescribeMissionFiveEntity(
-                TEXT("site1"), 0));
+                *FString::Printf(TEXT("site%d"), Index + 1),
+                0));
             ObserveMissionFiveState();
             if (!Require(
                     AcceptMissionFiveCommand(
                         Bridge->IssueBuildCommand(
-                            M05Workers[0],
+                            WorkerId,
                             EntityType::Dropoff,
-                            Bridge->SimToWorld(CentralTreatyLink),
+                            Bridge->SimToWorld(PlayerSite),
                             Feedback),
                         EEchoesTermsOfContinuancePhase::
                             SynchronizeNetworks),
-                    TEXT("Central treaty link is accepted")))
+                    FString::Printf(
+                        TEXT("Mission 05 player Power Link %d is accepted"),
+                        Index + 1)))
             {
                 return false;
             }
@@ -2125,8 +2536,32 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 TEXT("Mission 05 synchronizes both treaty networks")) ||
             !Require(
                 AcceptMissionFiveCondition(
+                    AreMissionFiveSeedsLiving(),
+                    EEchoesTermsOfContinuancePhase::
+                        HoldContinuanceWindow),
+                TEXT("Mission 05 keeps every authored seed alive and completed before the treaty deadline")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFiveSeedsInExpectedPowerState(),
+                    EEchoesTermsOfContinuancePhase::
+                        HoldContinuanceWindow),
+                TEXT("Mission 05 matches the branch-specific authored seed power state before the treaty deadline")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFivePlayerLinksLivingCompletedPowered(),
+                    EEchoesTermsOfContinuancePhase::
+                        HoldContinuanceWindow),
+                TEXT("Mission 05 keeps every player-built link living, completed, and powered before the treaty deadline")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFiveInterfacesLivingCompletedPowered(),
+                    EEchoesTermsOfContinuancePhase::
+                        HoldContinuanceWindow),
+                TEXT("Mission 05 keeps both treaty interfaces living, completed, and powered before the treaty deadline")) ||
+            !Require(
+                AcceptMissionFiveCondition(
                     Bridge->GetSimulation()->CurrentTick() <
-                        M05Plan.ContinuanceWindowEndTick,
+                        M05Plan.ContinuanceWindowStartTick,
                     EEchoesTermsOfContinuancePhase::HoldContinuanceWindow),
                 TEXT("Mission 05 synchronizes before the treaty deadline")) ||
             !Require(
@@ -2141,7 +2576,27 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     EEchoesTermsOfContinuancePhase::ExtractWitnesses,
                     1000),
-                TEXT("Mission 05 holds the complete continuance window")))
+                TEXT("Mission 05 holds the complete continuance window")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFiveSeedsLiving(),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
+                TEXT("Mission 05 keeps every authored seed alive and completed through T900")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFiveSeedsInExpectedPowerState(),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
+                TEXT("Mission 05 preserves the branch-specific authored seed power state through T900")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFivePlayerLinksLivingCompletedPowered(),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
+                TEXT("Mission 05 keeps every player-built link living, completed, and powered through T900")) ||
+            !Require(
+                AcceptMissionFiveCondition(
+                    AreMissionFiveInterfacesLivingCompletedPowered(),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
+                TEXT("Mission 05 keeps both treaty interfaces living, completed, and powered through T900")))
         {
             return false;
         }

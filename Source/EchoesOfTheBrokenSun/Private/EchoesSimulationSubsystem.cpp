@@ -117,6 +117,7 @@ constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
 constexpr uint8 QuickSaveContainerVersion = 3;
+constexpr uint8 TermsOfContinuanceTopologyRevision = 1;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
@@ -359,7 +360,10 @@ enum class EQuickSaveContainerRead : uint8
     OutContainer.Add(QuickSaveContainerVersion);
     OutContainer.Add(static_cast<uint8>(Operation));
     OutContainer.Add(static_cast<uint8>(LocalFaction));
-    OutContainer.Add(0);
+    OutContainer.Add(
+        Operation == EEchoesOperationMode::CampaignTermsOfContinuance
+            ? TermsOfContinuanceTopologyRevision
+            : 0);
     AppendUint64LittleEndian(OutContainer, CampaignBranchIdentity);
     if (Operation == EEchoesOperationMode::Skirmish)
     {
@@ -448,7 +452,7 @@ enum class EQuickSaveContainerRead : uint8
     const uint8 Version = Bytes[Offset++];
     const uint8 Operation = Bytes[Offset++];
     const uint8 FactionValue = Bytes[Offset++];
-    const uint8 Reserved = Bytes[Offset++];
+    const uint8 TopologyRevision = Bytes[Offset++];
     if (Version < QuickSaveContainerMinimumVersion ||
         Version > QuickSaveContainerVersion)
     {
@@ -481,7 +485,6 @@ enum class EQuickSaveContainerRead : uint8
         ? VersionThreeHeaderSize
         : Version >= 2 ? VersionTwoHeaderSize : VersionOneHeaderSize;
     if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
-        Reserved != 0 ||
         Operation != static_cast<uint8>(ExpectedOperation) ||
         PayloadLength > static_cast<uint32>(MAX_int32) ||
         Bytes.Num() != HeaderSize + static_cast<int32>(PayloadLength) +
@@ -503,7 +506,6 @@ enum class EQuickSaveContainerRead : uint8
         OutError = TEXT("checkpoint container checksum is invalid");
         return EQuickSaveContainerRead::Invalid;
     }
-
     if (Version >= 3 && ExpectedOperation == EEchoesOperationMode::Skirmish)
     {
         FEchoesSkirmishSetup RecoveredSetup;
@@ -604,6 +606,22 @@ enum class EQuickSaveContainerRead : uint8
     {
         OutError = TEXT(
             "checkpoint container carries an unexpected campaign branch identity");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    if (ExpectedOperation ==
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        TopologyRevision != TermsOfContinuanceTopologyRevision)
+    {
+        OutError = TEXT(
+            "[LOAD_TERMS_TOPOLOGY_MISMATCH] This checkpoint predates the active Terms of Continuance route topology.");
+        return EQuickSaveContainerRead::Invalid;
+    }
+    if (ExpectedOperation !=
+            EEchoesOperationMode::CampaignTermsOfContinuance &&
+        TopologyRevision != 0)
+    {
+        OutError = TEXT(
+            "checkpoint container carries an unexpected topology revision");
         return EQuickSaveContainerRead::Invalid;
     }
     OutPayload.Append(
@@ -3581,8 +3599,10 @@ bool UEchoesSimulationSubsystem::StartScenario(
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] branch=%s begin=true"),
-                Plan.StableName);
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] branch=%s begin=true playerLinks=%d seedLinks=%d"),
+                Plan.StableName,
+                Plan.PlayerPowerLinkSites.Num(),
+                Plan.SeedPowerLinkSites.Num());
             MeridianContinuanceRelayId = SpawnUnit(
                 LocalPlayerId,
                 Faction::MeridianCompact,
@@ -3607,16 +3627,14 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 EntityType::ScoutUnit,
                 23,
                 24);
-            const FIntPoint TreatyLinks[] = {
-                {18, 10}, {24, 15}, {29, 20}, {29, 36}, {29, 40}};
-            for (const FIntPoint& Link : TreatyLinks)
+            for (const echoes::sim::Vec2& Link : Plan.SeedPowerLinkSites)
             {
                 SpawnUnit(
                     LocalPlayerId,
                     Faction::MeridianCompact,
                     EntityType::Dropoff,
-                    Link.X,
-                    Link.Y);
+                    Link.x.FloorToInt(),
+                    Link.y.FloorToInt());
             }
             for (int32 Index = 0; Index < 2; ++Index)
             {
@@ -3630,11 +3648,13 @@ bool UEchoesSimulationSubsystem::StartScenario(
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u success=%s"),
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_SPAWN] meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u playerLinks=%d seedLinks=%d success=%s"),
                 MeridianContinuanceRelayId,
                 KharuunContinuanceSpineId,
                 MeridianContinuanceWitnessId,
                 KharuunContinuanceWitnessId,
+                Plan.PlayerPowerLinkSites.Num(),
+                Plan.SeedPowerLinkSites.Num(),
                 bSpawnSucceeded ? TEXT("true") : TEXT("false"));
         }
 
@@ -4893,7 +4913,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_READY] branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u relay=(%d,%d) spine=(%d,%d) extraction=(%d,%d) window=(%llu,%llu) pressureProxies=2 proxyAuthority=MeridianCompact pressureFaction=KharuunAssemblies pressureBehavior=genericAdaptive terrainDelta=%d blocked=%d inheritedRecords=4"),
+                TEXT("[ECHOES_TERMS_OF_CONTINUANCE_READY] branch=%s meridianRelay=%u kharuunSpine=%u meridianWitness=%u kharuunWitness=%u relay=(%d,%d) spine=(%d,%d) extraction=(%d,%d) playerLinks=%d seedLinks=%d window=(%llu,%llu) pressureProxies=2 proxyAuthority=MeridianCompact pressureFaction=KharuunAssemblies pressureBehavior=genericAdaptive terrainDelta=%d blocked=%d inheritedRecords=4"),
                 Plan.StableName,
                 MeridianContinuanceRelayId,
                 KharuunContinuanceSpineId,
@@ -4905,6 +4925,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 Plan.KharuunSpineSite.y.FloorToInt(),
                 Plan.WitnessExtractionSite.x.FloorToInt(),
                 Plan.WitnessExtractionSite.y.FloorToInt(),
+                Plan.PlayerPowerLinkSites.Num(),
+                Plan.SeedPowerLinkSites.Num(),
                 static_cast<unsigned long long>(
                     Plan.ContinuanceWindowStartTick),
                 static_cast<unsigned long long>(

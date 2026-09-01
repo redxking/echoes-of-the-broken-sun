@@ -5279,9 +5279,22 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     {
         const FEchoesTermsOfContinuancePlan Plan =
             Bridge->GetTermsOfContinuancePlan();
+        FString PlayerLinkSites;
+        for (const auto& Site : Plan.PlayerPowerLinkSites)
+        {
+            if (!PlayerLinkSites.IsEmpty())
+            {
+                PlayerLinkSites += TEXT(", ");
+            }
+            PlayerLinkSites += FString::Printf(
+                TEXT("%d,%d"),
+                Site.x.FloorToInt(),
+                Site.y.FloorToInt());
+        }
         SetStatusMessage(
             FString::Printf(
-                TEXT("DEPLOYED — sync Meridian proxies %d,%d + %d,%d by T%llu; hold to T%llu; extract witnesses at %d,%d."),
+                TEXT("DEPLOYED — build Power Links at %s; then sync Meridian proxies %d,%d + %d,%d by T%llu; hold to T%llu; extract witnesses at %d,%d."),
+                *PlayerLinkSites,
                 Plan.MeridianRelaySite.x.FloorToInt(),
                 Plan.MeridianRelaySite.y.FloorToInt(),
                 Plan.KharuunSpineSite.x.FloorToInt(),
