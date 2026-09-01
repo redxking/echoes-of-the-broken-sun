@@ -824,7 +824,7 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 | 14 | Gameplay audio coverage — no unmapped authoritative event | B4 | 2 | NOT RUN |
 | 15 | Interface audio and rate-limited alerts | B5 | 2 | NOT RUN |
 | 16 | Mix qualified: −16 LUFS ±1 integrated, ≤ −1 dBTP, voice ducking rules, simultaneous-combat readability incl. a spoken line | B6 | 12, 13, 14, 15, 20 | NOT RUN |
-| 17 | Voice pipeline integrated; model, weights hash, license recorded; reproducibility proven | C1 | OD 1 | NOT RUN |
+| 17 | Voice pipeline integrated; model, weights hash, license recorded; reproducibility proven | C1 | OD 1 | OPEN — Kokoro-82M pulled and pinned (weights sha recorded, Apache-2.0), ten-line five-speaker calibration byte-reproducible (`CALIBRATION_OK nondeterministic=0`, ledger VOICE-C1-001); awaiting the owner's listening review, then full-line synthesis and runtime integration |
 | 18 | Voice profiles per character approved on directed calibration lines | C2 | 17 | NOT RUN |
 | 19 | Script-to-voice coverage matrix complete — zero unvoiced dialogue lines | C3 | 18, 24 | NOT RUN |
 | 20 | Line sets generated, registered, loudness-normalized, review-passed per mission | C4 | 19 | NOT RUN |
