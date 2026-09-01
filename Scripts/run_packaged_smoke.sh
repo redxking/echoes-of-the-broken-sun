@@ -48,7 +48,7 @@ mkdir -p "$runtime_state/save-games" "$runtime_state/user-dir"
   -benchmark -fps=20 -benchmarkseconds=3 > "$log" 2>&1
 print "[ECHOES_SMOKE_STORAGE_ISOLATED] saveGameDirectory=$runtime_state/save-games userDir=$runtime_state/user-dir" >> "$log"
 
-for marker in ECHOES_AUDIO_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_SIM_READY ECHOES_GLASS_SCAR_READY ECHOES_FOG_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
+for marker in ECHOES_AUDIO_READY ECHOES_ENV_READY ECHOES_WEATHER_READY ECHOES_SIM_READY ECHOES_SKIRMISH_MAP_READY ECHOES_NARRATIVE_READY ECHOES_FOG_READY ECHOES_BOOT_READY ECHOES_SIM_FIRST_TICK; do
   if ! /usr/bin/grep -q "\\[$marker\\]" "$log"; then
     print -u2 "Packaged runtime marker $marker was absent. Inspect: $log"
     exit 5
@@ -60,8 +60,13 @@ if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*32 entities, 14 visible views, 20 
   exit 6
 fi
 
-if ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log"; then
-  print -u2 "The packaged Glass Scar terrain did not report the accepted layout. Inspect: $log"
+if ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 well=(32,32) local=MeridianCompact opponent=KharuunAssemblies ai=ADAPTIVE resources=STANDARD' "$log"; then
+  print -u2 "The packaged Glass Scar skirmish front door did not report the accepted layout. Inspect: $log"
+  exit 7
+fi
+
+if ! /usr/bin/grep -q '\[ECHOES_NARRATIVE_READY\] ready=true operations=14 lines=290 sha256=' "$log"; then
+  print -u2 "The packaged narrative pack did not bind fail-closed-ready. Inspect: $log"
   exit 7
 fi
 
