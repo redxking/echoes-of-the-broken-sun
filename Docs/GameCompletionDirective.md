@@ -757,7 +757,17 @@ Add to this list rather than guessing. Each entry needs the question, the option
    levels ship.
 6. **Distribution channel.** Direct download from the site, Steam (macOS now, aligning with the
    Linux/SteamOS roadmap), or both — affects packaging, store text, and the claims audit. Undecided.
-7. **Demo versus full labeling.** This release contains the full fifteen-operation campaign and
+7. **Mission 05 narrative cast** (blocks the M05 contract under gate 24). The Bible's Terms of
+   Continuance entry names no speaking character — the treaty runs through "Meridian-authoritative
+   treaty and witness proxies". Canon continuity therefore records no named participant for
+   TermsOfContinuance, and the narrative validator pins casts to canon continuity. Options:
+   (a) extend canon continuity so Mara Vey (Meridian treaty authority, consistent with her Act I
+   command arc) and/or Oruun-of-Seven-Stones (the standing cross-faction interlocutor) appear in
+   M05 — smallest Bible-consistent cast, needs your approval as a canon extension; (b) author M05
+   with an attributed minor speaker (new named proxy character) — a larger canon extension;
+   (c) leave M05's dialogue as unattributed operations copy — weakest storytelling. Missions
+   02–04 and 06–15 have canonical casts and are not blocked. Decision owner: Angelis.
+8. **Demo versus full labeling.** This release contains the full fifteen-operation campaign and
    skirmish. Decide the public name — "demo", "first release", or versioned title — before store and
    site text is written, so no public label understates or oversells what ships.
 

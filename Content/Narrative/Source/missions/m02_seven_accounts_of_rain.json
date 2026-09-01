@@ -1,0 +1,868 @@
+{
+ "schema_version": 2,
+ "namespace": "echoes.narrative",
+ "content_id": "nar_m02_seven_accounts_of_rain",
+ "metadata": {
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_locale": "en-US",
+  "rights_status": "author_attributed_project_source",
+  "originality_review_status": "human_review_required",
+  "authority_path": "Docs/Archive/DevelopmentBible.md",
+  "content_status": "authored_source_only"
+ },
+ "runtime_binding": {
+  "mission_id": "SevenAccountsOfRain",
+  "operation_mode": "CampaignSevenAccounts",
+  "phases": [
+   "Inactive",
+   "EstablishWaystone",
+   "RecallMemory",
+   "Complete",
+   "Failed"
+  ],
+  "well_choices": [],
+  "well_uncommitted_state": "Dormant",
+  "campaign_commit_statuses": [
+   "Added",
+   "AlreadyRecorded",
+   "ReplayConflict",
+   "StorageFailure"
+  ],
+  "runtime_consumed": false,
+  "localization_runtime_status": "unimplemented",
+  "failure_reason_binding": "requested"
+ },
+ "canon": {
+  "title": "Seven Accounts of Rain",
+  "purpose": "Oruun-of-Seven-Stones defends a Kharuun migration route whose inherited accounts disagree about the terrain, re-roots the Waystone at the anchor the founding Well decision selected, and brings the memory bearer to the account site to make the recall.",
+  "player_pov": "oruun_command_authority",
+  "command_faction": "kharuun_assemblies",
+  "memory_bearer_role": "kharuun_worker",
+  "waystone_anchor_by_founding_choice": {
+   "harvest": {
+    "x": 20,
+    "y": 42
+   },
+   "preserve": {
+    "x": 35,
+    "y": 40
+   },
+   "reshape": {
+    "x": 40,
+    "y": 42
+   }
+  },
+  "account_site_by_founding_choice": {
+   "harvest": {
+    "x": 23,
+    "y": 44
+   },
+   "preserve": {
+    "x": 38,
+    "y": 43
+   },
+   "reshape": {
+    "x": 43,
+    "y": 44
+   }
+  },
+  "hidden_moral_score": false,
+  "canonical_facts": [
+   "The mission consumes the Mission 01 founding Well decision and selects one of three authored routes from it.",
+   "The Harvest founding decision selects the fractured western account, with the Waystone anchor at tile 20,42 and the account site at tile 23,44.",
+   "The Preserve founding decision selects the archive-verified central account, with the Waystone anchor at tile 35,40 and the account site at tile 38,43.",
+   "The Reshape founding decision selects the manifested eastern account, with the Waystone anchor at tile 40,42 and the account site at tile 43,44.",
+   "The operation requires the Waystone rooted at the selected anchor before the recall phase can begin.",
+   "Completion requires the memory bearer standing at the selected account site while the local core, the bearer, and the Waystone survive.",
+   "Losing the local core, the memory bearer, the Waystone, or reaching a terminal engagement outcome fails the attempt irreversibly."
+  ],
+  "prohibited_inferences": [
+   "No inherited account is established as true or infallible by playing this mission.",
+   "The Kharuun memory dispute is not resolved by the recall.",
+   "Completion does not assert the migration herds survive beyond the held route.",
+   "No claim of consent, trust, or agreement between the seven accounts is established.",
+   "The recall does not establish archival authenticity of any account.",
+   "No wider Kharuun political outcome follows from this single held route."
+  ]
+ },
+ "speakers": [
+  {
+   "id": "spk_oruun_seven_stones",
+   "display_name": "Oruun-of-Seven-Stones",
+   "faction_id": "kharuun_assemblies",
+   "role_in_mission": "player_command_authority",
+   "command_authority": true,
+   "delivery_channel": "command_radio",
+   "physical_presence_status": "not_asserted_by_contract",
+   "voice_asset_status": "absent"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "nar_m02_evt_operation_started",
+   "runtime_signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+   "prerequisite_ids": [],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_evt_waystone_rooted",
+   "runtime_signal": "phase_entered:RecallMemory",
+   "prerequisite_ids": [
+    "nar_m02_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_evt_memory_recalled",
+   "runtime_signal": "phase_entered:Complete",
+   "prerequisite_ids": [
+    "nar_m02_evt_waystone_rooted"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_evt_mission_failed",
+   "runtime_signal": "phase_entered:Failed",
+   "prerequisite_ids": [
+    "nar_m02_evt_operation_started"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_evt_campaign_result_presented",
+   "runtime_signal": "campaign_commit_status_presented",
+   "prerequisite_ids": [
+    "nar_m02_evt_memory_recalled"
+   ],
+   "occurrence": "once_per_completion",
+   "reset_behavior": "reset_on_mission_replay",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_evt_retry_requested",
+   "runtime_signal": "player_requested_mission_retry",
+   "prerequisite_ids": [
+    "nar_m02_evt_mission_failed"
+   ],
+   "occurrence": "repeatable_after_failure",
+   "reset_behavior": "starts_new_mission_attempt",
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "ui_copy": {
+  "briefing": {
+   "id": "nar_m02_ui_briefing",
+   "loc_key": "nar_m02_ui_briefing",
+   "source_text": "The migration moves today, and the seven inherited accounts disagree about the ground. Hold the route, root the Waystone at the anchor the founding decision left, and bring the memory bearer to the account site.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 260,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "objectives": [
+   {
+    "id": "nar_m02_ui_obj_root_waystone",
+    "loc_key": "nar_m02_ui_obj_root_waystone",
+    "source_text": "Uproot the Waystone and root it at the inherited route anchor.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 102,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   },
+   {
+    "id": "nar_m02_ui_obj_recall_memory",
+    "loc_key": "nar_m02_ui_obj_recall_memory",
+    "source_text": "Bring the memory bearer to the account site while the route holds.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 106,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  ]
+ },
+ "lines": [
+  {
+   "id": "nar_m02_line_oruun_op_orders_001",
+   "loc_key": "nar_m02_line_oruun_op_orders_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Seven accounts of this basin, and no two agree where the ground will hold. We walk the route my predecessors argue about.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 161,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_op_orders_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_op_accounts_002",
+   "loc_key": "nar_m02_line_oruun_op_accounts_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The third account says rain cut the western shelf. The fifth says the shelf never existed. Both of them are certain. I have learned to be neither.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 186,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_op_accounts_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_op_waystone_003",
+   "loc_key": "nar_m02_line_oruun_op_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "Uproot the Waystone and carry it to the anchor the founding decision left us. The route we inherited decides where we may stand.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 168,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_op_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_op_stakes_004",
+   "loc_key": "nar_m02_line_oruun_op_stakes_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "The herds move today whether we are ready or not. A migration route is only a route while someone holds it open.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 152,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_op_stakes_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_op_humor_005",
+   "loc_key": "nar_m02_line_oruun_op_humor_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "delivery_channel": "command_radio",
+   "source_text": "My second account insists this ridge is a riverbed. If we drown on dry stone, it will at least settle one family argument.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 162,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_op_humor_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_rooted_confirm_001",
+   "loc_key": "nar_m02_line_oruun_rooted_confirm_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is rooted at the anchor. The ground agrees with at least one of my accounts. Progress, of a kind.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_rooted_confirm_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_rooted_bearer_002",
+   "loc_key": "nar_m02_line_oruun_rooted_bearer_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "Now the bearer walks. The account site is close, and the accounts that survive are the ones a living witness carries.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 157,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_rooted_bearer_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_rooted_terrain_003",
+   "loc_key": "nar_m02_line_oruun_rooted_terrain_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "Watch the route edges. Whatever the accounts disagree on, hostile ground is a fact we can all verify together.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 150,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_rooted_terrain_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_rooted_memory_004",
+   "loc_key": "nar_m02_line_oruun_rooted_memory_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_waystone_rooted",
+   "delivery_channel": "command_radio",
+   "source_text": "What we recall at the site will not settle which account was true. It will only add an eighth. That is how memory works here.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 165,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_rooted_memory_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_complete_recall_001",
+   "loc_key": "nar_m02_line_oruun_complete_recall_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_memory_recalled",
+   "delivery_channel": "command_radio",
+   "source_text": "The bearer stands at the account site. The recall is made, and the route held long enough to make it.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_complete_recall_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_complete_accounts_002",
+   "loc_key": "nar_m02_line_oruun_complete_accounts_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_memory_recalled",
+   "delivery_channel": "command_radio",
+   "source_text": "Seven accounts disagreed about this ground. We have not proven any of them right. We have proven the route can still be walked.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 167,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_complete_accounts_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_complete_forward_003",
+   "loc_key": "nar_m02_line_oruun_complete_forward_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_memory_recalled",
+   "delivery_channel": "command_radio",
+   "source_text": "The herds pass. The Waystone holds. I will argue with my predecessors about the rest on the way home.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 141,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_complete_forward_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_fail_core_001",
+   "loc_key": "nar_m02_line_oruun_fail_core_001",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The command core is gone. Without it there is no authority to hold the route open. The migration finds another way, or does not.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 168,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_fail_core_001",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_fail_bearer_002",
+   "loc_key": "nar_m02_line_oruun_fail_bearer_002",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The memory bearer is lost. An account that reaches no witness is not recalled. This attempt ends here.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 142,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_fail_bearer_002",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_fail_waystone_003",
+   "loc_key": "nar_m02_line_oruun_fail_waystone_003",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The Waystone is destroyed. Without it the route has no anchor, and the accounts have nothing to argue over.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 147,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_fail_waystone_003",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_fail_terminal_004",
+   "loc_key": "nar_m02_line_oruun_fail_terminal_004",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The engagement has gone terminal. Whatever the accounts say about this ground, no one holds it now.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 139,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_fail_terminal_004",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_line_oruun_fail_generic_005",
+   "loc_key": "nar_m02_line_oruun_fail_generic_005",
+   "speaker_id": "spk_oruun_seven_stones",
+   "trigger_id": "nar_m02_evt_mission_failed",
+   "delivery_channel": "command_radio",
+   "source_text": "The operation has failed. The route closes behind us. We will read the accounts again and return.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 137,
+    "localization_expansion_percent": 30
+   },
+   "subtitle": {
+    "enabled": true,
+    "timing_status": "unassigned"
+   },
+   "transcript_included": true,
+   "voice_hook": {
+    "id": "aud_m02_vo_fail_generic_005",
+    "asset_status": "absent"
+   },
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "dialogue_sequences": [
+  {
+   "id": "nar_m02_seq_opening",
+   "beat": "route_orders_under_disputed_accounts",
+   "trigger_id": "nar_m02_evt_operation_started",
+   "line_ids": [
+    "nar_m02_line_oruun_op_orders_001",
+    "nar_m02_line_oruun_op_accounts_002",
+    "nar_m02_line_oruun_op_waystone_003",
+    "nar_m02_line_oruun_op_stakes_004",
+    "nar_m02_line_oruun_op_humor_005"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_seq_recall",
+   "beat": "waystone_rooted_bearer_walks",
+   "trigger_id": "nar_m02_evt_waystone_rooted",
+   "line_ids": [
+    "nar_m02_line_oruun_rooted_confirm_001",
+    "nar_m02_line_oruun_rooted_bearer_002",
+    "nar_m02_line_oruun_rooted_terrain_003",
+    "nar_m02_line_oruun_rooted_memory_004"
+   ],
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m02_seq_completion",
+   "beat": "recall_made_route_held",
+   "trigger_id": "nar_m02_evt_memory_recalled",
+   "line_ids": [
+    "nar_m02_line_oruun_complete_recall_001",
+    "nar_m02_line_oruun_complete_accounts_002",
+    "nar_m02_line_oruun_complete_forward_003"
+   ],
+   "binding_status": "authored_unbound"
+  }
+ ],
+ "branch_variants": {},
+ "result_variants": [
+  {
+   "status": "Added",
+   "copy": {
+    "id": "nar_m02_result_added",
+    "loc_key": "nar_m02_result_added",
+    "source_text": "The recall is recorded. The route held long enough to make it, and the account joins the seven that disagree. The migration passed; what it cost the rear families is not yet counted.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 260,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "AlreadyRecorded",
+   "copy": {
+    "id": "nar_m02_result_already",
+    "loc_key": "nar_m02_result_already",
+    "source_text": "This recall was already in the campaign ledger. The replay changes nothing recorded; the earlier account remains the one that stands.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 220,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "ReplayConflict",
+   "copy": {
+    "id": "nar_m02_result_conflict",
+    "loc_key": "nar_m02_result_conflict",
+    "source_text": "The replay outcome disagreed with the recorded campaign and was not written. The existing record remains authoritative.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 200,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  },
+  {
+   "status": "StorageFailure",
+   "copy": {
+    "id": "nar_m02_result_storage",
+    "loc_key": "nar_m02_result_storage",
+    "source_text": "The recall completed but campaign storage refused the record. Nothing was saved; the attempt stands only in this session.",
+    "placeholders": {},
+    "text_budget": {
+     "max_characters": 200,
+     "localization_expansion_percent": 30
+    },
+    "binding_status": "authored_unbound"
+   }
+  }
+ ],
+ "failure_retry": {
+  "failure_variants": [
+   {
+    "id": "nar_m02_fail_core",
+    "reason_code": "local_core_lost",
+    "source_condition": "The local command core is destroyed while the operation is active.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m02_line_oruun_fail_core_001"
+    ]
+   },
+   {
+    "id": "nar_m02_fail_bearer",
+    "reason_code": "memory_bearer_lost",
+    "source_condition": "The memory bearer is destroyed before the recall is made.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m02_line_oruun_fail_bearer_002"
+    ]
+   },
+   {
+    "id": "nar_m02_fail_waystone",
+    "reason_code": "waystone_lost",
+    "source_condition": "The Waystone is destroyed before or after rooting.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m02_line_oruun_fail_waystone_003"
+    ]
+   },
+   {
+    "id": "nar_m02_fail_terminal",
+    "reason_code": "terminal_match_outcome",
+    "source_condition": "The underlying engagement reaches a terminal outcome while objectives remain.",
+    "binding_status": "reason_code_requested",
+    "dialogue_line_ids": [
+     "nar_m02_line_oruun_fail_terminal_004"
+    ]
+   },
+   {
+    "id": "nar_m02_fail_generic",
+    "reason_code": "generic",
+    "source_condition": "Any other failure surface without a bound stable reason.",
+    "binding_status": "fallback_available",
+    "dialogue_line_ids": [
+     "nar_m02_line_oruun_fail_generic_005"
+    ]
+   }
+  ],
+  "retry_copy": {
+   "id": "nar_m02_retry",
+   "loc_key": "nar_m02_retry",
+   "source_text": "The route closed on this attempt. Read the accounts again and retry the operation; the founding decision and its inherited route remain as recorded.",
+   "placeholders": {},
+   "text_budget": {
+    "max_characters": 240,
+    "localization_expansion_percent": 30
+   },
+   "binding_status": "authored_unbound"
+  },
+  "campaign_state_effect": "A failed Mission 02 attempt appends no campaign decision record.",
+  "runtime_delivery_status": "unimplemented"
+ },
+ "cinematic": {
+  "id": "nar_m02_cine_opening",
+  "title": "Seven Accounts of Rain, one basin at first light",
+  "trigger_id": "nar_m02_evt_operation_started",
+  "format": "in_engine_storyboard",
+  "implementation_status": "absent",
+  "binding_status": "authored_unbound",
+  "named_character_physical_presence_asserted": false,
+  "shots": [
+   {
+    "id": "nar_m02_shot_basin",
+    "editorial_target_seconds": 9,
+    "visual_direction": "Open basin under layered strata at first light; shivergrass fields bend in a slow line ahead of unseen footfall while the migration dust rises at the horizon.",
+    "line_ids": [
+     "nar_m02_line_oruun_op_orders_001"
+    ],
+    "visual_hook_ids": [
+     "vis_m02_migration_basin"
+    ],
+    "audio_hook_ids": [
+     "aud_m02_ambience_route"
+    ]
+   },
+   {
+    "id": "nar_m02_shot_accounts",
+    "editorial_target_seconds": 8,
+    "visual_direction": "Three divergent route overlays ghost across the same ground, each drawn with a different confidence; none is privileged by the frame.",
+    "line_ids": [
+     "nar_m02_line_oruun_op_accounts_002"
+    ],
+    "visual_hook_ids": [
+     "vis_m02_account_overlays"
+    ],
+    "audio_hook_ids": [
+     "aud_m02_ambience_route"
+    ]
+   },
+   {
+    "id": "nar_m02_shot_waystone",
+    "editorial_target_seconds": 8,
+    "visual_direction": "The Waystone uproots, strata glowing amber along its base as it lifts; the anchor site waits as a shallow cut in the route ahead.",
+    "line_ids": [
+     "nar_m02_line_oruun_op_waystone_003",
+     "nar_m02_line_oruun_op_stakes_004"
+    ],
+    "visual_hook_ids": [
+     "vis_m02_waystone_uproot"
+    ],
+    "audio_hook_ids": [
+     "aud_m02_ambience_route"
+    ]
+   },
+   {
+    "id": "nar_m02_shot_ridge",
+    "editorial_target_seconds": 6,
+    "visual_direction": "A dry ridge in close frame; heat shimmer stands in for the argued river. The column starts to move.",
+    "line_ids": [
+     "nar_m02_line_oruun_op_humor_005"
+    ],
+    "visual_hook_ids": [
+     "vis_m02_argued_ridge"
+    ],
+    "audio_hook_ids": [
+     "aud_m02_ambience_route"
+    ]
+   }
+  ]
+ },
+ "asset_hooks": [
+  {
+   "id": "vis_m02_migration_basin",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m02_account_overlays",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m02_waystone_uproot",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "vis_m02_argued_ridge",
+   "kind": "visual",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  },
+  {
+   "id": "aud_m02_ambience_route",
+   "kind": "audio",
+   "asset_status": "absent",
+   "binding_status": "unimplemented"
+  }
+ ],
+ "projections": {
+  "subtitle_source": "lines[].source_text",
+  "transcript_source": "lines[].source_text",
+  "duplication_policy": "generated_from_canonical_source_text"
+ },
+ "implementation": {
+  "mechanics": "implemented_current_source_with_known_presentation_gaps",
+  "narrative_contract": "authored_source_only",
+  "runtime_consumption": "unimplemented",
+  "subtitles": "authored_unbound",
+  "voice_assets": "absent",
+  "cinematics": "absent",
+  "localization_pipeline": "unimplemented",
+  "well_telegraphs": "unimplemented",
+  "reshape_expiry_warning": "unimplemented",
+  "manual_observation": "not_run",
+  "packaged_build": "not_run"
+ }
+}

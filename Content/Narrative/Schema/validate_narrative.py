@@ -28,6 +28,17 @@ MAX_SOURCE_BYTES = 256_000
 NARRATIVE_ID = re.compile(r"^nar_[a-z0-9_]+$")
 SPEAKER_ID = re.compile(r"^spk_[a-z0-9_]+$")
 ASSET_ID = re.compile(r"^(?:aud|vis)_m01_[a-z0-9_]+$")
+GENERAL_ASSET_ID = re.compile(r"^(?:aud|vis)_m(?:0[1-9]|1[0-5])_[a-z0-9_]+$")
+
+
+def _mission_prefix_patterns(prefix: str) -> dict[str, re.Pattern[str]]:
+    """Compiled per-mission identifier patterns for a stem prefix like m02."""
+    return {
+        "line": re.compile(rf"^nar_{prefix}_line_[a-z0-9_]+$"),
+        "event": re.compile(rf"^nar_{prefix}_evt_[a-z0-9_]+$"),
+        "voice": re.compile(rf"^aud_{prefix}_vo_[a-z0-9_]+$"),
+        "asset": re.compile(rf"^(?:aud|vis)_{prefix}_[a-z0-9_]+$"),
+    }
 PLACEHOLDER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
 EXPECTED_CHOICES = ["Harvest", "Preserve", "Reshape"]
@@ -221,6 +232,39 @@ EXPECTED_SPEAKER_RECORDS = {
         "voice_asset_status": "absent",
     },
 }
+SPEAKER_CHARACTER_IDS = {
+    "spk_mara_vey": "mara_vey",
+    "spk_talar_venn": "talar_venn",
+    "spk_oruun_seven_stones": "oruun_of_seven_stones",
+    "spk_neme": "neme",
+    "spk_cael_rhyse": "cael_rhyse",
+}
+
+# Identity fields every appearance of a speaker must carry. Role and command
+# authority vary per mission and are pinned by each mission's registry entry.
+EXPECTED_SPEAKER_IDENTITIES = {
+    "spk_mara_vey": {
+        "display_name": "Mara Vey",
+        "faction_id": "meridian_compact",
+    },
+    "spk_talar_venn": {
+        "display_name": "Talar Venn",
+        "faction_id": "meridian_compact",
+    },
+    "spk_oruun_seven_stones": {
+        "display_name": "Oruun-of-Seven-Stones",
+        "faction_id": "kharuun_assemblies",
+    },
+    "spk_neme": {
+        "display_name": "Neme",
+        "faction_id": "hollow_choir",
+    },
+    "spk_cael_rhyse": {
+        "display_name": "Chancellor Cael Rhyse",
+        "faction_id": "meridian_compact",
+    },
+}
+
 EXPECTED_CAMPAIGN_CANON_PROSE_SHA256 = (
     "e90ae040771c81b0b59fa2b336fdf007ee4cfa79a202afbd05b88489a75923aa"
 )
@@ -1378,10 +1422,542 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
     }
 
 
+# ---------------------------------------------------------------------------
+# Registered mission contracts (Missions 02-15)
+# ---------------------------------------------------------------------------
+#
+# Each authored mission is pinned here after review, exactly as Mission 01 is
+# pinned by the constants above. An authored file without a registry entry, or
+# an entry without its file, fails validation. The prose and line pins are
+# canonical-projection SHA-256 digests, so any post-review edit to reviewed
+# text is detected.
+
+MISSION_REGISTRY: dict[str, dict[str, Any]] = {
+    "m02_seven_accounts_of_rain": {
+        "file": "m02_seven_accounts_of_rain.json",
+        "prefix": "m02",
+        "content_id": "nar_m02_seven_accounts_of_rain",
+        "mission_index": 1,
+        "mission_id": "SevenAccountsOfRain",
+        "operation_mode": "CampaignSevenAccounts",
+        "phases": ["Inactive", "EstablishWaystone", "RecallMemory", "Complete", "Failed"],
+        "decision_kind": "none",
+        "branch_keys": [],
+        "decision_trigger_id": None,
+        "speakers": {
+            "spk_oruun_seven_stones": {
+                "role_in_mission": "player_command_authority",
+                "command_authority": True,
+                "delivery_channel": "command_radio",
+            },
+        },
+        "command_speaker_ids": ["spk_oruun_seven_stones"],
+        "trigger_signals": {
+            "nar_m02_evt_operation_started": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+            "nar_m02_evt_waystone_rooted": "phase_entered:RecallMemory",
+            "nar_m02_evt_memory_recalled": "phase_entered:Complete",
+            "nar_m02_evt_mission_failed": "phase_entered:Failed",
+            "nar_m02_evt_campaign_result_presented": "campaign_commit_status_presented",
+            "nar_m02_evt_retry_requested": "player_requested_mission_retry",
+        },
+        "trigger_prerequisites": {
+            "nar_m02_evt_operation_started": [],
+            "nar_m02_evt_waystone_rooted": ["nar_m02_evt_operation_started"],
+            "nar_m02_evt_memory_recalled": ["nar_m02_evt_waystone_rooted"],
+            "nar_m02_evt_mission_failed": ["nar_m02_evt_operation_started"],
+            "nar_m02_evt_campaign_result_presented": ["nar_m02_evt_memory_recalled"],
+            "nar_m02_evt_retry_requested": ["nar_m02_evt_mission_failed"],
+        },
+        "failed_trigger_id": "nar_m02_evt_mission_failed",
+        "asset_hooks": {
+            "vis_m02_migration_basin": "visual",
+            "vis_m02_account_overlays": "visual",
+            "vis_m02_waystone_uproot": "visual",
+            "vis_m02_argued_ridge": "visual",
+            "aud_m02_ambience_route": "audio",
+        },
+        "failure_reason_codes": [
+            "local_core_lost",
+            "memory_bearer_lost",
+            "waystone_lost",
+            "terminal_match_outcome",
+            "generic",
+        ],
+        "campaign_state_effect": "A failed Mission 02 attempt appends no campaign decision record.",
+        "counts": {"lines": 17, "objectives": 2, "sequences": 3, "shots": 4},
+        "canon_prose_sha256": "b68a740c8ab5e519ac6632849514bb802380a6f55c6ed8ba3e821085a00747a2",
+        "lines_projection_sha256": "349ec7b17f3094691ff4c7196952194f6a2743e0747fe1767c20b243d1e9a73c",
+    },
+}
+
+
+def _validate_canon_value(value: Any, path: str) -> None:
+    """Mission-specific canon fields carry strings, numbers, booleans, tile
+    objects, or lists of those. Anything else fails closed."""
+    if isinstance(value, str):
+        _validate_source_text(value, path)
+    elif isinstance(value, bool) or isinstance(value, int):
+        return
+    elif isinstance(value, dict):
+        if set(value.keys()) == {"x", "y"}:
+            _expect_int(value["x"], f"{path}.x")
+            _expect_int(value["y"], f"{path}.y")
+        else:
+            for key, entry in value.items():
+                _expect_symbol(key, f"{path}.{key}")
+                _validate_canon_value(entry, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, entry in enumerate(value):
+            _validate_canon_value(entry, f"{path}[{index}]")
+    else:
+        raise NarrativeValidationError(f"{path}: unsupported canon value type")
+
+
+def validate_registered_mission_contract(
+    value: dict[str, Any],
+    canon: dict[str, Any],
+    entry: dict[str, Any],
+) -> dict[str, int]:
+    """Validate one registered Mission 02-15 authored-source contract."""
+    prefix = entry["prefix"]
+    patterns = _mission_prefix_patterns(prefix)
+
+    top = _exact_keys(
+        value,
+        {"schema_version", "namespace", "content_id", "metadata", "runtime_binding", "canon", "speakers", "triggers", "ui_copy", "lines", "dialogue_sequences", "branch_variants", "result_variants", "failure_retry", "cinematic", "asset_hooks", "projections", "implementation"},
+        "mission",
+    )
+    _expect_exact(top["schema_version"], 2, "mission.schema_version")
+    _expect_exact(top["namespace"], "echoes.narrative", "mission.namespace")
+    _expect_exact(top["content_id"], entry["content_id"], "mission.content_id")
+
+    metadata = _exact_keys(
+        top["metadata"],
+        {"author", "creator", "source_locale", "rights_status", "originality_review_status", "authority_path", "content_status"},
+        "mission.metadata",
+    )
+    for key, expected in {
+        "author": "Angelis Pseftis",
+        "creator": "Angelis Pseftis",
+        "source_locale": "en-US",
+        "rights_status": "author_attributed_project_source",
+        "originality_review_status": "human_review_required",
+        "authority_path": "Docs/Archive/DevelopmentBible.md",
+        "content_status": "authored_source_only",
+    }.items():
+        _expect_exact(metadata[key], expected, f"mission.metadata.{key}")
+
+    runtime = _exact_keys(
+        top["runtime_binding"],
+        {"mission_id", "operation_mode", "phases", "well_choices", "well_uncommitted_state", "campaign_commit_statuses", "runtime_consumed", "localization_runtime_status", "failure_reason_binding"},
+        "mission.runtime_binding",
+    )
+    _expect_exact(runtime["mission_id"], entry["mission_id"], "mission.runtime_binding.mission_id")
+    _expect_exact(runtime["operation_mode"], entry["operation_mode"], "mission.runtime_binding.operation_mode")
+    _expect_exact(runtime["phases"], entry["phases"], "mission.runtime_binding.phases")
+    expected_choices = EXPECTED_CHOICES if entry["decision_kind"] == "well_choice" else []
+    _expect_exact(runtime["well_choices"], expected_choices, "mission.runtime_binding.well_choices")
+    _expect_exact(runtime["well_uncommitted_state"], "Dormant", "mission.runtime_binding.well_uncommitted_state")
+    _expect_exact(runtime["campaign_commit_statuses"], EXPECTED_COMMIT_STATUSES, "mission.runtime_binding.campaign_commit_statuses")
+    _expect_exact(runtime["runtime_consumed"], False, "mission.runtime_binding.runtime_consumed")
+    _expect_exact(runtime["localization_runtime_status"], "unimplemented", "mission.runtime_binding.localization_runtime_status")
+    _expect_exact(runtime["failure_reason_binding"], "requested", "mission.runtime_binding.failure_reason_binding")
+
+    matrix = canon["missions"][entry["mission_index"]]
+    _expect_exact(matrix["mission_id"], runtime["mission_id"], "mission.runtime_binding.matrix_mission_id")
+    _expect_exact(matrix["operation_mode"], runtime["operation_mode"], "mission.runtime_binding.matrix_operation_mode")
+
+    canon_record = _expect_object(top["canon"], "mission.canon")
+    for required_key in ("title", "purpose", "player_pov", "command_faction", "hidden_moral_score", "canonical_facts", "prohibited_inferences"):
+        if required_key not in canon_record:
+            raise NarrativeValidationError(f"mission.canon.{required_key}: required canon field is absent")
+    _expect_exact(canon_record["title"], matrix["title"], "mission.canon.title")
+    _validate_source_text(canon_record["purpose"], "mission.canon.purpose")
+    _expect_symbol(canon_record["player_pov"], "mission.canon.player_pov")
+    if canon_record["command_faction"] not in EXPECTED_FACTIONS:
+        raise NarrativeValidationError("mission.canon.command_faction: unknown faction")
+    _expect_exact(canon_record["hidden_moral_score"], False, "mission.canon.hidden_moral_score")
+    for key, minimum in (("canonical_facts", 7), ("prohibited_inferences", 6)):
+        entries = _expect_list(canon_record[key], f"mission.canon.{key}")
+        if len(entries) < minimum:
+            raise NarrativeValidationError(f"mission.canon.{key}: expected at least {minimum} statements")
+        for index, statement in enumerate(entries):
+            _validate_source_text(statement, f"mission.canon.{key}[{index}]")
+    for key, extra in canon_record.items():
+        if key in {"title", "purpose", "player_pov", "command_faction", "hidden_moral_score", "canonical_facts", "prohibited_inferences"}:
+            continue
+        _expect_symbol(key, f"mission.canon.{key} (key)")
+        _validate_canon_value(extra, f"mission.canon.{key}")
+    _expect_canonical_projection(
+        {
+            "purpose": canon_record["purpose"],
+            "canonical_facts": canon_record["canonical_facts"],
+            "prohibited_inferences": canon_record["prohibited_inferences"],
+        },
+        entry["canon_prose_sha256"],
+        "mission.canon.reviewed_canonical_prose",
+    )
+
+    expected_speakers: dict[str, dict[str, Any]] = entry["speakers"]
+    speakers = _expect_list(top["speakers"], "mission.speakers")
+    if len(speakers) != len(expected_speakers):
+        raise NarrativeValidationError("mission.speakers: cast does not match the reviewed registry cast")
+    speaker_ids: set[str] = set()
+    speaker_channels: dict[str, str] = {}
+    command_speakers: list[str] = []
+    for index, raw_speaker in enumerate(speakers):
+        path = f"mission.speakers[{index}]"
+        speaker = _exact_keys(
+            raw_speaker,
+            {"id", "display_name", "faction_id", "role_in_mission", "command_authority", "delivery_channel", "physical_presence_status", "voice_asset_status"},
+            path,
+        )
+        speaker_id = _expect_string(speaker["id"], f"{path}.id")
+        if SPEAKER_ID.fullmatch(speaker_id) is None or speaker_id in speaker_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate speaker identifier")
+        if speaker_id not in expected_speakers:
+            raise NarrativeValidationError(f"{path}.id: speaker is not in the reviewed registry cast")
+        speaker_ids.add(speaker_id)
+        identity = EXPECTED_SPEAKER_IDENTITIES[speaker_id]
+        _expect_exact(speaker["display_name"], identity["display_name"], f"{path}.display_name")
+        _expect_exact(speaker["faction_id"], identity["faction_id"], f"{path}.faction_id")
+        character_id = SPEAKER_CHARACTER_IDS[speaker_id]
+        related_missions = EXPECTED_CHARACTER_RELATIONSHIPS[character_id][1]
+        if entry["mission_id"] not in related_missions:
+            raise NarrativeValidationError(
+                f"{path}.id: {character_id} is not recorded for {entry['mission_id']} in canon continuity"
+            )
+        pinned = expected_speakers[speaker_id]
+        _expect_exact(speaker["role_in_mission"], pinned["role_in_mission"], f"{path}.role_in_mission")
+        _expect_exact(speaker["command_authority"], pinned["command_authority"], f"{path}.command_authority")
+        _expect_exact(speaker["delivery_channel"], pinned["delivery_channel"], f"{path}.delivery_channel")
+        if pinned["command_authority"]:
+            command_speakers.append(speaker_id)
+        speaker_channels[speaker_id] = pinned["delivery_channel"]
+        _expect_exact(speaker["physical_presence_status"], "not_asserted_by_contract", f"{path}.physical_presence_status")
+        _expect_exact(speaker["voice_asset_status"], "absent", f"{path}.voice_asset_status")
+    _expect_exact(command_speakers, entry["command_speaker_ids"], "mission.speakers[].command_authority")
+
+    expected_signals: dict[str, str] = entry["trigger_signals"]
+    expected_prereqs: dict[str, list[str]] = entry["trigger_prerequisites"]
+    triggers = _expect_list(top["triggers"], "mission.triggers")
+    if len(triggers) != len(expected_signals):
+        raise NarrativeValidationError("mission.triggers: trigger set does not match the reviewed registry contract")
+    trigger_ids: set[str] = set()
+    for index, raw_trigger in enumerate(triggers):
+        path = f"mission.triggers[{index}]"
+        trigger = _exact_keys(
+            raw_trigger,
+            {"id", "runtime_signal", "prerequisite_ids", "occurrence", "reset_behavior", "binding_status"},
+            path,
+        )
+        trigger_id = _validate_narrative_id(trigger["id"], f"{path}.id")
+        if patterns["event"].fullmatch(trigger_id) is None or trigger_id in trigger_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate trigger identifier")
+        trigger_ids.add(trigger_id)
+        signal = _expect_string(trigger["runtime_signal"], f"{path}.runtime_signal")
+        if expected_signals.get(trigger_id) != signal:
+            raise NarrativeValidationError(f"{path}.runtime_signal: does not match the stable source signal")
+        prereqs = _expect_unique_strings(trigger["prerequisite_ids"], f"{path}.prerequisite_ids")
+        if prereqs != expected_prereqs.get(trigger_id):
+            raise NarrativeValidationError(f"{path}.prerequisite_ids: does not match the reviewed prerequisite chain")
+        if trigger["occurrence"] not in {"once_per_attempt", "once_per_completion", "repeatable_after_failure"}:
+            raise NarrativeValidationError(f"{path}.occurrence: unsupported occurrence policy")
+        if trigger["reset_behavior"] not in {"reset_on_mission_retry", "reset_on_mission_replay", "starts_new_mission_attempt"}:
+            raise NarrativeValidationError(f"{path}.reset_behavior: unsupported reset policy")
+        _expect_exact(trigger["binding_status"], "authored_unbound", f"{path}.binding_status")
+    _expect_exact(set(expected_signals), trigger_ids, "mission.triggers[].id")
+
+    content_ids: set[str] = {top["content_id"]}
+    loc_keys: set[str] = set()
+    ui = _exact_keys(top["ui_copy"], {"briefing", "objectives"}, "mission.ui_copy")
+    _validate_localized_text(ui["briefing"], "mission.ui_copy.briefing", content_ids, loc_keys)
+    objectives = _expect_list(ui["objectives"], "mission.ui_copy.objectives")
+    if len(objectives) != entry["counts"]["objectives"]:
+        raise NarrativeValidationError("mission.ui_copy.objectives: objective count does not match the reviewed contract")
+    for index, objective in enumerate(objectives):
+        _validate_localized_text(objective, f"mission.ui_copy.objectives[{index}]", content_ids, loc_keys)
+
+    lines = _expect_list(top["lines"], "mission.lines")
+    if len(lines) != entry["counts"]["lines"]:
+        raise NarrativeValidationError("mission.lines: line count does not match the reviewed contract")
+    line_ids: set[str] = set()
+    voice_hook_ids: set[str] = set()
+    line_triggers: dict[str, str] = {}
+    line_projection: list[list[str]] = []
+    for index, raw_line in enumerate(lines):
+        path = f"mission.lines[{index}]"
+        line = _exact_keys(
+            raw_line,
+            {"id", "loc_key", "speaker_id", "trigger_id", "delivery_channel", "source_text", "placeholders", "text_budget", "subtitle", "transcript_included", "voice_hook", "binding_status"},
+            path,
+        )
+        line_id = _validate_narrative_id(line["id"], f"{path}.id")
+        if patterns["line"].fullmatch(line_id) is None or line_id in content_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate line identifier")
+        content_ids.add(line_id)
+        line_ids.add(line_id)
+        loc_key = _validate_narrative_id(line["loc_key"], f"{path}.loc_key")
+        if loc_key != line_id or loc_key in loc_keys:
+            raise NarrativeValidationError(f"{path}.loc_key: must be unique and equal the line id")
+        loc_keys.add(loc_key)
+        speaker_id = _expect_string(line["speaker_id"], f"{path}.speaker_id")
+        if speaker_id not in speaker_ids:
+            raise NarrativeValidationError(f"{path}.speaker_id: unresolved speaker reference")
+        trigger_id = _expect_string(line["trigger_id"], f"{path}.trigger_id")
+        if trigger_id not in trigger_ids:
+            raise NarrativeValidationError(f"{path}.trigger_id: unresolved trigger reference")
+        line_triggers[line_id] = trigger_id
+        _expect_exact(line["delivery_channel"], speaker_channels[speaker_id], f"{path}.delivery_channel")
+        source_text = _validate_source_text(line["source_text"], f"{path}.source_text")
+        line_projection.append([line_id, speaker_id, source_text])
+        _validate_placeholders(line["placeholders"], source_text, f"{path}.placeholders")
+        _validate_text_budget(line["text_budget"], source_text, f"{path}.text_budget")
+        subtitle = _exact_keys(line["subtitle"], {"enabled", "timing_status"}, f"{path}.subtitle")
+        _expect_exact(subtitle["enabled"], True, f"{path}.subtitle.enabled")
+        _expect_exact(subtitle["timing_status"], "unassigned", f"{path}.subtitle.timing_status")
+        _expect_exact(line["transcript_included"], True, f"{path}.transcript_included")
+        voice_hook = _exact_keys(line["voice_hook"], {"id", "asset_status"}, f"{path}.voice_hook")
+        voice_id = _expect_string(voice_hook["id"], f"{path}.voice_hook.id")
+        if patterns["voice"].fullmatch(voice_id) is None or voice_id in voice_hook_ids:
+            raise NarrativeValidationError(f"{path}.voice_hook.id: invalid or duplicate logical voice hook")
+        voice_hook_ids.add(voice_id)
+        _expect_exact(voice_hook["asset_status"], "absent", f"{path}.voice_hook.asset_status")
+        _expect_exact(line["binding_status"], "authored_unbound", f"{path}.binding_status")
+    _expect_canonical_projection(
+        sorted(line_projection),
+        entry["lines_projection_sha256"],
+        "mission.lines.reviewed_projection",
+    )
+
+    used_line_ids: set[str] = set()
+    sequences = _expect_list(top["dialogue_sequences"], "mission.dialogue_sequences")
+    if len(sequences) != entry["counts"]["sequences"]:
+        raise NarrativeValidationError("mission.dialogue_sequences: sequence count does not match the reviewed contract")
+    sequence_ids: set[str] = set()
+    for index, raw_sequence in enumerate(sequences):
+        path = f"mission.dialogue_sequences[{index}]"
+        sequence = _exact_keys(raw_sequence, {"id", "beat", "trigger_id", "line_ids", "binding_status"}, path)
+        sequence_id = _validate_narrative_id(sequence["id"], f"{path}.id")
+        if sequence_id in sequence_ids or sequence_id in content_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate sequence identifier")
+        sequence_ids.add(sequence_id)
+        content_ids.add(sequence_id)
+        _expect_symbol(sequence["beat"], f"{path}.beat")
+        trigger_id = _expect_string(sequence["trigger_id"], f"{path}.trigger_id")
+        if trigger_id not in trigger_ids:
+            raise NarrativeValidationError(f"{path}.trigger_id: unresolved trigger reference")
+        refs = _expect_unique_strings(sequence["line_ids"], f"{path}.line_ids", minimum=1)
+        if not set(refs).issubset(line_ids):
+            raise NarrativeValidationError(f"{path}.line_ids: unresolved line reference")
+        if any(line_triggers[ref] != trigger_id for ref in refs):
+            raise NarrativeValidationError(f"{path}.line_ids: line trigger does not match sequence trigger")
+        if used_line_ids.intersection(refs):
+            raise NarrativeValidationError(f"{path}.line_ids: a line may belong to only one dialogue sequence or variant")
+        used_line_ids.update(refs)
+        _expect_exact(sequence["binding_status"], "authored_unbound", f"{path}.binding_status")
+
+    branch_keys: list[str] = entry["branch_keys"]
+    branches = _exact_keys(top["branch_variants"], branch_keys, "mission.branch_variants")
+    for choice in branch_keys:
+        path = f"mission.branch_variants.{choice}"
+        branch = _exact_keys(
+            branches[choice],
+            {"choice", "current_runtime_behavior", "design_target_tradeoff", "runtime_alignment", "trigger_id", "dialogue_line_ids", "design_target_choice_ui", "binding_status"},
+            path,
+        )
+        _expect_exact(branch["choice"], choice, f"{path}.choice")
+        for field_name in ("current_runtime_behavior", "design_target_tradeoff"):
+            text = _validate_source_text(branch[field_name], f"{path}.{field_name}")
+            if any(lexeme in text.casefold() for lexeme in EXPLICIT_MORAL_RANKING_LEXEMES):
+                raise NarrativeValidationError(
+                    f"{path}.{field_name}: limited explicit moral-ranking lexical guard matched"
+                )
+        _expect_symbol(branch["runtime_alignment"], f"{path}.runtime_alignment")
+        _expect_exact(branch["trigger_id"], entry["decision_trigger_id"], f"{path}.trigger_id")
+        refs = _expect_unique_strings(branch["dialogue_line_ids"], f"{path}.dialogue_line_ids", minimum=1)
+        if len(refs) > 3 or not set(refs).issubset(line_ids):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: expected one to three resolved branch lines")
+        if any(line_triggers[ref] != branch["trigger_id"] for ref in refs):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: branch line trigger mismatch")
+        if used_line_ids.intersection(refs):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: branch lines must be singly assigned")
+        used_line_ids.update(refs)
+        _validate_localized_text(branch["design_target_choice_ui"], f"{path}.design_target_choice_ui", content_ids, loc_keys)
+        _expect_exact(branch["binding_status"], "authored_unbound", f"{path}.binding_status")
+    if branch_keys:
+        branch_serialized = json.dumps(branches, sort_keys=True).casefold()
+        if entry["decision_kind"] == "well_choice" and "dormant" in branch_serialized:
+            raise NarrativeValidationError("mission.branch_variants: Dormant is not a terminal narrative branch")
+        if any(lexeme in branch_serialized for lexeme in EXPLICIT_MORAL_RANKING_LEXEMES):
+            raise NarrativeValidationError("mission.branch_variants: limited explicit moral-ranking lexical guard matched")
+        _expect_canonical_projection(
+            branches,
+            entry["branches_projection_sha256"],
+            "mission.branch_variants.reviewed_projection",
+        )
+
+    results = _expect_list(top["result_variants"], "mission.result_variants")
+    if len(results) != 4:
+        raise NarrativeValidationError("mission.result_variants: exact four campaign persistence states required")
+    result_statuses: list[str] = []
+    for index, raw_result in enumerate(results):
+        path = f"mission.result_variants[{index}]"
+        result = _exact_keys(raw_result, {"status", "copy"}, path)
+        result_statuses.append(_expect_string(result["status"], f"{path}.status"))
+        _validate_localized_text(result["copy"], f"{path}.copy", content_ids, loc_keys)
+    _expect_exact(result_statuses, EXPECTED_COMMIT_STATUSES, "mission.result_variants[].status")
+
+    failure_retry = _exact_keys(
+        top["failure_retry"],
+        {"failure_variants", "retry_copy", "campaign_state_effect", "runtime_delivery_status"},
+        "mission.failure_retry",
+    )
+    failures = _expect_list(failure_retry["failure_variants"], "mission.failure_retry.failure_variants")
+    expected_reasons: list[str] = entry["failure_reason_codes"]
+    if len(failures) != len(expected_reasons):
+        raise NarrativeValidationError("mission.failure_retry.failure_variants: failure set does not match the reviewed contract")
+    failure_reasons: list[str] = []
+    failed_trigger_id = entry["failed_trigger_id"]
+    for index, raw_failure in enumerate(failures):
+        path = f"mission.failure_retry.failure_variants[{index}]"
+        failure = _exact_keys(raw_failure, {"id", "reason_code", "source_condition", "binding_status", "dialogue_line_ids"}, path)
+        failure_id = _validate_narrative_id(failure["id"], f"{path}.id")
+        if failure_id in content_ids:
+            raise NarrativeValidationError(f"{path}.id: duplicate failure identifier")
+        content_ids.add(failure_id)
+        reason = _expect_string(failure["reason_code"], f"{path}.reason_code")
+        failure_reasons.append(reason)
+        _validate_source_text(failure["source_condition"], f"{path}.source_condition")
+        expected_binding = "fallback_available" if reason == "generic" else "reason_code_requested"
+        _expect_exact(failure["binding_status"], expected_binding, f"{path}.binding_status")
+        refs = _expect_unique_strings(failure["dialogue_line_ids"], f"{path}.dialogue_line_ids", minimum=1)
+        if len(refs) != 1 or not set(refs).issubset(line_ids):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: exact one resolved failure line required")
+        if any(line_triggers[ref] != failed_trigger_id for ref in refs):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: failure line trigger mismatch")
+        if used_line_ids.intersection(refs):
+            raise NarrativeValidationError(f"{path}.dialogue_line_ids: failure lines must be singly assigned")
+        used_line_ids.update(refs)
+    _expect_exact(failure_reasons, expected_reasons, "mission.failure_retry.failure_variants[].reason_code")
+    _validate_localized_text(failure_retry["retry_copy"], "mission.failure_retry.retry_copy", content_ids, loc_keys)
+    _expect_exact(failure_retry["campaign_state_effect"], entry["campaign_state_effect"], "mission.failure_retry.campaign_state_effect")
+    _expect_exact(failure_retry["runtime_delivery_status"], "unimplemented", "mission.failure_retry.runtime_delivery_status")
+
+    asset_hooks = _expect_list(top["asset_hooks"], "mission.asset_hooks")
+    expected_hooks: dict[str, str] = entry["asset_hooks"]
+    if len(asset_hooks) != len(expected_hooks):
+        raise NarrativeValidationError("mission.asset_hooks: hook set does not match the reviewed contract")
+    asset_hook_ids: set[str] = set()
+    asset_kinds: dict[str, str] = {}
+    for index, raw_hook in enumerate(asset_hooks):
+        path = f"mission.asset_hooks[{index}]"
+        hook = _exact_keys(raw_hook, {"id", "kind", "asset_status", "binding_status"}, path)
+        hook_id = _expect_string(hook["id"], f"{path}.id")
+        if patterns["asset"].fullmatch(hook_id) is None or hook_id in asset_hook_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate logical asset hook")
+        asset_hook_ids.add(hook_id)
+        kind = _expect_string(hook["kind"], f"{path}.kind")
+        if kind not in {"audio", "visual"} or not hook_id.startswith("aud_" if kind == "audio" else "vis_"):
+            raise NarrativeValidationError(f"{path}.kind: does not match logical hook prefix")
+        asset_kinds[hook_id] = kind
+        _expect_exact(hook["asset_status"], "absent", f"{path}.asset_status")
+        _expect_exact(hook["binding_status"], "unimplemented", f"{path}.binding_status")
+    _expect_exact(asset_kinds, expected_hooks, "mission.asset_hooks logical inventory")
+
+    cinematic = _exact_keys(
+        top["cinematic"],
+        {"id", "title", "trigger_id", "format", "implementation_status", "binding_status", "named_character_physical_presence_asserted", "shots"},
+        "mission.cinematic",
+    )
+    cinematic_id = _validate_narrative_id(cinematic["id"], "mission.cinematic.id")
+    if cinematic_id in content_ids:
+        raise NarrativeValidationError("mission.cinematic.id: duplicate content identifier")
+    content_ids.add(cinematic_id)
+    _validate_source_text(cinematic["title"], "mission.cinematic.title")
+    if cinematic["trigger_id"] not in trigger_ids:
+        raise NarrativeValidationError("mission.cinematic.trigger_id: unresolved trigger reference")
+    _expect_exact(cinematic["format"], "in_engine_storyboard", "mission.cinematic.format")
+    _expect_exact(cinematic["implementation_status"], "absent", "mission.cinematic.implementation_status")
+    _expect_exact(cinematic["binding_status"], "authored_unbound", "mission.cinematic.binding_status")
+    _expect_exact(cinematic["named_character_physical_presence_asserted"], False, "mission.cinematic.named_character_physical_presence_asserted")
+    shots = _expect_list(cinematic["shots"], "mission.cinematic.shots")
+    if len(shots) != entry["counts"]["shots"]:
+        raise NarrativeValidationError("mission.cinematic.shots: shot count does not match the reviewed contract")
+    shot_ids: set[str] = set()
+    referenced_asset_hook_ids: set[str] = set()
+    for index, raw_shot in enumerate(shots):
+        path = f"mission.cinematic.shots[{index}]"
+        shot = _exact_keys(raw_shot, {"id", "editorial_target_seconds", "visual_direction", "line_ids", "visual_hook_ids", "audio_hook_ids"}, path)
+        shot_id = _validate_narrative_id(shot["id"], f"{path}.id")
+        if shot_id in shot_ids or shot_id in content_ids:
+            raise NarrativeValidationError(f"{path}.id: invalid or duplicate shot identifier")
+        shot_ids.add(shot_id)
+        content_ids.add(shot_id)
+        duration = shot["editorial_target_seconds"]
+        if (
+            isinstance(duration, bool)
+            or not isinstance(duration, (int, float))
+            or not math.isfinite(duration)
+            or duration <= 0
+            or duration > 30
+        ):
+            raise NarrativeValidationError(f"{path}.editorial_target_seconds: expected value in (0, 30]")
+        _validate_source_text(shot["visual_direction"], f"{path}.visual_direction")
+        line_refs = _expect_unique_strings(shot["line_ids"], f"{path}.line_ids", minimum=1)
+        if not set(line_refs).issubset(line_ids):
+            raise NarrativeValidationError(f"{path}.line_ids: unresolved line reference")
+        visual_refs = _expect_unique_strings(shot["visual_hook_ids"], f"{path}.visual_hook_ids", minimum=1)
+        audio_refs = _expect_unique_strings(shot["audio_hook_ids"], f"{path}.audio_hook_ids", minimum=1)
+        if any(asset_kinds.get(ref) != "visual" for ref in visual_refs):
+            raise NarrativeValidationError(f"{path}.visual_hook_ids: unresolved or nonvisual hook")
+        if any(asset_kinds.get(ref) != "audio" for ref in audio_refs):
+            raise NarrativeValidationError(f"{path}.audio_hook_ids: unresolved or nonaudio hook")
+        referenced_asset_hook_ids.update(visual_refs)
+        referenced_asset_hook_ids.update(audio_refs)
+    _expect_exact(referenced_asset_hook_ids, asset_hook_ids, "mission.cinematic.shots asset hook coverage")
+
+    projections = _exact_keys(top["projections"], {"subtitle_source", "transcript_source", "duplication_policy"}, "mission.projections")
+    _expect_exact(projections["subtitle_source"], "lines[].source_text", "mission.projections.subtitle_source")
+    _expect_exact(projections["transcript_source"], "lines[].source_text", "mission.projections.transcript_source")
+    _expect_exact(projections["duplication_policy"], "generated_from_canonical_source_text", "mission.projections.duplication_policy")
+
+    implementation = _exact_keys(
+        top["implementation"],
+        {"mechanics", "narrative_contract", "runtime_consumption", "subtitles", "voice_assets", "cinematics", "localization_pipeline", "well_telegraphs", "reshape_expiry_warning", "manual_observation", "packaged_build"},
+        "mission.implementation",
+    )
+    for key, expected in {
+        "mechanics": "implemented_current_source_with_known_presentation_gaps",
+        "narrative_contract": "authored_source_only",
+        "runtime_consumption": "unimplemented",
+        "subtitles": "authored_unbound",
+        "voice_assets": "absent",
+        "cinematics": "absent",
+        "localization_pipeline": "unimplemented",
+        "well_telegraphs": "unimplemented",
+        "reshape_expiry_warning": "unimplemented",
+        "manual_observation": "not_run",
+        "packaged_build": "not_run",
+    }.items():
+        _expect_exact(implementation[key], expected, f"mission.implementation.{key}")
+
+    if used_line_ids != line_ids:
+        missing = sorted(line_ids - used_line_ids)
+        raise NarrativeValidationError(f"mission.lines: unreferenced canonical lines: {', '.join(missing)}")
+    return {
+        "lines": len(lines),
+        "branches": len(branch_keys),
+        "failures": len(failures),
+        "results": len(results),
+        "shots": len(shots),
+    }
+
+
 def validate_schema_documents(schema_dir: Path) -> None:
     expected = {
         "campaign_canon_continuity.schema.json": "echoes://narrative/schema/campaign-canon-continuity-v1",
-        "mission_contract.schema.json": "echoes://narrative/schema/mission-contract-v1",
+        "mission_contract.schema.json": "echoes://narrative/schema/mission-contract-v2",
     }
     for filename, schema_id in expected.items():
         schema = load_json_document(schema_dir / filename)
@@ -1397,9 +1973,30 @@ def validate_source_tree(root: Path) -> dict[str, int]:
     validate_schema_documents(schema_dir)
     canon = load_json_document(source_dir / "campaign_canon_continuity.json")
     canon_counts = validate_campaign_canon(canon)
-    mission = load_json_document(source_dir / "missions/m01_what_the_ledger_keeps.json")
-    mission_counts = validate_mission_contract(mission, canon)
-    return {**canon_counts, **mission_counts}
+
+    missions_dir = source_dir / "missions"
+    expected_files = {"m01_what_the_ledger_keeps.json"} | {
+        entry["file"] for entry in MISSION_REGISTRY.values()
+    }
+    actual_files = {path.name for path in missions_dir.glob("*.json")}
+    if actual_files != expected_files:
+        unexpected = sorted(actual_files - expected_files)
+        missing = sorted(expected_files - actual_files)
+        raise NarrativeValidationError(
+            "missions: authored files and registry disagree "
+            f"(unregistered: {unexpected}; absent: {missing})"
+        )
+
+    mission = load_json_document(missions_dir / "m01_what_the_ledger_keeps.json")
+    totals = dict(validate_mission_contract(mission, canon))
+    for stem in sorted(MISSION_REGISTRY):
+        entry = MISSION_REGISTRY[stem]
+        registered = load_json_document(missions_dir / entry["file"])
+        counts = validate_registered_mission_contract(registered, canon, entry)
+        for key, count in counts.items():
+            totals[key] += count
+    totals["authored_missions"] = 1 + len(MISSION_REGISTRY)
+    return {**canon_counts, **totals}
 
 
 def _default_root() -> Path:
@@ -1417,7 +2014,8 @@ def main() -> int:
         return 1
     print(
         "NARRATIVE_VALIDATION_OK "
-        f"missions={counts['missions']} characters={counts['characters']} "
+        f"missions={counts['missions']} authored={counts['authored_missions']} "
+        f"characters={counts['characters']} "
         f"factions={counts['factions']} lines={counts['lines']} "
         f"branches={counts['branches']} failures={counts['failures']} "
         f"results={counts['results']} shots={counts['shots']} "

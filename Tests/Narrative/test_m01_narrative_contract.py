@@ -42,13 +42,14 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             VALIDATOR.validate_source_tree(ROOT),
             {
                 "missions": 15,
+                "authored_missions": 1 + len(VALIDATOR.MISSION_REGISTRY),
                 "characters": 5,
                 "factions": 3,
-                "lines": 28,
-                "branches": 3,
-                "failures": 5,
-                "results": 4,
-                "shots": 4,
+                "lines": 28 + sum(e["counts"]["lines"] for e in VALIDATOR.MISSION_REGISTRY.values()),
+                "branches": 3 + sum(len(e["branch_keys"]) for e in VALIDATOR.MISSION_REGISTRY.values()),
+                "failures": 5 + sum(len(e["failure_reason_codes"]) for e in VALIDATOR.MISSION_REGISTRY.values()),
+                "results": 4 + 4 * len(VALIDATOR.MISSION_REGISTRY),
+                "shots": 4 + sum(e["counts"]["shots"] for e in VALIDATOR.MISSION_REGISTRY.values()),
             },
         )
 

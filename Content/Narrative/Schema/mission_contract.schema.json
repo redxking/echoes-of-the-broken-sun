@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "echoes://narrative/schema/mission-contract-v1",
+  "$id": "echoes://narrative/schema/mission-contract-v2",
   "title": "Echoes Authored Mission Narrative Contract",
   "$defs": {
     "text_budget": {
@@ -127,7 +127,7 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_evt_[a-z0-9_]+$"
         },
         "runtime_signal": {
           "type": "string",
@@ -138,7 +138,7 @@
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+            "pattern": "^nar_m(0[1-9]|1[0-5])_evt_[a-z0-9_]+$"
           }
         },
         "occurrence": {
@@ -169,7 +169,7 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^aud_m01_vo_[a-z0-9_]+$"
+          "pattern": "^aud_m(0[1-9]|1[0-5])_vo_[a-z0-9_]+$"
         },
         "asset_status": {
           "const": "absent"
@@ -195,16 +195,16 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
         },
         "loc_key": {
-          "pattern": "^nar_m01_line_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
         },
         "speaker_id": {
           "pattern": "^spk_[a-z0-9_]+$"
         },
         "trigger_id": {
-          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_evt_[a-z0-9_]+$"
         },
         "delivery_channel": {
           "pattern": "^[a-z][a-z0-9_]*$"
@@ -259,20 +259,20 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m01_seq_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_seq_[a-z0-9_]+$"
         },
         "beat": {
           "pattern": "^[a-z][a-z0-9_]*$"
         },
         "trigger_id": {
-          "pattern": "^nar_m01_evt_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_evt_[a-z0-9_]+$"
         },
         "line_ids": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+            "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
           }
         },
         "binding_status": {
@@ -319,7 +319,7 @@
           ]
         },
         "trigger_id": {
-          "const": "nar_m01_evt_well_decision_committed"
+          "const": "nar_m(0[1-9]|1[0-5])_evt_well_decision_committed"
         },
         "dialogue_line_ids": {
           "type": "array",
@@ -327,7 +327,7 @@
           "maxItems": 3,
           "uniqueItems": true,
           "items": {
-            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+            "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
           }
         },
         "design_target_choice_ui": {
@@ -371,7 +371,7 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m01_fail_[a-z0-9_]+$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_fail_[a-z0-9_]+$"
         },
         "reason_code": {
           "enum": [
@@ -398,7 +398,7 @@
           "minItems": 1,
           "maxItems": 1,
           "items": {
-            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+            "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
           }
         }
       }
@@ -416,7 +416,7 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m01_shot_[0-9]{3}$"
+          "pattern": "^nar_m(0[1-9]|1[0-5])_shot_[0-9]{3}$"
         },
         "editorial_target_seconds": {
           "type": "number",
@@ -433,7 +433,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "pattern": "^nar_m01_line_[a-z0-9_]+$"
+            "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
           }
         },
         "visual_hook_ids": {
@@ -441,7 +441,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "pattern": "^vis_m01_[a-z0-9_]+$"
+            "pattern": "^vis_m(0[1-9]|1[0-5])_[a-z0-9_]+$"
           }
         },
         "audio_hook_ids": {
@@ -449,7 +449,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "pattern": "^aud_m01_[a-z0-9_]+$"
+            "pattern": "^aud_m(0[1-9]|1[0-5])_[a-z0-9_]+$"
           }
         }
       }
@@ -465,7 +465,7 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^(aud|vis)_m01_[a-z0-9_]+$"
+          "pattern": "^(aud|vis)_m(0[1-9]|1[0-5])_[a-z0-9_]+$"
         },
         "kind": {
           "enum": [
@@ -506,13 +506,16 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     },
     "namespace": {
       "const": "echoes.narrative"
     },
     "content_id": {
-      "const": "nar_m01_what_the_ledger_keeps"
+      "const": "nar_m(0[1-9]|1[0-5])_what_the_ledger_keeps"
     },
     "metadata": {
       "type": "object",
@@ -792,24 +795,57 @@
       }
     },
     "branch_variants": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "Harvest",
-        "Preserve",
-        "Reshape"
-      ],
-      "properties": {
-        "Harvest": {
-          "$ref": "#/$defs/branch"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "Harvest",
+            "Preserve",
+            "Reshape"
+          ],
+          "properties": {
+            "Harvest": {
+              "$ref": "#/$defs/branch"
+            },
+            "Preserve": {
+              "$ref": "#/$defs/branch"
+            },
+            "Reshape": {
+              "$ref": "#/$defs/branch"
+            }
+          }
         },
-        "Preserve": {
-          "$ref": "#/$defs/branch"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "Restoration",
+            "ControlledStabilization",
+            "Extinguishment",
+            "OpenEvolution"
+          ],
+          "properties": {
+            "Restoration": {
+              "$ref": "#/$defs/branch"
+            },
+            "ControlledStabilization": {
+              "$ref": "#/$defs/branch"
+            },
+            "Extinguishment": {
+              "$ref": "#/$defs/branch"
+            },
+            "OpenEvolution": {
+              "$ref": "#/$defs/branch"
+            }
+          }
         },
-        "Reshape": {
-          "$ref": "#/$defs/branch"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 0
         }
-      }
+      ]
     },
     "result_variants": {
       "type": "array",
@@ -865,7 +901,7 @@
       ],
       "properties": {
         "id": {
-          "const": "nar_m01_cin_opening"
+          "const": "nar_m(0[1-9]|1[0-5])_cin_opening"
         },
         "title": {
           "type": "string",
@@ -873,7 +909,7 @@
           "maxLength": 120
         },
         "trigger_id": {
-          "const": "nar_m01_evt_operation_started"
+          "const": "nar_m(0[1-9]|1[0-5])_evt_operation_started"
         },
         "format": {
           "const": "in_engine_storyboard"
