@@ -10,7 +10,8 @@ public class EchoesOfTheBrokenSun : ModuleRules
         {
             "Core", "CoreUObject", "Engine", "InputCore", "ApplicationCore", "PhysicsCore",
             "AIModule", "NavigationSystem", "GameplayTasks", "UMG", "Slate",
-            "SlateCore", "Json", "JsonUtilities", "Sockets", "EchoesSimCore"
+            "SlateCore", "Json", "JsonUtilities", "Sockets", "EchoesSimCore",
+            "LevelSequence", "MovieScene", "MovieSceneTracks", "CinematicCamera"
         });
     }
 }
