@@ -239,6 +239,41 @@ echoes::sim::Vec2 TestOwnedBrokenSunApproachSite(
     }
 }
 
+echoes::sim::Vec2 TestOwnedBrokenSunResolutionSite(
+    EEchoesFinalResolution Resolution)
+{
+    using echoes::sim::Vec2;
+    switch (Resolution)
+    {
+        case EEchoesFinalResolution::Restoration:
+            return Vec2::FromTiles(32, 49);
+        case EEchoesFinalResolution::ControlledStabilization:
+            return Vec2::FromTiles(32, 44);
+        case EEchoesFinalResolution::Extinguishment:
+            return Vec2::FromTiles(26, 49);
+        case EEchoesFinalResolution::OpenEvolution:
+            return Vec2::FromTiles(26, 54);
+        case EEchoesFinalResolution::None:
+            return {};
+    }
+    return {};
+}
+
+bool BrokenSunObjectiveDomainsAreDisjoint(
+    const echoes::sim::Vec2& First,
+    int32 FirstRadius,
+    const echoes::sim::Vec2& Second,
+    int32 SecondRadius)
+{
+    const int64 DeltaX = static_cast<int64>(First.x.Raw()) - Second.x.Raw();
+    const int64 DeltaY = static_cast<int64>(First.y.Raw()) - Second.y.Raw();
+    const int64 CombinedRadius =
+        static_cast<int64>(FirstRadius + SecondRadius) *
+        echoes::sim::kFixedScale;
+    return DeltaX * DeltaX + DeltaY * DeltaY >
+        CombinedRadius * CombinedRadius;
+}
+
 FString DescribeBrokenSunEntity(
     const TCHAR* Label,
     echoes::sim::EntityId Id,
@@ -283,6 +318,7 @@ struct FBrokenSunResolutionPersistenceSpec final
     uint8 ExpectedAvailability = 0;
     echoes::sim::Vec2 ExpectedApproachSite{};
     echoes::sim::Vec2 ExpectedApproachBuildSite{};
+    echoes::sim::Vec2 ExpectedResolutionSite{};
 };
 
 bool RunBrokenSunResolutionPersistenceCase(
@@ -994,6 +1030,9 @@ bool RunBrokenSunResolutionPersistenceCase(
             Spec.SelectedResolution);
     Vec2 ConduitBuildSite;
     if (!Check(
+            TEXT("the selected ending uses its test-owned convergence site"),
+            ResolutionCenter == Spec.ExpectedResolutionSite) ||
+        !Check(
             TEXT("the selected ending exposes a valid conduit footprint"),
             FindBuildSite(ResolutionCenter, 2, ConduitBuildSite)) ||
         !Check(
@@ -1204,27 +1243,53 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                     TEXT("The earned ending mask is derived only from explicit ledger facts"),
                     Plan.AvailableFinalResolutions,
                     ExpectedMask);
+                const echoes::sim::Vec2 RestorationSite =
+                    FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                        Plan,
+                        EEchoesFinalResolution::Restoration);
+                const echoes::sim::Vec2 ControlledSite =
+                    FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                        Plan,
+                        EEchoesFinalResolution::ControlledStabilization);
+                const echoes::sim::Vec2 ExtinguishmentSite =
+                    FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                        Plan,
+                        EEchoesFinalResolution::Extinguishment);
+                const echoes::sim::Vec2 OpenEvolutionSite =
+                    FEchoesBrokenSunMissionModel::ResolutionConvergenceSite(
+                        Plan,
+                        EEchoesFinalResolution::OpenEvolution);
                 TestTrue(
-                    TEXT("The approach and all four ending sites remain separate"),
-                    Plan.CrownfallApproachSite !=
-                            Plan.FinalConvergenceSite &&
-                        FEchoesBrokenSunMissionModel::
-                                ResolutionConvergenceSite(
-                                    Plan,
-                                    EEchoesFinalResolution::Restoration) !=
-                            FEchoesBrokenSunMissionModel::
-                                ResolutionConvergenceSite(
-                                    Plan,
-                                    EEchoesFinalResolution::
-                                        ControlledStabilization) &&
-                        FEchoesBrokenSunMissionModel::
-                                ResolutionConvergenceSite(
-                                    Plan,
-                                    EEchoesFinalResolution::Extinguishment) !=
-                            FEchoesBrokenSunMissionModel::
-                                ResolutionConvergenceSite(
-                                    Plan,
-                                    EEchoesFinalResolution::OpenEvolution));
+                    TEXT("Every ending retains its test-owned convergence site"),
+                    RestorationSite == TestOwnedBrokenSunResolutionSite(
+                        EEchoesFinalResolution::Restoration) &&
+                        ControlledSite == TestOwnedBrokenSunResolutionSite(
+                            EEchoesFinalResolution::ControlledStabilization) &&
+                        ExtinguishmentSite == TestOwnedBrokenSunResolutionSite(
+                            EEchoesFinalResolution::Extinguishment) &&
+                        OpenEvolutionSite == TestOwnedBrokenSunResolutionSite(
+                            EEchoesFinalResolution::OpenEvolution));
+                TestTrue(
+                    TEXT("All four ending domains remain non-overlapping"),
+                    BrokenSunObjectiveDomainsAreDisjoint(
+                        RestorationSite, 2, ControlledSite, 2) &&
+                        BrokenSunObjectiveDomainsAreDisjoint(
+                            RestorationSite, 2, ExtinguishmentSite, 2) &&
+                        BrokenSunObjectiveDomainsAreDisjoint(
+                            RestorationSite, 2, OpenEvolutionSite, 2) &&
+                        BrokenSunObjectiveDomainsAreDisjoint(
+                            ControlledSite, 2, ExtinguishmentSite, 2) &&
+                        BrokenSunObjectiveDomainsAreDisjoint(
+                            ControlledSite, 2, OpenEvolutionSite, 2) &&
+                        BrokenSunObjectiveDomainsAreDisjoint(
+                            ExtinguishmentSite, 2, OpenEvolutionSite, 2));
+                TestTrue(
+                    TEXT("Open Evolution cannot alias the inherited approach objective"),
+                    BrokenSunObjectiveDomainsAreDisjoint(
+                        Plan.CrownfallApproachSite,
+                        3,
+                        OpenEvolutionSite,
+                        2));
                 TestTrue(
                     TEXT("Every named ending has a nonzero distinct hold"),
                     FEchoesBrokenSunMissionModel::ResolutionHoldTicks(
@@ -2292,6 +2357,7 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             0x0A,
             echoes::sim::Vec2::FromTiles(32, 43),
             echoes::sim::Vec2::FromTiles(32, 40),
+            echoes::sim::Vec2::FromTiles(26, 54),
         },
         {
             TEXT("plan 25 Reshape/Preserve to Controlled Stabilization"),
@@ -2302,6 +2368,7 @@ bool FEchoesBrokenSunAlternateResolutionPersistenceTest::RunTest(
             0x0B,
             echoes::sim::Vec2::FromTiles(32, 56),
             {},
+            echoes::sim::Vec2::FromTiles(32, 44),
         },
     };
 

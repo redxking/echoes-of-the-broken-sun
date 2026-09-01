@@ -199,6 +199,25 @@ uint8 TestOwnedResolutionBit(EEchoesFinalResolution Resolution)
     return 0;
 }
 
+Vec2 TestOwnedFreshJourneyBrokenSunResolutionSite(
+    EEchoesFinalResolution Resolution)
+{
+    switch (Resolution)
+    {
+        case EEchoesFinalResolution::Restoration:
+            return Vec2::FromTiles(32, 49);
+        case EEchoesFinalResolution::ControlledStabilization:
+            return Vec2::FromTiles(32, 44);
+        case EEchoesFinalResolution::Extinguishment:
+            return Vec2::FromTiles(26, 49);
+        case EEchoesFinalResolution::OpenEvolution:
+            return Vec2::FromTiles(26, 54);
+        case EEchoesFinalResolution::None:
+            return {};
+    }
+    return {};
+}
+
 Vec2 TestOwnedNoNeutralRallySite(FutureWellChoice Choice)
 {
     switch (Choice)
@@ -2568,6 +2587,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Plan, Resolution);
         Vec2 ConduitSite;
         if (!Require(
+                ResolutionCenter ==
+                    TestOwnedFreshJourneyBrokenSunResolutionSite(Resolution),
+                TEXT("Mission 15 binds the ending to its test-owned convergence site")) ||
+            !Require(
                 FindValidBuildSite(
                     Bridge, ResolutionCenter, 2, ConduitSite),
                 TEXT("Mission 15 exposes the ending's conduit site")) ||
