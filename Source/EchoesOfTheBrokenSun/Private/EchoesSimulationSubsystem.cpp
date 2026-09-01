@@ -118,6 +118,7 @@ constexpr uint8 BrokenSunQuickSaveMagic[] = {
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
 constexpr uint8 QuickSaveContainerVersion = 3;
 constexpr uint8 TermsOfContinuanceTopologyRevision = 2;
+constexpr uint8 NamesWithoutBirthsTopologyRevision = 1;
 constexpr uint8 QuickSaveContainerMagic[] = {
     'E', 'C', 'H', 'O', 'S', 'A', 'V', 'E'};
 
@@ -360,10 +361,14 @@ enum class EQuickSaveContainerRead : uint8
     OutContainer.Add(QuickSaveContainerVersion);
     OutContainer.Add(static_cast<uint8>(Operation));
     OutContainer.Add(static_cast<uint8>(LocalFaction));
-    OutContainer.Add(
+    const uint8 TopologyRevision =
         Operation == EEchoesOperationMode::CampaignTermsOfContinuance
             ? TermsOfContinuanceTopologyRevision
-            : 0);
+            : Operation ==
+                    EEchoesOperationMode::CampaignNamesWithoutBirths
+                ? NamesWithoutBirthsTopologyRevision
+                : 0;
+    OutContainer.Add(TopologyRevision);
     AppendUint64LittleEndian(OutContainer, CampaignBranchIdentity);
     if (Operation == EEchoesOperationMode::Skirmish)
     {
@@ -616,8 +621,18 @@ enum class EQuickSaveContainerRead : uint8
             "[LOAD_TERMS_TOPOLOGY_MISMATCH] This checkpoint predates the active Terms of Continuance route topology.");
         return EQuickSaveContainerRead::Invalid;
     }
+    if (ExpectedOperation ==
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
+        TopologyRevision != NamesWithoutBirthsTopologyRevision)
+    {
+        OutError = TEXT(
+            "[LOAD_NAMES_TOPOLOGY_MISMATCH] This checkpoint predates the active Names Without Births route topology.");
+        return EQuickSaveContainerRead::Invalid;
+    }
     if (ExpectedOperation !=
             EEchoesOperationMode::CampaignTermsOfContinuance &&
+        ExpectedOperation !=
+            EEchoesOperationMode::CampaignNamesWithoutBirths &&
         TopologyRevision != 0)
     {
         OutError = TEXT(

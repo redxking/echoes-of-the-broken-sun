@@ -2601,18 +2601,163 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetNamesWithoutBirthsPlan();
         const FEchoesObjectiveSnapshot M06Start =
             Bridge->GetLocalObjectiveSnapshot();
+        const TArray<EntityId> M06Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M06CoreId =
+            M06Cores.IsEmpty() ? 0 : M06Cores[0];
+        FString M06FirstObservedProtectedLoss = TEXT("none");
+        uint64 M06FirstObservedProtectedLossTick = 0;
+        const auto ObserveMissionSixProtectedState = [
+            Bridge,
+            M06CoreId,
+            M06Start,
+            &M06FirstObservedProtectedLoss,
+            &M06FirstObservedProtectedLossTick]()
+        {
+            const auto ObserveProtected = [
+                Bridge,
+                &M06FirstObservedProtectedLoss,
+                &M06FirstObservedProtectedLossTick](
+                    const TCHAR* Label,
+                    EntityId Id)
+            {
+                if (M06FirstObservedProtectedLoss != TEXT("none"))
+                {
+                    return;
+                }
+                const Entity* Current = Bridge->FindEntity(Id);
+                if (Id != 0 && Current != nullptr &&
+                    Current->hitPoints > 0)
+                {
+                    return;
+                }
+                const echoes::sim::Simulation* Simulation =
+                    Bridge->GetSimulation();
+                M06FirstObservedProtectedLossTick =
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0;
+                M06FirstObservedProtectedLoss =
+                    DescribeFreshJourneyEntity(Label, Id, Current);
+            };
+            ObserveProtected(TEXT("core"), M06CoreId);
+            ObserveProtected(TEXT("talar"), M06Start.TalarId);
+            ObserveProtected(
+                TEXT("archive"), M06Start.CensusArchiveId);
+            ObserveProtected(
+                TEXT("civilianA"), M06Start.FirstCivilianId);
+            ObserveProtected(
+                TEXT("civilianB"), M06Start.SecondCivilianId);
+        };
+        const auto WriteMissionSixDiagnostic = [
+            Bridge,
+            M06CoreId,
+            M06Plan,
+            M06Start,
+            &M06FirstObservedProtectedLoss,
+            &M06FirstObservedProtectedLossTick,
+            &ObserveMissionSixProtectedState,
+            &Feedback]()
+        {
+            ObserveMissionSixProtectedState();
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            const FEchoesObjectiveSnapshot Current =
+                Bridge->GetLocalObjectiveSnapshot();
+            const FString PriorFeedback =
+                Feedback.IsEmpty() ? TEXT("none") : Feedback;
+            Feedback = FString::Printf(
+                TEXT("[M06_DIAGNOSTIC] tick=%llu outcome=%u phase=%u archivePowered=%s expectedShelter=(%d,%d) firstObservedProtectedLossTick=%llu firstObservedProtectedLoss=%s priorFeedback=%s current={%s %s %s %s %s}"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr
+                        ? Simulation->CurrentTick()
+                        : 0),
+                Simulation != nullptr
+                    ? static_cast<uint8>(Simulation->Outcome())
+                    : 0xFF,
+                static_cast<uint8>(
+                    Bridge->GetNamesWithoutBirthsPhase()),
+                Current.bCensusArchivePowered
+                    ? TEXT("true")
+                    : TEXT("false"),
+                M06Plan.CivilianShelterSite.x.FloorToInt(),
+                M06Plan.CivilianShelterSite.y.FloorToInt(),
+                static_cast<unsigned long long>(
+                    M06FirstObservedProtectedLossTick),
+                *M06FirstObservedProtectedLoss,
+                *PriorFeedback,
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"),
+                    M06CoreId,
+                    Bridge->FindEntity(M06CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("talar"),
+                    M06Start.TalarId,
+                    Bridge->FindEntity(M06Start.TalarId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("archive"),
+                    M06Start.CensusArchiveId,
+                    Bridge->FindEntity(M06Start.CensusArchiveId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("civilianA"),
+                    M06Start.FirstCivilianId,
+                    Bridge->FindEntity(M06Start.FirstCivilianId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("civilianB"),
+                    M06Start.SecondCivilianId,
+                    Bridge->FindEntity(M06Start.SecondCivilianId)));
+        };
+        const auto RequireMissionSix = [
+            &Require,
+            &ObserveMissionSixProtectedState,
+            &WriteMissionSixDiagnostic](
+                bool bCondition,
+                const FString& Label)
+        {
+            ObserveMissionSixProtectedState();
+            if (!bCondition)
+            {
+                WriteMissionSixDiagnostic();
+            }
+            return Require(bCondition, Label);
+        };
+        const auto TickUntilMissionSixCondition = [
+            Bridge,
+            &ObserveMissionSixProtectedState](
+                const TFunction<bool()>& Predicate,
+                int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0;
+                 TickIndex < MaximumTicks;
+                 ++TickIndex)
+            {
+                ObserveMissionSixProtectedState();
+                if (Bridge->GetNamesWithoutBirthsPhase() ==
+                    EEchoesNamesWithoutBirthsPhase::Failed)
+                {
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                Bridge->Tick(0.05f);
+            }
+            ObserveMissionSixProtectedState();
+            return Predicate();
+        };
+        ObserveMissionSixProtectedState();
         Vec2 M06PowerLinkSite;
-        if (!Require(
+        if (!RequireMissionSix(
                 M06Start.TalarId != 0 &&
                     M06Start.FirstCivilianId != 0 &&
                     M06Start.SecondCivilianId != 0,
                 TEXT("Mission 06 exposes Talar and both civilians")) ||
-            !Require(
+            !RequireMissionSix(
                 Move(M06Start.TalarId, M06Plan.CensusSite),
                 TEXT("Mission 06 Talar accepts the census route")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSix(
+                TickUntilMissionSixCondition(
                     [Bridge]()
                     {
                         return Bridge->GetNamesWithoutBirthsPhase() ==
@@ -2621,7 +2766,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     500),
                 TEXT("Mission 06 locates the inherited census")) ||
-            !Require(
+            !RequireMissionSix(
                 FindValidBuildSiteForType(
                     Bridge,
                     EntityType::Dropoff,
@@ -2629,16 +2774,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     2,
                     M06PowerLinkSite),
                 TEXT("Mission 06 exposes a valid census Power Link site")) ||
-            !Require(
+            !RequireMissionSix(
                 Bridge->IssueBuildCommand(
                     M06Start.FirstCivilianId,
                     EntityType::Dropoff,
                     Bridge->SimToWorld(M06PowerLinkSite),
                     Feedback),
                 TEXT("Mission 06 accepts the census Power Link")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSix(
+                TickUntilMissionSixCondition(
                     [Bridge]()
                     {
                         return Bridge->GetNamesWithoutBirthsPhase() ==
@@ -2647,19 +2791,18 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     900),
                 TEXT("Mission 06 powers the census archive")) ||
-            !Require(
+            !RequireMissionSix(
                 Move(
                     M06Start.FirstCivilianId,
                     M06Plan.CivilianShelterSite),
                 TEXT("Mission 06 first civilian accepts shelter")) ||
-            !Require(
+            !RequireMissionSix(
                 Move(
                     M06Start.SecondCivilianId,
                     M06Plan.CivilianShelterSite),
                 TEXT("Mission 06 second civilian accepts shelter")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSix(
+                TickUntilMissionSixCondition(
                     [Bridge]()
                     {
                         return Bridge->GetNamesWithoutBirthsPhase() ==
@@ -2668,12 +2811,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     1000),
                 TEXT("Mission 06 shelters both civilians")) ||
-            !Require(
+            !RequireMissionSix(
                 Move(M06Start.TalarId, M06Plan.EvidenceExtractionSite),
                 TEXT("Mission 06 Talar accepts evidence extraction")) ||
-            !Require(
-                TickUntil(
-                    Bridge,
+            !RequireMissionSix(
+                TickUntilMissionSixCondition(
                     [Bridge]()
                     {
                         return Bridge->GetNamesWithoutBirthsPhase() ==

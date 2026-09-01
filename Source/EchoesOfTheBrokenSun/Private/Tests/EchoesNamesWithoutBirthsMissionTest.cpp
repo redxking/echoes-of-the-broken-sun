@@ -159,12 +159,36 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
     const FEchoesNamesWithoutBirthsPlan ReshapePlan =
         FEchoesNamesWithoutBirthsMissionModel::PlanForChoice(
             echoes::sim::FutureWellChoice::Reshape);
-    TestTrue(TEXT("Each inherited choice produces distinct census geometry"),
-             HarvestPlan.CensusSite == echoes::sim::Vec2::FromTiles(16, 22) &&
-                 PreservePlan.CensusSite == echoes::sim::Vec2::FromTiles(32, 22) &&
-                 ReshapePlan.CensusSite == echoes::sim::Vec2::FromTiles(48, 22) &&
-                 HarvestPlan.PowerLinkSite != PreservePlan.PowerLinkSite &&
-                 PreservePlan.PowerLinkSite != ReshapePlan.PowerLinkSite);
+    TestTrue(
+        TEXT("Harvest uses the exact foundry census geometry"),
+        HarvestPlan.CensusSite ==
+                echoes::sim::Vec2::FromTiles(16, 22) &&
+            HarvestPlan.PowerLinkSite ==
+                echoes::sim::Vec2::FromTiles(16, 16) &&
+            HarvestPlan.CivilianShelterSite ==
+                echoes::sim::Vec2::FromTiles(14, 48) &&
+            HarvestPlan.EvidenceExtractionSite ==
+                echoes::sim::Vec2::FromTiles(22, 44));
+    TestTrue(
+        TEXT("Preserve uses the exact missing-quarter census geometry"),
+        PreservePlan.CensusSite ==
+                echoes::sim::Vec2::FromTiles(32, 22) &&
+            PreservePlan.PowerLinkSite ==
+                echoes::sim::Vec2::FromTiles(28, 16) &&
+            PreservePlan.CivilianShelterSite ==
+                echoes::sim::Vec2::FromTiles(32, 48) &&
+            PreservePlan.EvidenceExtractionSite ==
+                echoes::sim::Vec2::FromTiles(32, 44));
+    TestTrue(
+        TEXT("Reshape uses the exact folded-register census geometry"),
+        ReshapePlan.CensusSite ==
+                echoes::sim::Vec2::FromTiles(48, 22) &&
+            ReshapePlan.PowerLinkSite ==
+                echoes::sim::Vec2::FromTiles(45, 16) &&
+            ReshapePlan.CivilianShelterSite ==
+                echoes::sim::Vec2::FromTiles(39, 37) &&
+            ReshapePlan.EvidenceExtractionSite ==
+                echoes::sim::Vec2::FromTiles(42, 44));
 
     FEchoesNamesWithoutBirthsMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission six"),
@@ -303,9 +327,70 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
              !Start.bCensusArchivePowered &&
                  Bridge->GetNamesWithoutBirthsPhase() ==
                      EEchoesNamesWithoutBirthsPhase::LocateCensus);
-    TestTrue(TEXT("Mission six uses its ledger-bound quick-save slot"),
-             Bridge->QuickSaveScenario(Feedback) &&
-                 IFileManager::Get().FileExists(*QuickSavePath));
+    if (!TestTrue(TEXT("Mission six uses its ledger-bound quick-save slot"),
+                  Bridge->QuickSaveScenario(Feedback) &&
+                      IFileManager::Get().FileExists(*QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    constexpr int32 TopologyRevisionOffset = 11;
+    constexpr int32 ChecksumSize = 4;
+    TArray<uint8> CurrentTopologyBytes;
+    if (!TestTrue(
+            TEXT("The current Mission 06 checkpoint carries topology revision one"),
+            FFileHelper::LoadFileToArray(
+                CurrentTopologyBytes,
+                *QuickSavePath) &&
+                CurrentTopologyBytes.Num() > 16 &&
+                CurrentTopologyBytes[TopologyRevisionOffset] == 1))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TArray<uint8> LegacyTopologyBytes = CurrentTopologyBytes;
+    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    const int32 ChecksumOffset =
+        LegacyTopologyBytes.Num() - ChecksumSize;
+    const uint32 LegacyChecksum = FCrc::MemCrc32(
+        LegacyTopologyBytes.GetData(),
+        ChecksumOffset);
+    for (int32 ByteIndex = 0;
+         ByteIndex < ChecksumSize;
+         ++ByteIndex)
+    {
+        LegacyTopologyBytes[ChecksumOffset + ByteIndex] =
+            static_cast<uint8>(
+                LegacyChecksum >> (ByteIndex * 8));
+    }
+    if (!TestTrue(
+            TEXT("The revision-zero Mission 06 fixture retains a valid checksum"),
+            FFileHelper::SaveArrayToFile(
+                LegacyTopologyBytes,
+                *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(
+        TEXT("QuickLoad rejects the revision-zero Mission 06 topology"),
+        Bridge->QuickLoadScenario(Feedback));
+    TestTrue(
+        TEXT("The Mission 06 topology rejection is explicit and stable"),
+        Feedback.Contains(TEXT("LOAD_NAMES_TOPOLOGY_MISMATCH")));
+    if (!TestTrue(
+            TEXT("The current Mission 06 checkpoint is restored after the legacy probe"),
+            FFileHelper::SaveArrayToFile(
+                CurrentTopologyBytes,
+                *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
     TestTrue(TEXT("The initial locate phase reconstructs after quick load"),
              Bridge->QuickLoadScenario(Feedback) &&
                  Bridge->GetNamesWithoutBirthsPhase() ==
