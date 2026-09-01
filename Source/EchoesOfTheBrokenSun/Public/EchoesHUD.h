@@ -7,6 +7,8 @@
 class AEchoesPlayerController;
 class UEchoesGameUserSettings;
 class UEchoesSimulationSubsystem;
+struct FEchoesVisualTheme;
+enum class EEchoesVisualFaction : uint8;
 namespace echoes::sim
 {
 class PlayerView;
@@ -71,6 +73,21 @@ private:
         const AEchoesPlayerController* EchoesController,
         const UEchoesSimulationSubsystem* Bridge,
         const UEchoesGameUserSettings* Settings);
+    void DrawVisualPanel(
+        const FBox2D& Bounds,
+        const FEchoesVisualTheme& Theme,
+        bool bEmphasized = true);
+    void DrawShatteredSunMotif(
+        const FBox2D& Bounds,
+        const FEchoesVisualTheme& Theme,
+        const UEchoesGameUserSettings* Settings,
+        float Opacity);
+    void DrawFactionSigil(
+        EEchoesVisualFaction Faction,
+        const FVector2D& Center,
+        float Radius,
+        const FEchoesVisualTheme& Theme,
+        float Opacity = 1.0f);
     void DrawSelectionRectangle();
 
     bool bLoggedTacticalOverviewReady = false;
