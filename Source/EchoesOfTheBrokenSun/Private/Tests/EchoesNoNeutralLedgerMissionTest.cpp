@@ -52,7 +52,7 @@ uint8 NoNeutralChoiceMask(echoes::sim::FutureWellChoice Choice)
     }
 }
 
-echoes::sim::Vec2 TestOwnedNoNeutralRallySite(
+echoes::sim::Vec2 TestOwnedLedgerRallySite(
     echoes::sim::FutureWellChoice Choice)
 {
     using echoes::sim::FutureWellChoice;
@@ -210,7 +210,7 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
                             Vec2::FromTiles(38, 43) &&
                         Plan.FutureWellSite == Vec2::FromTiles(32, 49) &&
                         Plan.RallySite ==
-                            TestOwnedNoNeutralRallySite(LumeChoice));
+                            TestOwnedLedgerRallySite(LumeChoice));
                 TestTrue(
                     TEXT("Every alliance rally stays distinct from contributing districts and public evidence readbacks"),
                     Plan.RallySite != Plan.FirstDistrictSite &&
