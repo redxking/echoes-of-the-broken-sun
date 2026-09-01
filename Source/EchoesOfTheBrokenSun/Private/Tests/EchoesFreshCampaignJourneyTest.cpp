@@ -42,6 +42,8 @@ struct FFreshRouteSpec final
     FutureWellChoice LumeChoice = FutureWellChoice::Dormant;
     EEchoesFinalResolution FinalResolution =
         EEchoesFinalResolution::None;
+    uint8 ExpectedFinalPlanKey = 0;
+    uint8 ExpectedFinalResolutionMask = 0;
 };
 
 bool TickUntil(
@@ -179,6 +181,22 @@ EEchoesOperationMode OperationForMission(int32 MissionNumber)
         EEchoesOperationMode::CampaignSeveralVoicesOneCommand,
         EEchoesOperationMode::CampaignTheBrokenSun};
     return Operations[FMath::Clamp(MissionNumber - 1, 0, 14)];
+}
+
+// This mapping is intentionally test-owned. Using the production
+// ResolutionMask here would let the expected and observed sides share the
+// same defect if two resolution identities were mapped to the wrong bits.
+uint8 TestOwnedResolutionBit(EEchoesFinalResolution Resolution)
+{
+    switch (Resolution)
+    {
+        case EEchoesFinalResolution::Restoration: return 0x01;
+        case EEchoesFinalResolution::ControlledStabilization: return 0x02;
+        case EEchoesFinalResolution::Extinguishment: return 0x04;
+        case EEchoesFinalResolution::OpenEvolution: return 0x08;
+        case EEchoesFinalResolution::None: return 0;
+    }
+    return 0;
 }
 }
 
@@ -352,8 +370,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         return Bridge->GetActiveQuickSavePath();
     };
 
-    const auto BeginFreshRoute = [Bridge, Controller, &Require](
-        bool bReplaceExisting)
+    const auto BeginFreshRoute = [Bridge, Controller, CampaignPath, &Feedback,
+                                  &Require](bool bReplaceExisting)
     {
         Controller->PresentTitleScreen();
         if (!Require(
@@ -375,10 +393,25 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Controller->RequestNewCampaign();
         }
         if (!Require(
-                Bridge->GetCampaignProgress().Decisions.IsEmpty(),
+                Bridge->GetCampaignProgress().Decisions.IsEmpty() &&
+                    Bridge->GetCampaignJourney().State ==
+                        EEchoesCampaignJourneyState::Ready &&
+                    Bridge->GetCampaignJourney().CompletedMissionCount == 0,
                 TEXT("New Campaign exposes an empty ledger")))
         {
             return false;
+        }
+        if (bReplaceExisting)
+        {
+            FEchoesCampaignProgress EmptyPrimary;
+            if (!Require(
+                    FEchoesCampaignProgressStore::LoadGeneration(
+                        CampaignPath, EmptyPrimary, Feedback) &&
+                        EmptyPrimary.Decisions.IsEmpty(),
+                    TEXT("New Campaign persists an exact empty primary ledger")))
+            {
+                return false;
+            }
         }
         Controller->ContinueCampaign();
         if (!Require(
@@ -2007,6 +2040,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
 
     const auto RunMissionFifteen = [
         Bridge, Controller, &Feedback, &Require, &VerifyCompletion](
+        const FFreshRouteSpec& Spec,
         EEchoesFinalResolution Resolution,
         EEchoesFinalResolution ExpectedRecordedResolution,
         EEchoesCampaignCommitStatus ExpectedStatus)
@@ -2022,11 +2056,53 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge,
             EntityType::Barracks,
             echoes::sim::Faction::HollowChoir);
+        const EEchoesFinalResolution CandidateResolutions[] = {
+            EEchoesFinalResolution::Restoration,
+            EEchoesFinalResolution::ControlledStabilization,
+            EEchoesFinalResolution::Extinguishment,
+            EEchoesFinalResolution::OpenEvolution};
+        uint8 ObservedResolutionMask = 0;
+        for (const EEchoesFinalResolution Candidate : CandidateResolutions)
+        {
+            const uint8 CandidateMask = TestOwnedResolutionBit(Candidate);
+            const bool bExpectedAvailable =
+                (Spec.ExpectedFinalResolutionMask & CandidateMask) != 0;
+            const bool bObservedAvailable =
+                FEchoesBrokenSunMissionModel::IsResolutionAvailable(
+                    Plan, Candidate);
+            if (!Require(
+                    CandidateMask != 0 &&
+                        bObservedAvailable == bExpectedAvailable,
+                    FString::Printf(
+                        TEXT("Mission 15 route %s maps resolution %u to independent literal bit 0x%02X"),
+                        Spec.Label,
+                        static_cast<uint8>(Candidate),
+                        CandidateMask)))
+            {
+                return false;
+            }
+            if (bObservedAvailable)
+            {
+                ObservedResolutionMask = static_cast<uint8>(
+                    ObservedResolutionMask | CandidateMask);
+            }
+        }
         if (!Require(
                 !Workers.IsEmpty() && !ResearchLooms.IsEmpty() &&
+                    Resolution != EEchoesFinalResolution::None &&
+                    Spec.ExpectedFinalResolutionMask != 0 &&
+                    Plan.FoundingDoctrine == Spec.FoundingChoice &&
+                    Plan.RecordedProtocol == Spec.LumeChoice &&
+                    Plan.StablePlanKey == Spec.ExpectedFinalPlanKey &&
+                    Plan.AvailableFinalResolutions ==
+                        Spec.ExpectedFinalResolutionMask &&
+                    ObservedResolutionMask ==
+                        Spec.ExpectedFinalResolutionMask &&
                     FEchoesBrokenSunMissionModel::IsResolutionAvailable(
                         Plan, Resolution),
-                TEXT("Mission 15 exposes its earned resolution force")))
+                FString::Printf(
+                    TEXT("Mission 15 binds %s to its exact plan and earned resolutions"),
+                    Spec.Label)))
         {
             return false;
         }
@@ -2248,8 +2324,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Record->VerifiedFacts == 0xFF &&
                     Record->FinalResolution == ExpectedRecordedResolution &&
                     Record->AvailableFinalResolutions ==
-                        Plan.AvailableFinalResolutions &&
-                    Record->FinalPlanKey == Plan.StablePlanKey &&
+                        Spec.ExpectedFinalResolutionMask &&
+                    Record->FinalPlanKey == Spec.ExpectedFinalPlanKey &&
                     Record->SimulationSnapshotVersion == 23 &&
                     Record->CompletionTick > 0 &&
                     Record->FinalStateChecksum != 0,
@@ -2277,12 +2353,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         TEXT("preserve-restoration"),
         FutureWellChoice::Preserve,
         FutureWellChoice::Preserve,
-        EEchoesFinalResolution::Restoration};
+        EEchoesFinalResolution::Restoration,
+        16,
+        0x03};
     if (!BeginFreshRoute(false) ||
         !RunMissionsOneThroughFive(PreserveRoute) ||
         !RunMissionsSixThroughTen(PreserveRoute) ||
         !RunMissionsElevenThroughFourteen(PreserveRoute) ||
         !RunMissionFifteen(
+            PreserveRoute,
             PreserveRoute.FinalResolution,
             PreserveRoute.FinalResolution,
             EEchoesCampaignCommitStatus::Added))
@@ -2481,6 +2560,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     EEchoesFinalResolution::ControlledStabilization),
             TEXT("The replay exposes its earned alternate ending")) ||
         !RunMissionFifteen(
+            PreserveRoute,
             EEchoesFinalResolution::ControlledStabilization,
             EEchoesFinalResolution::Restoration,
             EEchoesCampaignCommitStatus::ReplayConflict))
@@ -2564,7 +2644,9 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         TEXT("harvest-extinguishment"),
         FutureWellChoice::Harvest,
         FutureWellChoice::Harvest,
-        EEchoesFinalResolution::Extinguishment};
+        EEchoesFinalResolution::Extinguishment,
+        6,
+        0x06};
     if (!BeginFreshRoute(true))
     {
         Controller->Destroy();
@@ -2584,6 +2666,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         !RunMissionsSixThroughTen(HarvestRoute) ||
         !RunMissionsElevenThroughFourteen(HarvestRoute) ||
         !RunMissionFifteen(
+            HarvestRoute,
             HarvestRoute.FinalResolution,
             HarvestRoute.FinalResolution,
             EEchoesCampaignCommitStatus::Added))
@@ -2624,6 +2707,126 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Controller->IsTitleScreenVisible() &&
                 !Controller->IsMatchResultVisible(),
             TEXT("The distinct Harvest route earns Extinguishment without Mission 16")))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const FFreshRouteSpec PreserveReshapeRoute{
+        TEXT("preserve-reshape-open-evolution"),
+        FutureWellChoice::Preserve,
+        FutureWellChoice::Reshape,
+        EEchoesFinalResolution::OpenEvolution,
+        17,
+        0x0A};
+    if (!BeginFreshRoute(true) ||
+        !RunMissionsOneThroughFive(PreserveReshapeRoute) ||
+        !RunMissionsSixThroughTen(PreserveReshapeRoute) ||
+        !RunMissionsElevenThroughFourteen(PreserveReshapeRoute) ||
+        !RunMissionFifteen(
+            PreserveReshapeRoute,
+            PreserveReshapeRoute.FinalResolution,
+            PreserveReshapeRoute.FinalResolution,
+            EEchoesCampaignCommitStatus::Added))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const FEchoesCampaignDecisionRecord* PreserveReshapeFoundingRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* PreserveReshapeLumeRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    const FEchoesCampaignDecisionRecord* PreserveReshapeEndingRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::TheBrokenSun);
+    if (!Require(
+            PreserveReshapeFoundingRecord != nullptr &&
+                PreserveReshapeFoundingRecord->WellChoice ==
+                    PreserveReshapeRoute.FoundingChoice &&
+                PreserveReshapeLumeRecord != nullptr &&
+                PreserveReshapeLumeRecord->WellChoice ==
+                    PreserveReshapeRoute.LumeChoice &&
+                PreserveReshapeEndingRecord != nullptr &&
+                PreserveReshapeEndingRecord->FinalResolution ==
+                    PreserveReshapeRoute.FinalResolution &&
+                PreserveReshapeEndingRecord->FinalPlanKey ==
+                    PreserveReshapeRoute.ExpectedFinalPlanKey &&
+                PreserveReshapeEndingRecord->AvailableFinalResolutions ==
+                    PreserveReshapeRoute.ExpectedFinalResolutionMask &&
+                Bridge->GetCampaignProgress().Decisions.Num() == 15 &&
+                Bridge->GetCampaignJourney().State ==
+                    EEchoesCampaignJourneyState::Complete &&
+                Bridge->GetCampaignJourney().CompletedMissionCount == 15 &&
+                Controller->IsTitleScreenVisible() &&
+                !Controller->IsMatchResultVisible(),
+            TEXT("The Preserve-Reshape journey earns Open Evolution under exact plan 17 and mask 0x0A without Mission 16")))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const FFreshRouteSpec ReshapePreserveRoute{
+        TEXT("reshape-preserve-controlled-stabilization"),
+        FutureWellChoice::Reshape,
+        FutureWellChoice::Preserve,
+        EEchoesFinalResolution::ControlledStabilization,
+        25,
+        0x0B};
+    if (!BeginFreshRoute(true) ||
+        !RunMissionsOneThroughFive(ReshapePreserveRoute) ||
+        !RunMissionsSixThroughTen(ReshapePreserveRoute) ||
+        !RunMissionsElevenThroughFourteen(ReshapePreserveRoute) ||
+        !RunMissionFifteen(
+            ReshapePreserveRoute,
+            ReshapePreserveRoute.FinalResolution,
+            ReshapePreserveRoute.FinalResolution,
+            EEchoesCampaignCommitStatus::Added))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const FEchoesCampaignDecisionRecord* ReshapePreserveFoundingRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const FEchoesCampaignDecisionRecord* ReshapePreserveLumeRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::ChoirAtLumeReach);
+    const FEchoesCampaignDecisionRecord* ReshapePreserveEndingRecord =
+        Bridge->GetCampaignProgress().FindDecision(
+            EEchoesCampaignMissionId::TheBrokenSun);
+    if (!Require(
+            ReshapePreserveFoundingRecord != nullptr &&
+                ReshapePreserveFoundingRecord->WellChoice ==
+                    ReshapePreserveRoute.FoundingChoice &&
+                ReshapePreserveLumeRecord != nullptr &&
+                ReshapePreserveLumeRecord->WellChoice ==
+                    ReshapePreserveRoute.LumeChoice &&
+                ReshapePreserveEndingRecord != nullptr &&
+                ReshapePreserveEndingRecord->FinalResolution ==
+                    ReshapePreserveRoute.FinalResolution &&
+                ReshapePreserveEndingRecord->FinalPlanKey ==
+                    ReshapePreserveRoute.ExpectedFinalPlanKey &&
+                ReshapePreserveEndingRecord->AvailableFinalResolutions ==
+                    ReshapePreserveRoute.ExpectedFinalResolutionMask &&
+                Bridge->GetCampaignProgress().Decisions.Num() == 15 &&
+                Bridge->GetCampaignJourney().State ==
+                    EEchoesCampaignJourneyState::Complete &&
+                Bridge->GetCampaignJourney().CompletedMissionCount == 15 &&
+                Controller->IsTitleScreenVisible() &&
+                !Controller->IsMatchResultVisible(),
+            TEXT("The Reshape-Preserve journey earns Controlled Stabilization under exact plan 25 and mask 0x0B without Mission 16")))
     {
         Controller->Destroy();
         Bridge->StopPrototypeScenario();
