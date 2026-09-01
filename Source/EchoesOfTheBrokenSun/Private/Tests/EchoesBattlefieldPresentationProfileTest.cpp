@@ -7,11 +7,103 @@
 #include "EchoesTerrainView.h"
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesWeatherView.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Tests/AutomationCommon.h"
+
+namespace
+{
+struct FEchoesIdentityColor final
+{
+    const TCHAR* Label = TEXT("");
+    FLinearColor Color = FLinearColor::Black;
+};
+
+/**
+ * Mirror of the identity palette that terrain accents must never approach:
+ * owner colors, HollowChoir, ResourceNode, FutureWell choices, and the
+ * temporary mineral cover from EchoesEntityView.cpp ColorForState, plus the
+ * command-marker base colors from EchoesCommandMarkerView.cpp
+ * InitializeMarker. If a production identity color changes, update this
+ * table in the same slice.
+ */
+const FEchoesIdentityColor IdentityColors[] = {
+    {TEXT("owner-0"), FLinearColor(0.04f, 0.72f, 0.88f)},
+    {TEXT("owner-1"), FLinearColor(0.92f, 0.30f, 0.05f)},
+    {TEXT("owner-2"), FLinearColor(0.95f, 0.74f, 0.08f)},
+    {TEXT("owner-3"), FLinearColor(0.62f, 0.30f, 0.95f)},
+    {TEXT("owner-neutral"), FLinearColor(0.72f, 0.72f, 0.72f)},
+    {TEXT("hollow-choir"), FLinearColor(0.788f, 0.824f, 0.941f)},
+    {TEXT("resource-node"), FLinearColor(0.95f, 0.56f, 0.08f)},
+    {TEXT("well-harvest"), FLinearColor(1.0f, 0.43f, 0.05f)},
+    {TEXT("well-preserve"), FLinearColor(0.12f, 0.86f, 0.44f)},
+    {TEXT("well-reshape"), FLinearColor(0.95f, 0.08f, 0.16f)},
+    {TEXT("well-dormant"), FLinearColor(0.62f, 0.18f, 1.0f)},
+    {TEXT("mineral-cover"), FLinearColor(0.42f, 0.28f, 0.16f)},
+    {TEXT("marker-move"), FLinearColor(0.05f, 0.92f, 1.0f)},
+    {TEXT("marker-attack"), FLinearColor(1.0f, 0.12f, 0.04f)},
+    {TEXT("marker-attack-move"), FLinearColor(1.0f, 0.34f, 0.04f)},
+    {TEXT("marker-patrol"), FLinearColor(0.76f, 0.24f, 1.0f)},
+    {TEXT("marker-guard"), FLinearColor(0.20f, 1.0f, 0.42f)},
+    {TEXT("marker-build"), FLinearColor(0.98f, 0.84f, 0.22f)},
+    {TEXT("marker-interact"), FLinearColor(0.32f, 0.95f, 0.82f)}};
+
+constexpr float MinimumIdentitySeparation = 0.30f;
+
+/** Brightness-independent chromaticity: each channel divided by the max. */
+[[nodiscard]] FVector NormalizedChromaticity(const FLinearColor& Color)
+{
+    const float MaxChannel = FMath::Max3(Color.R, Color.G, Color.B);
+    if (MaxChannel <= KINDA_SMALL_NUMBER)
+    {
+        return FVector::ZeroVector;
+    }
+    return FVector(
+        Color.R / MaxChannel,
+        Color.G / MaxChannel,
+        Color.B / MaxChannel);
+}
+
+[[nodiscard]] float ChromaticitySeparation(
+    const FLinearColor& First,
+    const FLinearColor& Second)
+{
+    return static_cast<float>(FVector::Distance(
+        NormalizedChromaticity(First),
+        NormalizedChromaticity(Second)));
+}
+
+/**
+ * Reads the slot-3 accent Color parameter from the named instanced tile
+ * layer of the real terrain actor.
+ */
+[[nodiscard]] bool ReadAccentColor(
+    const AEchoesTerrainView& Terrain,
+    const TCHAR* ComponentName,
+    FLinearColor& OutColor)
+{
+    TArray<UInstancedStaticMeshComponent*> TileLayers;
+    Terrain.GetComponents<UInstancedStaticMeshComponent>(TileLayers);
+    for (const UInstancedStaticMeshComponent* Layer : TileLayers)
+    {
+        if (Layer == nullptr || Layer->GetName() != ComponentName)
+        {
+            continue;
+        }
+        const UMaterialInstanceDynamic* AccentMaterial =
+            Cast<UMaterialInstanceDynamic>(Layer->GetMaterial(3));
+        return AccentMaterial != nullptr &&
+               AccentMaterial->GetVectorParameterValue(
+                   FHashedMaterialParameterInfo(TEXT("Color")),
+                   OutColor);
+    }
+    return false;
+}
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesBattlefieldPresentationProfileTest,
@@ -150,10 +242,15 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
     }
 
     float FogDensities[UE_ARRAY_COUNT(Presets)] = {};
+    FLinearColor BlockedAccents[UE_ARRAY_COUNT(Presets)] = {
+        FLinearColor::Black, FLinearColor::Black, FLinearColor::Black};
+    FLinearColor ScarredAccents[UE_ARRAY_COUNT(Presets)] = {
+        FLinearColor::Black, FLinearColor::Black, FLinearColor::Black};
     const auto VerifyProfile =
         [this, Bridge, Weather, MalformedWeather, SharedFloor,
          SharedFloorMesh, SharedSun, SharedSky, LegacyGlassScarProbe,
-         MalformedRootOnlyProbe, &PresentationProbes, &FogDensities, &Presets](
+         MalformedRootOnlyProbe, &PresentationProbes, &FogDensities,
+         &BlockedAccents, &ScarredAccents, &Presets](
             EEchoesSkirmishMapPreset Preset,
             int32 PresetIndex,
             const TCHAR* Label)
@@ -210,6 +307,47 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
                     Label),
                 Terrain->GetBlockedTileCount(),
                 FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(Preset));
+            const struct
+            {
+                const TCHAR* LayerName;
+                FLinearColor* Store;
+            } AccentLayers[] = {
+                {TEXT("BlockedTiles"), &BlockedAccents[PresetIndex]},
+                {TEXT("ScarredTiles"), &ScarredAccents[PresetIndex]}};
+            for (const auto& AccentLayer : AccentLayers)
+            {
+                FLinearColor Accent = FLinearColor::Black;
+                const bool bAccentRead = ReadAccentColor(
+                    *Terrain,
+                    AccentLayer.LayerName,
+                    Accent);
+                bPassed &= TestTrue(
+                    FString::Printf(
+                        TEXT("%s: %s exposes its accent color"),
+                        Label,
+                        AccentLayer.LayerName),
+                    bAccentRead);
+                if (!bAccentRead)
+                {
+                    continue;
+                }
+                *AccentLayer.Store = Accent;
+                for (const FEchoesIdentityColor& Identity : IdentityColors)
+                {
+                    const float Separation =
+                        ChromaticitySeparation(Accent, Identity.Color);
+                    bPassed &= TestTrue(
+                        FString::Printf(
+                            TEXT("%s: %s accent keeps chromatic distance ")
+                            TEXT("%.3f >= %.2f from %s"),
+                            Label,
+                            AccentLayer.LayerName,
+                            Separation,
+                            MinimumIdentitySeparation,
+                            Identity.Label),
+                        Separation >= MinimumIdentitySeparation);
+                }
+            }
         }
         bPassed &= TestTrue(
             FString::Printf(TEXT("%s: registered weather preset matches"),
@@ -301,6 +439,36 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
         !FMath::IsNearlyEqual(FogDensities[0], FogDensities[1], 0.000001f) &&
             !FMath::IsNearlyEqual(FogDensities[0], FogDensities[2], 0.000001f) &&
             !FMath::IsNearlyEqual(FogDensities[1], FogDensities[2], 0.000001f));
+    for (int32 FirstIndex = 0; FirstIndex < UE_ARRAY_COUNT(Presets);
+         ++FirstIndex)
+    {
+        for (int32 SecondIndex = FirstIndex + 1;
+             SecondIndex < UE_ARRAY_COUNT(Presets); ++SecondIndex)
+        {
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s and %s keep distinct blocked accents"),
+                    EchoesBattlefieldPresentation::StableName(
+                        Presets[FirstIndex]),
+                    EchoesBattlefieldPresentation::StableName(
+                        Presets[SecondIndex])),
+                ChromaticitySeparation(
+                    BlockedAccents[FirstIndex],
+                    BlockedAccents[SecondIndex]) >=
+                    MinimumIdentitySeparation);
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s and %s keep distinct scarred accents"),
+                    EchoesBattlefieldPresentation::StableName(
+                        Presets[FirstIndex]),
+                    EchoesBattlefieldPresentation::StableName(
+                        Presets[SecondIndex])),
+                ChromaticitySeparation(
+                    ScarredAccents[FirstIndex],
+                    ScarredAccents[SecondIndex]) >=
+                    MinimumIdentitySeparation);
+        }
+    }
 
     FEchoesSkirmishSetup CrownfallSetup =
         FEchoesSkirmishSetupModel::DefaultSetup();
