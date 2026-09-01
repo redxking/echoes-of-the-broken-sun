@@ -210,6 +210,17 @@ Vec2 TestOwnedNoNeutralRallySite(FutureWellChoice Choice)
     }
 }
 
+Vec2 TestOwnedFutureWonWellApproach(FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case FutureWellChoice::Harvest: return Vec2::FromTiles(16, 54);
+        case FutureWellChoice::Preserve: return Vec2::FromTiles(30, 54);
+        case FutureWellChoice::Reshape: return Vec2::FromTiles(46, 41);
+        default: return {};
+    }
+}
+
 FString DescribeFreshJourneyEntity(
     const TCHAR* Label,
     EntityId Id,
@@ -1824,10 +1835,30 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             FindOwnedEntities(Bridge, EntityType::Worker);
         Vec2 M12FirstLink;
         Vec2 M12SecondLink;
-        const Vec2 M12WellApproach = Vec2::FromTiles(
-            M12Plan.FutureWellSite.x.FloorToInt() - 2,
-            M12Plan.FutureWellSite.y.FloorToInt() - 2);
+        const Vec2 ExpectedM12WellSite =
+            TestOwnedNoNeutralRallySite(Spec.LumeChoice);
+        const Vec2 M12WellApproach =
+            TestOwnedFutureWonWellApproach(Spec.LumeChoice);
         if (!Require(
+                M12Plan.FutureWellSite == ExpectedM12WellSite,
+                FString::Printf(
+                    TEXT("Mission 12 route %s inherits the independent literal Future Well (%d,%d)"),
+                    Spec.Label,
+                    ExpectedM12WellSite.x.FloorToInt(),
+                    ExpectedM12WellSite.y.FloorToInt())) ||
+            !Require(
+                Bridge->GetSimulation()->TerrainAt(
+                    M12WellApproach.x.FloorToInt(),
+                    M12WellApproach.y.FloorToInt()) ==
+                    echoes::sim::Terrain::Open &&
+                    Bridge->GetSimulation()->IsPositionPassable(
+                        M12WellApproach),
+                FString::Printf(
+                    TEXT("Mission 12 route %s owns an open, passable literal Well approach (%d,%d)"),
+                    Spec.Label,
+                    M12WellApproach.x.FloorToInt(),
+                    M12WellApproach.y.FloorToInt())) ||
+            !Require(
                 M12Workers.Num() >= 2,
                 TEXT("Mission 12 exposes two Kharuun workers")) ||
             !Require(
@@ -1891,7 +1922,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 TEXT("Mission 12 verifies both recorded inputs")) ||
             !Require(
                 Move(M12Workers[0], M12WellApproach),
-                TEXT("Mission 12 worker accepts the Well approach")) ||
+                FString::Printf(
+                    TEXT("Mission 12 worker accepts the literal Well approach (%d,%d)"),
+                    M12WellApproach.x.FloorToInt(),
+                    M12WellApproach.y.FloorToInt())) ||
             !Require(
                 TickUntil(
                     Bridge,
