@@ -3339,6 +3339,19 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             FindOwnedEntities(Bridge, EntityType::CommandCore);
         const EntityId M08CoreId =
             M08Cores.IsEmpty() ? 0 : M08Cores[0];
+        TArray<EntityId> M08Soldiers;
+        for (const EntityId Candidate :
+             FindOwnedEntities(Bridge, EntityType::Soldier))
+        {
+            if (Candidate != M08Start.SecondStateWitnessId)
+            {
+                M08Soldiers.Add(Candidate);
+            }
+        }
+        const TArray<EntityId> M08Heavies =
+            FindOwnedEntities(Bridge, EntityType::HeavyUnit);
+        TArray<EntityId> M08GuardIds;
+        TArray<EntityId> M08GuardTargetIds;
         EntityId M08RelayId = 0;
         FString M08FirstObservedFailure = TEXT("none");
         uint64 M08FirstObservedFailureTick = 0;
@@ -3415,6 +3428,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     if (Candidate.owner ==
                             UEchoesSimulationSubsystem::LocalPlayerId &&
                         Candidate.type == EntityType::UtilityStructure &&
+                        Candidate.hitPoints > 0 &&
                         Candidate.position == M08Plan.EchoRelaySite)
                     {
                         M08RelayId = Candidate.id;
@@ -3497,6 +3511,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             &M08LastKnownWitnessB,
             &M08LastKnownWorker,
             &M08LastKnownRelay,
+            &M08GuardIds,
+            &M08GuardTargetIds,
             &ObserveMissionEightProtectedState,
             &Feedback]()
         {
@@ -3505,8 +3521,34 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Bridge->GetSimulation();
             const FString PriorFeedback =
                 Feedback.IsEmpty() ? TEXT("none") : Feedback;
+            FString DefenderState = TEXT("none");
+            if (!M08GuardIds.IsEmpty())
+            {
+                DefenderState.Reset();
+                for (int32 GuardIndex = 0;
+                     GuardIndex < M08GuardIds.Num();
+                     ++GuardIndex)
+                {
+                    if (GuardIndex > 0)
+                    {
+                        DefenderState += TEXT(" ");
+                    }
+                    const FString GuardLabel = FString::Printf(
+                        TEXT("guard%d"), GuardIndex + 1);
+                    DefenderState += DescribeFreshJourneyEntity(
+                        *GuardLabel,
+                        M08GuardIds[GuardIndex],
+                        Bridge->FindEntity(M08GuardIds[GuardIndex]));
+                    if (M08GuardTargetIds.IsValidIndex(GuardIndex))
+                    {
+                        DefenderState += FString::Printf(
+                            TEXT(" expectedTarget=%u"),
+                            M08GuardTargetIds[GuardIndex]);
+                    }
+                }
+            }
             Feedback = FString::Printf(
-                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s}"),
+                TEXT("[M08_DIAGNOSTIC] tick=%llu checksum=%llu outcome=%u phase=%u lastNonFailedPhase=%u expected={firstEcho=(%d,%d) relay=(%d,%d) witnesses=(%d,%d):(%d,%d) convergence=(%d,%d)} firstObservedFailureTick=%llu firstObservedFailure=%s priorFeedback=%s lastKnown={%s %s %s %s %s %s} current={%s %s %s %s %s %s} defenders={%s}"),
                 static_cast<unsigned long long>(
                     Simulation != nullptr
                         ? Simulation->CurrentTick()
@@ -3563,7 +3605,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 *DescribeFreshJourneyEntity(
                     TEXT("relay"),
                     M08RelayId,
-                    Bridge->FindEntity(M08RelayId)));
+                    Bridge->FindEntity(M08RelayId)),
+                *DefenderState);
         };
         const auto RequireMissionEight = [
             &Require,
@@ -3606,10 +3649,192 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     EEchoesShapeBesideUsPhase::Failed &&
                 Predicate();
         };
+        const auto FindMissionEightRelay = [
+            Bridge,
+            M08Plan,
+            &M08RelayId]()
+        {
+            const Entity* Current = Bridge->FindEntity(M08RelayId);
+            if (M08RelayId != 0 && Current != nullptr &&
+                Current->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Current->type == EntityType::UtilityStructure &&
+                Current->hitPoints > 0 &&
+                Current->position == M08Plan.EchoRelaySite)
+            {
+                return true;
+            }
+            M08RelayId = 0;
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            if (Simulation == nullptr)
+            {
+                return false;
+            }
+            for (const Entity& Candidate : Simulation->Entities())
+            {
+                if (Candidate.owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Candidate.type == EntityType::UtilityStructure &&
+                    Candidate.hitPoints > 0 &&
+                    Candidate.position == M08Plan.EchoRelaySite)
+                {
+                    M08RelayId = Candidate.id;
+                    return true;
+                }
+            }
+            return false;
+        };
+        const auto IssueMissionEightGuardAssignments = [
+            Bridge,
+            &M08GuardIds,
+            &M08GuardTargetIds,
+            &Feedback]()
+        {
+            if (M08GuardIds.Num() != 4 ||
+                M08GuardTargetIds.Num() != M08GuardIds.Num())
+            {
+                Feedback = TEXT(
+                    "[M08_TACTICS_ASSIGNMENT_INVALID] Mission 08 requires four exact Guard assignments.");
+                return false;
+            }
+            for (int32 GuardIndex = 0;
+                 GuardIndex < M08GuardIds.Num();
+                 ++GuardIndex)
+            {
+                const Entity* Target = Bridge->FindEntity(
+                    M08GuardTargetIds[GuardIndex]);
+                if (Target == nullptr || Target->hitPoints <= 0 ||
+                    !Bridge->IssueCommand(
+                        CommandType::Guard,
+                        M08GuardIds[GuardIndex],
+                        M08GuardTargetIds[GuardIndex],
+                        Bridge->SimToWorld(Target->position),
+                        FutureWellChoice::Dormant,
+                        Feedback))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto MissionEightGuardsActive = [
+            Bridge,
+            &M08GuardIds,
+            &M08GuardTargetIds]()
+        {
+            if (M08GuardIds.Num() != 4 ||
+                M08GuardTargetIds.Num() != M08GuardIds.Num())
+            {
+                return false;
+            }
+            for (int32 GuardIndex = 0;
+                 GuardIndex < M08GuardIds.Num();
+                 ++GuardIndex)
+            {
+                const Entity* Guard = Bridge->FindEntity(
+                    M08GuardIds[GuardIndex]);
+                if (Guard == nullptr || Guard->hitPoints <= 0 ||
+                    Guard->order.type != echoes::sim::OrderType::Guard ||
+                    Guard->order.target !=
+                        M08GuardTargetIds[GuardIndex])
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto PrepareMissionEightTalarGuards = [
+            M08Start,
+            M08Soldiers,
+            M08Heavies,
+            &M08GuardIds,
+            &M08GuardTargetIds,
+            &IssueMissionEightGuardAssignments]()
+        {
+            if (M08Soldiers.Num() != 3 || M08Heavies.Num() != 1)
+            {
+                return false;
+            }
+            const EntityId GuardActors[] = {
+                M08Soldiers[0],
+                M08Soldiers[1],
+                M08Soldiers[2],
+                M08Heavies[0]};
+            M08GuardIds.Reset();
+            M08GuardTargetIds.Reset();
+            for (const EntityId GuardActor : GuardActors)
+            {
+                M08GuardIds.Add(GuardActor);
+                M08GuardTargetIds.Add(
+                    M08Start.ShapeBesideUsTalarId);
+            }
+            return IssueMissionEightGuardAssignments();
+        };
+        const auto RetargetMissionEightRelayGuards = [
+            M08Start,
+            &M08RelayId,
+            &M08GuardTargetIds,
+            &FindMissionEightRelay,
+            &IssueMissionEightGuardAssignments]()
+        {
+            if (!FindMissionEightRelay() ||
+                M08GuardTargetIds.Num() != 4)
+            {
+                return false;
+            }
+            M08GuardTargetIds[0] = M08RelayId;
+            M08GuardTargetIds[1] = M08RelayId;
+            M08GuardTargetIds[2] =
+                M08Start.ShapeBesideUsTalarId;
+            M08GuardTargetIds[3] =
+                M08Start.ShapeBesideUsTalarId;
+            return IssueMissionEightGuardAssignments();
+        };
+        const auto RetargetMissionEightTraversalGuards = [
+            Bridge,
+            M08Start,
+            &M08RelayId,
+            &M08GuardTargetIds,
+            &FindMissionEightRelay,
+            &IssueMissionEightGuardAssignments]()
+        {
+            if (!FindMissionEightRelay() ||
+                M08GuardTargetIds.Num() != 4)
+            {
+                return false;
+            }
+            const Entity* Relay = Bridge->FindEntity(M08RelayId);
+            if (Relay == nullptr || Relay->hitPoints <= 0 ||
+                !Relay->completed)
+            {
+                return false;
+            }
+            M08GuardTargetIds[0] = M08RelayId;
+            M08GuardTargetIds[1] = M08Start.FirstStateWitnessId;
+            M08GuardTargetIds[2] = M08Start.SecondStateWitnessId;
+            M08GuardTargetIds[3] =
+                M08Start.ShapeBesideUsTalarId;
+            return IssueMissionEightGuardAssignments();
+        };
         ObserveMissionEightProtectedState();
         if (!RequireMissionEight(
                 M08Worker != 0,
                 TEXT("Mission 08 exposes a separate construction worker")) ||
+            !RequireMissionEight(
+                M08Soldiers.Num() == 3 && M08Heavies.Num() == 1,
+                TEXT("Mission 08 exposes exactly three generic Soldiers and one Heavy")) ||
+            !RequireMissionEight(
+                PrepareMissionEightTalarGuards(),
+                TEXT("Mission 08 assigns all four defenders to Talar")) ||
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
+                    [&MissionEightGuardsActive]()
+                    {
+                        return MissionEightGuardsActive();
+                    },
+                    20),
+                TEXT("Mission 08 initial Talar Guards take effect")) ||
             !RequireMissionEight(
                 Move(
                     M08Start.ShapeBesideUsTalarId,
@@ -3633,6 +3858,25 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 TEXT("Mission 08 accepts the echo relay")) ||
             !RequireMissionEight(
                 TickUntilMissionEightCondition(
+                    [&FindMissionEightRelay]()
+                    {
+                        return FindMissionEightRelay();
+                    },
+                    20),
+                TEXT("Mission 08 exposes the live echo relay")) ||
+            !RequireMissionEight(
+                RetargetMissionEightRelayGuards(),
+                TEXT("Mission 08 retargets two defenders to the live echo relay")) ||
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
+                    [&MissionEightGuardsActive]()
+                    {
+                        return MissionEightGuardsActive();
+                    },
+                    20),
+                TEXT("Mission 08 relay and Talar Guards take effect")) ||
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
                     [Bridge]()
                     {
                         return Bridge->GetShapeBesideUsPhase() ==
@@ -3641,6 +3885,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     3400),
                 TEXT("Mission 08 opens paired-state traversal")) ||
+            !RequireMissionEight(
+                RetargetMissionEightTraversalGuards(),
+                TEXT("Mission 08 assigns completed-relay and witness Guards")) ||
+            !RequireMissionEight(
+                TickUntilMissionEightCondition(
+                    [&MissionEightGuardsActive]()
+                    {
+                        return MissionEightGuardsActive();
+                    },
+                    20),
+                TEXT("Mission 08 traversal Guards take effect")) ||
             !RequireMissionEight(
                 Move(
                     M08Start.FirstStateWitnessId,
@@ -3673,7 +3928,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             EEchoesShapeBesideUsPhase::Complete;
                     },
                     3600),
-                TEXT("Mission 08 completes through ordinary play")) ||
+                TEXT("Mission 08 completes through guarded ordinary play")) ||
             !VerifyCompletion(8, EEchoesCampaignCommitStatus::Added) ||
             !AdvanceToNextMission(8))
         {
