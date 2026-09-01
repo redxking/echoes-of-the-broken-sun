@@ -180,7 +180,7 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("All three inherited choices produce distinct overlap geometry"),
              HarvestPlan.FirstEchoSite == echoes::sim::Vec2::FromTiles(14, 28) &&
                  PreservePlan.FirstEchoSite == echoes::sim::Vec2::FromTiles(32, 28) &&
-                 ReshapePlan.FirstEchoSite == echoes::sim::Vec2::FromTiles(50, 28) &&
+                 ReshapePlan.FirstEchoSite == echoes::sim::Vec2::FromTiles(46, 20) &&
                  HarvestPlan.FirstStateSite != PreservePlan.FirstStateSite &&
                  PreservePlan.ConvergenceSite != ReshapePlan.ConvergenceSite);
 

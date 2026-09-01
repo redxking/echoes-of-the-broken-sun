@@ -78,11 +78,11 @@ FEchoesShapeBesideUsMissionModel::PlanForChoice(
         case echoes::sim::FutureWellChoice::Reshape:
             return {
                 Choice,
-                echoes::sim::Vec2::FromTiles(50, 28),
-                echoes::sim::Vec2::FromTiles(50, 38),
-                echoes::sim::Vec2::FromTiles(46, 45),
-                echoes::sim::Vec2::FromTiles(54, 45),
-                echoes::sim::Vec2::FromTiles(50, 50),
+                echoes::sim::Vec2::FromTiles(46, 20),
+                echoes::sim::Vec2::FromTiles(38, 26),
+                echoes::sim::Vec2::FromTiles(40, 12),
+                echoes::sim::Vec2::FromTiles(48, 12),
+                echoes::sim::Vec2::FromTiles(44, 6),
                 TEXT("folded_echo"),
                 TEXT("FOLDED ECHO")};
         default:
