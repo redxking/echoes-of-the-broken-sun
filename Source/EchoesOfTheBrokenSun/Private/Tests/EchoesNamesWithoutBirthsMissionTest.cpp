@@ -188,7 +188,7 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
             ReshapePlan.CivilianShelterSite ==
                 echoes::sim::Vec2::FromTiles(39, 37) &&
             ReshapePlan.EvidenceExtractionSite ==
-                echoes::sim::Vec2::FromTiles(42, 44));
+                echoes::sim::Vec2::FromTiles(46, 37));
 
     FEchoesNamesWithoutBirthsMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission six"),
@@ -339,19 +339,30 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
     constexpr int32 ChecksumSize = 4;
     TArray<uint8> CurrentTopologyBytes;
     if (!TestTrue(
-            TEXT("The current Mission 06 checkpoint carries topology revision one"),
+            TEXT("The current Mission 06 checkpoint carries topology revision two"),
             FFileHelper::LoadFileToArray(
                 CurrentTopologyBytes,
                 *QuickSavePath) &&
                 CurrentTopologyBytes.Num() > 16 &&
-                CurrentTopologyBytes[TopologyRevisionOffset] == 1))
+                CurrentTopologyBytes[TopologyRevisionOffset] == 2))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    const echoes::sim::Vec2 RevisionOneShelterSite =
+        echoes::sim::Vec2::FromTiles(39, 37);
+    const echoes::sim::Vec2 RevisionOneEvidenceExtractionSite =
+        echoes::sim::Vec2::FromTiles(42, 44);
+    TestTrue(
+        TEXT("Topology revision one binds the prior Reshape route geometry"),
+        RevisionOneShelterSite == ReshapePlan.CivilianShelterSite &&
+            RevisionOneEvidenceExtractionSite !=
+                ReshapePlan.EvidenceExtractionSite &&
+            ReshapePlan.EvidenceExtractionSite ==
+                echoes::sim::Vec2::FromTiles(46, 37));
     TArray<uint8> LegacyTopologyBytes = CurrentTopologyBytes;
-    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    LegacyTopologyBytes[TopologyRevisionOffset] = 1;
     const int32 ChecksumOffset =
         LegacyTopologyBytes.Num() - ChecksumSize;
     const uint32 LegacyChecksum = FCrc::MemCrc32(
@@ -366,7 +377,7 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
                 LegacyChecksum >> (ByteIndex * 8));
     }
     if (!TestTrue(
-            TEXT("The revision-zero Mission 06 fixture retains a valid checksum"),
+            TEXT("The revision-one Mission 06 fixture retains a valid checksum"),
             FFileHelper::SaveArrayToFile(
                 LegacyTopologyBytes,
                 *QuickSavePath)))
@@ -376,7 +387,7 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
         return false;
     }
     TestFalse(
-        TEXT("QuickLoad rejects the revision-zero Mission 06 topology"),
+        TEXT("QuickLoad rejects the revision-one Mission 06 topology"),
         Bridge->QuickLoadScenario(Feedback));
     TestTrue(
         TEXT("The Mission 06 topology rejection is explicit and stable"),
