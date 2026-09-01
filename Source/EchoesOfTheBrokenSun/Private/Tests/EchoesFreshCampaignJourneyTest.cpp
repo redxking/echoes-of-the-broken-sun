@@ -3377,14 +3377,29 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const TArray<int32> M08WitnessBEscortIndices = {2};
         const TArray<int32> M08ConvergenceEscortIndices = {3};
         const TArray<int32> M08NoEscortIndices;
-        // Vision-safe stand displacement: final stands sit ~2.8 tiles from
-        // their plan site — inside every 3-tile mission-fact radius — chosen
-        // so the stand tile lies outside every live hostile's own vision
-        // disc. Standing inside a hostile vision disc is a permanent
-        // aggro pull (the opposing AI attacks any visible enemy without a
-        // range bound), which is what killed witnessB at its raw site.
-        const int32 M08StandOffsetRaw = (14 * echoes::sim::kFixedScale) / 5;
+        // Vision-safe stand displacement: final stands sit 2.5 tiles from
+        // their plan site, chosen so the stand tile lies outside every live
+        // hostile's own vision disc (standing inside one is a permanent
+        // aggro pull — the opposing AI attacks any visible enemy without a
+        // range bound, which is what killed witnessB at its raw site).
+        // Stand legs arrive with the pacer's slack window (standoff one
+        // eighth tile + one eighth slack), so the worst-case actor-to-site
+        // distance is 2.5 + 0.25 = 2.75 tiles — inside the 3-tile
+        // mission-fact radius with margin, and no computed stand ever
+        // demands a raw-exact landing.
+        const int32 M08StandOffsetRaw = (5 * echoes::sim::kFixedScale) / 2;
         FString M08StandTelemetry;
+        // Leg-objective early success: a paced leg completes the moment the
+        // mission-level objective it serves is already satisfied. Wired only
+        // for the convergence leg — reaching the convergence fact ring
+        // completes the mission, which presents the result and PAUSES the
+        // simulation, so further pacing is both unnecessary and impossible.
+        const TFunction<bool()> M08NoLegObjective;
+        const TFunction<bool()> M08ConvergenceObjectiveMet = [Bridge]()
+        {
+            return Bridge->GetShapeBesideUsPhase() ==
+                EEchoesShapeBesideUsPhase::Complete;
+        };
         EEchoesShapeBesideUsPhase M08LastNonFailedPhase =
             Bridge->GetShapeBesideUsPhase();
         FString M08LastKnownCore = DescribeFreshJourneyEntity(
@@ -4187,7 +4202,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 int32 StandoffRaw,
                 const TArray<int32>& EscortIndices,
                 int32& RemainingTicks,
-                int32& IncrementCount) -> bool
+                int32& IncrementCount,
+                const TFunction<bool()>& LegObjectiveMet) -> bool
         {
             const auto FailLeg = [
                 Bridge,
@@ -4209,6 +4225,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             };
             while (true)
             {
+                if (LegObjectiveMet && LegObjectiveMet())
+                {
+                    return true;
+                }
                 if (MissionEightConvoyCasualty(LeadId, EscortIndices))
                 {
                     return FailLeg(TEXT("CASUALTY"));
@@ -4219,12 +4239,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             RemainingTicks,
                             [LeadId,
                              &EscortIndices,
+                             &LegObjectiveMet,
                              &MissionEightEscortsReformed,
                              &MissionEightConvoyCasualty,
                              M08ConvoyReformRadiusTiles]()
                             {
-                                return MissionEightConvoyCasualty(
-                                           LeadId, EscortIndices) ||
+                                return (LegObjectiveMet &&
+                                        LegObjectiveMet()) ||
+                                    MissionEightConvoyCasualty(
+                                        LeadId, EscortIndices) ||
                                     MissionEightEscortsReformed(
                                         EscortIndices,
                                         LeadId,
@@ -4232,6 +4255,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             }))
                     {
                         return FailLeg(TEXT("REFORM_TIMEOUT"));
+                    }
+                    if (LegObjectiveMet && LegObjectiveMet())
+                    {
+                        return true;
                     }
                     if (MissionEightConvoyCasualty(LeadId, EscortIndices))
                     {
@@ -4331,9 +4358,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                          Goal,
                          bFinalStep,
                          &EscortIndices,
+                         &LegObjectiveMet,
                          &MissionEightConvoyCasualty,
                          M08ConvoyIncrementRaw]()
                         {
+                            if (LegObjectiveMet && LegObjectiveMet())
+                            {
+                                return true;
+                            }
                             if (MissionEightConvoyCasualty(
                                     LeadId, EscortIndices))
                             {
@@ -4372,6 +4404,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                         }))
                 {
                     return FailLeg(TEXT("STEP_TIMEOUT"));
+                }
+                if (LegObjectiveMet && LegObjectiveMet())
+                {
+                    return true;
                 }
                 if (MissionEightConvoyCasualty(LeadId, EscortIndices))
                 {
@@ -4561,7 +4597,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M08WorkerHoldStandoffRaw,
                     M08NoEscortIndices,
                     M08ApproachBudgetTicks,
-                    M08WorkerConvoyIncrements),
+                    M08WorkerConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 pre-positions the separate worker beside the first echo")) ||
             !RequireMissionEight(
                 TickMissionEightWithinBudget(
@@ -4580,7 +4617,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     0,
                     M08TalarEscortIndices,
                     M08ApproachBudgetTicks,
-                    M08TalarConvoyIncrements),
+                    M08TalarConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 paces Talar to the first echo behind reformed Guards")) ||
             !RequireMissionEight(
                 Bridge->GetShapeBesideUsPhase() ==
@@ -4613,7 +4651,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     0,
                     M08WorkerEscortIndices,
                     M08RelayBudgetTicks,
-                    M08WorkerConvoyIncrements),
+                    M08WorkerConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 paces the worker to the relay site with both escorts")) ||
             !RequireMissionEight(
                 MissionEightGuardsActive() &&
@@ -4628,7 +4667,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     0,
                     M08WorkerEscortIndices,
                     M08RelayBudgetTicks,
-                    M08WorkerConvoyIncrements),
+                    M08WorkerConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 clears the relay footprint for construction")) ||
             !RequireMissionEight(
                 Bridge->IssueBuildCommand(
@@ -4675,7 +4715,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M08WorkerHoldStandoffRaw,
                     M08NoEscortIndices,
                     M08RelayBudgetTicks,
-                    M08WorkerConvoyIncrements),
+                    M08WorkerConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 withdraws the worker from the contested corridor")) ||
             !RequireMissionEight(
                 RetargetMissionEightTraversalGuards(),
@@ -4695,10 +4736,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     false,
                     SelectMissionEightVisionSafeStand(
                         TEXT("witnessA"), M08Plan.FirstStateSite),
-                    0,
+                    echoes::sim::kFixedScale / 8,
                     M08WitnessAEscortIndices,
                     M08TraversalBudgetTicks,
-                    M08WitnessConvoyIncrements),
+                    M08WitnessConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 first witness accepts its state")) ||
             !RequireMissionEight(
                 PaceMissionEightConvoy(
@@ -4707,10 +4749,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     true,
                     SelectMissionEightVisionSafeStand(
                         TEXT("witnessB"), M08Plan.SecondStateSite),
-                    0,
+                    echoes::sim::kFixedScale / 8,
                     M08WitnessBEscortIndices,
                     M08TraversalBudgetTicks,
-                    M08WitnessConvoyIncrements),
+                    M08WitnessConvoyIncrements,
+                    M08NoLegObjective),
                 TEXT("Mission 08 second witness accepts its state")) ||
             !RequireMissionEight(
                 TickMissionEightWithinBudget(
@@ -4728,10 +4771,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     true,
                     SelectMissionEightVisionSafeStand(
                         TEXT("convergence"), M08Plan.ConvergenceSite),
-                    0,
+                    echoes::sim::kFixedScale / 8,
                     M08ConvergenceEscortIndices,
                     M08CompletionBudgetTicks,
-                    M08TalarConvoyIncrements),
+                    M08TalarConvoyIncrements,
+                    M08ConvergenceObjectiveMet),
                 TEXT("Mission 08 Talar accepts convergence")) ||
             !RequireMissionEight(
                 TickMissionEightWithinBudget(
