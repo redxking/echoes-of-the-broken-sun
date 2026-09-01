@@ -1623,15 +1623,422 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         // Mission 05: Terms of Continuance.
         const FEchoesTermsOfContinuancePlan M05Plan =
             Bridge->GetTermsOfContinuancePlan();
+        const FEchoesObjectiveSnapshot M05StartSnapshot =
+            Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M05Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
+        const TArray<EntityId> M05Cores =
+            FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const EntityId M05CoreId =
+            M05Cores.IsEmpty() ? 0 : M05Cores[0];
+        EntityId M05MeridianRelayId =
+            M05StartSnapshot.MeridianContinuanceRelayId;
+        EntityId M05KharuunSpineId =
+            M05StartSnapshot.KharuunContinuanceSpineId;
+        EntityId M05MeridianWitnessId =
+            M05StartSnapshot.MeridianContinuanceWitnessId;
+        EntityId M05KharuunWitnessId =
+            M05StartSnapshot.KharuunContinuanceWitnessId;
+        TArray<EntityId> M05SelectedWorkerIds;
+        TArray<Vec2> M05SelectedBuildSites;
+        TArray<EntityId> M05SelectedSiteEntityIds;
+        TArray<FString> M05LastKnownWorkers;
+        TArray<FString> M05LastKnownSites;
+        FString M05FirstObservedLoss = TEXT("none");
+        uint64 M05FirstObservedLossTick = 0;
+        const auto DescribeMissionFiveEntity = [Bridge](
+            const TCHAR* Label,
+            EntityId Id)
+        {
+            const Entity* Current = Bridge->FindEntity(Id);
+            if (Current == nullptr)
+            {
+                return FString::Printf(
+                    TEXT("%s{id=%u alive=false hp=-1/-1 pos=(-1,-1) aegisPowered=unknown completed=unknown constructionProgress=-1/-1 order=255 target=0 destination=(-1,-1)}"),
+                    Label,
+                    Id);
+            }
+            return FString::Printf(
+                TEXT("%s{id=%u alive=%s hp=%d/%d pos=(%d,%d) aegisPowered=%s completed=%s constructionProgress=%d/%d order=%u target=%u destination=(%d,%d)}"),
+                Label,
+                Id,
+                Current->hitPoints > 0 ? TEXT("true") : TEXT("false"),
+                Current->hitPoints,
+                Current->maxHitPoints,
+                Current->position.x.FloorToInt(),
+                Current->position.y.FloorToInt(),
+                Current->aegisPowered ? TEXT("true") : TEXT("false"),
+                Current->completed ? TEXT("true") : TEXT("false"),
+                Current->constructionProgress,
+                Current->constructionRequired,
+                static_cast<uint8>(Current->order.type),
+                Current->order.target,
+                Current->order.destination.x.FloorToInt(),
+                Current->order.destination.y.FloorToInt());
+        };
+        FString M05LastKnownCore = DescribeMissionFiveEntity(
+            TEXT("core"), M05CoreId);
+        FString M05LastKnownMeridianRelay = DescribeMissionFiveEntity(
+            TEXT("meridianRelay"), M05MeridianRelayId);
+        FString M05LastKnownKharuunSpine = DescribeMissionFiveEntity(
+            TEXT("kharuunSpine"), M05KharuunSpineId);
+        FString M05LastKnownMeridianWitness = DescribeMissionFiveEntity(
+            TEXT("meridianWitness"), M05MeridianWitnessId);
+        FString M05LastKnownKharuunWitness = DescribeMissionFiveEntity(
+            TEXT("kharuunWitness"), M05KharuunWitnessId);
+        const auto ObserveMissionFiveState = [
+            Bridge,
+            M05CoreId,
+            &M05MeridianRelayId,
+            &M05KharuunSpineId,
+            &M05MeridianWitnessId,
+            &M05KharuunWitnessId,
+            &M05SelectedWorkerIds,
+            &M05SelectedBuildSites,
+            &M05SelectedSiteEntityIds,
+            &M05LastKnownWorkers,
+            &M05LastKnownSites,
+            &M05FirstObservedLoss,
+            &M05FirstObservedLossTick,
+            &M05LastKnownCore,
+            &M05LastKnownMeridianRelay,
+            &M05LastKnownKharuunSpine,
+            &M05LastKnownMeridianWitness,
+            &M05LastKnownKharuunWitness,
+            &DescribeMissionFiveEntity]()
+        {
+            const FEchoesObjectiveSnapshot Snapshot =
+                Bridge->GetLocalObjectiveSnapshot();
+            const auto RefreshMissionEntityId = [
+                &DescribeMissionFiveEntity](
+                    EntityId SnapshotId,
+                    EntityId& TrackedId,
+                    const TCHAR* Label,
+                    FString& LastKnown)
+            {
+                if (TrackedId == 0 && SnapshotId != 0)
+                {
+                    TrackedId = SnapshotId;
+                    LastKnown = DescribeMissionFiveEntity(
+                        Label, TrackedId);
+                }
+            };
+            RefreshMissionEntityId(
+                Snapshot.MeridianContinuanceRelayId,
+                M05MeridianRelayId,
+                TEXT("meridianRelay"),
+                M05LastKnownMeridianRelay);
+            RefreshMissionEntityId(
+                Snapshot.KharuunContinuanceSpineId,
+                M05KharuunSpineId,
+                TEXT("kharuunSpine"),
+                M05LastKnownKharuunSpine);
+            RefreshMissionEntityId(
+                Snapshot.MeridianContinuanceWitnessId,
+                M05MeridianWitnessId,
+                TEXT("meridianWitness"),
+                M05LastKnownMeridianWitness);
+            RefreshMissionEntityId(
+                Snapshot.KharuunContinuanceWitnessId,
+                M05KharuunWitnessId,
+                TEXT("kharuunWitness"),
+                M05LastKnownKharuunWitness);
+
+            const auto ObserveTrackedEntity = [
+                Bridge,
+                &M05FirstObservedLoss,
+                &M05FirstObservedLossTick,
+                &DescribeMissionFiveEntity](
+                    const TCHAR* Label,
+                    EntityId Id,
+                    FString& LastKnown)
+            {
+                if (Id == 0)
+                {
+                    return;
+                }
+                const Entity* Current = Bridge->FindEntity(Id);
+                if (Current != nullptr && Current->hitPoints > 0)
+                {
+                    LastKnown = DescribeMissionFiveEntity(Label, Id);
+                    return;
+                }
+                if (M05FirstObservedLoss == TEXT("none"))
+                {
+                    const echoes::sim::Simulation* Simulation =
+                        Bridge->GetSimulation();
+                    M05FirstObservedLossTick =
+                        Simulation != nullptr
+                            ? Simulation->CurrentTick()
+                            : 0;
+                    M05FirstObservedLoss = FString::Printf(
+                        TEXT("%s{id=%u observed=%s lastKnown=%s}"),
+                        Label,
+                        Id,
+                        *DescribeMissionFiveEntity(Label, Id),
+                        *LastKnown);
+                }
+            };
+            ObserveTrackedEntity(
+                TEXT("core"), M05CoreId, M05LastKnownCore);
+            ObserveTrackedEntity(
+                TEXT("meridianRelay"),
+                M05MeridianRelayId,
+                M05LastKnownMeridianRelay);
+            ObserveTrackedEntity(
+                TEXT("kharuunSpine"),
+                M05KharuunSpineId,
+                M05LastKnownKharuunSpine);
+            ObserveTrackedEntity(
+                TEXT("meridianWitness"),
+                M05MeridianWitnessId,
+                M05LastKnownMeridianWitness);
+            ObserveTrackedEntity(
+                TEXT("kharuunWitness"),
+                M05KharuunWitnessId,
+                M05LastKnownKharuunWitness);
+
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            for (int32 Index = 0;
+                 Index < M05SelectedWorkerIds.Num();
+                 ++Index)
+            {
+                const FString WorkerLabel = FString::Printf(
+                    TEXT("worker%d"), Index + 1);
+                ObserveTrackedEntity(
+                    *WorkerLabel,
+                    M05SelectedWorkerIds[Index],
+                    M05LastKnownWorkers[Index]);
+
+                if (M05SelectedSiteEntityIds[Index] == 0 &&
+                    Simulation != nullptr)
+                {
+                    for (const Entity& Candidate : Simulation->Entities())
+                    {
+                        if (Candidate.owner ==
+                                UEchoesSimulationSubsystem::LocalPlayerId &&
+                            Candidate.type == EntityType::Dropoff &&
+                            Candidate.position ==
+                                M05SelectedBuildSites[Index])
+                        {
+                            M05SelectedSiteEntityIds[Index] = Candidate.id;
+                            break;
+                        }
+                    }
+                }
+                if (M05SelectedSiteEntityIds[Index] != 0)
+                {
+                    const FString SiteLabel = FString::Printf(
+                        TEXT("site%d"), Index + 1);
+                    ObserveTrackedEntity(
+                        *SiteLabel,
+                        M05SelectedSiteEntityIds[Index],
+                        M05LastKnownSites[Index]);
+                }
+            }
+        };
+        const auto WriteMissionFiveDiagnostic = [
+            Bridge,
+            M05CoreId,
+            &M05MeridianRelayId,
+            &M05KharuunSpineId,
+            &M05MeridianWitnessId,
+            &M05KharuunWitnessId,
+            &M05SelectedWorkerIds,
+            &M05SelectedBuildSites,
+            &M05SelectedSiteEntityIds,
+            &M05LastKnownWorkers,
+            &M05LastKnownSites,
+            &M05FirstObservedLoss,
+            &M05FirstObservedLossTick,
+            &M05LastKnownCore,
+            &M05LastKnownMeridianRelay,
+            &M05LastKnownKharuunSpine,
+            &M05LastKnownMeridianWitness,
+            &M05LastKnownKharuunWitness,
+            &DescribeMissionFiveEntity,
+            &ObserveMissionFiveState,
+            &Feedback](EEchoesTermsOfContinuancePhase ExpectedPhase)
+        {
+            ObserveMissionFiveState();
+            FString SelectedBuildSummary;
+            FString LastKnownWorkerSummary;
+            FString LastKnownSiteSummary;
+            FString CurrentWorkerSummary;
+            FString CurrentSiteSummary;
+            const auto AppendSummary = [](
+                FString& Summary,
+                const FString& Item)
+            {
+                if (!Summary.IsEmpty())
+                {
+                    Summary += TEXT(" | ");
+                }
+                Summary += Item;
+            };
+            for (int32 Index = 0;
+                 Index < M05SelectedWorkerIds.Num();
+                 ++Index)
+            {
+                AppendSummary(
+                    SelectedBuildSummary,
+                    FString::Printf(
+                        TEXT("build%d{workerId=%u site=(%d,%d) siteEntityId=%u}"),
+                        Index + 1,
+                        M05SelectedWorkerIds[Index],
+                        M05SelectedBuildSites[Index].x.FloorToInt(),
+                        M05SelectedBuildSites[Index].y.FloorToInt(),
+                        M05SelectedSiteEntityIds[Index]));
+                AppendSummary(
+                    LastKnownWorkerSummary,
+                    M05LastKnownWorkers[Index]);
+                AppendSummary(
+                    LastKnownSiteSummary,
+                    M05LastKnownSites[Index]);
+                const FString WorkerLabel = FString::Printf(
+                    TEXT("worker%d"), Index + 1);
+                AppendSummary(
+                    CurrentWorkerSummary,
+                    DescribeMissionFiveEntity(
+                        *WorkerLabel,
+                        M05SelectedWorkerIds[Index]));
+                const FString SiteLabel = FString::Printf(
+                    TEXT("site%d"), Index + 1);
+                AppendSummary(
+                    CurrentSiteSummary,
+                    FString::Printf(
+                        TEXT("selected=(%d,%d) %s"),
+                        M05SelectedBuildSites[Index].x.FloorToInt(),
+                        M05SelectedBuildSites[Index].y.FloorToInt(),
+                        *DescribeMissionFiveEntity(
+                            *SiteLabel,
+                            M05SelectedSiteEntityIds[Index])));
+            }
+            if (SelectedBuildSummary.IsEmpty())
+            {
+                SelectedBuildSummary = TEXT("none");
+                LastKnownWorkerSummary = TEXT("none");
+                LastKnownSiteSummary = TEXT("none");
+                CurrentWorkerSummary = TEXT("none");
+                CurrentSiteSummary = TEXT("none");
+            }
+            const FString LastKnownSummary = FString::Printf(
+                TEXT("%s %s %s %s %s workers=[%s] sites=[%s]"),
+                *M05LastKnownCore,
+                *M05LastKnownMeridianRelay,
+                *M05LastKnownKharuunSpine,
+                *M05LastKnownMeridianWitness,
+                *M05LastKnownKharuunWitness,
+                *LastKnownWorkerSummary,
+                *LastKnownSiteSummary);
+            const FString CurrentSummary = FString::Printf(
+                TEXT("%s %s %s %s %s workers=[%s] sites=[%s]"),
+                *DescribeMissionFiveEntity(TEXT("core"), M05CoreId),
+                *DescribeMissionFiveEntity(
+                    TEXT("meridianRelay"), M05MeridianRelayId),
+                *DescribeMissionFiveEntity(
+                    TEXT("kharuunSpine"), M05KharuunSpineId),
+                *DescribeMissionFiveEntity(
+                    TEXT("meridianWitness"), M05MeridianWitnessId),
+                *DescribeMissionFiveEntity(
+                    TEXT("kharuunWitness"), M05KharuunWitnessId),
+                *CurrentWorkerSummary,
+                *CurrentSiteSummary);
+            const FString PriorFeedback =
+                Feedback.IsEmpty() ? TEXT("none") : Feedback;
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            Feedback = FString::Printf(
+                TEXT("[M05_DIAGNOSTIC] tick=%llu outcome=%u phase=%u expectedPhase=%u priorFeedback=%s firstObservedLossTick=%llu firstObservedLoss=%s selectedBuilds=[%s] lastKnown={%s} current={%s}"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr ? Simulation->CurrentTick() : 0),
+                Simulation != nullptr
+                    ? static_cast<uint8>(Simulation->Outcome())
+                    : 0xFF,
+                static_cast<uint8>(
+                    Bridge->GetTermsOfContinuancePhase()),
+                static_cast<uint8>(ExpectedPhase),
+                *PriorFeedback,
+                static_cast<unsigned long long>(
+                    M05FirstObservedLossTick),
+                *M05FirstObservedLoss,
+                *SelectedBuildSummary,
+                *LastKnownSummary,
+                *CurrentSummary);
+        };
+        const auto TickUntilMissionFiveCondition = [
+            Bridge,
+            &ObserveMissionFiveState,
+            &WriteMissionFiveDiagnostic](
+                const TFunction<bool()>& Predicate,
+                EEchoesTermsOfContinuancePhase ExpectedPhase,
+                int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0;
+                 TickIndex < MaximumTicks;
+                 ++TickIndex)
+            {
+                ObserveMissionFiveState();
+                if (Bridge->GetTermsOfContinuancePhase() ==
+                    EEchoesTermsOfContinuancePhase::Failed)
+                {
+                    WriteMissionFiveDiagnostic(ExpectedPhase);
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                Bridge->Tick(0.05f);
+            }
+            ObserveMissionFiveState();
+            if (Bridge->GetTermsOfContinuancePhase() ==
+                EEchoesTermsOfContinuancePhase::Failed)
+            {
+                WriteMissionFiveDiagnostic(ExpectedPhase);
+                return false;
+            }
+            if (Predicate())
+            {
+                return true;
+            }
+            WriteMissionFiveDiagnostic(ExpectedPhase);
+            return false;
+        };
+        const auto AcceptMissionFiveCommand = [
+            &WriteMissionFiveDiagnostic](
+                bool bAccepted,
+                EEchoesTermsOfContinuancePhase ExpectedPhase)
+        {
+            if (!bAccepted)
+            {
+                WriteMissionFiveDiagnostic(ExpectedPhase);
+            }
+            return bAccepted;
+        };
+        const auto AcceptMissionFiveCondition = [
+            &WriteMissionFiveDiagnostic](
+                bool bAccepted,
+                EEchoesTermsOfContinuancePhase ExpectedPhase)
+        {
+            if (!bAccepted)
+            {
+                WriteMissionFiveDiagnostic(ExpectedPhase);
+            }
+            return bAccepted;
+        };
         if (!Require(
-                !M05Workers.IsEmpty(),
+                AcceptMissionFiveCondition(
+                    !M05Workers.IsEmpty(),
+                    EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
                 TEXT("Mission 05 exposes treaty-grid workers")))
         {
             return false;
         }
+        ObserveMissionFiveState();
         Bridge->Tick(0.05f);
+        ObserveMissionFiveState();
         if (Spec.FoundingChoice == FutureWellChoice::Harvest)
         {
             const Vec2 HarvestLinks[] = {
@@ -1639,19 +2046,34 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 Vec2::FromTiles(17, 28),
                 Vec2::FromTiles(15, 34)};
             if (!Require(
-                    M05Workers.Num() >= 3,
+                    AcceptMissionFiveCondition(
+                        M05Workers.Num() >= 3,
+                        EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
                     TEXT("Harvest treaty route exposes three workers")))
             {
                 return false;
             }
             for (int32 Index = 0; Index < 3; ++Index)
             {
+                M05SelectedWorkerIds.Add(M05Workers[Index]);
+                M05SelectedBuildSites.Add(HarvestLinks[Index]);
+                M05SelectedSiteEntityIds.Add(0);
+                M05LastKnownWorkers.Add(DescribeMissionFiveEntity(
+                    *FString::Printf(TEXT("worker%d"), Index + 1),
+                    M05Workers[Index]));
+                M05LastKnownSites.Add(DescribeMissionFiveEntity(
+                    *FString::Printf(TEXT("site%d"), Index + 1),
+                    0));
+                ObserveMissionFiveState();
                 if (!Require(
-                        Bridge->IssueBuildCommand(
-                            M05Workers[Index],
-                            EntityType::Dropoff,
-                            Bridge->SimToWorld(HarvestLinks[Index]),
-                            Feedback),
+                        AcceptMissionFiveCommand(
+                            Bridge->IssueBuildCommand(
+                                M05Workers[Index],
+                                EntityType::Dropoff,
+                                Bridge->SimToWorld(HarvestLinks[Index]),
+                                Feedback),
+                            EEchoesTermsOfContinuancePhase::
+                                SynchronizeNetworks),
                         FString::Printf(
                             TEXT("Harvest treaty link %d is accepted"),
                             Index + 1)))
@@ -1662,20 +2084,31 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         }
         else
         {
+            const Vec2 CentralTreatyLink = Vec2::FromTiles(29, 28);
+            M05SelectedWorkerIds.Add(M05Workers[0]);
+            M05SelectedBuildSites.Add(CentralTreatyLink);
+            M05SelectedSiteEntityIds.Add(0);
+            M05LastKnownWorkers.Add(DescribeMissionFiveEntity(
+                TEXT("worker1"), M05Workers[0]));
+            M05LastKnownSites.Add(DescribeMissionFiveEntity(
+                TEXT("site1"), 0));
+            ObserveMissionFiveState();
             if (!Require(
-                    Bridge->IssueBuildCommand(
-                        M05Workers[0],
-                        EntityType::Dropoff,
-                        Bridge->SimToWorld(Vec2::FromTiles(29, 28)),
-                        Feedback),
+                    AcceptMissionFiveCommand(
+                        Bridge->IssueBuildCommand(
+                            M05Workers[0],
+                            EntityType::Dropoff,
+                            Bridge->SimToWorld(CentralTreatyLink),
+                            Feedback),
+                        EEchoesTermsOfContinuancePhase::
+                            SynchronizeNetworks),
                     TEXT("Central treaty link is accepted")))
             {
                 return false;
             }
         }
         if (!Require(
-                TickUntil(
-                    Bridge,
+                TickUntilMissionFiveCondition(
                     [Bridge]()
                     {
                         const FEchoesObjectiveSnapshot Snapshot =
@@ -1686,15 +2119,18 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                                 EEchoesTermsOfContinuancePhase::
                                     HoldContinuanceWindow;
                     },
+                    EEchoesTermsOfContinuancePhase::
+                        HoldContinuanceWindow,
                     700),
                 TEXT("Mission 05 synchronizes both treaty networks")) ||
             !Require(
-                Bridge->GetSimulation()->CurrentTick() <
-                    M05Plan.ContinuanceWindowEndTick,
+                AcceptMissionFiveCondition(
+                    Bridge->GetSimulation()->CurrentTick() <
+                        M05Plan.ContinuanceWindowEndTick,
+                    EEchoesTermsOfContinuancePhase::HoldContinuanceWindow),
                 TEXT("Mission 05 synchronizes before the treaty deadline")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickUntilMissionFiveCondition(
                     [Bridge, M05Plan]()
                     {
                         return Bridge->GetTermsOfContinuancePhase() ==
@@ -1703,6 +2139,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                             Bridge->GetSimulation()->CurrentTick() >=
                                 M05Plan.ContinuanceWindowEndTick;
                     },
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses,
                     1000),
                 TEXT("Mission 05 holds the complete continuance window")))
         {
@@ -1711,26 +2148,33 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const FEchoesObjectiveSnapshot M05Snapshot =
             Bridge->GetLocalObjectiveSnapshot();
         if (!Require(
-                Move(
-                    M05Snapshot.MeridianContinuanceWitnessId,
-                    M05Plan.WitnessExtractionSite),
+                AcceptMissionFiveCommand(
+                    Move(
+                        M05Snapshot.MeridianContinuanceWitnessId,
+                        M05Plan.WitnessExtractionSite),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
                 TEXT("Mission 05 Meridian witness accepts extraction")) ||
             !Require(
-                Move(
-                    M05Snapshot.KharuunContinuanceWitnessId,
-                    M05Plan.WitnessExtractionSite),
+                AcceptMissionFiveCommand(
+                    Move(
+                        M05Snapshot.KharuunContinuanceWitnessId,
+                        M05Plan.WitnessExtractionSite),
+                    EEchoesTermsOfContinuancePhase::ExtractWitnesses),
                 TEXT("Mission 05 Kharuun witness accepts extraction")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickUntilMissionFiveCondition(
                     [Bridge]()
                     {
                         return Bridge->GetTermsOfContinuancePhase() ==
                             EEchoesTermsOfContinuancePhase::Complete;
                     },
+                    EEchoesTermsOfContinuancePhase::Complete,
                     1000),
-                TEXT("Mission 05 completes through ordinary play")) ||
-            !VerifyCompletion(5, EEchoesCampaignCommitStatus::Added) ||
+                TEXT("Mission 05 completes through ordinary play")))
+        {
+            return false;
+        }
+        if (!VerifyCompletion(5, EEchoesCampaignCommitStatus::Added) ||
             !AdvanceToNextMission(5))
         {
             return false;
