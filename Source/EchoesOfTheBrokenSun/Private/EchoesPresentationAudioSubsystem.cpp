@@ -8,6 +8,14 @@
 #include "Sound/SoundBase.h"
 #include "Sound/SoundConcurrency.h"
 
+#if WITH_DEV_AUTOMATION_TESTS
+#include "ActiveSound.h"
+#include "AudioDevice.h"
+#include "AudioThread.h"
+#include "Engine/Engine.h"
+#include "Misc/App.h"
+#endif
+
 namespace
 {
 constexpr TCHAR CommandCuePath[] =
@@ -316,6 +324,77 @@ USoundConcurrency* UEchoesPresentationAudioSubsystem::GetConcurrencyPolicy(
 }
 
 #if WITH_DEV_AUTOMATION_TESTS
+bool UEchoesPresentationAudioSubsystem::HasLiveAudioDeviceForTest() const
+{
+    const UWorld* World = GetWorld();
+    return FApp::CanEverRenderAudio() &&
+        GEngine != nullptr &&
+        GEngine->GetAudioDeviceManager() != nullptr &&
+        World != nullptr &&
+        World->GetAudioDeviceRaw() != nullptr;
+}
+
+UEchoesPresentationAudioSubsystem::FLiveVoiceEvidenceForTest
+UEchoesPresentationAudioSubsystem::GatherLiveVoiceEvidenceForTest(
+    EEchoesPresentationAudioCue Cue) const
+{
+    FLiveVoiceEvidenceForTest Evidence;
+    const UWorld* World = GetWorld();
+    FAudioDevice* Device =
+        World != nullptr ? World->GetAudioDeviceRaw() : nullptr;
+    USoundBase* Sound = GetCueAsset(Cue);
+    USoundConcurrency* Policy = GetConcurrencyPolicy(Cue);
+    if (Device == nullptr || Sound == nullptr)
+    {
+        return Evidence;
+    }
+    // GetActiveSounds is audio-thread state; when the audio thread is not
+    // running the game thread is that thread and the lambda runs inline.
+    auto GatherOnAudioThread = [Device, Sound, Policy, &Evidence]()
+    {
+        for (const FActiveSound* ActiveSound : Device->GetActiveSounds())
+        {
+            if (ActiveSound == nullptr || ActiveSound->GetSound() != Sound)
+            {
+                continue;
+            }
+            ++Evidence.MatchingActiveVoices;
+            if (Policy != nullptr &&
+                ActiveSound->ConcurrencySet.Contains(Policy))
+            {
+                ++Evidence.VoicesCarryingSubsystemPolicy;
+            }
+            if (ActiveSound->ConcurrencyGroupData.Num() > 0)
+            {
+                ++Evidence.VoicesInsideLiveConcurrencyGroup;
+            }
+        }
+    };
+    if (!IsInAudioThread())
+    {
+        FAudioThread::RunCommandOnAudioThread(GatherOnAudioThread);
+        FAudioCommandFence Fence;
+        Fence.BeginFence();
+        Fence.Wait();
+    }
+    else
+    {
+        GatherOnAudioThread();
+    }
+    return Evidence;
+}
+
+void UEchoesPresentationAudioSubsystem::FlushAllVoicesForTest()
+{
+    UWorld* World = GetWorld();
+    FAudioDevice* Device =
+        World != nullptr ? World->GetAudioDeviceRaw() : nullptr;
+    if (Device != nullptr)
+    {
+        Device->Flush(World);
+    }
+}
+
 bool UEchoesPresentationAudioSubsystem::ReserveCueForTest(
     EEchoesPresentationAudioCue Cue,
     double TimeSeconds,

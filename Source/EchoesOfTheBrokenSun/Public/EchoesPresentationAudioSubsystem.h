@@ -58,6 +58,22 @@ public:
     }
 
 #if WITH_DEV_AUTOMATION_TESTS
+    /**
+     * Live-engine playback evidence for one cue, gathered from the world's
+     * audio device on the audio thread. Submission counters alone cannot
+     * prove a voice exists; these counts can.
+     */
+    struct FLiveVoiceEvidenceForTest
+    {
+        int32 MatchingActiveVoices = 0;
+        int32 VoicesCarryingSubsystemPolicy = 0;
+        int32 VoicesInsideLiveConcurrencyGroup = 0;
+    };
+
+    [[nodiscard]] bool HasLiveAudioDeviceForTest() const;
+    [[nodiscard]] FLiveVoiceEvidenceForTest GatherLiveVoiceEvidenceForTest(
+        EEchoesPresentationAudioCue Cue) const;
+    void FlushAllVoicesForTest();
     bool ReserveCueForTest(
         EEchoesPresentationAudioCue Cue,
         double TimeSeconds,
