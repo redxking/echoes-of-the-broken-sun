@@ -5230,6 +5230,19 @@ void AEchoesPlayerController::PresentTitleScreen()
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
             ? TEXT("true")
             : TEXT("false"));
+
+#if !UE_BUILD_SHIPPING
+    // Rendered-review fixture: open the selected operation brief without
+    // ordinary input so headless captures can photograph the briefing panel.
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewOpenBrief")))
+    {
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_ART_REVIEW_OPEN_BRIEF] editorOnly=true"));
+        ConfirmTitleScreen();
+    }
+#endif
 }
 
 void AEchoesPlayerController::ConfirmTitleScreen()

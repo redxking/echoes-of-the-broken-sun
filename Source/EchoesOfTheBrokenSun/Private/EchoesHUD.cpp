@@ -4968,7 +4968,7 @@ void AEchoesHUD::DrawMissionBriefing(
         FMath::Clamp(Canvas->ClipX * 0.62f, 880.0f, 1280.0f));
     const float PanelHeight = FMath::Min(
         FMath::Max(500.0f, Canvas->ClipY - 60.0f),
-        FMath::Clamp(Canvas->ClipY * 0.72f, 560.0f, 720.0f));
+        FMath::Clamp(Canvas->ClipY * 0.74f, 620.0f, 780.0f));
     const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
     const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
     const float TextLeft = Left + 42.0f;
@@ -5412,7 +5412,7 @@ void AEchoesHUD::DrawMissionBriefing(
                     Wrapped[Index],
                     Muted,
                     TextLeft,
-                    Top + (194.0f + 15.0f * Index) * ContentScale,
+                    Top + (188.0f + 13.0f * Index) * ContentScale,
                     SmallFont,
                     BriefScale,
                     false);
@@ -5420,9 +5420,9 @@ void AEchoesHUD::DrawMissionBriefing(
         }
     }
 
-    DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f * ContentScale,
+    DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 232.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);
-    DrawText(
+    const FString MechanicalObjective01 =
         bPrologue
             ? TEXT("01  Move Mara Vey's scout carrier to the archive rendezvous at tile 22,18.")
         : bSevenAccounts
@@ -5524,9 +5524,8 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("01  Build APPROACH ANCHOR [M] at %d,%d. Research both [F2]; place Possible, Manifest, and Neme at their marked sites."),
                   BrokenSunPlan.CrownfallApproachSite.x.FloorToInt(),
                   BrokenSunPlan.CrownfallApproachSite.y.FloorToInt())
-            : TEXT("01  Secure and choose a protocol for the central Future Well."),
-             Body, TextLeft, Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
-    DrawText(
+            : TEXT("01  Secure and choose a protocol for the central Future Well.");
+    const FString MechanicalObjective02 =
         bPrologue
             ? TEXT("02  Hold the archive site, commit a Well protocol, then return the carrier to tile 6,17.")
         : bSevenAccounts
@@ -5638,10 +5637,65 @@ void AEchoesHUD::DrawMissionBriefing(
                       BrokenSunPlan.ResolutionHoldTicks + 120))
             : FString::Printf(
                   TEXT("02  Destroy the %s Command Core without losing your own."),
-                  *OpponentFaction),
-             Body, TextLeft, Top + 273.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
+                  *OpponentFaction);
 
-    DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + 322.0f * ContentScale,
+    // Authored objectives from the narrative pack render as the primary
+    // rows, consumed at runtime; the plan-derived mechanical instructions
+    // stay under each as the execution detail. Operations without an
+    // authored contract (skirmish) keep the mechanical rows as primary.
+    TArray<FString> AuthoredObjectives;
+    if (const UEchoesNarrativeSubsystem* ObjectiveNarrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        AuthoredObjectives = ObjectiveNarrative->GetObjectives(
+            BriefingBridge != nullptr
+                ? BriefingBridge->GetOperationMode()
+                : EEchoesOperationMode::Skirmish);
+    }
+    const FString MechanicalRows[] = {
+        MechanicalObjective01, MechanicalObjective02};
+    const bool bAuthoredObjectives = AuthoredObjectives.Num() > 0;
+    if (bAuthoredObjectives)
+    {
+        float ObjectiveRowTop = 256.0f;
+        for (int32 ObjectiveIndex = 0; ObjectiveIndex < 3; ++ObjectiveIndex)
+        {
+            if (AuthoredObjectives.IsValidIndex(ObjectiveIndex))
+            {
+                DrawText(
+                    FString::Printf(
+                        TEXT("%02d  %s"),
+                        ObjectiveIndex + 1,
+                        *AuthoredObjectives[ObjectiveIndex]),
+                    Body, TextLeft, Top + ObjectiveRowTop * ContentScale,
+                    SmallFont, 0.92f * TextScale, false);
+                ObjectiveRowTop += 21.0f;
+            }
+            if (ObjectiveIndex < 2)
+            {
+                DrawText(
+                    FString::Printf(
+                        TEXT("      %s"), *MechanicalRows[ObjectiveIndex].Mid(4)),
+                    Muted, TextLeft, Top + ObjectiveRowTop * ContentScale,
+                    SmallFont, 0.84f * TextScale, false);
+                ObjectiveRowTop += 26.0f;
+            }
+        }
+    }
+    else
+    {
+        DrawText(MechanicalRows[0], Body, TextLeft,
+                 Top + 247.0f * ContentScale, SmallFont, 1.0f * TextScale,
+                 false);
+        DrawText(MechanicalRows[1], Body, TextLeft,
+                 Top + 273.0f * ContentScale, SmallFont, 1.0f * TextScale,
+                 false);
+    }
+    const float LowerBlockShift = bAuthoredObjectives ? 70.0f : 0.0f;
+
+    DrawText(TEXT("FIELD DOCTRINE"), Accent, TextLeft, Top + (322.0f + LowerBlockShift) * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(bSevenAccounts
                  ? TEXT("The route is inherited. Mission 01's choice cannot be changed here.")
@@ -5672,7 +5726,7 @@ void AEchoesHUD::DrawMissionBriefing(
              : bBrokenSun
                  ? TEXT("M01/M09/M10 determine earned endings. M11-M14 are required receipts. There is no hidden morality score.")
                  : TEXT("Harvest: immediate power  |  Preserve: sustained possibility  |  Reshape: temporary terrain"),
-             Body, TextLeft, Top + 349.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + (349.0f + LowerBlockShift) * ContentScale, SmallFont, 0.92f * TextScale, false);
     DrawText(
         bPrologue
             ? TEXT("Mission victory is evacuation. Destroying the opposing Core does not replace withdrawal.")
@@ -5705,12 +5759,12 @@ void AEchoesHUD::DrawMissionBriefing(
         : bBrokenSun
             ? TEXT("Victory records one ending after its conduit and hold succeed. Other endings stay unchosen; wider consequences and release readiness remain unproven.")
             : FactionSystems,
-             Body, TextLeft, Top + 375.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + (375.0f + LowerBlockShift) * ContentScale, SmallFont, 0.92f * TextScale, false);
 
-    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + 424.0f * ContentScale,
+    DrawText(TEXT("ACCESSIBILITY BEFORE DEPLOYMENT"), Accent, TextLeft, Top + (424.0f + LowerBlockShift) * ContentScale,
              SmallFont, 0.95f * TextScale, false);
     DrawText(TEXT("[U] UI scale   [I] high contrast   [O] reduced motion   [/] reduced flashing"),
-             Body, TextLeft, Top + 451.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+             Body, TextLeft, Top + (451.0f + LowerBlockShift) * ContentScale, SmallFont, 0.92f * TextScale, false);
 
     DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
              PanelWidth - 84.0f, 42.0f);
