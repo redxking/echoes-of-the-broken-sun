@@ -245,23 +245,23 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     TestTrue(
         TEXT("Reshape's player link and seed footprints have distinct authored centers"),
         bReshapeSitesAreUniqueAndDisjoint);
-    const TArray<echoes::sim::Vec2> HarvestExpectedPoweredSeedSites{
+    const TArray<echoes::sim::Vec2> HarvestRouteGraphSeedSites{
         echoes::sim::Vec2::FromTiles(18, 10),
         echoes::sim::Vec2::FromTiles(24, 15),
         echoes::sim::Vec2::FromTiles(29, 20)};
-    const TArray<echoes::sim::Vec2> PreserveExpectedPoweredSeedSites{
+    const TArray<echoes::sim::Vec2> PreserveRouteGraphSeedSites{
         echoes::sim::Vec2::FromTiles(18, 10),
         echoes::sim::Vec2::FromTiles(24, 15),
         echoes::sim::Vec2::FromTiles(29, 20),
         echoes::sim::Vec2::FromTiles(29, 36),
         echoes::sim::Vec2::FromTiles(29, 40)};
-    const TArray<echoes::sim::Vec2> ReshapeExpectedPoweredSeedSites{
+    const TArray<echoes::sim::Vec2> ReshapeRouteGraphSeedSites{
         echoes::sim::Vec2::FromTiles(24, 15),
         echoes::sim::Vec2::FromTiles(30, 20),
         echoes::sim::Vec2::FromTiles(37, 23),
         echoes::sim::Vec2::FromTiles(44, 26),
         echoes::sim::Vec2::FromTiles(50, 31)};
-    const auto IsWithinPowerHop = [](
+    const auto IsWithinRouteHop = [](
         const echoes::sim::Vec2& First,
         const echoes::sim::Vec2& Second)
     {
@@ -271,37 +271,37 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             First.y.FloorToInt() - Second.y.FloorToInt();
         return DeltaX * DeltaX + DeltaY * DeltaY <= 64;
     };
-    TArray<echoes::sim::Vec2> ReshapePowerChain{
+    TArray<echoes::sim::Vec2> ReshapeRouteChain{
         echoes::sim::Vec2::FromTiles(10, 10)};
-    ReshapePowerChain.Append(ReshapePlan.PlayerPowerLinkSites);
-    ReshapePowerChain.Append(ReshapePlan.SeedPowerLinkSites);
-    bool bReshapeChainIsPhysical = ReshapePowerChain.Num() == 7;
+    ReshapeRouteChain.Append(ReshapePlan.PlayerPowerLinkSites);
+    ReshapeRouteChain.Append(ReshapePlan.SeedPowerLinkSites);
+    bool bReshapeChainIsPhysical = ReshapeRouteChain.Num() == 7;
     for (int32 Index = 1;
-         Index < ReshapePowerChain.Num();
+         Index < ReshapeRouteChain.Num();
          ++Index)
     {
-        bReshapeChainIsPhysical &= IsWithinPowerHop(
-            ReshapePowerChain[Index - 1],
-            ReshapePowerChain[Index]);
+        bReshapeChainIsPhysical &= IsWithinRouteHop(
+            ReshapeRouteChain[Index - 1],
+            ReshapeRouteChain[Index]);
     }
     bReshapeChainIsPhysical &=
         !ReshapePlan.SeedPowerLinkSites.IsEmpty() &&
-        IsWithinPowerHop(
+        IsWithinRouteHop(
             ReshapePlan.SeedPowerLinkSites.Last(),
             ReshapePlan.MeridianRelaySite) &&
-        IsWithinPowerHop(
+        IsWithinRouteHop(
             ReshapePlan.SeedPowerLinkSites.Last(),
             ReshapePlan.KharuunSpineSite);
     TestTrue(
         TEXT("Reshape's authored chain reaches both eastern interfaces in eight-tile hops"),
         bReshapeChainIsPhysical);
-    const auto PlanConnectsBothInterfaces = [IsWithinPowerHop](
+    const auto PlanConnectsBothInterfaces = [IsWithinRouteHop](
         const FEchoesTermsOfContinuancePlan& Plan,
-        const TArray<echoes::sim::Vec2>& PoweredSeedSites)
+        const TArray<echoes::sim::Vec2>& RouteGraphSeedSites)
     {
         TArray<echoes::sim::Vec2> NetworkSites{
             echoes::sim::Vec2::FromTiles(10, 10)};
-        NetworkSites.Append(PoweredSeedSites);
+        NetworkSites.Append(RouteGraphSeedSites);
         NetworkSites.Append(Plan.PlayerPowerLinkSites);
         TArray<uint8> Reachable;
         Reachable.Init(0, NetworkSites.Num());
@@ -318,13 +318,13 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 {
                     continue;
                 }
-                for (int32 PoweredIndex = 0;
-                     PoweredIndex < NetworkSites.Num();
-                     ++PoweredIndex)
+                for (int32 ReachableIndex = 0;
+                     ReachableIndex < NetworkSites.Num();
+                     ++ReachableIndex)
                 {
-                    if (Reachable[PoweredIndex] != 0 &&
-                        IsWithinPowerHop(
-                            NetworkSites[PoweredIndex],
+                    if (Reachable[ReachableIndex] != 0 &&
+                        IsWithinRouteHop(
+                            NetworkSites[ReachableIndex],
                             NetworkSites[CandidateIndex]))
                     {
                         Reachable[CandidateIndex] = 1;
@@ -342,14 +342,14 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             {
                 continue;
             }
-            bRelayConnected |= IsWithinPowerHop(
+            bRelayConnected |= IsWithinRouteHop(
                 NetworkSites[Index], Plan.MeridianRelaySite);
-            bSpineConnected |= IsWithinPowerHop(
+            bSpineConnected |= IsWithinRouteHop(
                 NetworkSites[Index], Plan.KharuunSpineSite);
         }
         bool bAllPlayerSitesReachable = true;
         const int32 PlayerSiteOffset =
-            1 + PoweredSeedSites.Num();
+            1 + RouteGraphSeedSites.Num();
         for (int32 PlayerIndex = 0;
              PlayerIndex < Plan.PlayerPowerLinkSites.Num();
              ++PlayerIndex)
@@ -364,13 +364,13 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         TEXT("Every player-built route site and both interfaces are reachable without requiring off-route seeds"),
         PlanConnectsBothInterfaces(
             HarvestPlan,
-            HarvestExpectedPoweredSeedSites) &&
+            HarvestRouteGraphSeedSites) &&
             PlanConnectsBothInterfaces(
                 PreservePlan,
-                PreserveExpectedPoweredSeedSites) &&
+                PreserveRouteGraphSeedSites) &&
             PlanConnectsBothInterfaces(
                 ReshapePlan,
-                ReshapeExpectedPoweredSeedSites));
+                ReshapeRouteGraphSeedSites));
 
     FEchoesTermsOfContinuanceMissionFacts Facts;
     TestTrue(TEXT("Inactive facts stay outside mission five"),
@@ -456,8 +456,6 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         &BuildMissionFivePrerequisiteLedger](
             echoes::sim::FutureWellChoice Choice,
             const FEchoesTermsOfContinuancePlan& ExpectedPlan,
-            const TArray<echoes::sim::Vec2>&
-                ExpectedPoweredSeedSites,
             const TCHAR* BranchLabel)
     {
         const auto Check = [this, BranchLabel](
@@ -559,28 +557,6 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             BranchWorld.ForwardErrorMessages(this);
             return false;
         }
-        bool bExpectedPowerSpecValid =
-            ExpectedPoweredSeedSites.Num() ==
-                (Choice == echoes::sim::FutureWellChoice::Harvest
-                    ? 3
-                    : 5);
-        TArray<echoes::sim::Vec2> UniqueExpectedPoweredSeedSites;
-        for (const echoes::sim::Vec2& SeedSite :
-             ExpectedPoweredSeedSites)
-        {
-            bExpectedPowerSpecValid &=
-                ExpectedPlan.SeedPowerLinkSites.Contains(SeedSite) &&
-                !UniqueExpectedPoweredSeedSites.Contains(SeedSite);
-            UniqueExpectedPoweredSeedSites.Add(SeedSite);
-        }
-        if (!Check(
-                TEXT("the test-owned branch power specification is exact and unique"),
-                bExpectedPowerSpecValid))
-        {
-            BranchBridge->StopPrototypeScenario();
-            BranchWorld.ForwardErrorMessages(this);
-            return false;
-        }
         const auto FindOwnedPowerLinkAt = [BranchBridge](
             const echoes::sim::Vec2& Site)
             -> const echoes::sim::Entity*
@@ -606,7 +582,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             }
             return nullptr;
         };
-        const auto HasExactLivingCompletedSeedTopology = [
+        const auto HasExactLivingCompletedUnpoweredSeedTopology = [
             BranchBridge,
             &LivePlan]()
         {
@@ -643,7 +619,8 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 }
                 if (!LivePlan.SeedPowerLinkSites.Contains(
                         Entity.position) ||
-                    ObservedSeedSites.Contains(Entity.position))
+                    ObservedSeedSites.Contains(Entity.position) ||
+                    Entity.aegisPowered)
                 {
                     return false;
                 }
@@ -680,7 +657,9 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             }
             return true;
         };
-        const auto AreBothInterfacesInitiallyDown = [BranchBridge]()
+        const auto AreBothInterfacesInitiallyDown = [
+            BranchBridge,
+            &LivePlan]()
         {
             const FEchoesObjectiveSnapshot Objective =
                 BranchBridge->GetLocalObjectiveSnapshot();
@@ -695,14 +674,30 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                         SynchronizeNetworks &&
                 !Objective.bMeridianRelaySynchronized &&
                 !Objective.bKharuunSpineSynchronized &&
-                Relay != nullptr && Relay->hitPoints > 0 &&
+                Relay != nullptr &&
+                Relay->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Relay->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Relay->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Relay->position == LivePlan.MeridianRelaySite &&
+                Relay->hitPoints > 0 && Relay->completed &&
                 !Relay->aegisPowered &&
-                Spine != nullptr && Spine->hitPoints > 0 &&
+                Spine != nullptr &&
+                Spine->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Spine->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Spine->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Spine->position == LivePlan.KharuunSpineSite &&
+                Spine->hitPoints > 0 && Spine->completed &&
                 !Spine->aegisPowered;
         };
         if (!Check(
-                TEXT("all and only route-owned seeds are prebuilt"),
-                HasExactLivingCompletedSeedTopology()) ||
+                TEXT("all and only route-owned seeds are living, completed, and unpowered"),
+                HasExactLivingCompletedUnpoweredSeedTopology()) ||
             !Check(
                 TEXT("every authored player site is open and buildable"),
                 ArePlayerSitesOpenAndBuildable()))
@@ -740,7 +735,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 !Check(
                     TEXT("the pre-build Reshape checkpoint restores its exact open topology"),
                     BranchBridge->QuickLoadScenario(Feedback) &&
-                        HasExactLivingCompletedSeedTopology() &&
+                        HasExactLivingCompletedUnpoweredSeedTopology() &&
                         ArePlayerSitesOpenAndBuildable() &&
                         AreBothInterfacesInitiallyDown()))
             {
@@ -773,7 +768,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     EEchoesTermsOfContinuancePhase::Failed &&
                 Predicate();
         };
-        const auto AreAllPlayerLinksLivingCompletedPowered = [
+        const auto AreAllPlayerLinksLivingCompletedUnpowered = [
             &LivePlan,
             &FindOwnedPowerLinkAt]()
         {
@@ -785,16 +780,15 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 if (PlayerLink == nullptr ||
                     PlayerLink->hitPoints <= 0 ||
                     !PlayerLink->completed ||
-                    !PlayerLink->aegisPowered)
+                    PlayerLink->aegisPowered)
                 {
                     return false;
                 }
             }
             return true;
         };
-        const auto DoAuthoredSeedsMatchExpectedPower = [
+        const auto AreAllAuthoredSeedsLivingCompletedUnpowered = [
             &LivePlan,
-            &ExpectedPoweredSeedSites,
             &FindOwnedPowerLinkAt]()
         {
             for (const echoes::sim::Vec2& SeedSite :
@@ -802,18 +796,18 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             {
                 const echoes::sim::Entity* Seed =
                     FindOwnedPowerLinkAt(SeedSite);
-                const bool bExpectedPowered =
-                    ExpectedPoweredSeedSites.Contains(SeedSite);
                 if (Seed == nullptr || Seed->hitPoints <= 0 ||
                     !Seed->completed ||
-                    Seed->aegisPowered != bExpectedPowered)
+                    Seed->aegisPowered)
                 {
                     return false;
                 }
             }
             return true;
         };
-        const auto AreBothInterfacesLivingAndPowered = [BranchBridge]()
+        const auto AreBothInterfacesLivingAndPowered = [
+            BranchBridge,
+            &LivePlan]()
         {
             const FEchoesObjectiveSnapshot Objective =
                 BranchBridge->GetLocalObjectiveSnapshot();
@@ -825,9 +819,25 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     Objective.KharuunContinuanceSpineId);
             return Objective.bMeridianRelaySynchronized &&
                 Objective.bKharuunSpineSynchronized &&
-                Relay != nullptr && Relay->hitPoints > 0 &&
+                Relay != nullptr &&
+                Relay->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Relay->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Relay->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Relay->position == LivePlan.MeridianRelaySite &&
+                Relay->hitPoints > 0 &&
                 Relay->completed && Relay->aegisPowered &&
-                Spine != nullptr && Spine->hitPoints > 0 &&
+                Spine != nullptr &&
+                Spine->owner ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                Spine->faction ==
+                    echoes::sim::Faction::MeridianCompact &&
+                Spine->type ==
+                    echoes::sim::EntityType::UtilityStructure &&
+                Spine->position == LivePlan.KharuunSpineSite &&
+                Spine->hitPoints > 0 &&
                 Spine->completed && Spine->aegisPowered;
         };
         BranchBridge->SetScenarioPaused(false);
@@ -922,12 +932,12 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                             HoldContinuanceWindow;
             },
             700);
-        const bool bCompletedPlayerLinks =
+        const bool bCompletedUnpoweredPlayerLinks =
             bSynchronized &&
-            AreAllPlayerLinksLivingCompletedPowered();
-        const bool bSeedsMatchExpectedPower =
+            AreAllPlayerLinksLivingCompletedUnpowered();
+        const bool bLivingCompletedUnpoweredSeeds =
             bSynchronized &&
-            DoAuthoredSeedsMatchExpectedPower();
+            AreAllAuthoredSeedsLivingCompletedUnpowered();
         const FEchoesObjectiveSnapshot SynchronizedObjective =
             BranchBridge->GetLocalObjectiveSnapshot();
         const echoes::sim::Entity* MeridianRelay =
@@ -942,18 +952,34 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     BranchBridge->GetSimulation()->CurrentTick() <
                         LivePlan.ContinuanceWindowStartTick) ||
             !Check(
-                TEXT("every player link completes and carries power at its exact site"),
-                bCompletedPlayerLinks) ||
+                TEXT("every player link is living, completed, and unpowered at its exact site"),
+                bCompletedUnpoweredPlayerLinks) ||
             !Check(
-                TEXT("every authored seed is living and complete with its branch-specific power state"),
-                bSeedsMatchExpectedPower) ||
+                TEXT("every authored seed is living, completed, and unpowered at its exact site"),
+                bLivingCompletedUnpoweredSeeds) ||
             !Check(
                 TEXT("both treaty interfaces are living, completed, and powered"),
                 MeridianRelay != nullptr &&
+                    MeridianRelay->owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    MeridianRelay->faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    MeridianRelay->type ==
+                        echoes::sim::EntityType::UtilityStructure &&
+                    MeridianRelay->position ==
+                        LivePlan.MeridianRelaySite &&
                     MeridianRelay->hitPoints > 0 &&
                     MeridianRelay->completed &&
                     MeridianRelay->aegisPowered &&
                     KharuunSpine != nullptr &&
+                    KharuunSpine->owner ==
+                        UEchoesSimulationSubsystem::LocalPlayerId &&
+                    KharuunSpine->faction ==
+                        echoes::sim::Faction::MeridianCompact &&
+                    KharuunSpine->type ==
+                        echoes::sim::EntityType::UtilityStructure &&
+                    KharuunSpine->position ==
+                        LivePlan.KharuunSpineSite &&
                     KharuunSpine->hitPoints > 0 &&
                     KharuunSpine->completed &&
                     KharuunSpine->aegisPowered))
@@ -974,8 +1000,8 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                              HoldContinuanceWindow &&
                      BranchBridge->GetSimulation()->CurrentTick() <
                          LivePlan.ContinuanceWindowStartTick &&
-                     AreAllPlayerLinksLivingCompletedPowered() &&
-                     DoAuthoredSeedsMatchExpectedPower() &&
+                     AreAllPlayerLinksLivingCompletedUnpowered() &&
+                     AreAllAuthoredSeedsLivingCompletedUnpowered() &&
                      AreBothInterfacesLivingAndPowered())))
         {
             BranchBridge->StopPrototypeScenario();
@@ -1001,11 +1027,11 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             return false;
         }
         if (!Check(
-                TEXT("every player-built link remains living, completed, and powered at T900"),
-                AreAllPlayerLinksLivingCompletedPowered()) ||
+                TEXT("every player-built link remains living, completed, and unpowered at T900"),
+                AreAllPlayerLinksLivingCompletedUnpowered()) ||
             !Check(
-                TEXT("every authored seed remains living and complete with its branch-specific power state at T900"),
-                DoAuthoredSeedsMatchExpectedPower()) ||
+                TEXT("every authored seed remains living, completed, and unpowered at T900"),
+                AreAllAuthoredSeedsLivingCompletedUnpowered()) ||
             !Check(
                 TEXT("both treaty interfaces remain living, completed, and powered at T900"),
                 AreBothInterfacesLivingAndPowered()))
@@ -1086,17 +1112,14 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     if (!RunLiveBranchCoverage(
             echoes::sim::FutureWellChoice::Harvest,
             HarvestPlan,
-            HarvestExpectedPoweredSeedSites,
             TEXT("Harvest")) ||
         !RunLiveBranchCoverage(
             echoes::sim::FutureWellChoice::Preserve,
             PreservePlan,
-            PreserveExpectedPoweredSeedSites,
             TEXT("Preserve")) ||
         !RunLiveBranchCoverage(
             echoes::sim::FutureWellChoice::Reshape,
             ReshapePlan,
-            ReshapeExpectedPoweredSeedSites,
             TEXT("Reshape")))
     {
         return false;
@@ -1836,8 +1859,9 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  SeedProgress,
                  Feedback));
 
-    const auto IsCompletedOwnedPowerLinkAt = [Bridge](
+    const auto FindOwnedMeridianDropoffAt = [Bridge](
         const echoes::sim::Vec2& Site)
+        -> const echoes::sim::Entity*
     {
         for (const echoes::sim::Entity& Entity :
              Bridge->GetSimulation()->Entities())
@@ -1847,29 +1871,31 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 Entity.faction ==
                     echoes::sim::Faction::MeridianCompact &&
                 Entity.type == echoes::sim::EntityType::Dropoff &&
-                Entity.position == Site && Entity.hitPoints > 0 &&
-                Entity.completed)
+                Entity.position == Site)
             {
-                return true;
+                return &Entity;
             }
         }
-        return false;
+        return nullptr;
     };
     bool bPreserveSeedsSpawned = true;
     for (const echoes::sim::Vec2& SeedSite :
          PreservePlan.SeedPowerLinkSites)
     {
-        bPreserveSeedsSpawned &=
-            IsCompletedOwnedPowerLinkAt(SeedSite);
+        const echoes::sim::Entity* Seed =
+            FindOwnedMeridianDropoffAt(SeedSite);
+        bPreserveSeedsSpawned &= Seed != nullptr &&
+            Seed->hitPoints > 0 && Seed->completed &&
+            !Seed->aegisPowered;
     }
     TestTrue(
-        TEXT("Preserve spawns every route-owned seed Power Link as a completed Meridian structure"),
+        TEXT("Preserve spawns every route-owned seed as a living, completed, unpowered Meridian Dropoff"),
         bPreserveSeedsSpawned);
     TestTrue(
         TEXT("Preserve leaves its player Power Link site unbuilt"),
         PreservePlan.PlayerPowerLinkSites.Num() == 1 &&
-            !IsCompletedOwnedPowerLinkAt(
-                PreservePlan.PlayerPowerLinkSites[0]));
+            FindOwnedMeridianDropoffAt(
+                PreservePlan.PlayerPowerLinkSites[0]) == nullptr);
 
     echoes::sim::EntityId WorkerId = 0;
     int64 NearestWorkerDistanceSquared = TNumericLimits<int64>::Max();
@@ -1957,8 +1983,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     TestTrue(TEXT("Ordinary construction synchronizes both interfaces"),
              bSynchronizedThroughOrdinaryConstruction);
     TestTrue(
-        TEXT("The authored player Power Link completes at the plan site"),
-        IsCompletedOwnedPowerLinkAt(PreservePlayerLinkSite));
+        TEXT("The authored player Power Link completes unpowered at the plan site"),
+        [&FindOwnedMeridianDropoffAt, &PreservePlayerLinkSite]()
+        {
+            const echoes::sim::Entity* PlayerLink =
+                FindOwnedMeridianDropoffAt(PreservePlayerLinkSite);
+            return PlayerLink != nullptr &&
+                PlayerLink->hitPoints > 0 &&
+                PlayerLink->completed &&
+                !PlayerLink->aegisPowered;
+        }());
     TestTrue(
         TEXT("Both interfaces synchronize before the fixed treaty deadline"),
         bSynchronizedThroughOrdinaryConstruction &&
