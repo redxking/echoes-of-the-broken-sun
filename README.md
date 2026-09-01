@@ -5,7 +5,7 @@
 
 *Echoes of the Broken Sun* is an original science-fantasy real-time strategy game for macOS. Its central strategic resource, the Future Well, forces a player to choose between immediate power, sustained possibility, and temporary transformation of the battlefield.
 
-The repository is intentionally evidence-bounded. A file or menu stub is not treated as a working feature. The current implementation includes an Unreal Engine 5.8 project, Apple Silicon configuration, source-controlled balance definitions, a tool-independent deterministic C++ simulation, and a runtime Unreal adapter with visibility-scoped entity views, RTS camera, selection/controller layer, HUD, opponent AI, construction, one-slot unit production, logistics capacity, pause/restart, Command-Core victory state, and Future Well orders. All twenty-four current faction units and structures across Meridian, Kharuun, and Hollow Choir use distinct project-authored static-mesh candidates. The Future Well has a four-part authored landmark candidate whose Dormant, Harvest, Preserve, and Reshape states differ by geometry as well as color and motion. The Glass Scar has authored shelf, ridge, shard, route, Matter-deposit, and shared-surface candidates; selection, accepted orders, and destruction feedback use registered authored mesh-VFX candidates; command/removal events use a first registered presentation-audio candidate family. Fog, character animation, production textures, final destruction/particle effects, music, voice, ambience, and the final effects mix remain prototype or unimplemented presentation rather than final art/audio. Test results and remaining limitations are recorded in [Docs/ProjectLedger.md](Docs/ProjectLedger.md).
+The repository is intentionally evidence-bounded. A file or menu stub is not treated as a working feature. The current implementation includes an Unreal Engine 5.8 project, Apple Silicon configuration, source-controlled balance definitions, a tool-independent deterministic C++ simulation, and a runtime Unreal adapter with visibility-scoped entity views, RTS camera, selection/controller layer, HUD, opponent AI, construction, one-slot unit production, logistics capacity, pause/restart, Command-Core victory state, and Future Well orders. All twenty-four current faction units and structures across Meridian, Kharuun, and Hollow Choir use distinct project-authored static-mesh candidates. The Future Well has a four-part authored landmark candidate whose Dormant, Harvest, Preserve, and Reshape states differ by geometry as well as color and motion. The Glass Scar has authored shelf, ridge, shard, route, Matter-deposit, and shared-surface candidates; selection, accepted orders, and destruction feedback use registered authored mesh-VFX candidates; command/removal events use a first registered presentation-audio candidate family. Fog, character animation, production textures, final destruction/particle effects, music, voice, ambience, and the final effects mix remain prototype or unimplemented presentation rather than final art/audio. Test results and remaining limitations are recorded in [Docs/Archive/ProjectLedger.md](Docs/Archive/ProjectLedger.md).
 
 ## Current development gate
 
@@ -16,7 +16,7 @@ The current Unreal integration gate is:
 1. Stop prototype builds below 40 GiB free, restore at least 60 GiB before large imports or release packaging, and target 100 GiB for sustained production. These are project engineering thresholds, not Epic-published minimums.
 2. Keep full Xcode selected. Xcode 26.6 has passed project generation, current-source arm64 Development Editor and Game compilation, a forty-seven-test Unreal automation report, null-RHI startup for the bounded playable-faction routes and all fifteen implemented campaign missions, the controlled prologue-completion path, and the 400-unit/four-team fixture, plus an earlier local Development cook/package; Epic still recommends 26.1.1, and clean-machine use remains unverified.
 3. Advance the accepted Unreal NetDriver packet-simulation evidence to operating-system traffic conditioning and then separate machines without weakening authority ownership. Replace the Development bearer-resume fixture with authenticated identity, protected credential storage, and encrypted transport before internet-facing claims. Private-lobby/invite behavior, spectators, abuse controls, and security qualification remain mandatory later gates. In parallel, extend the accepted seven-case pointer combat/Guard matrix into unaided-human usability and dynamic resize coverage, and continue replacing technical primitives under the performance, provenance, and accessibility gates.
-4. Follow [Docs/SetupAndBuild.md](Docs/SetupAndBuild.md) and record every accepted result in the ledger.
+4. Follow [Docs/Archive/SetupAndBuild.md](Docs/Archive/SetupAndBuild.md) and record every accepted result in the ledger.
 
 ## Repository map
 
@@ -27,9 +27,9 @@ The current Unreal integration gate is:
 - `site`: static public game archive deployed through GitHub Pages
 - `Config`: macOS/Apple Silicon Unreal defaults
 - `Tests/Native`: simulation tests runnable before Unreal is installed
-- `Docs/DevelopmentBible.md`: game, universe, campaign, UI, audio, accessibility, and player-experience design
-- `Docs/TechnicalArchitecture.md`: simulation, Unreal integration, AI, networking, save, replay, and build architecture
-- `Docs/ProjectLedger.md`: decisions, roadmap, acceptance evidence, risks, performance budgets, test record, and known limitations
-- `Docs/AssetRegister.md`: asset provenance and distribution status
+- `Docs/Archive/DevelopmentBible.md`: game, universe, campaign, UI, audio, accessibility, and player-experience design
+- `Docs/Archive/TechnicalArchitecture.md`: simulation, Unreal integration, AI, networking, save, replay, and build architecture
+- `Docs/Archive/ProjectLedger.md`: decisions, roadmap, acceptance evidence, risks, performance budgets, test record, and known limitations
+- `Docs/Archive/AssetRegister.md`: asset provenance and distribution status
 
 All project documents are authoritative files edited in place. No document is a claim of production readiness.

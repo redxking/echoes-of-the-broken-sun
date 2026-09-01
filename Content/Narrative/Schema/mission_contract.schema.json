@@ -543,7 +543,7 @@
           "const": "human_review_required"
         },
         "authority_path": {
-          "const": "Docs/DevelopmentBible.md"
+          "const": "Docs/Archive/DevelopmentBible.md"
         },
         "content_status": {
           "const": "authored_source_only"

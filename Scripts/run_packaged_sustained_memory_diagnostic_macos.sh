@@ -37,8 +37,8 @@ expected_package_external_seal_sha256="ff5ab774a1737c2cc8c15185a59a580955edc7bc6
 expected_runtime_validator_sha256="4d27edc7276a7d7e97afd91fc2789cdefebb11f8d69c52df499e154008826b93"
 expected_package_verifier_sha256="a7bbc35ee84f95b072d1f919436af5b980fe2fc06620f2b5923b22ea52062c70"
 expected_unreal_insights_sha256="b475184d29fbf4d4b342402929e5e7d3fab779cb77a3b615ac41607ea09fccbb"
-expected_diff_paths=$'Docs/SetupAndBuild.md\nScripts/run_packaged_sustained_memory_diagnostic_macos.sh\nScripts/validate_sustained_memory_diagnostic.py\nTests/Content/test_sustained_memory_diagnostic.py'
-diagnostic_diff_paths="Docs/SetupAndBuild.md,Scripts/run_packaged_sustained_memory_diagnostic_macos.sh,Scripts/validate_sustained_memory_diagnostic.py,Tests/Content/test_sustained_memory_diagnostic.py"
+expected_diff_paths=$'Docs/Archive/SetupAndBuild.md\nScripts/run_packaged_sustained_memory_diagnostic_macos.sh\nScripts/validate_sustained_memory_diagnostic.py\nTests/Content/test_sustained_memory_diagnostic.py'
+diagnostic_diff_paths="Docs/Archive/SetupAndBuild.md,Scripts/run_packaged_sustained_memory_diagnostic_macos.sh,Scripts/validate_sustained_memory_diagnostic.py,Tests/Content/test_sustained_memory_diagnostic.py"
 claim_boundary="This capture is diagnostic evidence only. It does not pass or replace the 600-second preflight, establish a root cause, prove leak freedom, qualify a one-hour run, or establish release readiness."
 
 requested_final="$1"

@@ -47,7 +47,7 @@
           "const": "en-US"
         },
         "authority_path": {
-          "const": "Docs/DevelopmentBible.md"
+          "const": "Docs/Archive/DevelopmentBible.md"
         },
         "authority_status": {
           "const": "structured_projection_of_authoritative_bible"

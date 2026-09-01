@@ -65,8 +65,8 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             self.mission["metadata"]["originality_review_status"],
             "human_review_required",
         )
-        self.assertEqual(self.canon["metadata"]["authority_path"], "Docs/DevelopmentBible.md")
-        self.assertEqual(self.mission["metadata"]["authority_path"], "Docs/DevelopmentBible.md")
+        self.assertEqual(self.canon["metadata"]["authority_path"], "Docs/Archive/DevelopmentBible.md")
+        self.assertEqual(self.mission["metadata"]["authority_path"], "Docs/Archive/DevelopmentBible.md")
 
     def test_canon_matrix_is_exact_m01_through_m15_and_terminal(self) -> None:
         self.assertEqual(

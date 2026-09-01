@@ -79,7 +79,7 @@ MANIFEST_DIGEST_NAME = "EchoesOfTheBrokenSun.manifest.sha256"
 NORMAL_SMOKE_NAME = "EchoesOfTheBrokenSun.normal-startup-smoke.log"
 STRESS_SMOKE_NAME = "EchoesOfTheBrokenSun.legacy-stress-startup-smoke.log"
 DIAGNOSTIC_DIFF_PATHS = (
-    "Docs/SetupAndBuild.md",
+    "Docs/Archive/SetupAndBuild.md",
     "Scripts/run_packaged_sustained_memory_diagnostic_macos.sh",
     "Scripts/validate_sustained_memory_diagnostic.py",
     "Tests/Content/test_sustained_memory_diagnostic.py",

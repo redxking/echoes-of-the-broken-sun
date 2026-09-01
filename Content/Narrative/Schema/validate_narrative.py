@@ -664,7 +664,7 @@ def validate_campaign_canon(value: dict[str, Any]) -> dict[str, int]:
         "author": "Angelis Pseftis",
         "creator": "Angelis Pseftis",
         "source_locale": "en-US",
-        "authority_path": "Docs/DevelopmentBible.md",
+        "authority_path": "Docs/Archive/DevelopmentBible.md",
         "authority_status": "structured_projection_of_authoritative_bible",
         "content_status": "validated_authored_source",
         "runtime_consumed": False,
@@ -863,7 +863,7 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
         "source_locale": "en-US",
         "rights_status": "author_attributed_project_source",
         "originality_review_status": "human_review_required",
-        "authority_path": "Docs/DevelopmentBible.md",
+        "authority_path": "Docs/Archive/DevelopmentBible.md",
         "content_status": "authored_source_only",
     }
     for key, expected in expected_metadata.items():
