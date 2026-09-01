@@ -113,6 +113,8 @@ private:
         const FString& ErrorString);
     [[nodiscard]] static FString PlayerFacingFailure(
         const FString& StableReason);
+    [[nodiscard]] static bool HasExplicitDevelopmentLoopbackBind(
+        const TCHAR* CommandLine);
     void ResolveHostShareEndpoint();
     [[nodiscard]] bool HasStoredReconnectCredential() const;
     bool ArmReconnectWindow();

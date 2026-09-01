@@ -35,6 +35,7 @@
 #include "InputKeyEventArgs.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Misc/Paths.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
@@ -43,6 +44,13 @@
 
 #include <algorithm>
 #include <limits>
+
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS && \
+    (PLATFORM_MAC || PLATFORM_UNIX)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace
 {
@@ -69,7 +77,422 @@ constexpr float NetworkTileWorldSize = 200.0f;
         default: return false;
     }
 }
+
+constexpr int32 DevelopmentResumeCredentialLength = 32;
+
+[[nodiscard]] bool IsBoundedClientResumeCredential(
+    const FString& Credential)
+{
+    if (Credential.Len() != DevelopmentResumeCredentialLength)
+    {
+        return false;
+    }
+    for (const TCHAR Character : Credential)
+    {
+        if (!FChar::IsHexDigit(Character))
+        {
+            return false;
+        }
+    }
+    return true;
 }
+
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+[[nodiscard]] bool NormalizeDevelopmentCredentialFilePath(
+    const FString& Candidate,
+    FString& OutNormalized,
+    FString& OutReason)
+{
+    OutNormalized.Reset();
+    OutReason.Reset();
+    if (Candidate.IsEmpty() || Candidate.Len() > 2048 ||
+        Candidate != Candidate.TrimStartAndEnd() ||
+        FPaths::IsRelative(Candidate))
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PATH_INVALID");
+        return false;
+    }
+    for (const TCHAR Character : Candidate)
+    {
+        if (FChar::IsControl(Character))
+        {
+            OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PATH_INVALID");
+            return false;
+        }
+    }
+    OutNormalized = Candidate;
+    FPaths::NormalizeFilename(OutNormalized);
+    if (!FPaths::CollapseRelativeDirectories(OutNormalized))
+    {
+        OutNormalized.Reset();
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PATH_INVALID");
+        return false;
+    }
+    const FString FileName = FPaths::GetCleanFilename(OutNormalized);
+    if (FileName != TEXT("EchoesResumeCredential.bin") &&
+        FileName != TEXT("EchoesInvalidResumeCredential.bin"))
+    {
+        OutNormalized.Reset();
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_NAME_INVALID");
+        return false;
+    }
+    FString ParentDirectory = FPaths::GetPath(OutNormalized);
+    FPaths::NormalizeDirectoryName(ParentDirectory);
+    if (!FPaths::GetCleanFilename(ParentDirectory).StartsWith(TEXT("run.")))
+    {
+        OutNormalized.Reset();
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_ROOT_INVALID");
+        return false;
+    }
+    return true;
+}
+
+#if PLATFORM_MAC || PLATFORM_UNIX
+[[nodiscard]] bool OpenDevelopmentCredentialFile(
+    const FString& NormalizedPath,
+    int FileOpenFlags,
+    int& OutDirectoryHandle,
+    int& OutFileHandle,
+    FString& OutLeafName,
+    FString& OutReason)
+{
+    OutDirectoryHandle = -1;
+    OutFileHandle = -1;
+    OutLeafName = FPaths::GetCleanFilename(NormalizedPath);
+    const FString ParentDirectory = FPaths::GetPath(NormalizedPath);
+    OutDirectoryHandle = open(
+        TCHAR_TO_UTF8(*ParentDirectory),
+        O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (OutDirectoryHandle < 0)
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_DIRECTORY_OPEN_FAILED");
+        return false;
+    }
+    struct stat DirectoryState {};
+    if (fstat(OutDirectoryHandle, &DirectoryState) != 0 ||
+        !S_ISDIR(DirectoryState.st_mode) ||
+        DirectoryState.st_uid != geteuid() ||
+        (DirectoryState.st_mode & 0777) != 0700)
+    {
+        close(OutDirectoryHandle);
+        OutDirectoryHandle = -1;
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_DIRECTORY_NOT_PRIVATE");
+        return false;
+    }
+    OutFileHandle = openat(
+        OutDirectoryHandle,
+        TCHAR_TO_UTF8(*OutLeafName),
+        FileOpenFlags | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
+    if (OutFileHandle < 0)
+    {
+        close(OutDirectoryHandle);
+        OutDirectoryHandle = -1;
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_OPEN_FAILED");
+        return false;
+    }
+    struct stat FileState {};
+    if (fstat(OutFileHandle, &FileState) != 0 ||
+        !S_ISREG(FileState.st_mode) || FileState.st_uid != geteuid() ||
+        FileState.st_nlink != 1 || (FileState.st_mode & 0777) != 0600)
+    {
+        close(OutFileHandle);
+        close(OutDirectoryHandle);
+        OutFileHandle = -1;
+        OutDirectoryHandle = -1;
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_NOT_PRIVATE");
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] bool OpenedDevelopmentCredentialFileStillNamesEntry(
+    int DirectoryHandle,
+    int FileHandle,
+    const FString& LeafName)
+{
+    struct stat OpenedFileState {};
+    struct stat DirectoryEntryState {};
+    return fstat(FileHandle, &OpenedFileState) == 0 &&
+        fstatat(
+            DirectoryHandle,
+            TCHAR_TO_UTF8(*LeafName),
+            &DirectoryEntryState,
+            AT_SYMLINK_NOFOLLOW) == 0 &&
+        S_ISREG(DirectoryEntryState.st_mode) &&
+        OpenedFileState.st_dev == DirectoryEntryState.st_dev &&
+        OpenedFileState.st_ino == DirectoryEntryState.st_ino;
+}
+
+[[nodiscard]] bool RemoveOpenedDevelopmentCredentialFile(
+    int DirectoryHandle,
+    int FileHandle,
+    const FString& LeafName)
+{
+    if (!OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName) ||
+        unlinkat(DirectoryHandle, TCHAR_TO_UTF8(*LeafName), 0) != 0)
+    {
+        return false;
+    }
+    struct stat UnlinkedFileState {};
+    return fstat(FileHandle, &UnlinkedFileState) == 0 &&
+        UnlinkedFileState.st_nlink == 0;
+}
+
+void CloseDevelopmentCredentialFile(
+    int& DirectoryHandle,
+    int& FileHandle)
+{
+    if (FileHandle >= 0)
+    {
+        close(FileHandle);
+        FileHandle = -1;
+    }
+    if (DirectoryHandle >= 0)
+    {
+        close(DirectoryHandle);
+        DirectoryHandle = -1;
+    }
+}
+#endif
+
+[[nodiscard]] bool ValidateDevelopmentCredentialStagingFile(
+    const FString& Candidate,
+    FString& OutNormalized,
+    FString& OutReason)
+{
+    if (!NormalizeDevelopmentCredentialFilePath(
+            Candidate, OutNormalized, OutReason))
+    {
+        return false;
+    }
+#if PLATFORM_MAC || PLATFORM_UNIX
+    int DirectoryHandle = -1;
+    int FileHandle = -1;
+    FString LeafName;
+    if (!OpenDevelopmentCredentialFile(
+            OutNormalized,
+            O_WRONLY,
+            DirectoryHandle,
+            FileHandle,
+            LeafName,
+            OutReason))
+    {
+        return false;
+    }
+    struct stat FileState {};
+    const bool bEmpty =
+        fstat(FileHandle, &FileState) == 0 && FileState.st_size == 0;
+    const bool bEntryUnchanged =
+        OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName);
+    CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+    if (!bEntryUnchanged)
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_ENTRY_CHANGED");
+        return false;
+    }
+    if (!bEmpty)
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_STAGING_FILE_NOT_EMPTY");
+        return false;
+    }
+    return true;
+#else
+    OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PLATFORM_UNSUPPORTED");
+    return false;
+#endif
+}
+
+[[nodiscard]] bool StageDevelopmentResumeCredential(
+    const FString& NormalizedPath,
+    const FString& Credential,
+    FString& OutReason)
+{
+    if (!IsBoundedClientResumeCredential(Credential))
+    {
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_CONTENT_INVALID");
+        return false;
+    }
+#if PLATFORM_MAC || PLATFORM_UNIX
+    int DirectoryHandle = -1;
+    int FileHandle = -1;
+    FString LeafName;
+    if (!OpenDevelopmentCredentialFile(
+            NormalizedPath,
+            O_WRONLY,
+            DirectoryHandle,
+            FileHandle,
+            LeafName,
+            OutReason))
+    {
+        return false;
+    }
+    struct stat FileState {};
+    if (fstat(FileHandle, &FileState) != 0 || FileState.st_size != 0 ||
+        ftruncate(FileHandle, 0) != 0)
+    {
+        CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_STAGING_FILE_INVALID");
+        return false;
+    }
+    FTCHARToUTF8 CredentialUtf8(*Credential);
+    int32 BytesWritten = 0;
+    while (BytesWritten < CredentialUtf8.Length())
+    {
+        const ssize_t Result = write(
+            FileHandle,
+            CredentialUtf8.Get() + BytesWritten,
+            static_cast<size_t>(CredentialUtf8.Length() - BytesWritten));
+        if (Result <= 0)
+        {
+            (void)RemoveOpenedDevelopmentCredentialFile(
+                DirectoryHandle, FileHandle, LeafName);
+            CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+            OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_WRITE_FAILED");
+            return false;
+        }
+        BytesWritten += static_cast<int32>(Result);
+    }
+    if (fsync(FileHandle) != 0)
+    {
+        (void)RemoveOpenedDevelopmentCredentialFile(
+            DirectoryHandle, FileHandle, LeafName);
+        CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_SYNC_FAILED");
+        return false;
+    }
+    if (!OpenedDevelopmentCredentialFileStillNamesEntry(
+            DirectoryHandle, FileHandle, LeafName))
+    {
+        CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_ENTRY_CHANGED");
+        return false;
+    }
+    CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+    return true;
+#else
+    (void)NormalizedPath;
+    OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PLATFORM_UNSUPPORTED");
+    return false;
+#endif
+}
+
+[[nodiscard]] bool ConsumeDevelopmentResumeCredential(
+    const FString& Candidate,
+    FString& OutCredential,
+    FString& OutReason)
+{
+    OutCredential.Reset();
+    FString NormalizedPath;
+    if (!NormalizeDevelopmentCredentialFilePath(
+            Candidate, NormalizedPath, OutReason))
+    {
+        return false;
+    }
+#if PLATFORM_MAC || PLATFORM_UNIX
+    int DirectoryHandle = -1;
+    int FileHandle = -1;
+    FString LeafName;
+    if (!OpenDevelopmentCredentialFile(
+            NormalizedPath,
+            O_RDONLY,
+            DirectoryHandle,
+            FileHandle,
+            LeafName,
+            OutReason))
+    {
+        return false;
+    }
+    struct stat FileState {};
+    const bool bExpectedSize =
+        fstat(FileHandle, &FileState) == 0 &&
+        FileState.st_size == DevelopmentResumeCredentialLength;
+    if (!RemoveOpenedDevelopmentCredentialFile(
+            DirectoryHandle, FileHandle, LeafName))
+    {
+        CloseDevelopmentCredentialFile(DirectoryHandle, FileHandle);
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_CONSUME_FAILED");
+        return false;
+    }
+    close(DirectoryHandle);
+    DirectoryHandle = -1;
+    if (!bExpectedSize)
+    {
+        close(FileHandle);
+        FileHandle = -1;
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_CONTENT_INVALID");
+        return false;
+    }
+    char CredentialBytes[DevelopmentResumeCredentialLength + 1] = {};
+    int32 BytesRead = 0;
+    while (BytesRead < DevelopmentResumeCredentialLength)
+    {
+        const ssize_t Result = read(
+            FileHandle,
+            CredentialBytes + BytesRead,
+            static_cast<size_t>(
+                DevelopmentResumeCredentialLength - BytesRead));
+        if (Result <= 0)
+        {
+            close(FileHandle);
+            FileHandle = -1;
+            FMemory::Memzero(CredentialBytes, sizeof(CredentialBytes));
+            OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_READ_FAILED");
+            return false;
+        }
+        BytesRead += static_cast<int32>(Result);
+    }
+    close(FileHandle);
+    FileHandle = -1;
+    OutCredential = FString(UTF8_TO_TCHAR(CredentialBytes));
+    FMemory::Memzero(CredentialBytes, sizeof(CredentialBytes));
+    if (!IsBoundedClientResumeCredential(OutCredential))
+    {
+        OutCredential.Reset();
+        OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_CONTENT_INVALID");
+        return false;
+    }
+    return true;
+#else
+    OutReason = TEXT("NET_RESUME_CREDENTIAL_FILE_PLATFORM_UNSUPPORTED");
+    return false;
+#endif
+}
+#endif
+}
+
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+namespace echoes::network::testing
+{
+bool ValidateDevelopmentCredentialStagingFile(
+    const FString& Candidate,
+    FString& OutNormalized,
+    FString& OutReason)
+{
+    return ::ValidateDevelopmentCredentialStagingFile(
+        Candidate, OutNormalized, OutReason);
+}
+
+bool StageDevelopmentResumeCredential(
+    const FString& NormalizedPath,
+    const FString& Credential,
+    FString& OutReason)
+{
+    return ::StageDevelopmentResumeCredential(
+        NormalizedPath, Credential, OutReason);
+}
+
+bool ConsumeDevelopmentResumeCredential(
+    const FString& Candidate,
+    FString& OutCredential,
+    FString& OutReason)
+{
+    return ::ConsumeDevelopmentResumeCredential(
+        Candidate, OutCredential, OutReason);
+}
+}
+#endif
 
 AEchoesPlayerController::AEchoesPlayerController()
 {
@@ -120,10 +543,15 @@ void AEchoesPlayerController::BeginPlay()
     bNetworkMatchSmoke =
         FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkMatchClientSmoke"));
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
     bNetworkReconnectPhaseOneSmoke = FParse::Param(
         FCommandLine::Get(), TEXT("EchoesNetworkReconnectPhaseOne"));
     bNetworkReconnectPhaseTwoSmoke = FParse::Param(
         FCommandLine::Get(), TEXT("EchoesNetworkReconnectPhaseTwo"));
+#else
+    bNetworkReconnectPhaseOneSmoke = false;
+    bNetworkReconnectPhaseTwoSmoke = false;
+#endif
     if (GetNetMode() == NM_Client && bNetworkReconnectPhaseOneSmoke &&
         bNetworkReconnectPhaseTwoSmoke)
     {
@@ -165,36 +593,100 @@ void AEchoesPlayerController::BeginPlay()
     {
         StartNetworkHandshakeTimeout();
         FString RequestedResumeCredential;
-        if (FParse::Value(
-                FCommandLine::Get(),
-                TEXT("EchoesNetworkResumeToken="),
-                RequestedResumeCredential) &&
-            !RequestedResumeCredential.IsEmpty())
+        bool bResumeSubmissionScheduled = false;
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+        FString RequestedCredentialFile;
+        const bool bCredentialFileProvided = FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesNetworkResumeCredentialFile="),
+            RequestedCredentialFile);
+        if (bNetworkReconnectPhaseOneSmoke ||
+            bNetworkReconnectPhaseTwoSmoke)
         {
-            NetworkResumeCredential = RequestedResumeCredential;
-            GetWorldTimerManager().SetTimerForNextTick(
-                this,
-                &AEchoesPlayerController::SubmitNetworkResumeCredential);
+            if (!bCredentialFileProvided || RequestedCredentialFile.IsEmpty())
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Error,
+                    TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=NET_RESUME_CREDENTIAL_FILE_REQUIRED"));
+                FPlatformMisc::RequestExit(false);
+                return;
+            }
+            FString FileReason;
+            if (bNetworkReconnectPhaseOneSmoke)
+            {
+                if (!ValidateDevelopmentCredentialStagingFile(
+                        RequestedCredentialFile,
+                        DevelopmentResumeCredentialFilePath,
+                        FileReason))
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Error,
+                        TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=%s credentialLogged=false"),
+                        *FileReason);
+                    FPlatformMisc::RequestExit(false);
+                    return;
+                }
+            }
+            else if (!ConsumeDevelopmentResumeCredential(
+                         RequestedCredentialFile,
+                         RequestedResumeCredential,
+                         FileReason))
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Error,
+                    TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=%s credentialLogged=false credentialFileConsumed=false"),
+                    *FileReason);
+                FPlatformMisc::RequestExit(false);
+                return;
+            }
+            else
+            {
+                NetworkResumeCredential = RequestedResumeCredential;
+                GetWorldTimerManager().SetTimerForNextTick(
+                    this,
+                    &AEchoesPlayerController::SubmitNetworkResumeCredential);
+                bResumeSubmissionScheduled = true;
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL_FILE] consumed=true deletedBeforeSubmit=true mode=owner_only credentialLogged=false"));
+            }
         }
-        else if (UEchoesGameInstance* EchoesGameInstance =
-                     GetEchoesGameInstance();
-                 EchoesGameInstance != nullptr &&
-                 EchoesGameInstance->TryGetPendingReconnectCredential(
-                     RequestedResumeCredential))
+        else if (bCredentialFileProvided)
         {
-            NetworkResumeCredential = RequestedResumeCredential;
-            GetWorldTimerManager().SetTimerForNextTick(
-                this,
-                &AEchoesPlayerController::SubmitNetworkResumeCredential);
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=NET_RESUME_CREDENTIAL_FILE_OUTSIDE_DEVELOPMENT_SMOKE"));
+            FPlatformMisc::RequestExit(false);
+            return;
         }
-        else
+#endif
+        if (!bResumeSubmissionScheduled)
         {
-            GetWorldTimerManager().SetTimerForNextTick(
-                this,
-                &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
+            if (UEchoesGameInstance* EchoesGameInstance =
+                    GetEchoesGameInstance();
+                EchoesGameInstance != nullptr &&
+                EchoesGameInstance->TryGetPendingReconnectCredential(
+                    RequestedResumeCredential))
+            {
+                NetworkResumeCredential = RequestedResumeCredential;
+                GetWorldTimerManager().SetTimerForNextTick(
+                    this,
+                    &AEchoesPlayerController::SubmitNetworkResumeCredential);
+            }
+            else
+            {
+                GetWorldTimerManager().SetTimerForNextTick(
+                    this,
+                    &AEchoesPlayerController::SubmitNetworkCompatibilityHello);
+            }
         }
     }
-#if !UE_BUILD_SHIPPING
+#if UE_BUILD_DEVELOPMENT
     else if (GetNetMode() == NM_Standalone &&
              FParse::Param(
                  FCommandLine::Get(),
@@ -1588,7 +2080,8 @@ void AEchoesPlayerController::ClientReceiveNetworkResumeCredential_Implementatio
     const FString& Credential,
     float GraceSeconds)
 {
-    if (Credential.IsEmpty() || GraceSeconds <= 0.0f)
+    if (!IsBoundedClientResumeCredential(Credential) ||
+        GraceSeconds <= 0.0f)
     {
         UE_LOG(
             LogEchoes,
@@ -1602,23 +2095,48 @@ void AEchoesPlayerController::ClientReceiveNetworkResumeCredential_Implementatio
         EchoesGameInstance->StoreNetworkResumeCredential(
             Credential, GraceSeconds);
     }
-    const bool bDevelopmentReconnectSmoke =
-        bNetworkReconnectPhaseOneSmoke || bNetworkReconnectPhaseTwoSmoke;
-    if (bDevelopmentReconnectSmoke)
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+    if (bNetworkReconnectPhaseOneSmoke)
     {
+        FString FileReason;
+        if (DevelopmentResumeCredentialFilePath.IsEmpty() ||
+            !StageDevelopmentResumeCredential(
+                DevelopmentResumeCredentialFilePath,
+                Credential,
+                FileReason))
+        {
+            NetworkResumeCredential.Reset();
+            if (UEchoesGameInstance* EchoesGameInstance =
+                    GetEchoesGameInstance())
+            {
+                EchoesGameInstance->ClearReconnectContext(
+                    TEXT("NET_RESUME_CREDENTIAL_STAGING_FAILED"));
+            }
+            DevelopmentResumeCredentialFilePath.Reset();
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_NETWORK_RECONNECT_CLIENT_FAILED] reason=%s credentialLogged=false credentialStaged=false"),
+                FileReason.IsEmpty()
+                    ? TEXT("NET_RESUME_CREDENTIAL_STAGING_FAILED")
+                    : *FileReason);
+            FPlatformMisc::RequestExit(false);
+            return;
+        }
+        DevelopmentResumeCredentialFilePath.Reset();
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true token=%s graceSeconds=%.0f exposure=developmentSmokeOnly"),
-            *Credential,
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true credentialLogged=false credentialStaged=true storage=owner_only_one_use_file graceSeconds=%.0f exposure=developmentLoopbackSmokeOnly"),
             GraceSeconds);
     }
     else
+#endif
     {
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true token=redacted graceSeconds=%.0f exposure=memoryOnly"),
+            TEXT("[ECHOES_NETWORK_RESUME_CREDENTIAL] issued=true credentialLogged=false credentialStaged=false graceSeconds=%.0f exposure=memoryOnly"),
             GraceSeconds);
     }
 }
@@ -3750,8 +4268,7 @@ void AEchoesPlayerController::TryAdvanceNetworkReconnectSmoke(
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_NETWORK_RECONNECT_PHASE_ONE_PASSED] token=%s snapshot=%llu tick=%llu lastAcceptedSequence=%llu nextBatch=%llu commandAdmitted=true intentionalDisconnect=true"),
-            *NetworkResumeCredential,
+            TEXT("[ECHOES_NETWORK_RECONNECT_PHASE_ONE_PASSED] credentialStaged=true credentialLogged=false snapshot=%llu tick=%llu lastAcceptedSequence=%llu nextBatch=%llu commandAdmitted=true intentionalDisconnect=true"),
             static_cast<unsigned long long>(Keyframe.snapshotId),
             static_cast<unsigned long long>(Keyframe.simulationTick),
             static_cast<unsigned long long>(Keyframe.lastAcceptedSequence),

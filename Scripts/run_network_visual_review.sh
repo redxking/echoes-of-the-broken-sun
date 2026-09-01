@@ -41,7 +41,8 @@ trap cleanup_server EXIT INT TERM
 
 "$editor" "$project" "/Engine/Maps/Entry?listen" \
   -game -unattended -nop4 -nosplash -nullrhi -nosound \
-  -port="$port" -EchoesAutoStart -AbsLog="$server_log" &
+  -MULTIHOME=127.0.0.1 -port="$port" \
+  -EchoesAutoStart -AbsLog="$server_log" &
 server_pid=$!
 
 server_ready=false
