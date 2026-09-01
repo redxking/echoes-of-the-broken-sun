@@ -2,11 +2,12 @@
 
 **Author and owner:** Angelis Pseftis
 **Repository root:** `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project`
-**Current objective:** finish the game to an initial public demo release — player versus AI, Glass Scar skirmish plus all fifteen campaign operations, with complete visuals and audio.
+**Current objective:** finish the game to a professional public release — player versus AI, Glass Scar skirmish plus all fifteen campaign operations, with professional visuals, the full original score and audio, voiced and subtitled storytelling, and in-engine cinematics. macOS ships first; Linux/SteamOS and then Windows follow in later releases.
 
 The full plan, per-track specifications, and the release gate matrix are in
-**[Docs/DemoReleaseDirective.md](Docs/DemoReleaseDirective.md)**. Read it before starting any demo work.
-This file is the standing session contract; the directive is the work.
+**[Docs/GameCompletionDirective.md](Docs/GameCompletionDirective.md)**. Read it before starting any release work.
+It supersedes `Docs/DemoReleaseDirective.md` (2026-09-01), whose accepted gate evidence it carries
+forward. This file is the standing session contract; the directive is the work.
 
 ---
 
@@ -24,7 +25,7 @@ check against these files, never a fact to build on:
 | What assets exist and under what provenance? | `Docs/Archive/AssetRegister.md` |
 | How do I build, test, and package? | `Docs/Archive/SetupAndBuild.md` |
 | Who is allowed to touch what right now? | `../WorkstreamControl/ACTIVE_LANES.md` |
-| What is the demo missing? | `Docs/DemoReleaseDirective.md` |
+| What is the release missing? | `Docs/GameCompletionDirective.md` |
 
 Source data lives in `Content/Data/Source` (JSON, compiled into a digest-verified runtime catalog),
 `Content/Narrative/Source`, and `Content/World/Source`. Edit source, then recompile — never hand-edit compiled
@@ -39,11 +40,14 @@ output.
    Presentation, HUD, VFX, audio, and camera never enter simulation state, fog authority, saves, replays, or
    checksums. Any new visual or audio work must disable collision, overlaps, navigation influence, and
    shadows where applicable, and must be spawned from authoritative state rather than predicting it.
-3. **Original assets only.** Every mesh, material, texture, sound, and music cue is generated
-   deterministically by project code through `Scripts/generate_art_assets.py` and
-   `Scripts/generate_audio_assets.py`, and is registered in `Docs/Archive/AssetRegister.md` before use. No
-   marketplace, stock, scraped, or third-party content. Regeneration must stay byte-idempotent under its
-   recorded revision string.
+3. **Procedural-first assets with recorded exceptions.** The default for every mesh, material, texture,
+   sound, music cue, and voice line is deterministic generation by project code through
+   `Scripts/generate_art_assets.py` and `Scripts/generate_audio_assets.py`, registered in
+   `Docs/Archive/AssetRegister.md` before use and byte-idempotent under its recorded revision string.
+   Where the generators provably cannot reach the professional bar, a per-family exception (locally run
+   generative model, licensed asset, or original commissioned work) may be taken only if recorded before
+   use with its method, license, and rationale — see the directive's asset policy. Never
+   marketplace-scraped or unlicensed content.
 4. **Documents are edited in place.** One authoritative file per document. No `draft`, `v2`, `final`, or
    `copy` variants. Author fields, where a format has them, read exactly `Angelis Pseftis` — never Claude, an
    AI, a script, or a library.
@@ -97,7 +101,7 @@ credential manager is configured; the Linux VM has no credentials, no `git-lfs` 
 permission.
 
 - Remote: `origin` → `https://github.com/redxking/echoes-of-the-broken-sun.git`. Mainline is `main`.
-- Feature work goes on a branch named for its track, for example `demo/visual-terrain-textures`. Merge to
+- Feature work goes on a branch named for its track, for example `release/visual-terrain-textures`. Merge to
   `main` only after that track's acceptance evidence exists and is recorded.
 - Set identity per invocation rather than writing into the user's config:
   `GIT_AUTHOR_NAME="Angelis Pseftis" GIT_AUTHOR_EMAIL="44432751+redxking@users.noreply.github.com"` and the
@@ -112,7 +116,7 @@ permission.
 
 ## 5. How to run a session
 
-1. Read `Docs/DemoReleaseDirective.md`, then `ProjectLedger.md`'s *Current known limitations* and
+1. Read `Docs/GameCompletionDirective.md`, then `ProjectLedger.md`'s *Current known limitations* and
    *Immediate next task*, then `../WorkstreamControl/ACTIVE_LANES.md`.
 2. Pick the next unblocked item from the directive's gate matrix. If two tracks touch the same files, take a
    lane lease in `ACTIVE_LANES.md` first; if the work is isolated, a branch is enough. Use judgment, and say

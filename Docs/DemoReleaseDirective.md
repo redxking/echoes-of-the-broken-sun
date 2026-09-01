@@ -2,7 +2,7 @@
 
 **Author and control owner:** Angelis Pseftis
 **Created:** 2026-09-01
-**Applies to:** every Claude session working in this repository until the demo ships
+**Status:** SUPERSEDED 2026-09-01 by [`GameCompletionDirective.md`](GameCompletionDirective.md) — scope and session guidance live there; this file remains the record of the gate evidence (gates 1–4 and 14) that the new directive carries forward
 **Companion file:** [`CLAUDE.md`](../CLAUDE.md) — the standing session contract, build commands, and environment traps
 
 This directive defines the work required to take *Echoes of the Broken Sun* from a verified playable-systems
