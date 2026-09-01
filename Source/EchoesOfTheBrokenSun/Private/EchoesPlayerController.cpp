@@ -11,6 +11,7 @@
 #include "EchoesHudLayout.h"
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesMusicSubsystem.h"
+#include "EchoesNarrativeSubsystem.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -4906,6 +4907,13 @@ void AEchoesPlayerController::PresentTitleAudio()
         Ambience->SetWellProximity(false);
         Ambience->SetAmbienceBed(EEchoesAmbienceBed::None);
     }
+    if (UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        Narrative->ClearSubtitleQueue();
+    }
 }
 
 void AEchoesPlayerController::PresentDeploymentAudio()
@@ -4993,6 +5001,23 @@ void AEchoesPlayerController::PresentResultAudio(bool bSuccess)
             bSuccess ? EEchoesMusicStinger::Victory
                      : EEchoesMusicStinger::Defeat);
     }
+    if (UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        const UEchoesSimulationSubsystem* Bridge =
+            World->GetSubsystem<UEchoesSimulationSubsystem>();
+        if (Bridge != nullptr)
+        {
+            Narrative->ClearSubtitleQueue();
+            Narrative->EnqueueSignal(
+                Bridge->GetOperationMode(),
+                bSuccess ? TEXT("phase_entered:Complete")
+                         : TEXT("phase_entered:Failed"),
+                World->GetRealTimeSeconds());
+        }
+    }
 }
 
 void AEchoesPlayerController::PresentEndingAudio(
@@ -5008,6 +5033,17 @@ void AEchoesPlayerController::PresentEndingAudio(
     if (World == nullptr)
     {
         return;
+    }
+    if (UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        Narrative->ClearSubtitleQueue();
+        Narrative->EnqueueSignal(
+            EEchoesOperationMode::CampaignTheBrokenSun,
+            TEXT("phase_entered:Complete"),
+            World->GetRealTimeSeconds());
     }
     if (UEchoesMusicSubsystem* Music =
             World->GetSubsystem<UEchoesMusicSubsystem>())
@@ -5383,6 +5419,16 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     }
     Bridge->SetScenarioPaused(false);
     PresentDeploymentAudio();
+    if (UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        Narrative->ClearSubtitleQueue();
+        Narrative->EnqueueOperationStart(
+            Bridge->GetOperationMode(),
+            GetWorld()->GetRealTimeSeconds());
+    }
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)

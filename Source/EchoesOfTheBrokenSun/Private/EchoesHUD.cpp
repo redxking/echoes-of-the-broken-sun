@@ -1,5 +1,7 @@
 #include "EchoesHUD.h"
 
+#include "EchoesNarrativeSubsystem.h"
+
 #include "EchoesContentSubsystem.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesBrokenSunMissionModel.h"
@@ -1015,6 +1017,8 @@ void AEchoesHUD::DrawHUD()
                 false);
         }
     }
+
+    DrawNarrativeSubtitle(EchoesController, Settings);
 
     const echoes::sim::Simulation* HudSimulation =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
@@ -4048,6 +4052,63 @@ void AEchoesHUD::DrawObjectiveTracker(
     }
 }
 
+void AEchoesHUD::DrawNarrativeSubtitle(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        EchoesController->IsModalOverlayVisible() || GetWorld() == nullptr)
+    {
+        return;
+    }
+    UEchoesNarrativeSubsystem* Narrative =
+        GetGameInstance() != nullptr
+            ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+            : nullptr;
+    if (Narrative == nullptr)
+    {
+        return;
+    }
+    FString Speaker;
+    FString Text;
+    if (!Narrative->GetActiveSubtitle(
+            GetWorld()->GetRealTimeSeconds(), Speaker, Text))
+    {
+        return;
+    }
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+
+    const FString Composite =
+        FString::Printf(TEXT("%s — %s"), *Speaker.ToUpper(), *Text);
+    const float TextScaleValue = 0.95f * HudScale;
+    const float ApproxWidth =
+        7.2f * TextScaleValue * static_cast<float>(Composite.Len());
+    const float BandWidth =
+        FMath::Min(ApproxWidth + 48.0f, Canvas->ClipX - 40.0f);
+    const float BandHeight = 34.0f * HudScale;
+    const float BandLeft = (Canvas->ClipX - BandWidth) * 0.5f;
+    const float BandTop = Canvas->ClipY - 96.0f * HudScale - BandHeight;
+    DrawRect(
+        Theme.Surface.CopyWithNewOpacity(bHighContrast ? 1.0f : 0.82f),
+        BandLeft,
+        BandTop,
+        BandWidth,
+        BandHeight);
+    DrawText(
+        Composite,
+        Theme.TextPrimary,
+        BandLeft + 24.0f,
+        BandTop + 9.0f * HudScale,
+        SmallFont,
+        TextScaleValue,
+        false);
+}
+
 void AEchoesHUD::DrawMatchResult(
     const AEchoesPlayerController* EchoesController,
     const UEchoesSimulationSubsystem* Bridge,
@@ -4646,6 +4707,80 @@ void AEchoesHUD::DrawMatchResult(
             0.90f * TextScale,
             false);
     }
+    // Authored result copy from the narrative pack, consumed at runtime.
+    if (bCampaignResult)
+    {
+        const UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr;
+        const EEchoesCampaignCommitStatus CommitStatus =
+            EchoesController->GetCampaignCommitStatus();
+        const TCHAR* StatusKey =
+            CommitStatus == EEchoesCampaignCommitStatus::Added
+                ? TEXT("Added")
+            : CommitStatus == EEchoesCampaignCommitStatus::AlreadyRecorded
+                ? TEXT("AlreadyRecorded")
+            : CommitStatus == EEchoesCampaignCommitStatus::ReplayConflict
+                ? TEXT("ReplayConflict")
+            : CommitStatus == EEchoesCampaignCommitStatus::StorageFailure
+                ? TEXT("StorageFailure")
+                : nullptr;
+        const FString AuthoredResult =
+            Narrative != nullptr && StatusKey != nullptr
+                ? Narrative->GetResultCopy(
+                      EchoesController->GetPresentedCampaignOperation(),
+                      StatusKey)
+                : FString();
+        if (!AuthoredResult.IsEmpty())
+        {
+            const float ResultScale = 0.82f * TextScale;
+            const int32 CharsPerLine = FMath::Max(
+                40,
+                FMath::FloorToInt(
+                    (PanelWidth - 84.0f) / (7.2f * ResultScale)));
+            TArray<FString> Wrapped;
+            FString Remaining = AuthoredResult;
+            while (!Remaining.IsEmpty() && Wrapped.Num() < 3)
+            {
+                if (Remaining.Len() <= CharsPerLine)
+                {
+                    Wrapped.Add(Remaining);
+                    break;
+                }
+                int32 Break = CharsPerLine;
+                while (Break > 0 && Remaining[Break] != TEXT(' '))
+                {
+                    --Break;
+                }
+                if (Break == 0)
+                {
+                    Break = CharsPerLine;
+                }
+                Wrapped.Add(Remaining.Left(Break));
+                Remaining.RightChopInline(Break + 1);
+            }
+            UFont* ResultFont =
+                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+            const FEchoesVisualTheme ResultTheme =
+                UEchoesVisualThemeSettings::Resolve(
+                    Settings != nullptr &&
+                    Settings->IsHighContrastHudEnabled());
+            for (int32 Index = 0; Index < Wrapped.Num(); ++Index)
+            {
+                DrawText(
+                    Wrapped[Index],
+                    ResultTheme.TextSecondary,
+                    Left + 42.0f,
+                    Top + PanelHeight -
+                        (78.0f - 15.0f * Index) * ContentScale,
+                    ResultFont,
+                    ResultScale,
+                    false);
+            }
+        }
+    }
+
 }
 
 void AEchoesHUD::DrawPauseMenu(
@@ -5229,6 +5364,61 @@ void AEchoesHUD::DrawMissionBriefing(
                   TEXT("%s forces hold the eastern approach. Every protocol changes what survives."),
                   *OpponentFaction),
              Body, TextLeft, Top + 172.0f * ContentScale, SmallFont, 1.0f * TextScale, false);
+
+    // The authored field brief from the narrative pack, consumed at runtime.
+    // Additive presentation: the plan-derived situation lines above stay the
+    // mechanical truth; this paragraph is the mission's in-world voice.
+    if (const UEchoesNarrativeSubsystem* Narrative =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr)
+    {
+        const EEchoesOperationMode BriefOperation =
+            BriefingBridge != nullptr
+                ? BriefingBridge->GetOperationMode()
+                : EEchoesOperationMode::Skirmish;
+        const FString AuthoredBrief = Narrative->GetBriefing(BriefOperation);
+        if (!AuthoredBrief.IsEmpty())
+        {
+            const float BriefScale = 0.82f * TextScale;
+            const int32 CharsPerLine = FMath::Max(
+                40,
+                FMath::FloorToInt(
+                    (PanelWidth - 84.0f) / (7.2f * BriefScale)));
+            TArray<FString> Wrapped;
+            FString Remaining = AuthoredBrief;
+            while (!Remaining.IsEmpty() && Wrapped.Num() < 3)
+            {
+                if (Remaining.Len() <= CharsPerLine)
+                {
+                    Wrapped.Add(Remaining);
+                    break;
+                }
+                int32 Break = CharsPerLine;
+                while (Break > 0 && Remaining[Break] != TEXT(' '))
+                {
+                    --Break;
+                }
+                if (Break == 0)
+                {
+                    Break = CharsPerLine;
+                }
+                Wrapped.Add(Remaining.Left(Break));
+                Remaining.RightChopInline(Break + 1);
+            }
+            for (int32 Index = 0; Index < Wrapped.Num(); ++Index)
+            {
+                DrawText(
+                    Wrapped[Index],
+                    Muted,
+                    TextLeft,
+                    Top + (194.0f + 15.0f * Index) * ContentScale,
+                    SmallFont,
+                    BriefScale,
+                    false);
+            }
+        }
+    }
 
     DrawText(TEXT("PRIMARY OBJECTIVES"), Accent, TextLeft, Top + 220.0f * ContentScale,
              SmallFont, 0.95f * TextScale, false);

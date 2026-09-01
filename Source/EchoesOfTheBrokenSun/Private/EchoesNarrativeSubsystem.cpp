@@ -333,3 +333,88 @@ const TArray<FEchoesNarrativeLine>* UEchoesNarrativeSubsystem::GetLines(
         Operations.Find(OperationPackKey(Operation));
     return Found != nullptr ? &Found->Lines : nullptr;
 }
+
+double UEchoesNarrativeSubsystem::SubtitleDurationSeconds(const FString& Text)
+{
+    return FMath::Clamp(2.4 + 0.045 * static_cast<double>(Text.Len()), 3.0, 9.0);
+}
+
+void UEchoesNarrativeSubsystem::EnqueueOperationStart(
+    EEchoesOperationMode Operation,
+    double NowSeconds)
+{
+    const FString Key = OperationPackKey(Operation);
+    const FOperationNarrative* Found = Operations.Find(Key);
+    if (Found == nullptr)
+    {
+        return;
+    }
+    const FString StartPrefix =
+        FString::Printf(TEXT("operation_ready:%s:"), *Key);
+    for (const FEchoesNarrativeLine& Line : Found->Lines)
+    {
+        if (Line.Signal.StartsWith(StartPrefix))
+        {
+            SubtitleQueue.Add(Line);
+        }
+    }
+    if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())
+    {
+        ActiveLineStartSeconds = NowSeconds;
+    }
+}
+
+void UEchoesNarrativeSubsystem::EnqueueSignal(
+    EEchoesOperationMode Operation,
+    const FString& Signal,
+    double NowSeconds)
+{
+    const FOperationNarrative* Found =
+        Operations.Find(OperationPackKey(Operation));
+    if (Found == nullptr)
+    {
+        return;
+    }
+    for (const FEchoesNarrativeLine& Line : Found->Lines)
+    {
+        if (Line.Signal == Signal)
+        {
+            SubtitleQueue.Add(Line);
+        }
+    }
+    if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())
+    {
+        ActiveLineStartSeconds = NowSeconds;
+    }
+}
+
+bool UEchoesNarrativeSubsystem::GetActiveSubtitle(
+    double NowSeconds,
+    FString& OutSpeaker,
+    FString& OutText)
+{
+    while (!SubtitleQueue.IsEmpty())
+    {
+        const FEchoesNarrativeLine& Head = SubtitleQueue[0];
+        const double Duration = SubtitleDurationSeconds(Head.Text);
+        if (ActiveLineStartSeconds < 0.0)
+        {
+            ActiveLineStartSeconds = NowSeconds;
+        }
+        if (NowSeconds - ActiveLineStartSeconds < Duration)
+        {
+            OutSpeaker = Head.Speaker;
+            OutText = Head.Text;
+            return true;
+        }
+        SubtitleQueue.RemoveAt(0);
+        ActiveLineStartSeconds = SubtitleQueue.IsEmpty() ? -1.0 : NowSeconds;
+    }
+    return false;
+}
+
+void UEchoesNarrativeSubsystem::ClearSubtitleQueue()
+{
+    SubtitleQueue.Reset();
+    ActiveLineStartSeconds = -1.0;
+}

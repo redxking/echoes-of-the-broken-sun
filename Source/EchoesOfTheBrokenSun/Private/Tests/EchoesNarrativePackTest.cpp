@@ -140,6 +140,50 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
             StartLines >= 1);
     }
 
+    // --- The subtitle queue consumes lines in authored order --------------
+
+    Narrative->ClearSubtitleQueue();
+    Narrative->EnqueueOperationStart(
+        EEchoesOperationMode::CampaignSevenAccounts, 100.0);
+    TestEqual(TEXT("Opening lines enqueue for the deployed operation"),
+              Narrative->GetQueuedLineCountForTest(),
+              5);
+    FString Speaker;
+    FString Text;
+    TestTrue(TEXT("The first authored line owns the lane immediately"),
+             Narrative->GetActiveSubtitle(100.1, Speaker, Text));
+    TestEqual(TEXT("The opening line speaks in Oruun's voice"),
+              Speaker,
+              FString(TEXT("Oruun-of-Seven-Stones")));
+    const double FirstDuration =
+        UEchoesNarrativeSubsystem::SubtitleDurationSeconds(Text);
+    TestTrue(TEXT("Line durations scale with length within bounds"),
+             FirstDuration >= 3.0 && FirstDuration <= 9.0);
+    FString SecondText;
+    TestTrue(TEXT("The lane advances after the first line's duration"),
+             Narrative->GetActiveSubtitle(
+                 100.1 + FirstDuration + 0.1, Speaker, SecondText));
+    TestTrue(TEXT("The second line differs from the first"),
+             SecondText != Text);
+    Narrative->ClearSubtitleQueue();
+    TestFalse(TEXT("A cleared queue leaves the lane silent"),
+              Narrative->GetActiveSubtitle(200.0, Speaker, Text));
+    Narrative->EnqueueSignal(
+        EEchoesOperationMode::CampaignSevenAccounts,
+        TEXT("phase_entered:Complete"),
+        300.0);
+    TestEqual(TEXT("Completion lines enqueue by exact signal"),
+              Narrative->GetQueuedLineCountForTest(),
+              3);
+    Narrative->EnqueueSignal(
+        EEchoesOperationMode::Skirmish,
+        TEXT("phase_entered:Complete"),
+        300.0);
+    TestEqual(TEXT("Skirmish enqueues nothing"),
+              Narrative->GetQueuedLineCountForTest(),
+              3);
+    Narrative->ClearSubtitleQueue();
+
     // Skirmish deliberately has no narrative contract.
     TestFalse(TEXT("Skirmish has no narrative contract"),
               Narrative->HasOperation(EEchoesOperationMode::Skirmish));

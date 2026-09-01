@@ -43,6 +43,11 @@ private:
     void DrawSkirmishDeploymentSummary(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    /** Bottom-center authored dialogue line from the narrative queue. */
+    void DrawNarrativeSubtitle(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
+
     void DrawMissionBriefing(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);

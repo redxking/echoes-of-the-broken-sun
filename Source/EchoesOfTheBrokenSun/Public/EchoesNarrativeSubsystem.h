@@ -78,6 +78,39 @@ public:
     [[nodiscard]] static FString OperationPackKey(
         EEchoesOperationMode Operation);
 
+    // --- Subtitle queue ----------------------------------------------------
+    // Lines enqueue in authored order and each holds the lane for a duration
+    // scaled to its length. Presentation only; an empty pack means an empty
+    // queue and a silent lane.
+
+    /** Enqueues every line bound to the operation's own start signal. */
+    void EnqueueOperationStart(
+        EEchoesOperationMode Operation,
+        double NowSeconds);
+
+    /** Enqueues every line bound to one exact runtime signal. */
+    void EnqueueSignal(
+        EEchoesOperationMode Operation,
+        const FString& Signal,
+        double NowSeconds);
+
+    /** The line currently owning the subtitle lane, if any. */
+    [[nodiscard]] bool GetActiveSubtitle(
+        double NowSeconds,
+        FString& OutSpeaker,
+        FString& OutText);
+
+    /** Clears any queued or active lines (title screen, scenario change). */
+    void ClearSubtitleQueue();
+
+    [[nodiscard]] int32 GetQueuedLineCountForTest() const
+    {
+        return SubtitleQueue.Num();
+    }
+
+    /** Seconds one line owns the lane: base plus per-character reading time. */
+    [[nodiscard]] static double SubtitleDurationSeconds(const FString& Text);
+
 private:
     struct FOperationNarrative
     {
@@ -93,6 +126,8 @@ private:
     void LoadPack();
 
     TMap<FString, FOperationNarrative> Operations;
+    TArray<FEchoesNarrativeLine> SubtitleQueue;
+    double ActiveLineStartSeconds = -1.0;
     FString PackDigest;
     FString LoadError;
     int32 TotalLineCount = 0;
