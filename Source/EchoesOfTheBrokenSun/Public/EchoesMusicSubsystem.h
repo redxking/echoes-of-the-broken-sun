@@ -62,6 +62,23 @@ public:
     /** Raises or lowers the additive tension and combat layers. */
     void SetThreatLayers(bool bTension, bool bCombat);
 
+    /** Selects the faction-pairing threat material (skirmish matchups).
+     *  Order-independent; without a context the generic layers play. */
+    void SetThreatContext(
+        echoes::sim::Faction Local,
+        echoes::sim::Faction Opponent);
+
+    /** Returns to the generic (non-pairing) threat layers. */
+    void ClearThreatContext();
+
+    [[nodiscard]] bool HasThreatContext() const { return bThreatContextSet; }
+
+    /** The tension cue the current context resolves to. */
+    [[nodiscard]] USoundBase* ResolveTensionCue() const;
+
+    /** The combat cue the current context resolves to. */
+    [[nodiscard]] USoundBase* ResolveCombatCue() const;
+
     /** Plays a one-shot stinger over the current bed. */
     bool PlayStinger(EEchoesMusicStinger Stinger);
 
@@ -146,7 +163,11 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UAudioComponent> CombatComponent;
 
+    [[nodiscard]] USoundBase* FindCue(const TCHAR* Path) const;
+
     EEchoesMusicContext CurrentContext = EEchoesMusicContext::Silent;
+    FString ThreatPairingTag;
+    bool bThreatContextSet = false;
     echoes::sim::Faction CurrentFaction =
         echoes::sim::Faction::MeridianCompact;
     int32 CurrentAct = 1;

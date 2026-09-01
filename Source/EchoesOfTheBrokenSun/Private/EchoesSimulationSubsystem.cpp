@@ -9,6 +9,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesGameplayAudioSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
+#include "EchoesMusicSubsystem.h"
 #include "EchoesNarrativeSubsystem.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
@@ -16674,6 +16675,8 @@ void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
             // it is the shielded variant.
             if (Snapshot.HitPoints < Previous->HitPoints)
             {
+                LastAuthoritativeDamageSeconds =
+                    GetWorld()->GetRealTimeSeconds();
                 Audio->PlayEvent(
                     Snapshot.bTemporaryMineralCover
                         ? EEchoesGameplayAudioEvent::ImpactShielded
@@ -17052,6 +17055,44 @@ void UEchoesSimulationSubsystem::UpdateNarrativeDispatch()
         GetWorld()->GetRealTimeSeconds());
 }
 
+void UEchoesSimulationSubsystem::UpdateThreatMusicPresentation(
+    const TArray<const echoes::sim::Entity*>& VisibleEntities)
+{
+    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    {
+        return;
+    }
+    UEchoesMusicSubsystem* Music =
+        GetWorld()->GetSubsystem<UEchoesMusicSubsystem>();
+    if (Music == nullptr)
+    {
+        return;
+    }
+    const double Now = GetWorld()->GetRealTimeSeconds();
+    if (Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        // The result flow owns the layers once the match ends.
+        return;
+    }
+    for (const echoes::sim::Entity* Entity : VisibleEntities)
+    {
+        if (Entity != nullptr && Entity->owner != LocalPlayerId &&
+            Entity->owner != echoes::sim::kNeutralPlayer &&
+            Entity->type != echoes::sim::EntityType::ResourceNode &&
+            Entity->type != echoes::sim::EntityType::FutureWell)
+        {
+            LastHostileVisibleSeconds = Now;
+            break;
+        }
+    }
+    // Hysteresis: a visible hostile arms tension for 6 seconds beyond the
+    // last sighting; authoritative damage arms combat for 5 seconds beyond
+    // the last hit, and combat implies tension.
+    const bool bCombat = Now - LastAuthoritativeDamageSeconds < 5.0;
+    const bool bTension = bCombat || Now - LastHostileVisibleSeconds < 6.0;
+    Music->SetThreatLayers(bTension, bCombat);
+}
+
 void UEchoesSimulationSubsystem::OnPreGarbageCollect()
 {
     const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
@@ -17316,6 +17357,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
     UpdateAlertPresentation();
     UpdateGameplayAudioPresentation(VisibleEntities);
     UpdateNarrativeDispatch();
+    UpdateThreatMusicPresentation(VisibleEntities);
     return bAllVisibleViewsReady;
 }
 

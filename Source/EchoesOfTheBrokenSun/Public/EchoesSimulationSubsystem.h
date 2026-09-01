@@ -760,6 +760,13 @@ private:
      *  phases are owned by the result flow; scenario changes and restored
      *  saves re-baseline silently. Presentation only. */
     void UpdateNarrativeDispatch();
+
+    /** Drives the tension and combat music layers from authoritative state:
+     *  tension while hostiles are visible, combat while authoritative damage
+     *  is recent, both with hysteresis so layers never flap. Presentation
+     *  only. */
+    void UpdateThreatMusicPresentation(
+        const TArray<const echoes::sim::Entity*>& VisibleEntities);
     bool SpawnFogView();
     bool SyncFogView();
     bool SpawnTerrainView();
@@ -798,6 +805,8 @@ private:
     const echoes::sim::Simulation* GameplayAudioBaselineSimulation = nullptr;
     const echoes::sim::Simulation* NarrativeBaselineSimulation = nullptr;
     FString NarrativeLastPhaseName;
+    double LastHostileVisibleSeconds = -1000.0;
+    double LastAuthoritativeDamageSeconds = -1000.0;
     echoes::sim::ResearchType GameplayAudioLastActiveResearch =
         echoes::sim::ResearchType::None;
     echoes::sim::ResearchType GameplayAudioLastInterruptedResearch =

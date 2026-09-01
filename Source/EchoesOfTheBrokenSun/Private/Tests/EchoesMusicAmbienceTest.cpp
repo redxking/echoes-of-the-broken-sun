@@ -52,11 +52,11 @@ bool FEchoesMusicAmbienceTest::RunTest(const FString& Parameters)
 
     // --- Registered cues load and route to their category submixes ---------
 
-    TestTrue(TEXT("All fifteen registered music cues load"),
+    TestTrue(TEXT("All twenty-nine registered music cues load"),
              Music->HasAllAuthoredCues());
-    TestEqual(TEXT("Music cue count is fifteen"),
+    TestEqual(TEXT("Music cue count is twenty-nine"),
               Music->GetLoadedCueCount(),
-              15);
+              29);
     TestTrue(TEXT("Every music cue's base submix is the music submix"),
              Music->HasMusicSubmixRouting());
     TestTrue(TEXT("All five registered ambience cues load"),
@@ -185,6 +185,51 @@ bool FEchoesMusicAmbienceTest::RunTest(const FString& Parameters)
     Music->SetThreatLayers(false, false);
     TestFalse(TEXT("Both layers lower"),
               Music->IsTensionLayerActive() || Music->IsCombatLayerActive());
+
+    // --- Faction-pairing threat material -----------------------------------
+
+    USoundBase* GenericTension = Music->ResolveTensionCue();
+    USoundBase* GenericCombat = Music->ResolveCombatCue();
+    TestTrue(TEXT("Without a context the generic layers resolve"),
+             GenericTension != nullptr && GenericCombat != nullptr);
+    Music->SetThreatContext(
+        echoes::sim::Faction::MeridianCompact,
+        echoes::sim::Faction::KharuunAssemblies);
+    USoundBase* PairedTension = Music->ResolveTensionCue();
+    USoundBase* PairedCombat = Music->ResolveCombatCue();
+    TestTrue(TEXT("A matchup selects its own pairing layers"),
+             PairedTension != nullptr && PairedCombat != nullptr &&
+                 PairedTension != GenericTension &&
+                 PairedCombat != GenericCombat);
+    Music->SetThreatContext(
+        echoes::sim::Faction::KharuunAssemblies,
+        echoes::sim::Faction::MeridianCompact);
+    TestTrue(TEXT("Pairing selection is order-independent"),
+             Music->ResolveTensionCue() == PairedTension &&
+                 Music->ResolveCombatCue() == PairedCombat);
+    Music->SetThreatContext(
+        echoes::sim::Faction::HollowChoir,
+        echoes::sim::Faction::HollowChoir);
+    TestTrue(TEXT("A mirror matchup has its own material"),
+             Music->ResolveTensionCue() != PairedTension &&
+                 Music->ResolveTensionCue() != GenericTension);
+    Music->SetThreatLayers(true, true);
+    UAudioComponent* PairedTensionComponent =
+        Music->GetTensionComponentForTest();
+    TestTrue(TEXT("The raised tension layer plays the pairing cue"),
+             PairedTensionComponent != nullptr &&
+                 PairedTensionComponent->Sound ==
+                     Music->ResolveTensionCue());
+    Music->ClearThreatContext();
+    TestTrue(TEXT("Clearing the context returns the generic material"),
+             Music->ResolveTensionCue() == GenericTension &&
+                 Music->ResolveCombatCue() == GenericCombat);
+    UAudioComponent* RestartedTension =
+        Music->GetTensionComponentForTest();
+    TestTrue(TEXT("Live layers restart on the generic cue after clearing"),
+             RestartedTension != nullptr &&
+                 RestartedTension->Sound == GenericTension);
+    Music->SetThreatLayers(false, false);
 
     // --- Stingers -----------------------------------------------------------
 

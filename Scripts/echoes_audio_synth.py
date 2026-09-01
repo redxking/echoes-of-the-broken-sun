@@ -52,6 +52,7 @@ REVISION_INTERFACE = "interface-audio-v1"
 REVISION_GAMEPLAY = "gameplay-audio-v1"
 REVISION_MUSIC = "music-v1"
 REVISION_AMBIENCE = "ambience-v1"
+REVISION_MUSIC_PAIRINGS = "music-v2"
 
 PEAK_CEILING = 0.96
 
@@ -925,6 +926,150 @@ def music_stinger(duration: float, kind: str) -> Buffer:
 
 
 # ---------------------------------------------------------------------------
+# Faction-pairing layers (music-v2)
+# ---------------------------------------------------------------------------
+#
+# One tension and one combat layer per unordered faction pairing. Each blends
+# the two factions' established materials without letting either dominate:
+# Meridian is pulse, machine, and brass; Kharuun is stone and ceramic; the
+# Choir is multi-directional pad harmony. Mirrors (MM, KK, CC) intensify one
+# language instead of blending two.
+
+FACTION_KEYS = ("meridian", "kharuun", "choir")
+
+
+def _pairing_scales(a: str, b: str):
+    table = {
+        "meridian": MERIDIAN_SCALE,
+        "kharuun": KHARUUN_SCALE,
+        "choir": CHOIR_SCALE,
+    }
+    return table[a], table[b]
+
+
+def _tension_material(buffer: Buffer, faction: str, scale, duration: float, seed: int, pan: float) -> None:
+    beat = 60.0 / 108.0
+    root = note(scale[0] - 24)
+    if faction == "meridian":
+        steps = int(duration / (beat * 0.5))
+        for step in range(steps):
+            time = step * beat * 0.5
+            if step % 6 in (0, 3):
+                voice_sub(buffer, time, root, beat * 0.45, 0.24)
+            if step % 8 == 5:
+                voice_mechanical(buffer, time, 205.0, 0.5, 0.16, pan, seed + step)
+    elif faction == "kharuun":
+        steps = int(duration / (beat * 0.5))
+        for step in range(steps):
+            time = step * beat * 0.5
+            if step % 7 in (0, 4):
+                voice_stone(buffer, time, root * 4.0, 0.22, 0.2, pan, seed + step)
+        for index in range(int(duration / 5.0)):
+            time = index * 5.0
+            if time + 4.0 > duration:
+                break
+            voice_ceramic(buffer, time, note(scale[0] - 12), 4.0, 0.14, pan)
+    else:
+        for index in range(int(duration / 4.0)):
+            time = index * 4.0
+            if time + 4.4 > duration:
+                break
+            voice_choir_pad(buffer, time, note(scale[0] - 12), 4.4, 0.15, 0.006, seed + index)
+            voice_choir_pad(buffer, time, note(scale[0] - 12) * 1.4983, 4.4, 0.1, 0.005, seed + 61 + index)
+
+
+def _combat_material(buffer: Buffer, faction: str, scale, duration: float, seed: int, pan: float) -> None:
+    beat = 60.0 / 132.0
+    root = note(scale[0] - 12)
+    if faction == "meridian":
+        steps = int(duration / (beat * 0.5))
+        for step in range(steps):
+            time = step * beat * 0.5
+            if step % 4 == 0:
+                voice_sub(buffer, time, root * 0.5, beat * 0.9, 0.3)
+            if step % 8 == 6:
+                voice_mechanical(buffer, time, 240.0, 0.35, 0.18, pan, seed + step)
+        for index in range(int(duration / (beat * 8))):
+            time = index * beat * 8.0
+            if time + 1.4 > duration:
+                break
+            voice_brass(buffer, time, note(scale[0] - 12), beat * 3.2, 0.2, pan)
+    elif faction == "kharuun":
+        steps = int(duration / (beat * 0.5))
+        for step in range(steps):
+            time = step * beat * 0.5
+            if step % 2 == 0:
+                voice_stone(buffer, time, root * 2.0, 0.22, 0.34, pan, seed + step)
+            if step % 3 == 1:
+                voice_stone(buffer, time, root * 3.0, 0.18, 0.24, -pan, seed + 251 + step)
+    else:
+        for index in range(int(duration / (beat * 4))):
+            time = index * beat * 4.0
+            if time + 2.0 > duration:
+                break
+            chord = ((0, 6), (0, 4), (0, 7), (0, 5))[index % 4]
+            for offset_index, offset in enumerate(chord):
+                voice_choir_pad(buffer, time, note(scale[0] + offset - 12), beat * 4.4, 0.16, 0.004 * (offset_index + 1), seed + index * 3 + offset_index)
+
+
+def music_tension_pair(duration: float, a: str, b: str) -> Buffer:
+    buffer = Buffer(duration, 2)
+    scale_a, scale_b = _pairing_scales(a, b)
+    _tension_material(buffer, a, scale_a, duration, 13101, -0.28)
+    _tension_material(buffer, b, scale_b, duration, 13399, 0.28)
+    buffer.normalize(0.7)
+    return buffer
+
+
+def music_combat_pair(duration: float, a: str, b: str) -> Buffer:
+    buffer = Buffer(duration, 2)
+    scale_a, scale_b = _pairing_scales(a, b)
+    _combat_material(buffer, a, scale_a, duration, 14107, -0.3)
+    _combat_material(buffer, b, scale_b, duration, 14401, 0.3)
+    buffer.normalize(0.85)
+    return buffer
+
+
+def music_brief_underscore(duration: float) -> Buffer:
+    """Under the operations brief: patient, low, room left for reading."""
+    buffer = Buffer(duration, 2)
+    bar = 60.0 / 72.0 * 4.0
+    bars = int(duration / bar)
+    for bar_index in range(bars):
+        time = bar_index * bar
+        voice_sub(buffer, time, note(MERIDIAN_SCALE[0] - 24) * 0.5, bar * 0.8, 0.2)
+        if time + bar <= duration:
+            chord = ((0, 7), (0, 5))[bar_index % 2]
+            for offset_index, offset in enumerate(chord):
+                voice_choir_pad(buffer, time, note(MERIDIAN_SCALE[0] + offset - 24), bar * 1.1, 0.14, 0.003 * (offset_index + 1), 15107 + bar_index * 3 + offset_index)
+    for index in range(int(duration / 6.0)):
+        time = index * 6.0 + 2.0
+        if time + 2.0 > duration:
+            break
+        voice_prepared_piano(buffer, time, note(MERIDIAN_SCALE[(index * 2) % len(MERIDIAN_SCALE)]), 1.8, 0.2, 0.0, 15511 + index)
+    buffer.normalize(0.62)
+    return buffer
+
+
+def music_results_underscore(duration: float) -> Buffer:
+    """Under the result screen: still, unresolved on purpose."""
+    buffer = Buffer(duration, 2)
+    segment = duration / 4.0
+    chords = ((0, 5, 10), (0, 3, 8), (0, 5, 9), (0, 4, 9))
+    for index, chord in enumerate(chords):
+        time = index * segment
+        for offset_index, offset in enumerate(chord):
+            voice_choir_pad(buffer, time, note(CHOIR_SCALE[0] + offset - 24), segment * 1.3, 0.16, 0.0035 * (offset_index + 1), 15901 + index * 5 + offset_index)
+    for index in range(int(duration / 7.0)):
+        time = index * 7.0 + 3.0
+        if time + 2.4 > duration:
+            break
+        voice_ceramic(buffer, time, note(KHARUUN_SCALE[0] - 12), 2.4, 0.14, 0.0)
+    buffer.normalize(0.6)
+    return buffer
+
+
+# ---------------------------------------------------------------------------
 # Ambience
 # ---------------------------------------------------------------------------
 
@@ -1137,6 +1282,21 @@ CUES: tuple[CueSpec, ...] = (
     _stereo("MUS_EndingStabilization", CATEGORY_MUSIC, REVISION_MUSIC, "Controlled Stabilization ending", lambda: music_stinger(9.0, "stabilization")),
     _stereo("MUS_EndingExtinguishment", CATEGORY_MUSIC, REVISION_MUSIC, "Extinguishment ending", lambda: music_stinger(9.0, "extinguishment")),
     _stereo("MUS_EndingOpenEvolution", CATEGORY_MUSIC, REVISION_MUSIC, "Open Evolution ending", lambda: music_stinger(9.0, "evolution")),
+
+    _stereo("MUS_TensionMM", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian mirror tension layer", lambda a="meridian", b="meridian": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatMM", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian mirror combat layer", lambda a="meridian", b="meridian": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_TensionMK", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian versus Kharuun tension layer", lambda a="meridian", b="kharuun": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatMK", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian versus Kharuun combat layer", lambda a="meridian", b="kharuun": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_TensionMC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian versus Choir tension layer", lambda a="meridian", b="choir": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatMC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Meridian versus Choir combat layer", lambda a="meridian", b="choir": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_TensionKK", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Kharuun mirror tension layer", lambda a="kharuun", b="kharuun": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatKK", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Kharuun mirror combat layer", lambda a="kharuun", b="kharuun": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_TensionKC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Kharuun versus Choir tension layer", lambda a="kharuun", b="choir": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatKC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Kharuun versus Choir combat layer", lambda a="kharuun", b="choir": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_TensionCC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Choir mirror tension layer", lambda a="choir", b="choir": music_tension_pair(24.0, a, b), looping=True),
+    _stereo("MUS_CombatCC", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Choir mirror combat layer", lambda a="choir", b="choir": music_combat_pair(24.0, a, b), looping=True),
+    _stereo("MUS_BriefUnderscore", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Operations brief underscore", lambda: music_brief_underscore(36.0), looping=True),
+    _stereo("MUS_ResultsUnderscore", CATEGORY_MUSIC, REVISION_MUSIC_PAIRINGS, "Result screen underscore", lambda: music_results_underscore(32.0), looping=True),
 
     # ambience-v1
     _stereo("AMB_GlassScar", CATEGORY_AMBIENCE, REVISION_AMBIENCE, "Glass Scar basin bed", lambda: ambience_glass_scar(30.0), looping=True),

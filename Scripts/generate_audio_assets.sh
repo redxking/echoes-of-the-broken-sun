@@ -21,7 +21,7 @@ mkdir -p "$project_root/Saved/Logs"
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! grep -Eq '\[ECHOES_AUDIO_ASSET_READY\].*cues=54 revisions=5 sourceRate=48000.*effects=21 interface=13 music=15 ambience=5 dialogue=0.*sourcesOriginal=true thirdPartySamples=false.*runtimeRoutingValidated=false runtimeConcurrencyValidated=false.*finalAudio=false' "$log"; then
+if ! grep -Eq '\[ECHOES_AUDIO_ASSET_READY\].*cues=68 revisions=6 sourceRate=48000.*effects=21 interface=13 music=29 ambience=5 dialogue=0.*sourcesOriginal=true thirdPartySamples=false.*runtimeRoutingValidated=false runtimeConcurrencyValidated=false.*finalAudio=false' "$log"; then
   print -u2 "The presentation-audio asset audit did not pass."
   print -u2 "Inspect: $log"
   exit 3
@@ -33,5 +33,5 @@ if grep -Eq 'LogPython: Error:|LogAudio: Error:|LogEditorAssetSubsystem: Error:|
   exit 4
 fi
 
-print "Verified 54 original audio sources and imported SoundWave assets across four populated categories."
+print "Verified 68 original audio sources and imported SoundWave assets across four populated categories."
 print "Evidence log: $log"

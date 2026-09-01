@@ -30,6 +30,7 @@ This is the single authoritative provenance register and is edited in place. An 
 | AUDIO-003 | Eighteen gameplay cues (`SFX_Weapon*`, `SFX_Impact*`, Matter, construction, production, research, Well, Reshape) under `Content/Audio/Source` and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `gameplay-audio-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Authoritative gameplay event confirmation | Imported audio candidates; event routing and coverage test pending |
 | AUDIO-004 | Fifteen music cues (title, three faction themes, three act beds, tension/combat layers, victory/defeat, four ending stingers) as looping/one-shot stereo sources and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `music-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Title/faction/act music, threat layers, and result punctuation | Imported audio candidates; rendered state-transition capture and mix qualification pending |
 | AUDIO-005 | Five looping stereo ambience beds (Glass Scar, Lume Reach, ark-city, Crownfall, Future Well proximity) and imported SoundWave assets | `Scripts/echoes_audio_synth.py` revision `ambience-v1`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Site ambience and Well proximity presentation | Imported audio candidates; rendered per-site capture and masking measurement pending |
+| AUDIO-006 | Fourteen music-v2 cues: tension and combat layers for all six faction pairings plus brief and results underscores, as looping stereo sources and imported SoundWaves | `Scripts/echoes_audio_synth.py` revision `music-v2`, imported through `Scripts/generate_audio_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original deterministic synthesis; no recordings, samples, models, or third-party source audio | Matchup-specific threat layers and screen underscores | Imported audio candidates; rendered crossfade capture and mix qualification pending |
 | CONCEPT-001 | Four 2x2 Meridian/Kharuun unit and structure presentation sheets under `site/assets/concepts` | OpenAI image generation through Codex, 2026-08-29; exact prompts below; no source images | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Arsenal visual targets | Development concept reference; not a runtime or production asset |
 | CONCEPT-002 | Four-state Future Well presentation sheet at `site/assets/concepts/future-well-states.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Future Well visual target | Development concept reference; not a runtime or production asset |
 | CONCEPT-003 | Four-view Glass Scar environment and route presentation sheet at `site/assets/concepts/glass-scar-routes.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Glass Scar visual target | Development concept reference; not a runtime or production asset |
@@ -156,6 +157,20 @@ This is the single authoritative provenance register and is edited in place. An 
   audio is present in any of these cues. Structural peak/RMS measurements are not loudness,
   perceptual-quality, hearing-safety, or mastering evidence. These families do not establish
   runtime event coverage, rendered playback, the qualified mix, packaged behavior, or final audio.
+
+## AUDIO-006 generation record
+
+- Generator: `Scripts/echoes_audio_synth.py` revision `music-v2`; import and audit through
+  `Scripts/generate_audio_assets.sh` in Unreal Engine 5.8.2.
+- 2026-09-01: fourteen cues added — `MUS_Tension{MM,MK,MC,KK,KC,CC}` and
+  `MUS_Combat{MM,MK,MC,KK,KC,CC}` (24 s looping stereo; each blends its two factions'
+  established materials without letting either dominate, mirrors intensifying one language),
+  plus `MUS_BriefUnderscore` (36 s) and `MUS_ResultsUnderscore` (32 s). A second synthesis run
+  reused all 68 sources byte-identically, and the editor import audit passed
+  (`cues=68 revisions=6 … music=29`). Per-cue BS.1770-4 loudness and inter-sample peak are in
+  the retained measurement log under the evidence directory.
+- These cues do not establish rendered playback, the demonstrated in-session combat crossfade
+  capture, loudness normalization to the −16 LUFS target, or final audio.
 
 ## CONCEPT-001 exact prompt record
 

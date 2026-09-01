@@ -4899,6 +4899,7 @@ void AEchoesPlayerController::PresentTitleAudio()
             World->GetSubsystem<UEchoesMusicSubsystem>())
     {
         Music->SetThreatLayers(false, false);
+        Music->ClearThreatContext();
         Music->SetMusicContext(EEchoesMusicContext::Title);
     }
     if (UEchoesAmbienceSubsystem* Ambience =
@@ -4943,6 +4944,7 @@ void AEchoesPlayerController::PresentDeploymentAudio()
         }
         if (Music != nullptr)
         {
+            Music->SetThreatContext(Setup.LocalFaction, Setup.OpponentFaction);
             Music->SetMusicContext(
                 EEchoesMusicContext::FactionTheme,
                 Setup.LocalFaction);
@@ -4974,6 +4976,7 @@ void AEchoesPlayerController::PresentDeploymentAudio()
         }
         if (Music != nullptr)
         {
+            Music->ClearThreatContext();
             Music->SetMusicContext(
                 EEchoesMusicContext::ActBed,
                 echoes::sim::Faction::MeridianCompact,

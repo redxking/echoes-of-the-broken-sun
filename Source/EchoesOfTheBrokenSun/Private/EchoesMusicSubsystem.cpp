@@ -42,6 +42,46 @@ constexpr TCHAR EndingExtinguishmentCuePath[] = TEXT(
 constexpr TCHAR EndingOpenEvolutionCuePath[] = TEXT(
     "/Game/Audio/Generated/MUS_EndingOpenEvolution.MUS_EndingOpenEvolution");
 
+constexpr const TCHAR* PairingTags[] = {
+    TEXT("MM"), TEXT("MK"), TEXT("MC"), TEXT("KK"), TEXT("KC"), TEXT("CC"),
+};
+constexpr TCHAR BriefUnderscorePath[] =
+    TEXT("/Game/Audio/Generated/MUS_BriefUnderscore.MUS_BriefUnderscore");
+constexpr TCHAR ResultsUnderscorePath[] =
+    TEXT("/Game/Audio/Generated/MUS_ResultsUnderscore.MUS_ResultsUnderscore");
+
+[[nodiscard]] FString PairingCuePath(const TCHAR* Kind, const FString& Tag)
+{
+    return FString::Printf(
+        TEXT("/Game/Audio/Generated/MUS_%s%s.MUS_%s%s"),
+        Kind,
+        *Tag,
+        Kind,
+        *Tag);
+}
+
+[[nodiscard]] TCHAR FactionPairingLetter(echoes::sim::Faction Faction)
+{
+    switch (Faction)
+    {
+        case echoes::sim::Faction::MeridianCompact: return TEXT('M');
+        case echoes::sim::Faction::KharuunAssemblies: return TEXT('K');
+        case echoes::sim::Faction::HollowChoir: return TEXT('C');
+    }
+    return TEXT('M');
+}
+
+[[nodiscard]] int32 FactionPairingRank(echoes::sim::Faction Faction)
+{
+    switch (Faction)
+    {
+        case echoes::sim::Faction::MeridianCompact: return 0;
+        case echoes::sim::Faction::KharuunAssemblies: return 1;
+        case echoes::sim::Faction::HollowChoir: return 2;
+    }
+    return 0;
+}
+
 constexpr const TCHAR* AllMusicCuePaths[] = {
     TitleCuePath,          MeridianCuePath,
     KharuunCuePath,        ChoirCuePath,
@@ -70,6 +110,24 @@ void UEchoesMusicSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     {
         USoundBase* Sound = LoadCue(Path);
         if (Sound != nullptr)
+        {
+            LoadedCues.Add(MusicCueKey(Path), Sound);
+        }
+    }
+    for (const TCHAR* Tag : PairingTags)
+    {
+        for (const TCHAR* Kind : {TEXT("Tension"), TEXT("Combat")})
+        {
+            const FString Path = PairingCuePath(Kind, Tag);
+            if (USoundBase* Sound = LoadCue(*Path))
+            {
+                LoadedCues.Add(FName(*Path), Sound);
+            }
+        }
+    }
+    for (const TCHAR* Path : {BriefUnderscorePath, ResultsUnderscorePath})
+    {
+        if (USoundBase* Sound = LoadCue(Path))
         {
             LoadedCues.Add(MusicCueKey(Path), Sound);
         }
@@ -284,13 +342,83 @@ void UEchoesMusicSubsystem::SetMusicContext(
         BedComponent != nullptr ? TEXT("true") : TEXT("false"));
 }
 
+USoundBase* UEchoesMusicSubsystem::FindCue(const TCHAR* Path) const
+{
+    const TObjectPtr<USoundBase>* Found = LoadedCues.Find(FName(Path));
+    return Found != nullptr ? Found->Get() : nullptr;
+}
+
+void UEchoesMusicSubsystem::SetThreatContext(
+    echoes::sim::Faction Local,
+    echoes::sim::Faction Opponent)
+{
+    const bool bLocalFirst =
+        FactionPairingRank(Local) <= FactionPairingRank(Opponent);
+    const TCHAR First =
+        FactionPairingLetter(bLocalFirst ? Local : Opponent);
+    const TCHAR Second =
+        FactionPairingLetter(bLocalFirst ? Opponent : Local);
+    const FString NewTag = FString::Printf(TEXT("%c%c"), First, Second);
+    if (bThreatContextSet && NewTag == ThreatPairingTag)
+    {
+        return;
+    }
+    ThreatPairingTag = NewTag;
+    bThreatContextSet = true;
+    // A live layer restarts on its new material through the ordinary fades.
+    const bool bTensionWas = bTensionActive;
+    const bool bCombatWas = bCombatActive;
+    SetThreatLayers(false, false);
+    SetThreatLayers(bTensionWas, bCombatWas);
+}
+
+void UEchoesMusicSubsystem::ClearThreatContext()
+{
+    if (!bThreatContextSet)
+    {
+        return;
+    }
+    bThreatContextSet = false;
+    ThreatPairingTag.Reset();
+    const bool bTensionWas = bTensionActive;
+    const bool bCombatWas = bCombatActive;
+    SetThreatLayers(false, false);
+    SetThreatLayers(bTensionWas, bCombatWas);
+}
+
+USoundBase* UEchoesMusicSubsystem::ResolveTensionCue() const
+{
+    if (bThreatContextSet)
+    {
+        if (USoundBase* Paired =
+                FindCue(*PairingCuePath(TEXT("Tension"), ThreatPairingTag)))
+        {
+            return Paired;
+        }
+    }
+    return FindCue(TensionCuePath);
+}
+
+USoundBase* UEchoesMusicSubsystem::ResolveCombatCue() const
+{
+    if (bThreatContextSet)
+    {
+        if (USoundBase* Paired =
+                FindCue(*PairingCuePath(TEXT("Combat"), ThreatPairingTag)))
+        {
+            return Paired;
+        }
+    }
+    return FindCue(CombatCuePath);
+}
+
 void UEchoesMusicSubsystem::SetThreatLayers(bool bTension, bool bCombat)
 {
     auto UpdateLayer = [this](
                            TObjectPtr<UAudioComponent>& Component,
                            bool bWanted,
                            bool& bActive,
-                           const TCHAR* Path)
+                           USoundBase* Sound)
     {
         if (bWanted == bActive)
         {
@@ -299,9 +427,6 @@ void UEchoesMusicSubsystem::SetThreatLayers(bool bTension, bool bCombat)
         bActive = bWanted;
         if (bWanted)
         {
-            const TObjectPtr<USoundBase>* Found =
-                LoadedCues.Find(MusicCueKey(Path));
-            USoundBase* Sound = Found != nullptr ? Found->Get() : nullptr;
             if (Component == nullptr)
             {
                 Component = StartLoopingBed(Sound, GetLayerFadeSeconds());
@@ -317,8 +442,9 @@ void UEchoesMusicSubsystem::SetThreatLayers(bool bTension, bool bCombat)
             Component = nullptr;
         }
     };
-    UpdateLayer(TensionComponent, bTension, bTensionActive, TensionCuePath);
-    UpdateLayer(CombatComponent, bCombat, bCombatActive, CombatCuePath);
+    UpdateLayer(
+        TensionComponent, bTension, bTensionActive, ResolveTensionCue());
+    UpdateLayer(CombatComponent, bCombat, bCombatActive, ResolveCombatCue());
 }
 
 bool UEchoesMusicSubsystem::PlayStinger(EEchoesMusicStinger Stinger)
@@ -336,7 +462,8 @@ bool UEchoesMusicSubsystem::PlayStinger(EEchoesMusicStinger Stinger)
 
 bool UEchoesMusicSubsystem::HasAllAuthoredCues() const
 {
-    return GetLoadedCueCount() == UE_ARRAY_COUNT(AllMusicCuePaths);
+    return GetLoadedCueCount() ==
+        UE_ARRAY_COUNT(AllMusicCuePaths) + UE_ARRAY_COUNT(PairingTags) * 2 + 2;
 }
 
 int32 UEchoesMusicSubsystem::GetLoadedCueCount() const
