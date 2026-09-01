@@ -45,7 +45,8 @@ const FName EnvironmentMetallicParameterName(TEXT("Metallic"));
 const FName EnvironmentRoughnessParameterName(TEXT("Roughness"));
 const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
 
-[[nodiscard]] bool IsBoundedResumeCredential(const FString& Credential)
+[[nodiscard]] bool IsBoundedServerResumeCredential(
+    const FString& Credential)
 {
     if (Credential.Len() != 32)
     {
@@ -65,8 +66,8 @@ const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
     const FString& Candidate,
     const FString& Expected)
 {
-    if (!IsBoundedResumeCredential(Candidate) ||
-        !IsBoundedResumeCredential(Expected))
+    if (!IsBoundedServerResumeCredential(Candidate) ||
+        !IsBoundedServerResumeCredential(Expected))
     {
         return false;
     }

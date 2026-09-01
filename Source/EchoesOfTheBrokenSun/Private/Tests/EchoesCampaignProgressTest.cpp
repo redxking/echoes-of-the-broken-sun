@@ -6,7 +6,6 @@
 
 #include "EchoesCampaignProgress.h"
 #include "HAL/FileManager.h"
-#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
@@ -56,43 +55,21 @@ FEchoesCampaignDecisionRecord MakeDecision(
     return Record;
 }
 
-TArray<uint8> MakeLegacySchemaOneLedger(
-    const FEchoesCampaignDecisionRecord& Record)
+TArray<uint8> MakeFrozenLegacySchemaOneLedger()
 {
-    TArray<uint8> Bytes;
-    const auto AppendU16 = [&Bytes](uint16 Value)
-    {
-        Bytes.Add(static_cast<uint8>(Value));
-        Bytes.Add(static_cast<uint8>(Value >> 8));
-    };
-    const auto AppendU32 = [&Bytes](uint32 Value)
-    {
-        for (int32 ByteIndex = 0; ByteIndex < 4; ++ByteIndex)
-        {
-            Bytes.Add(static_cast<uint8>(Value >> (ByteIndex * 8)));
-        }
-    };
-    const auto AppendU64 = [&Bytes](uint64 Value)
-    {
-        for (int32 ByteIndex = 0; ByteIndex < 8; ++ByteIndex)
-        {
-            Bytes.Add(static_cast<uint8>(Value >> (ByteIndex * 8)));
-        }
-    };
-
-    const uint8 Magic[] = {'E', 'C', 'H', 'O', 'C', 'P', 'G', '1'};
-    Bytes.Append(Magic, UE_ARRAY_COUNT(Magic));
-    AppendU16(1);
-    AppendU16(1);
-    Bytes.Add(static_cast<uint8>(Record.Mission));
-    Bytes.Add(static_cast<uint8>(Record.WellChoice));
-    Bytes.Add(Record.AvailableWellChoices);
-    Bytes.Add(Record.VerifiedFacts);
-    AppendU32(Record.SimulationSnapshotVersion);
-    AppendU64(Record.CompletionTick);
-    AppendU64(Record.FinalStateChecksum);
-    AppendU32(FCrc::MemCrc32(Bytes.GetData(), Bytes.Num()));
-    return Bytes;
+    // Historically valid schema-one encoding corresponding to a Mission 01
+    // Preserve record at simulation snapshot schema 22. The literal fixture
+    // keeps the current encoder and CRC implementation from defining their
+    // own compatibility evidence.
+    static constexpr uint8 Bytes[] = {
+        0x45, 0x43, 0x48, 0x4f, 0x43, 0x50, 0x47, 0x31,
+        0x01, 0x00, 0x01, 0x00,
+        0x01, 0x02, 0x07, 0x0f,
+        0x16, 0x00, 0x00, 0x00,
+        0x79, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
+        0x62, 0xcf, 0x73, 0x0c};
+    return TArray<uint8>(Bytes, UE_ARRAY_COUNT(Bytes));
 }
 }
 
@@ -167,7 +144,7 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
              Decoded.Decisions == Progress.Decisions);
 
     const TArray<uint8> LegacyEncoded =
-        MakeLegacySchemaOneLedger(Preserve);
+        MakeFrozenLegacySchemaOneLedger();
     FEchoesCampaignProgress MigratedLegacy;
     TestTrue(TEXT("A schema-one campaign ledger migrates in memory"),
              FEchoesCampaignProgressStore::Decode(
@@ -177,11 +154,19 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Legacy migration preserves the decision and adds no ending"),
         MigratedLegacy.Decisions.Num() == 1 &&
+            MigratedLegacy.Decisions[0].Mission ==
+                EEchoesCampaignMissionId::WhatTheLedgerKeeps &&
             MigratedLegacy.Decisions[0].WellChoice == Preserve.WellChoice &&
+            MigratedLegacy.Decisions[0].AvailableWellChoices == 0x07 &&
+            MigratedLegacy.Decisions[0].VerifiedFacts == 0x0f &&
             MigratedLegacy.Decisions[0].FinalResolution ==
                 EEchoesFinalResolution::None &&
             MigratedLegacy.Decisions[0].AvailableFinalResolutions == 0 &&
-            MigratedLegacy.Decisions[0].FinalPlanKey == 0xFF);
+            MigratedLegacy.Decisions[0].FinalPlanKey == 0xFF &&
+            MigratedLegacy.Decisions[0].SimulationSnapshotVersion == 22 &&
+            MigratedLegacy.Decisions[0].CompletionTick == 377 &&
+            MigratedLegacy.Decisions[0].FinalStateChecksum ==
+                0x1234'5678'9abc'def0ULL);
     TArray<uint8> MigratedEncoding;
     TestTrue(TEXT("A migrated ledger re-encodes as schema two"),
              FEchoesCampaignProgressStore::Encode(
@@ -223,6 +208,134 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
     IFileManager::Get().Delete(*TestPath, false, true, true);
     IFileManager::Get().Delete(*(TestPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(TestPath + TEXT(".tmp")), false, true, true);
+
+    TestTrue(TEXT("The frozen schema-one primary is written exactly"),
+             FFileHelper::SaveArrayToFile(LegacyEncoded, *TestPath));
+    TArray<uint8> FrozenFixtureReadback;
+    TestTrue(TEXT("The frozen schema-one fixture reads back byte for byte"),
+             FFileHelper::LoadFileToArray(
+                 FrozenFixtureReadback,
+                 *TestPath) &&
+                 FrozenFixtureReadback == LegacyEncoded);
+
+    FEchoesCampaignProgress LoadedLegacy;
+    TestTrue(TEXT("The schema-one primary loads through production recovery"),
+             FEchoesCampaignProgressStore::LoadWithBackup(
+                 TestPath,
+                 LoadedLegacy,
+                 Feedback));
+    TestTrue(TEXT("The schema-one primary load is disclosed"),
+             Feedback.Contains(TEXT("primary record loaded")));
+    TestTrue(TEXT("The loaded schema-one decision is exact"),
+             LoadedLegacy.Decisions == MigratedLegacy.Decisions);
+    TArray<uint8> LegacyBytesAfterLoad;
+    TestTrue(TEXT("Loading schema one does not rewrite the primary"),
+             FFileHelper::LoadFileToArray(
+                 LegacyBytesAfterLoad,
+                 *TestPath) &&
+                 LegacyBytesAfterLoad == LegacyEncoded);
+    TestFalse(TEXT("Loading schema one does not create a backup"),
+              IFileManager::Get().FileExists(*(TestPath + TEXT(".bak"))));
+    TestFalse(TEXT("Loading schema one leaves no temporary file"),
+              IFileManager::Get().FileExists(*(TestPath + TEXT(".tmp"))));
+
+    TestTrue(TEXT("Saving loaded schema one promotes the current schema"),
+             FEchoesCampaignProgressStore::SaveAtomic(
+                 TestPath,
+                 LoadedLegacy,
+                 Feedback));
+    TArray<uint8> UpgradedPrimaryBytes;
+    TArray<uint8> RetainedLegacyBytes;
+    TestTrue(TEXT("The promoted primary is schema two"),
+             FFileHelper::LoadFileToArray(
+                 UpgradedPrimaryBytes,
+                 *TestPath) &&
+                 UpgradedPrimaryBytes.Num() > 10 &&
+                 UpgradedPrimaryBytes[8] == 2 &&
+                 UpgradedPrimaryBytes[9] == 0);
+    TestTrue(TEXT("Promotion retains the exact schema-one generation"),
+             FFileHelper::LoadFileToArray(
+                 RetainedLegacyBytes,
+                 *(TestPath + TEXT(".bak"))) &&
+                 RetainedLegacyBytes == LegacyEncoded);
+    TestFalse(TEXT("Schema promotion leaves no temporary file"),
+              IFileManager::Get().FileExists(*(TestPath + TEXT(".tmp"))));
+
+    FEchoesCampaignProgress UpgradedPrimary;
+    FEchoesCampaignProgress RetainedLegacy;
+    TestTrue(TEXT("The promoted primary reopens with the migrated decision"),
+             FEchoesCampaignProgressStore::LoadGeneration(
+                 TestPath,
+                 UpgradedPrimary,
+                 Feedback) &&
+                 UpgradedPrimary.Decisions == MigratedLegacy.Decisions);
+    TestTrue(TEXT("The exact schema-one backup remains readable"),
+             FEchoesCampaignProgressStore::LoadGeneration(
+                 TestPath + TEXT(".bak"),
+                 RetainedLegacy,
+                 Feedback) &&
+                 RetainedLegacy.Decisions == MigratedLegacy.Decisions);
+
+    if (!TestTrue(
+            TEXT("The promoted primary exposes a payload byte for corruption"),
+            UpgradedPrimaryBytes.IsValidIndex(12)))
+    {
+        return false;
+    }
+    TArray<uint8> CorruptUpgradedPrimary = UpgradedPrimaryBytes;
+    CorruptUpgradedPrimary[12] ^= 0x40;
+    TestTrue(TEXT("The promoted primary accepts a controlled payload mutation"),
+             FFileHelper::SaveArrayToFile(
+                 CorruptUpgradedPrimary,
+                 *TestPath));
+    FEchoesCampaignProgress RejectedCorruptPrimary;
+    TestFalse(TEXT("The CRC-damaged promoted primary fails exact loading"),
+              FEchoesCampaignProgressStore::LoadGeneration(
+                  TestPath,
+                  RejectedCorruptPrimary,
+                  Feedback));
+    TestTrue(TEXT("Exact loading identifies the CRC failure"),
+             Feedback.Contains(TEXT("GENERATION_INVALID")) &&
+                 Feedback.Contains(TEXT("CHECKSUM_MISMATCH")));
+
+    FEchoesCampaignProgress RecoveredLegacy;
+    TestTrue(TEXT("A damaged promoted primary recovers schema one"),
+             FEchoesCampaignProgressStore::LoadWithBackup(
+                 TestPath,
+                 RecoveredLegacy,
+                 Feedback));
+    TestTrue(TEXT("Schema-one fallback recovery is disclosed"),
+             Feedback.Contains(TEXT("backup recovered")));
+    TestTrue(TEXT("Fallback returns the exact migrated decision"),
+             RecoveredLegacy.Decisions == MigratedLegacy.Decisions);
+    TArray<uint8> PrimaryBytesAfterFallback;
+    TArray<uint8> BackupBytesAfterFallback;
+    TestTrue(TEXT("Fallback does not repair the damaged primary"),
+             FFileHelper::LoadFileToArray(
+                 PrimaryBytesAfterFallback,
+                 *TestPath) &&
+                 PrimaryBytesAfterFallback == CorruptUpgradedPrimary);
+    TestTrue(TEXT("Fallback leaves the schema-one backup byte exact"),
+             FFileHelper::LoadFileToArray(
+                 BackupBytesAfterFallback,
+                 *(TestPath + TEXT(".bak"))) &&
+                 BackupBytesAfterFallback == LegacyEncoded);
+    TestFalse(TEXT("Fallback recovery leaves no temporary file"),
+              IFileManager::Get().FileExists(*(TestPath + TEXT(".tmp"))));
+
+    IFileManager::Get().Delete(*TestPath, false, true, true);
+    IFileManager::Get().Delete(*(TestPath + TEXT(".bak")), false, true, true);
+    IFileManager::Get().Delete(*(TestPath + TEXT(".tmp")), false, true, true);
+    if (!TestTrue(
+            TEXT("Migration fixture cleanup resets all campaign generations"),
+            !IFileManager::Get().FileExists(*TestPath) &&
+                !IFileManager::Get().FileExists(
+                    *(TestPath + TEXT(".bak"))) &&
+                !IFileManager::Get().FileExists(
+                    *(TestPath + TEXT(".tmp")))))
+    {
+        return false;
+    }
 
     FEchoesCampaignProgress MissingProgress;
     TestTrue(TEXT("An absent ledger starts a new empty campaign"),
