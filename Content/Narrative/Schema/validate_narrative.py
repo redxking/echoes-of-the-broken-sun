@@ -2727,6 +2727,10 @@ DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
         "content_id": "demo_tutorial_readiness_check",
         "surface": "tutorial",
         "scope": "prologue_tutorial",
+        # The venue this surface opens in. An owner ruling that moves a surface
+        # is applied by editing THIS line; every contract still bound to the
+        # retired venue then fails compilation until it is amended.
+        "opens_after_signal": "operation_ready:CampaignPrologue:RecoverArchive",
         "speaker_ids": {"spk_mara_vey"},
         "counts": {"triggers": 32, "lines": 43},
     },
@@ -2734,6 +2738,7 @@ DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
         "content_id": "demo_system_voice_annunciator",
         "surface": "system_voice",
         "scope": "global",
+        "opens_after_signal": "none",
         "speaker_ids": {"spk_annunciator"},
         "counts": {"triggers": 12, "lines": 12},
     },
@@ -2787,6 +2792,7 @@ def _validate_system_voice_copy(lines: list[dict[str, Any]], path: str) -> None:
 def validate_demo_contract(
     value: dict[str, Any],
     entry: dict[str, Any],
+    live_venue_signals: set[str] | None = None,
 ) -> dict[str, int]:
     """Validate one additive demo-surface contract.
 
@@ -2844,6 +2850,22 @@ def validate_demo_contract(
     elif opens_after == "none":
         raise NarrativeValidationError(
             "demo.runtime_binding.opens_after_signal: a scoped surface must name its opening signal"
+        )
+    # A surface must be bound to the venue the registry declares for it. This is
+    # the check that catches a venue the owner has superseded: the signal itself
+    # may still be perfectly live, but binding THIS surface to it is stale.
+    _expect_exact(
+        opens_after, entry["opens_after_signal"], "demo.runtime_binding.opens_after_signal"
+    )
+    # Weaker second guard, a different defect: a signal naming no live venue at
+    # all. Skipped for the global scope, whose sentinel names no venue by design.
+    if (
+        entry["scope"] != "global"
+        and live_venue_signals is not None
+        and opens_after not in live_venue_signals
+    ):
+        raise NarrativeValidationError(
+            f"demo.runtime_binding.opens_after_signal: {opens_after!r} names no live venue"
         )
     _expect_exact(
         binding["binding_status"], "authored_unbound", "demo.runtime_binding.binding_status"
@@ -3041,10 +3063,21 @@ def validate_source_tree(root: Path) -> dict[str, int]:
             "demo: authored files and registry disagree "
             f"(unregistered: {unexpected}; absent: {missing})"
         )
+    live_venue_signals: set[str] = {
+        trigger["runtime_signal"] for trigger in mission["triggers"]
+    }
+    for stem in sorted(MISSION_REGISTRY):
+        registered = load_json_document(missions_dir / MISSION_REGISTRY[stem]["file"])
+        live_venue_signals.update(
+            trigger["runtime_signal"] for trigger in registered["triggers"]
+        )
+
     demo_totals = {"demo_contracts": 0, "demo_lines": 0, "demo_triggers": 0}
     for name in sorted(DEMO_CONTRACT_REGISTRY):
         document = load_json_document(demo_dir / name)
-        counts = validate_demo_contract(document, DEMO_CONTRACT_REGISTRY[name])
+        counts = validate_demo_contract(
+            document, DEMO_CONTRACT_REGISTRY[name], live_venue_signals
+        )
         for key, count in counts.items():
             demo_totals[key] += count
 
