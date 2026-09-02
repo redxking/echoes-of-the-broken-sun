@@ -20,6 +20,7 @@ SPEC.loader.exec_module(VALIDATOR)
 
 CANON_PATH = ROOT / "Content/Narrative/Source/campaign_canon_continuity.json"
 MISSION_PATH = ROOT / "Content/Narrative/Source/missions/m01_what_the_ledger_keeps.json"
+MISSION_SOURCE_DIR = ROOT / "Content/Narrative/Source/missions"
 CANON_SCHEMA_PATH = ROOT / "Content/Narrative/Schema/campaign_canon_continuity.schema.json"
 MISSION_SCHEMA_PATH = ROOT / "Content/Narrative/Schema/mission_contract.schema.json"
 
@@ -564,23 +565,108 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             },
         )
 
-    def test_published_json_schemas_are_valid_and_accept_sources_when_available(self) -> None:
-        try:
-            import jsonschema
-        except ImportError:
-            self.skipTest("optional jsonschema package is unavailable; dependency-free validator still ran")
+    def test_published_json_schemas_are_valid_and_accept_every_mission_source(self) -> None:
+        # `jsonschema` is REQUIRED, not optional. This assertion used to skip when
+        # the import failed, so on any host without the library the suite reported
+        # green while the only check of the published schema had not run -- which
+        # is exactly how the schema came to reject all fifteen contracts, on main,
+        # unnoticed. A suite that reports green when it did not run is worse than
+        # one that fails.
+        import jsonschema
+
         canon_schema = VALIDATOR.load_json_document(CANON_SCHEMA_PATH)
         mission_schema = VALIDATOR.load_json_document(MISSION_SCHEMA_PATH)
         jsonschema.Draft202012Validator.check_schema(canon_schema)
         jsonschema.Draft202012Validator.check_schema(mission_schema)
         jsonschema.Draft202012Validator(canon_schema).validate(self.canon)
-        jsonschema.Draft202012Validator(mission_schema).validate(self.mission)
-        extra_hook_mission = copy.deepcopy(self.mission)
-        extra_hook_mission["asset_hooks"].append(
-            copy.deepcopy(extra_hook_mission["asset_hooks"][0])
-        )
-        with self.assertRaises(jsonschema.ValidationError):
-            jsonschema.Draft202012Validator(mission_schema).validate(extra_hook_mission)
+        validator = jsonschema.Draft202012Validator(mission_schema)
+
+        # Every authored contract, not just m01: the schema claims to be the v2
+        # mission contract, so all fifteen must satisfy it. m01-only coverage is
+        # what let the v2 generalization ship rejecting m02-m15.
+        sources = sorted(MISSION_SOURCE_DIR.glob("m*.json"))
+        self.assertEqual(len(sources), 15, "expected exactly fifteen mission sources")
+        for source in sources:
+            with self.subTest(mission=source.stem):
+                errors = sorted(
+                    validator.iter_errors(VALIDATOR.load_json_document(source)),
+                    key=lambda error: list(error.absolute_path),
+                )
+                self.assertEqual(
+                    [],
+                    [
+                        f"{'/'.join(str(part) for part in error.absolute_path)}: {error.message}"
+                        for error in errors
+                    ],
+                )
+
+    def test_published_mission_schema_still_rejects_illegal_contracts(self) -> None:
+        # The repair widened constraints that were pinned to m01. Guard against
+        # widening them into a schema that accepts anything.
+        import jsonschema
+
+        mission_schema = VALIDATOR.load_json_document(MISSION_SCHEMA_PATH)
+        validator = jsonschema.Draft202012Validator(mission_schema)
+
+        def mutated(apply):
+            candidate = copy.deepcopy(self.mission)
+            apply(candidate)
+            return candidate
+
+        def drop_generic_failure(candidate):
+            candidate["failure_retry"]["failure_variants"] = [
+                variant
+                for variant in candidate["failure_retry"]["failure_variants"]
+                if variant["reason_code"] != "generic"
+            ]
+
+        rejected = {
+            "duplicate asset hook": lambda candidate: candidate["asset_hooks"].append(
+                copy.deepcopy(candidate["asset_hooks"][0])
+            ),
+            "unknown top-level property": lambda candidate: candidate.update(
+                {"bonus_field": 1}
+            ),
+            "unknown canon key": lambda candidate: candidate["canon"].update(
+                {"invented_site": {"x": 1, "y": 2}}
+            ),
+            "sixteenth mission id": lambda candidate: candidate.update(
+                {"content_id": "nar_m16_a_new_mission"}
+            ),
+            "changed namespace": lambda candidate: candidate.update(
+                {"namespace": "echoes.other"}
+            ),
+            "no generic failure variant": drop_generic_failure,
+            "phases missing Complete": lambda candidate: candidate[
+                "runtime_binding"
+            ].__setitem__(
+                "phases",
+                [
+                    phase
+                    for phase in candidate["runtime_binding"]["phases"]
+                    if phase != "Complete"
+                ],
+            ),
+            "phases not opening on Inactive": lambda candidate: candidate[
+                "runtime_binding"
+            ]["phases"].__setitem__(0, "Started"),
+            "operation mode outside Campaign": lambda candidate: candidate[
+                "runtime_binding"
+            ].update({"operation_mode": "SkirmishFree"}),
+            "stale runtime_consumption": lambda candidate: candidate[
+                "implementation"
+            ].update({"runtime_consumption": "unimplemented"}),
+            "stale failure_reason_binding": lambda candidate: candidate[
+                "runtime_binding"
+            ].update({"failure_reason_binding": "requested"}),
+            "reassigned author": lambda candidate: candidate["metadata"].update(
+                {"author": "Someone Else"}
+            ),
+        }
+        for label, apply in rejected.items():
+            with self.subTest(rejects=label):
+                with self.assertRaises(jsonschema.ValidationError):
+                    validator.validate(mutated(apply))
 
 
 if __name__ == "__main__":

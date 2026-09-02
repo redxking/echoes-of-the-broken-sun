@@ -212,7 +212,7 @@
         "source_text": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 220
+          "maxLength": 260
         },
         "placeholders": {
           "$ref": "#/$defs/placeholders"
@@ -295,10 +295,15 @@
       ],
       "properties": {
         "choice": {
+          "$comment": "Seven approved branch choices: the three well choices (m01, m10) and the four campaign resolutions (m15).",
           "enum": [
             "Harvest",
             "Preserve",
-            "Reshape"
+            "Reshape",
+            "Restoration",
+            "ControlledStabilization",
+            "Extinguishment",
+            "OpenEvolution"
           ]
         },
         "current_runtime_behavior": {
@@ -319,16 +324,19 @@
           ]
         },
         "trigger_id": {
-          "const": "nar_m(0[1-9]|1[0-5])_evt_well_decision_committed"
+          "$comment": "Authored branch triggers: nar_m01_evt_well_decision_committed, nar_m10_evt_protocol_committed, nar_m15_evt_resolution_selected.",
+          "type": "string",
+          "pattern": "^nar_m(0[1-9]|1[0-5])_evt_[a-z0-9_]+$"
         },
         "dialogue_line_ids": {
           "type": "array",
-          "minItems": 3,
+          "minItems": 2,
           "maxItems": 3,
           "uniqueItems": true,
           "items": {
             "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
-          }
+          },
+          "$comment": "m01 authors three lines per branch; m10 and m15 author two."
         },
         "design_target_choice_ui": {
           "$ref": "#/$defs/localized_text"
@@ -374,13 +382,9 @@
           "pattern": "^nar_m(0[1-9]|1[0-5])_fail_[a-z0-9_]+$"
         },
         "reason_code": {
-          "enum": [
-            "local_core_lost",
-            "archive_carrier_lost",
-            "future_well_lost",
-            "terminal_match_outcome",
-            "generic"
-          ]
+          "$comment": "Per-mission vocabulary (32 codes across the fifteen). Exact per-mission sets are pinned by validate_narrative.py and matched 15/15 against EchoesSimulationSubsystem.cpp:9578.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
         },
         "source_condition": {
           "type": "string",
@@ -416,7 +420,8 @@
       ],
       "properties": {
         "id": {
-          "pattern": "^nar_m(0[1-9]|1[0-5])_shot_[0-9]{3}$"
+          "type": "string",
+          "pattern": "^nar_m(0[1-9]|1[0-5])_shot_[a-z0-9_]+$"
         },
         "editorial_target_seconds": {
           "type": "number",
@@ -480,6 +485,64 @@
           "const": "unimplemented"
         }
       }
+    },
+    "tile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "tile_by_founding_choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "harvest",
+        "preserve",
+        "reshape"
+      ],
+      "properties": {
+        "harvest": {
+          "$ref": "#/$defs/tile"
+        },
+        "preserve": {
+          "$ref": "#/$defs/tile"
+        },
+        "reshape": {
+          "$ref": "#/$defs/tile"
+        }
+      }
+    },
+    "tile_by_district": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "archive",
+        "life_support",
+        "transit"
+      ],
+      "properties": {
+        "archive": {
+          "$ref": "#/$defs/tile"
+        },
+        "life_support": {
+          "$ref": "#/$defs/tile"
+        },
+        "transit": {
+          "$ref": "#/$defs/tile"
+        }
+      }
     }
   },
   "type": "object",
@@ -515,7 +578,9 @@
       "const": "echoes.narrative"
     },
     "content_id": {
-      "const": "nar_m(0[1-9]|1[0-5])_what_the_ledger_keeps"
+      "$comment": "Was const holding a regex string (commit 1ca3ad0). Slug generalized: authored ids run nar_m01_what_the_ledger_keeps .. nar_m15_the_broken_sun.",
+      "type": "string",
+      "pattern": "^nar_m(0[1-9]|1[0-5])_[a-z0-9_]+$"
     },
     "metadata": {
       "type": "object",
@@ -569,34 +634,40 @@
       ],
       "properties": {
         "mission_id": {
-          "const": "WhatTheLedgerKeeps"
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z]+$"
         },
         "operation_mode": {
-          "const": "CampaignPrologue"
+          "type": "string",
+          "pattern": "^Campaign[A-Za-z]+$"
         },
         "phases": {
+          "$comment": "Every contract opens on Inactive and carries Complete and Failed; 5-9 phases authored.",
           "type": "array",
+          "minItems": 5,
+          "maxItems": 9,
+          "uniqueItems": true,
           "prefixItems": [
             {
               "const": "Inactive"
-            },
-            {
-              "const": "RecoverArchive"
-            },
-            {
-              "const": "DecideFutureWell"
-            },
-            {
-              "const": "Withdraw"
-            },
-            {
-              "const": "Complete"
-            },
-            {
-              "const": "Failed"
             }
           ],
-          "items": false
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z]+$"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "Complete"
+              }
+            },
+            {
+              "contains": {
+                "const": "Failed"
+              }
+            }
+          ]
         },
         "well_choices": {
           "type": "array",
@@ -641,11 +712,13 @@
           "const": "unimplemented"
         },
         "failure_reason_binding": {
-          "const": "requested"
+          "$comment": "Verified bound: EchoesPlayerController.cpp:5084 passes GetMissionFailureReasonCode(); EchoesSimulationSubsystem.cpp:9578 returns per-mission codes matching every contract's authored reason_code set exactly, both directions, for all fifteen.",
+          "const": "bound_runtime"
         }
       }
     },
     "canon": {
+      "$comment": "Required = the 7 keys present in all fifteen contracts. The other 51 are mission-specific and optional; the vocabulary stays closed.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -653,84 +726,45 @@
         "purpose",
         "player_pov",
         "command_faction",
-        "archive_carrier_role",
-        "recovery_tile",
-        "evacuation_tile",
-        "carrier_must_hold_recovery_during_well_commit",
-        "hostile_core_destruction_substitutes_for_evacuation",
         "hidden_moral_score",
         "canonical_facts",
         "prohibited_inferences"
       ],
       "properties": {
-        "title": {
-          "const": "What the Ledger Keeps"
-        },
-        "purpose": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 600
-        },
-        "player_pov": {
-          "const": "mara_vey_command_authority"
-        },
-        "command_faction": {
-          "const": "meridian_compact"
+        "account_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
         },
         "archive_carrier_role": {
-          "const": "meridian_scout"
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
         },
-        "recovery_tile": {
+        "authority_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "base_hold_ticks_by_deferred_district": {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "x",
-            "y"
+            "archive",
+            "life_support",
+            "transit"
           ],
           "properties": {
-            "x": {
-              "const": 22
+            "archive": {
+              "type": "integer",
+              "minimum": 0
             },
-            "y": {
-              "const": 18
+            "life_support": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transit": {
+              "type": "integer",
+              "minimum": 0
             }
           }
-        },
-        "evacuation_tile": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "x",
-            "y"
-          ],
-          "properties": {
-            "x": {
-              "const": 6
-            },
-            "y": {
-              "const": 17
-            }
-          }
-        },
-        "carrier_must_hold_recovery_during_well_commit": {
-          "const": true
-        },
-        "hostile_core_destruction_substitutes_for_evacuation": {
-          "const": false
-        },
-        "hidden_moral_score": {
-          "const": false
         },
         "canonical_facts": {
-          "type": "array",
-          "minItems": 7,
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          }
-        },
-        "prohibited_inferences": {
           "type": "array",
           "minItems": 6,
           "items": {
@@ -738,21 +772,303 @@
             "minLength": 1,
             "maxLength": 600
           }
+        },
+        "carrier_must_hold_recovery_during_well_commit": {
+          "type": "boolean"
+        },
+        "census_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "civilian_shelter_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "command_faction": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "confluence_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "contact_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "continuance_window_ticks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "convergence_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "crisis_hold_ticks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "district_contribution_sites": {
+          "$ref": "#/$defs/tile_by_district"
+        },
+        "district_sites": {
+          "$ref": "#/$defs/tile_by_district"
+        },
+        "echo_relay_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "evacuation_tile": {
+          "$ref": "#/$defs/tile"
+        },
+        "evidence_extraction_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "extraction_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "first_anchor_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "first_echo_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "first_state_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "first_witness_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "future_well_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "hidden_moral_score": {
+          "const": false
+        },
+        "hold_ticks_delta_by_resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "restoration",
+            "controlled_stabilization",
+            "extinguishment",
+            "open_evolution"
+          ],
+          "properties": {
+            "restoration": {
+              "type": "integer"
+            },
+            "controlled_stabilization": {
+              "type": "integer"
+            },
+            "extinguishment": {
+              "type": "integer"
+            },
+            "open_evolution": {
+              "type": "integer"
+            }
+          }
+        },
+        "hostile_core_destruction_substitutes_for_evacuation": {
+          "type": "boolean"
+        },
+        "kharuun_evidence_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "liability_site_by_deferred_district": {
+          "$ref": "#/$defs/tile_by_district"
+        },
+        "listening_spine_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "memory_bearer_role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "memory_shard_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "meridian_evidence_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "player_pov": {
+          "$comment": "m05 authors the short form mara_command_authority where m01 authors mara_vey_command_authority; both approved.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*_command_authority$"
+        },
+        "power_link_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "priority_order_by_founding_choice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "harvest",
+            "preserve",
+            "reshape"
+          ],
+          "properties": {
+            "harvest": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "preserve": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "reshape": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            }
+          }
+        },
+        "prohibited_inferences": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          }
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "rally_site_by_recorded_protocol": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "readback_sites": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kharuun",
+            "meridian"
+          ],
+          "properties": {
+            "kharuun": {
+              "$ref": "#/$defs/tile"
+            },
+            "meridian": {
+              "$ref": "#/$defs/tile"
+            }
+          }
+        },
+        "recommended_first_district_by_founding_choice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "harvest",
+            "preserve",
+            "reshape"
+          ],
+          "properties": {
+            "harvest": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "preserve": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "reshape": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          }
+        },
+        "recovery_tile": {
+          "$ref": "#/$defs/tile"
+        },
+        "relay_site_by_district": {
+          "$ref": "#/$defs/tile_by_district"
+        },
+        "relay_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "resolution_site_by_protocol": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "restoration_demonstrator_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "roadhead_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "route_site_by_founding_doctrine": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "second_anchor_site": {
+          "$ref": "#/$defs/tile"
+        },
+        "second_state_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "second_witness_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "spine_link_distance_tiles": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "spine_site_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "stability_window_ticks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "waystone_anchor_by_founding_choice": {
+          "$ref": "#/$defs/tile_by_founding_choice"
+        },
+        "witness_roles": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
         }
       }
     },
     "speakers": {
       "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
+      "minItems": 1,
+      "maxItems": 4,
       "items": {
         "$ref": "#/$defs/speaker"
       }
     },
     "triggers": {
       "type": "array",
-      "minItems": 7,
-      "maxItems": 7,
+      "minItems": 6,
+      "maxItems": 10,
       "items": {
         "$ref": "#/$defs/trigger"
       }
@@ -770,8 +1086,8 @@
         },
         "objectives": {
           "type": "array",
-          "minItems": 3,
-          "maxItems": 3,
+          "minItems": 2,
+          "maxItems": 6,
           "items": {
             "$ref": "#/$defs/localized_text"
           }
@@ -780,7 +1096,7 @@
     },
     "lines": {
       "type": "array",
-      "minItems": 28,
+      "minItems": 15,
       "maxItems": 28,
       "items": {
         "$ref": "#/$defs/line"
@@ -788,8 +1104,8 @@
     },
     "dialogue_sequences": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 3,
+      "maxItems": 6,
       "items": {
         "$ref": "#/$defs/dialogue_sequence"
       }
@@ -867,10 +1183,22 @@
       "properties": {
         "failure_variants": {
           "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
+          "minItems": 4,
+          "maxItems": 10,
           "items": {
             "$ref": "#/$defs/failure_variant"
+          },
+          "$comment": "4-10 authored. generic is required: EchoesNarrativeSubsystem.cpp:415 falls back to it for any unmatched reason code.",
+          "contains": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "const": "generic"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
           }
         },
         "retry_copy": {
@@ -901,7 +1229,9 @@
       ],
       "properties": {
         "id": {
-          "const": "nar_m(0[1-9]|1[0-5])_cin_opening"
+          "$comment": "m01 authors _cin_opening; m02-m15 author _cine_opening. Both approved, so both accepted; normalization is a separate content decision.",
+          "type": "string",
+          "pattern": "^nar_m(0[1-9]|1[0-5])_cine?_opening$"
         },
         "title": {
           "type": "string",
@@ -909,7 +1239,8 @@
           "maxLength": 120
         },
         "trigger_id": {
-          "const": "nar_m(0[1-9]|1[0-5])_evt_operation_started"
+          "type": "string",
+          "pattern": "^nar_m(0[1-9]|1[0-5])_evt_operation_started$"
         },
         "format": {
           "const": "in_engine_storyboard"
@@ -1018,7 +1349,8 @@
           "const": "authored_source_only"
         },
         "runtime_consumption": {
-          "const": "unimplemented"
+          "$comment": "Verified partial: briefing EchoesHUD.cpp:5472, objectives :5744, result copy :4823, subtitle lane :4166; enqueue from EchoesPlayerController.cpp:5519/5084 and EchoesSimulationSubsystem.cpp:17633. Title, retry copy and failure-condition copy have no production consumer.",
+          "const": "partial_briefing_lines_results"
         },
         "subtitles": {
           "const": "authored_unbound"
