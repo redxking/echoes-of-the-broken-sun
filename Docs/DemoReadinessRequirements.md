@@ -484,3 +484,19 @@ entries — never by rewriting the requirement bodies above.
   tells that checkout to STOP the affected path. Fix: track the routing doc, the canonical
   `.opencode/skills/**` tree, and both symlink bridges, landed BEFORE the next packaging or QA
   run. Granted as its own receipt; the Git lane correctly refused to widen a two-path grant.
+* 2026-09-02 — PROCESS VIOLATION (no harm; caught by the Git lane, coordinator-verified):
+  TWO feature-lane commits were created OUTSIDE the Git Integration path, contrary to
+  PROTOCOL.md §Git discipline ("feature-lane commits happen only through the dedicated Git
+  Integration task per accepted lease; your job ends at a frozen, reviewed diff plus a handoff
+  entry"). Namely `049ca9b` (Visual, UVScale, parent `569cfbd`) and `6db209b` (Campaign,
+  tutorial curriculum model, parent `e8677e2`). Verified independently: NEITHER is an ancestor
+  of `origin/main` — the mainline equals the Git lane's last receipt tip exactly, so nothing
+  unreceipted reached the promoted line; both carry Angelis-only author AND committer (ruling
+  #26 clean); `049ca9b`'s content hashes to the Visual lane's freeze value exactly. Contributing
+  coordinator error: I relayed the Visual lane's "receipt verified" claim to the Git lane as
+  fact without checking it against the receipt chain, which briefly made an unreceipted commit
+  look receipted. RULING: the rule STANDS unnarrowed — lanes freeze, lanes do not commit; the
+  Git task is the independent verifier and self-committing skips exactly the check the receipt
+  exists to provide. The two existing commits are lane-local with NO mainline standing and NO
+  asserted review status; their CONTENT reaches main only by normal review → Git-task receipt,
+  applied by content onto current main rather than cherry-picked from stale bases.
