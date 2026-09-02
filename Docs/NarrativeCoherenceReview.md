@@ -1,7 +1,7 @@
 ---
 title: Echoes of the Broken Sun — Narrative Coherence Review (DEMO-NAR-011)
 author: Angelis Pseftis
-status: Owner rulings of 2026-09-02 folded in; awaiting remaining lane inventories for full consolidation
+status: COMPLETE — all five lane inventories consolidated and classified; owner rulings of 2026-09-02 folded in; four items await owner adoption
 created: 2026-09-02
 updated: 2026-09-02
 ---
@@ -94,10 +94,65 @@ invents canon: every proposal is marked **[PROPOSAL]** and requires owner accept
 
 ## 7. Awaiting lane inventories (intake sections)
 
-- **Visual** — per-screen-element and per-asset-family pass against §Art and §Ecology/architecture canon. *(pending handoff)*
-- **Audio** — per-cue/per-class pass against §Art and audio. *(pending handoff; rulings #9-#12 already recorded in §8)*
-- **Player** — UI/control surface inventory against the ruled command-deck fiction; interaction failure reasons. *(pending handoff)*
-- **AI** — per-personality doctrine statements; why each faction fights as it does in-mission. *(pending handoff)*
+All five lane inventories have now been delivered and are consolidated below (World in §7.1,
+the remaining four in §7.2). Campaign-lead classification follows each; items needing owner
+adoption are marked, and those already settled by the 2026-09-02 ruling batches are closed.
+
+### 7.2 Visual, Audio, Player, and AI inventories — DELIVERED and classified
+
+**Visual** (visual-presentation handoff). Grounded: fair-fog discipline, faction silhouette and
+material language, the broken-sun motif in feedback. Five ungrounded items, all colour/atmosphere
+rather than mechanics:
+| # | Item | Campaign classification |
+|---|---|---|
+| V1 | CrownfallBasin palette (teal/olive, lime accents) — separation-justified, not story-justified | **ACCEPT VISUAL'S PROPOSAL** — ground it in the recorded impact-basin ecology (pale tides migrating after Well disturbances; shivergrass), which is canon and also yields the M5 dressing brief. Canon-consistent, no new entity. |
+| V2 | SorynConfluence palette/geography | **CLOSED BY RULING** — the Confluence is now an early coherent Choir incursion site (owner-adopted, §7.1 item 6). Choir architecture is repeated luminous geometry with local contradictions (§Art and audio; §Ecology) — that is the palette brief. Visual should re-hue from the incursion grounding rather than from separation alone. |
+| V3 | Future Well choice colours (Harvest/Preserve/Reshape/Dormant) | **OWNER ADOPTION REQUIRED** — these gate the demo's central decision and no colour language is authored. Campaign proposal: Harvest → broken-sun amber (consuming the sun's remainder), Reshape → magenta-fracture (manifesting a possibility), Preserve → cyan-held (the authored language's "held/coherent" colour; avoids green, which canon reserves for the Guard marker), Dormant → unlit charcoal. Keeps the identity-separation floor Visual asks for. |
+| V4 | Weather/atmosphere drift, no authored weather | **ACCEPT VISUAL'S PROPOSAL** — probability-leakage atmospherics is canon-derivable (§Soryn, §Ecology) and gives the three presets story-motivated distinction. |
+| V5 | Per-preset accent semantics (what the emissive bands depict) | **CAMPAIGN ANSWER** — they are scar veins: Crownfall fracture traces where possibility leaked into the ground (§Soryn). If a preset cannot carry that meaning, remove the band per the terrain-contrast discipline (§Art and audio) rather than invent a second meaning. |
+
+**Audio** (audio handoff). Mostly grounded — faction music languages, material-truth destruction,
+the fracture motif as the broken sun's literal voice, Choir audio displaced ±60–120 ms because the
+Choir *is* displaced futures. Its five requests are now **all settled**: interface identity =
+Mara's command deck (ruling #5), advisor persona = the Annunciator (rulings #4/#10, specified in
+NAR-010), ledger-frame underscores and shard-adaptation research cues (ruling #11), shared economy
+cues — "matter voices itself" (ruling #12), and the weapon-fire contradiction resolved as
+per-faction 3×3 variants with the blind-identification rule standing (ruling #9). **One as-built
+CONTRADICTION remains open as an implementation gap, not a design question**: the blind-
+identification rule is canon, and a single shared asset per archetype cannot satisfy it until the
+3×3 variants exist.
+
+**Player** (player-experience handoff). The inventory is largely a fiction-break catalogue of
+development chrome surfaced to the player — determinism-speak in the field menu, a printed
+development covenant, build chrome in the window title, raw mode descriptors. Campaign
+classification: **all CONTRADICTS DEMO-GOV-008** (no debug or prototype surface in the demo) and
+are resolved by the ruled command-deck fiction (#5) plus the M5 copy pass; they need no new canon,
+only the ruled vocabulary. Two items deserve naming: the 8-line hotkey cheat-sheet is *the
+anti-tutorial* — the interface teaching by wall of text because nothing else teaches — and it
+retires when the tutorial lands; and Player's four "pending canon input" questions are answered
+here: vibration detection is the Kharuun *terrain-vibration sense* made instrument (§Kharuun
+Assemblies: Resonants and Listening Spines read movement signatures without identity); mineral
+cover is Cairnback-grown mineral strata (**GROUNDED**, §Kharuun table); Aegis power fields are
+Compact supplied-network defence (**GROUNDED**, §Meridian table); and the title-vs-HUD relation is
+the ruled one — the HUD is Mara's command deck, and the broken sun is the wound the whole world
+orbits, present in the title treatment, not in the instrument.
+
+**AI** (ai-skirmish-balance handoff). Two findings Campaign endorses without reservation:
+- **`Balanced` personality is UNGROUNDED** — canon authors exactly five doctrines; the code enum
+  has six. **Campaign recommendation: remove it** rather than author a sixth character, since the
+  demo exposes personality choice and an unauthored default would be the only faction-facing
+  option with no doctrine behind it. Owner ruling required (it touches a shipped enum).
+- **The unbounded attack-pull CONTRADICTS Bible:202's own posture description**, which says
+  posture-held units hold near or return toward the core and do not pursue vibration contacts.
+  Campaign confirms this independently from the M08 evidence: the pull sent posture-held units
+  corridor-wide and killed Talar ten tiles behind the witness line. **AI's bounded-engagement spec
+  is therefore a canon-CONFORMANCE fix, not a balance opinion** — this is the same defect this
+  review recorded as the deepest fix for the vision-pull class.
+- Also recorded: Bible:127's command set names **repair** and **rally**, neither of which exists in
+  `CommandType`, so Surveyor/Tender "repairs" is currently fiction (**CONTRADICTS**, flagged for
+  redesign-or-rejustify); the Hollow Choir unit roster exists only in data with no Bible table
+  (**UNGROUNDED ×4 by omission** — author into the Bible or rename from it); and tile-quantized
+  movement erases the authored Resonant-over-Riftstalker speed edge (**UNGROUNDED-BY-DRIFT**).
 
 ### 7.1 World inventory — DELIVERED (world-levels handoff, 2026-09-02T11:37:57Z) and classified
 
@@ -118,19 +173,46 @@ World's four inverse gaps (observation ridge, ecology dressing, subsurface route
 phenomena) are recorded as owner-approved thematic material for M5 map dressing; World specs
 anchors when that slice opens.
 
-## 8. Ranked findings — status after the 2026-09-02 owner rulings
+## 8. Ranked findings — complete review, post-ruling status
 
-Rulings recorded in the DEMO ledger change log (14-item batch). Status of this review's items:
+All five inventories are in. Of the review's original eight items, the 2026-09-02 ruling batches
+closed the four HIGH ones outright; the remainder are carried below with the cross-lane items.
 
-1. **Demo AI match frame** — RULED (#13): a REAL ENGAGEMENT of the Present War. Framing brief + result copy move to line-authoring.
-2. **HUD in-fiction identity** — RULED (#5): MARA'S COMMAND DECK. Binding design language for the DEMO-UI remake.
-3. **Dawn as consumed possibility** — RULED (#6): binding presentation requirement for UI/audio/VFX treatment.
-4. **Tutorial governance contradiction** — RESOLVED (#8): tutorial inside the prologue fiction, lesson-cycle structure.
-5. **Tutorial lesson fiction + transition** — grounded by #8/#13; readiness-check beats move to line-authoring.
-6. **Title screen fiction** — proposal stands (Crownfall title); not in the ruling batch — remains open for a later packet or design execution under #5's command-deck language.
-7. **Results/replay meaning** — partially ruled: ledger-frame results underscore ACCEPTED (#11, Audio batch); consequence-language copy moves to line-authoring; 6.4's replay line remains a light-touch proposal.
-8. **Formations / research-interruption framing** — LOW; proposals stand.
+**Closed by owner ruling** — demo match framed as a real engagement (#13); HUD identity = Mara's
+command deck (#5); Dawn presented as consumed possibility (#6); tutorial inside the prologue
+fiction (#8); Reshape overlay fixed with canon standing (#7, runtime repair landed); Lume gate
+names and the Confluence grounding adopted (§7.1); and every one of Audio's five requests
+(#4/#5/#9/#10/#11/#12).
 
-Cross-lane items ruled in the same batch and folded here for the record: Reshape-Well overlay CONTRADICTS defect — FIX THE OVERLAY, the Well stays reachable, canon rule stands (#7); per-faction weapon-fire variants with the blind-identification rule standing (#9); alerts voiced by the Annunciator (#10); economy sounds shared — "matter voices itself" (#12); DEMO-INP-010 remapping deferred to release scope with a view+reset controls screen in the demo (#14). Full per-cue and per-element classification lands with the Audio/Visual/Player/World/AI inventories.
+**Open — owner adoption required (4):**
+1. **Future Well choice colours (V3)** — HIGH. These colour the demo's central irreversible
+   decision and nothing authors them. Campaign proposal in §7.2 (amber / magenta-fracture /
+   cyan-held / unlit charcoal), which keeps the authored palette and Visual's separation floor.
+2. **`Balanced` AI personality is unauthored** — MEDIUM-HIGH, and demo-facing: it is selectable in
+   skirmish setup while canon authors exactly five doctrines. Campaign recommends removal.
+3. **Hollow Choir unit roster exists only in data** (×4, by omission) — MEDIUM. Author into the
+   Bible or rename from it; not demo-blocking (Choir is post-slice) but it is unciteable canon.
+4. **Bible's command set names `repair` and `rally`, which do not exist in code** — MEDIUM.
+   Surveyor/Tender "repairs" is currently fiction. Redesign-or-rejustify.
 
-The review's central finding stands and is now owner-endorsed by implication: the coherence debt was presentation and framing; the rulings convert every HIGH item into an executable design directive. Soryn's story is already load-bearing in the simulation; the demo's job is to let the player see it.
+**Open — implementation gaps against settled canon (no decision needed, work needed):**
+5. **Unbounded visible-enemy attack-pull contradicts Bible:202's posture description** — the
+   deepest item in this review. AI's bounded-engagement spec is a canon-conformance fix; it also
+   dissolves the vision-pull class that consumed six Campaign slices at M08.
+6. **Weapon-fire blind-identification** — canon requires faction identifiable from fire alone;
+   one shared asset per archetype cannot satisfy it until the ruled 3×3 variants exist.
+7. **Player-facing development chrome** (determinism-speak, printed covenant, build chrome, raw
+   mode labels) — CONTRADICTS DEMO-GOV-008; resolved by the ruled vocabulary in the M5 copy pass.
+   The 8-line hotkey cheat-sheet is the anti-tutorial and retires when the tutorial lands.
+8. **Visual's V1/V4/V5 groundings** — accepted as canon-consistent in §7.2; execution rides M5.
+9. **Tile-quantized movement erases authored speed identity** (Resonant vs Riftstalker) —
+   UNGROUNDED-BY-DRIFT at the mechanics layer; lowest priority, stats-work item.
+10. **Title screen fiction, results/replay consequence copy, formations, research-interruption
+    framing** — proposals stand from the original review; execution rides M2/M5 copy work.
+
+**The review's central finding, now confirmed across every lane**: the simulation implements
+Soryn faithfully — Wells, fair fog, vibration asymmetry, economy, material-truth audio, faction
+silhouette language. Every coherence defect found by five lanes is either presentation/framing
+(resolved by the ruling batches) or an implementation gap against canon that is already
+understood. Not one mechanic had to be redesigned to make the world coherent. Soryn's story was
+already load-bearing in the simulation; the demo's job is to let the player see it.
