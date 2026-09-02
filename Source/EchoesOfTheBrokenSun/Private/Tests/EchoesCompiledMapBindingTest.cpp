@@ -125,10 +125,13 @@ bool FEchoesCompiledMapBindingTest::RunTest(const FString& Parameters)
                      sim::Vec2::FromTiles(Primary.X, Primary.Y)));
     }
 
-    // 4. Parity against the live authority: ConfigureGlassScar inside the
-    // subsystem must agree with the compiled mask tile-for-tile. This is the
-    // gate that detects drift between the hard-coded terrain author and the
-    // checked-in contract.
+    // 4. Parity against the live skirmish author. StartPrototypeScenario runs
+    // ConfigureSkirmishTerrain with the Glass Scar preset, not
+    // ConfigureGlassScar: SelectedOperation defaults to Skirmish and neither
+    // the stress nor a controlled-presentation flag is set here, so the
+    // subsystem takes its bConfiguredSkirmish branch. The preset geometry is
+    // identical to the campaign author's, which is why this block agrees with
+    // the compiled mask; section 4b covers the campaign author itself.
     {
         FTestWorldWrapper WorldWrapper;
         if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
@@ -156,9 +159,57 @@ bool FEchoesCompiledMapBindingTest::RunTest(const FString& Parameters)
             const int32 Mismatches =
                 CountParityMismatches(*Simulation, BlockedTiles);
             TestEqual(
+                TEXT("Live skirmish-preset terrain matches the compiled mask on every tile"),
+                Mismatches, 0);
+            TestEqual(TEXT("Live skirmish-preset blocked census matches the contract"),
+                      BlockedTiles, pack::kExpectedBlockedCellCount);
+        }
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+    }
+
+    // 4b. Parity against the live campaign author. CampaignPrologue is neither
+    // Skirmish nor one of the six LumeReach-family operations, so the subsystem
+    // dispatches to ConfigureGlassScar; and it appears in neither
+    // ApplyUnburiedRoadTerrain's nor ApplySevenAccountsTerrain's operation
+    // list, so no overlay modifies its base terrain. Its terrain is therefore
+    // exactly the campaign author's output, which is the case section 4 does
+    // not reach.
+    {
+        FTestWorldWrapper WorldWrapper;
+        if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
+        {
+            WorldWrapper.ForwardErrorMessages(this);
+            AddError(TEXT("Could not create the campaign parity test world."));
+            return false;
+        }
+        UWorld* World = WorldWrapper.GetTestWorld();
+        UEchoesSimulationSubsystem* Bridge =
+            World != nullptr
+                ? World->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        FString Feedback;
+        if (!TestNotNull(TEXT("Campaign parity world owns the simulation subsystem"), Bridge) ||
+            !TestTrue(TEXT("Campaign prologue operation can be selected"),
+                      Bridge != nullptr &&
+                          Bridge->SelectOperationMode(
+                              EEchoesOperationMode::CampaignPrologue, Feedback)) ||
+            !TestTrue(TEXT("Campaign prologue scenario starts"),
+                      Bridge->StartPrototypeScenario()))
+        {
+            WorldWrapper.ForwardErrorMessages(this);
+            return false;
+        }
+        const sim::Simulation* Simulation = Bridge->GetSimulation();
+        if (TestNotNull(TEXT("Authoritative campaign simulation exists"), Simulation))
+        {
+            int32 BlockedTiles = 0;
+            const int32 Mismatches =
+                CountParityMismatches(*Simulation, BlockedTiles);
+            TestEqual(
                 TEXT("Live ConfigureGlassScar terrain matches the compiled mask on every tile"),
                 Mismatches, 0);
-            TestEqual(TEXT("Live blocked census matches the contract"),
+            TestEqual(TEXT("Live campaign blocked census matches the contract"),
                       BlockedTiles, pack::kExpectedBlockedCellCount);
         }
         Bridge->StopPrototypeScenario();
