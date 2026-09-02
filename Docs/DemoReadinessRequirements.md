@@ -388,3 +388,68 @@ entries — never by rewriting the requirement bodies above.
   LogInput-verbose run remains available as a diagnostic to determine WHERE Escape is lost
   (engine consumption vs harness delivery) if the repair proves non-obvious, but the requirement
   no longer depends on that answer. Against DEMO-INP-011.
+  → CORRECTIONS/REFINEMENTS (World half of the map-strategy packet, independently verified):
+  the Content/Art .uasset count is 77, not 89 (145 total repo-wide stands). The determinism risk
+  everyone expects DOES NOT EXIST by construction — EchoesSimCore is engine-independent and
+  terrain reaches it only through contract data, so no code path runs from level geometry into
+  sim state. The REAL risks are (a) visual-authority divergence — hand-placed dressing on a
+  contract-passable cell teaches the player a lie about pathing, a Bible rule-3 violation — and
+  (b) unverifiability: .umap assets are binary, non-mergeable, exclusive-lease-per-map, not
+  diff-reviewable, and carry the editor-SCC trap. Proposed mitigation: a dressing conformance
+  gate — an authored-dressing manifest inside the map contract, machine-checked so placed
+  dressing must match the cell states it claims, keeping authored levels inside the same
+  fail-closed discipline the contracts established.
+* 2026-09-02 — GAMEPLAY GAP (surfaced by using the four canon items as map-strategy test cases;
+  NOT a dressing problem and not solvable by any map option): the Bible promises an OBSERVATION
+  RIDGE, `height_band_ordinal` exists in the compiled map contract, but NOTHING CONSUMES IT and
+  vision ignores elevation entirely — so no amount of dressing can deliver it without lying to
+  the player. Vaultbacks are likewise an entity/rules question, partly existing already as
+  `temporaryMineralCover` in sim. To be raised separately as a Core/World gameplay question
+  regardless of which map strategy is chosen.
+* 2026-09-02 — OPEN DIAGNOSTIC (pointer-fixture vs M0 selection) — **CLOSED, RETRACTED by the
+  reporting lane.** Not a product defect: the fixture was mis-invoked. The project's own script
+  (`Scripts/run_pointer_combat_guard_review.sh:24-30`) launches it with `/Engine/Maps/Entry` AND
+  `-EchoesAutoStart`; neither was passed, so the app sat on the TITLE screen
+  (`[ECHOES_TITLE_READY]`, no TITLE_CONFIRMED/DEPLOYED), `IsModalOverlayVisible()` includes
+  `bTitleScreenVisible`, and `SelectionPressed()` returns inside the modal branch before setting
+  `bSelectionButtonDown` — so the stage-1 assertion failed exactly as designed. The run was
+  additionally off-contract because that fixture's acceptance contract is EDITOR-only, not
+  packaged. Player's S4/S6 time is released. Reconciliation of the two observations (recorded
+  because it matters): stage 1 asserts `SelectedEntityIds.Num()==1 AND [0]==the local HeavyUnit`
+  — "exactly one, and exactly the defender", NOT "a click selected something" — so Player's
+  "Selected 1 (Surveyor)" would fail that assertion while selection works perfectly. Both
+  observations were always compatible.
+* 2026-09-02 — DEFECT S4 (fixture logging, found during the above): in
+  `[ECHOES_POINTER_REVIEW_COORDINATE]`, the tokens `fullBoundsVisible=true hudOcclusion=false`
+  are HARDCODED LITERAL TEXT in the format string, not measured booleans — and the occlusion
+  check builds the BATTLEFIELD layout, so it is blind to a title/briefing modal. These tokens
+  must not be treated as evidence by anyone. Additionally, zero-selected, two-selected, and
+  wrong-entity-selected all emit an identical `POINTER_SELECTION_REJECTED` string with no
+  discriminating detail; whoever next touches it should log `SelectedEntityIds` contents.
+* 2026-09-02 — **DEFECT S2, MAJOR, adversarially proven — likely a primary cause of the owner's
+  visual rejection.** `Scripts/generate_art_assets.py:1433` sets material parameter `UVScale`
+  default_value = **0.01**, while GeometryScript box UVs span at most 1.0 — so each face samples
+  roughly a 5×5-texel patch of a 512×512 texture, magnified ~100× past visibility. Unit and
+  building textures are present, cooked, and sampled, but effectively invisible: every surface
+  renders as a near-flat colour wash. This is upstream of every other material recommendation
+  and plausibly explains "graphics lack detail" and "units, buildings, terrain too visually
+  similar" better than any per-asset critique. Fix is one line with whole-frame effect. Visual
+  lane's V-E slice re-ranked to lead with it. Verified independently by the coordinator at the
+  cited line.
+  → SEVERITY UPGRADE on the elevation gap: it is NOT a future-content gap, it is a PRESENT
+  correctness defect. The game ALREADY DRAWS RIDGES: `SM_World_GlassScarRidge` is loaded and
+  spawned (`EchoesTerrainView.cpp:41`, `EchoesGameMode.cpp:1846`), asserted by
+  `EchoesGlassScarTest.cpp:87`, and the accepted 0.65.0 capture evidence records "authored
+  routes, ridges, shards, shelves" as rendered — while the simulation has NO elevation at all
+  (vision ignores height, movement cost ignores height, `height_band_ordinal` is consumed by
+  nothing). So the shipped visual layer implies a tactical affordance that does not exist, which
+  is a Bible rule-3 trust/readability violation today, not a missing feature tomorrow. The
+  predicted "why doesn't holding the ridge do anything?" complaint is already latent in the
+  build the owner played.
+* 2026-09-02 — DEFECT (mechanical cause of the owner's "terrain too similar", INDEPENDENT of the
+  map-strategy decision): every registered environment mesh belongs to the Glass Scar family —
+  Shelf, Ridge, Shard, AshCut, BuriedCauseway, FoldedVerge, plus MatterDeposit and the Future
+  Well set. **Crownfall Basin and The Confluence Ring have NO bespoke environment art at all**,
+  rendering from Glass Scar's vocabulary with only different blocked-cell patterns. Three maps
+  drawn from one mesh family will read as one place under EITHER map option. Belongs to Visual's
+  half of the consolidated packet.
