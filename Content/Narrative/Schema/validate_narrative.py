@@ -2722,6 +2722,278 @@ def validate_schema_documents(schema_dir: Path) -> None:
         _expect_exact(schema.get("additionalProperties"), False, f"schema.{filename}.additionalProperties")
 
 
+DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
+    "tutorial_readiness_check.json": {
+        "content_id": "demo_tutorial_readiness_check",
+        "surface": "tutorial",
+        "scope": "prologue_tutorial",
+        "speaker_ids": {"spk_mara_vey"},
+        "counts": {"triggers": 32, "lines": 43},
+    },
+    "system_voice_annunciator.json": {
+        "content_id": "demo_system_voice_annunciator",
+        "surface": "system_voice",
+        "scope": "global",
+        "speaker_ids": {"spk_annunciator"},
+        "counts": {"triggers": 12, "lines": 12},
+    },
+}
+
+# The Annunciator's audio-side copy constraints, enforced mechanically so an
+# out-of-budget alert line fails the pipeline instead of reaching a take pool:
+# 2-4 words, one breath group, a stable distinct opening word per class, and no
+# second-person address (accepted system-voice spec; owner rulings 4, 10, 20).
+SYSTEM_VOICE_MAX_WORDS = 4
+# One word is the ideal case, not a violation: the binding constraint is the
+# 0.8 s / one-breath-group budget, and the accepted spec's own register anchor
+# for the contact alert is the single word "Contact." (owner rulings 19, 20).
+SYSTEM_VOICE_MIN_WORDS = 1
+SYSTEM_VOICE_FORBIDDEN_WORDS = {"you", "your", "yours"}
+
+
+def _validate_system_voice_copy(lines: list[dict[str, Any]], path: str) -> None:
+    openings: dict[str, str] = {}
+    for index, line in enumerate(lines):
+        text = line["source_text"]
+        where = f"{path}[{index}].source_text"
+        words = text.split()
+        if not SYSTEM_VOICE_MIN_WORDS <= len(words) <= SYSTEM_VOICE_MAX_WORDS:
+            raise NarrativeValidationError(
+                f"{where}: system-voice copy must be "
+                f"{SYSTEM_VOICE_MIN_WORDS}..{SYSTEM_VOICE_MAX_WORDS} words, found {len(words)}"
+            )
+        if "," in text or text.count(".") != 1 or not text.endswith("."):
+            raise NarrativeValidationError(
+                f"{where}: system-voice copy must be one breath group ending in a single period"
+            )
+        lowered = {word.strip(".,;:!?").casefold() for word in words}
+        forbidden = lowered & SYSTEM_VOICE_FORBIDDEN_WORDS
+        if forbidden:
+            raise NarrativeValidationError(
+                f"{where}: system-voice copy must not address the player ({sorted(forbidden)})"
+            )
+        opening = words[0].casefold()
+        if opening in openings:
+            raise NarrativeValidationError(
+                f"{where}: opening word {words[0]!r} already used by {openings[opening]}"
+            )
+        openings[opening] = line["id"]
+
+
+def validate_demo_contract(
+    value: dict[str, Any],
+    entry: dict[str, Any],
+) -> dict[str, int]:
+    """Validate one additive demo-surface contract.
+
+    Demo contracts carry tutorial and system-voice copy that is not mission
+    dialogue. They are deliberately separate from the fifteen pinned mission
+    contracts: every mission pin stays exactly as authored, and these rules
+    apply only to this namespace.
+    """
+    top = _exact_keys(
+        value,
+        {
+            "schema_version",
+            "namespace",
+            "content_id",
+            "metadata",
+            "runtime_binding",
+            "speakers",
+            "triggers",
+            "lines",
+        },
+        "demo",
+    )
+    _validate_all_strings(top, "demo")
+    _expect_exact(top["schema_version"], 1, "demo.schema_version")
+    _expect_exact(top["namespace"], "echoes.narrative.demo", "demo.namespace")
+    _expect_exact(top["content_id"], entry["content_id"], "demo.content_id")
+
+    metadata = _exact_keys(
+        top["metadata"],
+        {"author", "status", "source_document", "source_document_sha256"},
+        "demo.metadata",
+    )
+    _expect_exact(metadata["author"], "Angelis Pseftis", "demo.metadata.author")
+    _expect_exact(metadata["status"], "authored_unbound", "demo.metadata.status")
+    _expect_string(metadata["source_document"], "demo.metadata.source_document")
+    if re.fullmatch(r"[0-9a-f]{64}", _expect_string(
+        metadata["source_document_sha256"], "demo.metadata.source_document_sha256"
+    )) is None:
+        raise NarrativeValidationError(
+            "demo.metadata.source_document_sha256: expected a lowercase sha256 digest"
+        )
+
+    binding = _exact_keys(
+        top["runtime_binding"],
+        {"surface", "scope", "opens_after_signal", "binding_status"},
+        "demo.runtime_binding",
+    )
+    _expect_exact(binding["surface"], entry["surface"], "demo.runtime_binding.surface")
+    _expect_exact(binding["scope"], entry["scope"], "demo.runtime_binding.scope")
+    opens_after = _expect_string(
+        binding["opens_after_signal"], "demo.runtime_binding.opens_after_signal"
+    )
+    if entry["scope"] == "global":
+        _expect_exact(opens_after, "none", "demo.runtime_binding.opens_after_signal")
+    elif opens_after == "none":
+        raise NarrativeValidationError(
+            "demo.runtime_binding.opens_after_signal: a scoped surface must name its opening signal"
+        )
+    _expect_exact(
+        binding["binding_status"], "authored_unbound", "demo.runtime_binding.binding_status"
+    )
+
+    speakers = _expect_list(top["speakers"], "demo.speakers")
+    speaker_ids: set[str] = set()
+    for index, speaker in enumerate(speakers):
+        record = _exact_keys(
+            speaker,
+            {
+                "id",
+                "display_name",
+                "faction_id",
+                "role_in_surface",
+                "delivery_channel",
+                "voice_asset_status",
+            },
+            f"demo.speakers[{index}]",
+        )
+        speaker_ids.add(_expect_symbol(record["id"], f"demo.speakers[{index}].id"))
+        _expect_string(record["display_name"], f"demo.speakers[{index}].display_name")
+        _expect_symbol(record["faction_id"], f"demo.speakers[{index}].faction_id")
+        _expect_symbol(record["role_in_surface"], f"demo.speakers[{index}].role_in_surface")
+        _expect_symbol(record["delivery_channel"], f"demo.speakers[{index}].delivery_channel")
+        _expect_exact(
+            record["voice_asset_status"], "absent", f"demo.speakers[{index}].voice_asset_status"
+        )
+    if speaker_ids != entry["speaker_ids"]:
+        raise NarrativeValidationError(
+            f"demo.speakers: expected exactly {sorted(entry['speaker_ids'])}"
+        )
+
+    triggers = _expect_list(top["triggers"], "demo.triggers")
+    if len(triggers) != entry["counts"]["triggers"]:
+        raise NarrativeValidationError(
+            f"demo.triggers: expected exactly {entry['counts']['triggers']} triggers"
+        )
+    trigger_ids: set[str] = set()
+    for index, item in enumerate(triggers):
+        record = _exact_keys(
+            item,
+            {
+                "id",
+                "runtime_signal",
+                "prerequisite_ids",
+                "occurrence",
+                "reset_behavior",
+                "binding_status",
+            },
+            f"demo.triggers[{index}]",
+        )
+        tid = _validate_narrative_id(record["id"], f"demo.triggers[{index}].id")
+        if tid in trigger_ids:
+            raise NarrativeValidationError(f"demo.triggers[{index}].id: duplicate {tid!r}")
+        trigger_ids.add(tid)
+        _expect_string(record["runtime_signal"], f"demo.triggers[{index}].runtime_signal")
+        if record["occurrence"] not in {"once_per_attempt", "repeatable"}:
+            raise NarrativeValidationError(
+                f"demo.triggers[{index}].occurrence: expected once_per_attempt or repeatable"
+            )
+        _expect_exact(
+            record["reset_behavior"],
+            "reset_on_mission_retry",
+            f"demo.triggers[{index}].reset_behavior",
+        )
+        _expect_exact(
+            record["binding_status"],
+            "authored_unbound",
+            f"demo.triggers[{index}].binding_status",
+        )
+    for index, item in enumerate(triggers):
+        for prerequisite in _expect_list(
+            item["prerequisite_ids"], f"demo.triggers[{index}].prerequisite_ids"
+        ):
+            if prerequisite not in trigger_ids:
+                raise NarrativeValidationError(
+                    f"demo.triggers[{index}].prerequisite_ids: unknown trigger {prerequisite!r}; "
+                    "demo prerequisites resolve inside their own contract"
+                )
+
+    lines = _expect_list(top["lines"], "demo.lines")
+    if len(lines) != entry["counts"]["lines"]:
+        raise NarrativeValidationError(
+            f"demo.lines: expected exactly {entry['counts']['lines']} lines"
+        )
+    line_ids: set[str] = set()
+    for index, item in enumerate(lines):
+        record = _exact_keys(
+            item,
+            {
+                "id",
+                "loc_key",
+                "speaker_id",
+                "trigger_id",
+                "delivery_channel",
+                "source_text",
+                "placeholders",
+                "text_budget",
+                "subtitle",
+                "transcript_included",
+                "voice_hook",
+                "binding_status",
+            },
+            f"demo.lines[{index}]",
+        )
+        lid = _validate_narrative_id(record["id"], f"demo.lines[{index}].id")
+        if lid in line_ids:
+            raise NarrativeValidationError(f"demo.lines[{index}].id: duplicate {lid!r}")
+        line_ids.add(lid)
+        _expect_exact(record["loc_key"], lid, f"demo.lines[{index}].loc_key")
+        if record["speaker_id"] not in speaker_ids:
+            raise NarrativeValidationError(
+                f"demo.lines[{index}].speaker_id: unknown speaker {record['speaker_id']!r}"
+            )
+        if record["trigger_id"] not in trigger_ids:
+            raise NarrativeValidationError(
+                f"demo.lines[{index}].trigger_id: unknown trigger {record['trigger_id']!r}"
+            )
+        _expect_symbol(record["delivery_channel"], f"demo.lines[{index}].delivery_channel")
+        text = _validate_source_text(record["source_text"], f"demo.lines[{index}].source_text")
+        _validate_placeholders(
+            record["placeholders"], text, f"demo.lines[{index}].placeholders"
+        )
+        _validate_text_budget(record["text_budget"], text, f"demo.lines[{index}].text_budget")
+        subtitle = _exact_keys(
+            record["subtitle"], {"enabled", "timing_status"}, f"demo.lines[{index}].subtitle"
+        )
+        _expect_exact(subtitle["enabled"], True, f"demo.lines[{index}].subtitle.enabled")
+        _expect_exact(
+            subtitle["timing_status"], "unassigned", f"demo.lines[{index}].subtitle.timing_status"
+        )
+        _expect_exact(
+            record["transcript_included"], True, f"demo.lines[{index}].transcript_included"
+        )
+        voice_hook = _exact_keys(
+            record["voice_hook"], {"id", "asset_status"}, f"demo.lines[{index}].voice_hook"
+        )
+        _expect_symbol(voice_hook["id"], f"demo.lines[{index}].voice_hook.id")
+        _expect_exact(
+            voice_hook["asset_status"], "absent", f"demo.lines[{index}].voice_hook.asset_status"
+        )
+        _expect_exact(
+            record["binding_status"],
+            "authored_unbound",
+            f"demo.lines[{index}].binding_status",
+        )
+
+    if entry["surface"] == "system_voice":
+        _validate_system_voice_copy(lines, "demo.lines")
+
+    return {"demo_contracts": 1, "demo_lines": len(lines), "demo_triggers": len(triggers)}
+
+
 def validate_source_tree(root: Path) -> dict[str, int]:
     source_dir = root / "Content/Narrative/Source"
     schema_dir = root / "Content/Narrative/Schema"
@@ -2751,7 +3023,28 @@ def validate_source_tree(root: Path) -> dict[str, int]:
         for key, count in counts.items():
             totals[key] += count
     totals["authored_missions"] = 1 + len(MISSION_REGISTRY)
-    return {**canon_counts, **totals}
+
+    # Additive demo namespace. Mission contracts above are untouched by this
+    # block: demo contracts live in their own directory, carry their own
+    # registry and rules, and cannot relax any mission pin.
+    demo_dir = source_dir / "demo"
+    expected_demo = set(DEMO_CONTRACT_REGISTRY)
+    actual_demo = {path.name for path in demo_dir.glob("*.json")} if demo_dir.is_dir() else set()
+    if actual_demo != expected_demo:
+        unexpected = sorted(actual_demo - expected_demo)
+        missing = sorted(expected_demo - actual_demo)
+        raise NarrativeValidationError(
+            "demo: authored files and registry disagree "
+            f"(unregistered: {unexpected}; absent: {missing})"
+        )
+    demo_totals = {"demo_contracts": 0, "demo_lines": 0, "demo_triggers": 0}
+    for name in sorted(DEMO_CONTRACT_REGISTRY):
+        document = load_json_document(demo_dir / name)
+        counts = validate_demo_contract(document, DEMO_CONTRACT_REGISTRY[name])
+        for key, count in counts.items():
+            demo_totals[key] += count
+
+    return {**canon_counts, **totals, **demo_totals}
 
 
 def _default_root() -> Path:
@@ -2774,6 +3067,7 @@ def main() -> int:
         f"factions={counts['factions']} lines={counts['lines']} "
         f"branches={counts['branches']} failures={counts['failures']} "
         f"results={counts['results']} shots={counts['shots']} "
+        f"demo_contracts={counts['demo_contracts']} demo_lines={counts['demo_lines']} "
         "runtime_consumed=false"
     )
     return 0

@@ -1,6 +1,355 @@
 {
  "author": "Angelis Pseftis",
  "authored_missions": 15,
+ "demo": {
+  "system_voice": {
+   "content_id": "demo_system_voice_annunciator",
+   "lines": [
+    {
+     "id": "nar_demo_line_ann_under_attack",
+     "signal": "alert:UnderAttack",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Contact."
+    },
+    {
+     "id": "nar_demo_line_ann_structure_lost",
+     "signal": "alert:StructureLost",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Structure lost."
+    },
+    {
+     "id": "nar_demo_line_ann_build_complete",
+     "signal": "alert:ConstructionComplete",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Build complete."
+    },
+    {
+     "id": "nar_demo_line_ann_unit_fielded",
+     "signal": "alert:ProductionComplete",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Unit fielded."
+    },
+    {
+     "id": "nar_demo_line_ann_adaptation_ready",
+     "signal": "alert:ResearchComplete",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Adaptation ready."
+    },
+    {
+     "id": "nar_demo_line_ann_logistics_limit",
+     "signal": "alert:CapacityLow",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Logistics limit."
+    },
+    {
+     "id": "nar_demo_line_ann_matter_low",
+     "signal": "alert:MatterLow",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Matter reserve low."
+    },
+    {
+     "id": "nar_demo_line_ann_reserve_insufficient",
+     "signal": "alert:ResourcesInsufficient",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Cost exceeds reserve."
+    },
+    {
+     "id": "nar_demo_line_ann_dawn_committed",
+     "signal": "alert:DawnSpent",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Dawn committed."
+    },
+    {
+     "id": "nar_demo_line_ann_telegraph_running",
+     "signal": "alert:WellTelegraph",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Telegraph running."
+    },
+    {
+     "id": "nar_demo_line_ann_hostile_core_down",
+     "signal": "alert:HostileCoreDown",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Hostile core down."
+    },
+    {
+     "id": "nar_demo_line_ann_anchor_critical",
+     "signal": "alert:AnchorCritical",
+     "speaker": "Meridian Operations Annunciator",
+     "text": "Anchor critical."
+    }
+   ],
+   "opens_after_signal": "none",
+   "scope": "global",
+   "surface": "system_voice"
+  },
+  "tutorial": {
+   "content_id": "demo_tutorial_readiness_check",
+   "lines": [
+    {
+     "id": "nar_demo_line_tut_survey_01",
+     "signal": "tutorial_lesson_opened:survey",
+     "speaker": "Mara Vey",
+     "text": "Before anything moves, we see the ground. Sweep the basin."
+    },
+    {
+     "id": "nar_demo_line_tut_survey_02",
+     "signal": "tutorial_lesson_opened:survey",
+     "speaker": "Mara Vey",
+     "text": "Edge of the world moves the view. The wheel brings it closer. {recenter_key} brings you home to the Anchor."
+    },
+    {
+     "id": "nar_demo_line_tut_survey_03",
+     "signal": "tutorial_lesson_verified:survey",
+     "speaker": "Mara Vey",
+     "text": "Good. The basin's on your board — scar, crossings, and our corridor."
+    },
+    {
+     "id": "nar_demo_line_tut_survey_04",
+     "signal": "tutorial_lesson_verified:survey",
+     "speaker": "Mara Vey",
+     "text": "A commander who can't look can't warn anyone. Seeing first is the cheapest thing we do."
+    },
+    {
+     "id": "nar_demo_line_tut_survey_hint",
+     "signal": "tutorial_lesson_hesitation:survey",
+     "speaker": "Mara Vey",
+     "text": "The view answers the screen edge and the wheel. Try the corner of the world."
+    },
+    {
+     "id": "nar_demo_line_tut_roster_01",
+     "signal": "tutorial_lesson_opened:roster",
+     "speaker": "Mara Vey",
+     "text": "Now the roster. Every asset answers when named. Left-click the Surveyor."
+    },
+    {
+     "id": "nar_demo_line_tut_roster_02",
+     "signal": "tutorial_lesson_verified:roster",
+     "speaker": "Mara Vey",
+     "text": "That ring means it's listening. Click open ground — released. Selection is a channel, not a leash."
+    },
+    {
+     "id": "nar_demo_line_tut_roster_03",
+     "signal": "tutorial_lesson_verified:roster",
+     "speaker": "Mara Vey",
+     "text": "You'll command forty things at once out there. Knowing exactly who's listening is the difference between an order and an accident."
+    },
+    {
+     "id": "nar_demo_line_tut_roster_hint",
+     "signal": "tutorial_lesson_hesitation:roster",
+     "speaker": "Mara Vey",
+     "text": "One click, on the Surveyor itself. It's waiting."
+    },
+    {
+     "id": "nar_demo_line_tut_muster_01",
+     "signal": "tutorial_lesson_opened:muster",
+     "speaker": "Mara Vey",
+     "text": "One at a time is for repairs. Drag a box around the whole section."
+    },
+    {
+     "id": "nar_demo_line_tut_muster_02",
+     "signal": "tutorial_lesson_verified:muster",
+     "speaker": "Mara Vey",
+     "text": "Whole section, one motion. That's how the Compact moves anything heavier than a wrench."
+    },
+    {
+     "id": "nar_demo_line_tut_muster_03",
+     "signal": "tutorial_lesson_verified:muster",
+     "speaker": "Mara Vey",
+     "text": "Duty windows are short. Muster fast, and the window is yours instead of the enemy's."
+    },
+    {
+     "id": "nar_demo_line_tut_muster_hint",
+     "signal": "tutorial_lesson_hesitation:muster",
+     "speaker": "Mara Vey",
+     "text": "Press, drag a corner across the section, release."
+    },
+    {
+     "id": "nar_demo_line_tut_route_01",
+     "signal": "tutorial_lesson_opened:route",
+     "speaker": "Mara Vey",
+     "text": "Route check. Right-click sends them where you point. The order reads the target — ground means go, a shard seam means gather, trouble means fight."
+    },
+    {
+     "id": "nar_demo_line_tut_route_02",
+     "signal": "tutorial_lesson_verified:route",
+     "speaker": "Mara Vey",
+     "text": "Held exactly where you stopped them. An order you can end is the only kind worth giving."
+    },
+    {
+     "id": "nar_demo_line_tut_route_03",
+     "signal": "tutorial_lesson_verified:route",
+     "speaker": "Mara Vey",
+     "text": "Routes are promises. The check is how we keep them."
+    },
+    {
+     "id": "nar_demo_line_tut_route_hint",
+     "signal": "tutorial_lesson_hesitation:route",
+     "speaker": "Mara Vey",
+     "text": "Right-click the marked ground. They know the way from there."
+    },
+    {
+     "id": "nar_demo_line_tut_reserve_01",
+     "signal": "tutorial_lesson_opened:reserve",
+     "speaker": "Mara Vey",
+     "text": "The city's reserve is thin. Put the Surveyor on the Matter seam — it cuts, carries, and books the load at the Anchor."
+    },
+    {
+     "id": "nar_demo_line_tut_reserve_02",
+     "signal": "tutorial_lesson_verified:reserve",
+     "speaker": "Mara Vey",
+     "text": "First load booked. Matter is honest work — the strata always has more."
+    },
+    {
+     "id": "nar_demo_line_tut_reserve_03",
+     "signal": "tutorial_lesson_verified:reserve",
+     "speaker": "Mara Vey",
+     "text": "Dawn is different. Every shard we spend is a future somebody doesn't get. We spend it — but we log WHY. Remember that when the cost feels light."
+    },
+    {
+     "id": "nar_demo_line_tut_reserve_hint",
+     "signal": "tutorial_lesson_hesitation:reserve",
+     "speaker": "Mara Vey",
+     "text": "Right-click the bright seam. The Surveyor handles the rest."
+    },
+    {
+     "id": "nar_demo_line_tut_link_01",
+     "signal": "tutorial_lesson_opened:link",
+     "speaker": "Mara Vey",
+     "text": "Severed link on the corridor. Put a Power Link at the marked footprint — the ghost shows green where the ground will take it."
+    },
+    {
+     "id": "nar_demo_line_tut_link_02",
+     "signal": "tutorial_placement_rejected:link",
+     "speaker": "Mara Vey",
+     "text": "Red means the ground disagrees. Find footing the network can hold."
+    },
+    {
+     "id": "nar_demo_line_tut_link_03",
+     "signal": "tutorial_lesson_verified:link",
+     "speaker": "Mara Vey",
+     "text": "Link's live. The corridor has power and eyes again."
+    },
+    {
+     "id": "nar_demo_line_tut_link_04",
+     "signal": "tutorial_lesson_verified:link",
+     "speaker": "Mara Vey",
+     "text": "The Compact is the network. Every structure you place is a promise the next crew can stand on."
+    },
+    {
+     "id": "nar_demo_line_tut_link_hint",
+     "signal": "tutorial_lesson_hesitation:link",
+     "speaker": "Mara Vey",
+     "text": "The footprint marker, on open ground near the corridor. Green ghost, then commit."
+    },
+    {
+     "id": "nar_demo_line_tut_foundry_01",
+     "signal": "tutorial_lesson_opened:foundry",
+     "speaker": "Mara Vey",
+     "text": "Spin up the Foundry. Queue a Lancer — the cost comes off the ledger the moment you commit."
+    },
+    {
+     "id": "nar_demo_line_tut_foundry_02",
+     "signal": "tutorial_lesson_verified:foundry",
+     "speaker": "Mara Vey",
+     "text": "Fresh Lancer, on station at your rally. The queue keeps building while you fight — set it and trust it."
+    },
+    {
+     "id": "nar_demo_line_tut_foundry_03",
+     "signal": "tutorial_lesson_verified:foundry",
+     "speaker": "Mara Vey",
+     "text": "Battles are won by whoever still has a next unit. The Foundry is your next unit."
+    },
+    {
+     "id": "nar_demo_line_tut_foundry_hint",
+     "signal": "tutorial_lesson_hesitation:foundry",
+     "speaker": "Mara Vey",
+     "text": "Select the Foundry, then its Lancer entry. The ledger covers it."
+    },
+    {
+     "id": "nar_demo_line_tut_probe_01",
+     "signal": "tutorial_lesson_opened:probe",
+     "speaker": "Mara Vey",
+     "text": "Contact on the perimeter — small, and ours to handle. Lancers forward. The Bulwark holds the line; {guard_key} puts it on the Surveyor — its whole job becomes that one life."
+    },
+    {
+     "id": "nar_demo_line_tut_probe_02",
+     "signal": "tutorial_lesson_verified:probe",
+     "speaker": "Mara Vey",
+     "text": "Probe broken. Nobody we're responsible for got touched. That's the whole report."
+    },
+    {
+     "id": "nar_demo_line_tut_probe_03",
+     "signal": "tutorial_lesson_verified:probe",
+     "speaker": "Mara Vey",
+     "text": "Out there it won't be a probe. Composition, cover, and a guarded worker — that's how a fight becomes arithmetic instead of grief."
+    },
+    {
+     "id": "nar_demo_line_tut_probe_hint",
+     "signal": "tutorial_lesson_hesitation:probe",
+     "speaker": "Mara Vey",
+     "text": "Lancers on the contact; the guard order on the Surveyor. In that order is fine."
+    },
+    {
+     "id": "nar_demo_line_tut_board_01",
+     "signal": "tutorial_lesson_opened:board",
+     "speaker": "Mara Vey",
+     "text": "Top of your deck: the duty ledger — what's open, what's held, what's closed. Corner: the basin entire. When something happens off-screen, the deck flags it; {alert_key} takes you straight there."
+    },
+    {
+     "id": "nar_demo_line_tut_board_02",
+     "signal": "tutorial_lesson_verified:board",
+     "speaker": "Mara Vey",
+     "text": "You found it without hunting. The deck watches so you can think."
+    },
+    {
+     "id": "nar_demo_line_tut_board_03",
+     "signal": "tutorial_lesson_verified:board",
+     "speaker": "Mara Vey",
+     "text": "A commander's real enemy is the thing happening where she isn't looking."
+    },
+    {
+     "id": "nar_demo_line_tut_board_hint",
+     "signal": "tutorial_lesson_hesitation:board",
+     "speaker": "Mara Vey",
+     "text": "The flash in the corner is real. {alert_key} jumps to it."
+    },
+    {
+     "id": "nar_demo_line_tut_well_01",
+     "signal": "tutorial_lesson_opened:well",
+     "speaker": "Mara Vey",
+     "text": "Last item, and it isn't drill. That's a Future Well. Inside are futures that never happened — held, coherent, and ours to decide about. Walk the Surveyor up and read the panel. Harvest ends it for power now. Preserve holds it and pays slowly. Reshape spends it to change the ground itself, for a while."
+    },
+    {
+     "id": "nar_demo_line_tut_well_02",
+     "signal": "tutorial_lesson_verified:well",
+     "speaker": "Mara Vey",
+     "text": "Committed and logged. Whatever you chose — that's now the only version of this that ever happens."
+    },
+    {
+     "id": "nar_demo_line_tut_well_03",
+     "signal": "tutorial_lesson_verified:well",
+     "speaker": "Mara Vey",
+     "text": "There's no clean answer at a Well. There's only the answer you can stand behind in the ledger. You just made your first one. The next one won't be practice."
+    },
+    {
+     "id": "nar_demo_line_tut_well_hint",
+     "signal": "tutorial_lesson_hesitation:well",
+     "speaker": "Mara Vey",
+     "text": "The Surveyor, to the Well. The panel does not commit until you do."
+    },
+    {
+     "id": "nar_demo_line_tut_close",
+     "signal": "tutorial_mastery_complete",
+     "speaker": "Mara Vey",
+     "text": "Readiness check complete — survey, roster, routes, reserve, links, foundry, perimeter, board, and one Well you'll be thinking about tonight. The window opens now. This one is real."
+    }
+   ],
+   "opens_after_signal": "operation_ready:CampaignPrologue:RecoverArchive",
+   "scope": "prologue_tutorial",
+   "surface": "tutorial"
+  }
+ },
+ "demo_line_count": 55,
  "line_count": 308,
  "operations": {
   "CampaignAssemblyOfTheMissing": {

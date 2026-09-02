@@ -50,6 +50,13 @@ class Mission01NarrativeContractTests(unittest.TestCase):
                 "failures": 5 + sum(len(e["failure_reason_codes"]) for e in VALIDATOR.MISSION_REGISTRY.values()),
                 "results": 4 + 4 * len(VALIDATOR.MISSION_REGISTRY),
                 "shots": 4 + sum(e["counts"]["shots"] for e in VALIDATOR.MISSION_REGISTRY.values()),
+                "demo_contracts": len(VALIDATOR.DEMO_CONTRACT_REGISTRY),
+                "demo_lines": sum(
+                    e["counts"]["lines"] for e in VALIDATOR.DEMO_CONTRACT_REGISTRY.values()
+                ),
+                "demo_triggers": sum(
+                    e["counts"]["triggers"] for e in VALIDATOR.DEMO_CONTRACT_REGISTRY.values()
+                ),
             },
         )
 

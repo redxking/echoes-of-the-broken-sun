@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "namespace": "echoes.narrative.demo",
+  "content_id": "demo_system_voice_annunciator",
+  "metadata": {
+    "author": "Angelis Pseftis",
+    "status": "authored_unbound",
+    "source_document": "Docs/OpeningAndTutorialScript.md",
+    "source_document_sha256": "92e2a6c1b3a3ffb2040e893b32d9d0ccceb70a60d9aa61aa409f1bbab8f1c63d"
+  },
+  "runtime_binding": {
+    "surface": "system_voice",
+    "scope": "global",
+    "opens_after_signal": "none",
+    "binding_status": "authored_unbound"
+  },
+  "speakers": [
+    {
+      "id": "spk_annunciator",
+      "display_name": "Meridian Operations Annunciator",
+      "faction_id": "meridian_compact",
+      "role_in_surface": "operations_system_voice",
+      "delivery_channel": "operations_annunciator",
+      "voice_asset_status": "absent"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "nar_demo_evt_ann_under_attack",
+      "runtime_signal": "alert:UnderAttack",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_structure_lost",
+      "runtime_signal": "alert:StructureLost",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_build_complete",
+      "runtime_signal": "alert:ConstructionComplete",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_unit_fielded",
+      "runtime_signal": "alert:ProductionComplete",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_adaptation_ready",
+      "runtime_signal": "alert:ResearchComplete",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_logistics_limit",
+      "runtime_signal": "alert:CapacityLow",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_matter_low",
+      "runtime_signal": "alert:MatterLow",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_reserve_insufficient",
+      "runtime_signal": "alert:ResourcesInsufficient",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_dawn_committed",
+      "runtime_signal": "alert:DawnSpent",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_telegraph_running",
+      "runtime_signal": "alert:WellTelegraph",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_hostile_core_down",
+      "runtime_signal": "alert:HostileCoreDown",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_ann_anchor_critical",
+      "runtime_signal": "alert:AnchorCritical",
+      "prerequisite_ids": [],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    }
+  ],
+  "lines": [
+    {
+      "id": "nar_demo_line_ann_under_attack",
+      "loc_key": "nar_demo_line_ann_under_attack",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_under_attack",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Contact.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 15,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_under_attack",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_structure_lost",
+      "loc_key": "nar_demo_line_ann_structure_lost",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_structure_lost",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Structure lost.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_structure_lost",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_build_complete",
+      "loc_key": "nar_demo_line_ann_build_complete",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_build_complete",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Build complete.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_build_complete",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_unit_fielded",
+      "loc_key": "nar_demo_line_ann_unit_fielded",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_unit_fielded",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Unit fielded.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 20,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_unit_fielded",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_adaptation_ready",
+      "loc_key": "nar_demo_line_ann_adaptation_ready",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_adaptation_ready",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Adaptation ready.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_adaptation_ready",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_logistics_limit",
+      "loc_key": "nar_demo_line_ann_logistics_limit",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_logistics_limit",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Logistics limit.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_logistics_limit",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_matter_low",
+      "loc_key": "nar_demo_line_ann_matter_low",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_matter_low",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Matter reserve low.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 30,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_matter_low",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_reserve_insufficient",
+      "loc_key": "nar_demo_line_ann_reserve_insufficient",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_reserve_insufficient",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Cost exceeds reserve.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 30,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_reserve_insufficient",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_dawn_committed",
+      "loc_key": "nar_demo_line_ann_dawn_committed",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_dawn_committed",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Dawn committed.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_dawn_committed",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_telegraph_running",
+      "loc_key": "nar_demo_line_ann_telegraph_running",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_telegraph_running",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Telegraph running.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_telegraph_running",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_hostile_core_down",
+      "loc_key": "nar_demo_line_ann_hostile_core_down",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_hostile_core_down",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Hostile core down.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_hostile_core_down",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_ann_anchor_critical",
+      "loc_key": "nar_demo_line_ann_anchor_critical",
+      "speaker_id": "spk_annunciator",
+      "trigger_id": "nar_demo_evt_ann_anchor_critical",
+      "delivery_channel": "operations_annunciator",
+      "source_text": "Anchor critical.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 25,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_annunciator_anchor_critical",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    }
+  ]
+}

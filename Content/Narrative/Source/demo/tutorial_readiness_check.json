@@ -1,0 +1,1346 @@
+{
+  "schema_version": 1,
+  "namespace": "echoes.narrative.demo",
+  "content_id": "demo_tutorial_readiness_check",
+  "metadata": {
+    "author": "Angelis Pseftis",
+    "status": "authored_unbound",
+    "source_document": "Docs/OpeningAndTutorialScript.md",
+    "source_document_sha256": "92e2a6c1b3a3ffb2040e893b32d9d0ccceb70a60d9aa61aa409f1bbab8f1c63d"
+  },
+  "runtime_binding": {
+    "surface": "tutorial",
+    "scope": "prologue_tutorial",
+    "opens_after_signal": "operation_ready:CampaignPrologue:RecoverArchive",
+    "binding_status": "authored_unbound"
+  },
+  "speakers": [
+    {
+      "id": "spk_mara_vey",
+      "display_name": "Mara Vey",
+      "faction_id": "meridian_compact",
+      "role_in_surface": "tutorial_command_authority",
+      "delivery_channel": "command_radio",
+      "voice_asset_status": "absent"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "nar_demo_evt_tut_survey_opened",
+      "runtime_signal": "tutorial_lesson_opened:survey",
+      "prerequisite_ids": [],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_survey_verified",
+      "runtime_signal": "tutorial_lesson_verified:survey",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_survey_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_survey_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:survey",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_survey_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_roster_opened",
+      "runtime_signal": "tutorial_lesson_opened:roster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_survey_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_roster_verified",
+      "runtime_signal": "tutorial_lesson_verified:roster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_roster_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_roster_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:roster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_roster_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_muster_opened",
+      "runtime_signal": "tutorial_lesson_opened:muster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_roster_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_muster_verified",
+      "runtime_signal": "tutorial_lesson_verified:muster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_muster_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_muster_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:muster",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_muster_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_route_opened",
+      "runtime_signal": "tutorial_lesson_opened:route",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_muster_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_route_verified",
+      "runtime_signal": "tutorial_lesson_verified:route",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_route_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_route_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:route",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_route_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_reserve_opened",
+      "runtime_signal": "tutorial_lesson_opened:reserve",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_route_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_reserve_verified",
+      "runtime_signal": "tutorial_lesson_verified:reserve",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_reserve_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_reserve_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:reserve",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_reserve_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_link_opened",
+      "runtime_signal": "tutorial_lesson_opened:link",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_reserve_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_link_verified",
+      "runtime_signal": "tutorial_lesson_verified:link",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_link_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_link_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:link",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_link_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_foundry_opened",
+      "runtime_signal": "tutorial_lesson_opened:foundry",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_link_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_foundry_verified",
+      "runtime_signal": "tutorial_lesson_verified:foundry",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_foundry_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_foundry_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:foundry",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_foundry_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_probe_opened",
+      "runtime_signal": "tutorial_lesson_opened:probe",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_foundry_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_probe_verified",
+      "runtime_signal": "tutorial_lesson_verified:probe",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_probe_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_probe_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:probe",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_probe_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_board_opened",
+      "runtime_signal": "tutorial_lesson_opened:board",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_probe_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_board_verified",
+      "runtime_signal": "tutorial_lesson_verified:board",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_board_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_board_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:board",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_board_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_well_opened",
+      "runtime_signal": "tutorial_lesson_opened:well",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_board_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_well_verified",
+      "runtime_signal": "tutorial_lesson_verified:well",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_well_opened"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_well_hint",
+      "runtime_signal": "tutorial_lesson_hesitation:well",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_well_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_link_rejected",
+      "runtime_signal": "tutorial_placement_rejected:link",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_link_opened"
+      ],
+      "occurrence": "repeatable",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_evt_tut_complete",
+      "runtime_signal": "tutorial_mastery_complete",
+      "prerequisite_ids": [
+        "nar_demo_evt_tut_well_verified"
+      ],
+      "occurrence": "once_per_attempt",
+      "reset_behavior": "reset_on_mission_retry",
+      "binding_status": "authored_unbound"
+    }
+  ],
+  "lines": [
+    {
+      "id": "nar_demo_line_tut_survey_01",
+      "loc_key": "nar_demo_line_tut_survey_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_survey_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Before anything moves, we see the ground. Sweep the basin.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_survey_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_survey_02",
+      "loc_key": "nar_demo_line_tut_survey_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_survey_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Edge of the world moves the view. The wheel brings it closer. {recenter_key} brings you home to the Anchor.",
+      "placeholders": {
+        "recenter_key": "input binding that recentres the camera on the selection"
+      },
+      "text_budget": {
+        "max_characters": 145,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_survey_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_survey_03",
+      "loc_key": "nar_demo_line_tut_survey_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_survey_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Good. The basin's on your board — scar, crossings, and our corridor.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 95,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_survey_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_survey_04",
+      "loc_key": "nar_demo_line_tut_survey_04",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_survey_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "A commander who can't look can't warn anyone. Seeing first is the cheapest thing we do.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 120,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_survey_04",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_survey_hint",
+      "loc_key": "nar_demo_line_tut_survey_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_survey_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "The view answers the screen edge and the wheel. Try the corner of the world.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 105,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_survey_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_roster_01",
+      "loc_key": "nar_demo_line_tut_roster_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_roster_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Now the roster. Every asset answers when named. Left-click the Surveyor.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 100,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_roster_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_roster_02",
+      "loc_key": "nar_demo_line_tut_roster_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_roster_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "That ring means it's listening. Click open ground — released. Selection is a channel, not a leash.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 135,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_roster_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_roster_03",
+      "loc_key": "nar_demo_line_tut_roster_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_roster_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "You'll command forty things at once out there. Knowing exactly who's listening is the difference between an order and an accident.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 180,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_roster_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_roster_hint",
+      "loc_key": "nar_demo_line_tut_roster_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_roster_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "One click, on the Surveyor itself. It's waiting.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 65,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_roster_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_muster_01",
+      "loc_key": "nar_demo_line_tut_muster_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_muster_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "One at a time is for repairs. Drag a box around the whole section.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_muster_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_muster_02",
+      "loc_key": "nar_demo_line_tut_muster_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_muster_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Whole section, one motion. That's how the Compact moves anything heavier than a wrench.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 120,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_muster_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_muster_03",
+      "loc_key": "nar_demo_line_tut_muster_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_muster_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Duty windows are short. Muster fast, and the window is yours instead of the enemy's.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 115,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_muster_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_muster_hint",
+      "loc_key": "nar_demo_line_tut_muster_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_muster_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "Press, drag a corner across the section, release.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 70,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_muster_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_route_01",
+      "loc_key": "nar_demo_line_tut_route_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_route_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Route check. Right-click sends them where you point. The order reads the target — ground means go, a shard seam means gather, trouble means fight.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 200,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_route_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_route_02",
+      "loc_key": "nar_demo_line_tut_route_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_route_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Held exactly where you stopped them. An order you can end is the only kind worth giving.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 120,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_route_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_route_03",
+      "loc_key": "nar_demo_line_tut_route_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_route_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Routes are promises. The check is how we keep them.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 70,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_route_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_route_hint",
+      "loc_key": "nar_demo_line_tut_route_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_route_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "Right-click the marked ground. They know the way from there.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 85,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_route_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_reserve_01",
+      "loc_key": "nar_demo_line_tut_reserve_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_reserve_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "The city's reserve is thin. Put the Surveyor on the Matter seam — it cuts, carries, and books the load at the Anchor.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 160,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_reserve_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_reserve_02",
+      "loc_key": "nar_demo_line_tut_reserve_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_reserve_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "First load booked. Matter is honest work — the strata always has more.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 95,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_reserve_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_reserve_03",
+      "loc_key": "nar_demo_line_tut_reserve_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_reserve_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Dawn is different. Every shard we spend is a future somebody doesn't get. We spend it — but we log WHY. Remember that when the cost feels light.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 195,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_reserve_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_reserve_hint",
+      "loc_key": "nar_demo_line_tut_reserve_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_reserve_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "Right-click the bright seam. The Surveyor handles the rest.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_reserve_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_link_01",
+      "loc_key": "nar_demo_line_tut_link_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_link_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Severed link on the corridor. Put a Power Link at the marked footprint — the ghost shows green where the ground will take it.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 170,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_link_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_link_02",
+      "loc_key": "nar_demo_line_tut_link_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_link_rejected",
+      "delivery_channel": "command_radio",
+      "source_text": "Red means the ground disagrees. Find footing the network can hold.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_link_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_link_03",
+      "loc_key": "nar_demo_line_tut_link_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_link_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Link's live. The corridor has power and eyes again.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 70,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_link_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_link_04",
+      "loc_key": "nar_demo_line_tut_link_04",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_link_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "The Compact is the network. Every structure you place is a promise the next crew can stand on.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 130,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_link_04",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_link_hint",
+      "loc_key": "nar_demo_line_tut_link_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_link_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "The footprint marker, on open ground near the corridor. Green ghost, then commit.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 110,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_link_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_foundry_01",
+      "loc_key": "nar_demo_line_tut_foundry_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_foundry_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Spin up the Foundry. Queue a Lancer — the cost comes off the ledger the moment you commit.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 125,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_foundry_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_foundry_02",
+      "loc_key": "nar_demo_line_tut_foundry_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_foundry_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Fresh Lancer, on station at your rally. The queue keeps building while you fight — set it and trust it.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 140,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_foundry_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_foundry_03",
+      "loc_key": "nar_demo_line_tut_foundry_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_foundry_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Battles are won by whoever still has a next unit. The Foundry is your next unit.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 110,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_foundry_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_foundry_hint",
+      "loc_key": "nar_demo_line_tut_foundry_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_foundry_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "Select the Foundry, then its Lancer entry. The ledger covers it.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_foundry_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_probe_01",
+      "loc_key": "nar_demo_line_tut_probe_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_probe_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Contact on the perimeter — small, and ours to handle. Lancers forward. The Bulwark holds the line; {guard_key} puts it on the Surveyor — its whole job becomes that one life.",
+      "placeholders": {
+        "guard_key": "input binding that issues Guard at the cursor"
+      },
+      "text_budget": {
+        "max_characters": 235,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_probe_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_probe_02",
+      "loc_key": "nar_demo_line_tut_probe_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_probe_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Probe broken. Nobody we're responsible for got touched. That's the whole report.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 110,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_probe_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_probe_03",
+      "loc_key": "nar_demo_line_tut_probe_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_probe_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Out there it won't be a probe. Composition, cover, and a guarded worker — that's how a fight becomes arithmetic instead of grief.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 175,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_probe_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_probe_hint",
+      "loc_key": "nar_demo_line_tut_probe_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_probe_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "Lancers on the contact; the guard order on the Surveyor. In that order is fine.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 110,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_probe_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_board_01",
+      "loc_key": "nar_demo_line_tut_board_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_board_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Top of your deck: the duty ledger — what's open, what's held, what's closed. Corner: the basin entire. When something happens off-screen, the deck flags it; {alert_key} takes you straight there.",
+      "placeholders": {
+        "alert_key": "input binding that jumps to the most recent alert"
+      },
+      "text_budget": {
+        "max_characters": 265,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_board_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_board_02",
+      "loc_key": "nar_demo_line_tut_board_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_board_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "You found it without hunting. The deck watches so you can think.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_board_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_board_03",
+      "loc_key": "nar_demo_line_tut_board_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_board_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "A commander's real enemy is the thing happening where she isn't looking.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 100,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_board_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_board_hint",
+      "loc_key": "nar_demo_line_tut_board_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_board_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "The flash in the corner is real. {alert_key} jumps to it.",
+      "placeholders": {
+        "alert_key": "input binding that jumps to the most recent alert"
+      },
+      "text_budget": {
+        "max_characters": 80,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_board_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_well_01",
+      "loc_key": "nar_demo_line_tut_well_01",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_well_opened",
+      "delivery_channel": "command_radio",
+      "source_text": "Last item, and it isn't drill. That's a Future Well. Inside are futures that never happened — held, coherent, and ours to decide about. Walk the Surveyor up and read the panel. Harvest ends it for power now. Preserve holds it and pays slowly. Reshape spends it to change the ground itself, for a while.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 320,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_well_01",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_well_02",
+      "loc_key": "nar_demo_line_tut_well_02",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_well_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "Committed and logged. Whatever you chose — that's now the only version of this that ever happens.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 135,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_well_02",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_well_03",
+      "loc_key": "nar_demo_line_tut_well_03",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_well_verified",
+      "delivery_channel": "command_radio",
+      "source_text": "There's no clean answer at a Well. There's only the answer you can stand behind in the ledger. You just made your first one. The next one won't be practice.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 215,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_well_03",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_well_hint",
+      "loc_key": "nar_demo_line_tut_well_hint",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_well_hint",
+      "delivery_channel": "command_radio",
+      "source_text": "The Surveyor, to the Well. The panel does not commit until you do.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 90,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_well_hint",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    },
+    {
+      "id": "nar_demo_line_tut_close",
+      "loc_key": "nar_demo_line_tut_close",
+      "speaker_id": "spk_mara_vey",
+      "trigger_id": "nar_demo_evt_tut_complete",
+      "delivery_channel": "command_radio",
+      "source_text": "Readiness check complete — survey, roster, routes, reserve, links, foundry, perimeter, board, and one Well you'll be thinking about tonight. The window opens now. This one is real.",
+      "placeholders": {},
+      "text_budget": {
+        "max_characters": 245,
+        "localization_expansion_percent": 35
+      },
+      "subtitle": {
+        "enabled": true,
+        "timing_status": "unassigned"
+      },
+      "transcript_included": true,
+      "voice_hook": {
+        "id": "aud_demo_vo_mara_tut_close",
+        "asset_status": "absent"
+      },
+      "binding_status": "authored_unbound"
+    }
+  ]
+}

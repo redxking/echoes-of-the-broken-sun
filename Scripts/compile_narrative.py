@@ -78,6 +78,27 @@ def project_mission(mission: dict) -> dict:
     }
 
 
+def project_demo_contract(contract: dict) -> dict:
+    """The runtime projection of one additive demo-surface contract."""
+    speakers = {s["id"]: s["display_name"] for s in contract["speakers"]}
+    triggers = {t["id"]: t["runtime_signal"] for t in contract["triggers"]}
+    return {
+        "content_id": contract["content_id"],
+        "surface": contract["runtime_binding"]["surface"],
+        "scope": contract["runtime_binding"]["scope"],
+        "opens_after_signal": contract["runtime_binding"]["opens_after_signal"],
+        "lines": [
+            {
+                "id": line["id"],
+                "speaker": speakers[line["speaker_id"]],
+                "signal": triggers[line["trigger_id"]],
+                "text": line["source_text"],
+            }
+            for line in contract["lines"]
+        ],
+    }
+
+
 def main() -> int:
     validator = load_validator()
     try:
@@ -93,6 +114,12 @@ def main() -> int:
         operation_mode = mission["runtime_binding"]["operation_mode"]
         operations[operation_mode] = project_mission(mission)
 
+    demo_dir = SOURCE_DIR / "demo"
+    demo: dict[str, dict] = {}
+    for path in sorted(demo_dir.glob("*.json")):
+        contract = validator.load_json_document(path)
+        demo[contract["runtime_binding"]["surface"]] = project_demo_contract(contract)
+
     pack = {
         "pack_format": "echoes-narrative-pack",
         "pack_version": PACK_SCHEMA_VERSION,
@@ -100,6 +127,8 @@ def main() -> int:
         "authored_missions": counts["authored_missions"],
         "line_count": counts["lines"],
         "operations": operations,
+        "demo_line_count": counts["demo_lines"],
+        "demo": demo,
     }
     encoded = json.dumps(
         pack, ensure_ascii=False, indent=1, sort_keys=True
@@ -114,6 +143,7 @@ def main() -> int:
     print(
         "NARRATIVE_COMPILE_OK "
         f"operations={len(operations)} lines={counts['lines']} "
+        f"demo_surfaces={len(demo)} demo_lines={counts['demo_lines']} "
         f"digest={digest}"
     )
     return 0
