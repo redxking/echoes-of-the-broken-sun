@@ -9,6 +9,19 @@ The full plan, per-track specifications, and the release gate matrix are in
 It supersedes `Docs/DemoReleaseDirective.md` (2026-09-01), whose accepted gate evidence it carries
 forward. This file is the standing session contract; the directive is the work.
 
+## Mandatory project-skill selection
+
+Before analysis, editing, testing, building, GUI operation, or a completion claim, read
+`Docs/AgentSkillRouting.md`. Inspect the project-skill names and frontmatter descriptions under
+`.claude/skills/`, select the smallest sufficient set of `echoes-*` skills, and read every selected
+`SKILL.md` completely before acting. State which skills are being used and why. If the task changes
+materially, repeat selection before expanding the work.
+
+Do not load or claim to use all skills by default. Use the most specific matching skill plus the routing
+contract's required session, lane, heavy-run, GUI, traceability, evidence, or release prerequisites. If a
+required skill or interface is unavailable, stop that affected path with the status required by the skill;
+do not improvise evidence or silently fall back to a weaker workflow.
+
 ---
 
 ## 1. Read before you act
