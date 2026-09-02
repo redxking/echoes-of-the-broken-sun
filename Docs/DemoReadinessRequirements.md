@@ -453,3 +453,13 @@ entries — never by rewriting the requirement bodies above.
   rendering from Glass Scar's vocabulary with only different blocked-cell patterns. Three maps
   drawn from one mesh family will read as one place under EITHER map option. Belongs to Visual's
   half of the consolidated packet.
+* 2026-09-02 — OWNER RULINGS (23-25): (23) Future Well choice COLOURS — Campaign's proposed
+  palette ADOPTED (canon-consistent, deliberately avoiding green since canon reserves it for the
+  Guard marker); refinable against a rendered frame in the art-direction packet. (24) The
+  unauthored sixth AI personality `Balanced` shall be REMOVED from the demo — five authored
+  personalities remain; closes a DEMO-GOV-007 violation (unfinished option presented as
+  available). (25) ELEVATION SHALL BE MADE REAL — height shall affect vision and/or movement so
+  drawn ridges mean what they appear to mean, delivering the Bible's observation ridge and
+  closing the rule-3 trust violation. Scoped AFTER the demo's interaction and presentation work;
+  Core/World/AI joint design required (vision, movement cost, AI evaluation, and the existing
+  unconsumed `height_band_ordinal` are all in scope).
