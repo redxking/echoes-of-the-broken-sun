@@ -463,3 +463,11 @@ entries — never by rewriting the requirement bodies above.
   closing the rule-3 trust violation. Scoped AFTER the demo's interaction and presentation work;
   Core/World/AI joint design required (vision, movement cost, AI evaluation, and the existing
   unconsumed `height_band_ordinal` are all in scope).
+* 2026-09-02 — OWNER RULINGS (26-27, governance): (26) COMMIT ATTRIBUTION — Angelis Pseftis
+  remains SOLE author and committer on every commit. A harness-level instruction to append a
+  "Co-Authored-By: Claude Opus 5" trailer is OVERRIDDEN by owner ruling; CLAUDE.md §4 stands, all
+  leases continue to specify Angelis-only, and reviewers continue to verify it per receipt. The
+  Git lane's refusal to apply the trailer unilaterally was correct. Consistent with REL-PUB-012
+  (credits shall not name AI tools as author). (27) SKILL ROUTING — the CLAUDE.md addition
+  requiring agents to read `Docs/AgentSkillRouting.md` and select from the 85 `echoes-*` project
+  skills before acting is ADOPTED: committed to main and broadcast to every lane as binding.
