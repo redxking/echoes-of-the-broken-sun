@@ -117,9 +117,27 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         }
         TestFalse(TEXT("Full-health scout health bar starts hidden"),
                   ScoutView->IsHealthBarVisible());
+        // Entity resolution reaches exactly what is drawn. A hidden bar is
+        // never an invisible pick plate, and a drawn bar is never unpickable.
+        TestFalse(TEXT("A hidden health bar is not an entity-pick plate"),
+                  ScoutView->IsHealthBarEntityPickable());
         ScoutView->SetSelected(true);
         TestTrue(TEXT("Selecting a scout exposes its health bar"),
                  ScoutView->IsHealthBarVisible());
+        TestTrue(TEXT("A drawn health bar is part of the entity-pick region"),
+                 ScoutView->IsHealthBarEntityPickable());
+        TestTrue(TEXT("A drawn owner marker is part of the entity-pick region"),
+                 ScoutView->IsOwnerMarkerVisible() ==
+                     ScoutView->IsOwnerMarkerEntityPickable());
+        // The whole point of the second channel: nothing drawn above the
+        // ground may answer the ground trace, or every command site that reads
+        // HitResult.Location as a battlefield point would read overlay height.
+        TestFalse(TEXT("The footprint pick volume stays out of the ground trace"),
+                  ScoutView->DoesEntityPickProxyBlockGroundTrace());
+        TestTrue(TEXT("The footprint pick volume answers entity resolution"),
+                 ScoutView->IsEntityPickProxyEnabled());
+        TestTrue(TEXT("The footprint pick volume is never rendered"),
+                 ScoutView->IsEntityPickProxyHidden());
         TestTrue(TEXT("Selection uses the project-authored VFX family"),
                  ScoutView->IsUsingAuthoredSelectionVFX());
         TestTrue(TEXT("Selection VFX is visible while selected"),
@@ -163,12 +181,16 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
         }
         TestFalse(TEXT("Deselection hides a full-health scout health bar"),
                   ScoutView->IsHealthBarVisible());
+        TestFalse(TEXT("Deselection also removes the health bar pick region"),
+                  ScoutView->IsHealthBarEntityPickable());
         echoes::sim::Entity DamagedScout =
             *InitialSimulation->FindEntity(ScoutId);
         DamagedScout.hitPoints = DamagedScout.maxHitPoints / 4;
         ScoutView->ApplyAuthoritativeState(DamagedScout, true);
         TestTrue(TEXT("A damaged scout exposes its health bar without selection"),
                  ScoutView->IsHealthBarVisible());
+        TestTrue(TEXT("A damaged scout's drawn health bar is pickable"),
+                 ScoutView->IsHealthBarEntityPickable());
         TestEqual(TEXT("Damaged scout health fraction mirrors authoritative hit points"),
                   ScoutView->GetDisplayedHealthFraction(),
                   static_cast<float>(DamagedScout.hitPoints) /
@@ -191,6 +213,8 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
             true);
         TestFalse(TEXT("Restored full health hides the unselected health bar"),
                   ScoutView->IsHealthBarVisible());
+        TestFalse(TEXT("Restored full health removes the health bar pick region"),
+                  ScoutView->IsHealthBarEntityPickable());
     }
 
     TestFalse(

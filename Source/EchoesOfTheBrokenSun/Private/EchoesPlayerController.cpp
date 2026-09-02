@@ -1,8 +1,10 @@
 #include "EchoesPlayerController.h"
 
 #include "EchoesAmbienceSubsystem.h"
+#include "EchoesCollisionChannels.h"
 #include "EchoesCommandDeckLayout.h"
 #include "EchoesCommandMarkerView.h"
+#include "EchoesContextOrderReport.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
 #include "EchoesFactionPolicy.h"
@@ -3138,7 +3140,13 @@ bool AEchoesPlayerController::SyncNetworkPresentation(
         Mesh->SetStaticMesh(Cube);
         Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
         Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+        // Ground only. This plane answers the ECC_Visibility trace, which is
+        // where every command site gets its battlefield point, and it stays
+        // out of ECC_EchoesEntityPick on purpose: the entity trace must fall
+        // through open ground and return no entity, so a click on nothing
+        // stays a move rather than resolving to the ground actor.
         Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+        Mesh->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Ignore);
         Mesh->SetGenerateOverlapEvents(false);
         Mesh->SetCastShadow(false);
         Mesh->SetReceivesDecals(true);
@@ -8980,8 +8988,21 @@ void AEchoesPlayerController::IssueContextOrder(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    // Two questions, two answers. HitResult stays the ECC_Visibility ground
+    // hit and keeps supplying Destination; the entity under the cursor comes
+    // from the dedicated pick channel, which the ground plane and the terrain
+    // ignore. The ground trace's own actor is still honoured, so a click that
+    // lands directly on a body resolves the same entity it always did even
+    // before the pick geometry is reached.
+    FVector2D CommandScreenPosition = FVector2D::ZeroVector;
     const AEchoesEntityView* TargetView =
-        Cast<AEchoesEntityView>(HitResult.GetActor());
+        ResolveCommandScreenPosition(bPointerSource, CommandScreenPosition)
+            ? TraceEntityUnderCommandTarget(CommandScreenPosition)
+            : nullptr;
+    if (TargetView == nullptr)
+    {
+        TargetView = Cast<AEchoesEntityView>(HitResult.GetActor());
+    }
     if (GetNetMode() == NM_Client)
     {
         const echoes::sim::net::ScopedEntityState* TargetEntity =
@@ -9108,19 +9129,33 @@ void AEchoesPlayerController::IssueContextOrder(
     const int32 UnitCount = SelectedEntityIds.Num();
     const TArray<FVector> FormationDestinations =
         BuildSelectedFormationDestinations(Destination, UnitCount);
-    int32 AcceptedCount = 0;
-    int32 RejectedCount = 0;
-    FString LastRejection;
+    FEchoesContextOrderOutcome Outcome;
     for (int32 Index = 0; Index < UnitCount; ++Index)
     {
+        const uint32 ActorId = SelectedEntityIds[Index];
         echoes::sim::CommandType ActorCommandType = CommandType;
         uint32 ActorTargetId = TargetId;
-        const echoes::sim::Entity* ActorState =
-            Bridge->FindEntity(SelectedEntityIds[Index]);
-        if (CommandType == echoes::sim::CommandType::Deliver &&
-            (ActorState == nullptr ||
-             ActorState->type != echoes::sim::EntityType::Worker ||
-             ActorState->cargo <= 0))
+        const echoes::sim::Entity* ActorState = Bridge->FindEntity(ActorId);
+        // A Deliver is substituted with a move to the drop-off only when the
+        // authoritative state says this unit cannot deliver: it is not a
+        // worker, or its hold is empty. Each of those is recorded as the fact
+        // it is, so the banner below never merges them into one claim.
+        //
+        // A unit whose state could not be read is NOT substituted. A failed
+        // lookup establishes nothing about cargo, so the Deliver goes to the
+        // authority unchanged and whatever the authority answers is what the
+        // player is told.
+        const bool bCannotCarry =
+            CommandType == echoes::sim::CommandType::Deliver &&
+            ActorState != nullptr &&
+            ActorState->type != echoes::sim::EntityType::Worker;
+        const bool bNotCarrying =
+            CommandType == echoes::sim::CommandType::Deliver &&
+            ActorState != nullptr &&
+            ActorState->type == echoes::sim::EntityType::Worker &&
+            ActorState->cargo <= 0;
+        const bool bSubstitutedDropoffMove = bCannotCarry || bNotCarrying;
+        if (bSubstitutedDropoffMove)
         {
             ActorCommandType = echoes::sim::CommandType::Move;
             ActorTargetId = 0;
@@ -9135,78 +9170,98 @@ void AEchoesPlayerController::IssueContextOrder(
         FString Feedback;
         if (Bridge->IssueCommand(
                 ActorCommandType,
-                SelectedEntityIds[Index],
+                ActorId,
                 ActorTargetId,
                 UnitDestination,
                 FutureWellChoice,
                 Feedback))
         {
-            ++AcceptedCount;
+            if (bCannotCarry)
+            {
+                ++Outcome.MovedCannotCarryCount;
+            }
+            else if (bNotCarrying)
+            {
+                ++Outcome.MovedNotCarryingCount;
+            }
+            else if (CommandType == echoes::sim::CommandType::Deliver)
+            {
+                ++Outcome.DeliveredCount;
+            }
+            else
+            {
+                ++Outcome.AcceptedOtherCount;
+            }
         }
         else
         {
-            ++RejectedCount;
-            LastRejection = Feedback;
+            Outcome.RecordRejection(ActorId, Feedback);
         }
     }
 
+    const int32 AcceptedCount = Outcome.AcceptedCount();
     if (AcceptedCount > 0)
     {
-        const FString OrderLabel =
+        const FString OrderSummary =
             CommandType == echoes::sim::CommandType::Deliver
-                ? TEXT("CONTEXT MOVE / DELIVER")
-                : CommandType == echoes::sim::CommandType::Move
-                      ? FString::Printf(
-                            TEXT("MOVE / %s"),
-                            *GetFormationLabel())
-                      : CommandLabel(CommandType);
-        const FString RejectionSuffix =
-            RejectedCount > 0
-                ? FString::Printf(TEXT(", %d rejected."), RejectedCount)
-                : TEXT(".");
-        SetStatusMessage(
-            FString::Printf(
-                TEXT("%s: %d queued%s"),
-                *OrderLabel,
-                AcceptedCount,
-                *RejectionSuffix));
+                ? FEchoesContextOrderReport::ComposeDeliverBanner(Outcome)
+                : FEchoesContextOrderReport::ComposeOrderBanner(
+                      CommandType == echoes::sim::CommandType::Move
+                          ? FString::Printf(
+                                TEXT("MOVE / %s"),
+                                *GetFormationLabel())
+                          : CommandLabel(CommandType),
+                      Outcome);
+        SetStatusMessage(OrderSummary);
+        // A Deliver that produced no delivery is a move, and its ground marker
+        // says so.
+        const bool bGroundMoveMarker =
+            CommandType == echoes::sim::CommandType::Move ||
+            (CommandType == echoes::sim::CommandType::Deliver &&
+             Outcome.DeliveredCount <= 0);
         ShowAcceptedCommandMarker(
             Destination,
             CommandType == echoes::sim::CommandType::Attack
                 ? EEchoesCommandMarkerType::Attack
-                : CommandType == echoes::sim::CommandType::Move
+                : bGroundMoveMarker
                       ? EEchoesCommandMarkerType::Move
                       : EEchoesCommandMarkerType::Interact,
             AcceptedCount);
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_CONTEXT_ORDER_ACCEPTED] source=%s screen=(%.1f,%.1f) command=%s target=%u accepted=%d rejected=%d visibleHit=%s"),
+            TEXT("[ECHOES_CONTEXT_ORDER_ACCEPTED] source=%s screen=(%.1f,%.1f) command=%s target=%u accepted=%d delivered=%d movedEmptyHold=%d movedCannotCarry=%d rejected=%d rejectedEntity=%u visibleHit=%s"),
             bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
             bPointerSource ? LastPointerScreenPosition.X : -1.0f,
             bPointerSource ? LastPointerScreenPosition.Y : -1.0f,
             *CommandLabel(CommandType),
             TargetId,
             AcceptedCount,
-            RejectedCount,
+            Outcome.DeliveredCount,
+            Outcome.MovedNotCarryingCount,
+            Outcome.MovedCannotCarryCount,
+            Outcome.RejectedCount,
+            Outcome.RejectionEntityId,
             TargetView != nullptr ? TEXT("true") : TEXT("false"));
     }
     else
     {
-        SetStatusMessage(LastRejection.IsEmpty()
+        SetStatusMessage(Outcome.RejectionReason.IsEmpty()
                              ? TEXT("[ORDER_REJECTED] No selected entity accepted the order.")
-                             : LastRejection);
+                             : Outcome.RejectionReason);
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_CONTEXT_ORDER_REJECTED] source=%s screen=(%.1f,%.1f) command=%s target=%u rejected=%d reason=%s"),
+            TEXT("[ECHOES_CONTEXT_ORDER_REJECTED] source=%s screen=(%.1f,%.1f) command=%s target=%u rejected=%d rejectedEntity=%u reason=%s"),
             bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
             bPointerSource ? LastPointerScreenPosition.X : -1.0f,
             bPointerSource ? LastPointerScreenPosition.Y : -1.0f,
             *CommandLabel(CommandType),
             TargetId,
-            RejectedCount,
-            LastRejection.IsEmpty() ? TEXT("ORDER_REJECTED") : *LastRejection);
+            Outcome.RejectedCount,
+            Outcome.RejectionEntityId,
+            Outcome.RejectionReason.IsEmpty() ? TEXT("ORDER_REJECTED")
+                                              : *Outcome.RejectionReason);
     }
 }
 
@@ -9489,6 +9544,59 @@ bool AEchoesPlayerController::TraceCommandTarget(FHitResult& OutHitResult)
     return bKeyboardTargetingEnabled
         ? TraceKeyboardTarget(OutHitResult)
         : TraceCursor(OutHitResult);
+}
+
+bool AEchoesPlayerController::ResolveCommandScreenPosition(
+    bool bPointerSource,
+    FVector2D& OutScreenPosition)
+{
+    // One function decides the screen point for BOTH the ground trace and the
+    // entity trace. Reading the point twice from two different sources is how
+    // a right-click came to resolve its ground from the cursor and its target
+    // from the keyboard reticle; taking the source as an argument makes that
+    // divergence impossible rather than merely unlikely.
+    if (!bPointerSource)
+    {
+        int32 ViewportWidth = 0;
+        int32 ViewportHeight = 0;
+        GetViewportSize(ViewportWidth, ViewportHeight);
+        if (ViewportWidth <= 0 || ViewportHeight <= 0)
+        {
+            return false;
+        }
+        OutScreenPosition =
+            FVector2D(
+                static_cast<float>(ViewportWidth) * 0.5f,
+                static_cast<float>(ViewportHeight) * 0.5f) +
+            KeyboardTargetOffset;
+        return true;
+    }
+    if (!ResolvePointerScreenPosition(OutScreenPosition))
+    {
+        return false;
+    }
+    LastPointerScreenPosition = OutScreenPosition;
+    return true;
+}
+
+AEchoesEntityView* AEchoesPlayerController::TraceEntityUnderCommandTarget(
+    const FVector2D& ScreenPosition)
+{
+    // The same screen ray as the ground trace, on the entity channel. Terrain,
+    // the network ground plane and every unrelated actor default to Ignore
+    // there, so this answers "which entity" without ever answering "where".
+    // The caller supplies the point it used for the ground, so the two answers
+    // always describe the same pixel.
+    FHitResult EntityHit;
+    if (!GetHitResultAtScreenPosition(
+            ScreenPosition,
+            ECC_EchoesEntityPick,
+            true,
+            EntityHit))
+    {
+        return nullptr;
+    }
+    return Cast<AEchoesEntityView>(EntityHit.GetActor());
 }
 
 TArray<FVector> AEchoesPlayerController::BuildSelectedFormationDestinations(
@@ -10937,8 +11045,16 @@ void AEchoesPlayerController::GuardAtCursor()
             SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Guard requires a visible owned target."));
             return;
         }
+        FVector2D GuardScreenPosition = FVector2D::ZeroVector;
         const AEchoesEntityView* TargetView =
-            Cast<AEchoesEntityView>(HitResult.GetActor());
+            ResolveCommandScreenPosition(
+                !bKeyboardTargetingEnabled, GuardScreenPosition)
+                ? TraceEntityUnderCommandTarget(GuardScreenPosition)
+                : nullptr;
+        if (TargetView == nullptr)
+        {
+            TargetView = Cast<AEchoesEntityView>(HitResult.GetActor());
+        }
         const echoes::sim::net::ScopedEntityState* Target =
             TargetView != nullptr
                 ? FindNetworkEntity(TargetView->GetEntityId())
@@ -10983,8 +11099,16 @@ void AEchoesPlayerController::GuardAtCursor()
         SetStatusMessage(TEXT("[NO_WORLD_HIT] Target the owned entity to guard with the pointer or center reticle."));
         return;
     }
+    FVector2D GuardScreenPosition = FVector2D::ZeroVector;
     const AEchoesEntityView* TargetView =
-        Cast<AEchoesEntityView>(HitResult.GetActor());
+        ResolveCommandScreenPosition(
+            !bKeyboardTargetingEnabled, GuardScreenPosition)
+            ? TraceEntityUnderCommandTarget(GuardScreenPosition)
+            : nullptr;
+    if (TargetView == nullptr)
+    {
+        TargetView = Cast<AEchoesEntityView>(HitResult.GetActor());
+    }
     const echoes::sim::Entity* Target =
         TargetView != nullptr
             ? Bridge->FindEntity(TargetView->GetEntityId())

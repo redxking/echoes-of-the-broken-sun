@@ -1,7 +1,9 @@
 #include "EchoesEntityView.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EchoesCollisionChannels.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesInterfaceAudioSubsystem.h"
@@ -21,6 +23,14 @@ const FName MetallicParameterName(TEXT("Metallic"));
 const FName RoughnessParameterName(TEXT("Roughness"));
 const FName EmissiveStrengthParameterName(TEXT("EmissiveStrength"));
 constexpr float DamagePulseDurationSeconds = 0.18f;
+// SM_VFX_SelectionHalo carries its acquisition brackets out to 68 cm from its
+// own origin, so a relative scale of one draws a 68 cm halo radius.
+constexpr float SelectionHaloExtentCentimetres = 68.0f;
+// A floor under the pick footprint so the smallest entity still answers a
+// click, and headroom above the drawn geometry so the health bar and owner
+// marker sit inside the volume rather than poking out of the top of it.
+constexpr float MinimumEntityPickHaloScale = 0.85f;
+constexpr float EntityPickHeadroomCentimetres = 26.0f;
 
 const TCHAR* AuthoredPresentationMeshPath(
     echoes::sim::Faction Faction,
@@ -159,15 +169,46 @@ AEchoesEntityView::AEchoesEntityView()
     BodyMesh->SetCollisionObjectType(ECC_WorldDynamic);
     BodyMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+    // The body stands on the ground, so it answers both questions: it is the
+    // ground trace's entity hit that selection reads, and it is part of the
+    // entity pick region.
     BodyMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    BodyMesh->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Block);
     BodyMesh->SetGenerateOverlapEvents(false);
     BodyMesh->SetCastShadow(true);
+
+    // Never rendered, never in the ground trace, never in the simulation: a
+    // footprint-sized query volume that exists only so ECC_EchoesEntityPick
+    // finds this entity anywhere inside the footprint the selection halo
+    // draws. A shape component is used rather than a mesh because a shape's
+    // body setup is CTF_UseSimpleAsComplex, so the complex screen trace the
+    // controller runs always resolves against it.
+    EntityPickProxy = CreateDefaultSubobject<UCapsuleComponent>(
+        TEXT("EntityPickProxy"));
+    EntityPickProxy->SetupAttachment(SceneRoot);
+    EntityPickProxy->SetCollisionObjectType(ECC_WorldDynamic);
+    EntityPickProxy->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    EntityPickProxy->SetCollisionResponseToAllChannels(ECR_Ignore);
+    EntityPickProxy->SetCollisionResponseToChannel(
+        ECC_EchoesEntityPick, ECR_Block);
+    EntityPickProxy->SetGenerateOverlapEvents(false);
+    EntityPickProxy->SetCanEverAffectNavigation(false);
+    EntityPickProxy->SetCastShadow(false);
+    EntityPickProxy->SetReceivesDecals(false);
+    EntityPickProxy->bDrawOnlyIfSelected = true;
+    EntityPickProxy->SetHiddenInGame(true);
+    EntityPickProxy->SetVisibility(false);
 
     SilhouetteAccent = CreateDefaultSubobject<UStaticMeshComponent>(
         TEXT("SilhouetteAccent"));
     SilhouetteAccent->SetupAttachment(SceneRoot);
+    SilhouetteAccent->SetCollisionObjectType(ECC_WorldDynamic);
     SilhouetteAccent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    SilhouetteAccent->SetCollisionResponseToAllChannels(ECR_Ignore);
+    SilhouetteAccent->SetCollisionResponseToChannel(
+        ECC_EchoesEntityPick, ECR_Block);
     SilhouetteAccent->SetGenerateOverlapEvents(false);
+    SilhouetteAccent->SetCanEverAffectNavigation(false);
     SilhouetteAccent->SetCastShadow(true);
     SilhouetteAccent->SetReceivesDecals(false);
     SilhouetteAccent->SetVisibility(false);
@@ -189,8 +230,12 @@ AEchoesEntityView::AEchoesEntityView()
     HealthBarFill->SetupAttachment(SceneRoot);
     for (UStaticMeshComponent* Bar : {HealthBarBackground, HealthBarFill})
     {
+        Bar->SetCollisionObjectType(ECC_WorldDynamic);
         Bar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Bar->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Bar->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Block);
         Bar->SetGenerateOverlapEvents(false);
+        Bar->SetCanEverAffectNavigation(false);
         Bar->SetCastShadow(false);
         Bar->SetReceivesDecals(false);
         Bar->SetVisibility(false);
@@ -198,8 +243,13 @@ AEchoesEntityView::AEchoesEntityView()
 
     OwnerMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("OwnerMarker"));
     OwnerMarker->SetupAttachment(SceneRoot);
+    OwnerMarker->SetCollisionObjectType(ECC_WorldDynamic);
     OwnerMarker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    OwnerMarker->SetCollisionResponseToAllChannels(ECR_Ignore);
+    OwnerMarker->SetCollisionResponseToChannel(
+        ECC_EchoesEntityPick, ECR_Block);
     OwnerMarker->SetGenerateOverlapEvents(false);
+    OwnerMarker->SetCanEverAffectNavigation(false);
     OwnerMarker->SetCastShadow(false);
     OwnerMarker->SetReceivesDecals(false);
     OwnerMarker->SetVisibility(false);
@@ -276,8 +326,13 @@ AEchoesEntityView::AEchoesEntityView()
              FutureWellGroundGlyphB})
     {
         FutureWellComponent->SetupAttachment(SceneRoot);
+        FutureWellComponent->SetCollisionObjectType(ECC_WorldDynamic);
         FutureWellComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        FutureWellComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+        FutureWellComponent->SetCollisionResponseToChannel(
+            ECC_EchoesEntityPick, ECR_Block);
         FutureWellComponent->SetGenerateOverlapEvents(false);
+        FutureWellComponent->SetCanEverAffectNavigation(false);
         FutureWellComponent->SetReceivesDecals(false);
         FutureWellComponent->SetCastShadow(true);
         FutureWellComponent->SetVisibility(false);
@@ -376,8 +431,19 @@ void AEchoesEntityView::ActivateForEntity(
     BodyMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
     BodyMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    BodyMesh->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Block);
     BodyMesh->SetGenerateOverlapEvents(false);
     BodyMesh->SetVisibility(true, true);
+    // The footprint volume answers entity picking only. It is restored here and
+    // sized by ConfigureAppearance below, once the footprint is known.
+    EntityPickProxy->SetCollisionObjectType(ECC_WorldDynamic);
+    EntityPickProxy->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    EntityPickProxy->SetCollisionResponseToAllChannels(ECR_Ignore);
+    EntityPickProxy->SetCollisionResponseToChannel(
+        ECC_EchoesEntityPick, ECR_Block);
+    EntityPickProxy->SetGenerateOverlapEvents(false);
+    EntityPickProxy->SetHiddenInGame(true);
+    EntityPickProxy->SetVisibility(false, true);
     SetActorTickEnabled(true);
 
     // Rebind while still hidden so no partially configured actor can be picked
@@ -395,6 +461,11 @@ void AEchoesEntityView::PrepareForPool()
     BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
     BodyMesh->SetGenerateOverlapEvents(false);
+    EntityPickProxy->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    EntityPickProxy->SetCollisionResponseToAllChannels(ECR_Ignore);
+    EntityPickProxy->SetGenerateOverlapEvents(false);
+    EntityPickProxyRadius = 0.0f;
+    EntityPickProxyTopHeight = 0.0f;
 
     EntityId = 0;
     OwnerPlayerId = echoes::sim::kNeutralPlayer;
@@ -451,6 +522,147 @@ void AEchoesEntityView::PrepareForPool()
     SetActorTransform(FTransform::Identity, false, nullptr,
                       ETeleportType::TeleportPhysics);
     bPreparedForPool = true;
+}
+
+void AEchoesEntityView::SetOverlayVisibleAndPickable(
+    UStaticMeshComponent* Component,
+    bool bVisible)
+{
+    if (Component == nullptr)
+    {
+        return;
+    }
+    // These overlays are drawn above the body and are read by the player as
+    // part of the entity, so entity resolution must reach them - but only
+    // while they are actually on screen. Setting both here, and only here, is
+    // what keeps a hidden overlay from becoming an invisible pick plate.
+    //
+    // Only ECC_EchoesEntityPick is involved. The constructor never gives these
+    // components an ECC_Visibility response, so no overlay can appear in the
+    // ground trace and hand a command site a point in the air.
+    Component->SetVisibility(bVisible, true);
+    Component->SetCollisionEnabled(
+        bVisible ? ECollisionEnabled::QueryOnly
+                 : ECollisionEnabled::NoCollision);
+}
+
+void AEchoesEntityView::SetOverlayUnpickableForPool(
+    UStaticMeshComponent* Component)
+{
+    SetOverlayVisibleAndPickable(Component, false);
+}
+
+bool AEchoesEntityView::IsOverlayEntityPickable(
+    const UStaticMeshComponent* Component)
+{
+    return Component != nullptr &&
+           Component->GetCollisionEnabled() == ECollisionEnabled::QueryOnly &&
+           Component->GetCollisionResponseToChannel(ECC_EchoesEntityPick) ==
+               ECR_Block &&
+           Component->GetCollisionResponseToChannel(ECC_Visibility) ==
+               ECR_Ignore;
+}
+
+bool AEchoesEntityView::IsHealthBarEntityPickable() const
+{
+    return GetActorEnableCollision() &&
+           IsOverlayEntityPickable(HealthBarBackground);
+}
+
+bool AEchoesEntityView::IsOwnerMarkerEntityPickable() const
+{
+    return GetActorEnableCollision() && IsOverlayEntityPickable(OwnerMarker);
+}
+
+bool AEchoesEntityView::IsSilhouetteAccentEntityPickable() const
+{
+    return GetActorEnableCollision() &&
+           IsOverlayEntityPickable(SilhouetteAccent);
+}
+
+bool AEchoesEntityView::IsFutureWellPresentationEntityPickable() const
+{
+    return GetActorEnableCollision() &&
+           IsOverlayEntityPickable(FutureWellOrbitOuter) &&
+           IsOverlayEntityPickable(FutureWellOrbitInner) &&
+           IsOverlayEntityPickable(FutureWellCore);
+}
+
+bool AEchoesEntityView::IsEntityPickProxyEnabled() const
+{
+    return GetActorEnableCollision() && EntityPickProxy != nullptr &&
+           EntityPickProxy->GetCollisionEnabled() ==
+               ECollisionEnabled::QueryOnly &&
+           EntityPickProxy->GetCollisionResponseToChannel(
+               ECC_EchoesEntityPick) == ECR_Block;
+}
+
+bool AEchoesEntityView::IsEntityPickProxyHidden() const
+{
+    return EntityPickProxy != nullptr && !EntityPickProxy->IsVisible();
+}
+
+bool AEchoesEntityView::DoesEntityPickProxyBlockGroundTrace() const
+{
+    return EntityPickProxy != nullptr &&
+           EntityPickProxy->GetCollisionResponseToChannel(ECC_Visibility) ==
+               ECR_Block;
+}
+
+float AEchoesEntityView::GetEntityPickProxyRadius() const
+{
+    return EntityPickProxyRadius;
+}
+
+float AEchoesEntityView::GetEntityPickProxyTopHeight() const
+{
+    return EntityPickProxyTopHeight;
+}
+
+void AEchoesEntityView::ConfigureEntityPickProxy(float SelectionHaloScale)
+{
+    if (EntityPickProxy == nullptr)
+    {
+        return;
+    }
+    // The footprint a right-click resolves over is whichever is larger of the
+    // two things the player can actually see: the body's own drawn extent and
+    // the selection halo's radius. Taking the body's bounds rather than a
+    // per-type constant is what makes this correct for an authored mesh whose
+    // silhouette has nothing to do with the primitive it replaced - a Matter
+    // deposit's spires and collar reach far past the small sphere the
+    // fallback body would have drawn.
+    float BodyHorizontalReach = 0.0f;
+    float BodyTopReach = 0.0f;
+    if (const UStaticMesh* CurrentBodyMesh = BodyMesh->GetStaticMesh())
+    {
+        const FBoxSphereBounds MeshBounds = CurrentBodyMesh->GetBounds();
+        const FVector BodyScale = BodyMesh->GetRelativeScale3D();
+        BodyHorizontalReach = static_cast<float>(FMath::Max(
+            (FMath::Abs(MeshBounds.Origin.X) + MeshBounds.BoxExtent.X) *
+                FMath::Abs(BodyScale.X),
+            (FMath::Abs(MeshBounds.Origin.Y) + MeshBounds.BoxExtent.Y) *
+                FMath::Abs(BodyScale.Y)));
+        BodyTopReach = static_cast<float>(
+            BodyMesh->GetRelativeLocation().Z +
+            (MeshBounds.Origin.Z + MeshBounds.BoxExtent.Z) *
+                FMath::Abs(BodyScale.Z));
+    }
+    EntityPickProxyRadius = FMath::Max(
+        BodyHorizontalReach,
+        FMath::Max(SelectionHaloScale, MinimumEntityPickHaloScale) *
+            SelectionHaloExtentCentimetres);
+    // The top clears the health bar so the bar and the owner marker sit inside
+    // the volume instead of above it, and clears the body for a tall mesh.
+    EntityPickProxyTopHeight = FMath::Max(
+        HealthBarHeight + EntityPickHeadroomCentimetres,
+        BodyTopReach + EntityPickHeadroomCentimetres);
+    EntityPickProxy->SetCapsuleSize(
+        EntityPickProxyRadius,
+        FMath::Max(EntityPickProxyRadius, EntityPickProxyTopHeight * 0.5f),
+        false);
+    EntityPickProxy->SetRelativeLocation(
+        FVector(0.0f, 0.0f, EntityPickProxyTopHeight * 0.5f));
 }
 
 bool AEchoesEntityView::HasBodySelectionCollisionEnabled() const
@@ -581,12 +793,17 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
     BodyMesh->SetRelativeRotation(FRotator::ZeroRotator);
     BodyMesh->SetRelativeScale3D(FVector::OneVector);
 
-    SilhouetteAccent->SetVisibility(false, true);
+    SetOverlayUnpickableForPool(SilhouetteAccent);
     SilhouetteAccent->SetRenderCustomDepth(false);
     SilhouetteAccent->SetCustomDepthStencilValue(0);
     SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
     SilhouetteAccent->SetRelativeRotation(FRotator::ZeroRotator);
     SilhouetteAccent->SetRelativeScale3D(FVector::OneVector);
+
+    EntityPickProxy->SetRelativeLocation(FVector::ZeroVector);
+    EntityPickProxy->SetRelativeRotation(FRotator::ZeroRotator);
+    EntityPickProxy->SetRelativeScale3D(FVector::OneVector);
+    EntityPickProxy->SetCapsuleSize(1.0f, 1.0f, false);
 
     SelectionRing->SetVisibility(false, true);
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
@@ -609,7 +826,9 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
              FutureWellGroundGlyphA,
              FutureWellGroundGlyphB})
     {
-        Component->SetVisibility(false, true);
+        // Same gate as every other hide: a pooled view must leave no
+        // pickable overlay behind for the next entity to inherit.
+        SetOverlayUnpickableForPool(Component);
         Component->SetRelativeRotation(FRotator::ZeroRotator);
         Component->SetRelativeScale3D(FVector::OneVector);
     }
@@ -1113,15 +1332,21 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
-    SilhouetteAccent->SetVisibility(
+    SetOverlayVisibleAndPickable(
+        SilhouetteAccent,
         bShowSilhouetteAccent && !bUsingAuthoredRosterMesh &&
-            !bUsingAuthoredFutureWellMesh,
-        true);
+            !bUsingAuthoredFutureWellMesh);
     SelectionRing->SetRelativeScale3D(FVector(
         SelectionRadius,
         SelectionRadius,
         SelectionHaloMesh != nullptr ? 1.0f : 0.025f));
     SelectionVFXBaseScale = SelectionRing->GetRelativeScale3D();
+    // Entity resolution covers the same footprint the halo draws. This is what
+    // gives a Matter deposit and a Future Well a click target: both suppress
+    // the silhouette accent above, and a deposit has no other overlay at all,
+    // so without this volume the only thing standing for them is whatever
+    // collision their authored mesh happens to carry.
+    ConfigureEntityPickProxy(SelectionRadius);
 
     const bool bShowDeploymentCover =
         State.deployed &&
@@ -1266,7 +1491,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                   : State.owner == 3
                         ? FVector(0.18f, 0.18f, 0.08f)
                         : FVector(0.18f, 0.18f, 0.12f));
-    OwnerMarker->SetVisibility(MarkerMesh != nullptr, true);
+    SetOverlayVisibleAndPickable(OwnerMarker, MarkerMesh != nullptr);
 
     if (BasicMaterial != nullptr)
     {
@@ -1554,10 +1779,7 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
                  FutureWellGroundGlyphA,
                  FutureWellGroundGlyphB})
         {
-            if (Component != nullptr)
-            {
-                Component->SetVisibility(false, true);
-            }
+            SetOverlayVisibleAndPickable(Component, false);
         }
         return;
     }
@@ -1700,11 +1922,15 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
     FutureWellGroundGlyphB->SetRelativeRotation(GlyphBRotation);
     FutureWellVisualTimeSeconds = 0.0f;
 
-    FutureWellOrbitOuter->SetVisibility(true, true);
-    FutureWellOrbitInner->SetVisibility(true, true);
-    FutureWellCore->SetVisibility(true, true);
-    FutureWellGroundGlyphA->SetVisibility(bShowGlyphA, true);
-    FutureWellGroundGlyphB->SetVisibility(bShowGlyphB, true);
+    // The orbit, core and glyphs are what a player points at when they point
+    // at a Future Well, so they carry the entity-pick region with them. They
+    // still stay out of ECC_Visibility: the orbit sits 145-224 cm above the
+    // ground and must never become a ground answer.
+    SetOverlayVisibleAndPickable(FutureWellOrbitOuter, true);
+    SetOverlayVisibleAndPickable(FutureWellOrbitInner, true);
+    SetOverlayVisibleAndPickable(FutureWellCore, true);
+    SetOverlayVisibleAndPickable(FutureWellGroundGlyphA, bShowGlyphA);
+    SetOverlayVisibleAndPickable(FutureWellGroundGlyphB, bShowGlyphB);
 
     EnsureFutureWellMaterialSet(
         FutureWellOrbitOuter,
@@ -1901,8 +2127,9 @@ void AEchoesEntityView::UpdateHealthBar()
         return;
     }
     const bool bShowHealth = bSelected || DisplayedHealthFraction < 0.999f;
-    HealthBarBackground->SetVisibility(bShowHealth, true);
-    HealthBarFill->SetVisibility(bShowHealth && DisplayedHealthFraction > 0.0f, true);
+    SetOverlayVisibleAndPickable(HealthBarBackground, bShowHealth);
+    SetOverlayVisibleAndPickable(
+        HealthBarFill, bShowHealth && DisplayedHealthFraction > 0.0f);
     HealthBarBackground->SetRelativeLocation(
         FVector(0.0f, 0.0f, HealthBarHeight));
     HealthBarBackground->SetRelativeScale3D(

@@ -707,6 +707,17 @@ private:
     bool TraceCursor(FHitResult& OutHitResult);
     bool TraceKeyboardTarget(FHitResult& OutHitResult);
     bool TraceCommandTarget(FHitResult& OutHitResult);
+    // Ground position and entity identity are two answers, so they are two
+    // traces. TraceCommandTarget keeps returning the ECC_Visibility ground hit
+    // that every command site reads as a battlefield point; this one runs the
+    // same screen ray on ECC_EchoesEntityPick and returns the entity view under
+    // the cursor, or null. Neither trace can move the other's answer.
+    bool ResolveCommandScreenPosition(
+        bool bPointerSource,
+        FVector2D& OutScreenPosition);
+
+    [[nodiscard]] class AEchoesEntityView* TraceEntityUnderCommandTarget(
+        const FVector2D& ScreenPosition);
     void NudgeKeyboardTarget(const FVector2D& Direction);
     void IssueContextOrder(const FHitResult& HitResult, bool bPointerSource);
     void SynchronizeBoundCampaignProtocol();

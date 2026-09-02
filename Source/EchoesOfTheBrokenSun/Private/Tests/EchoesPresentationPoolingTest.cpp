@@ -207,17 +207,73 @@ bool FEchoesPresentationPoolingTest::RunTest(const FString& Parameters)
                  RebindView->HasBodySelectionCollisionEnabled());
         TestTrue(TEXT("Rebind applies the new Future Well presentation"),
                  RebindView->IsFutureWellPresentationVisible());
+        // The Future Well suppresses its silhouette accent, so the orbit, core
+        // and glyphs are the only drawn geometry a player can point at besides
+        // the base. They carry the entity-pick region, and they are 145-224 cm
+        // in the air, so they must stay out of the ground trace.
+        TestTrue(TEXT("A drawn Future Well orbit answers entity resolution"),
+                 RebindView->IsFutureWellPresentationEntityPickable());
+        TestFalse(TEXT("A Future Well pick volume stays out of the ground trace"),
+                  RebindView->DoesEntityPickProxyBlockGroundTrace());
+        const float WellPickRadius = RebindView->GetEntityPickProxyRadius();
+        TestTrue(TEXT("A Future Well has a footprint-sized pick radius"),
+                 WellPickRadius > 0.0f);
         TestFalse(TEXT("Rebind does not inherit old selection"),
                   RebindView->IsSelected());
         RebindView->PrepareForPool();
         TestFalse(TEXT("Pooling clears Future Well presentation"),
                   RebindView->IsFutureWellPresentationVisible());
+        // A pooled view must leave no pick region behind for the next entity
+        // to inherit while it is not drawn.
+        TestFalse(TEXT("Pooling clears the health bar pick region"),
+                  RebindView->IsHealthBarEntityPickable());
+        TestFalse(TEXT("Pooling clears the owner marker pick region"),
+                  RebindView->IsOwnerMarkerEntityPickable());
+        TestFalse(TEXT("Pooling clears the silhouette accent pick region"),
+                  RebindView->IsSilhouetteAccentEntityPickable());
+        TestFalse(TEXT("Pooling clears the footprint pick volume"),
+                  RebindView->IsEntityPickProxyEnabled());
+        TestFalse(TEXT("Pooling clears the Future Well pick region"),
+                  RebindView->IsFutureWellPresentationEntityPickable());
 
         echoes::sim::Entity Resource = FutureWell;
         Resource.id = 900008;
         Resource.type = echoes::sim::EntityType::ResourceNode;
         Resource.wellChoice = echoes::sim::FutureWellChoice::Dormant;
         RebindView->ActivateForEntity(Resource, true);
+        // On the reactivated view the pick region and the drawn overlay move
+        // together, so a rebound full-health entity carries no invisible pick
+        // plate above it.
+        TestTrue(TEXT("Rebound health bar pick region matches what is drawn"),
+                 RebindView->IsHealthBarEntityPickable() ==
+                     RebindView->IsHealthBarVisible());
+        TestTrue(TEXT("Rebound owner marker pick region matches what is drawn"),
+                 RebindView->IsOwnerMarkerEntityPickable() ==
+                     RebindView->IsOwnerMarkerVisible());
+        TestTrue(TEXT("Rebound silhouette accent pick region matches what is drawn"),
+                 RebindView->IsSilhouetteAccentEntityPickable() ==
+                     RebindView->IsSilhouetteAccentVisible());
+        // The reported defect: a Matter deposit draws no accent, no owner
+        // marker and no Future Well geometry. Without the footprint volume the
+        // only thing under the cursor is whatever collision its authored mesh
+        // happens to carry, and a miss becomes a move order on the ground
+        // behind it.
+        TestFalse(TEXT("A Matter deposit draws no silhouette accent"),
+                  RebindView->IsSilhouetteAccentVisible());
+        TestFalse(TEXT("A Matter deposit draws no Future Well geometry"),
+                  RebindView->IsFutureWellPresentationVisible());
+        TestTrue(TEXT("A Matter deposit still answers entity resolution"),
+                 RebindView->IsEntityPickProxyEnabled());
+        TestTrue(TEXT("A Matter deposit's pick volume is never rendered"),
+                 RebindView->IsEntityPickProxyHidden());
+        TestFalse(TEXT("A Matter deposit's pick volume stays out of the ground trace"),
+                  RebindView->DoesEntityPickProxyBlockGroundTrace());
+        TestTrue(TEXT("A Matter deposit has a footprint-sized pick radius"),
+                 RebindView->GetEntityPickProxyRadius() > 0.0f);
+        TestTrue(TEXT("A Matter deposit's pick volume clears its health bar"),
+                 RebindView->GetEntityPickProxyTopHeight() > 0.0f);
+        TestTrue(TEXT("Body selection collision survives the rebind"),
+                 RebindView->HasBodySelectionCollisionEnabled());
         const uint64 WarmMIDCount = RebindView->GetOwnedMIDCreationCount();
         for (const echoes::sim::Entity* WarmState :
              {&Covered, &Deployment, &Relay, &Waystone,

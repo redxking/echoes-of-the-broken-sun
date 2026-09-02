@@ -7,6 +7,7 @@
 
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
+class UCapsuleComponent;
 class USceneComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
@@ -46,6 +47,25 @@ public:
         return OwnedMIDCreationCount;
     }
     [[nodiscard]] bool HasBodySelectionCollisionEnabled() const;
+    // The cursor must be able to reach every part of this entity the player
+    // reads as the entity. These report whether a component currently blocks
+    // ECC_EchoesEntityPick - the entity-resolution channel, never the
+    // ground-position one - so a test can assert that a drawn overlay is
+    // pickable and a hidden one is not.
+    [[nodiscard]] bool IsHealthBarEntityPickable() const;
+    [[nodiscard]] bool IsOwnerMarkerEntityPickable() const;
+    [[nodiscard]] bool IsSilhouetteAccentEntityPickable() const;
+    [[nodiscard]] bool IsFutureWellPresentationEntityPickable() const;
+    // The footprint volume. It is never rendered; it exists so that entity
+    // resolution covers the whole readable footprint of entities whose drawn
+    // geometry is small, low, or carries no usable collision at all - which is
+    // every Matter deposit and every Future Well, since both suppress the
+    // silhouette accent and neither has any other overlay.
+    [[nodiscard]] bool IsEntityPickProxyEnabled() const;
+    [[nodiscard]] bool IsEntityPickProxyHidden() const;
+    [[nodiscard]] bool DoesEntityPickProxyBlockGroundTrace() const;
+    [[nodiscard]] float GetEntityPickProxyRadius() const;
+    [[nodiscard]] float GetEntityPickProxyTopHeight() const;
     [[nodiscard]] bool IsUsingAuthoredSelectionVFX() const
     {
         return bUsingAuthoredSelectionVFX;
@@ -144,6 +164,18 @@ private:
         UMaterialInterface* Parent);
     void ResetOwnedMaterialParameters();
     void ResetPresentationComponentsForPool();
+    // The single gate for every overlay that is part of the entity's drawn
+    // silhouette. Visibility and entity-pick collision are set together and
+    // never apart, so a hidden overlay is never an invisible pick plate and a
+    // drawn overlay is never unpickable. Neither state touches ECC_Visibility:
+    // an overlay must not move the ground answer.
+    static void SetOverlayVisibleAndPickable(
+        UStaticMeshComponent* Component,
+        bool bVisible);
+    static void SetOverlayUnpickableForPool(UStaticMeshComponent* Component);
+    [[nodiscard]] static bool IsOverlayEntityPickable(
+        const UStaticMeshComponent* Component);
+    void ConfigureEntityPickProxy(float SelectionHaloScale);
     void SetBodyColor(const FLinearColor& Color);
     void UpdateHealthBar();
 
@@ -155,6 +187,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> SilhouetteAccent;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UCapsuleComponent> EntityPickProxy;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> SelectionRing;
@@ -318,6 +353,8 @@ private:
     float DisplayedHealthFraction = 1.0f;
     float HealthBarWidthScale = 0.9f;
     float HealthBarHeight = 92.0f;
+    float EntityPickProxyRadius = 0.0f;
+    float EntityPickProxyTopHeight = 0.0f;
     FLinearColor BaseBodyColor = FLinearColor::White;
     float DamagePulseRemainingSeconds = 0.0f;
     bool bHasAuthoritativeLocation = false;
