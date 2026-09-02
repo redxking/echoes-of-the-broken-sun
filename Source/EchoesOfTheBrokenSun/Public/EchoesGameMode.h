@@ -45,6 +45,11 @@ public:
     {
         return SpawnPrototypeEnvironment();
     }
+
+    [[nodiscard]] FString GenerateNetworkResumeCredentialForTesting() const
+    {
+        return GenerateNetworkResumeCredential();
+    }
 #endif
 
 private:

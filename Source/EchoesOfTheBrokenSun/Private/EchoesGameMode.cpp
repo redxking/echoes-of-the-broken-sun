@@ -41,6 +41,12 @@
 #include "Misc/Parse.h"
 #include "TimerManager.h"
 
+#if PLATFORM_APPLE || PLATFORM_UNIX
+#include <sys/random.h>
+#else
+#error GenerateNetworkResumeCredential requires an OS CSPRNG source for this platform.
+#endif
+
 namespace
 {
 const FName EnvironmentColorParameterName(TEXT("Color"));
@@ -609,7 +615,19 @@ bool AEchoesGameMode::IsNetworkSeatReservationAvailable() const
 
 FString AEchoesGameMode::GenerateNetworkResumeCredential() const
 {
-    return FGuid::NewGuid().ToString(EGuidFormats::Digits);
+    // 128-bit one-use resume credential drawn from the OS CSPRNG, formatted
+    // as the same 32 uppercase hex digits the previous FGuid path produced.
+    // A failed entropy read returns empty, which every consumer already
+    // treats as "no resume capability": the seat-reservation predicate
+    // requires a non-empty credential and the bounded-format checks reject
+    // the empty string, so the failure mode is fail-closed rather than a
+    // fallback to a weaker source.
+    uint8 RandomBytes[16] = {};
+    if (getentropy(RandomBytes, sizeof(RandomBytes)) != 0)
+    {
+        return FString();
+    }
+    return BytesToHex(RandomBytes, sizeof(RandomBytes));
 }
 
 void AEchoesGameMode::ExpireNetworkSeatReservation()

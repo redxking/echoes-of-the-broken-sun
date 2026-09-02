@@ -4,6 +4,7 @@
 
 #include "CoreGlobals.h"
 #include "EchoesGameInstance.h"
+#include "EchoesGameMode.h"
 #include "EchoesOnlineFrontDoorLayout.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSkirmishSetup.h"
@@ -537,6 +538,37 @@ bool FEchoesOnlineFrontDoorTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Back closes the online front door"),
               GameInstance->GetOnlineState(),
               EEchoesOnlineFrontDoorState::Idle);
+
+    // N-SEC-2: server-issued resume credentials come from the OS CSPRNG and
+    // must hold the exact bounded format every validator enforces — 32 hex
+    // digits — and must not repeat across issuances.
+    AEchoesGameMode* GameMode =
+        NewObject<AEchoesGameMode>(GetTransientPackage());
+    if (!TestNotNull(TEXT("Game mode can be instantiated"), GameMode))
+    {
+        return false;
+    }
+    TSet<FString> IssuedCredentials;
+    for (int32 Sample = 0; Sample < 8; ++Sample)
+    {
+        const FString Issued =
+            GameMode->GenerateNetworkResumeCredentialForTesting();
+        TestEqual(
+            TEXT("Issued resume credential is exactly 32 characters"),
+            Issued.Len(),
+            32);
+        bool bAllHex = !Issued.IsEmpty();
+        for (const TCHAR Character : Issued)
+        {
+            bAllHex &= FChar::IsHexDigit(Character);
+        }
+        TestTrue(
+            TEXT("Issued resume credential is entirely hex digits"), bAllHex);
+        TestFalse(
+            TEXT("Issued resume credential does not repeat"),
+            IssuedCredentials.Contains(Issued));
+        IssuedCredentials.Add(Issued);
+    }
 
     // N-SEC-1: a smoke-completion confirmation arriving at an ordinary
     // client (one that never entered smoke mode) must be rejected without
