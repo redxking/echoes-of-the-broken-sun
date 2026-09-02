@@ -335,6 +335,60 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
                  Bridge->GetShapeBesideUsPhase() ==
                      EEchoesShapeBesideUsPhase::ReachFirstEcho);
 
+    // Mission eight stamps topology revision one, so a checkpoint written
+    // before the route moved out of the hostile envelope must fail closed
+    // rather than restore geometry the operation no longer uses. The probe
+    // rewrites only the revision byte and repairs the container checksum, so
+    // the rejection can come from the topology rule alone and not from a
+    // detectable corruption.
+    constexpr int32 TopologyRevisionOffset = 11;
+    constexpr int32 ChecksumSize = 4;
+    TArray<uint8> CurrentTopologyBytes;
+    if (!TestTrue(
+            TEXT("The current Mission 08 checkpoint carries topology revision one"),
+            FFileHelper::LoadFileToArray(CurrentTopologyBytes, *QuickSavePath) &&
+                CurrentTopologyBytes.Num() > 16 &&
+                CurrentTopologyBytes[TopologyRevisionOffset] == 1))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TArray<uint8> LegacyTopologyBytes = CurrentTopologyBytes;
+    LegacyTopologyBytes[TopologyRevisionOffset] = 0;
+    const int32 ChecksumOffset = LegacyTopologyBytes.Num() - ChecksumSize;
+    const uint32 LegacyChecksum = FCrc::MemCrc32(
+        LegacyTopologyBytes.GetData(), ChecksumOffset);
+    for (int32 ByteIndex = 0; ByteIndex < ChecksumSize; ++ByteIndex)
+    {
+        LegacyTopologyBytes[ChecksumOffset + ByteIndex] =
+            static_cast<uint8>(LegacyChecksum >> (ByteIndex * 8));
+    }
+    if (!TestTrue(
+            TEXT("The revision-zero Mission 08 fixture retains a valid checksum"),
+            FFileHelper::SaveArrayToFile(LegacyTopologyBytes, *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(TEXT("QuickLoad rejects the revision-zero Mission 08 topology"),
+              Bridge->QuickLoadScenario(Feedback));
+    TestTrue(TEXT("The Mission 08 topology rejection is explicit and stable"),
+             Feedback.Contains(TEXT("LOAD_SHAPE_BESIDE_US_TOPOLOGY_MISMATCH")));
+    if (!TestTrue(
+            TEXT("The current Mission 08 checkpoint is restored after the legacy probe"),
+            FFileHelper::SaveArrayToFile(CurrentTopologyBytes, *QuickSavePath)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestTrue(TEXT("The restored Mission 08 checkpoint reloads cleanly"),
+             Bridge->QuickLoadScenario(Feedback) &&
+                 Bridge->GetShapeBesideUsPhase() ==
+                     EEchoesShapeBesideUsPhase::ReachFirstEcho);
+
     echoes::sim::EntityId WorkerId = 0;
     for (const echoes::sim::Entity& Entity :
          Bridge->GetSimulation()->Entities())
