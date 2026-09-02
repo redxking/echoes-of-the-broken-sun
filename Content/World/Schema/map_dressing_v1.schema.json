@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "echoes.world.map-dressing-pack.v1",
+  "title": "Echoes compiled map-dressing pack v1",
+  "description": "Structural envelope for the compiled map-dressing pack. Acceptance requires the compiler's semantic validator in Content/World/Tools/compile_dressing_pack.py — in particular the cell-state conformance gate — not schema validation alone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pack_format",
+    "pack_version",
+    "schema_version",
+    "authority",
+    "runtime_binding",
+    "grid",
+    "base_contract",
+    "source_provenance",
+    "dressing_classes",
+    "deferred_classes",
+    "sites",
+    "total_record_count",
+    "claim_boundary"
+  ],
+  "properties": {
+    "pack_format": {"const": "echoes-map-dressing-pack"},
+    "pack_version": {"const": 1},
+    "schema_version": {"const": 1},
+    "authority": {"const": "checked-in-source-fixture"},
+    "runtime_binding": {"const": "none"},
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width_tiles",
+        "height_tiles",
+        "cell_count",
+        "index_formula",
+        "coordinate_origin"
+      ],
+      "properties": {
+        "width_tiles": {"const": 64},
+        "height_tiles": {"const": 64},
+        "cell_count": {"const": 4096},
+        "index_formula": {"const": "y*width+x"},
+        "coordinate_origin": {"const": "southwest"}
+      }
+    },
+    "base_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compiled_pack_path", "compiled_pack_sha256"],
+      "properties": {
+        "compiled_pack_path": {"type": "string", "minLength": 1},
+        "compiled_pack_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "raw_sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "raw_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "dressing_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "permitted_cell_state",
+          "mesh_reference",
+          "reads_as",
+          "occluder"
+        ],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$"},
+          "permitted_cell_state": {"enum": ["blocked", "passable"]},
+          "mesh_reference": {"type": "string", "minLength": 1},
+          "reads_as": {"type": "string", "minLength": 1},
+          "occluder": {"type": "boolean"}
+        }
+      }
+    },
+    "deferred_classes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mesh_reference", "deferred_reason"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$"},
+          "mesh_reference": {"type": "string", "minLength": 1},
+          "deferred_reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "sites": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "vocabulary_status", "record_count", "records"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "vocabulary_status": {"enum": ["populated", "empty"]},
+          "empty_reason": {"type": "string", "minLength": 1},
+          "record_count": {"type": "integer", "minimum": 0},
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "class",
+                "cell_index",
+                "x",
+                "y",
+                "orientation_ordinal",
+                "scale_band"
+              ],
+              "properties": {
+                "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$"},
+                "class": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$"},
+                "cell_index": {"type": "integer", "minimum": 0, "maximum": 4095},
+                "x": {"type": "integer", "minimum": 0, "maximum": 63},
+                "y": {"type": "integer", "minimum": 0, "maximum": 63},
+                "orientation_ordinal": {"type": "integer", "minimum": 0, "maximum": 3},
+                "scale_band": {"type": "integer", "minimum": 0, "maximum": 2}
+              }
+            }
+          }
+        }
+      }
+    },
+    "total_record_count": {"type": "integer", "minimum": 0},
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposed_contract", "not_evidence_for"],
+      "properties": {
+        "proposed_contract": {"const": true},
+        "not_evidence_for": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

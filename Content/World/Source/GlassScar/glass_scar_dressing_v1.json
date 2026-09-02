@@ -1,0 +1,301 @@
+{
+  "source_format": "echoes-map-dressing-source",
+  "source_version": 1,
+  "display_name": "Glass Scar map dressing",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed presentation-only dressing contract. It places NO gameplay meaning: every record is authored against the digest-pinned compiled map pack and must agree with that pack's cell state. Runtime spawning is deliberately out of scope for this slice and belongs to a later joint World+Visual slice; this file is checked-in contract data, not runtime output.",
+  "base_contract": {
+    "compiled_pack_path": "Content/World/Generated/GlassScar/glass_scar_compiled_map_pack_v1.json",
+    "compiled_pack_sha256": "6dbbe2f1a5bd7faec122e6050e5c2d27d4d56e3e94da357b239673ec4b6ab621"
+  },
+  "dressing_classes": [
+    {
+      "id": "vitrified_shelf",
+      "permitted_cell_state": "blocked",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf",
+      "reads_as": "impassable vitrified shelf",
+      "occluder": true
+    },
+    {
+      "id": "glass_shard",
+      "permitted_cell_state": "blocked",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarShard",
+      "reads_as": "impassable black-glass shard",
+      "occluder": true
+    }
+  ],
+  "deferred_classes": [
+    {
+      "id": "basin_ridge",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge",
+      "deferred_reason": "Elevation is not modelled: vision and movement cost ignore height and height_band_ordinal is consumed by nothing, so ridge geometry implies a tactical affordance the simulation does not provide. Authoring more ridge dressing would deepen the existing Bible rule-3 readability defect recorded 2026-09-02. This class stays deferred until the elevation gameplay ruling lands."
+    }
+  ],
+  "sites": [
+    {
+      "id": "glass-scar",
+      "vocabulary_status": "populated",
+      "records": [
+        {
+          "id": "drs_gs_shelf_01",
+          "class": "vitrified_shelf",
+          "x": 8,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shelf_02",
+          "class": "vitrified_shelf",
+          "x": 16,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_03",
+          "class": "vitrified_shelf",
+          "x": 20,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_04",
+          "class": "vitrified_shelf",
+          "x": 24,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shelf_05",
+          "class": "vitrified_shelf",
+          "x": 28,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shelf_06",
+          "class": "vitrified_shelf",
+          "x": 36,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shelf_07",
+          "class": "vitrified_shelf",
+          "x": 40,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_08",
+          "class": "vitrified_shelf",
+          "x": 44,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_09",
+          "class": "vitrified_shelf",
+          "x": 52,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shelf_10",
+          "class": "vitrified_shelf",
+          "x": 10,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shelf_11",
+          "class": "vitrified_shelf",
+          "x": 18,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_12",
+          "class": "vitrified_shelf",
+          "x": 22,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_13",
+          "class": "vitrified_shelf",
+          "x": 26,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shelf_14",
+          "class": "vitrified_shelf",
+          "x": 38,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shelf_15",
+          "class": "vitrified_shelf",
+          "x": 42,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_16",
+          "class": "vitrified_shelf",
+          "x": 46,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shelf_17",
+          "class": "vitrified_shelf",
+          "x": 54,
+          "y": 34,
+          "orientation_ordinal": 0,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shard_01",
+          "class": "glass_shard",
+          "x": 8,
+          "y": 31,
+          "orientation_ordinal": 3,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shard_02",
+          "class": "glass_shard",
+          "x": 22,
+          "y": 31,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shard_03",
+          "class": "glass_shard",
+          "x": 36,
+          "y": 31,
+          "orientation_ordinal": 3,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shard_04",
+          "class": "glass_shard",
+          "x": 43,
+          "y": 31,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_gs_shard_05",
+          "class": "glass_shard",
+          "x": 8,
+          "y": 32,
+          "orientation_ordinal": 0,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shard_06",
+          "class": "glass_shard",
+          "x": 22,
+          "y": 32,
+          "orientation_ordinal": 2,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shard_07",
+          "class": "glass_shard",
+          "x": 36,
+          "y": 32,
+          "orientation_ordinal": 0,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shard_08",
+          "class": "glass_shard",
+          "x": 43,
+          "y": 32,
+          "orientation_ordinal": 1,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_gs_shard_09",
+          "class": "glass_shard",
+          "x": 8,
+          "y": 33,
+          "orientation_ordinal": 1,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shard_10",
+          "class": "glass_shard",
+          "x": 22,
+          "y": 33,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shard_11",
+          "class": "glass_shard",
+          "x": 36,
+          "y": 33,
+          "orientation_ordinal": 1,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_gs_shard_12",
+          "class": "glass_shard",
+          "x": 43,
+          "y": 33,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        }
+      ]
+    },
+    {
+      "id": "crownfall-basin",
+      "vocabulary_status": "empty",
+      "empty_reason": "No bespoke environment meshes exist for this site; every registered environment mesh is a Glass Scar family asset. Reusing them here is what makes the three maps read as one place, so this vocabulary is deliberately left empty until Visual authors a Crownfall mesh family.",
+      "records": []
+    },
+    {
+      "id": "confluence-ring",
+      "vocabulary_status": "empty",
+      "empty_reason": "No bespoke environment meshes exist for this site. The owner-adopted grounding is an early coherent Hollow Choir incursion site, which calls for repeated near-identical geometry with deliberate local contradictions rather than Glass Scar's vitrified vocabulary. Left empty until Visual authors a Choir-incursion mesh family.",
+      "records": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption or spawning of this data",
+      "gameplay meaning of any placed record",
+      "final art, materials, or texture quality",
+      "composed framing, lighting design, or authored levels",
+      "package, performance, or release readiness"
+    ]
+  }
+}
