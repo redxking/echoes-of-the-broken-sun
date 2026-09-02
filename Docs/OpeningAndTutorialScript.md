@@ -1,7 +1,7 @@
 ---
 title: Echoes of the Broken Sun — Opening & Tutorial Script (M2 line-authoring)
 author: Angelis Pseftis
-status: Draft for owner review — transcribes to the m01 narrative pack under a content lease after acceptance
+status: APPROVED PRODUCTION TEXT (owner rulings #19 and #20, 2026-09-02) — formal TUT-022/NAR-009 acceptance rides the packaged experience; transcribed into the additive demo narrative namespace (Content/Narrative/Source/demo), not the pinned m01 contract
 created: 2026-09-02
 updated: 2026-09-02
 ---

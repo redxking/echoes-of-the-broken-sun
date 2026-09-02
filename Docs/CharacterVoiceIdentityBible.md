@@ -76,4 +76,3 @@ Companion document: `Docs/NarrativeCoherenceReview.md` (DEMO-NAR-011).
 - **Narrator**: recommend NONE — the m01 storyboard carries the opening entirely in the three character voices over authored shots; a narrator would violate "no villain explains the setting / exposition by disagreement, action, evidence, consequence." Marked for explicit owner confirmation since DEMO-NAR-010 listed one as a possibility.
 
 ---
-
