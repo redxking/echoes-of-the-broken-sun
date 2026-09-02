@@ -278,3 +278,22 @@ entries — never by rewriting the requirement bodies above.
 * 2026-09-02 — OWNER RULING (19): Docs/OpeningAndTutorialScript.md (SHA-256 8b0595ba…)
   APPROVED AS PRODUCTION TEXT for voice generation. Script green-light only — formal TUT-022 /
   NAR-009 acceptance still applies to the packaged experience.
+* 2026-09-02 — OWNER RULING (20): Annunciator placeholder-opening alert lines → OPTION A,
+  fixed class lines: "Structure lost." / "Build complete." / "Unit fielded." / "Adaptation
+  ready." Specifics (which structure/unit/technology) carried by HUD alert text + minimap
+  pulse per the layering constraint; ConstructionComplete's three approved variants collapse to
+  the single class line; adopts the sheet's ruling-#11 "Adaptation ready." shard-adaptation
+  framing. Amends the ruling-#19 approved text; script hash supersedes accordingly.
+* 2026-09-02 — DEFECT (self-reported by World, coordinator-verified, in receipted code on main
+  at `26afffd`): `EchoesCompiledMapBindingTest.cpp` section 4 names `ConfigureGlassScar` as the
+  terrain author under test, but `StartPrototypeScenario` → `StartScenario(false)` with
+  `SelectedOperation` defaulting to `Skirmish` yields `bConfiguredSkirmish == true`, so
+  `ConfigureSkirmishTerrain(GlassScar preset)` is the actual author. Verified at
+  subsystem.cpp:2279 / 2424 / 2809. **S4** for the false provenance claim (comment/label only —
+  the assertion remains sound: it compares live subsystem terrain tile-for-tile against the
+  compiled mask, and preset/author geometric identity is separately pinned). **Real consequence
+  is a coverage gap**: no runtime test exercises the campaign terrain author, which serves nine
+  campaign operations including the demo prologue. Missed by both the authoring lane and the
+  independent reviewer — recorded as a review-depth lesson (provenance labels were taken at
+  face value; the call path was not traced). Coordinator ruling: fixed by a STANDALONE
+  test-only lease ahead of the phase-B switchover, not batched.
