@@ -471,3 +471,16 @@ entries — never by rewriting the requirement bodies above.
   (credits shall not name AI tools as author). (27) SKILL ROUTING — the CLAUDE.md addition
   requiring agents to read `Docs/AgentSkillRouting.md` and select from the 85 `echoes-*` project
   skills before acting is ADOPTED: committed to main and broadcast to every lane as binding.
+* 2026-09-02 — DEFECT S2 (introduced by coordinator when adopting ruling #27 without checking
+  tracking state; found by the Git lane before it could bite): the committed `CLAUDE.md` now
+  MANDATES reading `Docs/AgentSkillRouting.md` and the `.claude/skills/` tree, but BOTH ARE
+  UNTRACKED — verified at the branch tip: zero matching paths in `git ls-tree -r HEAD`, and
+  `git check-ignore` confirms they are not gitignored, so this is absence, not exclusion. Full
+  shape: the canonical library is `.opencode/skills/` (85 `SKILL.md` files, 340K, author
+  Angelis Pseftis), with `.agents/skills` and `.claude/skills` each a single SYMLINK bridge to
+  it; `Docs/AgentSkillRouting.md` (56 lines) is likewise untracked. CONSEQUENCE: any clean
+  checkout — the packaging worktree at pushed main, QA checkouts, a fresh clone — receives a
+  mandatory instruction pointing at files that do not exist, and the contract's own rule then
+  tells that checkout to STOP the affected path. Fix: track the routing doc, the canonical
+  `.opencode/skills/**` tree, and both symlink bridges, landed BEFORE the next packaging or QA
+  run. Granted as its own receipt; the Git lane correctly refused to widen a two-path grant.
