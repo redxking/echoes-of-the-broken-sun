@@ -4419,23 +4419,43 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 }
             }
         };
-        // The worker's construction stance: 1.375 tiles from the relay site
-        // back along the plan-owned first-echo direction. That clears the
-        // relay's 2x2 placement footprint (combined half-extents come to
-        // 1.125 tiles) while keeping the worker inside the required two
-        // tiles.
-        const Vec2 M08BuildStanceSite = [
-            &M08Plan,
-            &ComputeMissionEightConvoyStep]()
+        // The worker's construction stance: 3.3 tiles from the relay site
+        // along the DOMINANT axis of the plan-owned first-echo direction,
+        // sign-preserving. Placement's footprint-overlap test is per-axis —
+        // blocked only when BOTH axis offsets sit inside the combined
+        // half-extent band of 1.125 tiles — so one clear axis suffices: the
+        // worker stands 3.3 tiles out on that axis, and any escort settled
+        // inside its 2-tile follow ring keeps at least 1.3 tiles there.
+        // Both actor classes are therefore outside the band on ANY
+        // echo-relay axis. The prior 1.375-tile Euclidean stance split its
+        // offset across axes on diagonal geometry and put the worker itself
+        // inside the band ([BUILD_PLACEMENT_INVALID] code 5, Occupied).
+        const Vec2 M08BuildStanceSite = [&M08Plan]()
         {
-            Vec2 StanceSite = M08Plan.EchoRelaySite;
-            (void)ComputeMissionEightConvoyStep(
-                M08Plan.EchoRelaySite,
-                M08Plan.FirstEchoSite,
-                0,
-                (11 * echoes::sim::kFixedScale) / 8,
-                StanceSite);
-            return StanceSite;
+            const int32 StanceOffsetRaw =
+                (33 * echoes::sim::kFixedScale) / 10;
+            const int64 DeltaX =
+                static_cast<int64>(M08Plan.FirstEchoSite.x.Raw()) -
+                M08Plan.EchoRelaySite.x.Raw();
+            const int64 DeltaY =
+                static_cast<int64>(M08Plan.FirstEchoSite.y.Raw()) -
+                M08Plan.EchoRelaySite.y.Raw();
+            if (DeltaX == 0 && DeltaY == 0)
+            {
+                return M08Plan.EchoRelaySite;
+            }
+            const bool bDominantX =
+                (DeltaX >= 0 ? DeltaX : -DeltaX) >=
+                (DeltaY >= 0 ? DeltaY : -DeltaY);
+            const int32 StepX = bDominantX
+                ? (DeltaX >= 0 ? StanceOffsetRaw : -StanceOffsetRaw)
+                : 0;
+            const int32 StepY = bDominantX
+                ? 0
+                : (DeltaY >= 0 ? StanceOffsetRaw : -StanceOffsetRaw);
+            return Vec2::FromRaw(
+                M08Plan.EchoRelaySite.x.Raw() + StepX,
+                M08Plan.EchoRelaySite.y.Raw() + StepY);
         }();
         const auto MissionEightWorkerHolding = [
             Bridge,
