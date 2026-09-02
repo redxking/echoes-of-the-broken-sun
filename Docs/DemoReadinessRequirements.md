@@ -228,3 +228,53 @@ entries — never by rewriting the requirement bodies above.
 
 * 2026-09-02 — Ledger created by coordinator from the owner's directive (verbatim shall
   statements). Baseline audit assigned to QA lane (separate read-only reviewer) per §4.
+
+* 2026-09-02 — **DEMO-AUD-004: HUMAN REJECTED — CHANGES REQUIRED** (owner, verbatim intent):
+  all proposed voices/sounds rejected — "sound like 1980s games." Modern bar required: real
+  voices, animation-synced delivery, map notifications, integrated modern sound design.
+  Owner direction: research what players love and how commercially successful games handle
+  sound, then re-propose with substantially more effort. Applies to the WHOLE audio direction,
+  not only voice profiles. Kokoro-82M calibration output is below bar; DEMO-AUD-005 stands
+  (raw TTS is not final voice). Reopens any audio work premised on the rejected profiles.
+* 2026-09-02 — Owner clarification on AUD-004 redo: fully generated voices and performances ARE
+  authorized — the constraint is quality, not human actors. The bake-off targets
+  state-of-the-art generation with real performance direction; commissioned VO is fallback only.
+* 2026-09-02 — OWNER-ADDED REQUIREMENT — **DEMO-NAR-010**: Before voice production, every
+  speaking character and system voice in the demo shall have a designed identity: who they are
+  in the story, their role, personality, motivations, speech patterns, and relationship to the
+  player — such that the player connects with them (someone they want to be, help, or listen
+  to). Voices shall match the designed character or system identity. Voice design (AUD-004
+  redo) depends on this and is sequenced after it. Verify: OWNER acceptance of the character
+  bible; HUM comprehension/connection signals at DEMO-NAR-008/VAL sessions.
+* 2026-09-02 — OWNER-ADDED REQUIREMENT — **DEMO-NAR-011 (Narrative Coherence Review)**: a full
+  review of everything in the game — story, setting, characters, missions/campaign, every
+  screen element, mechanic, sound, and interaction — answering WHY it exists and how it ties
+  into the storyline. Elements without a story/world justification are flagged for redesign,
+  rejustification, or removal. The review's output is the design foundation that informs how
+  everything looks, acts, sounds, and feels; presentation work (UI remake, art direction,
+  audio direction, mission staging) shall trace to it. Output: one owner-reviewed document
+  (`Docs/NarrativeCoherenceReview.md`), Campaign-led with per-lane contributions. Sequenced
+  with DEMO-NAR-010; both precede large-scale presentation/voice production.
+* 2026-09-02 — OWNER RULINGS (14, via coordinator question batch): (1) NAR-010 character bible
+  ACCEPTED as drafted (Mara/Talar/Oruun incl. Talar personality proposal); (2) tutorial guide =
+  MARA; (3) NO narrator; (4) Meridian Operations Annunciator APPROVED (hard personality
+  bounds); (5) HUD in-fiction identity = MARA'S COMMAND DECK; (6) Dawn presented as CONSUMED
+  POSSIBILITY; (7) Reshape-Well contradiction: FIX THE OVERLAY (Well stays reachable; canon
+  rule stands); (8) tutorial = INSIDE PROLOGUE FICTION, restructured to the lesson cycle;
+  (9) weapon-fire audio: PER-FACTION VARIANTS (3×3, canon blind-identification rule stands);
+  (10) alerts voiced by the ANNUNCIATOR; (11) ledger-frame results underscore + shard-adaptation
+  research cues BOTH ACCEPTED; (12) economy sounds SHARED ("matter voices itself");
+  (13) demo AI match FRAMED AS A REAL ENGAGEMENT; (14) DEMO-INP-010 demo deferral APPROVED:
+  demo ships view+reset controls screen; full remapping moves to REL-ACC-001..003.
+* 2026-09-02 — OWNER RULINGS (2, NAR-011 World intake): (15) Lume Reach gate/district names
+  ADOPTED as proposed (incl. "Census Gate"); (16) Soryn Confluence GROUNDED as an early Choir
+  incursion site with rename (Campaign proposes the name in the next docs fold).
+* 2026-09-02 — OWNER RULINGS (2, audio): (17) Annunciator timbre DELEGATED to the Audio lane
+  (default af_sky), judged at the next listening batch; (18) voice pipeline LOCKED = the heard
+  Kokoro + performance-direction + mastering chain; Chatterbox recorded as fallback only if the
+  opening cinematic's emotional peaks fail a later owner listen. (Owner's in-session "those are
+  fine" on the directed samples is recorded as informal sample-quality acceptance; AUD-004
+  final registration still rides the formal listening gates.)
+* 2026-09-02 — OWNER RULING (19): Docs/OpeningAndTutorialScript.md (SHA-256 8b0595ba…)
+  APPROVED AS PRODUCTION TEXT for voice generation. Script green-light only — formal TUT-022 /
+  NAR-009 acceptance still applies to the packaged experience.
