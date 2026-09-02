@@ -2152,6 +2152,25 @@ enum class EQuickSaveContainerRead : uint8
             }
         }
     }
+    if (Branch == FutureWellChoice::Reshape)
+    {
+        // Owner ruling (2026-09-02, DEMO-NAR-011 finding #7): the Bible's
+        // temporary, non-destructive Reshape stands, so the intact central
+        // Future Well must remain reachable even while the folded route
+        // seals the central crossing. A dead-end access spur stays open at
+        // exactly (32,30)-(32,32); (32,33)-(32,34) remain blocked so the
+        // Folded Verge is still the only interior through-route. This
+        // mirrors the authored overlay contract (unburied-road-reshape,
+        // census 217), whose pinned-runtime-divergence test retires once
+        // this repair lands.
+        for (int32 TileY = 30; TileY <= 32; ++TileY)
+        {
+            if (Simulation.SetTerrainTile(32, TileY, Terrain::Open))
+            {
+                --Delta;
+            }
+        }
+    }
     return Delta;
 }
 

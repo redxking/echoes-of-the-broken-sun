@@ -95,10 +95,28 @@ invents canon: every proposal is marked **[PROPOSAL]** and requires owner accept
 ## 7. Awaiting lane inventories (intake sections)
 
 - **Visual** — per-screen-element and per-asset-family pass against §Art and §Ecology/architecture canon. *(pending handoff)*
-- **Audio** — per-cue/per-class pass against §Art and audio. *(pending handoff)*
-- **Player** — UI/control surface inventory against 5.1's command-fiction proposal; interaction failure reasons. *(pending handoff)*
-- **World** — terrain/map/scar geography vs §Vertical slice; demo-map ecology presence. *(pending handoff)*
+- **Audio** — per-cue/per-class pass against §Art and audio. *(pending handoff; rulings #9-#12 already recorded in §8)*
+- **Player** — UI/control surface inventory against the ruled command-deck fiction; interaction failure reasons. *(pending handoff)*
 - **AI** — per-personality doctrine statements; why each faction fights as it does in-mission. *(pending handoff)*
+
+### 7.1 World inventory — DELIVERED (world-levels handoff, 2026-09-02T11:37:57Z) and classified
+
+World's seven UNGROUNDED items arrived with grounding proposals, written to the ruled framing
+(Dawn = consumed possibility; engagements are real). Campaign-lead classification:
+
+| # | Item | Proposal (abridged) | Classification |
+|---|---|---|---|
+| 1 | Edge corridors | Rim benches survived because "nothing worth condensing reached the rim" — no possibility there for a Well fate to disturb | **ACCEPTED — canon-consistent** (pure §Soryn physics; explains existence, safety, slowness, and branch-invariance; invents no entity or event) |
+| 2 | Preserve-branch closures | A held Well's stability envelope re-freezes the marginal crossings; only the engineered Causeway bears traffic | **ACCEPTED — canon-consistent** (extends §Future Wells/Preserve behavior with a physical rationale; center's stability priced at the flanks — thematically exact) |
+| 3 | Lume Reach gates + district blocks | Gates named Ration Gate (west), Census Gate (center), Reserve Gate (east); west block = Transit, east block = Archive | **OWNER ADOPTED 2026-09-02, as proposed** — the names are canon; "Census Gate" serves the census-erasure arc. Binding on map labeling, briefing copy, and line-authoring |
+| 4 | SevenAccounts-Reshape columns | The manifested widening followed the Causeway's old service verges | **ACCEPTED — canon-consistent** (inside §Reshape's explicit route-opening license) |
+| 5 | Crownfall Basin geography | Skip-impact twin ridges; pale-tide gate cuts; shelf walls as collapsed ark-city foundations | **ACCEPTED — canon-consistent** (assembles only existing canon elements; no new names or events; owner sees it here in review) |
+| 6 | Soryn Confluence | Grounded as an early coherent Choir incursion site — repeated near-identical geometry with deliberate local contradictions (§Ecology and architecture), grounding §Historical frame's "apparitions" and foreshadowing the Act II contact missions | **OWNER ADOPTED 2026-09-02 (option a: ground + rename)**. Proposed display name, recorded with this adoption: **"The Confluence Ring"** (World's proposal, endorsed — the ring is the incursion's repeated geometry made legible). Map preset display name and skirmish setup copy update under a later Player/World slice |
+| 7 | Base placements | Accept as vertical-slice convention | **ACCEPTED — convention** (no story work needed) |
+
+World's four inverse gaps (observation ridge, ecology dressing, subsurface routes, Crownfall
+phenomena) are recorded as owner-approved thematic material for M5 map dressing; World specs
+anchors when that slice opens.
 
 ## 8. Ranked findings — status after the 2026-09-02 owner rulings
 
