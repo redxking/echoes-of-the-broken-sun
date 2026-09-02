@@ -1,14 +1,14 @@
 {
   "source_format": "echoes-overlay-map-source",
   "source_version": 1,
-  "display_name": "Soryn Confluence skirmish preset",
+  "display_name": "The Confluence Ring skirmish preset",
   "grid": {
     "width_tiles": 64,
     "height_tiles": 64,
     "index_formula": "y*width+x",
     "coordinate_origin": "southwest"
   },
-  "authority_note": "Proposed source contract mirroring FEchoesSkirmishSetupModel::IsBlockedTile(SorynConfluence) and its placement tables as of commit 7824094. The runtime code remains the live authority.",
+  "authority_note": "Proposed source contract mirroring FEchoesSkirmishSetupModel::IsBlockedTile(SorynConfluence) and its placement tables as of commit 6fa2d6f. The runtime code remains the live authority. Display name 'The Confluence Ring' and its grounding as an early coherent Hollow Choir incursion site (repeated near-identical ring geometry with deliberate local contradictions) were owner-adopted 2026-09-02 under DEMO-NAR-011; the runtime enum name SorynConfluence is unchanged.",
   "base_contracts": {
     "open-grid": {
       "description": "All 4096 cells ground-passable before ops apply."

@@ -8,7 +8,7 @@
     "index_formula": "y*width+x",
     "coordinate_origin": "southwest"
   },
-  "authority_note": "Proposed source contract mirroring the runtime terrain authors in EchoesSimulationSubsystem.cpp (ConfigureGlassScar, ApplyUnburiedRoadTerrain, ApplySevenAccountsTerrain, ConfigureLumeReach) as of commit 7824094. The runtime code remains the live authority; this file is checked-in contract data, not runtime output.",
+  "authority_note": "Proposed source contract mirroring the runtime terrain authors in EchoesSimulationSubsystem.cpp (ConfigureGlassScar, ApplyUnburiedRoadTerrain, ApplySevenAccountsTerrain, ConfigureLumeReach) as of commit 6fa2d6f, which opened the reshaped well spur per the 2026-09-02 owner ruling. The runtime code remains the live authority; this file is checked-in contract data, not runtime output.",
   "base_contracts": {
     "glass-scar-v1": {
       "compiled_pack_path": "Content/World/Generated/GlassScar/glass_scar_compiled_map_pack_v1.json",
@@ -56,15 +56,16 @@
       "id": "unburied-road-reshape",
       "family": "unburied-road",
       "branch": "reshape",
-      "operations_note": "Only the eastern crossing (x=48-51) stays open; the M08 folded-echo geometry.",
+      "operations_note": "Only the eastern crossing (x=48-51) stays open as a through-route; the M08 folded-echo geometry. Owner ruling 2026-09-02 (DEMO-NAR-011): Reshape is temporary and non-destructive, so the intact Future Well must remain reachable — a dead-end southern access spur at x=32, y=30-32 leads to the Well without creating a second south-north crossing. The runtime repair landed as commit 6fa2d6f; contract and runtime agree cell-for-cell.",
       "base": "glass-scar-v1",
       "ops": [
         {"op": "block", "x0": 12, "x1": 15, "y0": 30, "y1": 34},
-        {"op": "block", "x0": 29, "x1": 35, "y0": 30, "y1": 34}
+        {"op": "block", "x0": 29, "x1": 35, "y0": 30, "y1": 34},
+        {"op": "open", "x0": 32, "x1": 32, "y0": 30, "y1": 32}
       ],
-      "expected_blocked_cells": 220,
+      "expected_blocked_cells": 217,
       "expected_passable_components": 1,
-      "expected_blocked_sites": ["future-well"]
+      "expected_blocked_sites": []
     },
     {
       "id": "seven-accounts-harvest",
@@ -108,7 +109,7 @@
       "id": "lume-reach-harvest",
       "family": "lume-reach",
       "branch": "harvest",
-      "operations_note": "Standalone city layout for LumeReach, NoNeutralLedger, FutureThatWon, AssemblyOfTheMissing, SeveralVoicesOneCommand, and TheBrokenSun: gated wall rows y=28-30 with public gates at x=16-19, 30-34, 45-48; two district pillars; Harvest scar column x=29-30, y=34-38.",
+      "operations_note": "Standalone city layout for LumeReach, NoNeutralLedger, FutureThatWon, AssemblyOfTheMissing, SeveralVoicesOneCommand, and TheBrokenSun: gated wall rows y=28-30 with public gates at x=16-19 (Ration Gate), 30-34 (Census Gate), 45-48 (Reserve Gate) — names owner-adopted 2026-09-02; two walled districts (west x=20-25 Transit District, east x=39-44 Archive District, aligned to Mission 09 records — owner-adopted 2026-09-02); Harvest scar column x=29-30, y=34-38.",
       "base": "open-grid",
       "ops": [
         {"op": "block", "x0": 8, "x1": 15, "y0": 28, "y1": 30},

@@ -3,7 +3,7 @@
 
 Independent of the compiler's own rectangle-op evaluation, these tests mirror
 the runtime terrain predicates verbatim (EchoesSimulationSubsystem.cpp and
-EchoesSkirmishSetup.cpp at commit 7824094) and require the compiled fixture to
+EchoesSkirmishSetup.cpp at commit 6fa2d6f, which added the Reshape well spur) and require the compiled fixture to
 match them cell-for-cell, so a transcription error in the authoring rects and
 a drift in the checked-in fixture both fail loudly.
 
@@ -44,13 +44,20 @@ EXPECTED_CENSUS = {
     "skirmish-soryn-confluence": 200,
     "unburied-road-harvest": 220,
     "unburied-road-preserve": 205,
-    "unburied-road-reshape": 220,
+    "unburied-road-reshape": 217,
 }
 EXPECTED_BURIED_WELL_VARIANTS = {
     "seven-accounts-harvest",
     "unburied-road-harvest",
-    "unburied-road-reshape",
 }
+
+# Owner ruling 2026-09-02 (DEMO-NAR-011): Reshape is temporary and
+# non-destructive, so unburied-road-reshape keeps a dead-end southern access
+# spur to the intact Future Well. The runtime repair landed as commit
+# 6fa2d6f1355687da990b57fca6c620c3e18866c1 ("Open the reshaped well spur and
+# record naming adoptions"), so the runtime mirror below includes the spur and
+# the contract and runtime agree cell-for-cell with NO tolerated divergence.
+WELL_ACCESS_SPUR = {30 * GRID + 32, 31 * GRID + 32, 32 * GRID + 32}
 
 
 def load_compiler():
@@ -62,7 +69,7 @@ def load_compiler():
     return module
 
 
-# --- Verbatim runtime predicate mirrors (commit 7824094) ---------------------
+# --- Verbatim runtime predicate mirrors (commit 6fa2d6f) ---------------------
 
 
 def is_glass_scar_crossing(x: int) -> bool:
@@ -92,6 +99,10 @@ def unburied_road_blocked(branch: str) -> set[int]:
             )
             if (western or central or eastern) and not selected:
                 blocked.add(y * GRID + x)
+    if branch == "reshape":
+        # Well-access spur re-opened by the runtime repair at 6fa2d6f.
+        for y in range(30, 33):
+            blocked.discard(y * GRID + 32)
     return blocked
 
 
@@ -244,6 +255,26 @@ class OverlayMapPackTests(unittest.TestCase):
                 actual = set(self.variants[variant_id]["blocked_cell_indices"])
                 self.assertEqual(actual, expected)
 
+    def test_well_access_spur_contract(self) -> None:
+        # Owner-ruled spur: passable in both contract and runtime mirror,
+        # dead-ending north of the Well so the Folded Verge remains the only
+        # interior through-route.
+        blocked = set(self.variants["unburied-road-reshape"]["blocked_cell_indices"])
+        runtime_blocked = unburied_road_blocked("reshape")
+        for cell in WELL_ACCESS_SPUR:
+            self.assertNotIn(cell, blocked)
+            self.assertNotIn(cell, runtime_blocked)
+        self.assertIn(33 * GRID + 32, blocked)
+        self.assertIn(34 * GRID + 32, blocked)
+        self.assertIn(33 * GRID + 32, runtime_blocked)
+        self.assertIn(34 * GRID + 32, runtime_blocked)
+        well = [
+            s
+            for s in self.variants["unburied-road-reshape"]["sites"]
+            if s["id"] == "future-well"
+        ]
+        self.assertTrue(well and well[0]["passable"] and well[0]["reachable"])
+
     def test_skirmish_glass_scar_preset_equals_base_contract(self) -> None:
         base_pack = json.loads(BASE_PACK_PATH.read_text(encoding="utf-8"))
         base_blocked = {
@@ -304,7 +335,7 @@ class OverlayMapPackTests(unittest.TestCase):
         provenance = self.pack["source_provenance"]
         self.assertEqual(
             provenance["runtime_mirror_commit"],
-            "7824094d526c64c104366a3125beccd9638624f0",
+            "6fa2d6f1355687da990b57fca6c620c3e18866c1",
         )
         for source in provenance["sources"]:
             path = REPO_ROOT / source["path"]
