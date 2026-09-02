@@ -1,6 +1,7 @@
 #include "EchoesPlayerController.h"
 
 #include "EchoesAmbienceSubsystem.h"
+#include "EchoesCommandDeckLayout.h"
 #include "EchoesCommandMarkerView.h"
 #include "EchoesEntityView.h"
 #include "EchoesFogView.h"
@@ -19,6 +20,7 @@
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSkirmishOverlayLayout.h"
+#include "EchoesTitleOverlayLayout.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "EchoesTerrainView.h"
 #include "Components/StaticMeshComponent.h"
@@ -8581,6 +8583,41 @@ void AEchoesPlayerController::SelectionPressed()
         SetStatusMessage(TEXT("[CURSOR_UNAVAILABLE] Selection could not read the pointer position."));
         return;
     }
+    if (HandleBattlefieldPointerPressed(PointerPosition, ViewportSize))
+    {
+        return;
+    }
+    if (ArmedDeckAction != EEchoesCommandDeckAction::None)
+    {
+        // The armed order resolves at the cursor, which is now on the chosen
+        // battlefield point rather than on the deck button that armed it.
+        const EEchoesCommandDeckAction PendingAction = ArmedDeckAction;
+        ArmedDeckAction = EEchoesCommandDeckAction::None;
+        switch (PendingAction)
+        {
+            case EEchoesCommandDeckAction::AttackMove:
+                AttackMoveAtCursor();
+                break;
+            case EEchoesCommandDeckAction::Patrol:
+                PatrolAtCursor();
+                break;
+            case EEchoesCommandDeckAction::Guard:
+                GuardAtCursor();
+                break;
+            case EEchoesCommandDeckAction::BuildBarracks:
+                BuildBarracks();
+                break;
+            case EEchoesCommandDeckAction::BuildDropoff:
+                BuildDropoff();
+                break;
+            case EEchoesCommandDeckAction::BuildUtility:
+                BuildUtility();
+                break;
+            default:
+                break;
+        }
+        return;
+    }
     SelectionStartScreenPosition = PointerPosition;
     SelectionCurrentScreenPosition = SelectionStartScreenPosition;
     bSelectionButtonDown = true;
@@ -8808,6 +8845,39 @@ void AEchoesPlayerController::ContextOrderPressed()
     if (IsModalOverlayVisible())
     {
         return;
+    }
+    if (ArmedDeckAction != EEchoesCommandDeckAction::None)
+    {
+        ArmedDeckAction = EEchoesCommandDeckAction::None;
+        SetStatusMessage(TEXT("Order cancelled."), 3.0f);
+        return;
+    }
+    {
+        // A right-click on the interface must not issue a battlefield order.
+        FVector2D PointerPosition = FVector2D::ZeroVector;
+        FVector2D ViewportSize = FVector2D::ZeroVector;
+        if (ResolvePointerScreenPosition(PointerPosition, &ViewportSize) &&
+            ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f)
+        {
+            const UEchoesGameUserSettings* Settings =
+                UEchoesGameUserSettings::Get();
+            const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+                ViewportSize,
+                Settings != nullptr ? Settings->GetHudScale() : 1.0f,
+                !GetStatusMessage().IsEmpty());
+            if (Layout.MainPanel.IsInsideOrOn(PointerPosition) ||
+                (Layout.bCommandDeckVisible &&
+                 Layout.CommandDeckPanel.IsInsideOrOn(PointerPosition)) ||
+                (Layout.bObjectiveVisible &&
+                 Layout.ObjectivePanel.IsInsideOrOn(PointerPosition)) ||
+                (Layout.bStatusVisible &&
+                 Layout.StatusPanel.IsInsideOrOn(PointerPosition)) ||
+                (Layout.bMinimapVisible &&
+                 Layout.MinimapPanel.IsInsideOrOn(PointerPosition)))
+            {
+                return;
+            }
+        }
     }
     PruneSelection();
     if (SelectedEntityIds.IsEmpty())
@@ -9175,6 +9245,11 @@ void AEchoesPlayerController::ClearSelection()
         SetEntitySelected(EntityId, false);
     }
     SelectedEntityIds.Reset();
+    // An armed deck order is meaningless without a selection, so losing the
+    // selection disarms it. Every scenario end, restart, load, match finish,
+    // and menu return clears the selection, so no armed order can survive a
+    // transition and fire into the next context.
+    ArmedDeckAction = EEchoesCommandDeckAction::None;
 }
 
 bool AEchoesPlayerController::SetControlGroup(
@@ -11697,6 +11772,170 @@ bool AEchoesPlayerController::HandleOnlineFrontDoorPointer(
     return true;
 }
 
+FEchoesTitleOverlayFacts
+AEchoesPlayerController::BuildTitleOverlayFacts() const
+{
+    FEchoesTitleOverlayFacts Facts;
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr)
+    {
+        return Facts;
+    }
+    Facts.bContinueAvailable =
+        Bridge->GetCampaignJourney().State ==
+        EEchoesCampaignJourneyState::Ready;
+    Facts.bNewCampaignAvailable =
+        !Bridge->GetCampaignProgress().Decisions.IsEmpty();
+    Facts.bRestoreAvailable = Bridge->HasRestorableCampaignBackup();
+    return Facts;
+}
+
+FEchoesCommandDeckProfile
+AEchoesPlayerController::BuildCommandDeckProfile() const
+{
+    FEchoesCommandDeckProfile Profile;
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr)
+    {
+        return Profile;
+    }
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
+        if (Entity == nullptr ||
+            Entity->owner != UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            continue;
+        }
+        switch (Entity->type)
+        {
+            case echoes::sim::EntityType::Worker:
+                ++Profile.WorkerCount;
+                break;
+            case echoes::sim::EntityType::Soldier:
+            case echoes::sim::EntityType::HeavyUnit:
+            case echoes::sim::EntityType::ScoutUnit:
+                ++Profile.CombatCount;
+                break;
+            case echoes::sim::EntityType::CommandCore:
+            case echoes::sim::EntityType::Dropoff:
+            case echoes::sim::EntityType::Barracks:
+            case echoes::sim::EntityType::UtilityStructure:
+                ++Profile.StructureCount;
+                Profile.bHasCommandCore =
+                    Profile.bHasCommandCore ||
+                    Entity->type == echoes::sim::EntityType::CommandCore;
+                Profile.bHasBarracks =
+                    Profile.bHasBarracks ||
+                    Entity->type == echoes::sim::EntityType::Barracks;
+                break;
+            default:
+                ++Profile.OtherCount;
+                break;
+        }
+    }
+    return Profile;
+}
+
+void AEchoesPlayerController::ActivateCommandDeckAction(
+    EEchoesCommandDeckAction Action)
+{
+    switch (Action)
+    {
+        // Cursor-targeted orders arm and wait for a battlefield target: their
+        // handlers resolve a position at the cursor, which is over the deck
+        // at the moment the button is pressed.
+        case EEchoesCommandDeckAction::AttackMove:
+        case EEchoesCommandDeckAction::Patrol:
+        case EEchoesCommandDeckAction::Guard:
+        case EEchoesCommandDeckAction::BuildBarracks:
+        case EEchoesCommandDeckAction::BuildDropoff:
+        case EEchoesCommandDeckAction::BuildUtility:
+            ArmedDeckAction = Action;
+            SetStatusMessage(
+                TEXT("Select a target on the battlefield. Right-click cancels."),
+                8.0f);
+            return;
+        case EEchoesCommandDeckAction::Hold:
+            HoldSelectedUnits();
+            return;
+        case EEchoesCommandDeckAction::Stop:
+            StopSelectedUnits();
+            return;
+        case EEchoesCommandDeckAction::ProduceWorker:
+            ProduceWorker();
+            return;
+        case EEchoesCommandDeckAction::ProduceSoldier:
+            ProduceSoldier();
+            return;
+        case EEchoesCommandDeckAction::ProduceHeavy:
+            ProduceHeavy();
+            return;
+        case EEchoesCommandDeckAction::ProduceScout:
+            ProduceScout();
+            return;
+        case EEchoesCommandDeckAction::ToggleTechnology:
+            ToggleTechnologyPanel();
+            return;
+        case EEchoesCommandDeckAction::CycleFormation:
+            CycleFormation();
+            return;
+        case EEchoesCommandDeckAction::None:
+        default:
+            return;
+    }
+}
+
+bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
+    const FVector2D& ScreenPosition,
+    const FVector2D& ViewportSize)
+{
+    if (ViewportSize.X <= 0.0f || ViewportSize.Y <= 0.0f)
+    {
+        return false;
+    }
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    const float HudScale =
+        Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        ViewportSize, HudScale, !GetStatusMessage().IsEmpty());
+
+    const bool bOverCommandDeck =
+        Layout.bCommandDeckVisible &&
+        Layout.CommandDeckPanel.IsInsideOrOn(ScreenPosition);
+    if (bOverCommandDeck)
+    {
+        const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
+            Entries = FEchoesCommandDeckModel::BuildActionEntries(
+                BuildCommandDeckProfile());
+        const FEchoesCommandDeckLayout DeckLayout =
+            FEchoesCommandDeckLayout::Build(
+                Layout.CommandDeckPanel, HudScale, Entries.Num());
+        const int32 ButtonIndex = DeckLayout.HitTest(ScreenPosition);
+        if (Entries.IsValidIndex(ButtonIndex))
+        {
+            ActivateCommandDeckAction(Entries[ButtonIndex].Action);
+        }
+        return true;
+    }
+
+    // Any other visible HUD panel absorbs the press: a click on the interface
+    // must never fall through and clear the player's selection.
+    return Layout.MainPanel.IsInsideOrOn(ScreenPosition) ||
+           (Layout.bObjectiveVisible &&
+            Layout.ObjectivePanel.IsInsideOrOn(ScreenPosition)) ||
+           (Layout.bStatusVisible &&
+            Layout.StatusPanel.IsInsideOrOn(ScreenPosition)) ||
+           (Layout.bMinimapVisible &&
+            Layout.MinimapPanel.IsInsideOrOn(ScreenPosition));
+}
+
 bool AEchoesPlayerController::HandleModalOverlayPointer(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize,
@@ -11739,6 +11978,69 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
             ViewportSize, HudScale).IsInsideOrOn(ScreenPosition))
     {
         OpenOnlineFrontDoor();
+        return true;
+    }
+
+    if (bNetworkCompatibilityAccepted && !bNetworkMatchStarted)
+    {
+        // Online lobby. Only the ready control is claimed here; the cancel
+        // path is Network-lane session semantics and stays unbound.
+        const FEchoesLobbyOverlayLayout Layout =
+            FEchoesLobbyOverlayLayout::Build(ViewportSize, HudScale);
+        if (Layout.ReadyButton.IsInsideOrOn(ScreenPosition))
+        {
+            ConfirmPrimaryAction();
+        }
+        return true;
+    }
+
+    if (bTitleScreenVisible && !IsSkirmishSetupVisible())
+    {
+        const FEchoesTitleOverlayLayout Layout =
+            FEchoesTitleOverlayLayout::Build(
+                ViewportSize, BuildTitleOverlayFacts());
+        if (Layout.OperationButton.IsInsideOrOn(ScreenPosition))
+        {
+            CycleOperation();
+        }
+        else if (Layout.FactionButton.IsInsideOrOn(ScreenPosition))
+        {
+            CyclePlayableFaction();
+        }
+        else if (Layout.bContinueVisible &&
+                 Layout.ContinueButton.IsInsideOrOn(ScreenPosition))
+        {
+            ContinueCampaign();
+        }
+        else if (Layout.bNewCampaignVisible &&
+                 Layout.NewCampaignButton.IsInsideOrOn(ScreenPosition))
+        {
+            RequestNewCampaign();
+        }
+        else if (Layout.bRestoreVisible &&
+                 Layout.RestoreButton.IsInsideOrOn(ScreenPosition))
+        {
+            RequestCampaignRestore();
+        }
+        else if (Layout.OpenBriefButton.IsInsideOrOn(ScreenPosition))
+        {
+            ConfirmPrimaryAction();
+        }
+        return true;
+    }
+
+    if (bMissionBriefingVisible && !IsSkirmishDeploymentSummaryVisible())
+    {
+        const FEchoesBriefingOverlayLayout Layout =
+            FEchoesBriefingOverlayLayout::Build(ViewportSize);
+        if (Layout.OperationButton.IsInsideOrOn(ScreenPosition))
+        {
+            CycleOperation();
+        }
+        else if (Layout.DeployButton.IsInsideOrOn(ScreenPosition))
+        {
+            ConfirmPrimaryAction();
+        }
         return true;
     }
 

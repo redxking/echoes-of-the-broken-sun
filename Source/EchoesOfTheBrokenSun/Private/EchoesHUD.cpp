@@ -6,8 +6,10 @@
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesSeveralVoicesOneCommandMissionModel.h"
+#include "EchoesCommandDeckLayout.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
+#include "EchoesTitleOverlayLayout.h"
 #include "EchoesEntityView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
@@ -136,6 +138,46 @@ FString ActiveSkirmishMapDisplayName(
         : EEchoesSkirmishMapPreset::GlassScar;
     return FEchoesSkirmishSetupModel::MapDisplayName(Preset);
 }
+}
+
+void AEchoesHUD::DrawPointerButton(
+    const FBox2D& Bounds,
+    const FString& Label,
+    const FEchoesVisualTheme& Theme,
+    const bool bPrimary,
+    const float TextScale)
+{
+    const FVector2D Size = Bounds.GetSize();
+    if (Canvas == nullptr || Size.X <= 0.0f || Size.Y <= 0.0f)
+    {
+        return;
+    }
+    DrawRect(
+        bPrimary ? Theme.Accent : Theme.ElevatedSurface,
+        Bounds.Min.X,
+        Bounds.Min.Y,
+        Size.X,
+        Size.Y);
+    if (!bPrimary)
+    {
+        DrawLine(Bounds.Min.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Min.Y,
+                 Theme.Accent, Theme.BorderThickness);
+        DrawLine(Bounds.Max.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Max.Y,
+                 Theme.Accent, Theme.BorderThickness);
+        DrawLine(Bounds.Max.X, Bounds.Max.Y, Bounds.Min.X, Bounds.Max.Y,
+                 Theme.Accent, Theme.BorderThickness);
+        DrawLine(Bounds.Min.X, Bounds.Max.Y, Bounds.Min.X, Bounds.Min.Y,
+                 Theme.Accent, Theme.BorderThickness);
+    }
+    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    DrawText(
+        Label,
+        bPrimary ? Theme.ActionText : Theme.TextPrimary,
+        Bounds.Min.X + 12.0f,
+        Bounds.Min.Y + FMath::Max(2.0f, Size.Y * 0.24f),
+        SmallFont,
+        TextScale,
+        false);
 }
 
 void AEchoesHUD::DrawVisualPanel(
@@ -395,9 +437,18 @@ void AEchoesHUD::DrawHUD()
             GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
             0.92f * HudScale,
             false);
-        DrawText(
-            TEXT("[ENTER]  READY AND START MATCH"),
+        const FEchoesLobbyOverlayLayout LobbyPointerLayout =
+            FEchoesLobbyOverlayLayout::Build(
+                FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale);
+        DrawRect(
             AccentColor,
+            LobbyPointerLayout.ReadyButton.Min.X,
+            LobbyPointerLayout.ReadyButton.Min.Y,
+            LobbyPointerLayout.ReadyButton.GetSize().X,
+            LobbyPointerLayout.ReadyButton.GetSize().Y);
+        DrawText(
+            TEXT("[ENTER] / CLICK  READY AND START MATCH"),
+            FLinearColor::Black,
             LobbyX + 32.0f,
             LobbyY + 184.0f,
             GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
@@ -1441,41 +1492,9 @@ void AEchoesHUD::DrawCommandDeck(
         return;
     }
 
-    FEchoesCommandDeckProfile Profile;
-    for (const uint32 EntityId : SelectedIds)
-    {
-        const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
-        if (Entity == nullptr || Entity->owner != UEchoesSimulationSubsystem::LocalPlayerId)
-        {
-            continue;
-        }
-        switch (Entity->type)
-        {
-            case echoes::sim::EntityType::Worker:
-                ++Profile.WorkerCount;
-                break;
-            case echoes::sim::EntityType::Soldier:
-            case echoes::sim::EntityType::HeavyUnit:
-            case echoes::sim::EntityType::ScoutUnit:
-                ++Profile.CombatCount;
-                break;
-            case echoes::sim::EntityType::CommandCore:
-            case echoes::sim::EntityType::Dropoff:
-            case echoes::sim::EntityType::Barracks:
-            case echoes::sim::EntityType::UtilityStructure:
-                ++Profile.StructureCount;
-                Profile.bHasCommandCore =
-                    Profile.bHasCommandCore ||
-                    Entity->type == echoes::sim::EntityType::CommandCore;
-                Profile.bHasBarracks =
-                    Profile.bHasBarracks ||
-                    Entity->type == echoes::sim::EntityType::Barracks;
-                break;
-            default:
-                ++Profile.OtherCount;
-                break;
-        }
-    }
+    // One profile source shared with the controller's deck hit-testing.
+    const FEchoesCommandDeckProfile Profile =
+        EchoesController->BuildCommandDeckProfile();
 
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
@@ -1529,16 +1548,41 @@ void AEchoesHUD::DrawCommandDeck(
         0.76f * HudScale,
         false);
 
-    const FString PrimaryActions =
-        FEchoesCommandDeckModel::BuildPrimaryActions(Profile);
-    DrawText(
-        PrimaryActions,
-        Body,
-        Left + 18.0f * HudScale,
-        Top + 63.0f * HudScale,
-        SmallFont,
-        0.75f * HudScale,
-        false);
+    // Primary actions are drawn as clickable buttons on the shared deck
+    // layout; the controller hit-tests the same boxes. Below a usable button
+    // width the deck falls back to the label line and stays display-only.
+    const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>> Entries =
+        FEchoesCommandDeckModel::BuildActionEntries(Profile);
+    const FEchoesCommandDeckLayout DeckPointerLayout =
+        FEchoesCommandDeckLayout::Build(
+            Layout.CommandDeckPanel, HudScale, Entries.Num());
+    if (DeckPointerLayout.Buttons.Num() == Entries.Num())
+    {
+        const EEchoesCommandDeckAction ArmedAction =
+            EchoesController->GetArmedDeckAction();
+        for (int32 Index = 0; Index < Entries.Num(); ++Index)
+        {
+            const FEchoesCommandDeckActionEntry& Entry = Entries[Index];
+            DrawPointerButton(
+                DeckPointerLayout.Buttons[Index],
+                FString::Printf(
+                    TEXT("[%s] %s"), Entry.Hotkey, Entry.Label),
+                Theme,
+                Entry.Action == ArmedAction,
+                0.70f * HudScale);
+        }
+    }
+    else
+    {
+        DrawText(
+            FEchoesCommandDeckModel::BuildPrimaryActions(Profile),
+            Body,
+            Left + 18.0f * HudScale,
+            Top + 63.0f * HudScale,
+            SmallFont,
+            0.75f * HudScale,
+            false);
+    }
 
     EEchoesFormationType NextFormation = EEchoesFormationType::Box;
     switch (EchoesController->GetFormationType())
@@ -2115,18 +2159,17 @@ void AEchoesHUD::DrawTitleScreen(
     const FEchoesVisualTheme Theme =
         UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    const float PanelWidth = FMath::Min(
-        FMath::Max(700.0f, Canvas->ClipX - 60.0f),
-        FMath::Clamp(Canvas->ClipX * 0.60f, 860.0f, 1220.0f));
-    const float PanelHeight = FMath::Min(
-        FMath::Max(560.0f, Canvas->ClipY - 60.0f),
-        FMath::Clamp(Canvas->ClipY * 0.72f, 620.0f, 760.0f));
-    const float Left = (Canvas->ClipX - PanelWidth) * 0.5f;
-    const float Top = (Canvas->ClipY - PanelHeight) * 0.5f;
-    const float ContentScale = FMath::Clamp(
-        FMath::Min(PanelWidth / 940.0f, PanelHeight / 650.0f),
-        0.76f,
-        1.22f);
+    // Geometry comes from the shared layout the pointer handler hit-tests
+    // against, so a drawn control is always a clickable control.
+    const FEchoesTitleOverlayLayout PointerLayout =
+        FEchoesTitleOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY),
+            EchoesController->BuildTitleOverlayFacts());
+    const float PanelWidth = PointerLayout.Panel.GetSize().X;
+    const float PanelHeight = PointerLayout.Panel.GetSize().Y;
+    const float Left = PointerLayout.Panel.Min.X;
+    const float Top = PointerLayout.Panel.Min.Y;
+    const float ContentScale = PointerLayout.ContentScale;
     const float TextScale = HudScale * ContentScale;
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
@@ -2360,44 +2403,89 @@ void AEchoesHUD::DrawTitleScreen(
         : FString::Printf(
               TEXT("[F9] CHANGE OPERATION  //  [TAB] FACTION  //  ADAPTIVE %s"),
               *OpponentFaction);
-    DrawText(
+    // The operation and campaign controls are drawn as real buttons on the
+    // shared layout boxes; every one keeps its keyboard shortcut on the face.
+    DrawPointerButton(
+        PointerLayout.OperationButton,
         OperationControlLine,
-             Accent, Left + 48.0f, Top + 272.0f * ContentScale,
-             SmallFont, 0.80f * TextScale, false);
-    FString CampaignControlLine = FString::Printf(
-        TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
-        ActiveCampaignRecords,
-        ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S"));
+        Theme,
+        false,
+        0.74f * TextScale);
+    DrawPointerButton(
+        PointerLayout.FactionButton,
+        FString::Printf(TEXT("[TAB] LOCAL FORCE  //  %s"), *LocalFaction),
+        Theme,
+        false,
+        0.74f * TextScale);
+
+    FString ContinueLabel;
     if (CampaignJourney.State == EEchoesCampaignJourneyState::Ready)
     {
-        CampaignControlLine += FString::Printf(
-            TEXT("  //  [C] CONTINUE M%02d %s"),
+        ContinueLabel = FString::Printf(
+            TEXT("[C] CONTINUE M%02d %s"),
             CampaignJourney.CompletedMissionCount + 1,
             FEchoesCampaignJourneyModel::OperationDisplayName(
                 CampaignJourney.NextOperation));
     }
     else if (CampaignJourney.State == EEchoesCampaignJourneyState::Complete)
     {
-        CampaignControlLine += TEXT("  //  COMPLETE 15/15");
+        ContinueLabel = TEXT("CAMPAIGN COMPLETE 15/15");
     }
     else
     {
-        CampaignControlLine += TEXT("  //  CONTINUATION UNAVAILABLE");
+        ContinueLabel = TEXT("CONTINUATION UNAVAILABLE");
     }
-    if (bCanStartNewCampaign)
+    if (PointerLayout.bContinueVisible)
     {
-        CampaignControlLine += TEXT("  //  [F10] NEW");
+        DrawPointerButton(
+            PointerLayout.ContinueButton,
+            ContinueLabel,
+            Theme,
+            false,
+            0.72f * TextScale);
     }
-    if (bCanRestoreCampaign)
+    else
     {
-        CampaignControlLine += FString::Printf(
-            TEXT("  //  [PAGE UP] RESTORE PRIOR %d"),
-            BackupCampaignRecords);
+        DrawText(
+            ContinueLabel,
+            Muted,
+            PointerLayout.ContinueButton.Min.X,
+            PointerLayout.ContinueButton.Min.Y + 6.0f,
+            SmallFont,
+            0.72f * TextScale,
+            false);
+    }
+    if (PointerLayout.bNewCampaignVisible)
+    {
+        DrawPointerButton(
+            PointerLayout.NewCampaignButton,
+            TEXT("[F10] NEW CAMPAIGN"),
+            Theme,
+            false,
+            0.72f * TextScale);
+    }
+    if (PointerLayout.bRestoreVisible)
+    {
+        DrawPointerButton(
+            PointerLayout.RestoreButton,
+            FString::Printf(
+                TEXT("[PAGE UP] RESTORE PRIOR %d"),
+                BackupCampaignRecords),
+            Theme,
+            false,
+            0.72f * TextScale);
     }
     DrawText(
-        CampaignControlLine,
-        Muted, Left + 48.0f, Top + 298.0f * ContentScale,
-        SmallFont, 0.78f * TextScale, false);
+        FString::Printf(
+            TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
+            ActiveCampaignRecords,
+            ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S")),
+        Muted,
+        Left + 48.0f,
+        Top + 246.0f * ContentScale,
+        SmallFont,
+        0.74f * TextScale,
+        false);
     DrawText(
         bNewCampaignArmed
             ? TEXT("NEW CAMPAIGN CONFIRMATION ARMED — ACTIVE PROGRESS WILL BE REPLACED.")
@@ -2485,14 +2573,18 @@ void AEchoesHUD::DrawTitleScreen(
              Left + 48.0f, Top + 474.0f * ContentScale,
              SmallFont, 0.78f * TextScale, false);
 
-    DrawRect(Accent, Left + 48.0f, Top + PanelHeight - 82.0f,
-             PanelWidth - 96.0f, 46.0f);
+    DrawRect(
+        Accent,
+        PointerLayout.OpenBriefButton.Min.X,
+        PointerLayout.OpenBriefButton.Min.Y,
+        PointerLayout.OpenBriefButton.GetSize().X,
+        PointerLayout.OpenBriefButton.GetSize().Y);
     DrawText(
              CampaignJourney.State == EEchoesCampaignJourneyState::Ready
-                 ? TEXT("ENTER: OPEN SELECTED BRIEF   //   C: CONTINUE CAMPAIGN")
+                 ? TEXT("ENTER / CLICK: OPEN SELECTED BRIEF   //   C: CONTINUE CAMPAIGN")
              : CampaignJourney.State == EEchoesCampaignJourneyState::Complete
-                 ? TEXT("ENTER: OPEN SELECTED BRIEF   //   CAMPAIGN COMPLETE")
-                 : TEXT("PRESS ENTER TO OPEN THE OPERATIONS BRIEF"),
+                 ? TEXT("ENTER / CLICK: OPEN SELECTED BRIEF   //   CAMPAIGN COMPLETE")
+                 : TEXT("PRESS ENTER OR CLICK TO OPEN THE OPERATIONS BRIEF"),
              Theme.ActionText,
              Left + PanelWidth * 0.5f - 236.0f * TextScale,
              Top + PanelHeight - 69.0f,
@@ -5766,8 +5858,23 @@ void AEchoesHUD::DrawMissionBriefing(
     DrawText(TEXT("[U] UI scale   [I] high contrast   [O] reduced motion   [/] reduced flashing"),
              Body, TextLeft, Top + (451.0f + LowerBlockShift) * ContentScale, SmallFont, 0.92f * TextScale, false);
 
-    DrawRect(Accent, Left + 42.0f, Top + PanelHeight - 74.0f,
-             PanelWidth - 84.0f, 42.0f);
+    // Both actions this bar advertises are separately clickable on the shared
+    // briefing layout the pointer handler hit-tests.
+    const FEchoesBriefingOverlayLayout BriefingPointerLayout =
+        FEchoesBriefingOverlayLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY));
+    DrawPointerButton(
+        BriefingPointerLayout.OperationButton,
+        TEXT("[F9] CHANGE OPERATION"),
+        Theme,
+        false,
+        0.80f * TextScale);
+    DrawRect(
+        Accent,
+        BriefingPointerLayout.DeployButton.Min.X,
+        BriefingPointerLayout.DeployButton.Min.Y,
+        BriefingPointerLayout.DeployButton.GetSize().X,
+        BriefingPointerLayout.DeployButton.GetSize().Y);
     DrawText(
         bPrologue
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
@@ -5801,10 +5908,10 @@ void AEchoesHUD::DrawMissionBriefing(
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS THE FINAL ACCORD")
             : TEXT("F9 OPERATION  //  TAB FACTION  //  ENTER DEPLOYS"),
              Theme.ActionText,
-             Left + PanelWidth * 0.5f - 180.0f * TextScale,
+             BriefingPointerLayout.DeployButton.Min.X + 14.0f,
              Top + PanelHeight - 64.0f,
              SmallFont,
-             1.05f * TextScale,
+             0.92f * TextScale,
              false);
 }
 

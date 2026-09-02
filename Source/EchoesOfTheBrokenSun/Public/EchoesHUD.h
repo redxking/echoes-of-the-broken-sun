@@ -78,6 +78,13 @@ private:
         const AEchoesPlayerController* EchoesController,
         const UEchoesSimulationSubsystem* Bridge,
         const UEchoesGameUserSettings* Settings);
+    /** Draws one bordered, clickable control from a shared layout box. */
+    void DrawPointerButton(
+        const FBox2D& Bounds,
+        const FString& Label,
+        const FEchoesVisualTheme& Theme,
+        bool bPrimary,
+        float TextScale);
     void DrawVisualPanel(
         const FBox2D& Bounds,
         const FEchoesVisualTheme& Theme,

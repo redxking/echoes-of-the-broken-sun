@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesCommandDeckModel.h"
 #include "EchoesFormationLayout.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSkirmishSetup.h"
+#include "EchoesTitleOverlayLayout.h"
 #include "GameFramework/PlayerController.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimCore/Simulation.h"
@@ -236,6 +238,29 @@ public:
         const FVector2D& ScreenPosition,
         const FVector2D& ViewportSize,
         float HudScale);
+    /**
+     * Battlefield press at an explicit screen position. Returns true when the
+     * press was consumed by a HUD panel (command deck, objectives, status,
+     * minimap, main) so it must not reach battlefield selection. Selection
+     * itself is never cleared by a consumed press.
+     */
+    bool HandleBattlefieldPointerPressed(
+        const FVector2D& ScreenPosition,
+        const FVector2D& ViewportSize);
+    /** Runs one command-deck action; cursor-targeted actions arm instead. */
+    void ActivateCommandDeckAction(EEchoesCommandDeckAction Action);
+    /**
+     * Which campaign title controls exist right now. The HUD draws from this
+     * and the pointer handler hit-tests from it, so a control cannot be drawn
+     * without being clickable or clickable without being drawn.
+     */
+    [[nodiscard]] FEchoesTitleOverlayFacts BuildTitleOverlayFacts() const;
+    /** Selection profile driving the deck's labels, buttons, and hit-tests. */
+    [[nodiscard]] FEchoesCommandDeckProfile BuildCommandDeckProfile() const;
+    [[nodiscard]] EEchoesCommandDeckAction GetArmedDeckAction() const
+    {
+        return ArmedDeckAction;
+    }
     [[nodiscard]] FString GetLocalFactionLabel() const;
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
@@ -727,6 +752,12 @@ private:
     bool bSelectionButtonDown = false;
     bool bRuntimeStateKnown = false;
     bool bControlGroupAssignmentArmed = false;
+    /**
+     * Deck action awaiting a battlefield target, armed by a deck button whose
+     * handler resolves its position at the cursor. Presentation/input state
+     * only, in the same family as bControlGroupAssignmentArmed.
+     */
+    EEchoesCommandDeckAction ArmedDeckAction = EEchoesCommandDeckAction::None;
     bool bTitleScreenVisible = false;
     bool bMissionBriefingVisible = false;
     bool bPauseMenuVisible = false;
