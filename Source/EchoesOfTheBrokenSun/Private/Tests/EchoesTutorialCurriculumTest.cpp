@@ -93,7 +93,11 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
              FModel::DetermineLessonState(Facts, false, 0) ==
                  EEchoesTutorialLessonState::Locked);
 
-    FEchoesTutorialLessonFacts Lost = VerifiedFacts();
+    // Built from an opened, acted, NOT-verified lesson: a lesson that ends in
+    // an unrecoverable loss cannot also report authoritative success, and the
+    // model rejects that pair as conflicting terminal facts (asserted below).
+    FEchoesTutorialLessonFacts Lost = OpenedFacts();
+    Lost.bActionObserved = true;
     Lost.bUnrecoverableFault = true;
     TestTrue(TEXT("An unrecoverable fault fails a lesson the player has reached"),
              FModel::DetermineLessonState(Lost, true, 0) ==
@@ -135,8 +139,9 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
                      EEchoesTutorialLessonState::Locked &&
                  !Skipped.bMasteryComplete && Skipped.ActiveLessonIndex == 0);
 
-    TArray<FEchoesTutorialLessonFacts> WithLoss =
-        CurriculumVerifiedThrough(EchoesTutorialLessonCount);
+    // Lessons 0-4 verified so lesson 5's prerequisite is met; lesson 5 is
+    // opened rather than verified, so faulting it is a coherent history.
+    TArray<FEchoesTutorialLessonFacts> WithLoss = CurriculumVerifiedThrough(5);
     WithLoss[5].bUnrecoverableFault = true;
     const FEchoesTutorialCurriculumState Failed =
         FModel::DetermineCurriculumState(WithLoss);
@@ -175,6 +180,11 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Verification without an observed action is refused"),
              FModel::AreLessonFactsMalformed(VerifiedWithoutAction, 0));
 
+    // The counterpart to the `Lost` case above: the SAME fault on a VERIFIED
+    // lesson is incoherent, so it must lock rather than fail. These two
+    // assertions are what keep a reached-and-faulted lesson distinguishable
+    // from a caller reporting success and loss at once; constructing `Lost`
+    // from verified facts would make this file assert both at once.
     FEchoesTutorialLessonFacts Conflicting = VerifiedFacts();
     Conflicting.bUnrecoverableFault = true;
     TestTrue(TEXT("Conflicting terminal facts lock rather than fail the lesson"),
