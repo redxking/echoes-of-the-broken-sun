@@ -172,10 +172,17 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
     BaseConfig.rules = Rules;
     BaseConfig.randomSeed = 1;
 
-    // Scenario 1 — escort pace gap. A Lancer guarding a moving Relay Skiff
-    // falls behind at exactly the speed difference per tick; the gap crosses
-    // the 6-tile response leash at the closed-form tick and the guard only
-    // reforms after the guarded unit stops.
+    // Scenario 1 — escort pace gap under waypoint-clamped movement. Path
+    // waypoints are the origins of adjacent tiles (4-directional field), and
+    // MoveTowards clamps each tick's travel at the next waypoint, so any
+    // per-tick residual is lost at every tile boundary. A 256-raw Skiff
+    // divides the 1024-raw tile exactly and sustains full speed; a 163-raw
+    // Lancer needs 7 ticks per tile (6x163 + 46), an effective 1024/7 =
+    // ~146.3 raw per tick — the gap therefore grows lumpily (+93 on plain
+    // ticks, +210 on the Lancer's clamp ticks), not by the nominal speed
+    // delta. The test mirrors that model tick-for-tick and derives the
+    // leash-crossing tick from it (38 with current content values; the
+    // linear nominal-delta model wrongly predicts 45).
     {
         sim::Simulation Simulation(BaseConfig);
         TestTrue(TEXT("S1: local player joins"),
@@ -207,12 +214,30 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                   VerticalGapRaw(Simulation, Vip, Guard),
                   static_cast<std::int64_t>(ExpectedGuardFollowRaw));
 
-        const std::int32_t SpeedDelta = MeridianScout.movementPerTickRaw -
-                                        MeridianSoldier.movementPerTickRaw;
+        const std::int32_t VipSpeed = MeridianScout.movementPerTickRaw;
+        const std::int32_t GuardSpeed = MeridianSoldier.movementPerTickRaw;
         TestTrue(TEXT("S1: guarded unit is strictly faster than its escort"),
-                 SpeedDelta > 0);
-        const std::int64_t PredictedBreakTick =
-            (ExpectedGuardLeashRaw - ExpectedGuardFollowRaw) / SpeedDelta + 1;
+                 VipSpeed > GuardSpeed);
+
+        // Tick mirror of MoveTowards on a straight open column: advance
+        // clamps at the next kFixedScale (tile-origin) boundary; the
+        // residual beyond the boundary is lost for that tick.
+        const auto ClampedAdvance = [](std::int64_t PositionRaw,
+                                       std::int32_t SpeedRaw) -> std::int64_t
+        {
+            // On a boundary the remainder is 0 and the next waypoint is a
+            // full tile away, so ToBoundary lands in [1, kFixedScale].
+            const std::int64_t ToBoundary =
+                sim::kFixedScale - (PositionRaw % sim::kFixedScale);
+            return PositionRaw +
+                   std::min<std::int64_t>(SpeedRaw, ToBoundary);
+        };
+        const std::int64_t VipGoalRaw =
+            static_cast<std::int64_t>(52) * sim::kFixedScale;
+        std::int64_t ModelVipRaw =
+            static_cast<std::int64_t>(12) * sim::kFixedScale;
+        std::int64_t ModelGuardRaw =
+            static_cast<std::int64_t>(10) * sim::kFixedScale;
 
         sim::Command MoveCommand{};
         MoveCommand.player = 0;
@@ -223,13 +248,31 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                  Issuer.IssueAndStep(*this, TEXT("S1 move"), MoveCommand) ==
                      sim::CommandResolutionOutcome::Applied);
 
-        // The execution step above was also the first movement tick.
+        // The execution step above was also the first movement tick; the VIP
+        // (spawned first) moves before its guard within each step, and the
+        // guard moves only while the post-move gap exceeds the follow radius.
+        const auto ModelTick = [&]()
+        {
+            ModelVipRaw = std::min(VipGoalRaw, ClampedAdvance(ModelVipRaw, VipSpeed));
+            if (ModelVipRaw - ModelGuardRaw > ExpectedGuardFollowRaw)
+            {
+                ModelGuardRaw = ClampedAdvance(ModelGuardRaw, GuardSpeed);
+            }
+        };
+        ModelTick();
+
         std::int64_t MovementTicks = 1;
-        std::int64_t PreviousGap = VerticalGapRaw(Simulation, Vip, Guard);
         std::int64_t ObservedBreakTick = 0;
-        std::int64_t MaximumGap = PreviousGap;
-        bool SteadyDeltaHeld = true;
-        if (PreviousGap > ExpectedGuardLeashRaw)
+        std::int64_t ModelBreakTick = 0;
+        std::int64_t MaximumGap = VerticalGapRaw(Simulation, Vip, Guard);
+        bool ModelMatchedEveryTick =
+            VerticalGapRaw(Simulation, Vip, Guard) ==
+            ModelVipRaw - ModelGuardRaw;
+        if (ModelVipRaw - ModelGuardRaw > ExpectedGuardLeashRaw)
+        {
+            ModelBreakTick = MovementTicks;
+        }
+        if (MaximumGap > ExpectedGuardLeashRaw)
         {
             ObservedBreakTick = MovementTicks;
         }
@@ -246,27 +289,30 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                 break;
             }
             Simulation.Step();
+            ModelTick();
             ++MovementTicks;
             const std::int64_t Gap = VerticalGapRaw(Simulation, Vip, Guard);
-            const sim::Entity* VipAfter = Simulation.FindEntity(Vip);
-            const bool bVipStillMoving =
-                VipAfter != nullptr &&
-                VipAfter->order.type == sim::OrderType::Move;
-            if (bVipStillMoving && Gap - PreviousGap != SpeedDelta)
+            if (Gap != ModelVipRaw - ModelGuardRaw)
             {
-                SteadyDeltaHeld = false;
+                ModelMatchedEveryTick = false;
             }
             if (ObservedBreakTick == 0 && Gap > ExpectedGuardLeashRaw)
             {
                 ObservedBreakTick = MovementTicks;
             }
+            if (ModelBreakTick == 0 &&
+                ModelVipRaw - ModelGuardRaw > ExpectedGuardLeashRaw)
+            {
+                ModelBreakTick = MovementTicks;
+            }
             MaximumGap = std::max(MaximumGap, Gap);
-            PreviousGap = Gap;
         }
-        TestTrue(TEXT("S1: gap grows by exactly the speed delta on every full movement tick"),
-                 SteadyDeltaHeld);
-        TestEqual(TEXT("S1: gap crosses the 6-tile leash at the closed-form tick"),
-                  ObservedBreakTick, PredictedBreakTick);
+        TestTrue(TEXT("S1: measured gap equals the waypoint-clamped model on every movement tick"),
+                 ModelMatchedEveryTick);
+        TestEqual(TEXT("S1: gap crosses the 6-tile leash at the model-derived tick"),
+                  ObservedBreakTick, ModelBreakTick);
+        TestEqual(TEXT("S1: model-derived leash-break tick is 38 with current content stats"),
+                  ModelBreakTick, static_cast<std::int64_t>(38));
         TestTrue(TEXT("S1: transit gap exceeds the leash — the escort cannot protect in transit"),
                  MaximumGap > ExpectedGuardLeashRaw);
 
