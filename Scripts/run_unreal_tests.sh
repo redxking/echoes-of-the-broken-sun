@@ -184,12 +184,12 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "65" ||
+if [[ "$(read_report_value succeeded)" != "68" ||
       "$(read_report_value succeededWithWarnings)" != "0" ||
       "$(read_report_value failed)" != "0" ||
       "$(read_report_value notRun)" != "0" ||
       "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the expected 62/62 clean result."
+  print -u2 "Unreal automation totals did not match the expected 68/68 clean result."
   print -u2 "Inspect: $report"
   exit 4
 fi
@@ -201,6 +201,7 @@ expected_tests=(
   "Echoes.Runtime.Audio.InterfaceCues"
   "Echoes.Runtime.Audio.GameplayCues"
   "Echoes.Runtime.Narrative.PackBinding"
+  "Echoes.Runtime.AI.GuardEscortSemantics"
   "Echoes.Runtime.AI.SkirmishDeterminismSmoke"
   "Echoes.Runtime.Bootstrap.ClassesAndCore"
   "Echoes.Runtime.Campaign.WhatTheLedgerKeeps"
@@ -225,6 +226,7 @@ expected_tests=(
   "Echoes.Runtime.Campaign.TheBrokenSun"
   "Echoes.Runtime.Campaign.TheBrokenSunAlternateResolutionPersistence"
   "Echoes.Runtime.Controls.ControlGroups"
+  "Echoes.Runtime.Controls.SharedArrowDispatch"
   "Echoes.Runtime.Controls.SharedKeyDispatch"
   "Echoes.Runtime.Content.CanonicalPack"
   "Echoes.Runtime.Gameplay.CompleteSkirmish"
@@ -242,6 +244,7 @@ expected_tests=(
   "Echoes.Runtime.Gameplay.Guard"
   "Echoes.Runtime.Gameplay.Patrol"
   "Echoes.Runtime.Gameplay.ProductionPauseRestart"
+  "Echoes.Runtime.Map.CompiledMapBinding"
   "Echoes.Runtime.Map.GlassScar"
   "Echoes.Runtime.Map.PresentationProfiles"
   "Echoes.Runtime.Network.ProtocolAdmission"
@@ -264,7 +267,7 @@ expected_tests=(
 
 for expected_test in "${expected_tests[@]}"; do
   matched=false
-  for test_index in {0..64}; do
+  for test_index in {0..67}; do
     if [[ "$(read_report_value tests.$test_index.fullTestPath)" == "$expected_test" ]]; then
       matched=true
       if [[ "$(read_report_value tests.$test_index.state)" != "Success" ||
