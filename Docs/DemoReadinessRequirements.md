@@ -297,3 +297,94 @@ entries — never by rewriting the requirement bodies above.
   independent reviewer — recorded as a review-depth lesson (provenance labels were taken at
   face value; the call path was not traced). Coordinator ruling: fixed by a STANDALONE
   test-only lease ahead of the phase-B switchover, not batched.
+* 2026-09-02 — DEFECT S3 (coordinator review of M1-S1+S2, recorded not blocking; against
+  DEMO-INP-011/012): `ArmedDeckAction` in `EchoesPlayerController` is set when a cursor-targeted
+  deck action arms, and cleared only on consumption or right-click cancel. No reset exists on
+  scenario end, restart, return-to-menu, load, or selection loss, so an armed action can survive
+  a scenario transition and fire on the next battlefield click in a new context. Most paths
+  degrade harmlessly (empty selection rejects the order); a restart with a fresh selection is a
+  genuine misfire. Fix assigned to the Player lane's S7 slice, preferably hooked into a single
+  existing scenario-teardown seam rather than scattered clears.
+* 2026-09-02 — OWNER RULING (21, PX-001 Space-key canon conflict): CONTEXT-GATE ONE KEY —
+  Space issues the order while the keyboard-targeting reticle is active, otherwise jumps to the
+  most recent alert. Honors Bible line 148 without a second unmodified Space mapping, preserves
+  the keyboard-only accessibility path, and is verifiable with the shared-key dispatch
+  methodology already accepted twice. Implementation dependency recorded: the alert system
+  currently tracks research/production/capacity and carries NO battlefield location, so a
+  spatial "last alert location" observation must be added (subsystem work) before the jump has
+  a destination. Player lane owns the binding + context gate; the subsystem observation needs
+  its own exact-path lease when scheduled.
+* 2026-09-02 — DEFECT (pre-existing, found by Campaign while building the demo namespace,
+  reproduced at pristine `87086b1c` by stashing all changes; NOT introduced by any lane):
+  `mission_contract.schema.json` declares `content_id` with `const` set to a regex STRING where
+  `pattern` was intended, so the published schema can never accept any mission source. Narrative
+  domain; left untouched (outside lease). Severity S3 (tooling/validation correctness, no
+  runtime player impact, existing pipeline unaffected because it does not consult the published
+  schema on that path). Assign with the next Narrative-domain slot.
+  → UPDATE (same day): fix applied BEFORE receipt rather than deferred. Player lane determined
+  the precedent state (`bControlGroupAssignmentArmed`) is cleared at 28 sprinkled sites and
+  rejected copying that pattern; instead a single semantic invariant — "selection cleared
+  implies disarm" — is enforced in `ClearSelection()`, which already precedes 20 of those 28
+  sites and covers every scenario transition, restart, quickload, match end, and menu return.
+  Safety under normal play proven: while armed, `SelectionPressed` returns before any selection
+  change and never sets `bSelectionButtonDown`, so `SelectionReleased` early-returns and the
+  ordinary select/deselect paths are unreachable. One line + one test assertion; artifact
+  re-frozen at the same base with the independent review re-pointed at the corrected tree.
+* 2026-09-02 — DEFECT S3 (coverage, found by Campaign's per-mission checkpoint matrix): M08 is
+  the ONLY mission carrying a live topology-revision constant with ZERO rejection coverage.
+  `ShapeBesideUsTopologyRevision=1` is enforced three ways in the subsystem (writer stamp,
+  reader rejection, catch-all exclusion), but no test proves a stamp-0 checkpoint is refused,
+  while M05/M06/M07 each carry that probe. Cause is known and was predicted at composition: the
+  two-step probe retired with the superseded plan-17 slices, and the composed head's direct M08
+  test kept only a literal assertion. Not demo-blocking, but it is the one place a live
+  fail-closed mechanism is currently unproven. Fix: test-only slice in the M07 probe shape.
+  Recorded correction from the same matrix (kept, not dropped): M01 initially appeared uncovered
+  but is covered by the dedicated `EchoesQuickSaveLoadTest.cpp` — mission-test counts alone
+  understate checkpoint coverage; that dedicated test carries no topology assertions, so the
+  four per-mission tests are the entire revision picture.
+* 2026-09-02 — OPEN DIAGNOSTIC (two lanes' observations disagree; NEITHER dismissed):
+  Visual's 12:14Z packaged run reports the build's own pointer fixture FAILING stage 1 with
+  `POINTER_SELECTION_REJECTED` (fullBoundsVisible=true, hudOcclusion=false); Player's M0
+  synthetic-input run on the same rejected package selected a ~10px unit first try. Both are
+  real observations from different instruments. Candidate explanations, none yet established:
+  the fixture asserts a stricter contract than a human click; the two run at different
+  geometry/resolution; or Player's selection took a code path the fixture does not exercise.
+  Assigned as the first diagnostic of Player's S4/S6 work, with Visual supplying the fixture's
+  exact contract and run geometry. Explicitly NOT to be resolved by assertion or by preferring
+  whichever observation is more convenient — a reconciliation must explain BOTH results.
+* 2026-09-02 — DEFECT S4 x2 (found in independent review of the demo namespace; ACCEPTED with
+  findings, not blocking): the new `_validate_system_voice_copy` enforcement is NARROWER than
+  its acceptance card claims. (a) "no second sentence" is not fully enforced — the check counts
+  periods only and `_validate_source_text` does not forbid `!` or `?`, so "Alert! Contact." and
+  "Contact? Alert." are both accepted; (b) the player-address rule is an exact-match blocklist
+  of {you, your, yours}, so "Ready yourself." is accepted. No approved line is affected (all 12
+  pass) and no existing pin is touched — but the card's wording "contains a comma or a second
+  sentence" overstates current behavior, and this is the gap class that bites when a LATER
+  author adds a line. Coordinator ruling: TIGHTEN THE RULES rather than narrow the card — a
+  partly-tight rule advertised as tight is worse than an honest one. Suggested fixes recorded by
+  the reviewer: `fullmatch [^.!?]*\.` and a you-stem match.
+* 2026-09-02 — OWNER OBSERVATION, coordinator-verified, ROOT-CAUSE CLASS: "none of the maps have
+  been fully designed / no completed maps in the Content Drawer." CONFIRMED and it is
+  structural, not a missing file: the project contains **ZERO `.umap` level assets**;
+  `GameDefaultMap` and `EditorStartupMap` both point at `/Engine/Maps/Entry` (the ENGINE's
+  default empty map, not a project map). Every world is constructed procedurally at runtime by
+  C++ (`ConfigureGlassScar` / `ConfigureSkirmishTerrain` spawning tile actors into an empty
+  level), with geometry pinned by the JSON map contracts; lighting/fog/atmosphere are likewise
+  spawned from code. 145 `.uasset` files exist (89 art: textures/materials/meshes) but no levels.
+  CONSEQUENCE — this is a plausible ROOT CAUSE of the owner's rejected-build visual complaints
+  (DEMO-VIS-002 landmarks/dressing, VIS-008 atmosphere, VIS-012 recognition, and "terrain too
+  similar"): with no authored level there is nowhere for hand-placed landmarks, set dressing,
+  lighting design, or composed scene framing to live, so every site is a procedural tile field.
+  The data-driven geometry is CORRECT and must be preserved (it is what keeps the simulation
+  authoritative and deterministic) — the gap is an authored PRESENTATION layer on top of it.
+  Assigned: World + Visual jointly to produce an owner decision packet on the map/level strategy
+  (options incl. authored .umap levels dressed over procedural gameplay geometry vs richer
+  procedural dressing driven by the existing contracts), with cost, risk to determinism, and
+  visual consequence per option. This gates the M5 presentation milestone.
+* 2026-09-02 — OWNER RULING (22, Escape key): "escape should work like any other game and open
+  the main menu or something." This is a REQUIREMENT ruling, not a test result: Escape SHALL
+  open the pause/field menu in the packaged build, matching desktop-game convention. Player lane
+  implements and verifies regardless of what the instrumented diagnostic would have shown; the
+  LogInput-verbose run remains available as a diagnostic to determine WHERE Escape is lost
+  (engine consumption vs harness delivery) if the repair proves non-obvious, but the requirement
+  no longer depends on that answer. Against DEMO-INP-011.
