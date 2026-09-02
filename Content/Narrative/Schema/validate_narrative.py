@@ -2748,7 +2748,12 @@ SYSTEM_VOICE_MAX_WORDS = 4
 # 0.8 s / one-breath-group budget, and the accepted spec's own register anchor
 # for the contact alert is the single word "Contact." (owner rulings 19, 20).
 SYSTEM_VOICE_MIN_WORDS = 1
-SYSTEM_VOICE_FORBIDDEN_WORDS = {"you", "your", "yours"}
+# One breath group: no comma, and exactly one terminal sentence mark. Matching
+# the whole line rejects "Alert! Contact." and "Contact? Alert." as well as a
+# second period-terminated sentence.
+SYSTEM_VOICE_ONE_BREATH_GROUP = re.compile(r"[^.!?]*\.")
+# Stem match, so "yourself" and "you're" are caught alongside "you"/"your".
+SYSTEM_VOICE_PLAYER_ADDRESS = re.compile(r"\byou\w*\b", re.IGNORECASE)
 
 
 def _validate_system_voice_copy(lines: list[dict[str, Any]], path: str) -> None:
@@ -2762,15 +2767,14 @@ def _validate_system_voice_copy(lines: list[dict[str, Any]], path: str) -> None:
                 f"{where}: system-voice copy must be "
                 f"{SYSTEM_VOICE_MIN_WORDS}..{SYSTEM_VOICE_MAX_WORDS} words, found {len(words)}"
             )
-        if "," in text or text.count(".") != 1 or not text.endswith("."):
+        if "," in text or SYSTEM_VOICE_ONE_BREATH_GROUP.fullmatch(text) is None:
             raise NarrativeValidationError(
                 f"{where}: system-voice copy must be one breath group ending in a single period"
             )
-        lowered = {word.strip(".,;:!?").casefold() for word in words}
-        forbidden = lowered & SYSTEM_VOICE_FORBIDDEN_WORDS
-        if forbidden:
+        address = SYSTEM_VOICE_PLAYER_ADDRESS.search(text)
+        if address is not None:
             raise NarrativeValidationError(
-                f"{where}: system-voice copy must not address the player ({sorted(forbidden)})"
+                f"{where}: system-voice copy must not address the player ({address.group(0)!r})"
             )
         opening = words[0].casefold()
         if opening in openings:
