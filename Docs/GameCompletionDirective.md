@@ -797,11 +797,11 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 
 | # | Gate | Track | Depends on | State |
 |---|---|---|---|---|
-| 1 | Suite health: automation, native ×3, and content suites green on current `main`; standing requirement on every merge | E1 | — | PASS carried from demo gates 1–4 — 56/56 at `39955ea`, 57/57 at `a470eb9`, 58/58 with audio-mix and music/ambience tests; native 37/37 ×3; content 123/123; evidence `demo-gates-1-4-39955ea-*` |
+| 1 | Suite health: automation, native ×3, and content suites green on current `main`; standing requirement on every merge | E1 | — | REGRESSED on `main` at `76dfaf1` (measured 2026-09-03): Mac Development Editor compilation failed with three `FJsonObject::IsValid` errors in `EchoesNarrativeSubsystem.cpp` until `07ae53f`; with that fix the suite is 65/71 with six failures — `AI.GuardEscortSemantics`, `Campaign.ChoirAtLumeReach`, `Campaign.FreshJourney` (Mission 10 Well), `Campaign.TheBrokenSun`, `Campaign.TheBrokenSunAlternateResolutionPersistence`, `Gameplay.CompleteSkirmish` — identical with and without the A3 change (evidence `a3_baseline2_index.json` in `BuildArtifacts/Evidence/release-gate5-a3-surface-families-20260903T231806Z`). Content suites green (build_editor.sh preflight). Earlier passes: 56/56 at `39955ea`, 57/57 at `a470eb9`, 58/58 with audio-mix tests |
 | 2 | Five-category submix graph with independent volumes | B1 | — | PASS carried from demo gate 14 — `Echoes.Runtime.Audio.MixArchitecture` green at `a470eb9`; evidence `demo-gate14-mix-architecture-*`; voice-bus ducking rules remain under gate 16 |
 | 3 | Exposure, tonemapping, and per-site lighting rig; no clipped highlights in packaged captures | A1 | 1 | OPEN — themed packaged captures accepted 2026-09-01 at `f47dbff8`: hero-referenced Glass Scar (golden-fracture vitrified ground, authored gold/indigo rig) at 1920×1080, 2560×1440, and high-contrast, clipped ≤0.00058% (ledger ART-A4-001/PKG-I1-002, evidence `release-gate3-themed-packaged-*`); Glass Scar's rig is authored — per-site rigs for the remaining campaign sites still owed |
 | 4 | No debug overlay or prototype text in shipping-configuration captures | A2 | 3 | NOT RUN |
-| 5 | Production texture/material families registered, byte-idempotent, reviewed per family | A3 | 3 | NOT RUN |
+| 5 | Production texture/material families registered, byte-idempotent, reviewed per family | A3 | 3 | IN PROGRESS — all nine A3 families registered at `surface-textures-v8` and bound per faction on 2026-09-03 (ledger ART-A3-002, evidence `BuildArtifacts/Evidence/release-gate5-a3-surface-families-20260903T231806Z`): editor-render captures measured within the exposure window; per-family isolated Metal composition review, packaged and high-contrast captures, Folded Verge route-kit binding, and owner review still owed |
 | 6 | Every campaign site dressed to its stated identity; no bare collision floor | A4 | 5 | NOT RUN |
 | 7 | Motion families implemented, presentation-only, reduced-motion compliant | A5 | 5 | NOT RUN |
 | 8 | Effect families implemented with recorded combat-load frame cost | A6 | 7 | NOT RUN |
@@ -847,7 +847,7 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 | 48 | Ledger, asset register (all exceptions), manual, and rights position complete | J3 | 44 | NOT RUN |
 | 49 | Known-limitations page shipped in build and on site, accurate | J4 | 48 | NOT RUN |
 
-Gates 1–2 are carried and standing. Five roots unblock the graph and can start in parallel now:
+Gate 2 is carried and standing; gate 1 regressed on `main` at `76dfaf1` and must be repaired before any merge to `main` (see its row). Five roots unblock the graph and can start in parallel now:
 **3** (exposure), **12** (score), **17** (voice pipeline, after OD 1), **22** (cinematic pipeline),
 and **24** (mission text — it feeds voice, cinematics, and pacing alike, and is the single highest-
 leverage open gate). Gate 39 is the release's real acceptance; gate 44 is its distribution
