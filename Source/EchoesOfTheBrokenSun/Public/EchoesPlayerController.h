@@ -623,6 +623,13 @@ private:
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
     void FailPointerCombatGuardReview(const FString& Reason);
+
+    /** Asks the engine for the viewport the active variant's camera and HUD
+        coordinates were authored against. */
+    void RequestPointerReviewViewport();
+
+    /** Puts back the HUD scale the review overrode. */
+    void RestorePointerReviewHudScale();
     bool ResolvePointerScreenPosition(
         FVector2D& OutScreenPosition,
         FVector2D* OutViewportSize = nullptr);
@@ -752,6 +759,15 @@ private:
     FString PointerReviewVariant = TEXT("Default");
     float PointerReviewHudScale = 1.0f;
     FIntPoint PointerReviewExpectedViewport = FIntPoint(1600, 900);
+    /** Seconds into the review at which the viewport reached the variant's
+        declared size, or a negative value while it has not. The resolution
+        request is asynchronous, so the review waits rather than judging the
+        first frame it happens to see. */
+    float PointerReviewViewportSettledAtSeconds = -1.0f;
+    /** HUD scale in force before the review overrode it, or negative when the
+        review is not holding one. Restored when the review ends so a controlled
+        run cannot rewrite a player-owned setting. */
+    float PointerReviewPriorHudScale = -1.0f;
     bool bPointerCombatGuardReviewActive = false;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;

@@ -682,6 +682,31 @@ float AEchoesEntityView::GetEntityPickProxyTopHeight() const
     return EntityPickProxyTopHeight;
 }
 
+bool AEchoesEntityView::GetClickableBounds(
+    FVector& OutOrigin,
+    FVector& OutExtent) const
+{
+    // Prefer the pick proxy: it is the geometry a click is actually resolved
+    // against, so it is the honest answer to "can the player reach this unit".
+    const UPrimitiveComponent* Source = nullptr;
+    if (EntityPickProxy != nullptr && EntityPickProxy->IsRegistered())
+    {
+        Source = EntityPickProxy;
+    }
+    else if (BodyMesh != nullptr && BodyMesh->IsRegistered())
+    {
+        Source = BodyMesh;
+    }
+    if (Source == nullptr)
+    {
+        return false;
+    }
+    const FBoxSphereBounds ClickableBounds = Source->Bounds;
+    OutOrigin = ClickableBounds.Origin;
+    OutExtent = ClickableBounds.BoxExtent;
+    return !OutExtent.IsNearlyZero();
+}
+
 void AEchoesEntityView::ConfigureEntityPickProxy(float SelectionHaloScale)
 {
     if (EntityPickProxy == nullptr)

@@ -4629,10 +4629,25 @@ void AEchoesPlayerController::StartPointerCombatGuardReview()
     PointerReviewVariant = ReviewConfiguration.Variant;
     PointerReviewHudScale = ReviewConfiguration.HudScale;
     PointerReviewExpectedViewport = ReviewConfiguration.ExpectedViewport;
+    PointerReviewViewportSettledAtSeconds = -1.0f;
+    // The review drives the HUD scale, and UGameUserSettings persists itself at
+    // shutdown -- so without restoring it the review permanently rewrites a
+    // setting the player owns. A MaxHud or FullHD run left HudScale=1.35 in
+    // GameUserSettings.ini, which then moved the HUD for every later run on
+    // this machine, including the owner's own game.
+    PointerReviewPriorHudScale = -1.0f;
     if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
     {
+        PointerReviewPriorHudScale = Settings->GetHudScale();
         Settings->SetHudScale(PointerReviewHudScale);
     }
+    // The variant declares both a HUD scale and a viewport, and its camera and
+    // click coordinates are authored against the pair. The scale was applied
+    // above; the viewport was only ever asserted afterwards. That asymmetry is
+    // why the review could pass solely on a display that already happened to
+    // match, and reported a mismatch on every other one without having asked
+    // for the size it wanted.
+    RequestPointerReviewViewport();
     ClearSelection();
     bKeyboardTargetingEnabled = false;
     PointerReviewDefenderId = 0;
@@ -7954,19 +7969,68 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    // Each way this can fail is reported separately. The caller's failure label
+    // is DEFENDER_PROJECTION_FAILED, which previously covered four unrelated
+    // causes -- including "the view actor does not exist yet", which is not a
+    // projection problem at all. A diagnostic that names the wrong cause is the
+    // same defect class the spec forbids in gameplay: a plausible wrong answer
+    // in place of the true one.
     AEchoesEntityView* View =
         Bridge != nullptr ? Bridge->FindEntityView(EntityId) : nullptr;
     if (View == nullptr)
     {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_PROJECTION] variant=%s stage=%s entity=%u reason=%s bridge=%s controlledNonshipping=true"),
+            *PointerReviewVariant,
+            StageLabel,
+            EntityId,
+            Bridge == nullptr ? TEXT("NO_SIM_BRIDGE") : TEXT("NO_ENTITY_VIEW"),
+            Bridge == nullptr ? TEXT("null") : TEXT("present"));
         return false;
     }
 
     FVector BoundsOrigin = FVector::ZeroVector;
     FVector BoundsExtent = FVector::ZeroVector;
-    View->GetActorBounds(false, BoundsOrigin, BoundsExtent);
+    // The clickable bounds, not GetActorBounds(): the latter unions every
+    // component including the wide state and supply fields, which projected to
+    // 1231x1175 on a 1600x900 viewport and so intersected the HUD from every
+    // camera angle. UI-004 requires hit regions to match visible silhouettes,
+    // and an occlusion test is only meaningful against the region a click has
+    // to land on.
+    const bool bHasClickableBounds =
+        View->GetClickableBounds(BoundsOrigin, BoundsExtent);
+    // Zero extent means the view spawned but its geometry has not registered,
+    // which projects "successfully" to a degenerate box and would otherwise be
+    // read as a legitimate off-screen result.
+    if (!bHasClickableBounds || BoundsExtent.IsNearlyZero())
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_PROJECTION] variant=%s stage=%s entity=%u reason=EMPTY_BOUNDS origin=(%.1f,%.1f,%.1f) controlledNonshipping=true"),
+            *PointerReviewVariant,
+            StageLabel,
+            EntityId,
+            BoundsOrigin.X,
+            BoundsOrigin.Y,
+            BoundsOrigin.Z);
+        return false;
+    }
     FVector2D ScreenPosition = FVector2D::ZeroVector;
     if (!ProjectWorldLocationToScreen(BoundsOrigin, ScreenPosition, false))
     {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_PROJECTION] variant=%s stage=%s entity=%u reason=ORIGIN_BEHIND_CAMERA origin=(%.1f,%.1f,%.1f) controlledNonshipping=true"),
+            *PointerReviewVariant,
+            StageLabel,
+            EntityId,
+            BoundsOrigin.X,
+            BoundsOrigin.Y,
+            BoundsOrigin.Z);
         return false;
     }
     FBox2D ProjectedBounds(ForceInit);
@@ -7979,6 +8043,20 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         FVector2D ProjectedCorner = FVector2D::ZeroVector;
         if (!ProjectWorldLocationToScreen(WorldCorner, ProjectedCorner, false))
         {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_POINTER_REVIEW_PROJECTION] variant=%s stage=%s entity=%u reason=CORNER_BEHIND_CAMERA corner=%d world=(%.1f,%.1f,%.1f) extent=(%.1f,%.1f,%.1f) controlledNonshipping=true"),
+                *PointerReviewVariant,
+                StageLabel,
+                EntityId,
+                CornerIndex,
+                WorldCorner.X,
+                WorldCorner.Y,
+                WorldCorner.Z,
+                BoundsExtent.X,
+                BoundsExtent.Y,
+                BoundsExtent.Z);
             return false;
         }
         ProjectedBounds += ProjectedCorner;
@@ -7993,7 +8071,7 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_MISMATCH] variant=%s expected=(%d,%d) actual=(%d,%d)"),
+            TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_MISMATCH] variant=%s expected=(%d,%d) actual=(%d,%d) note=viewport_was_requested_and_settled_before_stages_ran_so_this_is_drift_during_the_review"),
             *PointerReviewVariant,
             PointerReviewExpectedViewport.X,
             PointerReviewExpectedViewport.Y,
@@ -8006,6 +8084,17 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
         ScreenPosition.X >= static_cast<float>(ViewportWidth) ||
         ScreenPosition.Y >= static_cast<float>(ViewportHeight))
     {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_POINTER_REVIEW_PROJECTION] variant=%s stage=%s entity=%u reason=OFF_VIEWPORT screen=(%.1f,%.1f) viewport=(%d,%d) controlledNonshipping=true"),
+            *PointerReviewVariant,
+            StageLabel,
+            EntityId,
+            ScreenPosition.X,
+            ScreenPosition.Y,
+            ViewportWidth,
+            ViewportHeight);
         return false;
     }
 
@@ -8059,10 +8148,70 @@ bool AEchoesPlayerController::MoveReviewPointerToEntity(
     return true;
 }
 
+void AEchoesPlayerController::RestorePointerReviewHudScale()
+{
+#if !UE_BUILD_SHIPPING
+    if (PointerReviewPriorHudScale < 0.0f)
+    {
+        return;
+    }
+    if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+    {
+        Settings->SetHudScale(PointerReviewPriorHudScale);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POINTER_REVIEW_HUD_SCALE_RESTORED] variant=%s restored=%.2f reviewUsed=%.2f controlledNonshipping=true"),
+            *PointerReviewVariant,
+            PointerReviewPriorHudScale,
+            PointerReviewHudScale);
+    }
+    PointerReviewPriorHudScale = -1.0f;
+#endif
+}
+
+void AEchoesPlayerController::RequestPointerReviewViewport()
+{
+#if !UE_BUILD_SHIPPING
+    int32 CurrentWidth = 0;
+    int32 CurrentHeight = 0;
+    GetViewportSize(CurrentWidth, CurrentHeight);
+    if (CurrentWidth == PointerReviewExpectedViewport.X &&
+        CurrentHeight == PointerReviewExpectedViewport.Y)
+    {
+        PointerReviewViewportSettledAtSeconds = 0.0f;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_ALREADY] variant=%s viewport=(%d,%d) controlledNonshipping=true"),
+            *PointerReviewVariant,
+            CurrentWidth,
+            CurrentHeight);
+        return;
+    }
+    // Deliberately no r.SetRes here. The runner already launches with -ResX and
+    // -ResY, and measurement showed the viewport reaches the requested size on
+    // its own within 0.05s; the (0,0) seen here is simply frame zero before the
+    // viewport exists. Issuing r.SetRes as well would write ResolutionSizeX/Y
+    // into the persistent settings file for the sake of a size the process was
+    // already launched at. The settle gate below waits for it instead.
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_PENDING] variant=%s expected=(%d,%d) atStart=(%d,%d) source=launch_args controlledNonshipping=true"),
+        *PointerReviewVariant,
+        PointerReviewExpectedViewport.X,
+        PointerReviewExpectedViewport.Y,
+        CurrentWidth,
+        CurrentHeight);
+#endif
+}
+
 void AEchoesPlayerController::FailPointerCombatGuardReview(
     const FString& Reason)
 {
     bPointerCombatGuardReviewActive = false;
+    RestorePointerReviewHudScale();
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -8086,9 +8235,17 @@ void AEchoesPlayerController::FailPointerCombatGuardReview(
 void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
 {
 #if !UE_BUILD_SHIPPING
+    constexpr float kPointerReviewStageBudgetSeconds = 15.0f;
+    constexpr float kPointerReviewViewportSettleSeconds = 5.0f;
+
     PointerReviewStageElapsedSeconds += DeltaTime;
     PointerReviewTotalElapsedSeconds += DeltaTime;
-    if (PointerReviewTotalElapsedSeconds > 15.0f)
+    // Settle time is excluded from the stage budget so that waiting for the
+    // viewport can never be reported as a slow review.
+    const float SettleAllowance =
+        FMath::Max(0.0f, PointerReviewViewportSettledAtSeconds);
+    if (PointerReviewTotalElapsedSeconds >
+        kPointerReviewStageBudgetSeconds + SettleAllowance)
     {
         FailPointerCombatGuardReview(TEXT("TIMEOUT"));
         return;
@@ -8104,6 +8261,50 @@ void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
     {
         FailPointerCombatGuardReview(TEXT("SIM_NOT_READY"));
         return;
+    }
+
+    // No stage may run until the engine has actually delivered the variant's
+    // viewport. Every screen coordinate below is authored against that size, so
+    // running a stage early would not fail the review — it would click the
+    // wrong place and report whatever it found there.
+    if (PointerReviewViewportSettledAtSeconds < 0.0f)
+    {
+        int32 SettleWidth = 0;
+        int32 SettleHeight = 0;
+        GetViewportSize(SettleWidth, SettleHeight);
+        if (SettleWidth == PointerReviewExpectedViewport.X &&
+            SettleHeight == PointerReviewExpectedViewport.Y)
+        {
+            PointerReviewViewportSettledAtSeconds =
+                PointerReviewTotalElapsedSeconds;
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_POINTER_REVIEW_VIEWPORT_SETTLED] variant=%s viewport=(%d,%d) afterSeconds=%.2f controlledNonshipping=true"),
+                *PointerReviewVariant,
+                SettleWidth,
+                SettleHeight,
+                PointerReviewViewportSettledAtSeconds);
+        }
+        else if (PointerReviewTotalElapsedSeconds <
+                 kPointerReviewViewportSettleSeconds)
+        {
+            // Hold stage 0 at its start so the wait is not spent against the
+            // stage's own dwell time.
+            PointerReviewStageElapsedSeconds = 0.0f;
+            return;
+        }
+        else
+        {
+            FailPointerCombatGuardReview(FString::Printf(
+                TEXT("VIEWPORT_NOT_HONORED requested=(%d,%d) actual=(%d,%d) afterSeconds=%.2f"),
+                PointerReviewExpectedViewport.X,
+                PointerReviewExpectedViewport.Y,
+                SettleWidth,
+                SettleHeight,
+                PointerReviewTotalElapsedSeconds));
+            return;
+        }
     }
 
     const auto Advance = [this](int32 NextStage)
@@ -8158,6 +8359,22 @@ void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
     {
         if (PointerReviewStageElapsedSeconds < 0.15f)
         {
+            return;
+        }
+        // Re-aim immediately before pressing. Stage 0 projected the defender's
+        // position, but the simulation keeps running and this stage fires 0.15s
+        // -- three ticks -- later, so the stored coordinate is where the unit
+        // WAS. That staleness made the click miss intermittently (observed once
+        // in four Compact runs, where the smaller viewport and 0.85 HUD scale
+        // shrink the unit on screen and so shrink the margin for drift). The
+        // review is meant to prove an exact-coordinate click selects the unit
+        // under it, not to prove a unit stays still, so the coordinate has to be
+        // current at the instant of the press.
+        if (!MoveReviewPointerToEntity(
+                PointerReviewDefenderId,
+                TEXT("select_defender")))
+        {
+            FailPointerCombatGuardReview(TEXT("DEFENDER_REPROJECTION_FAILED"));
             return;
         }
         SelectionPressed();
@@ -8264,6 +8481,7 @@ void AEchoesPlayerController::RunPointerCombatGuardReviewStage(float DeltaTime)
 
         Bridge->SetScenarioPaused(true);
         bPointerCombatGuardReviewActive = false;
+        RestorePointerReviewHudScale();
         const int32 FinalHitPoints = Hostile != nullptr ? Hostile->hitPoints : 0;
         SetStatusMessage(
             FString::Printf(

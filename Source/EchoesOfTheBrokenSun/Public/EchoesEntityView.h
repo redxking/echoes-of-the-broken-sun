@@ -66,6 +66,19 @@ public:
     [[nodiscard]] bool DoesEntityPickProxyBlockGroundTrace() const;
     [[nodiscard]] float GetEntityPickProxyRadius() const;
     [[nodiscard]] float GetEntityPickProxyTopHeight() const;
+
+    /** World-space bounds of the region a pointer must actually hit to select
+        this entity, for callers that need to reason about its on-screen
+        silhouette. Deliberately NOT GetActorBounds(): that unions every
+        component, including the Relay supply, Aegis power, Waystone, Warform,
+        Choir identity and Future Well orbit fields, which are wide radius
+        volumes. At ordinary zoom their union projects larger than the viewport
+        itself, so any HUD element intersects it and the entity reads as
+        occluded wherever the camera is pointed. Returns false when no
+        registered pick or body geometry exists yet. */
+    [[nodiscard]] bool GetClickableBounds(
+        FVector& OutOrigin,
+        FVector& OutExtent) const;
     [[nodiscard]] bool IsUsingAuthoredSelectionVFX() const
     {
         return bUsingAuthoredSelectionVFX;

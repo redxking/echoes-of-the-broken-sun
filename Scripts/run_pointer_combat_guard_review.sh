@@ -20,6 +20,27 @@ fi
 mkdir -p "$evidence_dir"
 rm -f "$log" "$capture"
 
+# The review runs the editor with -ResX/-ResY and drives the HUD scale, and
+# UGameUserSettings persists itself at shutdown. Measured: a 1600x900 probe came
+# back as 1280x720 after one Compact run. Without this the review permanently
+# rewrites resolution and HUD scale in the player's own settings file. The
+# controller restores the HUD scale too, but that cannot cover a run the engine
+# kills, and it cannot cover the resolution the engine writes on its way out.
+settings_file="$project_root/Saved/Config/MacEditor/GameUserSettings.ini"
+settings_backup=""
+if [[ -f "$settings_file" ]]; then
+  settings_backup="$(mktemp -t echoes-gus)"
+  cp "$settings_file" "$settings_backup"
+fi
+restore_settings() {
+  if [[ -n "$settings_backup" && -f "$settings_backup" ]]; then
+    cp "$settings_backup" "$settings_file"
+    rm -f "$settings_backup"
+    settings_backup=""
+  fi
+}
+trap restore_settings EXIT INT TERM
+
 "$editor" "$project" /Engine/Maps/Entry \
   -game -nop4 -nosplash -nosound -windowed \
   -ResX="$expected_width" -ResY="$expected_height" \
