@@ -10914,21 +10914,18 @@ UEchoesSimulationSubsystem::GatherTermsOfContinuanceFacts() const
             KharuunWitness->position,
             Plan.WitnessExtractionSite,
             TermsOfContinuanceSiteRadiusTiles);
-    const auto IsEarlyExtractionOrder = [&Plan](
-                                            const echoes::sim::Entity* Witness)
-    {
-        return Witness != nullptr &&
-               Witness->order.type == echoes::sim::OrderType::Move &&
-               IsWithinTiles(
-                   Witness->order.destination,
-                   Plan.WitnessExtractionSite,
-                   TermsOfContinuanceSiteRadiusTiles);
-    };
-    Facts.bWitnessExtractionStartedEarly =
-        CurrentTick < Plan.ContinuanceWindowEndTick &&
-        (bMeridianWitnessAtExtraction || bKharuunWitnessAtExtraction ||
-         IsEarlyExtractionOrder(MeridianWitness) ||
-         IsEarlyExtractionOrder(KharuunWitness));
+    // OUT-005 permits only the failure predicates Mission 05 names before
+    // play: the local core, the Meridian relay, the Kharuun spine, either
+    // witness, a compromised continuance window, and a terminal engagement
+    // outcome. Standing a witness on the extraction tile early -- or merely
+    // ordering one to move toward it -- is not among them, and this gather
+    // previously raised bWitnessExtractionStartedEarly for exactly that,
+    // producing an unauthored instant failure whose reason code fell through
+    // to "generic". The authored rule is timing of *credit*, not a hidden
+    // trap: an early arrival simply does not count, which the
+    // bContinuanceWindowHeld conjunction below already enforces. The fact is
+    // left at its false default so no unnamed predicate can fail the
+    // operation.
     Facts.bMeridianWitnessExtracted =
         Facts.bContinuanceWindowHeld && bMeridianWitnessAtExtraction;
     Facts.bKharuunWitnessExtracted =

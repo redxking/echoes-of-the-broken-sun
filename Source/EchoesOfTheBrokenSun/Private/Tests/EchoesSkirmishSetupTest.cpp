@@ -122,11 +122,11 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Starting-resource profiles are materially distinct"),
         FEchoesSkirmishSetupModel::StartingResources(ResourceLevels[0]) ==
-                echoes::sim::ResourcePool{320, 18} &&
+                echoes::sim::ResourcePool{250, 18} &&
             FEchoesSkirmishSetupModel::StartingResources(ResourceLevels[1]) ==
-                echoes::sim::ResourcePool{500, 30} &&
+                echoes::sim::ResourcePool{400, 30} &&
             FEchoesSkirmishSetupModel::StartingResources(ResourceLevels[2]) ==
-                echoes::sim::ResourcePool{800, 60});
+                echoes::sim::ResourcePool{700, 60});
 
     const FVector2D LayoutViewports[] = {
         FVector2D(1280.0f, 720.0f),
@@ -205,16 +205,36 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
                     ResultLayout.RestartButton));
     }
 
-    FEchoesSkirmishSetup InvalidSetup =
+    // The release boundary requires "any of three factions versus any faction,
+    // including mirror matchups", so a mirror is a VALID configuration. This
+    // block previously asserted the opposite, which is why three of the nine
+    // required matchups were unreachable.
+    FEchoesSkirmishSetup MirrorSetup =
         FEchoesSkirmishSetupModel::DefaultSetup();
     FString ValidationError;
-    InvalidSetup.OpponentFaction = InvalidSetup.LocalFaction;
-    TestFalse(TEXT("A mirror matchup is rejected"),
-              FEchoesSkirmishSetupModel::Validate(
-                  InvalidSetup, ValidationError));
-    TestTrue(TEXT("Mirror rejection is explicit"),
-             ValidationError.Contains(TEXT("SKIRMISH_MATCHUP_INVALID")));
-    InvalidSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+    MirrorSetup.OpponentFaction = MirrorSetup.LocalFaction;
+    TestTrue(TEXT("A mirror matchup is a valid configuration"),
+             FEchoesSkirmishSetupModel::Validate(
+                 MirrorSetup, ValidationError));
+
+    // And the faction cycler must be able to REACH one: stepping the opponent
+    // onto the local faction is a legal stop, not a state to skip past.
+    FEchoesSkirmishSetup Cycled = FEchoesSkirmishSetupModel::DefaultSetup();
+    bool bReachedMirror = false;
+    for (int32 Step = 0; Step < 3; ++Step)
+    {
+        Cycled = FEchoesSkirmishSetupModel::WithNextFaction(Cycled, false, 1);
+        if (Cycled.LocalFaction == Cycled.OpponentFaction)
+        {
+            bReachedMirror = true;
+            break;
+        }
+    }
+    TestTrue(TEXT("Cycling the opponent can reach a mirror matchup"),
+             bReachedMirror);
+
+    FEchoesSkirmishSetup InvalidSetup =
+        FEchoesSkirmishSetupModel::DefaultSetup();
     InvalidSetup.MapPreset = static_cast<EEchoesSkirmishMapPreset>(255);
     TestFalse(TEXT("An unknown battlefield is rejected"),
               FEchoesSkirmishSetupModel::Validate(
@@ -385,7 +405,10 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
     const FEchoesSkirmishSetup PendingBeforeInvalid =
         Controller->GetPendingSkirmishSetup();
     InvalidSetup = PendingBeforeInvalid;
-    InvalidSetup.OpponentFaction = InvalidSetup.LocalFaction;
+    // A mirror matchup used to serve as this block's invalid example. Mirrors
+    // are now a REQUIRED configuration, so the rejection this block exists to
+    // prove needs a setup that is still genuinely invalid: an unauthored map.
+    InvalidSetup.MapPreset = static_cast<EEchoesSkirmishMapPreset>(255);
     TestFalse(TEXT("Invalid staged setup is rejected without mutation"),
               Controller->SetPendingSkirmishSetup(
                   InvalidSetup, Feedback));

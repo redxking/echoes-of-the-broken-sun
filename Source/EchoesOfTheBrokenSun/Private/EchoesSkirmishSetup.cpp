@@ -159,11 +159,6 @@ bool FEchoesSkirmishSetupModel::Validate(
         OutError = TEXT("[SKIRMISH_FACTION_INVALID] Select two playable forces.");
         return false;
     }
-    if (Setup.LocalFaction == Setup.OpponentFaction)
-    {
-        OutError = TEXT("[SKIRMISH_MATCHUP_INVALID] Local and opposing forces must be different.");
-        return false;
-    }
     if (static_cast<uint8>(Setup.MapPreset) >
         static_cast<uint8>(EEchoesSkirmishMapPreset::SorynConfluence))
     {
@@ -377,11 +372,11 @@ const TCHAR* FEchoesSkirmishSetupModel::ResourceDisplayName(
     switch (Level)
     {
         case EEchoesSkirmishResourceLevel::Scarce:
-            return TEXT("SCARCE // 320 MATTER + 18 DAWN");
+            return TEXT("SCARCE // 250 MATTER + 18 DAWN");
         case EEchoesSkirmishResourceLevel::Standard:
-            return TEXT("STANDARD // 500 MATTER + 30 DAWN");
+            return TEXT("STANDARD // 400 MATTER + 30 DAWN");
         case EEchoesSkirmishResourceLevel::Abundant:
-            return TEXT("ABUNDANT // 800 MATTER + 60 DAWN");
+            return TEXT("ABUNDANT // 700 MATTER + 60 DAWN");
     }
     return TEXT("UNKNOWN RESOURCE LEVEL");
 }
@@ -391,9 +386,9 @@ echoes::sim::ResourcePool FEchoesSkirmishSetupModel::StartingResources(
 {
     switch (Level)
     {
-        case EEchoesSkirmishResourceLevel::Scarce: return {320, 18};
-        case EEchoesSkirmishResourceLevel::Standard: return {500, 30};
-        case EEchoesSkirmishResourceLevel::Abundant: return {800, 60};
+        case EEchoesSkirmishResourceLevel::Scarce: return {250, 18};
+        case EEchoesSkirmishResourceLevel::Standard: return {400, 30};
+        case EEchoesSkirmishResourceLevel::Abundant: return {700, 60};
     }
     return {};
 }
@@ -406,14 +401,10 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextFaction(
     FEchoesSkirmishSetup Result = Setup;
     echoes::sim::Faction& Target =
         bLocal ? Result.LocalFaction : Result.OpponentFaction;
-    for (int32 Attempt = 0; Attempt < 3; ++Attempt)
-    {
-        Target = CycleEnum(Target, Direction, 3);
-        if (Result.LocalFaction != Result.OpponentFaction)
-        {
-            break;
-        }
-    }
+    // Mirror matchups are a required configuration, so the cycler steps once
+    // and stops. It used to loop past any faction that matched the other side,
+    // which made three of the nine required matchups unreachable in the UI.
+    Target = CycleEnum(Target, Direction, 3);
     return Result;
 }
 

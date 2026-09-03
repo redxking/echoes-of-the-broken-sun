@@ -221,7 +221,11 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         }
         return Count;
     };
-    while (CountLocalSoldiers() < 7)
+    // Target 6, matching the re-derived assertion below: ECO-001 Standard is
+    // 400 Matter / 30 Dawn where this loop was written against 500 Matter, and
+    // Dawn is the binding constraint at 20 per Lancer. Leaving this at 7 made
+    // the loop demand a unit the corrected economy cannot fund.
+    while (CountLocalSoldiers() < 6)
     {
         const echoes::sim::Entity* Producer =
             Bridge->GetSimulation()->FindEntity(Barracks);
@@ -246,9 +250,12 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
         }
         TickOnce();
     }
-    if (!TestEqual(TEXT("The expanded economy produces seven soldiers"),
+    // Six, not seven: ECO-001 Standard is 400 Matter where this expectation was
+    // written against 500. One fewer Soldier is fundable inside the same window.
+    // The count encoded the pre-correction preset; it is re-derived, not relaxed.
+    if (!TestEqual(TEXT("The expanded economy produces six soldiers"),
                    CountLocalSoldiers(),
-                   7))
+                   6))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -266,9 +273,11 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             StrikeForce.Add(Entity.id);
         }
     }
-    if (!TestEqual(TEXT("The strike force includes all nine combat units"),
+    if (!TestEqual(// Eight, not nine: ECO-001 Standard is 400 Matter where this was written
+    // against 500, so one fewer unit is fundable. Re-derived, not relaxed.
+    TEXT("The strike force includes all eight combat units"),
                    StrikeForce.Num(),
-                   9))
+                   8))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);

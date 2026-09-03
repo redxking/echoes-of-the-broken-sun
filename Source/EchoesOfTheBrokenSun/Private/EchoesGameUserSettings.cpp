@@ -4,8 +4,10 @@
 
 namespace
 {
-constexpr float MinimumHudScale = 0.85f;
-constexpr float MaximumHudScale = 1.35f;
+// ACC-002 requires a HUD scale range of 80-150%. These are the authoritative
+// bounds for the persisted setting; presentation layers must not clamp tighter.
+constexpr float MinimumHudScale = 0.80f;
+constexpr float MaximumHudScale = 1.50f;
 constexpr float MinimumCameraScale = 0.5f;
 constexpr float MaximumCameraScale = 2.0f;
 constexpr float MinimumEffectsVolume = 0.0f;

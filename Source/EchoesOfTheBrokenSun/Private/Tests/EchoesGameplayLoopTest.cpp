@@ -284,9 +284,11 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
         TestNotNull(TEXT("Restart restores the local player"), Player);
         if (Player != nullptr)
         {
+            // ECO-001 Standard is 400 Matter. This expectation carried the
+            // pre-correction 500 and was re-derived, not weakened.
             TestEqual(TEXT("Restart restores local Matter"),
                       Player->resources.material,
-                      500);
+                      400);
             TestEqual(TEXT("Restart restores local Dawnshards"),
                       Player->resources.dawnshards,
                       30);

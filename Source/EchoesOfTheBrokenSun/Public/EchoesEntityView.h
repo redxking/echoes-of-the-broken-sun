@@ -118,9 +118,36 @@ public:
     {
         return ChoirIdentityState;
     }
+    // The flashing half of the hit feedback: a luminance ramp on the body.
+    // Reduced flashing suppresses this one, and only this one.
     [[nodiscard]] bool IsDamagePulseActive() const
     {
         return DamagePulseRemainingSeconds > 0.0f;
+    }
+    // The hit EVENT itself. Armed for the same window whatever the
+    // accessibility settings are, so reduced flashing changes which channel
+    // reports "this entity was just hit" and never whether it is reported.
+    [[nodiscard]] bool IsDamageAcknowledgementActive() const
+    {
+        return DamageAcknowledgeRemainingSeconds > 0.0f;
+    }
+    [[nodiscard]] float GetDamageAcknowledgementRemainingSeconds() const
+    {
+        return DamageAcknowledgeRemainingSeconds;
+    }
+    [[nodiscard]] bool IsDamageAcknowledgeMarkerVisible() const;
+    [[nodiscard]] bool IsDamageAcknowledgeMarkerEntityPickable() const;
+    // The drawn radius of the two ability discs, in centimetres, as actually
+    // scaled onto the mesh. A test compares these against the authoritative
+    // rule radius so a decorative disc can never drift back in.
+    [[nodiscard]] float GetRelaySupplyFieldRadiusCentimetres() const;
+    [[nodiscard]] float GetAegisPowerFieldRadiusCentimetres() const;
+    // Which protocol shape the fallback Future Well accent is drawing:
+    // 0 Dormant, 1 Harvest, 2 Preserve, 3 Reshape, 255 when the accent is not
+    // the channel in use because the authored Well presentation is.
+    [[nodiscard]] uint8 GetFutureWellProtocolAccentVariant() const
+    {
+        return FutureWellProtocolAccentVariant;
     }
     [[nodiscard]] bool IsUsingAuthoredRosterMesh() const
     {
@@ -178,6 +205,7 @@ private:
     void ConfigureEntityPickProxy(float SelectionHaloScale);
     void SetBodyColor(const FLinearColor& Color);
     void UpdateHealthBar();
+    void UpdateDamageAcknowledgeMarker();
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -202,6 +230,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> OwnerMarker;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
+    TObjectPtr<UStaticMeshComponent> DamageAcknowledgeMarker;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> DeploymentCover;
@@ -318,6 +349,9 @@ private:
     TObjectPtr<UMaterialInstanceDynamic> OwnerMarkerMaterial;
 
     UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> DamageAcknowledgeMarkerMaterial;
+
+    UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> DeploymentCoverMaterial;
 
     UPROPERTY(Transient)
@@ -357,6 +391,10 @@ private:
     float EntityPickProxyTopHeight = 0.0f;
     FLinearColor BaseBodyColor = FLinearColor::White;
     float DamagePulseRemainingSeconds = 0.0f;
+    float DamageAcknowledgeRemainingSeconds = 0.0f;
+    float RelaySupplyFieldRadiusCentimetres = 0.0f;
+    float AegisPowerFieldRadiusCentimetres = 0.0f;
+    uint8 FutureWellProtocolAccentVariant = 255;
     bool bHasAuthoritativeLocation = false;
     bool bSelected = false;
     bool bDeployed = false;

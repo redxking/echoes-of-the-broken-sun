@@ -26,11 +26,38 @@ constexpr float DamagePulseDurationSeconds = 0.18f;
 // SM_VFX_SelectionHalo carries its acquisition brackets out to 68 cm from its
 // own origin, so a relative scale of one draws a 68 cm halo radius.
 constexpr float SelectionHaloExtentCentimetres = 68.0f;
+// /Engine/BasicShapes/Cylinder is a 100 cm cube-bounded primitive, so at a
+// relative scale of one it draws a 50 cm radius. Every ability disc below is
+// scaled through this, never through a hand-picked number.
+constexpr float UnitCylinderRadiusCentimetres = 50.0f;
+// The hit tick sits between the health bar and the owner marker, inside the
+// pick volume's headroom, so it never pokes out of the entity's click target.
+constexpr float DamageAcknowledgeMarkerHeightCentimetres = 13.0f;
+constexpr uint8 FutureWellProtocolAccentNone = 255;
 // A floor under the pick footprint so the smallest entity still answers a
 // click, and headroom above the drawn geometry so the health bar and owner
 // marker sit inside the volume rather than poking out of the top of it.
 constexpr float MinimumEntityPickHaloScale = 0.85f;
 constexpr float EntityPickHeadroomCentimetres = 26.0f;
+
+// An ability disc is an area-of-effect claim. Its drawn radius is derived from
+// the authoritative rule radius so the circle a player reads is the circle the
+// simulation actually applies - a decorative approximation here would be a
+// false affordance (VAL-003). Reading the rule is one-way: nothing here writes
+// back into the simulation (SIM-002).
+[[nodiscard]] float AbilityDiscRadiusCentimetres(std::int32_t RadiusRaw)
+{
+    return static_cast<float>(RadiusRaw) /
+           static_cast<float>(echoes::sim::kFixedScale) *
+           UEchoesSimulationSubsystem::TileWorldSize;
+}
+
+[[nodiscard]] FVector AbilityDiscScale(float RadiusCentimetres, float Thickness)
+{
+    const float PlanarScale =
+        RadiusCentimetres / UnitCylinderRadiusCentimetres;
+    return FVector(PlanarScale, PlanarScale, Thickness);
+}
 
 const TCHAR* AuthoredPresentationMeshPath(
     echoes::sim::Faction Faction,
@@ -254,6 +281,26 @@ AEchoesEntityView::AEchoesEntityView()
     OwnerMarker->SetReceivesDecals(false);
     OwnerMarker->SetVisibility(false);
 
+    // The non-colour half of the "this entity was just hit" event. Reduced
+    // flashing removes the body's luminance ramp; it must not remove the
+    // event, so the hit is also carried by a shape that appears for the same
+    // window in every accessibility mode (ACC-001, and the reduced-variant
+    // rule that a reduced effect still identifies start, active state and
+    // expiry). Presentation only: it reads damage, it never causes it.
+    DamageAcknowledgeMarker = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("DamageAcknowledgeMarker"));
+    DamageAcknowledgeMarker->SetupAttachment(SceneRoot);
+    DamageAcknowledgeMarker->SetCollisionObjectType(ECC_WorldDynamic);
+    DamageAcknowledgeMarker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    DamageAcknowledgeMarker->SetCollisionResponseToAllChannels(ECR_Ignore);
+    DamageAcknowledgeMarker->SetCollisionResponseToChannel(
+        ECC_EchoesEntityPick, ECR_Block);
+    DamageAcknowledgeMarker->SetGenerateOverlapEvents(false);
+    DamageAcknowledgeMarker->SetCanEverAffectNavigation(false);
+    DamageAcknowledgeMarker->SetCastShadow(false);
+    DamageAcknowledgeMarker->SetReceivesDecals(false);
+    DamageAcknowledgeMarker->SetVisibility(false);
+
     DeploymentCover = CreateDefaultSubobject<UStaticMeshComponent>(
         TEXT("DeploymentCover"));
     DeploymentCover->SetupAttachment(SceneRoot);
@@ -268,6 +315,7 @@ AEchoesEntityView::AEchoesEntityView()
     RelaySupplyField->SetupAttachment(SceneRoot);
     RelaySupplyField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     RelaySupplyField->SetGenerateOverlapEvents(false);
+    RelaySupplyField->SetCanEverAffectNavigation(false);
     RelaySupplyField->SetCastShadow(false);
     RelaySupplyField->SetReceivesDecals(false);
     RelaySupplyField->SetVisibility(false);
@@ -304,6 +352,7 @@ AEchoesEntityView::AEchoesEntityView()
     AegisPowerField->SetupAttachment(SceneRoot);
     AegisPowerField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     AegisPowerField->SetGenerateOverlapEvents(false);
+    AegisPowerField->SetCanEverAffectNavigation(false);
     AegisPowerField->SetCastShadow(false);
     AegisPowerField->SetReceivesDecals(false);
     AegisPowerField->SetVisibility(false);
@@ -393,9 +442,16 @@ AEchoesEntityView::AEchoesEntityView()
     HealthBarBackground->SetStaticMesh(CubeMesh);
     HealthBarFill->SetStaticMesh(CubeMesh);
     DeploymentCover->SetStaticMesh(CubeMesh);
+    DamageAcknowledgeMarker->SetStaticMesh(CubeMesh);
     RelaySupplyField->SetStaticMesh(CylinderMesh);
     RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
-    RelaySupplyField->SetRelativeScale3D(FVector(1.65f, 1.65f, 0.025f));
+    // Sized from the authored default rule, not from a literal. The live rule
+    // set re-derives it in ConfigureAppearance once a simulation exists; this
+    // only stops a never-configured actor from drawing an arbitrary circle.
+    RelaySupplyField->SetRelativeScale3D(AbilityDiscScale(
+        AbilityDiscRadiusCentimetres(
+            echoes::sim::RelaySupplyRules{}.connectionRadiusRaw),
+        0.025f));
     WaystoneStateField->SetStaticMesh(CylinderMesh);
     WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
     WarformStateField->SetStaticMesh(CylinderMesh);
@@ -404,7 +460,10 @@ AEchoesEntityView::AEchoesEntityView()
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetStaticMesh(CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
-    AegisPowerField->SetRelativeScale3D(FVector(1.35f, 1.35f, 0.045f));
+    AegisPowerField->SetRelativeScale3D(AbilityDiscScale(
+        AbilityDiscRadiusCentimetres(
+            echoes::sim::PoweredAegisRules{}.connectionRadiusRaw),
+        0.045f));
     FutureWellOrbitOuter->SetStaticMesh(FutureWellOrbitMesh);
     FutureWellOrbitInner->SetStaticMesh(FutureWellOrbitMesh);
     FutureWellCore->SetStaticMesh(FutureWellCoreMesh);
@@ -480,6 +539,10 @@ void AEchoesEntityView::PrepareForPool()
     HealthBarHeight = 92.0f;
     BaseBodyColor = FLinearColor::White;
     DamagePulseRemainingSeconds = 0.0f;
+    DamageAcknowledgeRemainingSeconds = 0.0f;
+    RelaySupplyFieldRadiusCentimetres = 0.0f;
+    AegisPowerFieldRadiusCentimetres = 0.0f;
+    FutureWellProtocolAccentVariant = FutureWellProtocolAccentNone;
     AuthoritativeWorldLocation = FVector::ZeroVector;
     bHasAuthoritativeLocation = false;
     bSelected = false;
@@ -773,6 +836,7 @@ void AEchoesEntityView::ResetOwnedMaterialParameters()
              HealthBarBackgroundMaterial,
              HealthBarFillMaterial,
              OwnerMarkerMaterial,
+             DamageAcknowledgeMarkerMaterial,
              DeploymentCoverMaterial,
              RelaySupplyFieldMaterial,
              WaystoneStateFieldMaterial,
@@ -814,6 +878,7 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
              HealthBarBackground,
              HealthBarFill,
              OwnerMarker,
+             DamageAcknowledgeMarker,
              DeploymentCover,
              RelaySupplyField,
              WaystoneStateField,
@@ -836,6 +901,7 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
     HealthBarFill->SetRelativeLocation(FVector::ZeroVector);
     OwnerMarker->SetRelativeLocation(FVector::ZeroVector);
     OwnerMarker->SetStaticMesh(nullptr);
+    DamageAcknowledgeMarker->SetRelativeLocation(FVector::ZeroVector);
     DeploymentCover->SetRelativeLocation(FVector::ZeroVector);
     RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
@@ -927,10 +993,21 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
             FutureWellCore->SetRelativeScale3D(FutureWellCoreBaseScale);
         }
     }
+    // Reduced flashing removes the LUMINANCE RAMP, never the event. The
+    // acknowledgement window below runs at the same length in every mode, so
+    // the hit still has a start, an active state and an expiry - it is just
+    // carried by the marker's shape instead of by the body's brightness.
     if (Settings != nullptr && Settings->IsReducedFlashingEnabled())
     {
         DamagePulseRemainingSeconds = 0.0f;
     }
+    if (DamageAcknowledgeRemainingSeconds > 0.0f)
+    {
+        DamageAcknowledgeRemainingSeconds = FMath::Max(
+            0.0f,
+            DamageAcknowledgeRemainingSeconds - DeltaSeconds);
+    }
+    UpdateDamageAcknowledgeMarker();
     if (DamagePulseRemainingSeconds > 0.0f)
     {
         DamagePulseRemainingSeconds = FMath::Max(
@@ -1037,6 +1114,11 @@ void AEchoesEntityView::ApplyAuthoritativeState(
         const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
         const bool bReducedFlashing =
             Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        // The colour ramp is the flashing part and is the only part reduced
+        // flashing suppresses. The acknowledgement window is armed either way
+        // and re-arms on every further hit, so sustained fire holds one steady
+        // marker instead of producing a train of luminance transitions.
+        DamageAcknowledgeRemainingSeconds = DamagePulseDurationSeconds;
         DamagePulseRemainingSeconds =
             bReducedFlashing ? 0.0f : DamagePulseDurationSeconds;
         SetBodyColor(
@@ -1054,6 +1136,31 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   : 0.0f;
     BodyMesh->SetCustomPrimitiveDataFloat(0, DisplayedHealthFraction);
     UpdateHealthBar();
+    UpdateDamageAcknowledgeMarker();
+}
+
+void AEchoesEntityView::UpdateDamageAcknowledgeMarker()
+{
+    if (DamageAcknowledgeMarker == nullptr)
+    {
+        return;
+    }
+    const bool bActive = DamageAcknowledgeRemainingSeconds > 0.0f;
+    if (bActive)
+    {
+        // A short, thick tick above the health bar: a different silhouette
+        // from the bar's long thin fill, so the two are not read as one
+        // widget. It stays inside the pick volume's headroom.
+        DamageAcknowledgeMarker->SetRelativeLocation(FVector(
+            0.0f,
+            0.0f,
+            HealthBarHeight + DamageAcknowledgeMarkerHeightCentimetres));
+        DamageAcknowledgeMarker->SetRelativeScale3D(FVector(
+            0.22f * HealthBarWidthScale,
+            0.14f,
+            0.14f));
+    }
+    SetOverlayVisibleAndPickable(DamageAcknowledgeMarker, bActive);
 }
 
 void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
@@ -1248,6 +1355,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     FVector AccentOffset(0.0f, 0.0f, HealthBarHeight - 28.0f);
     FRotator AccentRotation = FRotator::ZeroRotator;
     bool bShowSilhouetteAccent = !State.temporaryMineralCover;
+    FutureWellProtocolAccentVariant = FutureWellProtocolAccentNone;
     switch (State.type)
     {
         case echoes::sim::EntityType::Worker:
@@ -1315,8 +1423,49 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             AccentRotation.Yaw = bKharuun ? 45.0f : 0.0f;
             break;
         case echoes::sim::EntityType::ResourceNode:
-        case echoes::sim::EntityType::FutureWell:
             bShowSilhouetteAccent = false;
+            break;
+        case echoes::sim::EntityType::FutureWell:
+            // Only reached when the authored Well presentation is unavailable,
+            // because the visibility gate below suppresses this accent once
+            // that mesh set is in use. Without it the fallback Well is one
+            // uniform disc for all four protocols and COLOUR is the only thing
+            // separating Harvest from Preserve from Reshape from Dormant,
+            // which ACC-001 forbids. Each protocol gets its own primitive and
+            // orientation, so the protocol survives a colour-vision preset and
+            // survives reduced motion, which cannot take a static shape away.
+            switch (State.wellChoice)
+            {
+                case echoes::sim::FutureWellChoice::Harvest:
+                    AccentMesh = ConeMesh;
+                    AccentScale = FVector(0.40f, 0.40f, 0.44f);
+                    AccentRotation = FRotator::ZeroRotator;
+                    FutureWellProtocolAccentVariant = 1;
+                    break;
+                case echoes::sim::FutureWellChoice::Preserve:
+                    AccentMesh = CylinderMesh;
+                    AccentScale = FVector(0.70f, 0.70f, 0.10f);
+                    AccentRotation = FRotator::ZeroRotator;
+                    FutureWellProtocolAccentVariant = 2;
+                    break;
+                case echoes::sim::FutureWellChoice::Reshape:
+                    AccentMesh = CubeMesh;
+                    AccentScale = FVector(0.80f, 0.20f, 0.20f);
+                    AccentRotation = FRotator(0.0f, 45.0f, 0.0f);
+                    FutureWellProtocolAccentVariant = 3;
+                    break;
+                case echoes::sim::FutureWellChoice::Dormant:
+                    AccentMesh = SphereMesh;
+                    AccentScale = FVector(0.26f, 0.26f, 0.26f);
+                    AccentRotation = FRotator::ZeroRotator;
+                    FutureWellProtocolAccentVariant = 0;
+                    break;
+            }
+            // Above the fallback Well's flat 18 cm disc but below its 42 cm
+            // health bar and its owner marker, and well inside the pick
+            // volume - the accent must add a shape channel, not a new thing
+            // sticking out of the entity's click target.
+            AccentOffset.Z = 24.0f;
             break;
     }
     if (bChoir &&
@@ -1332,10 +1481,17 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
-    SetOverlayVisibleAndPickable(
-        SilhouetteAccent,
+    const bool bSilhouetteAccentDrawn =
         bShowSilhouetteAccent && !bUsingAuthoredRosterMesh &&
-            !bUsingAuthoredFutureWellMesh);
+        !bUsingAuthoredFutureWellMesh;
+    SetOverlayVisibleAndPickable(SilhouetteAccent, bSilhouetteAccentDrawn);
+    if (!bSilhouetteAccentDrawn)
+    {
+        // The authored Well presentation carries the protocol in its own
+        // glyph count, orbit tilt and core proportions, so the fallback
+        // accent stands down and reports that it is not the channel in use.
+        FutureWellProtocolAccentVariant = FutureWellProtocolAccentNone;
+    }
     SelectionRing->SetRelativeScale3D(FVector(
         SelectionRadius,
         SelectionRadius,
@@ -1368,6 +1524,40 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 : FVector(1.45f, 0.10f, 0.58f));
     }
     DeploymentCover->SetVisibility(bShowDeploymentCover, true);
+
+    // Both discs are area-of-effect statements, so both are drawn at the
+    // radius the simulation actually uses. The live rule set is preferred; the
+    // authored defaults stand in only when no simulation is reachable, and
+    // both are the same authority - never a hand-chosen mesh scale.
+    const UEchoesSimulationSubsystem* RulesBridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* RulesSimulation =
+        RulesBridge != nullptr ? RulesBridge->GetSimulation() : nullptr;
+    if (RulesSimulation != nullptr)
+    {
+        const echoes::sim::SimulationRules& LiveRules =
+            RulesSimulation->Config().rules;
+        RelaySupplyFieldRadiusCentimetres = AbilityDiscRadiusCentimetres(
+            LiveRules.relaySupply.connectionRadiusRaw);
+        AegisPowerFieldRadiusCentimetres = AbilityDiscRadiusCentimetres(
+            LiveRules.poweredAegis.connectionRadiusRaw);
+    }
+    else
+    {
+        const echoes::sim::SimulationRules DefaultRules =
+            echoes::sim::DefaultSimulationRules();
+        RelaySupplyFieldRadiusCentimetres = AbilityDiscRadiusCentimetres(
+            DefaultRules.relaySupply.connectionRadiusRaw);
+        AegisPowerFieldRadiusCentimetres = AbilityDiscRadiusCentimetres(
+            DefaultRules.poweredAegis.connectionRadiusRaw);
+    }
+    RelaySupplyField->SetRelativeScale3D(
+        AbilityDiscScale(RelaySupplyFieldRadiusCentimetres, 0.025f));
+    AegisPowerField->SetRelativeScale3D(
+        AbilityDiscScale(AegisPowerFieldRadiusCentimetres, 0.045f));
+
     RelaySupplyField->SetVisibility(
         State.relaySupplyActive &&
             State.faction == echoes::sim::Faction::MeridianCompact &&
@@ -1540,6 +1730,24 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         {
             OwnerMarkerMaterial = CreateOwnedMaterial(BasicMaterial);
             OwnerMarker->SetMaterial(0, OwnerMarkerMaterial);
+        }
+        if (DamageAcknowledgeMarkerMaterial == nullptr)
+        {
+            DamageAcknowledgeMarkerMaterial =
+                CreateOwnedMaterial(BasicMaterial);
+            DamageAcknowledgeMarker->SetMaterial(
+                0, DamageAcknowledgeMarkerMaterial);
+        }
+        if (DamageAcknowledgeMarkerMaterial != nullptr)
+        {
+            // Held flat: no emissive, no per-frame change. The marker's
+            // information is its presence and its shape, not its brightness.
+            DamageAcknowledgeMarkerMaterial->SetVectorParameterValue(
+                EntityColorParameterName,
+                FLinearColor(1.0f, 0.82f, 0.28f));
+            DamageAcknowledgeMarkerMaterial->SetScalarParameterValue(
+                EmissiveStrengthParameterName,
+                0.0f);
         }
         if (DeploymentCoverMaterial == nullptr)
         {
@@ -2165,6 +2373,27 @@ bool AEchoesEntityView::IsHealthBarVisible() const
 bool AEchoesEntityView::IsOwnerMarkerVisible() const
 {
     return OwnerMarker != nullptr && OwnerMarker->IsVisible();
+}
+
+bool AEchoesEntityView::IsDamageAcknowledgeMarkerVisible() const
+{
+    return DamageAcknowledgeMarker != nullptr &&
+           DamageAcknowledgeMarker->IsVisible();
+}
+
+bool AEchoesEntityView::IsDamageAcknowledgeMarkerEntityPickable() const
+{
+    return IsOverlayEntityPickable(DamageAcknowledgeMarker);
+}
+
+float AEchoesEntityView::GetRelaySupplyFieldRadiusCentimetres() const
+{
+    return RelaySupplyFieldRadiusCentimetres;
+}
+
+float AEchoesEntityView::GetAegisPowerFieldRadiusCentimetres() const
+{
+    return AegisPowerFieldRadiusCentimetres;
 }
 
 uint8 AEchoesEntityView::GetOwnerMarkerVariant() const

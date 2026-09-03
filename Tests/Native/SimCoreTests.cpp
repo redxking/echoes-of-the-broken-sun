@@ -445,12 +445,51 @@ void TestControlledSpawnAdmission() {
     REQUIRE(boundarySimulation.AddPlayer(
         0, Faction::MeridianCompact, {0, 0}));
     REQUIRE(boundarySimulation.SetTerrainTile(7, 5, Terrain::Blocked));
+    // Re-derived: this boundary case previously asserted a *Command Core*
+    // placed one tile clear of blocked ground was Valid, which encoded two
+    // defects at once - Cores being constructable at all (BLD-009) and the
+    // Meridian Core carrying a 2x2 footprint instead of its authored 5x5.
+    // The Barracks half-extent is exactly the one the Core used to claim, so
+    // the geometry under test is unchanged.
+    REQUIRE(boundarySimulation.ValidatePlacement(
+                0, EntityType::Barracks, Vec2::FromTiles(6, 5)) ==
+            PlacementResult::Valid);
+    // BLD-009: no player may build an additional Command Core, anywhere.
     REQUIRE(boundarySimulation.ValidatePlacement(
                 0, EntityType::CommandCore, Vec2::FromTiles(6, 5)) ==
-            PlacementResult::Valid);
-    REQUIRE(boundarySimulation.IsSpawnPositionAvailable(
+            PlacementResult::InvalidBuildingType);
+    REQUIRE(boundarySimulation.ValidatePlacement(
+                0, EntityType::CommandCore, Vec2::FromTiles(15, 15)) ==
+            PlacementResult::InvalidBuildingType);
+    // Authored spawns still place Cores; the 5x5 footprint now needs room for
+    // all twenty-five tiles, so tile (7,5) blocks the tight boundary case and
+    // open ground admits it.
+    REQUIRE(!boundarySimulation.IsSpawnPositionAvailable(
         Faction::MeridianCompact, EntityType::CommandCore,
         Vec2::FromTiles(6, 5)));
+    REQUIRE(boundarySimulation.IsSpawnPositionAvailable(
+        Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(15, 15)));
+    // All three Command Cores are 5x5 tiles: Anchor, Memory Hearth, and
+    // Concordance each declare that footprint in the authored building data.
+    const SimulationRules shippedRules = DefaultSimulationRules();
+    for (const Faction faction : {Faction::MeridianCompact,
+                                  Faction::KharuunAssemblies,
+                                  Faction::HollowChoir}) {
+        REQUIRE(shippedRules
+                    .archetypes[static_cast<std::size_t>(faction)]
+                               [static_cast<std::size_t>(
+                                   EntityType::CommandCore)]
+                    .footprintHalfExtentRaw == 5 * kFixedScale / 2);
+        // Surveyor, Tender, and Threadkeeper all read "no attack".
+        const EntityArchetypeRules& workerRules =
+            shippedRules.archetypes[static_cast<std::size_t>(faction)]
+                                   [static_cast<std::size_t>(
+                                       EntityType::Worker)];
+        REQUIRE(workerRules.attackDamage == 0);
+        REQUIRE(workerRules.attackRangeRaw == 0);
+        REQUIRE(workerRules.attackPeriodTicks == 0);
+    }
 }
 
 void TestCombatResolvesDeterministically() {
@@ -2749,9 +2788,14 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
             CommandAdmissionStatus::Accepted);
     REQUIRE(rejection.empty());
     REQUIRE(!valid.FindCommandResolutionReceipt(1, 1).has_value());
-    REQUIRE(valid.StateChecksum() == 5459800515315438623ULL);
+    // Re-derived: StateChecksum covers the authoritative rules table, so both
+    // golden values moved when the Command Core footprints became 5x5 and the
+    // Surveyor and Tender lost their attack weapons. The pinning contract -
+    // two exact, stable checksums across all three build configurations - is
+    // unchanged; only the state they pin was stale.
+    REQUIRE(valid.StateChecksum() == 15673808059727416843ULL);
     valid.Step();
-    REQUIRE(valid.StateChecksum() == 4575649953657819729ULL);
+    REQUIRE(valid.StateChecksum() == 3177932988310847857ULL);
     const std::optional<CommandResolutionReceipt> validReceipt =
         valid.FindCommandResolutionReceipt(1, 1);
     REQUIRE(validReceipt.has_value());
@@ -3690,15 +3734,26 @@ void TestHollowChoirIdentityReconciliationAndPersistence() {
             ChoirIdentityState::DualResolvePossible);
     REQUIRE(dual->choirIdentityResolveAtTick == resolutionTick);
     REQUIRE(dual->choirIdentityNextAvailableTick == nextAvailableTick);
-    REQUIRE(dual->attackDamage ==
+    // Re-derived: these three expectations encoded the defect itself. They
+    // asserted that a unit inside the 160-tick transition holds the Manifest
+    // damage bonus AND both Possible bonuses at once, which made the declared
+    // liability window the unit's strongest state. Section 12.5 grants 130%
+    // damage to Manifest and 130% movement / 125% vision to Possible; the
+    // transition is neither identity, so it grants neither. The unit pays base
+    // stats for the whole publicly visible window, and it is strictly worse
+    // than the Manifest state it left.
+    REQUIRE(dual->attackDamage == base.attackDamage);
+    REQUIRE(dual->attackDamage <
             base.attackDamage *
                 simulation.Config().rules.choirIdentity.manifestDamagePercent /
                 100);
-    REQUIRE(dual->movementPerTickRaw ==
+    REQUIRE(dual->movementPerTickRaw == base.movementPerTickRaw);
+    REQUIRE(dual->movementPerTickRaw <
             base.movementPerTickRaw *
                 simulation.Config().rules.choirIdentity.possibleMovementPercent /
                 100);
-    REQUIRE(dual->visionTiles ==
+    REQUIRE(dual->visionTiles == base.visionTiles);
+    REQUIRE(dual->visionTiles <
             base.visionTiles *
                 simulation.Config().rules.choirIdentity.possibleVisionPercent /
                 100);
@@ -4380,6 +4435,185 @@ void TestDeterministicNetworkForfeit() {
     REQUIRE(restored->FindEntity(remoteSoldier)->order.type == OrderType::None);
 }
 
+// BLD-009: "Players may build multiple production, supply, utility, and
+// drop-off structures, but no additional Command Core."
+void TestCommandCoreIsNotConstructable() {
+    Simulation cores({24, 24, 20, 0x424c44303039434fULL});
+    REQUIRE(cores.AddPlayer(0, Faction::MeridianCompact, {5000, 5000}));
+    const EntityId core = cores.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(6, 6));
+    const EntityId worker = cores.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(12, 12));
+    REQUIRE(core != 0 && worker != 0);
+
+    const auto CountCores = [&cores]() {
+        return std::count_if(
+            cores.Entities().begin(), cores.Entities().end(),
+            [](const Entity& entity) {
+                return entity.type == EntityType::CommandCore;
+            });
+    };
+    REQUIRE(CountCores() == 1);
+
+    REQUIRE(cores.ValidatePlacement(0, EntityType::CommandCore,
+                                    Vec2::FromTiles(16, 16)) ==
+            PlacementResult::InvalidBuildingType);
+
+    const ResourcePool before = cores.FindPlayer(0)->resources;
+    Command spareCore =
+        MakeCommand(0, 0, 1, CommandType::Build, worker);
+    spareCore.buildType = EntityType::CommandCore;
+    spareCore.position = Vec2::FromTiles(16, 16);
+    REQUIRE(cores.QueueCommand(spareCore));
+    cores.Step(5);
+    // No site, no worker order, and not one Matter spent.
+    REQUIRE(CountCores() == 1);
+    REQUIRE(cores.FindEntity(worker)->order.type != OrderType::Build);
+    REQUIRE(cores.FindPlayer(0)->resources.material == before.material);
+    REQUIRE(cores.FindPlayer(0)->resources.dawnshards == before.dawnshards);
+
+    // The same footprint still admits a structure BLD-009 does permit, so the
+    // rejection is about the Command Core and not about the ground.
+    REQUIRE(cores.ValidatePlacement(0, EntityType::Barracks,
+                                    Vec2::FromTiles(16, 16)) ==
+            PlacementResult::Valid);
+    Command barracks = MakeCommand(
+        cores.CurrentTick(), 0, 2, CommandType::Build, worker);
+    barracks.buildType = EntityType::Barracks;
+    barracks.position = Vec2::FromTiles(16, 16);
+    REQUIRE(cores.QueueCommand(barracks));
+    cores.Step();
+    REQUIRE(cores.FindEntity(worker)->order.type == OrderType::Build);
+    REQUIRE(cores.FindPlayer(0)->resources.material < before.material);
+
+    // OUT-001/OUT-002 read a *surviving* Core, and an incomplete one is not
+    // one. With Cores unconstructable this guard is defence in depth: nothing
+    // in normal play can now produce an incomplete Core to shelter behind.
+    REQUIRE(cores.Outcome() == MatchOutcome::Ongoing);
+}
+
+// MOV-004: "If no route remains, they stop at the last safe position,
+// preserve their order as blocked, and alert the owner."
+void TestReshapeExpiryStopsWithoutTeleporting() {
+    Simulation reshape({20, 20, 20, 0x4d4f56303034525fULL});
+    REQUIRE(reshape.AddPlayer(0, Faction::MeridianCompact, {0, 200}));
+    const EntityId worker = reshape.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(5, 6));
+    const EntityId nudged = reshape.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(5, 7));
+    const EntityId stranded = reshape.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(7, 6));
+    const EntityId well = reshape.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    REQUIRE(worker != 0 && nudged != 0 && stranded != 0 && well != 0);
+
+    Command activate = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    activate.target = well;
+    activate.wellChoice = FutureWellChoice::Reshape;
+    REQUIRE(reshape.QueueCommand(activate));
+    reshape.Step(12);
+    const Entity* reshapedWell = reshape.FindEntity(well);
+    REQUIRE(reshapedWell != nullptr);
+    REQUIRE(reshapedWell->wellChoice == FutureWellChoice::Reshape);
+    const Tick end = reshapedWell->reshapeUntilTick;
+    REQUIRE(end > reshape.CurrentTick());
+
+    // Close every tile within two of the stranded soldier while the Reshape
+    // still holds its 3x3 open. When the Reshape lapses there is no safe
+    // ground within reach at all.
+    for (std::int32_t tileY = 3; tileY <= 9; ++tileY) {
+        for (std::int32_t tileX = 4; tileX <= 10; ++tileX) {
+            REQUIRE(reshape.SetTerrainTile(tileX, tileY, Terrain::Blocked));
+        }
+    }
+
+    Command strandedOrder = MakeCommand(
+        reshape.CurrentTick(), 0, 2, CommandType::Move, stranded);
+    strandedOrder.position = Vec2::FromTiles(18, 18);
+    REQUIRE(reshape.QueueCommand(strandedOrder));
+    Command nudgedOrder = MakeCommand(
+        reshape.CurrentTick(), 0, 3, CommandType::Move, nudged);
+    nudgedOrder.position = Vec2::FromTiles(18, 18);
+    REQUIRE(reshape.QueueCommand(nudgedOrder));
+    reshape.Step();
+    REQUIRE(reshape.FindEntity(stranded)->order.type == OrderType::Move);
+    REQUIRE(reshape.FindEntity(stranded)->position == Vec2::FromTiles(7, 6));
+
+    reshape.Step(end - reshape.CurrentTick());
+    REQUIRE(reshape.FindEntity(well)->reshapeUntilTick == 0);
+
+    // The stranded soldier stops exactly where it stood. A whole-map search
+    // for the nearest open tile would have thrown it three tiles clear of the
+    // pocket; MOV-004 grants no displacement of unbounded distance.
+    const Entity* strandedAfter = reshape.FindEntity(stranded);
+    REQUIRE(strandedAfter != nullptr);
+    REQUIRE(strandedAfter->position == Vec2::FromTiles(7, 6));
+    REQUIRE(reshape.IsPositionPassable(strandedAfter->position));
+    // The order survives the ground closing under it.
+    REQUIRE(strandedAfter->order.type == OrderType::Move);
+    REQUIRE(strandedAfter->order.destination == Vec2::FromTiles(18, 18));
+
+    // A unit that does have safe ground in reach steps onto it, still bounded
+    // and still carrying its order.
+    const Entity* nudgedAfter = reshape.FindEntity(nudged);
+    REQUIRE(nudgedAfter != nullptr);
+    REQUIRE(reshape.IsPositionPassable(nudgedAfter->position));
+    REQUIRE(nudgedAfter->position != Vec2::FromTiles(5, 7));
+    REQUIRE(std::abs(nudgedAfter->position.x.FloorToInt() - 5) <= 2);
+    REQUIRE(std::abs(nudgedAfter->position.y.FloorToInt() - 7) <= 2);
+    REQUIRE(nudgedAfter->order.type == OrderType::Move);
+    REQUIRE(nudgedAfter->order.destination == Vec2::FromTiles(18, 18));
+}
+
+// Section 7 terrain table: Scarred is 85% speed.
+void TestScarredTerrainCostsSpeed() {
+    Simulation scar({20, 20, 20, 0x5343415252454431ULL});
+    REQUIRE(scar.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    const EntityId onOpen = scar.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(2, 2));
+    const EntityId onScar = scar.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(2, 10));
+    REQUIRE(onOpen != 0 && onScar != 0);
+    for (std::int32_t tileX = 0; tileX < 20; ++tileX) {
+        REQUIRE(scar.SetTerrainTile(tileX, 10, Terrain::Scarred));
+    }
+
+    Command openMove = MakeCommand(0, 0, 1, CommandType::Move, onOpen);
+    openMove.position = Vec2::FromTiles(18, 2);
+    Command scarMove = MakeCommand(0, 0, 2, CommandType::Move, onScar);
+    scarMove.position = Vec2::FromTiles(18, 10);
+    REQUIRE(scar.QueueCommand(openMove));
+    REQUIRE(scar.QueueCommand(scarMove));
+
+    // Eight ticks: short enough that neither unit reaches its next path
+    // waypoint, where travel is clamped to the waypoint and the per-tick rate
+    // stops being observable.
+    constexpr std::int32_t kTicks = 8;
+    scar.Step(kTicks);
+    const std::int32_t baseMovement =
+        scar.Config()
+            .rules
+            .archetypes[static_cast<std::size_t>(Faction::MeridianCompact)]
+                       [static_cast<std::size_t>(EntityType::Soldier)]
+            .movementPerTickRaw;
+    const std::int32_t openTravel =
+        scar.FindEntity(onOpen)->position.x.Raw() -
+        Vec2::FromTiles(2, 2).x.Raw();
+    const std::int32_t scarTravel =
+        scar.FindEntity(onScar)->position.x.Raw() -
+        Vec2::FromTiles(2, 10).x.Raw();
+    REQUIRE(openTravel == kTicks * baseMovement);
+    REQUIRE(scarTravel == kTicks * (baseMovement * 85 / 100));
+    REQUIRE(scarTravel < openTravel);
+    REQUIRE(scar.FindEntity(onScar)->position.y == Vec2::FromTiles(2, 10).y);
+}
+
 }  // namespace
 
 int main() {
@@ -4444,6 +4678,11 @@ int main() {
          TestHollowChoirAiUsesScopedThreatsAndStableTieBreaks},
         {"network protocol admission and hardening",
          TestNetworkProtocolAdmissionAndHardening},
+        {"Command Core is not constructable",
+         TestCommandCoreIsNotConstructable},
+        {"Reshape expiry stops without teleporting",
+         TestReshapeExpiryStopsWithoutTeleporting},
+        {"Scarred terrain costs speed", TestScarredTerrainCostsSpeed},
         {"deterministic network forfeit",
          TestDeterministicNetworkForfeit},
     };

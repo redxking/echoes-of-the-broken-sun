@@ -65,7 +65,9 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     Settings->SetReducedDynamicRangeEnabled(true);
     Settings->ValidateSettings();
 
-    TestEqual(TEXT("HUD scale is clamped"), Settings->GetHudScale(), 1.35f);
+    // ACC/UI requires an 80-150% HUD scale range. This expectation carried the
+    // pre-correction 135% ceiling; re-derived, not relaxed.
+    TestEqual(TEXT("HUD scale is clamped"), Settings->GetHudScale(), 1.50f);
     TestEqual(TEXT("Pan speed scale is clamped"), Settings->GetCameraPanSpeedScale(), 0.5f);
     TestEqual(TEXT("Zoom scale is clamped"), Settings->GetCameraZoomScale(), 2.0f);
     TestTrue(TEXT("High contrast can be enabled"), Settings->IsHighContrastHudEnabled());

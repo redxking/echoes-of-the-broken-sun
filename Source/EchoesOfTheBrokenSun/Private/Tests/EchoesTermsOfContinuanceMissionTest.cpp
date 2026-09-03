@@ -1662,10 +1662,18 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         {
             EarlyBridge->Tick(0.05f);
         }
-        TestTrue(TEXT("Extraction ordered before the fixed window closes fails immediately"),
+        // OUT-005: "Each operation names failure predicates before play...
+        // Ordinary unit loss is not a hidden failure." Ordering a witness toward
+        // extraction early was an UNAUTHORED seventh instant-fail, reported as
+        // `generic`, and it has been removed. The operation must now SURVIVE the
+        // early order; the window is still enforced, because extraction only
+        // counts once the continuance window has held. This block previously
+        // asserted the defect itself, so the expectation is re-derived, not
+        // weakened — and it now fails if the hidden predicate ever returns.
+        TestTrue(TEXT("An early extraction order does not fail the operation"),
                  EarlyBridge->GetSimulation()->CurrentTick() <
                          PreservePlan.ContinuanceWindowEndTick &&
-                     EarlyBridge->GetTermsOfContinuancePhase() ==
+                     EarlyBridge->GetTermsOfContinuancePhase() !=
                          EEchoesTermsOfContinuancePhase::Failed);
         EarlyBridge->StopPrototypeScenario();
         EarlyExtractionWorld.ForwardErrorMessages(this);

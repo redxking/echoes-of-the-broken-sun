@@ -176,6 +176,13 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 // researches, but does not chase anonymous vibration contacts or roam the map.
 constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
 
+// Section 7 terrain table: Scarred is 85% speed. Open is 100%; Blocked and
+// Water/void are impassable and never reach a movement step. This is an
+// authored terrain constant, not per-faction tuning, so it lives here rather
+// than in SimulationRules, which is serialized field-by-field into every
+// snapshot and replay.
+constexpr std::int32_t kScarredMovementPercent = 85;
+
 [[nodiscard]] std::int32_t SaturatingAdd(std::int32_t lhs, std::int32_t rhs);
 [[nodiscard]] bool ResourceCovers(const ResourcePool& available,
                                   const ResourcePool& cost);
@@ -183,6 +190,15 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
 [[nodiscard]] bool IsBuildingType(EntityType type) {
     return type == EntityType::CommandCore || type == EntityType::Dropoff ||
            type == EntityType::Barracks || type == EntityType::UtilityStructure;
+}
+
+// BLD-009: players may build multiple production, supply, utility, and
+// drop-off structures, but never an additional Command Core. IsBuildingType
+// stays the structure *classifier* (threat scoring, dropoff rules, snapshot
+// validation); only placement consults this narrower predicate. A Core still
+// reaches the field through authored spawns and mission scripting.
+[[nodiscard]] bool IsConstructableBuildingType(EntityType type) {
+    return IsBuildingType(type) && type != EntityType::CommandCore;
 }
 
 [[nodiscard]] bool IsDropoffType(EntityType type) {
@@ -503,7 +519,7 @@ constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
     const PlayerView& view,
     EntityType buildingType,
     Vec2 position) {
-    if (!IsBuildingType(buildingType)) {
+    if (!IsConstructableBuildingType(buildingType)) {
         return PlacementResult::InvalidBuildingType;
     }
     const std::int32_t halfExtent = FootprintHalfExtentFor(
@@ -805,15 +821,21 @@ SimulationRules DefaultSimulationRules() {
                         [static_cast<std::size_t>(type)] = value;
     };
 
+    // Surveyor: "Work rate 10; cargo 10; no attack" and, again, "No attack,
+    // low health, and high strategic value." Attack range/damage/cadence are
+    // zero for both worker archetypes below.
     set(Faction::MeridianCompact, EntityType::Worker,
-        {{50, 0}, 80, 128, 5, kFixedScale, 4, 20, 10, 100, 0, 1, 0,
+        {{50, 0}, 80, 128, 5, 0, 0, 0, 10, 100, 0, 1, 0,
          60, kFixedScale / 8});
     set(Faction::MeridianCompact, EntityType::Soldier,
         {{85, 20}, 120, 112, 6, 4 * kFixedScale, 18, 12, 0, 0, 0, 2,
          0, 100, kFixedScale / 8});
+    // Anchor footprint is 5x5 tiles (Content/Data/Source/buildings.json
+    // mc_anchor, and the Concordance entry below already encodes it).
+    // kFixedScale is one tile, so a 5x5 half-extent is 5 * kFixedScale / 2.
     set(Faction::MeridianCompact, EntityType::CommandCore,
         {{420, 40}, 1000, 0, 8, 0, 0, 0, 0, 0, 400, 0, 12, 0,
-         kFixedScale});
+         5 * kFixedScale / 2});
     set(Faction::MeridianCompact, EntityType::Dropoff,
         {{110, 0}, 500, 0, 5, 0, 0, 0, 0, 0, 100, 0, 6, 0,
          3 * kFixedScale / 4});
@@ -830,15 +852,18 @@ SimulationRules DefaultSimulationRules() {
         {{130, 30}, 520, 0, 7, 9 * kFixedScale, 28, 20, 0, 0, 120, 0, 0, 0,
          kFixedScale});
 
+    // Tender: "Work rate 9; cargo 10; no attack" and, again, "No attack.
+    // Stabilization is slow, visible, and too expensive [...]".
     set(Faction::KharuunAssemblies, EntityType::Worker,
-        {{50, 0}, 70, 160, 6, kFixedScale, 5, 16, 9, 90, 0, 1, 0,
+        {{50, 0}, 70, 160, 6, 0, 0, 0, 9, 90, 0, 1, 0,
          60, kFixedScale / 8});
     set(Faction::KharuunAssemblies, EntityType::Soldier,
         {{75, 30}, 105, 176, 7, Fixed::FromRatio(3, 2).Raw(), 25, 10,
          0, 0, 0, 2, 0, 100, kFixedScale / 8});
+    // Memory Hearth footprint is 5x5 tiles (buildings.json ka_memory_hearth).
     set(Faction::KharuunAssemblies, EntityType::CommandCore,
         {{380, 60}, 850, 0, 8, 0, 0, 0, 0, 0, 400, 0, 12, 0,
-         kFixedScale});
+         5 * kFixedScale / 2});
     set(Faction::KharuunAssemblies, EntityType::Dropoff,
         {{95, 0}, 420, Fixed::FromRatio(3, 50).Raw(), 5, 0, 0, 0, 0, 0, 100, 0, 5, 0,
          3 * kFixedScale / 4});
@@ -1130,14 +1155,15 @@ void Simulation::RefreshChoirIdentityStats(Entity& entity) const {
             0,
             std::numeric_limits<std::int32_t>::max()));
     };
+    // 12.5: "Manifest grants 130% damage. Possible grants 130% movement and
+    // 125% vision." The 160-tick public transition is neither identity, so it
+    // grants neither bonus. Holding both while DualResolve* made the declared
+    // liability window the unit's strongest state; the unit now pays base
+    // stats for the whole publicly visible transition.
     const bool manifest =
-        entity.choirIdentityState == ChoirIdentityState::Manifest ||
-        entity.choirIdentityState == ChoirIdentityState::DualResolveManifest ||
-        entity.choirIdentityState == ChoirIdentityState::DualResolvePossible;
+        entity.choirIdentityState == ChoirIdentityState::Manifest;
     const bool possible =
-        entity.choirIdentityState == ChoirIdentityState::Possible ||
-        entity.choirIdentityState == ChoirIdentityState::DualResolveManifest ||
-        entity.choirIdentityState == ChoirIdentityState::DualResolvePossible;
+        entity.choirIdentityState == ChoirIdentityState::Possible;
     if (manifest) {
         entity.attackDamage = ApplyPercent(
             entity.attackDamage,
@@ -2002,9 +2028,12 @@ MatchOutcome Simulation::Outcome() const {
     }
     std::array<bool, kMaximumPlayers> hasCommandCore{};
     for (const Entity& entity : entities_) {
+        // OUT-001/OUT-002: only a *surviving* Core keeps a player alive. An
+        // incomplete construction site is not a Core yet (BLD-004 grants it no
+        // structure function), so it may not postpone Corefall.
         if (entity.owner < hasCommandCore.size() &&
             players_[entity.owner].active && entity.hitPoints > 0 &&
-            entity.type == EntityType::CommandCore) {
+            entity.completed && entity.type == EntityType::CommandCore) {
             hasCommandCore[entity.owner] = true;
         }
     }
@@ -2073,7 +2102,7 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
     if (FindPlayer(player) == nullptr) {
         return PlacementResult::InvalidPlayer;
     }
-    if (!IsBuilding(buildingType)) {
+    if (!IsConstructableBuildingType(buildingType)) {
         return PlacementResult::InvalidBuildingType;
     }
     const Faction faction = players_[player].faction;
@@ -2353,6 +2382,17 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
             static_cast<std::int32_t>(
                 static_cast<std::int64_t>(movementPerTick) *
                 config_.rules.bulwarkDeployment.deployedMovementPercent / 100));
+    }
+    // Section 7 terrain table: Scarred costs 85% speed. Charged against the
+    // tile the unit is leaving, so crossing a scar is slower in both
+    // directions and the friction is symmetric and deterministic.
+    if (TerrainAt(entity.position.x.FloorToInt(),
+                  entity.position.y.FloorToInt()) == Terrain::Scarred) {
+        movementPerTick = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(movementPerTick) *
+                kScarredMovementPercent / 100));
     }
     const std::int64_t travel =
         std::min<std::int64_t>(movementPerTick, distance);
@@ -3722,14 +3762,24 @@ void Simulation::ResolveExpiredReshapes() {
             continue;
         }
 
+        // MOV-004: a unit whose ground closes under it stops at the last safe
+        // position it can still reach. The Reshape footprint is the 3x3 around
+        // the well, so the nearest safe ground is at most two tiles away; a
+        // whole-map scan is not a stop, it is a teleport, and the spec grants
+        // no displacement of unbounded distance.
         bool foundFallback = false;
         std::uint64_t bestDistance = std::numeric_limits<std::uint64_t>::max();
         std::size_t bestTile = 0;
-        for (std::int32_t candidateY = 0; candidateY < config_.mapHeightTiles;
-             ++candidateY) {
-            for (std::int32_t candidateX = 0;
-                 candidateX < config_.mapWidthTiles; ++candidateX) {
-                if (TerrainAt(candidateX, candidateY) == Terrain::Blocked) {
+        constexpr std::int32_t kReshapeEvictionRadiusTiles = 2;
+        for (std::int32_t candidateY = tileY - kReshapeEvictionRadiusTiles;
+             candidateY <= tileY + kReshapeEvictionRadiusTiles; ++candidateY) {
+            for (std::int32_t candidateX = tileX - kReshapeEvictionRadiusTiles;
+                 candidateX <= tileX + kReshapeEvictionRadiusTiles;
+                 ++candidateX) {
+                if (candidateX < 0 || candidateY < 0 ||
+                    candidateX >= config_.mapWidthTiles ||
+                    candidateY >= config_.mapHeightTiles ||
+                    TerrainAt(candidateX, candidateY) == Terrain::Blocked) {
                     continue;
                 }
                 const std::int64_t deltaX =
@@ -3755,11 +3805,14 @@ void Simulation::ResolveExpiredReshapes() {
                 bestTile / static_cast<std::size_t>(config_.mapWidthTiles));
             entity.position = Vec2::FromTiles(fallbackX, fallbackY);
         } else {
-            // Invalid all-blocked maps still resolve deterministically without
-            // leaving an entity in an inescapable cell.
+            // Enclosed pockets and invalid all-blocked maps still resolve
+            // deterministically without leaving an entity in an inescapable
+            // cell: the unit stays exactly where it is and its ground reopens.
             (void)SetTerrainTile(tileX, tileY, Terrain::Open);
         }
-        entity.order = {};
+        // MOV-004 preserves the order rather than cancelling it. The route is
+        // recalculated on the next tick; while no route exists the unit holds
+        // its last safe position with the order still standing.
     }
 }
 
