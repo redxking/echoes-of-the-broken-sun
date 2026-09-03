@@ -387,7 +387,7 @@ int main(int argc, char* argv[]) {
     if (runDeterminism) {
         std::cout << "Executing Batch Replay Determinism verification...\n";
         for (int i = 0; i < 10 && determinismPassed; ++i) {
-            const auto& sample = results[i * (totalMatches / 10)];
+            const auto& sample = results[static_cast<std::size_t>(i) * static_cast<std::size_t>(totalMatches / 10)];
             Faction f0 = Faction::MeridianCompact;
             Faction f1 = Faction::KharuunAssemblies;
             for (auto f : kFactions) {
