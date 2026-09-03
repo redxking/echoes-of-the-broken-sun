@@ -336,10 +336,14 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
+    // Per-player terrain and object memory is now serialized into the
+    // snapshot, so the native snapshot schema advanced from 24 to 25.
+    // The replay envelope shape did not change and stays at 24; this
+    // assertion pins the snapshot schema only.
     TestEqual(
-        TEXT("Simulation snapshot schema advances to twenty-four"),
+        TEXT("Simulation snapshot schema advances to twenty-five"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(24));
+        static_cast<uint32>(25));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

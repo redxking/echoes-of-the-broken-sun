@@ -252,6 +252,219 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
               FEchoesSkirmishSetupModel::Validate(
                   InvalidSetup, ValidationError));
 
+    // The release boundary names exactly five AI doctrines - Warden, Raider,
+    // Steward, Expansionist, Adaptive - and section 16.1 documents a purpose, a
+    // posture and a Well preference for each. A sixth selectable profile is
+    // accessible content with no documented player purpose, which AUTH-005 and
+    // VAL-003 make a release blocker. The selector used to offer
+    // AiPersonality::Balanced as a sixth "BALANCED" doctrine.
+    {
+        FEchoesSkirmishSetup DoctrineCycle =
+            FEchoesSkirmishSetupModel::DefaultSetup();
+        TSet<echoes::sim::AiPersonality> Reachable;
+        TSet<FString> DoctrineNames;
+        for (int32 Step = 0; Step < 24; ++Step)
+        {
+            DoctrineCycle =
+                FEchoesSkirmishSetupModel::WithNextAi(DoctrineCycle, 1);
+            Reachable.Add(DoctrineCycle.AiPersonality);
+            DoctrineNames.Add(FString(
+                FEchoesSkirmishSetupModel::AiDisplayName(
+                    DoctrineCycle.AiPersonality)));
+        }
+        for (int32 Step = 0; Step < 24; ++Step)
+        {
+            DoctrineCycle =
+                FEchoesSkirmishSetupModel::WithNextAi(DoctrineCycle, -1);
+            Reachable.Add(DoctrineCycle.AiPersonality);
+        }
+        TestEqual(
+            TEXT("The doctrine selector offers exactly the five authored doctrines"),
+            Reachable.Num(),
+            5);
+        TestTrue(
+            TEXT("The five reachable doctrines are the five the spec authors"),
+            Reachable.Contains(echoes::sim::AiPersonality::Defensive) &&
+                Reachable.Contains(echoes::sim::AiPersonality::Raider) &&
+                Reachable.Contains(echoes::sim::AiPersonality::Economic) &&
+                Reachable.Contains(
+                    echoes::sim::AiPersonality::Expansionist) &&
+                Reachable.Contains(echoes::sim::AiPersonality::Adaptive));
+        TestFalse(
+            TEXT("The undocumented sixth profile is unreachable from the selector"),
+            Reachable.Contains(echoes::sim::AiPersonality::Balanced));
+        TestEqual(
+            TEXT("Every reachable doctrine carries its own player-facing name"),
+            DoctrineNames.Num(),
+            5);
+
+        FEchoesSkirmishSetup UnauthoredDoctrine =
+            FEchoesSkirmishSetupModel::DefaultSetup();
+        UnauthoredDoctrine.AiPersonality =
+            echoes::sim::AiPersonality::Balanced;
+        TestFalse(
+            TEXT("An undocumented AI doctrine is rejected before deployment"),
+            FEchoesSkirmishSetupModel::Validate(
+                UnauthoredDoctrine, ValidationError));
+    }
+
+    // MAP-001 spawn fairness, measured rather than asserted. Both distance
+    // clauses are checked from the two anchors that matter: the Command Core,
+    // which is what an army or scout leaves from, and the nearer of Command
+    // Core or starting Dropoff, which is what "resource travel time" actually
+    // means for a hauling worker. Crownfall Basin used to put its Well 35 tiles
+    // from one start and 49 from the other.
+    {
+        const int32 Width = FEchoesSkirmishSetupModel::MapWidthTiles;
+        const int32 Height = FEchoesSkirmishSetupModel::MapHeightTiles;
+        const auto FloodFill = [Width, Height](
+            EEchoesSkirmishMapPreset Preset,
+            const FIntPoint& Start)
+        {
+            TArray<int32> Distance;
+            Distance.Init(TNumericLimits<int32>::Max(), Width * Height);
+            TArray<FIntPoint> Frontier;
+            if (Start.X < 0 || Start.X >= Width || Start.Y < 0 ||
+                Start.Y >= Height ||
+                FEchoesSkirmishSetupModel::IsBlockedTile(
+                    Preset, Start.X, Start.Y))
+            {
+                return Distance;
+            }
+            Distance[Start.Y * Width + Start.X] = 0;
+            Frontier.Add(Start);
+            const FIntPoint Steps[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            for (int32 Cursor = 0; Cursor < Frontier.Num(); ++Cursor)
+            {
+                const FIntPoint Current = Frontier[Cursor];
+                const int32 Here = Distance[Current.Y * Width + Current.X];
+                for (const FIntPoint& Step : Steps)
+                {
+                    const FIntPoint Next = Current + Step;
+                    if (Next.X < 0 || Next.X >= Width || Next.Y < 0 ||
+                        Next.Y >= Height ||
+                        FEchoesSkirmishSetupModel::IsBlockedTile(
+                            Preset, Next.X, Next.Y))
+                    {
+                        continue;
+                    }
+                    int32& Best = Distance[Next.Y * Width + Next.X];
+                    if (Best > Here + 1)
+                    {
+                        Best = Here + 1;
+                        Frontier.Add(Next);
+                    }
+                }
+            }
+            return Distance;
+        };
+        // MAP-001's ceiling is 5%, so the two measurements may differ by at
+        // most one twentieth of the larger.
+        const auto WithinCeiling = [](int32 A, int32 B)
+        {
+            return A != TNumericLimits<int32>::Max() &&
+                B != TNumericLimits<int32>::Max() &&
+                FMath::Abs(A - B) * 20 <= FMath::Max(A, B);
+        };
+        for (int32 MapIndex = 0; MapIndex < UE_ARRAY_COUNT(Maps); ++MapIndex)
+        {
+            const EEchoesSkirmishMapPreset Preset = Maps[MapIndex];
+            const TCHAR* MapName =
+                FEchoesSkirmishSetupModel::MapDisplayName(Preset);
+            const TArray<FIntPoint> LocalSpawns =
+                FEchoesSkirmishSetupModel::LocalSpawnTiles(Preset);
+            const TArray<FIntPoint> OpponentSpawns =
+                FEchoesSkirmishSetupModel::OpponentSpawnTiles(Preset);
+            const TArray<FIntPoint> Deposits =
+                FEchoesSkirmishSetupModel::ResourceNodeTiles(Preset);
+            const FIntPoint Well =
+                FEchoesSkirmishSetupModel::FutureWellTile(Preset);
+            if (LocalSpawns.Num() < 3 || OpponentSpawns.Num() < 3 ||
+                Deposits.Num() == 0)
+            {
+                AddError(FString::Printf(
+                    TEXT("%s has no measurable deployment contract"), MapName));
+                continue;
+            }
+            const TArray<int32> LocalCore = FloodFill(Preset, LocalSpawns[0]);
+            const TArray<int32> OpponentCore =
+                FloodFill(Preset, OpponentSpawns[0]);
+            const TArray<int32> LocalDrop = FloodFill(Preset, LocalSpawns[2]);
+            const TArray<int32> OpponentDrop =
+                FloodFill(Preset, OpponentSpawns[2]);
+            const auto At = [Width](const TArray<int32>& Field,
+                                    const FIntPoint& Tile)
+            {
+                return Field[Tile.Y * Width + Tile.X];
+            };
+            const auto Haul = [&At](const TArray<int32>& Core,
+                                    const TArray<int32>& Drop,
+                                    const FIntPoint& Tile)
+            {
+                return FMath::Min(At(Core, Tile), At(Drop, Tile));
+            };
+
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s: Well approach time is equivalent for both forces (%d vs %d tiles)"),
+                    MapName,
+                    At(LocalCore, Well),
+                    At(OpponentCore, Well)),
+                WithinCeiling(At(LocalCore, Well), At(OpponentCore, Well)));
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s: Well approach is equivalent from the starting Dropoff too"),
+                    MapName),
+                WithinCeiling(At(LocalDrop, Well), At(OpponentDrop, Well)));
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s: both forces start with equivalent build area"),
+                    MapName),
+                WithinCeiling(
+                    At(LocalCore, LocalSpawns[2]),
+                    At(OpponentCore, OpponentSpawns[2])));
+
+            // Rank the deposits by distance for each force and compare the
+            // ladders rank for rank: the nth-nearest deposit must cost each
+            // force the same travel, or one force simply opens richer.
+            TArray<int32> LocalCoreLadder;
+            TArray<int32> OpponentCoreLadder;
+            TArray<int32> LocalHaulLadder;
+            TArray<int32> OpponentHaulLadder;
+            for (const FIntPoint& Deposit : Deposits)
+            {
+                LocalCoreLadder.Add(At(LocalCore, Deposit));
+                OpponentCoreLadder.Add(At(OpponentCore, Deposit));
+                LocalHaulLadder.Add(Haul(LocalCore, LocalDrop, Deposit));
+                OpponentHaulLadder.Add(
+                    Haul(OpponentCore, OpponentDrop, Deposit));
+            }
+            LocalCoreLadder.Sort();
+            OpponentCoreLadder.Sort();
+            LocalHaulLadder.Sort();
+            OpponentHaulLadder.Sort();
+            bool bCoreLaddersFair = true;
+            bool bHaulLaddersFair = true;
+            for (int32 Rank = 0; Rank < Deposits.Num(); ++Rank)
+            {
+                bCoreLaddersFair &= WithinCeiling(
+                    LocalCoreLadder[Rank], OpponentCoreLadder[Rank]);
+                bHaulLaddersFair &= WithinCeiling(
+                    LocalHaulLadder[Rank], OpponentHaulLadder[Rank]);
+            }
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s: every deposit rank is equally far from either Command Core"),
+                    MapName),
+                bCoreLaddersFair);
+            TestTrue(
+                FString::Printf(
+                    TEXT("%s: worker haul time is equivalent at every deposit rank"),
+                    MapName),
+                bHaulLaddersFair);
+        }
+    }
+
     echoes::sim::Simulation AiFixture;
     TestTrue(TEXT("AI fixture accepts local authority"),
              AiFixture.AddPlayer(

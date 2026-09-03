@@ -6213,6 +6213,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const FEchoesCampaignDecisionRecord* Record =
             Bridge->GetCampaignProgress().FindDecision(
                 EEchoesCampaignMissionId::TheBrokenSun);
+        // This record is written by the live simulation as the journey
+        // ends, so it pins the CURRENT native snapshot schema. Terrain
+        // and object memory are now serialized into snapshots, so that
+        // schema moved 24 -> 25; the replay envelope shape is unchanged
+        // and stays at 24.
         if (!Require(
                 Record != nullptr &&
                     Record->VerifiedFacts == 0xFF &&
@@ -6220,7 +6225,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Record->AvailableFinalResolutions ==
                         Spec.ExpectedFinalResolutionMask &&
                     Record->FinalPlanKey == Spec.ExpectedFinalPlanKey &&
-                    Record->SimulationSnapshotVersion == 24 &&
+                    Record->SimulationSnapshotVersion == 25 &&
                     Record->CompletionTick > 0 &&
                     Record->FinalStateChecksum != 0,
                 TEXT("Mission 15 retains full native ending provenance")) ||

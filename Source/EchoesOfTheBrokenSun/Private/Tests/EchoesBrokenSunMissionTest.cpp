@@ -1786,12 +1786,16 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("The approach contract exposes a valid construction footprint"),
         FindBuildSite(RuntimePlan.CrownfallApproachSite, 3,
                       ApproachBuildSite));
-    const auto V24BuildSequence =
+    // Per-player terrain and object memory is now serialized into the
+    // snapshot, so the native snapshot schema advanced from 24 to 25. The
+    // replay envelope shape did not change and stays at 24; every schema
+    // named below is the native snapshot schema this build saves.
+    const auto NativeBuildSequence =
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-24 approach build has a stable receipt sequence"),
-        V24BuildSequence.has_value());
+        TEXT("The schema-25 approach build has a stable receipt sequence"),
+        NativeBuildSequence.has_value());
     TestTrue(
         TEXT("The exact approach anchor accepts an ordinary worker build"),
         Bridge->IssueBuildCommand(
@@ -1814,11 +1818,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Objective.bBrokenSunApproachSecured &&
             Objective.BrokenSunApproachAnchorId != 0);
     TestTrue(
-        TEXT("The native schema-24 source retains the approach-build receipt"),
-        V24BuildSequence.has_value() &&
+        TEXT("The native schema-25 source retains the approach-build receipt"),
+        NativeBuildSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
-                *V24BuildSequence)
+                *NativeBuildSequence)
                 .has_value());
     TestTrue(
         TEXT("A pre-choice checkpoint preserves the exact approach"),
@@ -1829,35 +1833,64 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     const FEchoesObjectiveSnapshot V22ExpectedObjective = Objective;
-    TArray<uint8> V24Checkpoint;
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        V24Layout;
+    TArray<uint8> NativeCheckpoint;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        NativeLayout;
+    // The checkpoint saved just above is native, so it is schema 25 now
+    // that terrain and object memory is serialized. The shared inspect and
+    // down-convert helpers read the memory ledgers explicitly, so they reduce
+    // this checkpoint one schema at a time: 25 to 24 to 23 to 22.
     TestTrue(
-        TEXT("The Mission 15 schema-24 checkpoint exposes its bounded receipt block"),
-        FFileHelper::LoadFileToArray(V24Checkpoint, *QuickSavePath) &&
+        TEXT("The Mission 15 schema-25 checkpoint exposes its bounded receipt block"),
+        FFileHelper::LoadFileToArray(NativeCheckpoint, *QuickSavePath) &&
             EchoesSnapshotMigrationTestHelpers::
-                InspectMission15EnvelopeSnapshotV24(
-                    V24Checkpoint, V24Layout) &&
-            V24Layout.ReceiptCount > 0U &&
-            V24Layout.ReceiptBlockSize ==
-                4 + static_cast<int32>(V24Layout.ReceiptCount) * 19);
-    TArray<uint8> V22Checkpoint = V24Checkpoint;
-    const uint64 ExpectedV24ToV22Shrink = 5ULL +
-        static_cast<uint64>(V24Layout.ReceiptCount) * 19ULL;
+                InspectMission15EnvelopeSnapshot(
+                    NativeCheckpoint, NativeLayout) &&
+            NativeLayout.ReceiptCount > 0U &&
+            NativeLayout.ReceiptBlockSize ==
+                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19);
+    // The schema-25 memory ledgers are measured against this mission's own map,
+    // not taken on the inspector's word: four remembered-terrain grids of
+    // exactly the live tile count, then one bounded object ledger per player.
+    const int32 Mission15MapTiles =
+        Bridge->GetSimulation()->Config().mapWidthTiles *
+        Bridge->GetSimulation()->Config().mapHeightTiles;
     TestTrue(
-        TEXT("The Mission 15 checkpoint converts through schema 23 to its genuine schema-22 shape"),
+        TEXT("The Mission 15 checkpoint carries one terrain memory per player and a bounded object memory"),
+        Mission15MapTiles > 0 &&
+            NativeLayout.RememberedTileCount ==
+                static_cast<uint32>(Mission15MapTiles) &&
+            NativeLayout.MemoryLedgerOffset > NativeLayout.SnapshotOffset &&
+            NativeLayout.MemoryLedgerOffset + NativeLayout.MemoryLedgerSize <=
+                NativeLayout.ReceiptBlockOffset &&
+            NativeLayout.MemoryLedgerSize ==
+                static_cast<int32>(echoes::sim::kMaximumPlayers) *
+                        (4 + Mission15MapTiles) +
+                    static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
+                    static_cast<int32>(NativeLayout.RememberedObjectCount) *
+                        24 &&
+            NativeLayout.RememberedObjectCount <=
+                static_cast<uint32>(echoes::sim::kMaximumPlayers) *
+                    static_cast<uint32>(
+                        echoes::sim::kMaximumRememberedObjects));
+    TArray<uint8> V22Checkpoint = NativeCheckpoint;
+    const uint64 ExpectedNativeToV22Shrink = 5ULL +
+        static_cast<uint64>(NativeLayout.ReceiptCount) * 19ULL +
+        static_cast<uint64>(NativeLayout.MemoryLedgerSize);
+    TestTrue(
+        TEXT("The Mission 15 checkpoint converts through schemas 24 and 23 to its genuine schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
-                ConvertMission15EnvelopeSnapshotV24ToV22(V22Checkpoint) &&
+                ConvertMission15EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
                 V22Checkpoint) == 22U &&
-            static_cast<uint64>(V24Checkpoint.Num() - V22Checkpoint.Num()) ==
-                ExpectedV24ToV22Shrink &&
+            static_cast<uint64>(NativeCheckpoint.Num() - V22Checkpoint.Num()) ==
+                ExpectedNativeToV22Shrink &&
             FMemory::Memcmp(
-                V24Checkpoint.GetData(), V22Checkpoint.GetData(), 34) == 0 &&
+                NativeCheckpoint.GetData(), V22Checkpoint.GetData(), 34) == 0 &&
             FMemory::Memcmp(
-                V24Checkpoint.GetData() + 38,
+                NativeCheckpoint.GetData() + 38,
                 V22Checkpoint.GetData() + 38,
-                V24Layout.SnapshotOffset - 38) == 0 &&
+                NativeLayout.SnapshotOffset - 38) == 0 &&
             FFileHelper::SaveArrayToFile(V22Checkpoint, *QuickSavePath));
     TestTrue(
         TEXT("The converted Mission 15 primary is the only loadable generation"),
@@ -1907,10 +1940,10 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             LoadedApproachAnchor->type == EntityType::UtilityStructure &&
             LoadedApproachAnchor->completed &&
             LoadedApproachAnchor->position == ApproachBuildSite &&
-            V24BuildSequence.has_value() &&
+            NativeBuildSequence.has_value() &&
             !Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
-                *V24BuildSequence)
+                *NativeBuildSequence)
                 .has_value());
 
     TestTrue(
@@ -2051,22 +2084,25 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesFinalResolution::ControlledStabilization &&
             Objective.BrokenSunFinalResolution ==
                 EEchoesFinalResolution::None);
+    // Resaving writes the native snapshot, which is schema 25 now that
+    // terrain and object memory is serialized; the replay envelope is
+    // untouched here and stays at 24.
     TestTrue(
-        TEXT("The legacy-loaded Mission 15 state resaves as native schema 24"),
+        TEXT("The legacy-loaded Mission 15 state resaves as native schema 25"),
         Bridge->QuickSaveScenario(Feedback));
-    TArray<uint8> ResavedV24Primary;
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        ResavedV24Layout;
+    TArray<uint8> ResavedNativePrimary;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        ResavedNativeLayout;
     TestTrue(
-        TEXT("The Mission 15 primary records native schema 24 after legacy load"),
+        TEXT("The Mission 15 primary records native schema 25 after legacy load"),
         FFileHelper::LoadFileToArray(
-            ResavedV24Primary, *QuickSavePath) &&
+            ResavedNativePrimary, *QuickSavePath) &&
             EchoesSnapshotMigrationTestHelpers::
-                InspectMission15EnvelopeSnapshotV24(
-                    ResavedV24Primary,
-                    ResavedV24Layout) &&
+                InspectMission15EnvelopeSnapshot(
+                    ResavedNativePrimary,
+                    ResavedNativeLayout) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
-                ResavedV24Primary) == 24U);
+                ResavedNativePrimary) == 25U);
     TestTrue(
         TEXT("The native Mission 15 primary remains directly loadable"),
         !IFileManager::Get().FileExists(
@@ -2084,8 +2120,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->GetBrokenSunPhase() ==
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
     TArray<uint8> RetainedV22Backup;
+    // Only the resave moved to the native schema 25. The retained backup is
+    // the deliberately built schema-22 generation this test loaded, so it
+    // stays at 22: that is the backward-compatibility coverage.
     TestTrue(
-        TEXT("The first schema-24 resave retains the valid schema-22 Mission 15 generation"),
+        TEXT("The first schema-25 resave retains the valid schema-22 Mission 15 generation"),
         FFileHelper::LoadFileToArray(
             RetainedV22Backup,
             *(QuickSavePath + TEXT(".bak"))) &&
@@ -2262,6 +2301,9 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheBrokenSun);
+    // The runtime stamps echoes::sim::kSnapshotVersion into the decision
+    // record, and that is 25 now that terrain and object memory is
+    // serialized; the replay envelope stays at 24.
     TestTrue(
         TEXT("Mission 15 stores the exact resolution projection and native provenance"),
         MissionRecord != nullptr &&
@@ -2274,7 +2316,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             MissionRecord->AvailableFinalResolutions ==
                 RuntimePlan.AvailableFinalResolutions &&
             MissionRecord->FinalPlanKey == RuntimePlan.StablePlanKey &&
-            MissionRecord->SimulationSnapshotVersion == 24 &&
+            MissionRecord->SimulationSnapshotVersion == 25 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

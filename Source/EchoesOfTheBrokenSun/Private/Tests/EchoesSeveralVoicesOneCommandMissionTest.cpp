@@ -310,9 +310,12 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 24"),
+    // Per-player terrain and object memory is now serialized into the
+    // snapshot, so the native schema moved from 24 to 25. The replay
+    // envelope shape did not change and stays at 24.
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 25"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(24));
+              static_cast<uint32>(25));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -638,12 +641,12 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Bridge->SimToWorld(Plan.NemeCommandSite),
             FutureWellChoice::Dormant,
             Feedback));
-    const auto V24ReconciliationSequence =
+    const auto NativeReconciliationSequence =
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-24 reconciliation has a stable receipt sequence"),
-        V24ReconciliationSequence.has_value());
+        TEXT("The schema-25 reconciliation has a stable receipt sequence"),
+        NativeReconciliationSequence.has_value());
     TestTrue(
         TEXT("The protected Soldier accepts Possible resolution"),
         Bridge->IssueChoirReconciliation(
@@ -669,11 +672,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ChoirIdentityState::DualResolvePossible &&
             InitialResolveRemaining > 0 && InitialResolveRemaining <= 160);
     TestTrue(
-        TEXT("The native schema-24 source retains the reconciliation receipt"),
-        V24ReconciliationSequence.has_value() &&
+        TEXT("The native schema-25 source retains the reconciliation receipt"),
+        NativeReconciliationSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
-                *V24ReconciliationSequence)
+                *NativeReconciliationSequence)
                 .has_value());
 
     TestTrue(
@@ -685,32 +688,56 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     const FEchoesObjectiveSnapshot V22ExpectedObjective = Objective;
-    TArray<uint8> V24Checkpoint;
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        V24Layout;
+    TArray<uint8> NativeCheckpoint;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-24 checkpoint exposes a bounded nonzero receipt block"),
-        FFileHelper::LoadFileToArray(V24Checkpoint, *QuickSavePath) &&
+        TEXT("The Mission 14 schema-25 checkpoint exposes a bounded nonzero receipt block"),
+        FFileHelper::LoadFileToArray(NativeCheckpoint, *QuickSavePath) &&
             EchoesSnapshotMigrationTestHelpers::
-                InspectMission14EnvelopeSnapshotV24(
-                    V24Checkpoint, V24Layout) &&
-            V24Layout.ReceiptCount > 0U &&
-            V24Layout.ReceiptBlockSize ==
-                4 + static_cast<int32>(V24Layout.ReceiptCount) * 19);
+                InspectMission14EnvelopeSnapshot(
+                    NativeCheckpoint, NativeLayout) &&
+            NativeLayout.ReceiptCount > 0U &&
+            NativeLayout.ReceiptBlockSize ==
+                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19);
+    // The schema-25 memory ledgers are measured against this mission's own map,
+    // not taken on the inspector's word: four remembered-terrain grids of
+    // exactly the live tile count, then one bounded object ledger per player.
+    const int32 Mission14MapTiles =
+        Bridge->GetSimulation()->Config().mapWidthTiles *
+        Bridge->GetSimulation()->Config().mapHeightTiles;
+    TestTrue(
+        TEXT("The Mission 14 checkpoint carries one terrain memory per player and a bounded object memory"),
+        Mission14MapTiles > 0 &&
+            NativeLayout.RememberedTileCount ==
+                static_cast<uint32>(Mission14MapTiles) &&
+            NativeLayout.MemoryLedgerOffset > NativeLayout.SnapshotOffset &&
+            NativeLayout.MemoryLedgerOffset + NativeLayout.MemoryLedgerSize <=
+                NativeLayout.ReceiptBlockOffset &&
+            NativeLayout.MemoryLedgerSize ==
+                static_cast<int32>(echoes::sim::kMaximumPlayers) *
+                        (4 + Mission14MapTiles) +
+                    static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
+                    static_cast<int32>(NativeLayout.RememberedObjectCount) *
+                        24 &&
+            NativeLayout.RememberedObjectCount <=
+                static_cast<uint32>(echoes::sim::kMaximumPlayers) *
+                    static_cast<uint32>(
+                        echoes::sim::kMaximumRememberedObjects));
     TArray<
-        EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout>
+        EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout>
         AmbiguousCandidates;
-    AmbiguousCandidates.Add(V24Layout);
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        DistinctAlternative = V24Layout;
+    AmbiguousCandidates.Add(NativeLayout);
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        DistinctAlternative = NativeLayout;
     ++DistinctAlternative.ReceiptCount;
     DistinctAlternative.ReceiptBlockOffset -= 19;
     DistinctAlternative.ReceiptBlockSize += 19;
     AmbiguousCandidates.Add(DistinctAlternative);
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        AmbiguousResult = V24Layout;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        AmbiguousResult = NativeLayout;
     TestTrue(
-        TEXT("Schema-24 receipt discovery rejects two candidate layouts"),
+        TEXT("Receipt discovery rejects two candidate layouts"),
         !EchoesSnapshotMigrationTestHelpers::SelectUniqueReceiptCandidate(
             AmbiguousCandidates, AmbiguousResult) &&
             AmbiguousResult.SnapshotOffset == INDEX_NONE &&
@@ -720,11 +747,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     {
         const TArray<uint8> Before = Candidate;
         return !EchoesSnapshotMigrationTestHelpers::
-                    ConvertMission14EnvelopeSnapshotV24ToV22(Candidate) &&
+                    ConvertMission14EnvelopeSnapshotToV22(Candidate) &&
             Candidate == Before;
     };
 
-    TArray<uint8> BadEnvelopeChecksum = V24Checkpoint;
+    TArray<uint8> BadEnvelopeChecksum = NativeCheckpoint;
     if (!BadEnvelopeChecksum.IsEmpty())
     {
         BadEnvelopeChecksum.Last() ^= 0x01;
@@ -733,7 +760,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         TEXT("Mission 14 conversion rejects a bad envelope checksum without mutation"),
         RejectsMission14ConversionWithoutMutation(BadEnvelopeChecksum));
 
-    TArray<uint8> WrongOperationEnvelope = V24Checkpoint;
+    TArray<uint8> WrongOperationEnvelope = NativeCheckpoint;
     if (WrongOperationEnvelope.IsValidIndex(9))
     {
         WrongOperationEnvelope[9] = static_cast<uint8>(
@@ -746,11 +773,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         RejectsMission14ConversionWithoutMutation(
             WrongOperationEnvelope));
 
-    TArray<uint8> BadSnapshotIntegrity = V24Checkpoint;
-    if (V24Layout.SnapshotOffset >= 0 &&
-        BadSnapshotIntegrity.IsValidIndex(V24Layout.SnapshotOffset + 8))
+    TArray<uint8> BadSnapshotIntegrity = NativeCheckpoint;
+    if (NativeLayout.SnapshotOffset >= 0 &&
+        BadSnapshotIntegrity.IsValidIndex(NativeLayout.SnapshotOffset + 8))
     {
-        BadSnapshotIntegrity[V24Layout.SnapshotOffset + 8] ^= 0x01;
+        BadSnapshotIntegrity[NativeLayout.SnapshotOffset + 8] ^= 0x01;
         EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
             BadSnapshotIntegrity);
     }
@@ -758,26 +785,30 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         TEXT("Mission 14 conversion rejects a bad snapshot signature without mutation"),
         RejectsMission14ConversionWithoutMutation(BadSnapshotIntegrity));
 
-    TArray<uint8> ProtectedCoreSnapshot = V24Checkpoint;
+    TArray<uint8> ProtectedCoreSnapshot = NativeCheckpoint;
     bool bProtectedCoreSourceLoadable = false;
-    if (V24Layout.SnapshotOffset >= 0 &&
-        ProtectedCoreSnapshot.IsValidIndex(V24Layout.SnapshotOffset + 28))
+    if (NativeLayout.SnapshotOffset >= 0 &&
+        ProtectedCoreSnapshot.IsValidIndex(NativeLayout.SnapshotOffset + 28))
     {
-        ProtectedCoreSnapshot[V24Layout.SnapshotOffset + 28] = 1U;
+        ProtectedCoreSnapshot[NativeLayout.SnapshotOffset + 28] = 1U;
         if (EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
                 ProtectedCoreSnapshot,
-                V24Layout.SnapshotOffset,
-                V24Layout.SnapshotLength))
+                NativeLayout.SnapshotOffset,
+                NativeLayout.SnapshotLength))
         {
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
+            // The source here is the checkpoint just written by this run,
+            // so it carries the native schema. That native schema is 25
+            // now that per-player terrain and object memory is serialized;
+            // the replay envelope is unrelated and stays at 24.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
                         ProtectedCoreSnapshot,
-                        V24Layout.SnapshotOffset,
-                        V24Layout.SnapshotLength,
-                        24U);
+                        NativeLayout.SnapshotOffset,
+                        NativeLayout.SnapshotLength,
+                        25U);
         }
     }
     TestTrue(
@@ -786,18 +817,18 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             RejectsMission14ConversionWithoutMutation(
                 ProtectedCoreSnapshot));
 
-    TArray<uint8> OversizedReceiptCount = V24Checkpoint;
-    if (V24Layout.ReceiptBlockOffset >= 0)
+    TArray<uint8> OversizedReceiptCount = NativeCheckpoint;
+    if (NativeLayout.ReceiptBlockOffset >= 0)
     {
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
             OversizedReceiptCount,
-            V24Layout.ReceiptBlockOffset,
+            NativeLayout.ReceiptBlockOffset,
             static_cast<uint32>(
                 echoes::sim::kMaximumCommandResolutionReceipts + 1U));
         EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
             OversizedReceiptCount,
-            V24Layout.SnapshotOffset,
-            V24Layout.SnapshotLength);
+            NativeLayout.SnapshotOffset,
+            NativeLayout.SnapshotLength);
         EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
             OversizedReceiptCount);
     }
@@ -805,22 +836,22 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         TEXT("Mission 14 conversion rejects an oversized receipt count without mutation"),
         RejectsMission14ConversionWithoutMutation(OversizedReceiptCount));
 
-    TArray<uint8> TruncatedReceiptBlock = V24Checkpoint;
-    if (V24Layout.ReceiptCount > 0U &&
+    TArray<uint8> TruncatedReceiptBlock = NativeCheckpoint;
+    if (NativeLayout.ReceiptCount > 0U &&
         TruncatedReceiptBlock.IsValidIndex(
-            V24Layout.ReceiptBlockOffset + 4))
+            NativeLayout.ReceiptBlockOffset + 4))
     {
         TruncatedReceiptBlock.RemoveAt(
-            V24Layout.ReceiptBlockOffset + 4,
+            NativeLayout.ReceiptBlockOffset + 4,
             1,
             EAllowShrinking::No);
         const uint32 TruncatedSnapshotLength =
-            V24Layout.SnapshotLength - 1U;
+            NativeLayout.SnapshotLength - 1U;
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
             TruncatedReceiptBlock, 15, TruncatedSnapshotLength);
         EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
             TruncatedReceiptBlock,
-            V24Layout.SnapshotOffset,
+            NativeLayout.SnapshotOffset,
             TruncatedSnapshotLength);
         EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
             TruncatedReceiptBlock);
@@ -829,7 +860,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         TEXT("Mission 14 conversion rejects a truncated receipt block without mutation"),
         RejectsMission14ConversionWithoutMutation(TruncatedReceiptBlock));
 
-    TArray<uint8> UnderflowedSnapshotLength = V24Checkpoint;
+    TArray<uint8> UnderflowedSnapshotLength = NativeCheckpoint;
     if (UnderflowedSnapshotLength.Num() >= 19)
     {
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
@@ -842,39 +873,41 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         RejectsMission14ConversionWithoutMutation(
             UnderflowedSnapshotLength));
 
-    TArray<uint8> ZeroReceiptV24 = V24Checkpoint;
-    if (V24Layout.ReceiptBlockSize >= 4)
+    TArray<uint8> ZeroReceiptNative = NativeCheckpoint;
+    if (NativeLayout.ReceiptBlockSize >= 4)
     {
         const int32 ReceiptRecordsSize =
-            V24Layout.ReceiptBlockSize - 4;
-        ZeroReceiptV24.RemoveAt(
-            V24Layout.ReceiptBlockOffset + 4,
+            NativeLayout.ReceiptBlockSize - 4;
+        ZeroReceiptNative.RemoveAt(
+            NativeLayout.ReceiptBlockOffset + 4,
             ReceiptRecordsSize,
             EAllowShrinking::No);
         const uint32 ZeroReceiptSnapshotLength =
-            V24Layout.SnapshotLength -
+            NativeLayout.SnapshotLength -
             static_cast<uint32>(ReceiptRecordsSize);
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
-            ZeroReceiptV24, V24Layout.ReceiptBlockOffset, 0U);
+            ZeroReceiptNative, NativeLayout.ReceiptBlockOffset, 0U);
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
-            ZeroReceiptV24, 15, ZeroReceiptSnapshotLength);
+            ZeroReceiptNative, 15, ZeroReceiptSnapshotLength);
         EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
-            ZeroReceiptV24,
-            V24Layout.SnapshotOffset,
+            ZeroReceiptNative,
+            NativeLayout.SnapshotOffset,
             ZeroReceiptSnapshotLength);
         EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
-            ZeroReceiptV24);
+            ZeroReceiptNative);
     }
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ZeroReceiptLayout;
     TestTrue(
-        TEXT("Mission 14 exposes a loadable synthetic zero-receipt schema-24 checkpoint"),
+        TEXT("Mission 14 exposes a loadable synthetic zero-receipt native checkpoint"),
         EchoesSnapshotMigrationTestHelpers::
-                InspectMission14EnvelopeSnapshotV24(
-                    ZeroReceiptV24, ZeroReceiptLayout) &&
+                InspectMission14EnvelopeSnapshot(
+                    ZeroReceiptNative, ZeroReceiptLayout) &&
             ZeroReceiptLayout.ReceiptCount == 0U &&
-            ZeroReceiptLayout.ReceiptBlockSize == 4);
-    TArray<uint8> MissingReceiptRecord = ZeroReceiptV24;
+            ZeroReceiptLayout.ReceiptBlockSize == 4 &&
+            ZeroReceiptLayout.MemoryLedgerSize ==
+                NativeLayout.MemoryLedgerSize);
+    TArray<uint8> MissingReceiptRecord = ZeroReceiptNative;
     if (ZeroReceiptLayout.ReceiptBlockOffset >= 0)
     {
         EchoesSnapshotMigrationTestHelpers::WriteUint32(
@@ -891,32 +924,37 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestTrue(
         TEXT("Mission 14 conversion rejects count one without a receipt record"),
         RejectsMission14ConversionWithoutMutation(MissingReceiptRecord));
-    TArray<uint8> ZeroReceiptV22 = ZeroReceiptV24;
+    TArray<uint8> ZeroReceiptV22 = ZeroReceiptNative;
+    // With no receipt records left, the only bytes the walk down to schema 22
+    // may drop are the empty receipt count, the protection mask, and the
+    // schema-25 memory ledgers this map's dimensions already pinned above.
     TestTrue(
-        TEXT("Mission 14 converts zero receipts with the exact five-byte shrink"),
+        TEXT("Mission 14 converts zero receipts with the exact memory-ledger and five-byte shrink"),
         EchoesSnapshotMigrationTestHelpers::
-                ConvertMission14EnvelopeSnapshotV24ToV22(ZeroReceiptV22) &&
-            ZeroReceiptV24.Num() - ZeroReceiptV22.Num() == 5 &&
+                ConvertMission14EnvelopeSnapshotToV22(ZeroReceiptV22) &&
+            ZeroReceiptNative.Num() - ZeroReceiptV22.Num() ==
+                5 + NativeLayout.MemoryLedgerSize &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 ZeroReceiptV22) == 22U);
 
-    TArray<uint8> V22Checkpoint = V24Checkpoint;
-    const uint64 ExpectedV24ToV22Shrink = 5ULL +
-        static_cast<uint64>(V24Layout.ReceiptCount) * 19ULL;
+    TArray<uint8> V22Checkpoint = NativeCheckpoint;
+    const uint64 ExpectedNativeToV22Shrink = 5ULL +
+        static_cast<uint64>(NativeLayout.ReceiptCount) * 19ULL +
+        static_cast<uint64>(NativeLayout.MemoryLedgerSize);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through schema 23 to its genuine schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through schemas 24 and 23 to its genuine schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
-                ConvertMission14EnvelopeSnapshotV24ToV22(V22Checkpoint) &&
+                ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 V22Checkpoint) == 22U &&
-            static_cast<uint64>(V24Checkpoint.Num() - V22Checkpoint.Num()) ==
-                ExpectedV24ToV22Shrink &&
+            static_cast<uint64>(NativeCheckpoint.Num() - V22Checkpoint.Num()) ==
+                ExpectedNativeToV22Shrink &&
             FMemory::Memcmp(
-                V24Checkpoint.GetData(), V22Checkpoint.GetData(), 15) == 0 &&
+                NativeCheckpoint.GetData(), V22Checkpoint.GetData(), 15) == 0 &&
             FMemory::Memcmp(
-                V24Checkpoint.GetData() + 19,
+                NativeCheckpoint.GetData() + 19,
                 V22Checkpoint.GetData() + 19,
-                V24Layout.SnapshotOffset - 19) == 0 &&
+                NativeLayout.SnapshotOffset - 19) == 0 &&
             FFileHelper::SaveArrayToFile(V22Checkpoint, *QuickSavePath));
     TestTrue(
         TEXT("The converted Mission 14 primary is the only loadable generation"),
@@ -956,10 +994,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Objective.bSeveralVoicesHeldAlternativesResearched ==
                 V22ExpectedObjective.
                     bSeveralVoicesHeldAlternativesResearched &&
-            V24ReconciliationSequence.has_value() &&
+            NativeReconciliationSequence.has_value() &&
             !Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
-                *V24ReconciliationSequence)
+                *NativeReconciliationSequence)
                 .has_value());
     for (int32 TickIndex = 0; TickIndex < 7; ++TickIndex)
     {
@@ -976,22 +1014,25 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->QuickSaveScenario(Feedback) &&
             IFileManager::Get().FileExists(
                 *(QuickSavePath + TEXT(".bak"))));
-    TArray<uint8> ResavedV24Primary;
-    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotV24Layout
-        ResavedV24Layout;
+    TArray<uint8> ResavedNativePrimary;
+    EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
+        ResavedNativeLayout;
+    // Resaving writes the native schema, which moved from 24 to 25 because
+    // per-player terrain and object memory is now serialized. The retained
+    // backup is a genuine migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 24"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 25"),
         FFileHelper::LoadFileToArray(
-            ResavedV24Primary, *QuickSavePath) &&
+            ResavedNativePrimary, *QuickSavePath) &&
             EchoesSnapshotMigrationTestHelpers::
-                InspectMission14EnvelopeSnapshotV24(
-                    ResavedV24Primary,
-                    ResavedV24Layout) &&
+                InspectMission14EnvelopeSnapshot(
+                    ResavedNativePrimary,
+                    ResavedNativeLayout) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
-                ResavedV24Primary) == 24U);
+                ResavedNativePrimary) == 25U);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-24 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-25 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             RetainedV22Backup,
             *(QuickSavePath + TEXT(".bak"))) &&
@@ -1094,7 +1135,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Objective.SeveralVoicesPhaseAnchorId != 0 &&
             InitialCrisisRemaining > 0 && InitialCrisisRemaining <= 160);
     TestTrue(
-        TEXT("The crisis hold reconstructs through schema-24 quick load"),
+        TEXT("The crisis hold reconstructs through schema-25 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetSeveralVoicesOneCommandPhase() ==
@@ -1236,14 +1277,17 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::SeveralVoicesOneCommand);
+    // The commit is written now, so it stamps the current native snapshot
+    // schema. That moved from 24 to 25 because per-player terrain and object
+    // memory is now serialized; the replay envelope stays at 24.
     TestTrue(
-        TEXT("Mission 14 stores the protocol, all facts, and schema-24 provenance"),
+        TEXT("Mission 14 stores the protocol, all facts, and schema-25 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 SeveralVoicesChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 24 &&
+            MissionRecord->SimulationSnapshotVersion == 25 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

@@ -51,8 +51,13 @@ struct FScenarioSpec final
         EEchoesSkirmishMapPreset::GlassScar;
     EEchoesSkirmishResourceLevel ResourceLevel =
         EEchoesSkirmishResourceLevel::Standard;
+    // Defensive, not Balanced: the release boundary authorises exactly five
+    // doctrines (Defensive, Raider, Economic, Expansionist, Adaptive) and
+    // Balanced is not among them, so skirmish setup now refuses it. This test
+    // compares runs against each other rather than against pinned checksums,
+    // so the substitution changes which match is played, not what is proven.
     echoes::sim::AiPersonality LocalPersonality =
-        echoes::sim::AiPersonality::Balanced;
+        echoes::sim::AiPersonality::Defensive;
     echoes::sim::AiPersonality OpponentPersonality =
         echoes::sim::AiPersonality::Adaptive;
 };
@@ -1152,7 +1157,7 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
          EEchoesSkirmishMapPreset::GlassScar,
          EEchoesSkirmishResourceLevel::Scarce,
          echoes::sim::AiPersonality::Economic,
-         echoes::sim::AiPersonality::Balanced},
+         echoes::sim::AiPersonality::Defensive},
         {TEXT("crownfall_kharuun_choir"),
          echoes::sim::Faction::KharuunAssemblies,
          echoes::sim::Faction::HollowChoir,
@@ -1172,7 +1177,7 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
          echoes::sim::Faction::HollowChoir,
          EEchoesSkirmishMapPreset::CrownfallBasin,
          EEchoesSkirmishResourceLevel::Abundant,
-         echoes::sim::AiPersonality::Balanced,
+         echoes::sim::AiPersonality::Expansionist,
          echoes::sim::AiPersonality::Economic},
         {TEXT("soryn_kharuun_meridian"),
          echoes::sim::Faction::KharuunAssemblies,
@@ -1242,9 +1247,44 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
                     return Count == Expected;
                 });
         };
-    TestTrue(TEXT("Each AI personality appears once in each seat"),
-             AllCountsEqual(LocalPersonalityCounts, 1) &&
-                 AllCountsEqual(OpponentPersonalityCounts, 1));
+    // Six scenarios across FIVE authored doctrines, so "once each" is no longer
+    // arithmetically possible: the release boundary retired
+    // AiPersonality::Balanced, leaving Defensive, Raider, Economic,
+    // Expansionist and Adaptive. The coverage intent is preserved by asserting
+    // what actually matters -- every authored doctrine is exercised in both
+    // seats, and the retired one is exercised in neither -- rather than by
+    // weakening the check to fit. The Balanced assertion is new coverage: it
+    // fails if a retired doctrine is ever reintroduced into this table.
+    constexpr std::size_t kBalancedIndex =
+        static_cast<std::size_t>(echoes::sim::AiPersonality::Balanced);
+    const auto AuthoredDoctrinesCovered =
+        [](const std::array<std::int32_t, 6>& Counts,
+           std::int32_t ExpectedTotal)
+        {
+            std::int32_t Total = 0;
+            for (std::size_t Index = 0; Index < Counts.size(); ++Index)
+            {
+                if (Index == kBalancedIndex)
+                {
+                    continue;
+                }
+                if (Counts[Index] < 1)
+                {
+                    return false;
+                }
+                Total += Counts[Index];
+            }
+            return Total == ExpectedTotal;
+        };
+    const std::int32_t ScenarioCount =
+        static_cast<std::int32_t>(Scenarios.size());
+    TestTrue(TEXT("Every authored AI doctrine is exercised in each seat"),
+             AuthoredDoctrinesCovered(LocalPersonalityCounts, ScenarioCount) &&
+                 AuthoredDoctrinesCovered(
+                     OpponentPersonalityCounts, ScenarioCount));
+    TestTrue(TEXT("The retired Balanced doctrine is exercised in neither seat"),
+             LocalPersonalityCounts[kBalancedIndex] == 0 &&
+                 OpponentPersonalityCounts[kBalancedIndex] == 0);
     TestTrue(TEXT("Each map and resource profile appears twice"),
              AllCountsEqual(MapCounts, 2) &&
                  AllCountsEqual(ResourceCounts, 2));

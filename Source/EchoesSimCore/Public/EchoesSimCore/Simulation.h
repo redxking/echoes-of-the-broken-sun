@@ -34,8 +34,17 @@ inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
 inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
 inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
-inline constexpr std::uint32_t kSnapshotVersion = 24;
+// Schema 25 adds per-player remembered terrain and remembered permanent
+// objects. The replay envelope shape is unchanged, so kReplayVersion does not
+// move with it: a schema-24 replay still carries a loadable schema-24
+// baseline snapshot.
+inline constexpr std::uint32_t kSnapshotVersion = 25;
 inline constexpr std::uint32_t kReplayVersion = 24;
+
+// Remembered permanent objects are bounded so a long match cannot grow an
+// unserializable ledger. When the bound is reached the oldest observation is
+// forgotten first, tie-broken by lowest entity identifier.
+inline constexpr std::size_t kMaximumRememberedObjects = 4096;
 
 // Signed Q22.10 fixed-point value. Simulation state never depends on floating point.
 class Fixed final {
@@ -677,6 +686,24 @@ struct PlayerViewTile final {
     friend bool operator==(const PlayerViewTile&, const PlayerViewTile&) = default;
 };
 
+// A permanent object the player observed directly and still remembers on an
+// Explored tile. It carries no live state: no health, no cargo, no order, no
+// production, and no resource amount. It is a record of what was seen, not a
+// window onto what is there now, so it is never targetable and never proves
+// the object still exists.
+struct RememberedObject final {
+    EntityId id = 0;
+    PlayerId owner = kNeutralPlayer;
+    Faction faction = Faction::MeridianCompact;
+    EntityType type = EntityType::ResourceNode;
+    FutureWellChoice wellChoice = FutureWellChoice::Dormant;
+    Vec2 position{};
+    Tick observedTick = 0;
+
+    friend bool operator==(const RememberedObject&,
+                           const RememberedObject&) = default;
+};
+
 /** Approximate anonymous contact produced by Kharuun vibration detectors. */
 struct VibrationSignature final {
     Vec2 approximatePosition{};
@@ -702,6 +729,12 @@ public:
     [[nodiscard]] const std::vector<VibrationSignature>& VibrationSignatures() const {
         return vibrationSignatures_;
     }
+    // Permanent objects the player remembers but cannot currently see. They
+    // are deliberately kept out of Entities() so no consumer can target,
+    // attack, or read live state through a memory. Ordered by entity id.
+    [[nodiscard]] const std::vector<RememberedObject>& RememberedObjects() const {
+        return rememberedObjects_;
+    }
     [[nodiscard]] Visibility VisibilityAt(Vec2 position) const;
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
@@ -720,6 +753,7 @@ private:
     std::vector<PlayerViewTile> tiles_{};
     std::vector<Entity> entities_{};
     std::vector<VibrationSignature> vibrationSignatures_{};
+    std::vector<RememberedObject> rememberedObjects_{};
 };
 
 struct ReplayRecord final {
@@ -985,6 +1019,7 @@ private:
     [[nodiscard]] bool TryAllocateEntityId(EntityId& id);
 
     void UpdateVisibility();
+    void UpdateRememberedObjects();
     void ResolveExpiredReshapes();
     void ResolveExpiredRelaySupply();
     void ResolveWaystoneTransitions();
@@ -1036,6 +1071,14 @@ private:
     std::vector<Terrain> terrain_{};
     std::array<std::vector<std::uint8_t>, kMaximumPlayers> explored_{};
     std::array<std::vector<std::uint8_t>, kMaximumPlayers> visible_{};
+    // FOG information state "Explored": remembered terrain snapshotted at the
+    // moment of last sight, per player. Never the live tile, and never a
+    // temporary terrain state — a tile standing under Cairnback mineral cover
+    // remembers the permanent ground beneath it.
+    std::array<std::vector<Terrain>, kMaximumPlayers> rememberedTerrain_{};
+    // Last observed permanent objects, per player, ordered by entity id.
+    std::array<std::vector<RememberedObject>, kMaximumPlayers>
+        rememberedObjects_{};
     std::vector<Entity> entities_{};
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};

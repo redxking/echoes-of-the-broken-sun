@@ -298,10 +298,14 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
+    // Per-player terrain and object memory is now serialized into the
+    // snapshot, so the native snapshot schema advanced from 24 to 25.
+    // The replay envelope shape did not change and stays at 24; this
+    // assertion pins the snapshot schema only.
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(24));
+        static_cast<uint32>(25));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -775,7 +779,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             },
             5600));
     TestTrue(
-        TEXT("The readback state survives a schema-24 quick save and load"),
+        TEXT("The readback state survives a schema-25 quick save and load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -945,14 +949,18 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheFutureThatWon);
+    // The commit is written now, so it carries native provenance. Per-player
+    // terrain and object memory is now serialized into the snapshot, so that
+    // native schema moved from 24 to 25. The replay envelope shape did not
+    // change and stays at 24; only the snapshot provenance moves here.
     TestTrue(
-        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-24 provenance"),
+        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-25 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 FutureThatWonChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 24 &&
+            MissionRecord->SimulationSnapshotVersion == 25 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

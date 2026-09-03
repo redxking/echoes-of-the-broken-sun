@@ -33,6 +33,29 @@
 
 namespace
 {
+/**
+ * FOG-001 lookup. Resolves an entity id inside the player-scoped view only, so
+ * presentation can never learn the position of something the local player is
+ * not entitled to observe. Returns nullptr when the id is outside the view.
+ */
+const echoes::sim::Entity* FindViewedEntity(
+    const echoes::sim::PlayerView& View,
+    uint32 EntityId)
+{
+    if (EntityId == 0)
+    {
+        return nullptr;
+    }
+    for (const echoes::sim::Entity& Entity : View.Entities())
+    {
+        if (Entity.id == EntityId)
+        {
+            return &Entity;
+        }
+    }
+    return nullptr;
+}
+
 EEchoesVisualFaction VisualFactionFromLabel(const FString& Label)
 {
     if (Label.Contains(TEXT("MERIDIAN"), ESearchCase::IgnoreCase))
@@ -1071,27 +1094,16 @@ void AEchoesHUD::DrawHUD()
 
     DrawNarrativeSubtitle(EchoesController, Settings);
 
+    // FOG-001: every presentation subsystem consumes the same player-scoped
+    // view. The HUD materializes it once per frame and never reads the
+    // authoritative simulation for anything the fog boundary covers. Vibration
+    // signatures need no separate detector precondition here: the view only
+    // populates them when the local player actually owns a completed, intact,
+    // uncovered Kharuun detector (Simulation::VibrationDetectionRadiusRaw).
     const echoes::sim::Simulation* HudSimulation =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
-    const bool bHasLocalVibrationDetector =
-        HudSimulation != nullptr &&
-        std::any_of(
-            HudSimulation->Entities().begin(),
-            HudSimulation->Entities().end(),
-            [](const echoes::sim::Entity& Entity)
-            {
-                return Entity.owner ==
-                           UEchoesSimulationSubsystem::LocalPlayerId &&
-                       Entity.faction ==
-                           echoes::sim::Faction::KharuunAssemblies &&
-                       Entity.completed && Entity.hitPoints > 0 &&
-                       !Entity.temporaryMineralCover &&
-                       (Entity.type == echoes::sim::EntityType::ScoutUnit ||
-                        Entity.type ==
-                            echoes::sim::EntityType::UtilityStructure);
-            });
     const std::optional<echoes::sim::PlayerView> PlayerView =
-        bHasLocalVibrationDetector
+        HudSimulation != nullptr
             ? HudSimulation->CreatePlayerView(
                   UEchoesSimulationSubsystem::LocalPlayerId)
             : std::nullopt;
@@ -2645,7 +2657,7 @@ void AEchoesHUD::DrawObjectiveTracker(
         const FString ArchiveState = bFailed
             ? TEXT("LOST — MISSION FAILED")
             : bArchiveRecovered
-                ? TEXT("RECOVERED — MARA VEY SECURE")
+                ? TEXT("RECOVERED — CARRIER INTACT")
                 : TEXT("RENDEZVOUS — TILE 22,18");
         const FString WellState = bProtocolChosen
             ? FString::Printf(
@@ -5921,12 +5933,14 @@ void AEchoesHUD::DrawTacticalMinimap(
     const UEchoesGameUserSettings* Settings,
     const echoes::sim::PlayerView* PlayerView)
 {
-    if (Canvas == nullptr || Bridge == nullptr || Bridge->GetSimulation() == nullptr)
+    // FOG-001: the minimap is a presentation subsystem and reads only the
+    // player-scoped view. It must never consult the authoritative Simulation
+    // for terrain, entities, or visibility.
+    if (Canvas == nullptr || Bridge == nullptr || PlayerView == nullptr)
     {
         return;
     }
 
-    const echoes::sim::Simulation* Sim = Bridge->GetSimulation();
     const bool bHighContrast =
         Settings != nullptr && Settings->IsHighContrastHudEnabled();
     const FEchoesVisualTheme Theme =
@@ -5949,17 +5963,17 @@ void AEchoesHUD::DrawTacticalMinimap(
                       : FLinearColor(0.12f, 0.16f, 0.22f);
     DrawRect(Background, Left, Top, Size, Size);
 
-    const int32 MapWidth = FMath::Max(1, Sim->Config().mapWidthTiles);
-    const int32 MapHeight = FMath::Max(1, Sim->Config().mapHeightTiles);
+    const int32 MapWidth = FMath::Max(1, PlayerView->Config().mapWidthTiles);
+    const int32 MapHeight = FMath::Max(1, PlayerView->Config().mapHeightTiles);
     const float CellWidth = Size / static_cast<float>(MapWidth);
     const float CellHeight = Size / static_cast<float>(MapHeight);
     for (int32 TileY = 0; TileY < MapHeight; ++TileY)
     {
         for (int32 TileX = 0; TileX < MapWidth; ++TileX)
         {
-            if (Sim->TerrainAt(TileX, TileY) == echoes::sim::Terrain::Blocked &&
-                Sim->VisibilityAt(
-                    UEchoesSimulationSubsystem::LocalPlayerId,
+            if (PlayerView->TerrainAt(TileX, TileY) ==
+                    echoes::sim::Terrain::Blocked &&
+                PlayerView->VisibilityAt(
                     echoes::sim::Vec2::FromTiles(TileX, TileY)) !=
                     echoes::sim::Visibility::Unexplored)
             {
@@ -5976,14 +5990,10 @@ void AEchoesHUD::DrawTacticalMinimap(
     const TArray<uint32>* SelectedIds =
         EchoesController != nullptr ? &EchoesController->GetSelectedEntityIds() : nullptr;
     int32 VisibleMarkerCount = 0;
-    for (const echoes::sim::Entity& Entity : Sim->Entities())
+    // The view already contains exactly the locally owned and currently
+    // visible entities, with every hidden field scrubbed.
+    for (const echoes::sim::Entity& Entity : PlayerView->Entities())
     {
-        if (!Sim->IsEntityVisibleTo(
-                UEchoesSimulationSubsystem::LocalPlayerId,
-                Entity.id))
-        {
-            continue;
-        }
         ++VisibleMarkerCount;
         const float X = Left +
             FMath::Clamp(
@@ -6259,28 +6269,23 @@ void AEchoesHUD::DrawTacticalMinimap(
         {
             const FEchoesTermsOfContinuancePlan Plan =
                 Bridge->GetTermsOfContinuancePlan();
-            const echoes::sim::Simulation* Simulation =
-                Bridge->GetSimulation();
             for (const auto& Site : Plan.PlayerPowerLinkSites)
             {
                 bool bPlayerLinkComplete = false;
-                if (Simulation != nullptr)
+                for (const echoes::sim::Entity& Entity :
+                     PlayerView->Entities())
                 {
-                    for (const echoes::sim::Entity& Entity :
-                         Simulation->Entities())
+                    if (Entity.owner ==
+                            UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Entity.faction ==
+                            echoes::sim::Faction::MeridianCompact &&
+                        Entity.type ==
+                            echoes::sim::EntityType::Dropoff &&
+                        Entity.position == Site &&
+                        Entity.hitPoints > 0 && Entity.completed)
                     {
-                        if (Entity.owner ==
-                                UEchoesSimulationSubsystem::LocalPlayerId &&
-                            Entity.faction ==
-                                echoes::sim::Faction::MeridianCompact &&
-                            Entity.type ==
-                                echoes::sim::EntityType::Dropoff &&
-                            Entity.position == Site &&
-                            Entity.hitPoints > 0 && Entity.completed)
-                        {
-                            bPlayerLinkComplete = true;
-                            break;
-                        }
+                        bPlayerLinkComplete = true;
+                        break;
                     }
                 }
                 DrawMissionSite(
@@ -6490,7 +6495,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                             Deferred == EEchoesCityDistrict::Archive
                         ? DeferredColor : WaitingColor);
             if (const echoes::sim::Entity* Mara =
-                    Sim->FindEntity(Objective.ReserveAuthorityMaraId))
+                    FindViewedEntity(*PlayerView,
+                                     Objective.ReserveAuthorityMaraId))
             {
                 DrawMissionSite(
                     Mara->position,
@@ -6553,7 +6559,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                         ? CompleteColor : Border);
             }
             if (const echoes::sim::Entity* Oruun =
-                    Sim->FindEntity(Objective.ChoirAtLumeReachOruunId))
+                    FindViewedEntity(*PlayerView,
+                                     Objective.ChoirAtLumeReachOruunId))
             {
                 DrawMissionSite(
                     Oruun->position,

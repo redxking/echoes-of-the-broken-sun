@@ -21,6 +21,11 @@ inline uint32 ReadUint32(const TArray<uint8>& Bytes, int32 Offset)
         (static_cast<uint32>(Bytes[Offset + 3]) << 24U);
 }
 
+inline int32 ReadInt32(const TArray<uint8>& Bytes, int32 Offset)
+{
+    return static_cast<int32>(ReadUint32(Bytes, Offset));
+}
+
 inline void WriteUint32(TArray<uint8>& Bytes, int32 Offset, uint32 Value)
 {
     check(Offset >= 0 && Bytes.Num() - Offset >= 4);
@@ -55,18 +60,28 @@ inline uint64 SnapshotIntegrity(
     return Hash;
 }
 
-struct FEmbeddedSnapshotV24Layout final
+// Where the variable-length regions of one embedded snapshot sit.
+//
+// MemoryLedger* describe the schema-25 block of per-player remembered terrain
+// and remembered permanent objects. Schema 24 has no such block, and there the
+// offset stays INDEX_NONE with a zero size — which is the honest answer, not a
+// placeholder.
+struct FEmbeddedSnapshotLayout final
 {
     int32 SnapshotOffset = INDEX_NONE;
     uint32 SnapshotLength = 0;
     int32 ReceiptBlockOffset = INDEX_NONE;
     uint32 ReceiptCount = 0;
     int32 ReceiptBlockSize = 0;
+    int32 MemoryLedgerOffset = INDEX_NONE;
+    int32 MemoryLedgerSize = 0;
+    uint32 RememberedTileCount = 0;
+    uint32 RememberedObjectCount = 0;
 };
 
 inline bool SelectUniqueReceiptCandidate(
-    const TArray<FEmbeddedSnapshotV24Layout>& LoadableCandidates,
-    FEmbeddedSnapshotV24Layout& OutLayout)
+    const TArray<FEmbeddedSnapshotLayout>& LoadableCandidates,
+    FEmbeddedSnapshotLayout& OutLayout)
 {
     OutLayout = {};
     if (LoadableCandidates.Num() != 1)
@@ -148,12 +163,178 @@ inline bool IsLoadableEmbeddedSnapshot(
         Error.empty();
 }
 
-inline bool InspectEmbeddedSnapshotV24(
+// Distance from the start of a snapshot payload to the terrain grid's length
+// word. Every field the writer emits ahead of that grid — magic, version, map
+// dimensions, seed, protection mask, the whole rules table, per-player state —
+// is fixed size, so this distance is a constant of the build.
+//
+// It is MEASURED from a snapshot this build actually writes rather than copied
+// in as a literal, because a literal would silently rot the next time the rules
+// table gains a field. The probe is a bare two-by-two simulation: no players
+// joined, no entities, no pending commands, no receipts, so everything after
+// the grids is a run of empty length words.
+inline int32 EmbeddedSnapshotTerrainGridOffset()
+{
+    static const int32 Measured = []() -> int32
+    {
+        constexpr int32 ProbeTileCount = 2 * 2;
+        constexpr int32 GridLengthSize = 4;
+        // Terrain, one explored grid per player, one remembered-terrain grid
+        // per player.
+        constexpr int32 GridCount =
+            1 + 2 * static_cast<int32>(echoes::sim::kMaximumPlayers);
+        constexpr int32 EmptyTrailingBytes =
+            // One empty remembered-object ledger per player, then the empty
+            // entity, pending-command and receipt ledgers.
+            static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 + 4 + 4 + 4;
+        constexpr int32 SnapshotSignatureSize = 8;
+        const echoes::sim::Simulation Probe(
+            echoes::sim::SimulationConfig{2, 2, 20, 0});
+        const std::vector<std::uint8_t> ProbeSnapshot = Probe.SaveSnapshot();
+        const int64 GridOffset = static_cast<int64>(ProbeSnapshot.size()) -
+            static_cast<int64>(GridCount) *
+                (GridLengthSize + ProbeTileCount) -
+            EmptyTrailingBytes - SnapshotSignatureSize;
+        return GridOffset > 0 && GridOffset <= MAX_int32
+            ? static_cast<int32>(GridOffset)
+            : INDEX_NONE;
+    }();
+    return Measured;
+}
+
+// Walks the fog and memory grids of one embedded snapshot and records where the
+// schema-25 memory ledgers live. The walk asserts that every grid declares
+// exactly the map's tile count, so a layout drift fails here rather than
+// silently shifting a later field.
+//
+// bHasMemoryLedger is the caller's schema claim, not a guess: schemas 20 to 24
+// wrote no memory at all, and for those the ledger is genuinely absent.
+inline bool ResolveEmbeddedSnapshotMemoryLedger(
+    const TArray<uint8>& Envelope,
+    int32 SnapshotOffset,
+    uint32 SnapshotLength,
+    bool bHasMemoryLedger,
+    FEmbeddedSnapshotLayout& InOutLayout)
+{
+    constexpr int32 SnapshotSignatureSize = 8;
+    constexpr int32 MapWidthOffset = 8;
+    constexpr int32 MapHeightOffset = 12;
+    constexpr int32 GridLengthSize = 4;
+    constexpr int32 SerializedRememberedObjectSize = 24;
+    constexpr int32 PlayerCount =
+        static_cast<int32>(echoes::sim::kMaximumPlayers);
+    // Terrain plus one explored grid per player: everything schema 24 wrote.
+    constexpr int32 FogGridCount = 1 + PlayerCount;
+
+    InOutLayout.MemoryLedgerOffset = INDEX_NONE;
+    InOutLayout.MemoryLedgerSize = 0;
+    InOutLayout.RememberedTileCount = 0;
+    InOutLayout.RememberedObjectCount = 0;
+
+    const int32 TerrainGridOffset = EmbeddedSnapshotTerrainGridOffset();
+    if (TerrainGridOffset == INDEX_NONE || SnapshotOffset < 0 ||
+        SnapshotLength <= static_cast<uint32>(SnapshotSignatureSize) ||
+        SnapshotLength > static_cast<uint32>(MAX_int32) ||
+        static_cast<int64>(SnapshotOffset) + SnapshotLength > Envelope.Num())
+    {
+        return false;
+    }
+    const int64 PayloadEnd = static_cast<int64>(SnapshotOffset) +
+        SnapshotLength - SnapshotSignatureSize;
+    const int64 MapWidth =
+        ReadInt32(Envelope, SnapshotOffset + MapWidthOffset);
+    const int64 MapHeight =
+        ReadInt32(Envelope, SnapshotOffset + MapHeightOffset);
+    if (MapWidth <= 0 || MapHeight <= 0 ||
+        MapWidth > static_cast<int64>(MAX_int32) / MapHeight)
+    {
+        return false;
+    }
+    const int64 TileCount = MapWidth * MapHeight;
+    const int64 GridStride = GridLengthSize + TileCount;
+    const int32 GridCount =
+        bHasMemoryLedger ? FogGridCount + PlayerCount : FogGridCount;
+    const int64 GridsBegin =
+        static_cast<int64>(SnapshotOffset) + TerrainGridOffset;
+    if (GridsBegin + static_cast<int64>(GridCount) * GridStride > PayloadEnd)
+    {
+        return false;
+    }
+    for (int32 GridIndex = 0; GridIndex < GridCount; ++GridIndex)
+    {
+        const int64 LengthOffset =
+            GridsBegin + static_cast<int64>(GridIndex) * GridStride;
+        if (ReadUint32(Envelope, static_cast<int32>(LengthOffset)) !=
+            static_cast<uint32>(TileCount))
+        {
+            return false;
+        }
+    }
+    if (!bHasMemoryLedger)
+    {
+        return true;
+    }
+
+    const int64 LedgerBegin =
+        GridsBegin + static_cast<int64>(FogGridCount) * GridStride;
+    int64 Cursor = GridsBegin + static_cast<int64>(GridCount) * GridStride;
+    int64 RememberedObjects = 0;
+    for (int32 Player = 0; Player < PlayerCount; ++Player)
+    {
+        if (Cursor + GridLengthSize > PayloadEnd)
+        {
+            return false;
+        }
+        const uint32 Count = ReadUint32(Envelope, static_cast<int32>(Cursor));
+        if (Count >
+            static_cast<uint32>(echoes::sim::kMaximumRememberedObjects))
+        {
+            return false;
+        }
+        Cursor += GridLengthSize +
+            static_cast<int64>(Count) * SerializedRememberedObjectSize;
+        if (Cursor > PayloadEnd)
+        {
+            return false;
+        }
+        RememberedObjects += Count;
+    }
+    InOutLayout.MemoryLedgerOffset = static_cast<int32>(LedgerBegin);
+    InOutLayout.MemoryLedgerSize = static_cast<int32>(Cursor - LedgerBegin);
+    InOutLayout.RememberedTileCount = static_cast<uint32>(TileCount);
+    InOutLayout.RememberedObjectCount =
+        static_cast<uint32>(RememberedObjects);
+    return true;
+}
+
+// Locates the trailing command-resolution receipt block of one embedded
+// snapshot, and on schema 25 the memory ledgers as well.
+//
+// The receipt block carries no self-describing terminator, so it is found by
+// proposing each possible receipt count, reducing the payload to the shape the
+// PREVIOUS schema wrote, and asking the real loader whether that reduction is a
+// valid schema-23 snapshot. Schema 23 parses nothing after the pending
+// commands and rejects trailing payload data outright, so a proposal that is
+// off by even one receipt cannot load: the surplus bytes it leaves behind, or
+// the command bytes it eats, are fatal. Exactly one proposal survives.
+//
+// Reducing a schema-25 payload means dropping the memory ledgers as well as the
+// receipts. The ledgers sit in the MIDDLE of the payload, not at an end, so
+// this is not a family that one blind tail-strip can serve — hence the explicit
+// ledger walk above.
+//
+// Call sites must pass ExpectedSnapshotVersion deliberately. A checkpoint the
+// test just SAVED is native (kSnapshotVersion). A checkpoint the test
+// HAND-BUILT to prove migration still works is whatever old version it was
+// built as, and passing the native version there would silently delete that
+// backward-compatibility coverage.
+inline bool InspectEmbeddedSnapshot(
     const TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
     int32 LedgerLengthOffset,
     int32 SnapshotLengthOffset,
-    FEmbeddedSnapshotV24Layout& OutLayout)
+    FEmbeddedSnapshotLayout& OutLayout,
+    uint32 ExpectedSnapshotVersion = echoes::sim::kSnapshotVersion)
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr int32 ProtectionMaskOffset = 28;
@@ -161,6 +342,8 @@ inline bool InspectEmbeddedSnapshotV24(
     constexpr int32 SerializedReceiptSize = 19;
     constexpr int32 SnapshotSignatureSize = 8;
     constexpr int32 EnvelopeChecksumSize = 4;
+    constexpr uint32 MemorySnapshotVersion = 25U;
+    constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
     OutLayout = {};
     if (FixedHeaderSize < 0 || LedgerLengthOffset < 0 ||
         SnapshotLengthOffset < 0 ||
@@ -191,8 +374,22 @@ inline bool InspectEmbeddedSnapshotV24(
     }
     const int32 SnapshotOffset = static_cast<int32>(SnapshotOffset64);
     if (!IsLoadableEmbeddedSnapshot(
-            Envelope, SnapshotOffset, SnapshotLength, 24U) ||
+            Envelope, SnapshotOffset, SnapshotLength,
+            ExpectedSnapshotVersion) ||
         Envelope[SnapshotOffset + ProtectionMaskOffset] != 0U)
+    {
+        return false;
+    }
+
+    FEmbeddedSnapshotLayout MeasuredLayout;
+    MeasuredLayout.SnapshotOffset = SnapshotOffset;
+    MeasuredLayout.SnapshotLength = SnapshotLength;
+    if (!ResolveEmbeddedSnapshotMemoryLedger(
+            Envelope,
+            SnapshotOffset,
+            SnapshotLength,
+            ExpectedSnapshotVersion >= MemorySnapshotVersion,
+            MeasuredLayout))
     {
         return false;
     }
@@ -200,7 +397,7 @@ inline bool InspectEmbeddedSnapshotV24(
     const int32 SnapshotSignatureOffset =
         SnapshotOffset + static_cast<int32>(SnapshotLength) -
         SnapshotSignatureSize;
-    TArray<FEmbeddedSnapshotV24Layout> LoadableCandidates;
+    TArray<FEmbeddedSnapshotLayout> LoadableCandidates;
     for (uint32 ReceiptCount = 0;
          ReceiptCount <= static_cast<uint32>(
              echoes::sim::kMaximumCommandResolutionReceipts);
@@ -222,24 +419,37 @@ inline bool InspectEmbeddedSnapshotV24(
             SnapshotSignatureOffset - ReceiptBlockSize;
         if (ReceiptBlockOffset <=
                 SnapshotOffset + ProtectionMaskOffset ||
+            ReceiptBlockOffset <
+                MeasuredLayout.MemoryLedgerOffset +
+                    MeasuredLayout.MemoryLedgerSize ||
             ReadUint32(Envelope, ReceiptBlockOffset) != ReceiptCount)
         {
             continue;
         }
 
+        // The receipt block trails the memory ledgers, so removing it first
+        // leaves the ledger offset undisturbed.
         TArray<uint8> Candidate = Envelope;
         Candidate.RemoveAt(
             ReceiptBlockOffset,
             ReceiptBlockSize,
             EAllowShrinking::No);
-        const uint32 V23SnapshotLength =
-            SnapshotLength - static_cast<uint32>(ReceiptBlockSize);
+        if (MeasuredLayout.MemoryLedgerSize > 0)
+        {
+            Candidate.RemoveAt(
+                MeasuredLayout.MemoryLedgerOffset,
+                MeasuredLayout.MemoryLedgerSize,
+                EAllowShrinking::No);
+        }
+        const uint32 V23SnapshotLength = SnapshotLength -
+            static_cast<uint32>(ReceiptBlockSize) -
+            static_cast<uint32>(MeasuredLayout.MemoryLedgerSize);
         WriteUint32(
             Candidate, SnapshotLengthOffset, V23SnapshotLength);
         WriteUint32(
             Candidate,
             SnapshotOffset + SnapshotVersionOffset,
-            23U);
+            ReceiptFreeSnapshotVersion);
         if (!ResignEmbeddedSnapshot(
                 Candidate, SnapshotOffset, V23SnapshotLength))
         {
@@ -247,13 +457,12 @@ inline bool InspectEmbeddedSnapshotV24(
         }
         UpdateEnvelopeChecksum(Candidate);
         if (!IsLoadableEmbeddedSnapshot(
-                Candidate, SnapshotOffset, V23SnapshotLength, 23U))
+                Candidate, SnapshotOffset, V23SnapshotLength,
+                ReceiptFreeSnapshotVersion))
         {
             continue;
         }
-        FEmbeddedSnapshotV24Layout CandidateLayout;
-        CandidateLayout.SnapshotOffset = SnapshotOffset;
-        CandidateLayout.SnapshotLength = SnapshotLength;
+        FEmbeddedSnapshotLayout CandidateLayout = MeasuredLayout;
         CandidateLayout.ReceiptBlockOffset = ReceiptBlockOffset;
         CandidateLayout.ReceiptCount = ReceiptCount;
         CandidateLayout.ReceiptBlockSize = ReceiptBlockSize;
@@ -331,15 +540,29 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
     return true;
 }
 
-inline bool ConvertEmbeddedSnapshotV24ToV22(
+// Walks a checkpoint this build just wrote down every schema step it supports,
+// stopping at the genuine schema-22 shape:
+//
+//   25 -> 24   drop the per-player terrain and object memory ledgers
+//   24 -> 23   drop the command-resolution receipt block
+//   23 -> 22   drop the protected-Command-Core mask byte
+//
+// Each step is proved by handing the result to the real loader and demanding it
+// load at that exact version, so a wrong split cannot slip through as a smaller
+// but still plausible payload. A schema-24 source simply starts one step in.
+//
+// The envelope is left untouched unless every step succeeds.
+inline bool ConvertEmbeddedSnapshotToV22(
     TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
     int32 LedgerLengthOffset,
     int32 SnapshotLengthOffset)
 {
     constexpr int32 SnapshotVersionOffset = 4;
-    FEmbeddedSnapshotV24Layout Layout;
-    if (!InspectEmbeddedSnapshotV24(
+    constexpr uint32 ReceiptSnapshotVersion = 24U;
+    constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,
@@ -350,17 +573,61 @@ inline bool ConvertEmbeddedSnapshotV24ToV22(
     }
 
     TArray<uint8> Working = Envelope;
+    uint32 WorkingSnapshotLength = Layout.SnapshotLength;
+    FEmbeddedSnapshotLayout ReceiptLayout = Layout;
+    if (Layout.MemoryLedgerSize > 0)
+    {
+        Working.RemoveAt(
+            Layout.MemoryLedgerOffset,
+            Layout.MemoryLedgerSize,
+            EAllowShrinking::No);
+        WorkingSnapshotLength -=
+            static_cast<uint32>(Layout.MemoryLedgerSize);
+        WriteUint32(
+            Working, SnapshotLengthOffset, WorkingSnapshotLength);
+        WriteUint32(
+            Working,
+            Layout.SnapshotOffset + SnapshotVersionOffset,
+            ReceiptSnapshotVersion);
+        if (!ResignEmbeddedSnapshot(
+                Working, Layout.SnapshotOffset, WorkingSnapshotLength))
+        {
+            return false;
+        }
+        UpdateEnvelopeChecksum(Working);
+        // The intermediate has to be a genuine schema-24 checkpoint, not just a
+        // shorter one: it loads at 24, it declares no memory ledger, and the
+        // receipt block rediscovered inside it is the same block the native
+        // source declared.
+        if (!IsLoadableEmbeddedSnapshot(
+                Working, Layout.SnapshotOffset, WorkingSnapshotLength,
+                ReceiptSnapshotVersion) ||
+            !InspectEmbeddedSnapshot(
+                Working,
+                FixedHeaderSize,
+                LedgerLengthOffset,
+                SnapshotLengthOffset,
+                ReceiptLayout,
+                ReceiptSnapshotVersion) ||
+            ReceiptLayout.MemoryLedgerSize != 0 ||
+            ReceiptLayout.ReceiptCount != Layout.ReceiptCount ||
+            ReceiptLayout.SnapshotOffset != Layout.SnapshotOffset)
+        {
+            return false;
+        }
+    }
+
     Working.RemoveAt(
-        Layout.ReceiptBlockOffset,
-        Layout.ReceiptBlockSize,
+        ReceiptLayout.ReceiptBlockOffset,
+        ReceiptLayout.ReceiptBlockSize,
         EAllowShrinking::No);
-    const uint32 V23SnapshotLength =
-        Layout.SnapshotLength - static_cast<uint32>(Layout.ReceiptBlockSize);
+    const uint32 V23SnapshotLength = WorkingSnapshotLength -
+        static_cast<uint32>(ReceiptLayout.ReceiptBlockSize);
     WriteUint32(Working, SnapshotLengthOffset, V23SnapshotLength);
     WriteUint32(
         Working,
         Layout.SnapshotOffset + SnapshotVersionOffset,
-        23U);
+        ReceiptFreeSnapshotVersion);
     if (!ResignEmbeddedSnapshot(
             Working, Layout.SnapshotOffset, V23SnapshotLength))
     {
@@ -368,7 +635,8 @@ inline bool ConvertEmbeddedSnapshotV24ToV22(
     }
     UpdateEnvelopeChecksum(Working);
     if (!IsLoadableEmbeddedSnapshot(
-            Working, Layout.SnapshotOffset, V23SnapshotLength, 23U) ||
+            Working, Layout.SnapshotOffset, V23SnapshotLength,
+            ReceiptFreeSnapshotVersion) ||
         !ConvertEmbeddedSnapshotV23ToV22(
             Working,
             FixedHeaderSize,
@@ -378,7 +646,8 @@ inline bool ConvertEmbeddedSnapshotV24ToV22(
         return false;
     }
     const uint64 ExpectedShrink = 5ULL +
-        static_cast<uint64>(Layout.ReceiptCount) * 19ULL;
+        static_cast<uint64>(Layout.ReceiptCount) * 19ULL +
+        static_cast<uint64>(Layout.MemoryLedgerSize);
     if (static_cast<uint64>(Envelope.Num() - Working.Num()) !=
         ExpectedShrink)
     {
@@ -412,58 +681,62 @@ inline bool HasMission15EnvelopeHeader(const TArray<uint8>& Envelope)
             EEchoesOperationMode::CampaignTheBrokenSun);
 }
 
-inline bool InspectMission14EnvelopeSnapshotV24(
+inline bool InspectMission14EnvelopeSnapshot(
     const TArray<uint8>& Envelope,
-    FEmbeddedSnapshotV24Layout& OutLayout)
+    FEmbeddedSnapshotLayout& OutLayout,
+    uint32 ExpectedSnapshotVersion = echoes::sim::kSnapshotVersion)
 {
     constexpr int32 FixedHeaderSize = 19;
     constexpr int32 LedgerLengthOffset = 11;
     constexpr int32 SnapshotLengthOffset = 15;
     return HasMission14EnvelopeHeader(Envelope) &&
-        InspectEmbeddedSnapshotV24(
+        InspectEmbeddedSnapshot(
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,
             SnapshotLengthOffset,
-            OutLayout);
+            OutLayout,
+            ExpectedSnapshotVersion);
 }
 
-inline bool InspectMission15EnvelopeSnapshotV24(
+inline bool InspectMission15EnvelopeSnapshot(
     const TArray<uint8>& Envelope,
-    FEmbeddedSnapshotV24Layout& OutLayout)
+    FEmbeddedSnapshotLayout& OutLayout,
+    uint32 ExpectedSnapshotVersion = echoes::sim::kSnapshotVersion)
 {
     constexpr int32 FixedHeaderSize = 38;
     constexpr int32 LedgerLengthOffset = 30;
     constexpr int32 SnapshotLengthOffset = 34;
     return HasMission15EnvelopeHeader(Envelope) &&
-        InspectEmbeddedSnapshotV24(
+        InspectEmbeddedSnapshot(
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,
             SnapshotLengthOffset,
-            OutLayout);
+            OutLayout,
+            ExpectedSnapshotVersion);
 }
 
-inline bool ConvertMission14EnvelopeSnapshotV24ToV22(TArray<uint8>& Envelope)
+inline bool ConvertMission14EnvelopeSnapshotToV22(TArray<uint8>& Envelope)
 {
     constexpr int32 FixedHeaderSize = 19;
     constexpr int32 LedgerLengthOffset = 11;
     constexpr int32 SnapshotLengthOffset = 15;
     return HasMission14EnvelopeHeader(Envelope) &&
-        ConvertEmbeddedSnapshotV24ToV22(
+        ConvertEmbeddedSnapshotToV22(
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,
             SnapshotLengthOffset);
 }
 
-inline bool ConvertMission15EnvelopeSnapshotV24ToV22(TArray<uint8>& Envelope)
+inline bool ConvertMission15EnvelopeSnapshotToV22(TArray<uint8>& Envelope)
 {
     constexpr int32 FixedHeaderSize = 38;
     constexpr int32 LedgerLengthOffset = 30;
     constexpr int32 SnapshotLengthOffset = 34;
     return HasMission15EnvelopeHeader(Envelope) &&
-        ConvertEmbeddedSnapshotV24ToV22(
+        ConvertEmbeddedSnapshotToV22(
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,

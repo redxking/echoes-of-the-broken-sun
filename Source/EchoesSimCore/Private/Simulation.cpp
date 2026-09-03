@@ -28,6 +28,9 @@ constexpr std::uint32_t kLegacySnapshotVersion = 20;
 constexpr std::uint32_t kPriorSnapshotVersion = 21;
 constexpr std::uint32_t kChoirSnapshotVersion = 22;
 constexpr std::uint32_t kProtectedCommandCoreSnapshotVersion = 23;
+constexpr std::uint32_t kCommandResolutionReceiptSnapshotVersion = 24;
+constexpr std::uint32_t kMemorySnapshotVersion = 25;
+constexpr std::size_t kSerializedRememberedObjectBytes = 24;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
@@ -48,6 +51,15 @@ constexpr std::uint8_t kValidCommandCoreProtectionMask =
 [[nodiscard]] bool HasProtectedCommandCoreSnapshotSchema(
     std::uint32_t version) {
     return version >= kProtectedCommandCoreSnapshotVersion;
+}
+
+[[nodiscard]] bool HasCommandResolutionReceiptSnapshotSchema(
+    std::uint32_t version) {
+    return version >= kCommandResolutionReceiptSnapshotVersion;
+}
+
+[[nodiscard]] bool HasMemorySnapshotSchema(std::uint32_t version) {
+    return version >= kMemorySnapshotVersion;
 }
 
 [[nodiscard]] std::int64_t Abs64(std::int64_t value) {
@@ -211,6 +223,37 @@ constexpr std::int32_t kScarredMovementPercent = 85;
 
 [[nodiscard]] bool IsDropoffType(EntityType type) {
     return type == EntityType::CommandCore || type == EntityType::Dropoff;
+}
+
+// FOG information state "Explored": last observed permanent objects. Units are
+// deliberately excluded — the spec keeps unit sightings in the separate,
+// optional "Last known" state, which this core does not grant.
+[[nodiscard]] bool IsRememberablePermanentObject(const Entity& entity) {
+    if (entity.hitPoints <= 0 || entity.temporaryMineralCover) {
+        return false;
+    }
+    // An uprooted Waystone is walking, not standing: while it is mobile it is
+    // a unit and leaves no permanent-object memory. The site it was last seen
+    // rooted at stays remembered until the player looks at it again.
+    if (entity.waystoneMode == WaystoneMode::Uprooting ||
+        entity.waystoneMode == WaystoneMode::Mobile) {
+        return false;
+    }
+    switch (entity.type) {
+        case EntityType::CommandCore:
+        case EntityType::Dropoff:
+        case EntityType::Barracks:
+        case EntityType::UtilityStructure:
+        case EntityType::ResourceNode:
+        case EntityType::FutureWell:
+            return true;
+        case EntityType::Worker:
+        case EntityType::Soldier:
+        case EntityType::HeavyUnit:
+        case EntityType::ScoutUnit:
+            break;
+    }
+    return false;
 }
 
 [[nodiscard]] const EntityArchetypeRules& ArchetypeFor(
@@ -1021,6 +1064,10 @@ Simulation::Simulation(SimulationConfig config)
         players_[player].id = player;
         explored_[player].assign(static_cast<std::size_t>(tileCount), 0);
         visible_[player].assign(static_cast<std::size_t>(tileCount), 0);
+        // Unseen ground remembers nothing usable. Blocked is the safe
+        // default: an unexplored tile must never read as known-open.
+        rememberedTerrain_[player].assign(static_cast<std::size_t>(tileCount),
+                                          Terrain::Blocked);
     }
 }
 
@@ -4189,6 +4236,32 @@ void Simulation::UpdateVisibility() {
     for (PlayerId player = 0; player < visible_.size(); ++player) {
         std::fill(visible_[player].begin(), visible_[player].end(), 0);
     }
+    // FOG information state: Explored is "remembered terrain ... no live unit
+    // or temporary terrain state". Cairnback mineral cover is exactly such a
+    // temporary state, so a covered tile is remembered as the permanent ground
+    // it will revert to rather than as Blocked. Built once per pass in entity
+    // id order; first cover on a tile wins, which is deterministic because
+    // entities_ is kept sorted by id.
+    std::map<std::size_t, Terrain> temporaryCoverGround{};
+    for (const Entity& entity : entities_) {
+        if (!entity.temporaryMineralCover || entity.hitPoints <= 0) {
+            continue;
+        }
+        const std::int32_t coverX = entity.position.x.FloorToInt();
+        const std::int32_t coverY = entity.position.y.FloorToInt();
+        if (coverX < 0 || coverY < 0 || coverX >= config_.mapWidthTiles ||
+            coverY >= config_.mapHeightTiles) {
+            continue;
+        }
+        temporaryCoverGround.try_emplace(
+            static_cast<std::size_t>(coverY * config_.mapWidthTiles + coverX),
+            entity.mineralCoverUnderlyingTerrain);
+    }
+    const auto permanentTerrainAt = [&](std::size_t tile) {
+        const auto covered = temporaryCoverGround.find(tile);
+        return covered != temporaryCoverGround.end() ? covered->second
+                                                     : terrain_[tile];
+    };
     const auto markVisible = [&](PlayerId player, Vec2 position,
                                  std::int32_t radiusTiles) {
         if (player >= players_.size() || !players_[player].active) {
@@ -4218,6 +4291,10 @@ void Simulation::UpdateVisibility() {
                     tileY * config_.mapWidthTiles + tileX);
                 visible_[player][tile] = 1;
                 explored_[player][tile] = 1;
+                // Terrain memory snapshots at the moment of sight. Once
+                // vision lapses this value is frozen until the tile is seen
+                // again, so a change made out of sight cannot repaint it.
+                rememberedTerrain_[player][tile] = permanentTerrainAt(tile);
             }
         }
     };
@@ -4229,6 +4306,83 @@ void Simulation::UpdateVisibility() {
                 markVisible(entity.owner, entity.position,
                             config_.rules.futureWell.preserveVisionTiles);
             }
+        }
+    }
+    UpdateRememberedObjects();
+}
+
+void Simulation::UpdateRememberedObjects() {
+    const auto tileIndex = [&](Vec2 position) {
+        const std::int32_t tileX = std::clamp(
+            position.x.FloorToInt(), 0, config_.mapWidthTiles - 1);
+        const std::int32_t tileY = std::clamp(
+            position.y.FloorToInt(), 0, config_.mapHeightTiles - 1);
+        return static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX);
+    };
+    for (PlayerId player = 0; player < players_.size(); ++player) {
+        std::vector<RememberedObject>& memory = rememberedObjects_[player];
+        if (!players_[player].active) {
+            memory.clear();
+            continue;
+        }
+        // A memory is only ever corrected by looking. Standing on the
+        // remembered tile and finding the object gone — destroyed, depleted,
+        // or uprooted and walked away — clears it. Losing vision never does.
+        std::erase_if(memory, [&](const RememberedObject& remembered) {
+            const std::size_t tile = tileIndex(remembered.position);
+            if (visible_[player][tile] == 0) {
+                return false;
+            }
+            const Entity* live = FindEntity(remembered.id);
+            return live == nullptr || !IsRememberablePermanentObject(*live) ||
+                   tileIndex(live->position) != tile;
+        });
+        for (const Entity& entity : entities_) {
+            // A player's own objects are always live in their view; they need
+            // no memory and must not be duplicated into one.
+            if (entity.owner == player ||
+                !IsRememberablePermanentObject(entity) ||
+                visible_[player][tileIndex(entity.position)] == 0) {
+                continue;
+            }
+            const RememberedObject observed{entity.id,        entity.owner,
+                                            entity.faction,   entity.type,
+                                            entity.wellChoice, entity.position,
+                                            currentTick_};
+            const auto slot = std::lower_bound(
+                memory.begin(), memory.end(), entity.id,
+                [](const RememberedObject& candidate, EntityId id) {
+                    return candidate.id < id;
+                });
+            if (slot != memory.end() && slot->id == entity.id) {
+                *slot = observed;
+                continue;
+            }
+            if (memory.size() >= kMaximumRememberedObjects) {
+                // Bounded ledger: the oldest observation fades first, with a
+                // stable tie-break by lowest entity id.
+                const auto oldest = std::min_element(
+                    memory.begin(), memory.end(),
+                    [](const RememberedObject& lhs,
+                       const RememberedObject& rhs) {
+                        return std::tie(lhs.observedTick, lhs.id) <
+                               std::tie(rhs.observedTick, rhs.id);
+                    });
+                if (oldest == memory.end() ||
+                    std::tie(oldest->observedTick, oldest->id) >=
+                        std::tie(observed.observedTick, observed.id)) {
+                    continue;
+                }
+                memory.erase(oldest);
+                const auto reslot = std::lower_bound(
+                    memory.begin(), memory.end(), entity.id,
+                    [](const RememberedObject& candidate, EntityId id) {
+                        return candidate.id < id;
+                    });
+                memory.insert(reslot, observed);
+                continue;
+            }
+            memory.insert(slot, observed);
         }
     }
 }
@@ -4323,20 +4477,18 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 tileY * config_.mapWidthTiles + tileX)];
             tile.visibility = visibility;
             if (visibility != Visibility::Unexplored) {
-                tile.terrain = TerrainAt(tileX, tileY);
-                if (visibility != Visibility::Visible &&
-                    tile.terrain == Terrain::Blocked) {
-                    for (const Entity& entity : entities_) {
-                        if (entity.temporaryMineralCover &&
-                            entity.hitPoints > 0 &&
-                            entity.position.x.FloorToInt() == tileX &&
-                            entity.position.y.FloorToInt() == tileY) {
-                            tile.terrain =
-                                entity.mineralCoverUnderlyingTerrain;
-                            break;
-                        }
-                    }
-                }
+                // Visible reports the live authorized tile. Explored reports
+                // the snapshot taken the last time this player saw it, so a
+                // change made out of sight — an enemy Harvest scarring the
+                // ground, a mineral cover raised and expired — cannot repaint
+                // the map through fog. UpdateVisibility already stored the
+                // permanent ground under any temporary cover, so no live
+                // entity scan is needed here.
+                tile.terrain =
+                    visibility == Visibility::Visible
+                        ? TerrainAt(tileX, tileY)
+                        : rememberedTerrain_[player][static_cast<std::size_t>(
+                              tileY * config_.mapWidthTiles + tileX)];
                 tile.passable =
                     tile.terrain != Terrain::Blocked ||
                     (visibility == Visibility::Visible &&
@@ -4393,6 +4545,15 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
             }
             view.entities_.push_back(observed);
         }
+    }
+    // Permanent objects the player saw and no longer sees. An object that is
+    // visible right now is already an authoritative entity in the view, so it
+    // is not also published as a memory.
+    for (const RememberedObject& remembered : rememberedObjects_[player]) {
+        if (IsEntityVisibleTo(player, remembered.id)) {
+            continue;
+        }
+        view.rememberedObjects_.push_back(remembered);
     }
     const std::int32_t resolution =
         config_.rules.vibrationDetection.contactResolutionRaw;
@@ -5203,6 +5364,28 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U32(static_cast<std::uint32_t>(explored.size()));
         writer.Bytes(explored);
     }
+    // Schema 25: per-player remembered terrain and remembered permanent
+    // objects. Both are authoritative per-player state; a save that dropped
+    // them would hand the loading player a map repainted from live truth.
+    for (const auto& remembered : rememberedTerrain_) {
+        writer.U32(static_cast<std::uint32_t>(remembered.size()));
+        writer.Bytes(std::span<const std::uint8_t>(
+            reinterpret_cast<const std::uint8_t*>(remembered.data()),
+            remembered.size()));
+    }
+    for (const auto& memory : rememberedObjects_) {
+        writer.U32(static_cast<std::uint32_t>(memory.size()));
+        for (const RememberedObject& remembered : memory) {
+            writer.U32(remembered.id);
+            writer.U8(remembered.owner);
+            writer.U8(static_cast<std::uint8_t>(remembered.faction));
+            writer.U8(static_cast<std::uint8_t>(remembered.type));
+            writer.U8(static_cast<std::uint8_t>(remembered.wellChoice));
+            writer.I32(remembered.position.x.Raw());
+            writer.I32(remembered.position.y.Raw());
+            writer.U64(remembered.observedTick);
+        }
+    }
     writer.U32(static_cast<std::uint32_t>(entities_.size()));
     for (const Entity& entity : entities_) {
         writer.U32(entity.id);
@@ -5298,8 +5481,15 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
     BinaryWriter writer{};
+    std::size_t rememberedObjectCount = 0;
+    for (const auto& memory : rememberedObjects_) {
+        rememberedObjectCount += memory.size();
+    }
     writer.Reserve(
-        1536U + terrain_.size() * (1U + explored_.size()) +
+        1536U +
+        terrain_.size() *
+            (1U + explored_.size() + rememberedTerrain_.size()) +
+        rememberedObjectCount * kSerializedRememberedObjectBytes +
         entities_.size() * kSerializedEntityBytes +
         pendingCommands_.size() * kSerializedCommandBytes + 4U +
         commandResolutionReceipts_.size() *
@@ -5352,6 +5542,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kCommandResolutionReceiptSnapshotVersion &&
         version != kProtectedCommandCoreSnapshotVersion &&
         version != kChoirSnapshotVersion &&
         version != kPriorSnapshotVersion && version != kLegacySnapshotVersion) {
@@ -5501,7 +5692,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     const std::size_t minimumRemaining =
         kSnapshotFixedBytesAfterConfig +
-        static_cast<std::size_t>(tileCount) * (1U + kMaximumPlayers);
+        static_cast<std::size_t>(tileCount) *
+            (1U + kMaximumPlayers +
+             (HasMemorySnapshotSchema(version) ? kMaximumPlayers : 0U));
     if (reader.Remaining() < minimumRemaining) {
         SetError(error, "snapshot payload is too short for its declared map");
         return std::nullopt;
@@ -5608,6 +5801,97 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                         [](std::uint8_t value) { return value > 1; })) {
             SetError(error, "snapshot fog state is invalid");
             return std::nullopt;
+        }
+    }
+    if (HasMemorySnapshotSchema(version)) {
+        for (auto& remembered : simulation.rememberedTerrain_) {
+            std::uint32_t count = 0;
+            if (!reader.U32(count) || count != serializedTileCount) {
+                SetError(error,
+                         "snapshot terrain memory dimensions do not match the map");
+                return std::nullopt;
+            }
+            for (Terrain& terrain : remembered) {
+                std::uint8_t encoded = 0;
+                if (!reader.U8(encoded) ||
+                    encoded > static_cast<std::uint8_t>(Terrain::Scarred)) {
+                    SetError(error,
+                             "snapshot terrain memory contains an invalid value");
+                    return std::nullopt;
+                }
+                terrain = static_cast<Terrain>(encoded);
+            }
+        }
+        for (PlayerId index = 0;
+             index < simulation.rememberedObjects_.size(); ++index) {
+            std::vector<RememberedObject>& memory =
+                simulation.rememberedObjects_[index];
+            std::uint32_t count = 0;
+            if (!reader.U32(count) || count > kMaximumRememberedObjects ||
+                static_cast<std::size_t>(count) >
+                    reader.Remaining() / kSerializedRememberedObjectBytes) {
+                SetError(error, "snapshot object memory count is invalid");
+                return std::nullopt;
+            }
+            memory.clear();
+            memory.reserve(count);
+            EntityId priorRememberedId = 0;
+            for (std::uint32_t entry = 0; entry < count; ++entry) {
+                RememberedObject remembered{};
+                std::uint8_t faction = 0;
+                std::uint8_t type = 0;
+                std::uint8_t wellChoice = 0;
+                std::int32_t rawX = 0;
+                std::int32_t rawY = 0;
+                if (!reader.U32(remembered.id) || !reader.U8(remembered.owner) ||
+                    !reader.U8(faction) || !reader.U8(type) ||
+                    !reader.U8(wellChoice) || !reader.I32(rawX) ||
+                    !reader.I32(rawY) || !reader.U64(remembered.observedTick)) {
+                    SetError(error, "snapshot object memory is truncated");
+                    return std::nullopt;
+                }
+                remembered.faction = static_cast<Faction>(faction);
+                remembered.type = static_cast<EntityType>(type);
+                remembered.wellChoice =
+                    static_cast<FutureWellChoice>(wellChoice);
+                remembered.position = Vec2::FromRaw(rawX, rawY);
+                // Memory is player-scoped authority, so it is validated as
+                // strictly as any other loaded state: ascending unique ids,
+                // in-map positions, real classes, and an observation that
+                // cannot come from the future.
+                if (remembered.id == 0 || remembered.id <= priorRememberedId ||
+                    remembered.id >= simulation.nextEntityId_ ||
+                    (remembered.owner != kNeutralPlayer &&
+                     remembered.owner >= simulation.players_.size()) ||
+                    remembered.owner == index ||
+                    !IsValidFaction(remembered.faction) ||
+                    !IsValidEntityType(remembered.type) ||
+                    wellChoice >
+                        static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
+                    !simulation.IsInsideMap(remembered.position) ||
+                    remembered.observedTick > simulation.currentTick_) {
+                    SetError(error, "snapshot object memory is invalid");
+                    return std::nullopt;
+                }
+                priorRememberedId = remembered.id;
+                memory.push_back(remembered);
+            }
+        }
+    } else {
+        // Schemas 20 through 24 recorded no memory. Their explored ground is
+        // reconstructed from the live map — the same information those saves
+        // already served through the view — and object memory starts empty
+        // rather than inventing sightings the player never had.
+        for (PlayerId index = 0;
+             index < simulation.rememberedTerrain_.size(); ++index) {
+            for (std::size_t tile = 0;
+                 tile < simulation.rememberedTerrain_[index].size(); ++tile) {
+                simulation.rememberedTerrain_[index][tile] =
+                    simulation.explored_[index][tile] != 0
+                        ? simulation.terrain_[tile]
+                        : Terrain::Blocked;
+            }
+            simulation.rememberedObjects_[index].clear();
         }
     }
     const std::size_t serializedEntityBytes =
@@ -6122,7 +6406,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         lastPendingTick[player] = command.executeTick;
         lastPendingSequence[player] = command.sequence;
     }
-    if (version == kSnapshotVersion) {
+    if (HasCommandResolutionReceiptSnapshotSchema(version)) {
         std::uint32_t receiptCount = 0;
         if (!reader.U32(receiptCount) ||
             receiptCount > kMaximumCommandResolutionReceipts ||

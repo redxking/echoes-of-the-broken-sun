@@ -137,17 +137,56 @@ std::size_t SnapshotV23EntityCountOffset(std::size_t mapTileCount) {
     return SnapshotV22EntityCountOffset(mapTileCount) + 1;
 }
 
-std::size_t SnapshotV23FirstEntityOffset(std::size_t mapTileCount) {
-    return SnapshotV23EntityCountOffset(mapTileCount) + 4;
-}
-
 std::size_t SnapshotV24EntityCountOffset(std::size_t mapTileCount) {
     // Snapshot v24 appends receipts, so entity offsets remain identical to v23.
     return SnapshotV23EntityCountOffset(mapTileCount);
 }
 
-std::size_t SnapshotV24FirstEntityOffset(std::size_t mapTileCount) {
-    return SnapshotV23FirstEntityOffset(mapTileCount);
+// Snapshot v25 inserts per-player remembered terrain and remembered permanent
+// objects between the fog grids and the entity table. The object block is
+// variable length, so the offset is walked out of the payload rather than
+// assumed; the walk asserts each terrain-memory grid matches the map, which
+// makes a layout drift fail here instead of silently shifting every later
+// field.
+constexpr std::size_t kSerializedRememberedObjectBytes = 24;
+
+std::size_t SnapshotV25MemoryBlockOffset(std::size_t mapTileCount) {
+    return SnapshotV24EntityCountOffset(mapTileCount);
+}
+
+std::size_t SnapshotV25EntityCountOffset(const std::vector<std::uint8_t>& bytes,
+                                         std::size_t mapTileCount) {
+    std::size_t offset = SnapshotV25MemoryBlockOffset(mapTileCount);
+    for (std::size_t player = 0; player < 4; ++player) {
+        REQUIRE(ReadU32(bytes, offset) == mapTileCount);
+        offset += 4U + mapTileCount;
+    }
+    for (std::size_t player = 0; player < 4; ++player) {
+        const std::uint32_t count = ReadU32(bytes, offset);
+        offset += 4U + static_cast<std::size_t>(count) *
+                           kSerializedRememberedObjectBytes;
+    }
+    return offset;
+}
+
+std::size_t SnapshotV25FirstEntityOffset(const std::vector<std::uint8_t>& bytes,
+                                         std::size_t mapTileCount) {
+    return SnapshotV25EntityCountOffset(bytes, mapTileCount) + 4;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV25ToV24(
+    const std::vector<std::uint8_t>& current,
+    std::size_t mapTileCount) {
+    REQUIRE(ReadU32(current, 4) == 25);
+    const std::size_t memoryBegin = SnapshotV25MemoryBlockOffset(mapTileCount);
+    const std::size_t memoryEnd =
+        SnapshotV25EntityCountOffset(current, mapTileCount);
+    std::vector<std::uint8_t> prior = current;
+    prior.erase(prior.begin() + static_cast<std::ptrdiff_t>(memoryBegin),
+                prior.begin() + static_cast<std::ptrdiff_t>(memoryEnd));
+    WriteU32(prior, 4, 24);
+    ResignSnapshot(prior);
+    return prior;
 }
 
 std::vector<std::uint8_t> ConvertSnapshotV24ToV23(
@@ -579,7 +618,11 @@ void TestProtectedCommandCoreContract() {
 
     const std::vector<std::uint8_t> protectedSnapshot =
         protectedSimulation.SaveSnapshot();
-    REQUIRE(ReadU32(protectedSnapshot, 4) == 24);
+    // Schema 25 adds per-player remembered terrain and remembered permanent
+    // objects, which the FOG information-state table requires an Explored tile
+    // to be served from. The literal stays a deliberate tripwire: a schema
+    // change must be an edit here, never a silent drift.
+    REQUIRE(ReadU32(protectedSnapshot, 4) == 25);
     REQUIRE(protectedSnapshot[28] == 0x02);
     std::string error;
     std::optional<Simulation> restored =
@@ -1721,7 +1764,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(simulation.FindEntity(dormantWell)->wellActivationTick == 0);
 
     const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
-    REQUIRE(ReadU32(snapshot, 4) == 24);
+    REQUIRE(ReadU32(snapshot, 4) == 25);
     std::string error;
     std::optional<Simulation> restored =
         Simulation::LoadSnapshot(snapshot, &error);
@@ -1731,8 +1774,10 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(restored->FindEntity(dormantWell)->wellActivationTick == 0);
 
     const ReplayRecord replay = simulation.ExportReplay();
+    // The replay envelope shape did not change with snapshot schema 25, so
+    // its own version stays 24 while the baseline it carries is a 25.
     REQUIRE(replay.version == 24);
-    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 24);
+    REQUIRE(ReadU32(replay.initialSnapshot, 4) == 25);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -1741,8 +1786,24 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
+    const std::vector<std::uint8_t> v24 =
+        ConvertSnapshotV25ToV24(snapshot, kMapTiles);
+    REQUIRE(ReadU32(v24, 4) == 24);
+    std::optional<Simulation> v24Migrated =
+        Simulation::LoadSnapshot(v24, &error);
+    REQUIRE(v24Migrated.has_value());
+    REQUIRE(error.empty());
+    // A schema-24 save carried no memory, so the loader reconstructs explored
+    // ground from the live map — exactly the information that schema already
+    // served — and starts object memory empty rather than inventing sightings.
+    REQUIRE(v24Migrated->FindCommandResolutionReceipt(0, 1).has_value());
+    REQUIRE(v24Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
+    REQUIRE(ReadU32(v24Migrated->SaveSnapshot(), 4) == 25);
+    REQUIRE(
+        v24Migrated->CreatePlayerView(0)->RememberedObjects().empty());
+
     const std::vector<std::uint8_t> v23 =
-        ConvertSnapshotV24ToV23(snapshot, 1);
+        ConvertSnapshotV24ToV23(v24, 1);
     REQUIRE(ReadU32(v23, 4) == 23);
     std::optional<Simulation> v23Migrated =
         Simulation::LoadSnapshot(v23, &error);
@@ -1751,7 +1812,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(!v23Migrated->FindCommandResolutionReceipt(0, 1).has_value());
     REQUIRE(v23Migrated->Config().protectedCommandCorePlayerMask == 0);
     REQUIRE(v23Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
-    REQUIRE(ReadU32(v23Migrated->SaveSnapshot(), 4) == 24);
+    REQUIRE(ReadU32(v23Migrated->SaveSnapshot(), 4) == 25);
 
     const std::vector<std::uint8_t> v22 = ConvertSnapshotV23ToV22(v23);
     REQUIRE(ReadU32(v22, 4) == 22);
@@ -1761,7 +1822,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(error.empty());
     REQUIRE(v22Migrated->Config().protectedCommandCorePlayerMask == 0);
     REQUIRE(v22Migrated->FindEntity(activatedWell)->wellActivationTick == 1);
-    REQUIRE(ReadU32(v22Migrated->SaveSnapshot(), 4) == 24);
+    REQUIRE(ReadU32(v22Migrated->SaveSnapshot(), 4) == 25);
 
     const std::vector<std::uint8_t> prior =
         ConvertSnapshotV22ToV21(v22, kMapTiles);
@@ -1774,7 +1835,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(error.empty());
     REQUIRE(priorMigrated->FindEntity(activatedWell)->wellActivationTick == 1);
     REQUIRE(priorMigrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 24);
+    REQUIRE(ReadU32(priorMigrated->SaveSnapshot(), 4) == 25);
 
     const std::vector<std::uint8_t> legacy =
         ConvertSnapshotV21ToV20(prior, kMapTiles);
@@ -1786,9 +1847,10 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(migrated->FindEntity(activatedWell)->wellActivationTick ==
             migrated->CurrentTick());
     REQUIRE(migrated->FindEntity(dormantWell)->wellActivationTick == 0);
-    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 24);
+    REQUIRE(ReadU32(migrated->SaveSnapshot(), 4) == 25);
 
-    const std::size_t firstEntity = SnapshotV24FirstEntityOffset(kMapTiles);
+    const std::size_t firstEntity =
+        SnapshotV25FirstEntityOffset(snapshot, kMapTiles);
     std::vector<std::uint8_t> futureActivation = snapshot;
     WriteU64(
         futureActivation,
@@ -1924,7 +1986,8 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     std::string error;
 
     std::vector<std::uint8_t> excessiveVision = baseline;
-    WriteU32(excessiveVision, SnapshotV24FirstEntityOffset(mapTiles) + 27, 50000);
+    WriteU32(excessiveVision,
+             SnapshotV25FirstEntityOffset(baseline, mapTiles) + 27, 50000);
     ResignSnapshot(excessiveVision);
     REQUIRE(!Simulation::LoadSnapshot(excessiveVision, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
@@ -1944,7 +2007,8 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     Simulation empty({8, 8, 20, 1});
     REQUIRE(empty.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
     std::vector<std::uint8_t> truncatedEntities = empty.SaveSnapshot();
-    WriteU32(truncatedEntities, SnapshotV24EntityCountOffset(mapTiles),
+    WriteU32(truncatedEntities,
+             SnapshotV25EntityCountOffset(truncatedEntities, mapTiles),
              64 * 1024);
     ResignSnapshot(truncatedEntities);
     REQUIRE(!Simulation::LoadSnapshot(truncatedEntities, &error).has_value());
@@ -2977,14 +3041,17 @@ void TestMineralCoverExtremeCoordinateDeterminism() {
             CommandAdmissionStatus::Accepted);
     REQUIRE(rejection.empty());
     REQUIRE(!valid.FindCommandResolutionReceipt(1, 1).has_value());
-    // Re-derived: StateChecksum covers the authoritative rules table, so both
-    // golden values moved when the Command Core footprints became 5x5 and the
-    // Surveyor and Tender lost their attack weapons. The pinning contract -
-    // two exact, stable checksums across all three build configurations - is
-    // unchanged; only the state they pin was stale.
-    REQUIRE(valid.StateChecksum() == 15673808059727416843ULL);
+    // Re-derived: StateChecksum hashes the whole snapshot payload, which
+    // schema 25 extends with per-player remembered terrain and remembered
+    // permanent objects. The FOG information-state table makes those two
+    // ledgers authoritative player state ("Explored: remembered terrain and
+    // last observed permanent objects"), so they belong inside the checksum
+    // and both golden values moved with them. The pinning contract - two
+    // exact, stable checksums across all three build configurations - is
+    // unchanged; only the state they pin grew.
+    REQUIRE(valid.StateChecksum() == 622828974504364912ULL);
     valid.Step();
-    REQUIRE(valid.StateChecksum() == 3177932988310847857ULL);
+    REQUIRE(valid.StateChecksum() == 12838942545694777131ULL);
     const std::optional<CommandResolutionReceipt> validReceipt =
         valid.FindCommandResolutionReceipt(1, 1);
     REQUIRE(validReceipt.has_value());
@@ -3602,7 +3669,7 @@ void TestPoweredAegisNetworkAndCounterplay() {
     constexpr std::size_t kAegisPowerFieldOffset = 209;
     constexpr std::size_t kAegisEntityIndex = 3;
     const std::size_t aegisPowerOffset =
-        SnapshotV24FirstEntityOffset(64U * 64U) +
+        SnapshotV25FirstEntityOffset(poweredSnapshot, 64U * 64U) +
         kAegisEntityIndex * kSerializedEntitySize +
         kAegisPowerFieldOffset;
     REQUIRE(forgedPower[aegisPowerOffset] == 1);
@@ -4010,7 +4077,8 @@ void TestHollowChoirIdentityReconciliationAndPersistence() {
             ChoirIdentityState::DualResolvePossible);
 
     std::vector<std::uint8_t> invalidIdentity = snapshot;
-    invalidIdentity[SnapshotV24FirstEntityOffset(32U * 32U) + 210] = 0xff;
+    invalidIdentity[SnapshotV25FirstEntityOffset(snapshot, 32U * 32U) + 210] =
+        0xff;
     ResignSnapshot(invalidIdentity);
     REQUIRE(!Simulation::LoadSnapshot(invalidIdentity, &error).has_value());
     REQUIRE(error == "snapshot entity state is invalid");
@@ -4780,6 +4848,144 @@ void TestReshapeExpiryStopsWithoutTeleporting() {
 }
 
 // Section 7 terrain table: Scarred is 85% speed.
+// FOG information state: "Explored - Remembered terrain and last observed
+// permanent objects; no live unit or temporary terrain state." An Explored
+// tile must therefore be served from what this player last saw, never from
+// the live map, and a scouted permanent object must survive the loss of
+// vision that reveals nothing new.
+void TestExploredTerrainAndPermanentObjectMemory() {
+    Simulation simulation({24, 24, 20, 0x464f474d454d3031ULL});
+    AddTwoPlayers(simulation, {1000, 500}, {1000, 500});
+    const EntityId homeCore = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(2, 2));
+    const EntityId scout = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::ScoutUnit,
+        Vec2::FromTiles(16, 16));
+    const EntityId enemyBarracks = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(17, 16));
+    const EntityId enemySoldier = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(16, 17));
+    REQUIRE(homeCore != 0 && scout != 0 && enemyBarracks != 0 &&
+            enemySoldier != 0);
+
+    const auto ViewOf = [&](PlayerId player) {
+        std::optional<PlayerView> view = simulation.CreatePlayerView(player);
+        REQUIRE(view.has_value());
+        return *view;
+    };
+    const auto Sees = [&](const PlayerView& view, EntityId id) {
+        return std::any_of(view.Entities().begin(), view.Entities().end(),
+                           [id](const Entity& entity) {
+                               return entity.id == id;
+                           });
+    };
+    const auto Remembers = [&](const PlayerView& view, EntityId id) {
+        const auto& memory = view.RememberedObjects();
+        return std::find_if(memory.begin(), memory.end(),
+                            [id](const RememberedObject& remembered) {
+                                return remembered.id == id;
+                            });
+    };
+
+    // The scout is standing on the contested ground: live terrain, live
+    // entities, no memory published for anything it can see right now.
+    const PlayerView watching = ViewOf(0);
+    REQUIRE(watching.VisibilityAt(Vec2::FromTiles(18, 16)) ==
+            Visibility::Visible);
+    REQUIRE(watching.TerrainAt(18, 16) == Terrain::Open);
+    REQUIRE(Sees(watching, enemyBarracks));
+    REQUIRE(Sees(watching, enemySoldier));
+    REQUIRE(watching.RememberedObjects().empty());
+
+    // Withdraw until nothing of player 0 can see the site.
+    Command withdraw = MakeCommand(0, 0, 1, CommandType::Move, scout);
+    withdraw.position = Vec2::FromTiles(3, 3);
+    REQUIRE(simulation.QueueCommand(withdraw));
+    simulation.Step(220);
+    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(3, 3));
+
+    const PlayerView withdrawn = ViewOf(0);
+    REQUIRE(withdrawn.VisibilityAt(Vec2::FromTiles(18, 16)) ==
+            Visibility::Explored);
+    // The structure is remembered; the soldier is not. Units belong to the
+    // separate optional "Last known" state, which this core does not grant.
+    REQUIRE(!Sees(withdrawn, enemyBarracks));
+    REQUIRE(!Sees(withdrawn, enemySoldier));
+    const auto rememberedBarracks = Remembers(withdrawn, enemyBarracks);
+    REQUIRE(rememberedBarracks != withdrawn.RememberedObjects().end());
+    REQUIRE(rememberedBarracks->owner == 1);
+    REQUIRE(rememberedBarracks->faction == Faction::KharuunAssemblies);
+    REQUIRE(rememberedBarracks->type == EntityType::Barracks);
+    REQUIRE(rememberedBarracks->position == Vec2::FromTiles(17, 16));
+    REQUIRE(Remembers(withdrawn, enemySoldier) ==
+            withdrawn.RememberedObjects().end());
+
+    // An enemy Harvest scars ground the player cannot see. Live truth moves;
+    // the remembered map must not.
+    REQUIRE(simulation.SetTerrainTile(18, 16, Terrain::Scarred));
+    simulation.Step();
+    REQUIRE(simulation.TerrainAt(18, 16) == Terrain::Scarred);
+    const PlayerView blind = ViewOf(0);
+    REQUIRE(blind.VisibilityAt(Vec2::FromTiles(18, 16)) ==
+            Visibility::Explored);
+    REQUIRE(blind.TerrainAt(18, 16) == Terrain::Open);
+    // The owner of the ground is standing on it and sees the live tile.
+    REQUIRE(ViewOf(1).TerrainAt(18, 16) == Terrain::Scarred);
+
+    // Memory is authoritative per-player state and survives a save exactly.
+    const std::vector<std::uint8_t> saved = simulation.SaveSnapshot();
+    std::string error;
+    const std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(saved, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    const std::optional<PlayerView> restoredView = restored->CreatePlayerView(0);
+    REQUIRE(restoredView.has_value());
+    REQUIRE(restoredView->TerrainAt(18, 16) == Terrain::Open);
+    REQUIRE(restoredView->RememberedObjects() == blind.RememberedObjects());
+
+    // Looking again is the only thing that corrects a memory.
+    Command returnScout = MakeCommand(
+        simulation.CurrentTick(), 0, 2, CommandType::Move, scout);
+    returnScout.position = Vec2::FromTiles(16, 16);
+    REQUIRE(simulation.QueueCommand(returnScout));
+    simulation.Step(220);
+    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(16, 16));
+    const PlayerView looking = ViewOf(0);
+    REQUIRE(looking.VisibilityAt(Vec2::FromTiles(18, 16)) ==
+            Visibility::Visible);
+    REQUIRE(looking.TerrainAt(18, 16) == Terrain::Scarred);
+    REQUIRE(Sees(looking, enemyBarracks));
+    REQUIRE(Remembers(looking, enemyBarracks) ==
+            looking.RememberedObjects().end());
+
+    // Watching the object die clears the memory rather than leaving a ghost
+    // the player can never resolve.
+    const EntityId breaker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(15, 16));
+    REQUIRE(breaker != 0);
+    Command demolish = MakeCommand(
+        simulation.CurrentTick(), 0, 3, CommandType::Attack, breaker);
+    demolish.target = enemyBarracks;
+    REQUIRE(simulation.QueueCommand(demolish));
+    for (Tick guard = 0;
+         guard < 4000 && simulation.FindEntity(enemyBarracks) != nullptr;
+         ++guard) {
+        simulation.Step();
+    }
+    REQUIRE(simulation.FindEntity(enemyBarracks) == nullptr);
+    const PlayerView cleared = ViewOf(0);
+    REQUIRE(cleared.VisibilityAt(Vec2::FromTiles(17, 16)) ==
+            Visibility::Visible);
+    REQUIRE(Remembers(cleared, enemyBarracks) ==
+            cleared.RememberedObjects().end());
+}
+
 void TestScarredTerrainCostsSpeed() {
     Simulation scar({20, 20, 20, 0x5343415252454431ULL});
     REQUIRE(scar.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
@@ -4894,6 +5100,8 @@ int main() {
          TestCommandCoreIsNotConstructable},
         {"Reshape expiry stops without teleporting",
          TestReshapeExpiryStopsWithoutTeleporting},
+        {"Explored terrain and permanent object memory",
+         TestExploredTerrainAndPermanentObjectMemory},
         {"Scarred terrain costs speed", TestScarredTerrainCostsSpeed},
         {"deterministic network forfeit",
          TestDeterministicNetworkForfeit},
