@@ -263,13 +263,13 @@ void UEchoesNarrativeSubsystem::LoadPack()
     DemoLines.Reset();
     const TSharedPtr<FJsonObject>* DemoObject = nullptr;
     if (Root->TryGetObjectField(TEXT("demo"), DemoObject) &&
-        DemoObject != nullptr && (*DemoObject)->IsValid())
+        DemoObject != nullptr && DemoObject->IsValid())
     {
         for (const auto& DemoPair : (*DemoObject)->Values)
         {
             const TSharedPtr<FJsonObject>* CategoryObj = nullptr;
             if (DemoPair.Value.IsValid() && DemoPair.Value->TryGetObject(CategoryObj) &&
-                CategoryObj != nullptr && (*CategoryObj)->IsValid())
+                CategoryObj != nullptr && CategoryObj->IsValid())
             {
                 const TArray<TSharedPtr<FJsonValue>>* DemoLineValues = nullptr;
                 if ((*CategoryObj)->TryGetArrayField(TEXT("lines"), DemoLineValues) &&
@@ -280,7 +280,7 @@ void UEchoesNarrativeSubsystem::LoadPack()
                         const TSharedPtr<FJsonObject>* LineObject = nullptr;
                         FEchoesNarrativeLine Line;
                         if (LineValue.IsValid() && LineValue->TryGetObject(LineObject) &&
-                            LineObject != nullptr && (*LineObject)->IsValid() &&
+                            LineObject != nullptr && LineObject->IsValid() &&
                             (*LineObject)->TryGetStringField(TEXT("id"), Line.Id) &&
                             (*LineObject)->TryGetStringField(TEXT("speaker"), Line.Speaker) &&
                             (*LineObject)->TryGetStringField(TEXT("signal"), Line.Signal) &&
