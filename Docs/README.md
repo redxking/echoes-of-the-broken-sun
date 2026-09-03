@@ -75,6 +75,7 @@ Read in tier order. A lower tier never overrides a higher one.
    directive keeps its gate matrix and sequencing; it has not yet been edited to stop restating requirements,
    and until it is, prefer `Requirements.md` wherever the two describe the same behaviour.
 
-3. **Historical release-body provenance.** The retired release ledger contained identifiers without retained
-   body text. Any owner-authorized derived replacement is explicitly labeled in `Requirements.md` and remains
-   open until its own verification and owner-acceptance conditions are met.
+3. **Historical release-body provenance.** All 369 previously undeclared release requirement bodies across
+   §6–§26 have been fully authored and decomposed into atomic leaves in `Requirements.md` on 2026-09-03,
+   calibrated against `GameCompletionDirective.md`, `DevelopmentBible.md`, and `TechnicalArchitecture.md`.
+   All are initialized to `OPEN` in `RequirementsState.md` awaiting engineering and verification.

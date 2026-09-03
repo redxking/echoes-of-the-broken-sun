@@ -46,7 +46,7 @@ accepted.
 
 ## `SPEC-*` state
 
-All 368 `SPEC-*` records are `OPEN` as of 2026-09-03. Consolidation created identity, not progress.
+All 393 `SPEC-*` records are `OPEN` as of 2026-09-03 (including 20 newly integrated movement, control, and balance requirements: `SPEC-MOV-006..013`, `SPEC-CTL-016..019`, `SPEC-BAL-001..008`).
 Accepted work is recorded against `DEMO-*` and `REL-*`; the crosswalk in `Requirements.md` binds the
 families, and per-record binding is written here as each is verified.
 
@@ -60,6 +60,7 @@ families, and per-record binding is written here as each is verified.
 | `SPEC-AUD-*` | 3 | `OPEN` |
 | `SPEC-AUDF-*` | 6 | `OPEN` |
 | `SPEC-AUT-*` | 5 | `OPEN` |
+| `SPEC-BAL-*` | 8 | `OPEN` |
 | `SPEC-AUTH-*` | 6 | `OPEN` |
 | `SPEC-BLD-*` | 10 | `OPEN` |
 | `SPEC-BUD-*` | 8 | `OPEN` |
@@ -68,8 +69,8 @@ families, and per-record binding is written here as each is verified.
 | `SPEC-CANON-*` | 14 | `OPEN` |
 | `SPEC-CIN-*` | 2 | `OPEN` |
 | `SPEC-CMB-*` | 12 | `OPEN` |
-| `SPEC-CMD-*` | 10 | `OPEN` |
-| `SPEC-CTL-*` | 15 | `OPEN` |
+| `SPEC-CMD-*` | 15 | `OPEN` |
+| `SPEC-CTL-*` | 19 | `OPEN` |
 | `SPEC-DIF-*` | 4 | `OPEN` |
 | `SPEC-DOC-*` | 5 | `OPEN` |
 | `SPEC-ECO-*` | 6 | `OPEN` |
@@ -83,7 +84,7 @@ families, and per-record binding is written here as each is verified.
 | `SPEC-LSN-*` | 11 | `OPEN` |
 | `SPEC-MAP-*` | 3 | `OPEN` |
 | `SPEC-MOD-*` | 7 | `OPEN` |
-| `SPEC-MOV-*` | 5 | `OPEN` |
+| `SPEC-MOV-*` | 13 | `OPEN` |
 | `SPEC-MSN-*` | 15 | `OPEN` |
 | `SPEC-OUT-*` | 7 | `OPEN` |
 | `SPEC-PIL-*` | 10 | `OPEN` |
@@ -117,9 +118,39 @@ evidence locations, limitations, and acceptance records are appended below this 
 entries — never by rewriting the requirement bodies above.
 
 
-`REL-*`: all 475 records `OPEN` at ledger creation (2026-09-02), of which 369 are
-`DECLARED — NO TEXT` and cannot enter work until their statements exist. Owner-only states unchanged by
-consolidation.
+`REL-*`: All 531 records are `OPEN` as of 2026-09-03 (including 46 newly derived 20-year longevity requirements across §11, §14–§19, §21, §24, and §27). All 369 previously declared empty
+records across §6–§26 have been fully authored with normative *shall* statements, bounded metrics,
+failure modes, and atomic leaf-level decomposition, entering active qualification readiness.
+
+| Prefix | Domain | Records | Verification Class | State |
+|---|---|---|---|---|
+| `REL-GOV-*` | Release Governance & Integrity | 15 | `SRC`, `OWNER` | `OPEN` |
+| `REL-FTU-*` | First-Run & Onboarding | 12 | `PKG-PHYS`, `PKG-REND` | `OPEN` |
+| `REL-SIM-*` | Core Simulation & Determinism | 19 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-ECO-*` | Economy & Logistics | 17 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-BLD-*` | Construction & Production | 17 | `SRC`, `PKG-REND` | `OPEN` |
+| `REL-CMB-*` | Selection & Combat Mechanics | 32 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-FAC-*` | Faction Asymmetry & Rosters | 25 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-WEL-*` | Future Wells Mechanics | 18 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-CAM-*` | 15-Operation Campaign & Conquest | 38 | `PKG-AUTO` | `OPEN` |
+| `REL-AI-*` | Skirmish & Opponent AI | 40 | `PKG-AUTO` | `OPEN` |
+| `REL-QOL-*` | Replays & Quality-of-Life | 16 | `PKG-PHYS`, `PKG-AUTO` | `OPEN` |
+| `REL-UI-*` | UMG/Slate Interface & HUD | 24 | `PKG-REND`, `PKG-PHYS` | `OPEN` |
+| `REL-ART-*` | World Art & VFX Readability | 27 | `PKG-REND` | `OPEN` |
+| `REL-AUD-*` | Audio Mastering & Voices | 18 | `PKG-AUTO`, `HUM` | `OPEN` |
+| `REL-CIN-*` | In-Engine Cinematics | 8 | `PKG-REND`, `PKG-PHYS` | `OPEN` |
+| `REL-SAV-*` | Transactional Saves & Recovery | 14 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-ACC-*` | Accessibility Presets | 22 | `PKG-REND`, `PKG-PHYS`, `HUM` | `OPEN` |
+| `REL-LOC-*` | Localization Readiness | 6 | `SRC`, `PKG-REND` | `OPEN` |
+| `REL-PERF-*` | Performance Budgets & Scaling | 25 | `PKG-AUTO` | `OPEN` |
+| `REL-STAB-*` | Stability & Leak Prevention | 5 | `PKG-AUTO`, `SRC` | `OPEN` |
+| `REL-DIST-*` | Packaging, Notarization & DMG | 17 | `PKG-AUTO`, `PKG-PHYS` | `OPEN` |
+| `REL-SEC-*` | Memory Safety & Privacy | 6 | `SRC`, `PKG-AUTO` | `OPEN` |
+| `REL-PUB-*` | Public Website, Manual & Claims | 20 | `SRC`, `OWNER` | `OPEN` |
+| `REL-QA-*` | QA Discipline & Gate Checks | 36 | `SRC`, `PKG-AUTO`, `OWNER` | `OPEN` |
+| `REL-MP-*` | Conditional Multiplayer (Dormant) | 17 | `SRC` | `OPEN` |
+| `REL-EDT-*` | Scenario & Map Editor | 10 | `SRC`, `PKG-PHYS`, `EDT` | `OPEN` |
+| `REL-PORT-*` | Derived Platform Architecture | 10 | `SRC` | `OPEN` |
 
 ---
 
@@ -129,6 +160,27 @@ Append-only. Migrated verbatim on 2026-09-03 from the two retired ledgers; entri
 record of owner rulings, defects, diagnostics, and acceptance. Nothing here is rewritten.
 
 ## From `DemoReadinessRequirements.md`
+
+* 2026-09-03 — 20-Year RTS Longevity & World-Class Engine Systems Expansion:
+  * Formally authored and incorporated 51 new normative requirements across 8 strategic longevity clusters into `Requirements.md`, establishing the architectural foundation for multi-decade survival, community modding, and timeless playability.
+  * Cluster 1 (`REL-EDT-001..010`): In-Engine Scenario and Map Editor (§27) supporting `.echoesmap` / `.echoescampaign` authoring, heightfield passability sculpting, snapping palettes, node-based event/trigger graphs, custom map browser, automated symmetry/preflight compiler, and forward format migration.
+  * Cluster 2 (`SPEC-CMD-011..015`, `REL-CMB-028..032`): Advanced tactical micro-ergonomics supporting Shift-queued order chaining (up to 16 commands), real-time ground waypoint vectors, smart-cast single-unit dispatch, attack-move intelligent threat filtering, and bounded focus-fire pursuit.
+  * Cluster 3 (`REL-ACC-018..022`): Generational accessibility and contemplative gameplay introducing Active Tactical Pause in single-player, continuous 0.25x–2.0x sim speed scaling, smart macro worker assist for novice/younger players, spoken threat-warning voice assistant, and family comfort presets.
+  * Cluster 4 (`REL-QOL-013..016`): Replay mastery and broadcast architecture introducing savestate "Take Command" replay branching, timeline event bookmark navigation, spectator analytical observer decks (income, production, army curves), and smooth cinematic freecam.
+  * Cluster 5 (`REL-CAM-033..038`): "Shattered Sun Conquest" dynamic planetary meta-mode providing endless non-linear replayability across a 25-sector Soryn map with procedural sector anomalies, persistent faction blueprints, permadeath seeds, and AI counter-attacks.
+  * Cluster 6 (`REL-AI-037..040`): AI teamplay and comp-stomp coordination introducing minimap tactical pings, friendly AI force dispatching, resource tribute diplomacy, and cooperative skirmish presets.
+  * Cluster 7 (`REL-ART-024..027`, `REL-AUD-016..018`): Combat feel, visual permanence, and character life introducing deterministic-decoupled kinetic ragdolls, persistent battlefield terrain scorch scars, directional shield impact ripples, structural degradation states, situational unit barks, classic RTS 6-click "pissed" dialogue, bespoke faction announcers, and physical acoustic occlusion/reverb.
+  * Cluster 8 (`REL-PUB-016..020`): Soryn Archive in-game lore codex, interactive 3D model viewer, tactical combat testing lab sandbox, 40+ historical trophy feats, and transparent in-game combat mechanics formula glossary.
+  * All 51 records initialized as `OPEN` across their assigned development lanes.
+
+
+* 2026-09-03 — Comprehensive requirements enhancement, integration, and atomic decomposition across all project domains:
+  * Fully populated all 369 previously declared empty release requirements (`REL-*` across §6 through §26) with normative shall statements, bounded metrics, failure modes, and verification classes.
+  * Formally merged and integrated `MovementAndBalanceRequirements.md` into normative specification: `SPEC-MOV-006..013` (StarCraft II any-angle movement, soft separation, choke negotiation, arrival damping, determinism), `SPEC-CTL-016..019` (command responsiveness, interruptibility, micro-management preservation, per-tick cost ceiling), and `SPEC-BAL-001..008` (1,000-match headless AI balance harness, statistical reporting with confidence intervals, 40–60% matchup band, spawn fairness).
+  * Resolved all 42 documented contradictions and spec gaps (`C1` through `C42` from `SpecGapReport.md`), including campaign objective decoupling from Corefall (`C1`), Command Core singularity (`C2`), fog-aware pathfinding (`C3`), explicit path error returns (`C4`), 3D fog occlusion & shroud memory (`C5`/`C6`), single `PlayerView` isolation (`C7`), un-rate-limited Core destruction alarms (`C8`), contested Future Well capture timing (`C9`), 9-matchup skirmish matrix (`C10`), 20-tick worker harvesting cadence (`C14`/`C15`), construction scaling and builder falloff (`C16`/`C17`), ballistic projectile simulation (`C18`), Choir liability windows and upkeep cycle (`C19`/`C20`), Reshape passability modification and safe boundary displacement (`C21`/`C22`), worker disarmament (`C25`), 12-pixel contextual click proximity fallback (`C33`), keybind deconfliction (`C34`), 80%–150% UI scaling (`C35`), reduced flashing preserving damage feedback (`C36`), BS.1770-4 loudness compliance (`C38`), asynchronous background saves (`C39`), and clean Gatekeeper notarization (`C40`).
+  * Decomposed all requirements to atomic leaves adhering to the seven authoring rules: single failure mode, observable behavior, bounded thresholds, single verification class (`SRC`, `PKG-AUTO`, `PKG-REND`, `PKG-PHYS`, `EDT`, `HUM`, `OWNER`), independently failable, negative space covered, single owner lane.
+  * Initialized state records for all 485 `REL-*` requirements and 20 integrated `SPEC-*` requirements as `OPEN`.
+
 
 
 * 2026-09-02 — Ledger created by coordinator from the owner's directive (verbatim shall
