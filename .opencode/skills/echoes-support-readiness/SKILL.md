@@ -6,7 +6,7 @@ metadata: { author: Angelis Pseftis }
 
 # Echoes support readiness
 
-Read `echoes-player-manual-known-limitations`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `echoes-security-privacy`. Define intake fields that minimize personal data: package/version/hash, macOS/hardware, install route, repro steps, expected/actual behavior, screenshots/logs only with consent, and accessibility impact. Never request secrets, credentials, private saves, or unrelated machine data.
+Read `echoes-player-manual-known-limitations`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `echoes-security-privacy`. Define intake fields that minimize personal data: package/version/hash, macOS/hardware, install route, repro steps, expected/actual behavior, screenshots/logs only with consent, and accessibility impact. Never request secrets, credentials, private saves, or unrelated machine data.
 
 Classify reports through `echoes-qa-defect-triage`; reproduce only in isolated paths. State current evidence and workarounds honestly; do not promise release dates, fixes, compatibility, refunds, service levels, or security conclusions. External support contact, accounts, telemetry, tickets, and publication require explicit owner authority.
 

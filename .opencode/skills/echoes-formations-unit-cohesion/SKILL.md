@@ -7,7 +7,7 @@ metadata:
 
 # Echoes formations and unit cohesion
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease/worktree/branch/SHA before mutation.
 
 Define formation/escort eligibility, anchor, spacing, blocked routing, casualties, regrouping, command replacement, fog limits, performance, and persistence. Keep all formation state and outcomes deterministic; camera/VFX/audio may expose status but never decide it. Use authoritative source data and compilers for tunables.
 

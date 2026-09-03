@@ -7,7 +7,7 @@ metadata:
 
 # Echoes third-party agent-skill review
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. This skill reviews; it does not install, execute, enable, update, or trust a package.
+Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. This skill reviews; it does not install, execute, enable, update, or trust a package.
 
 Resolve the primary repository, exact commit/tag, authorship, license, release date, supported engine/tool version, and every file that would enter the project. Inspect every `SKILL.md`, script, hook, installer, package manifest, lockfile, MCP definition, executable, generated file, dependency, credential request, network endpoint, and permission. Identify duplicate IDs, conflicts with Echoes directives, automatic invocation, source/generated mutations, editor/Python reach, destructive capability, telemetry, update behavior, and transitive downloads.
 

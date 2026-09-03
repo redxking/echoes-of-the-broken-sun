@@ -9,7 +9,7 @@ metadata:
 
 Use before any consequential Echoes work. It does not authorize edits, builds, releases, or human acceptance.
 
-1. Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; obey the latter if it limits Codex to review-only.
+1. Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; obey the latter if it limits Codex to review-only.
 2. Identify one gate/slice, its authoritative files, its current evidence state, the exact check, and the owner-only decision boundary. Never infer current status from a prior session.
 3. Before mutation, inspect the exact worktree, branch, commit, dirty paths, and current lease. Do not edit a leased/shared/owner-held path without a matching current lease; never self-authorize from old lane records.
 4. Use source paths (`Content/Data/Source`, `Content/Narrative/Source`, `Content/World/Source`) and the registered compiler/generator; generated artifacts are outputs, never hand-edited authority.

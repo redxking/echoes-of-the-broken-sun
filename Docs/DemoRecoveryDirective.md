@@ -8,7 +8,9 @@ Received: 2026-09-02, verbatim from the owner via the coordinator session. This 
 authoritative on-disk copy for all lanes. Write owner: the Claude Code lane fleet (coordinator
 session). ChatGPT Codex, when active, is a read-only reviewer (owner may re-designate).
 Related: `Docs/GameCompletionDirective.md` (professional-release backlog — unchanged);
-`Docs/DemoReadinessRequirements.md` (the sole requirements/acceptance ledger, per §4).
+`Docs/Requirements.md` (sole normative requirements authority) and
+`Docs/RequirementsState.md` (sole lifecycle and evidence-state authority). References below to the former
+`DemoReadinessRequirements.md` are historical only and have been superseded by these two records.
 
 Read this entire directive before continuing development. Treat it as binding human feedback and a corrective development order.
 
@@ -67,7 +69,10 @@ Continue the existing authoritative task and checkout. Do not create competing p
 
 ## 4. Requirements control and human acceptance
 
-Create and maintain one authoritative file: `Docs/DemoReadinessRequirements.md`. This file is the sole requirements and acceptance ledger for the immediate demo. Do not create draft, revised, final, or numbered copies. Link it to `GameCompletionDirective.md`, but do not duplicate the requirement bodies across multiple files.
+Maintain the immediate-demo requirement bodies in `Docs/Requirements.md` and their lifecycle, evidence, and
+acceptance state in `Docs/RequirementsState.md`. These are the sole current authorities; do not create draft,
+revised, final, or numbered copies. Link them to `GameCompletionDirective.md`, but do not duplicate
+requirement bodies across multiple files.
 
 Each requirement record must contain: Requirement ID; exact "shall" statement; player or product outcome; dependencies; planned verification method; required evidence; responsible implementation owner; engineering state; exact commit and packaged-build identity; evidence locations; known limitations; human acceptance state; human acceptance date and notes.
 
@@ -85,7 +90,8 @@ Changing a requirement so existing behavior appears to pass is prohibited. Propo
 
 ## 5. Mandatory demo requirements
 
-(Minimum requirements; every requirement requires final human acceptance. The exact shall statements are transcribed into `Docs/DemoReadinessRequirements.md`, which is the ledger of record. Section keys:)
+(Minimum requirements; every requirement requires final human acceptance. The exact shall statements are
+maintained in `Docs/Requirements.md`, with state in `Docs/RequirementsState.md`. Section keys:)
 
 * A. Scope, integrity, and traceability — DEMO-GOV-001..010
 * B. Complete player journey — DEMO-JRN-001..007
@@ -129,7 +135,7 @@ Do not repeat the full plan, narrate routine commands, or stop merely because an
 
 ## 9. Persistent goal
 
-Continue the authoritative development of Echoes of the Broken Sun from its currently rejected prototype/demo state to one polished, human-accepted demo candidate. Deliver one continuous packaged macOS player journey from cold launch through a voiced and subtitled opening, progressive mastery-gated RTS tutorial, and complete mouse-and-keyboard human-versus-AI match with results and replay/return paths. Repair all menu, mouse, selection, command, UI, audio, voice, cinematic, visual-readability, graphics-calibration, performance, accessibility, and stability deficiencies defined in `Docs/DemoReadinessRequirements.md`. Preserve canon, originality, asset provenance, current work, and evidence boundaries. Spend working time on implementation and verification, keep communication concise, and request human input only for genuine owner decisions or review-ready milestones. An agent may mark requirements evidence-ready but may never mark them complete. The demo is complete only when every mandatory requirement is tied to the same packaged build and explicitly accepted by Angelis Pseftis.
+Continue the authoritative development of Echoes of the Broken Sun from its currently rejected prototype/demo state to one polished, human-accepted demo candidate. Deliver one continuous packaged macOS player journey from cold launch through a voiced and subtitled opening, progressive mastery-gated RTS tutorial, and complete mouse-and-keyboard human-versus-AI match with results and replay/return paths. Repair all menu, mouse, selection, command, UI, audio, voice, cinematic, visual-readability, graphics-calibration, performance, accessibility, and stability deficiencies defined in `Docs/Requirements.md`. Preserve canon, originality, asset provenance, current work, and evidence boundaries. Spend working time on implementation and verification, keep communication concise, and request human input only for genuine owner decisions or review-ready milestones. An agent may mark requirements evidence-ready but may never mark them complete. The demo is complete only when every mandatory requirement is tied to the same packaged build and explicitly accepted by Angelis Pseftis.
 
 ## 10. Final meaning of "done"
 

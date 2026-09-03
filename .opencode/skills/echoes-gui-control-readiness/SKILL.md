@@ -7,7 +7,7 @@ metadata:
 
 # Echoes GUI control readiness
 
-Read live `CLAUDE.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/SetupAndBuild.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`; verify exact worktree/package identity and lane before launching or interacting with a build.
+Read live `CLAUDE.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, `Docs/Archive/SetupAndBuild.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`; verify exact worktree/package identity and lane before launching or interacting with a build.
 
 Verify—not assume—a callable macOS UI tool, fresh screenshot/state capture, real pointer and keyboard event delivery, Screen Recording permission, Accessibility permission, and an audio observation route. Bind captures to time, package/build identity, screen/window state, input sequence, and observer. Synthetic or agent GUI input is its own evidence class and never human play.
 

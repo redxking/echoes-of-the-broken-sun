@@ -6,7 +6,7 @@ metadata: { author: Angelis Pseftis }
 
 # Echoes human acceptance session
 
-Read `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/SetupAndBuild.md`, the exact package/signing identity, `echoes-security-privacy`, and `../WorkstreamControl/ACTIVE_LANES.md`. This skill prepares the session and evidence; it does not authorize recruiting, recording people, collecting personal data, publishing results, or changing release state. Obtain explicit owner direction and participant consent before any such activity.
+Read `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/SetupAndBuild.md`, the exact package/signing identity, `echoes-security-privacy`, and `../WorkstreamControl/ACTIVE_LANES.md`. This skill prepares the session and evidence; it does not authorize recruiting, recording people, collecting personal data, publishing results, or changing release state. Obtain explicit owner direction and participant consent before any such activity.
 
 Use a verified package on the declared clean/known machine. Define participant familiarity, starting state, scenario, success/stop criteria, accessibility setup, observer role, permitted help, data retained, and defect triage. The participant uses normal visible player surfaces with mouse and keyboard; no Unreal MCP, console, debug flag, source knowledge, injected save, or scripted automation substitutes.
 

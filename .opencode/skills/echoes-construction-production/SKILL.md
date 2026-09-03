@@ -7,7 +7,7 @@ metadata:
 
 # Echoes construction and production
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; confirm lease/worktree/branch/SHA and data-source ownership before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; confirm lease/worktree/branch/SHA and data-source ownership before mutation.
 
 Specify valid placement, footprint, collision, navigation authority, resources, prerequisites, queue/order, cancellation, spawn, blocked conditions, destruction, save/replay behavior, game-feel feedback, and stable player reason for every rejection. Simulation owns placement and production; terrain/nav and presentation cannot silently substitute rules. Compile tunables from authoritative source, never hand-edit generated output.
 

@@ -9,7 +9,7 @@ metadata:
 
 Use for requirement analysis, acceptance cards, gate evidence, or release claims; not for inventing requirements.
 
-1. Read live `CLAUDE.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md` before mutation. Confirm lease, worktree, branch, commit, and affected paths.
+1. Read live `CLAUDE.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md` before mutation. Confirm lease, worktree, branch, commit, and affected paths.
 2. Trace each claim as: requirement ID → exact authority path → implementation path → executable or observed check → evidence artifact → evidence class → current state. Keep DEMO and REL ledgers distinct.
 3. Separate source inspection, static review, simulation tests, Unreal automation, packaged execution, physical-input play, human review, and independent validation. A screenshot or compile cannot substitute for the required class.
 4. For source data, record source file, compiler/generator invocation, digest/catalog result, and generated output; never edit compiled outputs as a shortcut.

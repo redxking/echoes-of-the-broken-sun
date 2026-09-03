@@ -7,7 +7,7 @@ metadata:
 
 # Echoes platform portability
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lane lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lane lease/worktree/branch/SHA before mutation.
 
 macOS Apple Silicon is the release target. Linux/SteamOS and Windows are future compatibility constraints, not evidence of builds, support, signing, or release. Identify platform-bound code/assets/input/render/audio/file paths, target hardware/device matrices, and thermal/sustained-load checks, then establish a named compile, package, runtime, or clean-machine check before changing them. Generated platform artifacts follow official source/build pipelines; never hand-edit package output.
 

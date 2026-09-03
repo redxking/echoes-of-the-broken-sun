@@ -7,7 +7,7 @@ metadata:
 
 # Echoes save, progression, and recovery
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA and isolated storage before mutation.
+Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA and isolated storage before mutation.
 
 Persist authoritative deterministic state, campaign ledger/progression, content identity, and integrity checks as architecture requires. Presentation state is not authority. Define first run, save/load, checkpoint, failure/retry, interrupted write, missing/stale/mismatched/corrupt data, migration, privacy, and player recovery UI. Never silently fall back on corrupted content.
 

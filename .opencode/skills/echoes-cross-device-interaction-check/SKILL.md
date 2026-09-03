@@ -7,7 +7,7 @@ metadata:
 
 # Echoes cross-device interaction check
 
-Read `CLAUDE.md`, `Docs/InitialReleaseRequirements.md`, `Docs/DemoReadinessRequirements.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`. Define the authorized matrix before execution: exact package, Mac hardware, OS, display, resolution, scale, window/fullscreen mode, pointer/keyboard/controller route, accessibility settings, power/thermal conditions, and expected evidence.
+Read `CLAUDE.md`, `Docs/Requirements.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`. Define the authorized matrix before execution: exact package, Mac hardware, OS, display, resolution, scale, window/fullscreen mode, pointer/keyboard/controller route, accessibility settings, power/thermal conditions, and expected evidence.
 
 Use the live REL-UI resolution matrix when release work is authorized: 1280x720, 1440x900, 1600x900, 1920x1080, 2560x1440, baseline native, windowed, fullscreen, and live resize. Exercise normal task completion, focus, clipping, safe areas, target size, scrolling, remapping where implemented, device disconnect/reconnect, and settings persistence using real player surfaces.
 

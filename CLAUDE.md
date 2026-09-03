@@ -4,10 +4,16 @@
 **Repository root:** `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project`
 **Current objective:** finish the game to a professional public release — player versus AI, Glass Scar skirmish plus all fifteen campaign operations, with professional visuals, the full original score and audio, voiced and subtitled storytelling, and in-engine cinematics. macOS ships first; Linux/SteamOS and then Windows follow in later releases.
 
-The full plan, per-track specifications, and the release gate matrix are in
-**[Docs/GameCompletionDirective.md](Docs/GameCompletionDirective.md)**. Read it before starting any release work.
-It supersedes `Docs/DemoReleaseDirective.md` (2026-09-01), whose accepted gate evidence it carries
-forward. This file is the standing session contract; the directive is the work.
+**Start at [Docs/README.md](Docs/README.md)** — the authority map for this project's documents. It states,
+in tier order, which document binds, which records acceptance, and which is history.
+
+The binding definition of the finished game is **[Docs/Requirements.md](Docs/Requirements.md)** — the sole
+normative requirements authority. **[Docs/RequirementsState.md](Docs/RequirementsState.md)** is the sole
+lifecycle and evidence-state authority. `Docs/MovementAndBalanceRequirements.md` was merged into the master
+on 2026-09-03 and is retained only as a historical source. The per-track specifications and the release gate
+matrix are in **[Docs/GameCompletionDirective.md](Docs/GameCompletionDirective.md)**; read it before starting
+any release work. It supersedes `Docs/Archive/Superseded/DemoReleaseDirective.md` (2026-09-01), whose accepted
+gate evidence it carries forward. This file is the standing session contract; the directive is the work.
 
 ## Mandatory project-skill selection
 
@@ -32,12 +38,16 @@ check against these files, never a fact to build on:
 
 | Question | File |
 |---|---|
+| Which document wins when two disagree? | `Docs/README.md` |
+| What must the finished game be? | `Docs/Requirements.md` |
 | How does the game, world, faction, campaign, UI, art, or audio work? | `Docs/Archive/DevelopmentBible.md` |
 | How is it built — simulation, adapter, AI, net, save, replay? | `Docs/Archive/TechnicalArchitecture.md` |
-| What is actually proven, and what is still open? | `Docs/Archive/ProjectLedger.md` |
+| What is actually proven, and what is still open? | `Docs/RequirementsState.md` |
 | What assets exist and under what provenance? | `Docs/Archive/AssetRegister.md` |
 | How do I build, test, and package? | `Docs/Archive/SetupAndBuild.md` |
 | Who is allowed to touch what right now? | `../WorkstreamControl/ACTIVE_LANES.md` |
+| What is required for the demo, and what did the owner accept? | `Docs/Requirements.md` and `Docs/RequirementsState.md` |
+| What is required for initial release? | `Docs/Requirements.md` |
 | What is the release missing? | `Docs/GameCompletionDirective.md` |
 
 Source data lives in `Content/Data/Source` (JSON, compiled into a digest-verified runtime catalog),

@@ -7,7 +7,7 @@ metadata:
 
 # Echoes camera and navigation
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease/worktree/branch/SHA before mutation.
 
 Define input routes, focus/modal/Escape behavior, bounds, zoom, follow/frame rules, motion reduction, camera-relative input, resize/display behavior, and recovery after menus/cinematics/load. Camera is presentation: it cannot alter deterministic simulation state, fog authority, saves, replays, or checksums.
 

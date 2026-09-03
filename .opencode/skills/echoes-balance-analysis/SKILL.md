@@ -7,7 +7,7 @@ metadata:
 
 # Echoes balance analysis
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact requirements, approved test set, lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact requirements, approved test set, lease/worktree/branch/SHA before mutation.
 
 REL-AI-016 boundary: no non-mirror Standard matchup outside 40–60%, and no start-position advantage above 5 points over the approved test set, absent an owner-accepted design reason. Record scenario definitions, factions, maps, position, AI/version, seeds, sample size, metrics, confidence/limitations, and content digest. Do not tune source or generated data without the appropriate roster/mechanics lease.
 

@@ -7,7 +7,7 @@ metadata:
 
 # Echoes combat, targeting, and damage
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA before mutation.
 
 Define target legality, visibility, range, priority, damage timing, armor/effects, destruction, invalid target response, threat feedback, death cleanup, save/replay, and accessibility. Simulation is authority; animations, sound, VFX, camera, and HUD must follow state and cannot change collision/nav/checksum outcome. Use compiled source data, not generated edits.
 

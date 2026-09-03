@@ -7,7 +7,7 @@ metadata:
 
 # Echoes debug-visualization guardrails
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify a live owned lane before changing diagnostic code, widgets, flags, commands, or assets.
+Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify a live owned lane before changing diagnostic code, widgets, flags, commands, or assets.
 
 Define the diagnostic question, data source, build configuration, enable/disable path, authority boundary, hidden-information risk, capture labeling, and removal or compile-out rule before implementation. A debug view may observe authoritative state but must never mutate simulation, command validity, fog, AI, save/replay, checksum, or player progression. It must not expose concealed units or internal coordinates in player evidence.
 

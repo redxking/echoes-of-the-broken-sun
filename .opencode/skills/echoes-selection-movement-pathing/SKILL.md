@@ -7,7 +7,7 @@ metadata:
 
 # Echoes selection, movement, and pathing
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify active lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify active lease/worktree/branch/SHA before mutation.
 
 Specify click/drag/modifier semantics, UI occlusion, focus behavior, legal targets, selection authority, path validity, collision, unreachable destination, command replacement, interrupted movement, game-feel/feedback response, and accessible feedback. Simulation owns legal commands/path consequences; Unreal translates physical input and renders it. Never substitute handler or screenshot proof for real pointer/keyboard exercise.
 

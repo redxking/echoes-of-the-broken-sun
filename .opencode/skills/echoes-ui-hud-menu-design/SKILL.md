@@ -7,7 +7,7 @@ metadata:
 
 # Echoes UI, HUD, and menus
 
-Read `CLAUDE.md`, `Docs/GameCompletionDirective.md` Track G, `Docs/DemoReadinessRequirements.md` when demo work is in scope, `Docs/Archive/DevelopmentBible.md` (§Interface and accessibility), `Docs/Archive/TechnicalArchitecture.md` (§UI and accessibility; §Input and camera), `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Confirm live ownership before edits.
+Read `CLAUDE.md`, `Docs/GameCompletionDirective.md` Track G, `Docs/Requirements.md` when demo work is in scope, `Docs/Archive/DevelopmentBible.md` (§Interface and accessibility), `Docs/Archive/TechnicalArchitecture.md` (§UI and accessibility; §Input and camera), `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Confirm live ownership before edits.
 
 Design around an observable player task: discover, focus, select, command, pause, resume, recover, or understand an outcome. Preserve modal input capture and prevent click-through. Surface simulation-authoritative values only through approved adapters; UI never determines gameplay, fog, saves, replay, or checksums.
 

@@ -7,7 +7,7 @@ metadata:
 
 # Echoes faction roster design
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lane lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lane lease/worktree/branch/SHA before mutation.
 
 Preserve canonical faction identity and authorized mechanics. Define unit role, cost, tech/production chain, counterplay, visual/audio identification, accessibility, save/replay, and data/asset provenance. Author data at source and compile it; generated assets/catalogs are not authority. Simulation owns mechanical effects; presentation cannot create hidden advantages.
 

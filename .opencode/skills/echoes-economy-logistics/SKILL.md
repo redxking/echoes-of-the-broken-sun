@@ -7,7 +7,7 @@ metadata:
 
 # Echoes economy and logistics
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lease/worktree/branch/SHA before mutation.
 
 Define source-authoritative costs, rates, capacities, ownership, invalid requests, depletion, stalls, and recovery. Rules live in deterministic simulation; runtime UI/audio only render authority. Tune source data through the official compiler, never generated catalogs. Test tick-level accounting, path/logistics failure, save/replay continuity, and player-visible affordability/rejection feedback.
 

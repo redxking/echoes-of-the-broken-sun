@@ -7,7 +7,7 @@ metadata:
 
 # Echoes game-feel feedback
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/ArtDirection.md`, `Docs/AudioDirection.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Establish the exact player action, authoritative response, package/build, settings, accessibility mode, lane, and measurable acceptance signal.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/ArtDirection.md`, `Docs/AudioDirection.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Establish the exact player action, authoritative response, package/build, settings, accessibility mode, lane, and measurable acceptance signal.
 
 Exercise pointer selection, drag, contextual orders, camera motion, construction/production acknowledgement, combat impacts, Well interaction, rejected actions, pause/resume, failure, and recovery through visible player surfaces. Record input-to-visible and input-to-audible acknowledgement, clarity at RTS camera height, interruption behavior, repeated-action overload, and whether feedback remains equivalent with reduced motion, reduced flashing, reduced dynamic range, and high contrast.
 

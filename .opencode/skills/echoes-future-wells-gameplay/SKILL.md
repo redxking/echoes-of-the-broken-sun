@@ -7,7 +7,7 @@ metadata:
 
 # Echoes Future Wells gameplay
 
-Read live `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md` §13, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact current text, owner authority, lease/worktree/branch/SHA before mutation.
+Read live `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md` §13, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact current text, owner authority, lease/worktree/branch/SHA before mutation.
 
 Current §13 values are pinned for live verification, not assumed change authority: Harvest 180-tick telegraph / 500 Dawn; Preserve 15 Dawn per 300 ticks / 1,400 cm radius; Reshape 120 Dawn / 180-tick telegraph / 1,800-tick manifestation. Changes require Angelis approval. Keep Well state, costs, timing, outcomes, save/replay, and checksums in deterministic simulation; render telegraphs, UI, VFX, and sound from authority only.
 

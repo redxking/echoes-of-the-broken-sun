@@ -7,7 +7,7 @@ metadata:
 
 # Echoes determinism audit
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify the exact source/content commit, catalog digest, schema versions, seed, configuration, platform, lane, and worktree before mutation.
+Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify the exact source/content commit, catalog digest, schema versions, seed, configuration, platform, lane, and worktree before mutation.
 
 Inspect fixed-step boundaries, random-number ownership, container/iteration ordering, command ordering, floating-point assumptions, clocks, asynchronous callbacks, serialization, content lookup, save/load, replay, and checksum inputs. Define a red-capable scenario and compare repeated independent runs in the approved optimized, debug, and sanitizer configurations where applicable. Record the first divergent tick and smallest differing authoritative field; never hide a divergence by changing a checksum, seed, tolerance, or ordering rule.
 

@@ -9,7 +9,7 @@ metadata:
 
 Use for persistence containers, campaign progression, replay/checksum, corruption handling, migration, or recovery UX.
 
-1. Read live `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify exact lease/worktree/branch/dirty paths before mutation.
+1. Read live `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify exact lease/worktree/branch/dirty paths before mutation.
 2. Preserve simulation authority: saves and replays bind deterministic state, commands, content/catalog identity, and checksums as the architecture requires. Presentation objects, audio, and camera state do not become authoritative persistence.
 3. Define valid save/load, interrupted write, stale/mismatched content, corrupted container, missing asset, disk failure, incompatible version, replay divergence, and player recovery behavior before coding.
 4. Test clean and adversarial paths using isolated temporary evidence data. Verify fail-closed behavior and the player-visible reason/recovery route; never convert corruption into silent fallback.

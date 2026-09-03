@@ -7,7 +7,7 @@ metadata:
 
 # Echoes production orchestration
 
-Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/ProjectLedger.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`. Before mutation, verify exact lane lease, worktree, branch/SHA, dirty paths, and acceptance-card child checks.
+Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`. Before mutation, verify exact lane lease, worktree, branch/SHA, dirty paths, and acceptance-card child checks.
 
 Plan one requirement slice: authorized source/design → named implementation skill → focused build/runtime check → physical GUI/play/listening if player-facing → `echoes-evidence-gate-review` → `echoes-human-acceptance-session`. Keep DEMO recovery prerequisites ahead of release expansion. Generated data/assets are outputs of their registered source compiler/generator, never edit targets. Simulation remains authoritative over presentation.
 

@@ -9,7 +9,7 @@ metadata:
 
 Use for catalog, narrative, world, asset-registration, compiler, and generated-data work; not for hand-editing runtime output.
 
-1. Read live `CLAUDE.md`, `Docs/Archive/AssetRegister.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`, plus the relevant compiler/schema docs. Verify lease/worktree/branch/dirty paths before mutation.
+1. Read live `CLAUDE.md`, `Docs/Archive/AssetRegister.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`, plus the relevant compiler/schema docs. Verify lease/worktree/branch/dirty paths before mutation.
 2. Edit only authoritative source under `Content/Data/Source`, `Content/Narrative/Source`, or `Content/World/Source`. Use the official compiler/generator to create output; never patch compiled packs, digests, headers, catalogs, or assets manually.
 3. Preserve declared schema, stable IDs, canonical ordering, pins, and cross-reference integrity. New assets need provenance, method, rights basis, and recorded exception before use where procedural generation is insufficient.
 4. Run focused schema/compiler/content checks and inspect outputs, digests, and rejection behavior. Missing, stale, mismatched, or unbound content must fail closed.

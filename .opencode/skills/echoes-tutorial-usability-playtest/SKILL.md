@@ -6,7 +6,7 @@ metadata: { author: Angelis Pseftis }
 
 # Echoes tutorial usability playtest
 
-Read `Docs/OpeningAndTutorialScript.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/Archive/ProjectLedger.md`, the package-provenance record, and `../WorkstreamControl/ACTIVE_LANES.md`. Require a live GUI interface with fresh state and real mouse/keyboard events. Begin with no injected save or source-derived coordinates; work from the visible tutorial prompts and controls.
+Read `Docs/OpeningAndTutorialScript.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, the package-provenance record, and `../WorkstreamControl/ACTIVE_LANES.md`. Require a live GUI interface with fresh state and real mouse/keyboard events. Begin with no injected save or source-derived coordinates; work from the visible tutorial prompts and controls.
 
 At each lesson, record prompt wording, what is visually highlighted, input attempted, acknowledgement, audio/voice/subtitle observation, elapsed time, ambiguity, recovery after an incorrect attempt, and whether the next step is discoverable. Check that tutorial claims match actual behavior and that high contrast, reduced motion/flashing, HUD scale, and reduced dynamic range visibly/audibly change behavior when available.
 

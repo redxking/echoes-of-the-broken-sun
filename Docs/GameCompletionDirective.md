@@ -3,7 +3,7 @@
 **Author and control owner:** Angelis Pseftis
 **Created:** 2026-09-01
 **Applies to:** every Claude session working in this repository until the professional release ships
-**Supersedes:** [`DemoReleaseDirective.md`](DemoReleaseDirective.md) — its accepted evidence carries forward into section 10; its scope is replaced by section 2
+**Supersedes:** [`DemoReleaseDirective.md`](Archive/Superseded/DemoReleaseDirective.md) — its accepted evidence carries forward into section 10; its scope is replaced by section 2
 **Companion file:** [`CLAUDE.md`](../CLAUDE.md) — the standing session contract, build commands, and environment traps
 
 This directive defines the work required to take *Echoes of the Broken Sun* from a verified
@@ -94,7 +94,7 @@ that owns the question:
 - `Docs/Archive/SetupAndBuild.md` — host state, toolchain, and the build/test/package procedures.
 - `Content/Data/Source`, `Content/Narrative/Source`, `Content/World/Source` — authoritative source
   data. Edit source, recompile; never hand-edit compiled output.
-- [`DemoReleaseDirective.md`](DemoReleaseDirective.md) — superseded planning record. Its gate evidence
+- [`DemoReleaseDirective.md`](Archive/Superseded/DemoReleaseDirective.md) — superseded planning record. Its gate evidence
   is carried into section 10; consult it for the history of how those gates passed, not for scope.
 
 Design recollections carried from other tools or earlier conversations are hypotheses. Check them

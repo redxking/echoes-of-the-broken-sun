@@ -6,7 +6,7 @@ metadata: { author: Angelis Pseftis }
 
 # Echoes mouse and keyboard playtest
 
-Read `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/GameCompletionDirective.md`, `Docs/InitialReleaseRequirements.md`, the control/accessibility sections of `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/ProjectLedger.md`, the exact package identity, and `../WorkstreamControl/ACTIVE_LANES.md`. Require callable GUI control with fresh screenshots/state plus actual pointer and key events. Without it, stop and request human/tool access.
+Read `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, the control/accessibility sections of `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/ProjectLedger.md`, the exact package identity, and `../WorkstreamControl/ACTIVE_LANES.md`. Require callable GUI control with fresh screenshots/state plus actual pointer and key events. Without it, stop and request human/tool access.
 
 Start from the normal rendered title/briefing flow. Exercise visible selection, camera, contextual order, movement, construction/production where offered, Well interaction where reached, menus, pause, objectives, victory/failure/retry, and return path using only displayed affordances. Observe response latency, visible acknowledgement, audible feedback, rejected-action reason, cursor/focus, and whether controls remain usable under ordinary play.
 

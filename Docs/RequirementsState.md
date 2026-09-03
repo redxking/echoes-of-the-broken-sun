@@ -1,8 +1,19 @@
-# Demo Readiness Requirements — Sole Requirements and Acceptance Ledger
+# Echoes of the Broken Sun — Requirements state
 
-Authority: `Docs/DemoRecoveryDirective.md` (owner directive, 2026-09-02). Owner and final
-acceptance authority: Angelis Pseftis. Linked release backlog: `Docs/GameCompletionDirective.md`
-(bodies not duplicated here). This is the ONLY copy — no drafts, revisions, or numbered copies.
+**Author and owner:** Angelis Pseftis
+**Standing:** the sole record of per-requirement engineering state, acceptance, and decision history.
+**Created:** 2026-09-03.
+
+Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
+
+## State vocabulary
+
+Agent-assignable: `OPEN` → `IN PROGRESS` → `IMPLEMENTED` → `AGENT VERIFIED` → `EVIDENCE READY` →
+`AWAITING HUMAN ACCEPTANCE`, plus `BLOCKED`. Owner-only: `HUMAN ACCEPTED`,
+`HUMAN REJECTED — CHANGES REQUIRED`, `COMPLETE`. A parent stays open until every mandatory child is
+accepted.
+
+## Global verdicts and identities
 
 ## Global verdicts and identities
 
@@ -12,6 +23,9 @@ acceptance authority: Angelis Pseftis. Linked release backlog: `Docs/GameComplet
 * Authoritative source state at ledger creation: `origin/main = f0cf042`, tree clean.
 * Write owner: Claude Code lane fleet (coordinator). Read-only reviewer: ChatGPT Codex when
   active. Ledger author: coordinator. Baseline auditor (separate, read-only): QA lane.
+
+
+## Record defaults
 
 ## Record defaults (apply to every requirement below unless its row states otherwise)
 
@@ -29,202 +43,93 @@ acceptance authority: Angelis Pseftis. Linked release backlog: `Docs/GameComplet
   TUT=Campaign+Player; INP=Player; UI=Player+Visual; AUD=Audio; VIS=Visual+World;
   PERF=Performance+Build; AI=Opponent-AI; ACC=Player; VAL=QA+Build+Coordinator.
 
-## A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit)
 
-* DEMO-GOV-001 — The current demo shall remain classified as `HUMAN REJECTED` until I accept a later identified packaged build.
-* DEMO-GOV-002 — Every implementation task, commit, test, capture, and defect shall map to one or more requirement IDs.
-* DEMO-GOV-003 — Every evidence claim shall identify the exact commit, dirty or clean tree state, package, operating system, hardware, resolution, and graphics preset.
-* DEMO-GOV-004 — Source code, tests, editor demonstrations, screenshots, and packaged human play shall remain separate evidence classes.
-* DEMO-GOV-005 — Existing automated or headless campaign evidence shall not be represented as rendered human-play evidence.
-* DEMO-GOV-006 — Every player-visible asset shall have recorded authorship, generation, licensing, and integration provenance.
-* DEMO-GOV-007 — No unfinished option shall be presented as available. Incomplete functionality shall be completed, clearly identified as unavailable, or removed from the demo path with my approval.
-* DEMO-GOV-008 — The demo shall contain no visible debug commands, prototype instructions, default engine assets, placeholder geometry, temporary icons, or knowingly dead controls.
-* DEMO-GOV-009 — Genre references shall guide interaction quality and design discipline without copying protected expression.
-* DEMO-GOV-010 — A requirement shall not be called complete until its evidence is ready and I explicitly accept it.
+## `SPEC-*` state
 
-## B. Complete player journey (owner: Player+Campaign; verify: PKG-PHYS + HUM + OWNER)
+All 368 `SPEC-*` records are `OPEN` as of 2026-09-03. Consolidation created identity, not progress.
+Accepted work is recorded against `DEMO-*` and `REL-*`; the crosswalk in `Requirements.md` binds the
+families, and per-record binding is written here as each is verified.
 
-* DEMO-JRN-001 — A clean first-time profile shall complete the entire golden path without a terminal, editor, developer console, cheat, state injection, or developer coaching.
-* DEMO-JRN-002 — Every required menu and transition shall be usable with a physical mouse.
-* DEMO-JRN-003 — First-time players shall complete the tutorial before the full AI demo unlocks.
-* DEMO-JRN-004 — After tutorial completion, replay and approved skip behavior may become available for later sessions.
-* DEMO-JRN-005 — Loading, failure, cancellation, back-navigation, restart, and return-to-menu paths shall have clear visible states and shall not dead-end.
-* DEMO-JRN-006 — The demo shall end with a complete victory or defeat result and understandable replay, restart, and exit choices.
-* DEMO-JRN-007 — The player shall never need an external manual, developer explanation, or hidden control to complete the intended demo journey.
+| Prefix | Records | State |
+|---|---|---|
+| `SPEC-ACC-*` | 5 | `OPEN` |
+| `SPEC-AI-*` | 6 | `OPEN` |
+| `SPEC-AIST-*` | 10 | `OPEN` |
+| `SPEC-ARC-*` | 3 | `OPEN` |
+| `SPEC-ART-*` | 3 | `OPEN` |
+| `SPEC-AUD-*` | 3 | `OPEN` |
+| `SPEC-AUDF-*` | 6 | `OPEN` |
+| `SPEC-AUT-*` | 5 | `OPEN` |
+| `SPEC-AUTH-*` | 6 | `OPEN` |
+| `SPEC-BLD-*` | 10 | `OPEN` |
+| `SPEC-BUD-*` | 8 | `OPEN` |
+| `SPEC-CAM-*` | 7 | `OPEN` |
+| `SPEC-CAN-*` | 2 | `OPEN` |
+| `SPEC-CANON-*` | 14 | `OPEN` |
+| `SPEC-CIN-*` | 2 | `OPEN` |
+| `SPEC-CMB-*` | 12 | `OPEN` |
+| `SPEC-CMD-*` | 10 | `OPEN` |
+| `SPEC-CTL-*` | 15 | `OPEN` |
+| `SPEC-DIF-*` | 4 | `OPEN` |
+| `SPEC-DOC-*` | 5 | `OPEN` |
+| `SPEC-ECO-*` | 6 | `OPEN` |
+| `SPEC-END-*` | 4 | `OPEN` |
+| `SPEC-EVID-*` | 8 | `OPEN` |
+| `SPEC-FACID-*` | 3 | `OPEN` |
+| `SPEC-FOG-*` | 2 | `OPEN` |
+| `SPEC-HUD-*` | 7 | `OPEN` |
+| `SPEC-INFO-*` | 10 | `OPEN` |
+| `SPEC-LOC-*` | 2 | `OPEN` |
+| `SPEC-LSN-*` | 11 | `OPEN` |
+| `SPEC-MAP-*` | 3 | `OPEN` |
+| `SPEC-MOD-*` | 7 | `OPEN` |
+| `SPEC-MOV-*` | 5 | `OPEN` |
+| `SPEC-MSN-*` | 15 | `OPEN` |
+| `SPEC-OUT-*` | 7 | `OPEN` |
+| `SPEC-PIL-*` | 10 | `OPEN` |
+| `SPEC-PLAN-*` | 15 | `OPEN` |
+| `SPEC-PLAT-*` | 4 | `OPEN` |
+| `SPEC-PRD-*` | 10 | `OPEN` |
+| `SPEC-RES-*` | 3 | `OPEN` |
+| `SPEC-SAV-*` | 5 | `OPEN` |
+| `SPEC-SCT-*` | 6 | `OPEN` |
+| `SPEC-SIM-*` | 7 | `OPEN` |
+| `SPEC-SKM-*` | 13 | `OPEN` |
+| `SPEC-STANCE-*` | 5 | `OPEN` |
+| `SPEC-STR-*` | 12 | `OPEN` |
+| `SPEC-TEC-*` | 2 | `OPEN` |
+| `SPEC-TECH-*` | 6 | `OPEN` |
+| `SPEC-TER-*` | 6 | `OPEN` |
+| `SPEC-TUT-*` | 4 | `OPEN` |
+| `SPEC-UI-*` | 6 | `OPEN` |
+| `SPEC-UNIT-*` | 12 | `OPEN` |
+| `SPEC-VAL-*` | 3 | `OPEN` |
+| `SPEC-VISD-*` | 7 | `OPEN` |
+| `SPEC-WEL-*` | 3 | `OPEN` |
+| `SPEC-WELLP-*` | 3 | `OPEN` |
 
-## C. Opening story and player orientation (owner: Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER)
+## `DEMO-*` and `REL-*` state
 
-* DEMO-NAR-001 — The first launch shall present a polished title and opening sequence before normal gameplay.
-* DEMO-NAR-002 — The opening shall establish the broken world of Soryn, the Crownfall, and the immediate situation without contradicting the Development Bible.
-* DEMO-NAR-003 — The opening shall tell the player who they are, what role they occupy, what immediate problem they face, what they must do next, and why it matters.
-* DEMO-NAR-004 — The opening shall use authored in-engine visuals, motion, lighting, voice-over, exact subtitles, music, ambience, and deliberate transitions. A silent flyover, static text card, storyboard, or lore dump does not pass.
-* DEMO-NAR-005 — The opening should remain focused enough to preserve player attention; the proposed maximum is 90 seconds unless I approve another duration.
-* DEMO-NAR-006 — The sequence shall support pause, accessible subtitle controls, replay, and approved skip behavior without losing required gameplay information.
-* DEMO-NAR-007 — The transition from cinematic to playable tutorial shall be coherent and shall immediately connect the story problem to the player's first action.
-* DEMO-NAR-008 — At least four of five uncoached, project-naive testers shall be able to explain the player's identity, immediate situation, first objective, and why it matters. (Verify: HUM)
-* DEMO-NAR-009 — I shall personally accept the opening's story clarity, emotional tone, pacing, visual direction, and ability to create interest in continuing. (Verify: OWNER)
-
-## D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER)
-
-Lesson cycle (binding for every lesson): Explain → highlight or demonstrate → allow the player to act → verify the real game state → acknowledge success → explain why it mattered → unlock the next lesson.
-
-* DEMO-TUT-001 — The tutorial shall assume no prior RTS knowledge.
-* DEMO-TUT-002 — It shall begin in a safe, low-pressure situation and introduce one coherent concept at a time.
-* DEMO-TUT-003 — It shall teach camera movement, zoom, recentering, and navigation.
-* DEMO-TUT-004 — It shall teach left-click selection, deselection, selection feedback, and how to identify the selected entity.
-* DEMO-TUT-005 — It shall teach drag-box and multi-selection before requiring management of multiple units.
-* DEMO-TUT-006 — It shall identify every introduced unit, building, resource, objective, and interface area by name, function, available action, and tactical reason for mattering.
-* DEMO-TUT-007 — It shall teach move, contextual right-click commands, attack, attack-move, stop, and other commands required by the demo.
-* DEMO-TUT-008 — It shall teach resource identification, gathering, delivery, current totals, and what the resources enable.
-* DEMO-TUT-009 — It shall teach valid and invalid building placement, construction, building purpose, and completion feedback.
-* DEMO-TUT-010 — It shall teach unit production, costs, prerequisites, queues, rally behavior, and unit roles.
-* DEMO-TUT-011 — It shall teach basic force composition and combat against a controlled initial threat.
-* DEMO-TUT-012 — It shall teach objectives, minimap use, alerts, and navigation to important events.
-* DEMO-TUT-013 — It shall introduce the Future Well mechanic and clearly explain the available choice, immediate effect, long-term consequence, and strategic reason it matters.
-* DEMO-TUT-014 — Tutorial instructions shall be presented through synchronized voice and readable text using the player's current bindings.
-* DEMO-TUT-015 — A step shall advance only after the game verifies that the player performed the required action and achieved the required state. Timers, dismissed text, scripted automation, or entering a trigger volume alone do not demonstrate learning.
-* DEMO-TUT-016 — Incorrect actions shall produce understandable feedback without punishing a new player unfairly.
-* DEMO-TUT-017 — Contextual hints shall escalate after hesitation or repeated failure without completing the action for the player.
-* DEMO-TUT-018 — Every step shall have recovery, retry, reset, save, and resume behavior that prevents a soft lock.
-* DEMO-TUT-019 — The tutorial shall not introduce unexplained controls or mechanics immediately after claiming the fundamentals are learned.
-* DEMO-TUT-020 — Tutorial completion shall transition naturally into the full AI portion of the demo.
-* DEMO-TUT-021 — At least four of five project-naive testers shall complete the tutorial without verbal coaching. (Verify: HUM)
-* DEMO-TUT-022 — I shall personally accept the tutorial's pacing, clarity, instructional quality, and mastery threshold. (Verify: OWNER)
-
-## E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER)
-
-* DEMO-INP-001 — Every visible title, menu, settings, pause, tutorial, gameplay, results, confirmation, and error-dialog control shall work with mouse hover and click.
-* DEMO-INP-002 — Left click shall select valid units and buildings; clicking empty terrain shall clear selection when appropriate.
-* DEMO-INP-003 — Dragging shall create a predictable selection box with visible feedback.
-* DEMO-INP-004 — Shift modification, double-click selection, and multi-selection shall behave consistently where supported.
-* DEMO-INP-005 — Right click shall issue the correct contextual command, including move, attack, gather, repair, enter, or interact when applicable.
-* DEMO-INP-006 — Clickable command-card actions shall perform the same real action as their displayed keyboard shortcuts.
-* DEMO-INP-007 — The cursor and target indicators shall communicate valid commands, invalid targets, placement state, interaction state, and cancellation.
-* DEMO-INP-008 — Mouse-wheel zoom, edge or configured mouse pan, keyboard camera movement, and recentering shall be smooth and configurable.
-* DEMO-INP-009 — Attack-move, stop, hold, control groups, queued commands, and other displayed RTS shortcuts shall function consistently.
-* DEMO-INP-010 — All required actions shall be remappable, conflict-checked, resettable, persisted, and immediately reflected in tutorial prompts and tooltips.
-* DEMO-INP-011 — Escape, cancel, pause, back-navigation, window focus changes, and input-mode transitions shall behave predictably.
-* DEMO-INP-012 — Accepted and rejected commands shall receive immediate visual and audible acknowledgment.
-* DEMO-INP-013 — No normal player path shall depend on a keyboard-only fallback because mouse interaction is broken.
-* DEMO-INP-014 — A packaged-build interaction matrix shall verify every control at all supported window modes and target resolutions. Calling event handlers directly does not satisfy this requirement.
-* DEMO-INP-015 — I shall physically test and accept the mouse, keyboard, menu, camera, selection, command, and remapping behavior. (Verify: OWNER)
-
-## F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER)
-
-* DEMO-UI-001 — The existing prototype-like UI shall be replaced by one coherent, original RTS interface system, not merely recolored.
-* DEMO-UI-002 — The front door shall clearly present the guided demo, continue when valid, skirmish, options, accessibility, credits, and exit behavior appropriate to the accepted demo scope.
-* DEMO-UI-003 — Every menu option shall provide a concise plain-language explanation on hover and keyboard focus.
-* DEMO-UI-004 — Hovered, focused, pressed, selected, disabled, loading, warning, error, and confirmed states shall be visually distinct. Disabled controls shall explain why.
-* DEMO-UI-005 — The HUD shall clearly present resources, capacity, objectives, alerts, selected entities, health, status, production, abilities, and available commands.
-* DEMO-UI-006 — Unit and building panels shall explain identity, role, cost, prerequisites, current state, available actions, and why the entity matters.
-* DEMO-UI-007 — Tooltips shall include the action, consequence, current hotkey, cost, prerequisites, and reason an unavailable action cannot be used.
-* DEMO-UI-008 — The minimap shall clearly distinguish terrain, ownership, allies, enemies, objectives, alerts, and the current camera location using color and non-color cues.
-* DEMO-UI-009 — Tutorial prompts and objectives shall remain readable without obscuring the play area or competing with other critical information.
-* DEMO-UI-010 — Results screens shall clearly explain the outcome and provide working replay, restart, and return choices.
-* DEMO-UI-011 — The interface shall be inspected at 1280×720, 1440×900, 1600×900, 1920×1080, and 2560×1440, with no clipped, overlapping, unreadable, or unreachable controls.
-* DEMO-UI-012 — Debug overlays, prototype instructions, engine-default styling, and internal validation text shall not appear in the public demo path.
-* DEMO-UI-013 — I shall personally accept the UI's appearance, hierarchy, readability, discoverability, responsiveness, and consistency with the game universe. (Verify: OWNER)
-
-## G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER)
-
-* DEMO-AUD-001 — No player-facing scene or required action shall be unintentionally silent.
-* DEMO-AUD-002 — The title, menus, opening, tutorial, gameplay, combat, results, victory, and defeat shall have appropriate original music and ambience.
-* DEMO-AUD-003 — The opening and tutorial shall contain directed, final-demo-quality voice performances with synchronized subtitles.
-* DEMO-AUD-004 — Proposed character and narrator voice profiles shall receive my listening approval before large-scale generation or final integration. (OWNER decision gate)
-* DEMO-AUD-005 — Locally generated voice may satisfy the requirement only when its model, license, profile, performance, pronunciation, artifacts, mix, and final in-game result are accepted. Raw or unreviewed TTS is not final voice.
-* DEMO-AUD-006 — Hover, selection, confirmation, rejection, menu transitions, alerts, and objective updates shall provide suitable interface feedback.
-* DEMO-AUD-007 — Movement orders, attacks, impacts, damage, destruction, gathering, construction, production, abilities, and Future Well interactions shall have functioning audio appropriate to their material and faction.
-* DEMO-AUD-008 — Music and ambience shall respond coherently to cinematic, exploration, tension, combat, victory, and defeat states without abrupt or broken transitions.
-* DEMO-AUD-009 — Voice shall remain intelligible over music, ambience, and combat. Mixing shall meet the project's approved loudness, peak, and ducking requirements.
-* DEMO-AUD-010 — Music, voice, effects, interface, and ambience volumes shall be independently adjustable and persistent. Voice-off shall preserve all required information through text.
-* DEMO-AUD-011 — Subtitle text shall match the spoken meaning and support accepted size and background controls.
-* DEMO-AUD-012 — Audio files merely existing in the project shall not count; their correct triggering, routing, spatial behavior, transitions, and mix shall be verified in the packaged build.
-* DEMO-AUD-013 — I shall listen to and accept the opening, tutorial, menu, representative gameplay, and result-state audio from the candidate package. (Verify: OWNER)
-
-## H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER)
-
-* DEMO-VIS-001 — The demo path shall use one coherent original visual language derived from Soryn, its factions, and the Development Bible.
-* DEMO-VIS-002 — Terrain shall use sufficiently detailed materials, landmarks, elevation cues, boundaries, and environmental dressing to communicate place and gameplay function.
-* DEMO-VIS-003 — Friendly units, enemies, unit classes, and factions shall have distinct silhouettes, scale, materials, motion, and non-color identity cues.
-* DEMO-VIS-004 — Buildings shall communicate faction, purpose, operational state, construction state, damage, and production activity at ordinary gameplay distance.
-* DEMO-VIS-005 — Resources, objectives, Future Wells, pathable areas, blocked areas, hazards, and interactive locations shall be immediately distinguishable.
-* DEMO-VIS-006 — Selection, ownership, health, command, target, damage, and threat states shall remain readable during representative combat.
-* DEMO-VIS-007 — Introduced units and buildings shall have credible idle, movement, work, attack, construction, production, damage, and destruction presentation as applicable.
-* DEMO-VIS-008 — Effects, lighting, fog, shadows, and atmosphere shall improve the scene without hiding tactical information.
-* DEMO-VIS-009 — Visual acceptance shall be judged at the normal RTS camera height and during motion, not only through close-up screenshots or isolated asset previews.
-* DEMO-VIS-010 — No placeholder cubes, primitive stand-ins, default materials, temporary icons, missing portraits, or visually unintegrated assets shall remain on the accepted demo path.
-* DEMO-VIS-011 — Greater geometric or texture detail alone shall not pass if new players still cannot distinguish entities and gameplay states.
-* DEMO-VIS-012 — At least four of five project-naive testers shall correctly identify representative allies, enemies, buildings, resources, objectives, and interactable locations. (Verify: HUM)
-* DEMO-VIS-013 — I shall personally accept the terrain, units, buildings, animation, effects, visual hierarchy, and overall presentation. (Verify: OWNER)
-
-## I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER)
-
-* DEMO-PERF-001 — The implementation shall identify the exact CPU, GPU, memory, display, operating system, and relevant rendering capabilities without assuming the developer's exact M1 model.
-* DEMO-PERF-002 — On first run, Auto quality shall execute a representative rendering benchmark or calibration rather than selecting a preset solely from a device-name table.
-* DEMO-PERF-003 — The game shall provide understandable Auto, Low, Medium, High, and highest-supported presets with clear descriptions of performance and visual consequences.
-* DEMO-PERF-004 — Auto shall choose a conservative stable starting configuration based on measured performance and shall record why that configuration was selected.
-* DEMO-PERF-005 — Manual overrides shall work, persist, reset correctly, and not be silently replaced by Auto.
-* DEMO-PERF-006 — Stronger supported hardware shall receive materially higher fidelity through appropriate resolution, textures, effects, shadows, view distance, density, or related settings.
-* DEMO-PERF-007 — Lower settings shall preserve every tactically important cue and remain visually acceptable rather than removing information required to play.
-* DEMO-PERF-008 — On the developer's verified M1-class MacBook Pro, the proposed target is p95 frame time at or below 16.67 ms at the Auto-selected resolution and preset. A lower target requires my approval.
-* DEMO-PERF-009 — Performance evidence shall report frame-time distributions, game thread, render thread, GPU, memory, resolution, preset, thermals where available, and representative unit/combat load. Menu-only or average-FPS results do not pass.
-* DEMO-PERF-010 — The candidate shall survive at least a 30-minute rendered demo session without crash, progressive memory growth, thermal collapse, lost audio, severe stutter, input failure, or visual corruption.
-* DEMO-PERF-011 — Shader compilation, asset streaming, resolution changes, fullscreen changes, and settings application shall not create an unrecoverable state.
-* DEMO-PERF-012 — A safe graphics fallback shall recover after a settings-related crash or failed launch.
-* DEMO-PERF-013 — Higher-end qualification requires execution on an actual materially stronger supported computer. Simulated settings or theoretical scalability do not prove hardware support. (External hardware — owner-gated)
-* DEMO-PERF-014 — The current platform boundary remains macOS Apple Silicon unless I approve expansion. Do not claim Windows, Linux, or discrete-GPU qualification without a package and direct evidence from that platform.
-* DEMO-PERF-015 — I shall accept the visual-quality/performance tradeoff on the baseline Mac and any higher-capability system used for demo qualification. (Verify: OWNER)
-
-## J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER)
-
-* DEMO-AI-001 — First-time players shall enter the AI skirmish only after completing the required tutorial mastery gates.
-* DEMO-AI-002 — The skirmish setup shall clearly explain map, faction, AI personality or difficulty, starting conditions, victory conditions, and game speed.
-* DEMO-AI-003 — Every option presented as selectable shall change the match as described and shall be operable by mouse and keyboard.
-* DEMO-AI-004 — The AI shall gather resources, construct, produce units, respond to threats, expand or reposition where appropriate, attack, defend, and reach victory or defeat through actual gameplay systems.
-* DEMO-AI-005 — Standard AI shall use only authorized game information and shall not receive hidden resources or knowledge unless an assisted difficulty clearly discloses the exact modifier.
-* DEMO-AI-006 — The introductory opponent shall be beatable by a new player who successfully learned and applies the tutorial lessons.
-* DEMO-AI-007 — The skirmish shall use the same mechanics and controls taught in the tutorial. Unexplained new requirements shall not be introduced at the transition.
-* DEMO-AI-008 — Victory, defeat, pause, restart, rematch, and return-to-menu behavior shall work without debug intervention.
-* DEMO-AI-009 — At least one complete unassisted victory and one complete defeat or controlled defeat-path validation shall be recorded from the packaged build.
-* DEMO-AI-010 — I shall play and accept the AI experience, difficulty, pacing, clarity, and match lifecycle. (Verify: OWNER)
-
-## K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER)
-
-* DEMO-ACC-001 — Subtitle size, subtitle background, UI scale, high-contrast mode, and color-vision-safe/non-color markers shall change actual packaged behavior.
-* DEMO-ACC-002 — Reduced motion, reduced flashing, adjustable camera motion, and reduced dynamic range shall operate across the opening, tutorial, UI, and gameplay.
-* DEMO-ACC-003 — Keyboard navigation shall remain available throughout menus even though mouse interaction is mandatory.
-* DEMO-ACC-004 — Tutorial voice, text, hints, pacing, pause, replay, and recovery shall support players who require more time without automatically performing the lesson.
-* DEMO-ACC-005 — Remapped controls and accessibility settings shall persist and remain reflected accurately in every prompt and tooltip.
-* DEMO-ACC-006 — I shall verify and accept the accessibility behaviors included in the demo. (Verify: OWNER)
-
-## L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row)
-
-* DEMO-VAL-001 — All acceptance evidence shall come from one clearly identified candidate package built from the recorded source state.
-* DEMO-VAL-002 — A clean profile shall travel continuously from cold launch through opening, tutorial, AI match, result, and return to menu.
-* DEMO-VAL-003 — The end-to-end evidence shall use physical mouse and keyboard input. Editor play, headless automation, scripted controllers, state injection, and stitched unrelated clips do not pass.
-* DEMO-VAL-004 — Existing automated suites shall remain green, but their claims shall remain limited to the behavior they actually exercise.
-* DEMO-VAL-005 — Every retained screenshot shall be opened and inspected. Every required audio segment shall be listened to. File existence alone is not usable evidence.
-* DEMO-VAL-006 — The golden path shall contain zero crashes, progression blockers, broken visible controls, save corruption events, audio-loss failures, or known high-severity defects.
-* DEMO-VAL-007 — Reproducing a crash followed by a successful relaunch shall remain a failed run until the cause is understood and corrected.
-* DEMO-VAL-008 — Human testing shall use five project-naive participants where reasonably available, including players who cannot be assumed to know RTS conventions. (Human participation — owner-gated recruitment)
-* DEMO-VAL-009 — Participants shall receive no verbal coaching about where to click or how to complete a lesson.
-* DEMO-VAL-010 — The test record shall capture time to begin, first selection, misclicks, ignored clicks, stalled lessons, hint use, tutorial completion time, story comprehension, visual recognition, economy establishment, combat behavior, result, crashes, and every observed confusion.
-* DEMO-VAL-011 — At least four of five participants shall complete the tutorial, explain the immediate story and objective, begin the AI match, and execute the taught economy and combat loop.
-* DEMO-VAL-012 — At least four of five participants shall state that the demo is clear and that they would voluntarily continue playing. This is a bounded internal usability signal, not proof of market success.
-* DEMO-VAL-013 — Failures found in human sessions shall become tracked defects and, where technically appropriate, regression tests before retesting.
-* DEMO-VAL-014 — I shall receive the same candidate package, a short review path, evidence summary, known limitations, and exact requirement IDs being offered for acceptance.
-* DEMO-VAL-015 — I shall personally play the candidate and explicitly accept or reject each review batch. (Verify: OWNER)
-* DEMO-VAL-016 — The aggregate demo may be called `COMPLETE` or `DEMO-READY` only after every mandatory requirement is `HUMAN ACCEPTED` for the same candidate build.
-* DEMO-VAL-017 — My final acceptance is a demo decision only. It does not by itself establish full-game completion, public release readiness, notarization, broad hardware compatibility, or market acceptance.
-
-## State register
 
 All requirements: `OPEN` as of ledger creation (2026-09-02, source `f0cf042` clean), except
 DEMO-GOV-001 which is ACTIVE as stated. Per-requirement state changes, commit/package bindings,
 evidence locations, limitations, and acceptance records are appended below this line as dated
 entries — never by rewriting the requirement bodies above.
 
-### Change log
+
+`REL-*`: all 475 records `OPEN` at ledger creation (2026-09-02), of which 369 are
+`DECLARED — NO TEXT` and cannot enter work until their statements exist. Owner-only states unchanged by
+consolidation.
+
+---
+
+# Change log
+
+Append-only. Migrated verbatim on 2026-09-03 from the two retired ledgers; entries are the project's
+record of owner rulings, defects, diagnostics, and acceptance. Nothing here is rewritten.
+
+## From `DemoReadinessRequirements.md`
+
 
 * 2026-09-02 — Ledger created by coordinator from the owner's directive (verbatim shall
   statements). Baseline audit assigned to QA lane (separate read-only reviewer) per §4.
@@ -1237,3 +1142,537 @@ entries — never by rewriting the requirement bodies above.
   reviewer verified this WITHOUT deleting anything in the sealed directory, globbing the nine files
   while excluding the sums file and diffing, because it holds no lease there. Verification that
   respects write authority rather than suspending it.
+* 2026-09-02 — **LEDGER AUDIT (Independent Review, read-only, no `Docs/` lease held or requested).**
+  ~30 assertions verified against the repository. Two S3, two S4, and FOUR CATEGORIES REPORTED SOUND.
+  Corrections below; the sound findings are recorded too, because knowing which parts hold is as
+  useful as knowing which do not.
+  **A2 CORRECTION — a cited commit that does not exist, carrying a claim that is TRUE.** The entry
+  above recording the Visual palette-note defect cites it as "SHIPPED in `0dfd1df9`". **`0dfd1df9` is
+  not a valid object** (`git cat-file -t` fatal, and the string appears nowhere in
+  `WorkstreamControl/`). The intended commit is **`0fd1df99e581e21d7c3dfbdb2024bbd86a77be31`**,
+  "Separate presentation accent palettes from identity colors", 2026-09-01 17:47:13 -0400 — a
+  transposition typo. **THE SUBSTANCE SURVIVES CORRECTION**, verified by the coordinator:
+  `git merge-base --is-ancestor 0fd1df99 f0cf042` is TRUE, so the defect genuinely IS in the HUMAN
+  REJECTED package. S3 rather than S4 because it is a provenance claim binding a defect to the
+  rejected build — exactly what DEMO-GOV-003 requires to be exact — and as written a reader cannot
+  follow it. The reviewer did not stop at "does not resolve"; it found the intended object and then
+  re-proved the claim, which is the difference between a correction and an obstruction.
+  **A1 FIXED STRUCTURALLY — the FOURTH stale-`main` instance, inside the line written to stop the
+  third.** `ACTIVE_LANES.md` pinned `2830705…` as "authoritative current main"; `main` is now
+  `7740478f68bcf247473d8a25d852b2e8b72116ef`, three commits on. Root cause named by the reviewer and
+  adopted: **a SHA written into prose is stale the moment `main` moves**, so any document pinning one
+  recurs here forever. The literal is REMOVED and replaced with the derivation (`git rev-parse main`
+  from the local object database). All three values quoted as "current main" today — `07ce741d`,
+  `8d5ed715`, `2830705…` — are retained as history precisely to stop them recirculating.
+  **A3 — two stale line citations**, both narratives correct, pointers no longer resolving:
+  `run_unreal_tests.sh:290` is now `:291` and reads 70/70; `ACTIVE_LANES.md:34` is now `:48`.
+  **A4 — readability, explicitly NOT a rule violation.** The entry asserting in the present tense
+  that "the only imgtool file in the tree is … `5147130…`" was true when written and is false now,
+  resolved 48 lines later. Append-only is the documented method and is being followed correctly —
+  but the owner reads this to decide, and a reader landing on the earlier entry takes away a false
+  present-tense claim. Adopted fix, consistent with append-only: a superseded entry gets a
+  "→ SUPERSEDED" pointer when its correction lands.
+  **REPORTED SOUND, verified not assumed:** all 13 `file:line` assertions resolve to content matching
+  the claim (checked exhaustively, not sampled — the category most expected to fail given the
+  `ConfigureGlassScar` precedent, and it is clean); **evidence-class drift: NONE** — no language
+  upgrades SRC evidence to packaged, runtime or human-verified, and all five Campaign boundaries
+  survive into the ledger; **the coordinator's four error entries are HONEST**, verified against the
+  ARTIFACTS rather than the ledger's claims about them (the World hold is genuinely marked
+  `## [WITHDRAWN]` with original text retained, the F9 wrong-cause is plainly "retracted as wrong"
+  with no softening); F8 closure and the A/B result are both present; F14 and F16 closure confirmed
+  in the file rather than from the entry — gate 70, loop `{0..69}`, message 70/70, 70 registered
+  entries, all four agreeing. Two SHA-256s that "did not resolve to any file" are CORRECTLY
+  non-resolving and not defects: they are combined-diff digests, outputs of a named derivation over a
+  byte stream, not file hashes — the A2 trap read the other way.
+  **COVERAGE STATED HONESTLY BY THE REVIEWER**, and recorded so nobody reads more into it: ~30
+  assertions. NOT verified — the 13 numeric counts, 20 of 32 short SHAs, every entry older than
+  today, the requirement bodies in sections A–L, and the per-requirement state register. The change
+  log carries well over a hundred assertions; this is a sample of the highest-consequence ones.
+  **STRUCTURAL OBSERVATION, adopted as guidance:** two of the four findings are stale POINTERS rather
+  than wrong CLAIMS, and one of those was the reviewer's own, stale within fifteen minutes of writing
+  it. The ledger's substance is holding; what decays is the COORDINATES. **Cite content — a quoted
+  line, a hash — over position wherever there is a choice.**
+* 2026-09-02 — F16 (Independent Review, S4) is CLOSED, and its history is worth keeping because it
+  changes what kind of defect it was. `run_unreal_tests.sh` printed "65/65" while enforcing 69. The
+  reviewer traced origin and magnitude, which neither of the two lanes that reported it had done:
+  `7824094` moved the gate 64→65 AND the message together, correctly; **`6a9d6cc` moved the gate
+  65→68 and did NOT touch the message — that is where the drift starts**; `8d7dd0f` then took it
+  68→69, message untouched. So it was stale across TWO commits but FOUR tests, and the message had
+  been maintained correctly through at least five prior increments (59→60→61→62→64→65). **That makes
+  it a REGRESSION IN AN ESTABLISHED PRACTICE, not a habit never formed — and it was growing, not
+  static.** Fixed in `b4cc656` together with the F14 registration, all four numbers moving in one
+  edit. Reviewer's better long-term recommendation, recorded for the next person to touch that file:
+  derive the printed count from the asserted constant, since the drift exists only because the number
+  is duplicated in a string.
+* 2026-09-02 — **PATTERN (Campaign, self-named, S3 class): changing a RULE invalidates tests that
+  never mentioned it.** When the lane accepted F11 and added the conflicting-terminal-facts rule, it
+  updated the tests ABOUT that rule and did not revisit the pre-existing fault assertions the rule
+  newly INVALIDATED. Recorded as a specific repeatable mistake at the lane's own request rather than
+  filed as bad luck.
+  **WHY NO VERIFICATION COULD HAVE CAUGHT IT — stated precisely, because it flatters nobody.** The
+  lane's 13/13, its 256-case exhaustive enumeration, AND the reviewer's independent 256 cases plus
+  400,000 randomised curricula ALL ran against invariants written to encode the rules. So all of them
+  agreed with the implementation and NONE COULD disagree with the test file. The lane's own invariant
+  literally read "Failed requires … not verified" — matching the model exactly, and structurally
+  blind to a test asserting otherwise. **That is not a strong method finding nothing; it is a method
+  incapable of finding this.** Which is exactly why both lanes kept repeating that the test had never
+  been executed, and why the first execution found it in seconds.
+  **THE F14 DECISION IS VINDICATED IN THE STRONGEST FORM.** Had registration waited until the test
+  was TRUSTED, this contradiction would have sat in `main` behind a green suite indefinitely.
+  **Registering a test the moment it EXISTS, rather than once it is BELIEVED, is what turned an
+  invisible contradiction into a first-run failure.** Adopt as standing practice: a test enters the
+  runner when it is written, not when it is trusted.
+* 2026-09-02 — **THREE CORRECTIONS to the curriculum-test failure record. The coordinator's published
+  attribution was WRONG and is retracted.** All three verified by the coordinator against the SEALED
+  pre-fix artifact at `WorkstreamControl/evidence/campaign-slice1-reviewed-ff2af8bc/`.
+  **(1) The cause was NOT "the F11 rule Independent Review required".** F11 was
+  `bRecoverableFault && !bLessonOpened`. The rule actually implicated —
+  `bAuthoritativeStateVerified && bUnrecoverableFault` → malformed → `Locked` — **ALREADY EXISTED in
+  the pre-fix model**, verified at line 26 of the sealed `4c26970c…` blob with its comment
+  "Conflicting terminal facts: neither can be trusted". Nothing the reviewer required caused this.
+  The coordinator's framing blamed a reviewer for a defect that predated its findings, and the
+  reviewer corrected an attribution that was EXCULPATORY TOWARD ITSELF — retracted here in full.
+  **(2) "Changing a rule invalidates tests that never mentioned it" is the WRONG LESSON and is
+  withdrawn**, including from the pattern entry above. No rule change invalidated anything: assertion
+  `:98` was FALSE FROM THE MOMENT THE FILE WAS WRITTEN, because `:96` builds `VerifiedFacts()` +
+  `bUnrecoverableFault` and asserts `Failed` while `:175` builds THE IDENTICAL FACTS and asserts
+  `Locked` — verified in the sealed pre-fix test blob. **The file asserted both P and not-P about the
+  same input.** THE RIGHT LESSON, adopted: *a test file can contradict ITSELF, and neither an
+  implementation review nor an invariant-based enumeration can catch that, because both encode the
+  RULES rather than the test's EXPECTATIONS.* A self-contradictory test can be satisfied by NO
+  implementation.
+  **(3) TWO failing assertions, not one.** "Exactly one failure" was test-level granularity; the test
+  holds 26 assertions and the two failures sit at DIFFERENT LEVELS — one in the lesson reducer, one
+  in the curriculum reducer (`WithLoss[5]` asserting `bFailed` and `ActiveLessonIndex == 5`). A fix
+  addressing only the lesson-level case would have left the curriculum-level one failing.
+  **WHO MISSED IT, recorded plainly:** Campaign wrote the contradiction; Independent Review ACCEPTED
+  the file and has recorded that both blocks were in the excerpts it worked from — "I read them and
+  did not notice. I verified the implementation exhaustively and treated the test file as something
+  to identity-check rather than evaluate"; and the coordinator then published a wrong cause. Three
+  independent passes, and **the defect was TEXTUAL — visible by reading the file against itself, with
+  no compiler needed.**
+  **METHOD FIX, adopted fleet-wide and already built:** Independent Review has a shim (CoreMinimal.h
+  plus a ~40-line `Misc/AutomationTest.h` providing FString, TArray, TestTrue/TestEqual and
+  IMPLEMENT_SIMPLE_AUTOMATION_TEST) that compiles and runs an UNMODIFIED test translation unit
+  outside the engine in seconds, reporting per-assertion pass/fail with labels. It reproduced the
+  engine result exactly and localised it to two assertions where the engine reported one failing
+  test. **Standing change: for any artifact containing tests, evaluate EVERY ASSERTION against the
+  implementation — by execution where a shim allows — rather than reviewing the implementation and
+  identity-checking the test.** This would have caught the defect at the first review rather than at
+  the first engine run.
+  UNCHANGED: the implementation is correct and all verdicts on it stand. The 256 cases, the 400,000
+  randomised curricula and the by-execution re-tests of F10–F13 measured the MODEL against the
+  requirements, and a wrong assertion in the test file does not touch any of that. What failed was
+  the SUFFICIENCY of a claim boundary — the reviewer kept stating the test had never been executed
+  and did not treat that as a gap to close. Its words: "I had named the place and not gone there."
+* 2026-09-02 — **TEST-EXECUTION SHIM sealed and adopted fleet-wide.** Independent Review sealed both
+  files in full, with hashes, in its own handoff (`independent-review.md`, entry 16:31Z) rather than
+  under `evidence/` — correctly, because it holds no `evidence/` lease except the Campaign
+  preservation directory, the fleet hold bars new leases, and the handoff is the one file a lane may
+  always write. It also declined to stretch a preservation directory into a tool store.
+  `CoreMinimal.h` `2c108a9e6915dbc0d632ea3cfc8dd696940b3ba065c0e2481944085a29cdfb39` (22 lines);
+  `Misc/AutomationTest.h` `3689aa36432d50a433b83825195c7ce57e68351232f4b63470885eaf9c0bf60e`
+  (36 lines). Verified from a CLEAN rebuild at seal time rather than from objects already on disk:
+  26 assertions, 2 failed (#8 lesson-level, #14 curriculum-level) against the receipted artifact.
+  **BOUNDARIES, to be carried whenever a lane is pointed at it:** it is a SHIM, not the engine. It
+  proves the assertions' logic against the model's logic. It does NOT exercise UBT, engine headers,
+  reflection, the real `FAutomationTestBase`, or anything touching `UObject`. It suits pure reducers
+  and other engine-independent logic. A test needing real engine types will FAIL TO COMPILE against
+  it — and that failure is honest, not a false pass. The `TArray` is a thin `std::vector` wrapper
+  covering only Add/SetNum/Reserve/Pop/Num/operator[] and TArrayView conversion. The test file needs
+  exactly one edit — define `WITH_DEV_AUTOMATION_TESTS` and append a `main()` — with the assertions
+  themselves run UNMODIFIED, which is the point.
+* 2026-09-02 — **PRECISION on "three verification passes missed a textual contradiction"** — the
+  imprecise version overstates the problem and the precise one is more useful. The three passes were
+  NOT equivalent. Independent Review's 400,000 randomised curricula and Campaign's 256-case
+  exhaustive enumeration were **structurally incapable** of finding it: both encode the RULES, and a
+  test file's EXPECTATIONS are a different object. Only a third kind of check — executing the test,
+  or reading its assertions against each other — could ever have found it, and none of the three did
+  that until the engine did. **That is a narrower and more fixable failure than "three reviews missed
+  it", and the fix is already adopted** (evaluate every assertion, by execution where a shim allows).
+  Recorded WITH the harsher fact the reviewer volunteered alongside it, so this reads as precision
+  rather than mitigation: *"I accepted an artifact twice while stating in both verdicts that its test
+  had never been executed, and did not treat my own stated gap as a gap to close."*
+* 2026-09-02 — **COORDINATION DEFECT found and owned by Campaign: mixed clocks in handoff timestamps
+  made a coordination record read OUT OF CHRONOLOGICAL ORDER, and it caused two separate wrong
+  conclusions.** Some entry headers were derived with `date -u`; others were HAND-WRITTEN from
+  host-local times quoted in coordinator messages, roughly an hour ahead. Consequences, both real:
+  (1) the 16:22Z venue-binding LEASE-REQUEST sits above the 15:11:10Z venue freeze and the 15:56:53Z
+  test freeze — both of which are actually LATER — so the request read as a proposal to REDO already
+  accepted work, when the true order was request-then-implement. Independent Review flagged an
+  apparent duplicate; the coordinator verified both worktrees and confirmed NO duplicate existed.
+  (2) the test freeze looked OLDER than two WORKING notes, so both the reviewer and the coordinator
+  read the tail and concluded no freeze had been published. It had — the identity was correct and
+  stable the whole time, and the coordinator has now re-derived every value live and confirmed it.
+  **The safeguard worked but should never have had to; the cause was a timestamp, not a judgement.**
+  CORRECTIVE ACTION, adopted by the lane and endorsed: every handoff timestamp derived with `date -u`
+  at the moment of writing — never hand-written, never copied from message text. The bad headers are
+  NOT being retro-edited, on the lane's reasoning that **rewriting history in a coordination record
+  is worse than an accurate note about it**; a resolving map is carried in the correcting entry
+  instead. Recommended fleet-wide: a handoff is evidence, and a hand-copied timestamp is an
+  unverified claim in the one field the whole ordering depends on.
+* 2026-09-02 — Campaign test-repair freeze VERIFIED LIVE by the coordinator in
+  `Worktrees/campaign-composed-fix`: base `7740478…`, `git status --short` showing exactly one
+  modified file, file SHA-256 `7cb0df62de92267dac13f3ea33cd12eafbf4b21f1edc709e861208a11f5bae93`
+  (identical to the content Independent Review ran at 26 assertions / 0 failed, so the artifact has
+  not moved), diff `c6d90fa1…`, patch ID `d3ca713d…`, 13/-3, and the model still at the receipted
+  `019a5a1a…` — untouched, as the lease required. Single tracked file, so file order does not apply;
+  the lane stated that explicitly rather than omitting it, which is the correct handling of a rule
+  that does not bite. Awaiting the reviewer's verdict WITH THE TEST EXECUTED, then a fresh heavy
+  lease for the full suite. **70/70 or it is not fixed**, and no lane gets to declare it.
+* 2026-09-02 — **PHASE 0 GATE: 70/70 PASS — the first clean full automation suite in this project's
+  history.** `build_editor.sh` exit 0; suite exit 0; "Unreal automation passed: 70/70 Echoes tests,
+  0 warnings, 0 errors"; "Player SaveGames guard passed: sampled tree unchanged; scoped storage
+  empty." The gate has asserted 70 only since `b4cc656` and no prior run satisfied it. Closes the
+  self-contradictory-test defect the previous engine run found — proven by the ENGINE, not by a
+  logic port. Evidence sealed at `WorkstreamControl/evidence/gate-70-phase0-20260902/` with
+  derivation and order recorded. BOUNDARIES: editor automation only, NOT packaged, NOT played, no
+  human acceptance; **DEMO-TUT-018 stays OPEN** (verification class PKG-PHYS + HUM + OWNER).
+  METHOD NOTE: Independent Review's shim pass (26 assertions / 0 failed) explicitly stated it did
+  NOT predict 70/70 and was a gate rather than a substitute. It behaved as one. It also
+  MUTATION-TESTED THE TEST — breaking the model four ways and confirming the test caught each —
+  which is what ruled out the obvious wrong fix of weakening an assertion into passing.
+  COORDINATOR CORRECTION: the fix does NOT "add the assertion nothing covered", as I told Campaign.
+  The `Conflicting` assertion already existed and was the PASSING half of the contradictory pair.
+  **Nothing was added to coverage; a contradiction was removed from it.**
+  CARRIED FORWARD, non-blocking: two rules in that file are each guarded by exactly ONE assertion —
+  thin, neither created nor worsened by the fix, but relevant to anyone editing it next.
+* 2026-09-02 — **Narrative mission-contract schema generalization ACCEPTED — Phase 0's second and
+  final item.** The published schema rejected ALL FIFTEEN mission contracts (462 errors); now zero,
+  per-mission breakdown reproduced independently by the reviewer (m01:6, m02:31, m03:25, m04:27,
+  m05:29, m06:34, m07:35, m08:32, m09:31, m10:36, m11:38, m12:36, m13:29, m14:37, m15:36 → 0).
+  **CLASS C RESOLVED IN THE SAFE DIRECTION — sources right, schema stale — and verified by code
+  rather than settled by ruling.** The reviewer did not read the lane's account: it brace-matched
+  `GetMissionFailureReasonCode()` out of the subsystem, split on `case EEchoesOperationMode::`
+  labels, collected every returned code per case, and compared against every `reason_code` string in
+  each mission document — deliberately BROADER than `failure_variants[].reason_code`, so any extra
+  authored code would surface as a mismatch. **EXACT MATCH BOTH DIRECTIONS across 15 switch cases and
+  15 mission files**, not a subset either way.
+  **SUITE COUNT MOVED: `Tests/Narrative` is now 63, not 62** — the schema test covers all fifteen via
+  subTest instead of m01 alone, plus a new test that the schema still rejects illegal contracts.
+  **A future "62/62" for this suite is a REGRESSION, not a pass.**
+  **THE MOST VALUABLE PROPERTY IN THE SLICE, demonstrated not asserted:** with `jsonschema` forced
+  unavailable, HEAD reports `Ran 62 tests … OK (skipped=1)` — GREEN while the only check of the
+  published schema never runs — and the repaired version reports `FAILED (errors=2)`. The F14/F16
+  family reproduced on a real artifact: a green signal meaning "not checked". Third instance today.
+  **THE DIGEST AMENDMENT WORKED ON ITS FIRST OUTING:** this is the first freeze card to publish its
+  own derivation AND order (`LC_ALL=C git diff --name-only | sort | xargs shasum -a 256`, baselines
+  via `git show <base>:<path>`), and the reviewer re-ran the stated command verbatim and reproduced.
+  **LEAK REPORTED BY THE LANE RATHER THAN HIDDEN, and correctly scoped out:** an id from another
+  mission's namespace validates, because JSON Schema cannot backreference. Pre-existing. The reviewer
+  verified BOTH halves rather than accepting either — retargeting all 118 `nar_m02_*` ids gives 0
+  schema errors (leak confirmed), and it then built the SUBTLE case, a single nested id retargeted
+  with `content_id` untouched, which the schema still accepts and `validate_narrative.py` still
+  catches. So the per-mission pins hold at fine granularity, not just at the headline. Both mutations
+  restored and the tree verified clean after each.
+  **THREE JUDGEMENT CALLS ENDORSED BY THE REVIEWER, all restraint exercised unprompted:** declining
+  to flip `runtime_consumed` because the ledger's bar is delivery to a player and the lane had read
+  code rather than watched rendered play — naming that as laundering itself; routing two stale
+  artifacts out rather than fixing them; and recording a "15 orphaned signals" near-miss that turned
+  out reachable via `EnqueueFailureLine`, having nearly filed a defect on a first query and said so.
+  BOUNDARY: SRC plus local execution. The reason-code exact match is a STATIC correspondence between
+  authored data and a C++ switch — it proves the two sets are identical, NOT that the runtime
+  delivers those codes to a player. Neither lane nor reviewer upgraded it, and neither does this
+  ledger.
+* 2026-09-02 — **COORDINATOR ERROR: I left `main` diverged from the code I tested, and my own 70/70
+  claim was therefore not yet about `main`.** Found by the Git task while confirming a clean tree.
+  I took the heavy lease, applied the ACCEPTED Campaign test repair BY CONTENT into the main
+  worktree, ran the gate there — all intentional and stated in the lease — and then **failed to route
+  the receipt on the pass.** So `main` carried the old file while the working tree carried the new
+  one. Verified: on-disk is `7cb0df62…` (file SHA-256) / `fa3c5a69…` (git blob), byte-identical to the
+  reviewed and accepted artifact; `main` at `a493096` carries `bb54084c…`.
+  **THE CONSEQUENCE, in the Git task's framing and correct:** a suite run in that worktree compiles
+  the on-disk file, so "70/70 green" there is evidence about code `main` DOES NOT CONTAIN. That is
+  the same "a green signal means something else" trap as F14, F16 and the `skipTest` finding —
+  reproduced by the coordinator, on the very slice that named it. The 70/70 result is sound as
+  evidence about the ACCEPTED ARTIFACT; it becomes evidence about `main` only once the receipt lands,
+  after which the suite is re-run from the main worktree against committed code. **Phase 0 does not
+  close until that run is green.**
+  Note the reviewed/unreviewed distinction the tree cannot show: this was REVIEWED code not yet
+  receipted, not unreviewed code in the tree. The Git task could not have known that from the tree
+  alone and was right to flag rather than assume.
+* 2026-09-02 — **RULE: freeze cards must LABEL BASELINE HASHES BY UNIT, like every other digest.**
+  Adopted after a near-miss: the Git task almost stopped a receipt because published baselines
+  `59a8e671…`/`1c6973e3…` did not match the worktree's HEAD blobs `c7dda165…`/`32373828…`. Not a
+  mismatch — the first pair are **content SHA-256**, the second **git blob ids**: same bytes, two
+  units. It verified all four in BOTH units before concluding, rather than reporting a false
+  mismatch. The "name the unit" convention was adopted this morning after a coordinator called a
+  file SHA-256 a "git blob" and sent a lane hunting an object that never existed — and it was being
+  applied to every digest EXCEPT baselines. Now it applies to baselines too.
+* 2026-09-02 — CORRECTION to the coordinator's account of the Narrative "before" state, supplied by
+  the Git task and better than the original. I described HEAD as green-because-skipped. With
+  `jsonschema` 4.25.1 PRESENT — the normal state — `main` was **visibly RED**: `Ran 62 tests …
+  FAILED (errors=1)`, confirmed equally red at `7740478` so neither preceding receipt caused it.
+  Both statements are true of different environments and both are recorded. Phase 0's "clear the red"
+  was literal here: **62/red → 63/green.** Exit condition MET at `9dd00c7`: `Ran 63 tests … OK` from
+  the main worktree, with `jsonschema` confirmed importable so the schema test genuinely ran rather
+  than skipping — which matters more than usual, since a skip reads as green.
+* 2026-09-02 — **PHASE 0 CLOSED. All gates green against COMMITTED `main` `e408198`.** Build exit 0;
+  Unreal automation "70/70 Echoes tests, 0 warnings, 0 errors"; Player SaveGames guard passed;
+  `Tests/Narrative` **63 OK**; `Tests/World` **52 OK** (13+10+15+14, each module reporting OK, not
+  merely a count). Evidence sealed at
+  `WorkstreamControl/evidence/gate-70-phase0-close-e408198/` with derivation and order recorded.
+  WHY THIS RUN HAPPENED AT ALL: the Git task had already proved carry-over by DERIVATION —
+  `git diff --name-only 7740478 main -- Source/ Scripts/run_unreal_tests.sh Config/` returns exactly
+  the one repaired test file, so the compiled surface, runner and config at `e408198` are
+  byte-identical to the tree the earlier passing run built. Strong, and still an argument. **The
+  standing discipline is that a derivation is weaker than an execution**, and the coordinator had
+  said Phase 0 would close on a run against committed code. Run rather than reasoned past.
+  COORDINATOR TOOLING ERROR, caught before it was reported as a failure: the first attempt returned
+  `NARRATIVE_EXIT=1` / `WORLD_EXIT=1`. Neither was a test failure —
+  `python3 -m unittest discover -s Tests/Narrative -t .` raises `ImportError: Start directory is not
+  importable` because those directories carry no `__init__.py`; the module form runs correctly.
+  **"My command failed" is not "the tests failed"** — the same class as the four
+  absence-of-expected-string errors recorded today, and the reason this reads as a PASS rather than
+  a reported regression.
+  BOUNDARIES, unchanged and none upgraded: editor automation and native Python suites only. NOT
+  packaged, NOT played, NO human acceptance. The curriculum model is still wired to no subsystem;
+  `runtime_consumed` remains false; **DEMO-TUT-018 stays OPEN**. 70 green tests is engine-executed
+  evidence for those 70 tests and nothing beyond them.
+  **SEVEN RECEIPTS TODAY, every one Angelis-only author and committer with no AI-credit trailer**
+  (ruling #28 held over the harness instruction on all seven). Audit at the tip: declared 70,
+  registered 70, gaps NONE in either direction.
+  **PHASE 1 — THE MOUSE WORKS — is now the active phase**, per `Docs/DeliveryPlan.md`. One lane.
+* 2026-09-02 — **PHASE 3 SCOPE CORRECTED, smaller than the plan stated.** Reported by the Narrative
+  lane and VERIFIED by the coordinator by count rather than by reading its account:
+  `Content/Narrative/Generated/EchoesNarrativePack.json` has top-level keys including **`demo`** and
+  **`demo_line_count` = 55**, with the demo block carrying `system_voice` and `tutorial`; and
+  `EchoesNarrativeSubsystem.cpp` contains **ZERO** references to that demo block while carrying 14
+  references to `OperationPackKey` / `operations`. The demo contracts are deliberately NOT
+  operation-scoped per the additive-namespace ruling, so the subsystem cannot reach them through the
+  only addressing model it has. **Content: done. Pipeline: done. Compiled pack: done. Subtitle lane:
+  exists and works (`EchoesHUD.cpp:4166`). Missing: one addressing seam in one runtime file.**
+  Narrative-side files required: NONE. Recorded because "the curriculum model is wired to NOTHING"
+  was true but implied a far larger job than the evidence supports, and because the same seam gates
+  Phase 4's narrative delivery — one piece of work, two phases unblocked.
+  The lane flagged this rather than acting on it, correctly: the subsystem is a runtime file outside
+  its domain and needs routing regardless.
+* 2026-09-02 — REPORTING HABIT named by the Narrative lane against itself, worth keeping: it had
+  demonstrated BOTH environments for the schema failure but **led with the subtler mechanism
+  (green-because-skipped) over the blunt fact (`main` was visibly FAILING for anyone with the library
+  installed)**. Its own framing: "leading with the interesting mechanism over the plain fact is a
+  reporting habit worth not repeating." Applies to every lane and to the coordinator, who repeated
+  the subtler version to the owner because it was the one relayed.
+* 2026-09-02 — **PHASE 1 ROOT CAUSE FOUND (Player Experience, read-only): the click target is not the
+  visual target.** `AEchoesEntityView` has exactly ONE collidable component — `BodyMesh`
+  (`EntityView.cpp:159-162`), scaled 0.42 for a Worker and 0.48 by default (`:847-935`). TEN
+  decorative families are NoCollision (`:169-255`), including the health bar placed **92–165uu ABOVE
+  the body** depending on unit type (`:851-923`, applied `:1906`). **The player sees a silhouette,
+  ring and bar, and can only click a small cylinder at the unit's base.**
+  **THE COORDINATOR'S PRIME SUSPECT WAS REJECTED BY EVIDENCE, not assumed away.** I had proposed
+  stray collision intercepting ground traces. The lane checked: `EchoesWeatherView` makes zero
+  collision calls and owns only a SceneComponent and fog (no collision geometry exists), terrain
+  layers are NoCollision, marker/destruction/fog views disable collision, and the camera pawn has no
+  collision primitive. It also cleared two engine-level suspects — `HitResultTraceDistance` defaults
+  to 100000 against a 3800 camera arm, and the HUD-hitbox early-out in `GetHitResultAtScreenPosition`
+  cannot fire because `EchoesHUD` calls `AddHitBox` zero times. Four suspects eliminated by evidence.
+  **IT EXPLAINS THE INTERMITTENCE, which my hypothesis did not:** the bar height VARIES BY UNIT TYPE,
+  so the aim error varies by what you click. "Sometimes it works" is exactly what a per-unit-type
+  offset produces.
+  **AND IT RESOLVES A LEDGERED EVIDENCE TENSION.** The lane aimed by eye at the rendered body in M0
+  and selected first try; the packaged fixture aims via `MoveReviewPointerToEntity` →
+  `GetActorBounds(false,...)` → projected `BoundsOrigin`, a computed centre INCLUDING the raised bar,
+  so its aim point sits above the collidable body, the trace misses, selection clears, and stage 1
+  fails `POINTER_SELECTION_REJECTED` while truthfully reporting `fullBoundsVisible=true
+  hudOcclusion=false`. **Both observations were true.** The fixture has been testing decoration
+  placement rather than selection.
+  STATED AS NOT DETERMINABLE READ-ONLY, and now under a measurement lease: clickable pixel fraction
+  at gameplay zoom per unit type; whether real human aim lands on body or decoration; whether
+  `GetActorBounds` includes hidden bars (expected, UNPROVEN); and whether drag-select shares the
+  fault, since it projects `GetActorLocation()+(0,0,60)` rather than tracing.
+  COORDINATOR RULING: widening the click target to match the silhouette is IN SCOPE for this lane,
+  not deferred to Visual. A click target that does not match the silhouette the player aims at is not
+  a presentation preference; it is the definition of this defect.
+* 2026-09-02 — SELF-DISCLOSED DEFECT (Player Experience, in its own already-landed code, reported
+  unprompted): its S1+S2 panel consumption makes `SelectionPressed` return BEFORE setting
+  `bSelectionButtonDown`, so `SelectionReleased` early-returns. The packaged fixture calls both
+  directly (`:8155-8156`), so in the NEXT package any fixture aim point under a HUD panel will fail
+  differently. The lane was careful to state this did NOT cause the Visual failure, since `f0cf042b`
+  predates the change — both halves recorded, because the disclosure and its correct bounding are
+  each worth having.
+* 2026-09-02 — **COMPREHENSION DEFECT (Narrative, found while drafting an owner question): nothing in
+  the opening OR the tutorial tells the player who they are.** Canon sets
+  `player_pov: mara_vey_command_authority` — the player IS Mara — but Mara is ALSO a speaker in the
+  opening and the tutorial's instructor voice, so an unfamiliar player will read her as an NPC giving
+  them orders rather than as themselves. The only identity references are two abstract why-lines.
+  DEMO-NAR-003 requires the opening to establish identity and role; DEMO-NAR-008 requires 4 of 5
+  naive testers to explain it. **This is NOT among the script's own open items** — it is the specific
+  mechanism behind the owner's "does not establish who the player is", and being a comprehension
+  defect rather than a taste question, it is answerable rather than merely arguable.
+  Also recorded: the opening's WORDS ARE DONE — 4 shots, 18 seconds, 6 lines across Talar, Mara and
+  Oruun, well inside NAR-005's 90-second cap. Length is not the constraint; content is. And a
+  mechanical note needing no owner input: the cinematic declares `format: in_engine_storyboard` while
+  NAR-004 names "storyboard" among the forms that do NOT pass, so it must be realized as an actual
+  in-engine sequence with the format token updated.
+  **HELD FOR THE PHASE 4 OWNER BATCH, not raised now** — the owner asked for fewer things in front of
+  them, and this is not needed until Phase 4 opens. Flagged for that batch: **all four options need
+  VO, and VO is gated on the TTS casting decision** (the Annunciator's sixth voice has no pin), so
+  voice is the long pole rather than the visual work — the same lead-time shape as the Developer ID
+  provisioning, and worth batching into one owner sitting.
+* 2026-09-02 — **OWNER-OBSERVED, AND IT IS THE DECISIVE PHASE 1 EVIDENCE: "the units move but don't
+  interact with anything else."** This is the exact symptom predicted by the click-target defect, and
+  it arrived from the owner's own play, independently of the measurement lane. It is stronger
+  evidence than the probe series that lane correctly discarded.
+  **MECHANISM, verified in `EchoesPlayerController.cpp:8975` `IssueContextOrder`:**
+  `TargetView = Cast<AEchoesEntityView>(HitResult.GetActor())`, then `CommandType` is initialised to
+  **`Move` as the DEFAULT**, and Gather / FutureWell / Attack / Deliver are selected ONLY inside
+  `if (TargetEntity != nullptr)`. Since `AEchoesEntityView`'s only collidable component is `BodyMesh`
+  at 0.42–0.48 scale, a right-click aimed at the VISIBLE silhouette misses that small base cylinder,
+  hits the terrain behind or below it, `TargetView` is null, and the order **silently falls through
+  to Move**. The unit walks to the spot and stops.
+  **THIS IS WORSE THAN A VISIBLE FAILURE AND THE LEDGER SHOULD SAY SO.** No `[NO_WORLD_HIT]` fires,
+  because the trace DID hit something — the ground. So the player gets no error, no feedback, and a
+  plausible-but-wrong action they did not ask for. A silent wrong action is harder to diagnose from
+  the player's seat than an outright refusal, and it is why the owner reported "they don't seem to do
+  anything" rather than "the game shows me an error".
+  **THREE INDEPENDENT CONFIRMATIONS NOW AGREE:** the lane's static diagnosis of the single small
+  collider; its proof that `GetActorBounds(false,...)` admits non-colliding and even HIDDEN
+  components (`Actor.cpp:2265-2279`, visibility never tested); and the owner's play. The first two
+  predicted the third without knowing it.
+  STILL UNMEASURED and still the sizing question: clickable pixel fraction per unit type, the
+  silhouette-to-clickable ratio, whether real aim lands on body or decoration, and whether
+  drag-select shares the fault.
+* 2026-09-02 — **DEFECT (coordinator, found while extracting controls for the owner): FOUR DUPLICATE
+  KEY BINDINGS in `Config/DefaultInput.ini`.** `C` is bound to BOTH `ChoosePreserve` and
+  `ContinueCampaign`; `F8` to BOTH `CycleFormation` and `OpenOnlineFrontDoor`; `LeftBracket` to BOTH
+  `AdaptWarformCarapace` and `DecreaseCameraPanSpeed`; `RightBracket` to BOTH `AdaptWarformStriker`
+  and `IncreaseCameraPanSpeed`. Not previously logged by any lane. Relevant to the owner's
+  "too keyboard-dependent" rejection item, and to Phase 1 generally: ~45 actions are bound to keys.
+* 2026-09-02 — **COORDINATOR ERROR, owner-reported: I asked the owner to judge whether the controls
+  "feel right" without telling them what the game is, what they were looking at, or which keys do
+  anything.** Their words: *"I have no idea what anything does. so no clue on what im testing. i
+  cant really determine what is what in the game."* That is the demo's own rejection — the game does
+  not explain itself — reproduced in the coordinator's test instructions. RULING: **Phase 3 (the game
+  teaches) is re-ranked as more urgent than its position implies.** Knowing WHAT a thing is precedes
+  judging HOW it feels, and an owner acceptance session that requires a briefing from the coordinator
+  is not an acceptance session. Phase 1 continues, but no further owner play is requested until the
+  player can identify what they are looking at unaided.
+* 2026-09-02 — **PHASE 1 FALL-THROUGH MEASURED AND CONFIRMED.** Player Experience reproduced the
+  owner's symptom under controlled conditions. Method used NO instrumentation and NO source change:
+  the build's own telemetry already distinguishes outcomes (`GATHER MATTER` vs `MOVE`/`BOX`,
+  corroborated by `ECHOES_COMMAND_MARKER type=interact` vs `type=move`); a STATIONARY matter deposit
+  defeated the live-motion hazard; and outcomes were counted from a fixed probe set AFTER termination,
+  defeating the stdout-buffering hazard that invalidated the first attempt. 13 probes, 13 logged
+  outcomes, exact accounting.
+  **RESULT: a vertical series of 7 probes top-to-bottom through the visible silhouette — the TOPMOST
+  probe SILENTLY issued Move instead of Gather; the other six resolved correctly.** The dead band
+  sits at the TOP of the visible object, between y=282 (miss) and y=290 (hit) against a visible top
+  edge at y≈280 — roughly 8-10px of a ~50px visible height, about 16-20% of that object's visible
+  height. No error and no `[NO_WORLD_HIT]`, because the trace DID hit the ground behind. The coder's
+  claim was verified at the exact base first: in BOTH the client and local branches of
+  `IssueContextOrder`, `CommandType` initialises to `Move` and the contextual types are chosen only
+  inside `if (TargetEntity != nullptr)`.
+  **RATE STATED HONESTLY BY THE LANE: ~14% (1 of 7) on ONE AXIS for ONE ENTITY TYPE.** Explicitly NOT
+  established: the rate for combat and worker units, whose `BodyMesh` scale 0.42-0.48 differs from a
+  resource node's; the horizontal profile; the full 2-D area ratio; drag-select. The lane refused to
+  extrapolate one axis on one object into a global rate.
+* 2026-09-02 — **SECOND DISCARD OF A SELF-FLATTERING RESULT BY THE SAME LANE, and it is why the 14%
+  is trustworthy.** It ran a horizontal series of 6 probes that ALL returned Move — and discarded it.
+  The camera had drifted between batches, confirmed by comparing before/after screenshots, so those
+  probes aimed at stale coordinates. **Counting them would have reported 54% fall-through instead of
+  14% — a four-fold overstatement that would have flattered its own diagnosis considerably.** Edge-pan
+  is identified as the prime suspect and is now a mandatory method fix for any re-run.
+  This is the SECOND time this lane has discarded a result that would have CONFIRMED its own
+  hypothesis on an invalid method — the first being the seven-probe unit series killed by live-motion
+  aim error. Recorded as a pattern, not an incident: **the discipline that makes a small honest number
+  worth more than a large flattering one is the reason Phase 1's headline can be relied on.**
+* 2026-09-02 — **FULL STOP. Owner directive: "stop all work in the chats."** Executed immediately:
+  the running analysis workflow was killed; all leases REVOKED; the heavy lock released and frozen
+  with no heavy run permitted for any reason; the stop published to both `ACTIVE_LANES.md` and
+  `HEAVY_RUN_LOCK.md`; and all twelve lane sessions individually notified with instructions to stop
+  where they are rather than reach a tidy stopping point, preserve what is on disk, write one final
+  handoff entry, and stop. Verified: no build, editor, automation or packaging process running.
+  STATE AT STOP — `main` `e408198`, clean tracked tree apart from this ledger. All suites green:
+  Unreal automation 70/70, `Tests/Narrative` 63, `Tests/World` 52. Seven receipts landed today, every
+  one Angelis-only author and committer. Phase 0 closed. Phase 1 stopped mid-measurement with its
+  root cause found, its mechanism verified in code, its symptom confirmed by the owner's own play,
+  and a ~14% fall-through rate measured on one axis for one entity type.
+  Only the owner lifts this. The coordinator will not resume any lane, grant any lease, or start any
+  phase without an explicit instruction from Angelis.
+* 2026-09-02 — Player Experience CONFIRMED STOPPED, final entry 17:02:38Z. No lease held, no heavy
+  process, package never modified. It had already released the heavy lease at 17:01:56Z when the
+  unit-type run failed, before the stop arrived, and did not touch `HEAVY_RUN_LOCK.md` afterwards, so
+  the coordinator's freeze governs it.
+  **BINDING WARNING FOR WHOEVER RESUMES — do not let this decay into a false figure: the unit-type
+  dead band and fall-through rate were NOT MEASURED. The app exited before a single probe was
+  issued.** The resource-node **~14% MUST NOT be reused as the unit figure** — a unit's `BodyMesh`
+  scale of 0.42–0.48 differs from a node's, which is exactly why the second measurement was
+  commissioned. Also still open: the horizontal profile, the 2-D area ratio, and drag-select. The
+  repair LEASE-REQUEST was NOT posted — the lane stopped rather than write it — and **no repair code
+  exists.**
+  BANKED AND SAFE ON DISK: the root-cause diagnosis with four rival hypotheses eliminated by evidence;
+  the static proof that `GetActorBounds(false,...)` admits hidden non-colliding components
+  (`Actor.cpp:2265-2279`, visibility never tested); the sealed 14% fall-through measurement with the
+  dead band at the silhouette TOP; and both discard records.
+  USEFUL BY-PRODUCT of the failed run: the in-game edge-pan toggle is confirmed effective by its own
+  telemetry, so that drift source is eliminable whenever measurement resumes.
+  **IDENTIFIED, NOT STARTED, and worth reading before anyone books another GUI slot:** three
+  consecutive GUI runs were cut short on this shared machine, and the unit dead band is a
+  DETERMINISTIC FUNCTION of `BodyScale`, `HealthBarHeight` and authored mesh dimensions — so it is
+  probably measurable HEADLESSLY with no desktop contention at all. Would need its own lease. Nothing
+  was done about it.
+* 2026-09-02 — **C33 INPUT FIX RECEIPTED — the owner's reported bug is fixed in code and green at
+  71/71.** Commit `665b23de0c05558e8440bddae3c7cfc15b8697ec`, tree `ed26066521ad738a…`, 933
+  insertions / 62 deletions across 12 files with exactly 4 creates; `main` = `origin/main` =
+  `665b23d`. Build exit 0, suite exit 0, "Unreal automation passed: 71/71 Echoes tests, 0 warnings,
+  0 errors", SaveGames guard passed. Runner moved 70 -> 71 with
+  `Echoes.Runtime.Controls.ContextOrderBanner` registered; audit at the tip reports declared 71,
+  registered 71, gaps NONE either way. **Post-landing, committed `main` is byte-identical to the tree
+  that produced 71/71**, so that result is now evidence about the mainline rather than a working tree.
+  THE FIX: `IssueContextOrder` initialised `CommandType` to `Move` and chose the contextual types only
+  inside `if (TargetEntity != nullptr)`, so a right-click aimed at a visible silhouette missed the
+  collidable body, hit the terrain behind, and silently became a Move — with no error, because the
+  trace DID hit something. Accepted design after two rejected ones: `ECC_Visibility` is untouched and
+  still answers "where on the battlefield" for the ~12 sites that read `HitResult.Location` as a
+  ground position; a new `ECC_GameTraceChannel1` / "EchoesEntityPick" answers "which entity". Two
+  traces, two answers. Plus a structural fix for a reviewer-found divergence: one
+  `ResolveCommandScreenPosition(bPointerSource, ...)` now supplies the screen point to BOTH traces,
+  so the ground and the target can no longer describe different pixels in keyboard mode.
+  **BOUNDARY, UNCHANGED AND IMPORTANT: the owner's symptom is NOT proven fixed in rendered play.**
+  No rendered click has been observed resolving a Matter deposit. Editor automation only — not
+  packaged, not played, no human acceptance. A GUI session is the next evidence.
+* 2026-09-02 — **PROTOCOL RULE ADOPTED: a freeze that may include NEW files must use a STATUS-BASED
+  derivation, never a diff-based one.** `git diff` cannot see untracked files, and that single fact
+  caused THREE failures on 2026-09-02: (1) an orphan test file invisible to a `git diff` sweep that
+  would have tripped the automation gate; (2) the coordinator splitting a bundled change with
+  `git diff` and silently dropping FOUR new files including a header the build could not find —
+  caught in ninety seconds by compiling, where three review rounds had not; (3) the Git task hitting
+  it inside its own post-landing verification, where `git diff <commit>` reported those new files as
+  382 deletions that did not exist. Correct shape:
+  `git status --porcelain | awk '{print $2}' | sort | xargs shasum -a 256`. A diff-derived digest is
+  valid ONLY for the tracked subset and must be labelled so. CROSS-CHECK worth keeping: the full
+  commit's patch ID differs from a tracked-only card, but
+  `git show <commit> -- <tracked paths> | git patch-id --stable` reproduces the card exactly —
+  proving the tracked half of what landed is the reviewed diff while the new files are genuinely
+  additional. Neither number alone establishes that.
+
+## From `InitialReleaseRequirements.md`
+
+
+* 2026-09-03 — Direct owner instruction to carry inferred requirements alongside stated ones, with the
+  post-release Linux and Windows versions and later discrete-GPU and graphics-option support as the worked
+  case. Added REL-PORT-001..010 and REL-PERF-019..025 as derived records constraining macOS initial-release
+  work, plus TBR-SCP-011 for the enforcement-cost decision. Most of these make an existing architectural
+  commitment testable rather than adding scope; REL-PORT-003 (case-sensitivity, Unicode normalization, and
+  reserved-name path safety), REL-PORT-006 (maintained dependency register), and REL-PORT-008 (continuous
+  guard) have no prior coverage anywhere in the project. All are OPEN; no platform, hardware, build, or
+  support claim is made or implied by their addition. Requirement derivation is now a standing step of
+  `echoes-requirements-authoring`.
+* 2026-09-02 — Direct owner instruction added the binding player-purpose and strategy expansion:
+  Corefall victory/defeat/draw; objective-based campaign outcomes; strategic decision loop; universal
+  selection/action contract; exact three-faction units, structures, abilities, research, and
+  numeric baselines; Future Well control and protocol behavior; truthful fog/world presentation;
+  faction strategy acceptance; and closure gates preventing fiction-only or purposeless elements.
+  All added requirements are OPEN; no implementation, package, human acceptance, or completion is
+  claimed by their transcription.
+* 2026-09-02 — Owner-supplied campaign and single-player AI principles were converted into binding
+  requirements for progressive capability introduction, mission variety, pacing, environmental
+  storytelling, persistent rewards, scripted-event fairness, layered AI state control, mission
+  director separation, fair information, observed-threat assessment, human-legible behavior,
+  doctrine differentiation, bounded difficulty, reconnaissance parity, recovery, and acceptance.
+  Player-issued auto-scouting and the complete resource-monitor contract were added concurrently.
+  These requirements remain OPEN; the campaign unlock/reward manifests and AI decision tables do
+  not yet exist.
+* 2026-09-02 — Ledger installed by coordinator from the owner's order. All REL-* records OPEN.
+  Open ledger tasks: REL-GOV-002 bidirectional gate mapping; incremental verbatim section
+  transcription + QA fidelity audit; TBR packet preparation (background, demo priority intact).

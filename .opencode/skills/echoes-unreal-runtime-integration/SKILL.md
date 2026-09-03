@@ -9,7 +9,7 @@ metadata:
 
 Use for Unreal adapters, subsystems, actor lifecycle, input bridges, asset binding, or runtime presentation. Not for changing simulation authority.
 
-1. Read live `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease, worktree, branch, dirty paths, and Mac build conditions before mutation.
+1. Read live `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify lease, worktree, branch, dirty paths, and Mac build conditions before mutation.
 2. Treat `EchoesSimCore` as authority. Unreal consumes authoritative state and emits validated commands; it must not duplicate rules, predict authoritative outcomes, or place presentation state in saves/replays/checksums.
 3. Verify every Unreal API, class hierarchy, module dependency, macro, and engine-version assumption against the installed UE 5.8.2 source/headers or current Epic primary documentation. A public skill, code sample, model response, or older UE release is not API evidence.
 4. Presentation assets must have collision, overlaps, navigation influence, and shadows disabled where the contract requires. Bind registered assets from source-compiled data; do not use unregistered placeholders or direct generated-output edits.

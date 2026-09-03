@@ -7,7 +7,7 @@ metadata:
 
 # Echoes research and technology
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lane lease/worktree/branch/SHA before mutation.
+Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lane lease/worktree/branch/SHA before mutation.
 
 Model prerequisite graph, cost, queue, completion, effect scope, denial reason, cancellation, faction limits, and save/replay compatibility in source-authoritative deterministic rules. Compile data; never patch generated catalogs. Test cycles/missing dependencies, duplicated application, rollback/cancel, serialization, and player-facing unlock/rejection feedback.
 

@@ -7,7 +7,7 @@ metadata:
 
 # Echoes input and controls
 
-Read `CLAUDE.md`, `Docs/GameCompletionDirective.md` Tracks E/F/G, `Docs/DemoReadinessRequirements.md` where demo work is in scope, `Docs/Archive/DevelopmentBible.md` (§Combat and controls, §Player quick start), `Docs/Archive/TechnicalArchitecture.md` (§Input and camera), `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Take no write without a current lane lease.
+Read `CLAUDE.md`, `Docs/GameCompletionDirective.md` Tracks E/F/G, `Docs/Requirements.md` where demo work is in scope, `Docs/Archive/DevelopmentBible.md` (§Combat and controls, §Player quick start), `Docs/Archive/TechnicalArchitecture.md` (§Input and camera), `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Take no write without a current lane lease.
 
 Keep input translation at the engine adapter boundary. Commands must retain simulation validation, stable ordering, authority, and replay/checksum behavior; input convenience must not bypass those contracts. Specify the intended outcome for press, release, drag, double-click, modifiers, focus activation, modal capture, pause/Escape, invalid target, and lost focus.
 

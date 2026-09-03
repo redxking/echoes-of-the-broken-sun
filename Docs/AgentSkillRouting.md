@@ -30,6 +30,9 @@ replace the implementation, playtest, evidence, or release skill for the actual 
   UI/accessibility, visual, audio, or human-acceptance review.
 - Any release-gate, readiness, regression, or completion claim uses `echoes-evidence-gate-review` and, when
   defects or release closure are involved, `echoes-regression-release-blockers`.
+- Creating, changing, deriving, or decomposing a requirement record uses `echoes-requirements-authoring`.
+  It is the only skill that writes normative requirement text, and the only one that may add an inferred
+  requirement; it never records outcomes.
 - Requirements-to-evidence mapping uses `echoes-requirements-traceability` in addition to the domain skill.
 - Third-party skills, plugins, models, or agent packages must use `echoes-third-party-agent-skill-review`
   before project-local installation or execution.

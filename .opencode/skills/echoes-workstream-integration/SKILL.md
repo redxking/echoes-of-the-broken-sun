@@ -9,7 +9,7 @@ metadata:
 
 Use when handing off, reviewing, freezing, or integrating a bounded lane slice; not for taking over adjacent lanes.
 
-1. Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/DemoReadinessRequirements.md`, `Docs/InitialReleaseRequirements.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify the exact lease, base SHA, worktree, branch, and frozen scope before any mutation.
+1. Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify the exact lease, base SHA, worktree, branch, and frozen scope before any mutation.
 2. Compare only the leased paths against the declared base. Preserve all pre-existing dirty paths and other lanes' changes. Never use broad staging, history rewrite, or conflict resolution that changes an unowned file.
 3. Confirm every changed source-data path was compiled through its official pipeline and every generated artifact is traceable to source and digest. Simulation authority cannot be moved into presentation during integration.
 4. Review the acceptance card against the actual diff, command output, artifact hashes, and required evidence class. Record mismatches as defects or unproven—not as completion.
