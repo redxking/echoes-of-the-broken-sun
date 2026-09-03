@@ -9,6 +9,7 @@
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -22,6 +23,97 @@ const FName EntityColorParameterName(TEXT("Color"));
 const FName MetallicParameterName(TEXT("Metallic"));
 const FName RoughnessParameterName(TEXT("Roughness"));
 const FName EmissiveStrengthParameterName(TEXT("EmissiveStrength"));
+const FName BaseColorMapParameterName(TEXT("BaseColorMap"));
+const FName MREMapParameterName(TEXT("MREMap"));
+const FName NormalMapParameterName(TEXT("NormalMap"));
+const FName EmissiveTintParameterName(TEXT("EmissiveTint"));
+const FName MaskedEmissiveStrengthParameterName(TEXT("MaskedEmissiveStrength"));
+const FName ViewShiftParameterName(TEXT("ViewShift"));
+
+/**
+ * Registered A3 surface-texture families (surface-textures-v8). Each family
+ * is a modulation set around the ceramic albedo the slot-colour tables were
+ * tuned against, so the existing per-slot tints keep their meaning; the
+ * family carries grain, seams, strata, lattice, or facets plus an emissive
+ * mask for its own glow. Presentation only: nothing here reaches the
+ * simulation, fog authority, saves, replays, or checksums.
+ */
+enum class ESurfaceTextureFamily : uint8
+{
+    CeramicCivic,
+    CompactMetal,
+    KharuunMineral,
+    ChoirCoherent,
+    MatterCrystal,
+};
+
+[[nodiscard]] const TCHAR* SurfaceTextureFamilyName(
+    ESurfaceTextureFamily Family)
+{
+    switch (Family)
+    {
+        case ESurfaceTextureFamily::CompactMetal:
+            return TEXT("CompactMetal");
+        case ESurfaceTextureFamily::KharuunMineral:
+            return TEXT("KharuunMineral");
+        case ESurfaceTextureFamily::ChoirCoherent:
+            return TEXT("ChoirCoherent");
+        case ESurfaceTextureFamily::MatterCrystal:
+            return TEXT("MatterCrystal");
+        case ESurfaceTextureFamily::CeramicCivic:
+        default:
+            return TEXT("CeramicCivic");
+    }
+}
+
+/**
+ * Binds one registered family's three maps to a body MID. A map that is not
+ * present in the content leaves the master's ceramic default in place and is
+ * reported once, so a partial regeneration degrades to the accepted v6 look
+ * rather than to a missing-texture checkerboard.
+ */
+void ApplySurfaceTextureFamily(
+    UMaterialInstanceDynamic* Material,
+    ESurfaceTextureFamily Family)
+{
+    if (Material == nullptr)
+    {
+        return;
+    }
+    static TSet<FString> ReportedMissing;
+    const TCHAR* FamilyName = SurfaceTextureFamilyName(Family);
+    const TPair<FName, const TCHAR*> Maps[] = {
+        {BaseColorMapParameterName, TEXT("BaseColor")},
+        {MREMapParameterName, TEXT("MRE")},
+        {NormalMapParameterName, TEXT("Normal")},
+    };
+    for (const TPair<FName, const TCHAR*>& Map : Maps)
+    {
+        const FString Path = FString::Printf(
+            TEXT("/Game/Art/Generated/Textures/T_Echoes%s_%s.T_Echoes%s_%s"),
+            FamilyName,
+            Map.Value,
+            FamilyName,
+            Map.Value);
+        UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *Path);
+        if (Texture == nullptr)
+        {
+            if (!ReportedMissing.Contains(Path))
+            {
+                ReportedMissing.Add(Path);
+                UE_LOG(
+                    LogEchoes,
+                    Warning,
+                    TEXT("[ECHOES_SURFACE_FAMILY_MISSING] family=%s map=%s path=%s fallback=ceramic"),
+                    FamilyName,
+                    Map.Value,
+                    *Path);
+            }
+            continue;
+        }
+        Material->SetTextureParameterValue(Map.Key, Texture);
+    }
+}
 constexpr float DamagePulseDurationSeconds = 0.18f;
 // SM_VFX_SelectionHalo carries its acquisition brackets out to 68 cm from its
 // own origin, so a relative scale of one draws a 68 cm halo radius.
@@ -838,6 +930,12 @@ void AEchoesEntityView::ResetOwnedMaterialParameters()
         Material->SetScalarParameterValue(MetallicParameterName, 0.0f);
         Material->SetScalarParameterValue(RoughnessParameterName, 0.5f);
         Material->SetScalarParameterValue(EmissiveStrengthParameterName, 0.0f);
+        Material->SetVectorParameterValue(
+            EmissiveTintParameterName,
+            FLinearColor::White);
+        Material->SetScalarParameterValue(
+            MaskedEmissiveStrengthParameterName, 0.0f);
+        Material->SetScalarParameterValue(ViewShiftParameterName, 0.0f);
     };
     const auto ResetArray = [&ResetMaterial](
                                 const TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials)
@@ -1911,6 +2009,43 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             const float MetallicValues[] = {0.30f, 0.48f, 0.08f, 0.22f};
             const float RoughnessValues[] = {0.34f, 0.28f, 0.52f, 0.20f};
             const float EmissiveValues[] = {0.0f, 0.0f, 0.0f, 1.8f};
+            // A3 surface families per slot. Compact: machined metal on the
+            // load-bearing slots, pale ceramic on the LIGHT plates. Kharuun
+            // and Choir carry one family across the body so strata and
+            // lattice run continuously over the silhouette.
+            const ESurfaceTextureFamily SlotFamilies[] = {
+                bChoir ? ESurfaceTextureFamily::ChoirCoherent
+                : bKharuun ? ESurfaceTextureFamily::KharuunMineral
+                           : ESurfaceTextureFamily::CompactMetal,
+                bChoir ? ESurfaceTextureFamily::ChoirCoherent
+                : bKharuun ? ESurfaceTextureFamily::KharuunMineral
+                           : ESurfaceTextureFamily::CompactMetal,
+                bChoir ? ESurfaceTextureFamily::ChoirCoherent
+                : bKharuun ? ESurfaceTextureFamily::KharuunMineral
+                           : ESurfaceTextureFamily::CeramicCivic,
+                bChoir ? ESurfaceTextureFamily::ChoirCoherent
+                : bKharuun ? ESurfaceTextureFamily::KharuunMineral
+                           : ESurfaceTextureFamily::CompactMetal};
+            // Mask-driven glow in the family's own colour: amber nodules,
+            // magenta-lilac lattice. Compact metal carries no mask.
+            const FLinearColor FamilyEmissiveTint =
+                bChoir
+                    ? FLinearColor(0.851f, 0.412f, 0.553f)
+                : bKharuun
+                    ? FLinearColor(1.0f, 0.55f, 0.12f)
+                    : FLinearColor::White;
+            const float MaskedEmissiveValues[] = {
+                bChoir ? 0.9f : bKharuun ? 0.8f : 0.0f,
+                bChoir ? 0.6f : bKharuun ? 0.5f : 0.0f,
+                bChoir ? 1.2f : bKharuun ? 1.1f : 0.0f,
+                bChoir ? 1.5f : bKharuun ? 1.3f : 0.0f};
+            const UEchoesGameUserSettings* SurfaceSettings =
+                UEchoesGameUserSettings::Get();
+            const bool bHoldSurfaceSteady =
+                SurfaceSettings != nullptr &&
+                SurfaceSettings->IsReducedMotionEnabled();
+            const float ViewShift =
+                bChoir && !bHoldSurfaceSteady ? 0.6f : 0.0f;
             for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
             {
                 UMaterialInstanceDynamic* Material =
@@ -1927,6 +2062,16 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 Material->SetScalarParameterValue(
                     EmissiveStrengthParameterName,
                     EmissiveValues[MaterialIndex]);
+                ApplySurfaceTextureFamily(Material, SlotFamilies[MaterialIndex]);
+                Material->SetVectorParameterValue(
+                    EmissiveTintParameterName,
+                    FamilyEmissiveTint);
+                Material->SetScalarParameterValue(
+                    MaskedEmissiveStrengthParameterName,
+                    MaskedEmissiveValues[MaterialIndex]);
+                Material->SetScalarParameterValue(
+                    ViewShiftParameterName,
+                    ViewShift);
             }
         }
         if (bUsingAuthoredResourceMesh && BodyMaterials.Num() >= 4)
@@ -1939,6 +2084,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             const float MetallicValues[] = {0.16f, 0.48f, 0.22f, 0.10f};
             const float RoughnessValues[] = {0.72f, 0.18f, 0.30f, 0.12f};
             const float EmissiveValues[] = {0.0f, 0.0f, 0.18f, 2.5f};
+            // A3: Matter deposit crystal on every slot; interior glow pools
+            // in cyan-white through the family mask, held steady.
+            const float MaskedEmissiveValues[] = {1.0f, 0.4f, 1.4f, 1.8f};
             for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
             {
                 UMaterialInstanceDynamic* Material =
@@ -1955,6 +2103,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 Material->SetScalarParameterValue(
                     EmissiveStrengthParameterName,
                     EmissiveValues[MaterialIndex]);
+                ApplySurfaceTextureFamily(
+                    Material, ESurfaceTextureFamily::MatterCrystal);
+                Material->SetVectorParameterValue(
+                    EmissiveTintParameterName,
+                    FLinearColor(0.56f, 0.94f, 1.0f));
+                Material->SetScalarParameterValue(
+                    MaskedEmissiveStrengthParameterName,
+                    MaskedEmissiveValues[MaterialIndex]);
+                Material->SetScalarParameterValue(ViewShiftParameterName, 0.0f);
             }
         }
         SilhouetteAccentMaterial->SetVectorParameterValue(

@@ -21,7 +21,7 @@ import echoes_texture_synth as texture_synth
 
 ART_ROOT = "/Game/Art/Generated"
 TEXTURE_ROOT = f"{ART_ROOT}/Textures"
-SURFACE_TEXTURED_REVISION = "surface-textured-v6"
+SURFACE_TEXTURED_REVISION = "surface-textured-v7"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
 WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v6"
@@ -1501,8 +1501,69 @@ def rebuild_textured_surface_master(
     )
     lib.connect_material_expressions(tinted, "", emissive, "A")
     lib.connect_material_expressions(emissive_scaled, "", emissive, "B")
+
+    # surface-textured-v7: a mask-driven emissive path independent of the
+    # team tint, so nodules, lattice edges, and crystal interiors glow in
+    # their family colour on any slot. EmissiveTint defaults to white and
+    # MaskedEmissiveStrength to zero, so every pre-v7 instance renders
+    # unchanged. ViewShift blends a Fresnel term into the masked glow for
+    # the Choir's view-shifting surfaces; the entity view zeroes it under
+    # reduced motion so the surface holds steady for that setting.
+    emissive_tint = lib.create_material_expression(
+        material, unreal.MaterialExpressionVectorParameter, -900, 820
+    )
+    emissive_tint.set_editor_property("parameter_name", "EmissiveTint")
+    emissive_tint.set_editor_property(
+        "default_value", unreal.LinearColor(1.0, 1.0, 1.0, 1.0)
+    )
+    masked_strength = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -900, 920
+    )
+    masked_strength.set_editor_property("parameter_name", "MaskedEmissiveStrength")
+    masked_strength.set_editor_property("default_value", 0.0)
+    view_shift = lib.create_material_expression(
+        material, unreal.MaterialExpressionScalarParameter, -900, 1020
+    )
+    view_shift.set_editor_property("parameter_name", "ViewShift")
+    view_shift.set_editor_property("default_value", 0.0)
+    fresnel = lib.create_material_expression(
+        material, unreal.MaterialExpressionFresnel, -760, 1020
+    )
+    fresnel.set_editor_property("exponent", 3.0)
+    fresnel.set_editor_property("base_reflect_fraction", 0.08)
+    view_blend = lib.create_material_expression(
+        material, unreal.MaterialExpressionLinearInterpolate, -600, 1000
+    )
+    view_blend.set_editor_property("const_a", 1.0)
+    lib.connect_material_expressions(fresnel, "", view_blend, "B")
+    lib.connect_material_expressions(view_shift, "", view_blend, "Alpha")
+    mask_gain = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -600, 880
+    )
+    lib.connect_material_expressions(mre_map, "B", mask_gain, "A")
+    lib.connect_material_expressions(masked_strength, "", mask_gain, "B")
+    tinted_map = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -600, 780
+    )
+    lib.connect_material_expressions(base_map, "RGB", tinted_map, "A")
+    lib.connect_material_expressions(emissive_tint, "", tinted_map, "B")
+    masked_gained = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -420, 820
+    )
+    lib.connect_material_expressions(tinted_map, "", masked_gained, "A")
+    lib.connect_material_expressions(mask_gain, "", masked_gained, "B")
+    masked_emissive = lib.create_material_expression(
+        material, unreal.MaterialExpressionMultiply, -240, 860
+    )
+    lib.connect_material_expressions(masked_gained, "", masked_emissive, "A")
+    lib.connect_material_expressions(view_blend, "", masked_emissive, "B")
+    emissive_total = lib.create_material_expression(
+        material, unreal.MaterialExpressionAdd, -60, 0
+    )
+    lib.connect_material_expressions(emissive, "", emissive_total, "A")
+    lib.connect_material_expressions(masked_emissive, "", emissive_total, "B")
     lib.connect_material_property(
-        emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+        emissive_total, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR
     )
 
     lib.layout_material_expressions(material)

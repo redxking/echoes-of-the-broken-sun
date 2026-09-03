@@ -12,7 +12,7 @@ import struct
 import zlib
 
 SIZE = 512
-REVISION_TEXTURES = "surface-textures-v7"
+REVISION_TEXTURES = "surface-textures-v8"
 
 
 # --- Deterministic PRNG / noise -------------------------------------------
@@ -230,11 +230,213 @@ def glass_scar_ground() -> dict[str, list[tuple[int, int, int]]]:
     return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 0.9)}
 
 
+# --- Tiling helpers for the v8 families --------------------------------------
+def _scatter(seed: int, count: int) -> list[tuple[float, float]]:
+    rng = Xorshift(seed)
+    return [(rng.next_float() * SIZE, rng.next_float() * SIZE) for _ in range(count)]
+
+
+def _wrapped_distance(px: float, py: float, qx: float, qy: float) -> float:
+    dx = abs(px - qx)
+    dy = abs(py - qy)
+    if dx > SIZE * 0.5:
+        dx = SIZE - dx
+    if dy > SIZE * 0.5:
+        dy = SIZE - dy
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def _nearest_two(px: float, py: float, points: list[tuple[float, float]]) -> tuple[int, float, float]:
+    """Index and distance of the nearest point, plus the second distance."""
+    best_index, best, second = -1, 1e9, 1e9
+    for index, (qx, qy) in enumerate(points):
+        d = _wrapped_distance(px, py, qx, qy)
+        if d < best:
+            second = best
+            best, best_index = d, index
+        elif d < second:
+            second = d
+    return best_index, best, second
+
+
+def compact_metal() -> dict[str, list[tuple[int, int, int]]]:
+    """Compact machined metal: brushed grain, milled panel seams, and a
+    painted status band whose edges have chipped back to bare metal.
+    Engineered load paths — nothing organic, every seam a real joint."""
+    seed = 505
+    base, height, mre = [], [], []
+    panel_u, panel_v = 5, 3
+    band_lo, band_hi = 0.62, 0.72
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            pu, pv = (u * panel_u) % 1.0, (v * panel_v) % 1.0
+            seam = min(pu, 1 - pu, pv, 1 - pv)
+            seam_mask = max(0.0, 1.0 - seam / 0.018)
+            brush = 0.5 + 0.5 * math.sin(v * SIZE * 1.7 + fbm(u * 3, v * 140, seed + 1) * 6.0)
+            grain = fbm(u * 180, v * 6, seed + 2) * 0.12 + brush * 0.05
+            in_band = band_lo <= v <= band_hi
+            chip = fbm(u * 70, v * 70, seed + 4)
+            band_edge = min(abs(v - band_lo), abs(v - band_hi))
+            chipped = in_band and chip > 0.66 - min(0.22, (0.012 / max(band_edge, 0.002)) * 0.08)
+            painted = in_band and not chipped
+            tone = 0.70 + grain
+            if painted:
+                r, g, b = 0.90 + grain * 0.4, 0.91 + grain * 0.4, 0.92 + grain * 0.4
+            else:
+                r, g, b = tone * 0.97, tone, tone * 1.03
+            r *= 1.0 - seam_mask * 0.55
+            g *= 1.0 - seam_mask * 0.55
+            b *= 1.0 - seam_mask * 0.55
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(-seam_mask * 0.6 + (0.08 if painted else 0.0) + grain * 0.3)
+            metallic = 0.10 if painted else 0.86
+            rough = (0.52 if painted else 0.36) + (0.16 if chipped else 0.0) + seam_mask * 0.2 + grain * 0.4
+            mre.append((_clamp8(metallic), _clamp8(min(1.0, rough)), 0))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 2.2)}
+
+
+def kharuun_mineral() -> dict[str, list[tuple[int, int, int]]]:
+    """Kharuun grown mineral: warped strata bands in charcoal and dark
+    umber, with translucent amber nodules that carry the family's glow.
+    Inhabited and maintained — the bands are worn smooth along the grain."""
+    seed = 606
+    nodules = _scatter(seed + 7, 34)
+    base, height, mre = [], [], []
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            warp = fbm(u * 5, v * 5, seed + 1) * 0.9
+            strata = math.sin((v * 9.0 + warp) * math.tau)
+            band = 0.5 + 0.5 * strata
+            amber_layer = max(0.0, strata - 0.55) / 0.45
+            grit = fbm(u * 60, v * 60, seed + 3)
+            _index, d, _second = _nearest_two(x, y, nodules)
+            nodule = max(0.0, 1.0 - d / 22.0)
+            nodule_core = nodule * nodule
+            r = 0.60 + band * 0.20 + amber_layer * 0.16 + grit * 0.05
+            g = 0.58 + band * 0.18 + amber_layer * 0.06 + grit * 0.045
+            b = 0.57 + band * 0.15 - amber_layer * 0.08 + grit * 0.04
+            r = r * (1.0 - nodule) + (0.96 + nodule_core * 0.04) * nodule
+            g = g * (1.0 - nodule) + (0.70 + nodule_core * 0.12) * nodule
+            b = b * (1.0 - nodule) + (0.34 + nodule_core * 0.10) * nodule
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(band * 0.28 + nodule_core * 0.6 + grit * 0.12)
+            rough = 0.64 + grit * 0.14 - amber_layer * 0.1
+            rough = rough * (1.0 - nodule) + 0.26 * nodule
+            emissive = nodule_core * 0.9
+            mre.append((_clamp8(0.04), _clamp8(max(0.05, min(1.0, rough))), _clamp8(emissive)))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 2.4)}
+
+
+def choir_coherent() -> dict[str, list[tuple[int, int, int]]]:
+    """Hollow Choir coherent-light surface: a near-black body carrying a
+    luminous edge lattice, every line accompanied by an offset duplicate —
+    the deliberate contradiction of a structure held possible."""
+    seed = 707
+    base, height, mre = [], [], []
+    cells = 6
+    offset = 0.035
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            drift = fbm(u * 3, v * 3, seed + 1) * 0.08
+            cu, cv = ((u + drift) * cells) % 1.0, ((v - drift) * cells) % 1.0
+            edge = min(cu, 1 - cu, cv, 1 - cv)
+            line = max(0.0, 1.0 - edge / 0.012)
+            du, dv = ((u + drift + offset) * cells) % 1.0, ((v - drift + offset * 0.6) * cells) % 1.0
+            edge2 = min(du, 1 - du, dv, 1 - dv)
+            line2 = max(0.0, 1.0 - edge2 / 0.008) * 0.55
+            lattice = min(1.0, line + line2)
+            body = 0.56 + fbm(u * 18, v * 18, seed + 4) * 0.10
+            r = body * 0.97 + lattice * 0.40
+            g = body * 0.95 + lattice * 0.36
+            b = body * 1.04 + lattice * 0.44
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(line * 0.35 - line2 * 0.2)
+            rough = 0.18 + fbm(u * 40, v * 40, seed + 6) * 0.1 + lattice * 0.12
+            mre.append((_clamp8(0.0), _clamp8(min(1.0, rough)), _clamp8(lattice)))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.8)}
+
+
+def matter_crystal() -> dict[str, list[tuple[int, int, int]]]:
+    """Matter deposit crystal: tiled facets with bright cleavage edges and
+    a cyan-white interior glow that pools toward each facet's centre."""
+    seed = 808
+    facets = _scatter(seed + 3, 52)
+    slopes = [(Xorshift(seed + 11 + i).next_float() - 0.5, Xorshift(seed + 37 + i).next_float() - 0.5) for i in range(len(facets))]
+    base, height, mre = [], [], []
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            index, d, second = _nearest_two(x, y, facets)
+            edge = max(0.0, 1.0 - (second - d) / 4.0)
+            interior = max(0.0, 1.0 - d / max(12.0, second * 0.9))
+            fx, fy = facets[index]
+            sx, sy = slopes[index]
+            dx, dy = x - fx, y - fy
+            if dx > SIZE * 0.5:
+                dx -= SIZE
+            elif dx < -SIZE * 0.5:
+                dx += SIZE
+            if dy > SIZE * 0.5:
+                dy -= SIZE
+            elif dy < -SIZE * 0.5:
+                dy += SIZE
+            plane = (dx * sx + dy * sy) / SIZE
+            shimmer = fbm(u * 30, v * 30, seed + 5) * 0.06
+            r = 0.50 + interior * 0.22 + edge * 0.34 + shimmer
+            g = 0.60 + interior * 0.30 + edge * 0.36 + shimmer
+            b = 0.64 + interior * 0.32 + edge * 0.36 + shimmer
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(plane * 4.0 - edge * 0.5)
+            rough = 0.12 + edge * 0.22 + shimmer
+            emissive = interior ** 1.6 * 0.85 + edge * 0.3
+            mre.append((_clamp8(0.05), _clamp8(min(1.0, rough)), _clamp8(min(1.0, emissive))))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.6)}
+
+
+def verge_scored() -> dict[str, list[tuple[int, int, int]]]:
+    """Folded Verge plate wear: parallel scoring where displaced plates have
+    ground across each other, with ash drifts settled in the gouges.
+    Wear is history — the scoring follows the plates' travel, not the grid."""
+    seed = 909
+    base, height, mre = [], [], []
+    angle = 0.42
+    ca, sa = math.cos(angle), math.sin(angle)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            along = (u * ca + v * sa)
+            across = (-u * sa + v * ca)
+            jitter = fbm(along * 6, across * 90, seed + 2) * 0.012
+            score_phase = ((across + jitter) * 54.0) % 1.0
+            score = max(0.0, 1.0 - abs(score_phase - 0.5) / 0.09)
+            score_gate = 1.0 if fbm(along * 2.5, across * 14, seed + 5) > 0.42 else 0.0
+            score *= score_gate
+            drift = max(0.0, fbm(u * 7, v * 7, seed + 8) - 0.55) / 0.45
+            drift *= 1.0 - score * 0.5
+            plate = 0.74 + fbm(u * 22, v * 22, seed + 1) * 0.12
+            r = plate * 1.02 - score * 0.26 + drift * 0.16
+            g = plate * 1.0 - score * 0.26 + drift * 0.15
+            b = plate * 1.04 - score * 0.26 + drift * 0.13
+            base.append((_clamp8(r), _clamp8(g), _clamp8(b)))
+            height.append(-score * 0.5 + drift * 0.25)
+            rough = 0.82 - score * 0.3 + drift * 0.14
+            mre.append((_clamp8(0.03), _clamp8(max(0.05, min(1.0, rough))), 0))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 1.9)}
+
+
 FAMILIES = {
     "T_EchoesCeramicCivic": ceramic_civic,
     "T_EchoesVitrifiedGlass": vitrified_glass,
     "T_EchoesCausewayAsh": causeway_ash,
     "T_EchoesGlassScarGround": glass_scar_ground,
+    "T_EchoesCompactMetal": compact_metal,
+    "T_EchoesKharuunMineral": kharuun_mineral,
+    "T_EchoesChoirCoherent": choir_coherent,
+    "T_EchoesMatterCrystal": matter_crystal,
+    "T_EchoesVergeScored": verge_scored,
 }
 
 
@@ -252,8 +454,11 @@ if __name__ == "__main__":
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "Content", "Art", "Source", "Textures",
     )
+    only = set(sys.argv[2:])
     os.makedirs(out_dir, exist_ok=True)
     for family in FAMILIES:
+        if only and family not in only:
+            continue
         for suffix, payload in render_family(family).items():
             path = os.path.join(out_dir, f"{family}_{suffix}.png")
             action = "written"
