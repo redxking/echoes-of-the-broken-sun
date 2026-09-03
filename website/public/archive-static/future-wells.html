@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Future Wells | Echoes of the Broken Sun</title>
+  <meta name="description" content="See the Future Well in Unreal, understand Harvest, Preserve, and Reshape, and learn how each decision changes the campaign in Echoes of the Broken Sun.">
+  <link rel="stylesheet" href="styles.css?v=20260829l">
+  <link rel="stylesheet" href="pages.css?v=20260829l">
+  <link rel="stylesheet" href="contrast.css?v=20260829l">
+</head>
+<body class="detail-page">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a href="index.html" class="brand"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
+    <div class="nav-links">
+      <a href="story.html">Story</a>
+      <a href="characters.html">Characters</a>
+      <a href="factions.html">Factions</a>
+      <a href="glass-scar.html">World</a>
+      <a href="arsenal.html">Arsenal</a>
+      <a href="campaign.html">Campaign</a>
+      <a href="updates.html">Updates</a>
+    </div>
+  </nav>
+
+  <main id="main-content" class="page-main">
+    <header class="page-hero">
+      <span class="section-kicker">World archive / Signature objective</span>
+      <h1>One place.<br><em>Four visible futures.</em></h1>
+      <p class="lead">A Future Well is a wound in reality where several possible histories remain alive at once. Armies fight around it because choosing what the Well becomes can save a city, reveal a hidden route, or erase something the world may never recover.</p>
+      <div class="status-note"><strong>Art status:</strong> The Well now has original concept direction and four authored Unreal static-mesh parts with distinct Dormant, Harvest, Preserve, and Reshape presentations. The direct engine captures on this page show the current vertical-slice candidate. Final materials, detailed textures, destruction, effects, audio, animation polish, and player testing remain in development.</div>
+    </header>
+
+    <section class="content-band well-spotlight">
+      <div class="well-spotlight-copy">
+        <span class="section-kicker">01 / A landmark outside the factions</span>
+        <h2>Ancient.<br><em>Deliberate. Unclaimed.</em></h2>
+        <p>The Meridian Compact builds with visible engineering. The Kharuun Assemblies cultivate mineral-organic forms. The Future Well uses neither language. Its six broken pylons hold an impossible central light while incomplete rings turn around a space that should not exist.</p>
+        <p>From the strategy camera, the broad crown identifies the objective. The center and rings show its condition. Ground paths reveal whether possibility is being drained, held, or bent into another road.</p>
+        <dl class="well-anatomy">
+          <div><dt>Broken crown</dt><dd>Six pylons establish a large, neutral silhouette that belongs to the world rather than a player.</dd></div>
+          <div><dt>Suspended core</dt><dd>A faceted piece of impossible sunlight shows whether the Well is stable, pinched, or divided.</dd></div>
+          <div><dt>Orbital rings</dt><dd>Alignment, collapse, expansion, and crossed planes communicate state through geometry.</dd></div>
+          <div><dt>Ground paths</dt><dd>Luminous routes point inward during Harvest and spread outward during Preserve or Reshape.</dd></div>
+        </dl>
+      </div>
+      <figure class="well-concept">
+        <picture>
+          <source type="image/webp" srcset="assets/concepts/future-well-states.webp?v=20260829h">
+          <img src="assets/concepts/future-well-states.png?v=20260829h" width="1254" height="1254" loading="lazy" decoding="async" alt="Four-part concept direction sheet for a Future Well, with dormant, inward-collapsing Harvest, open Preserve, and crossed-plane Reshape forms.">
+        </picture>
+        <figcaption><b>Four-state concept direction</b><span>Generated reference · not gameplay</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="dark-band">
+      <span class="section-kicker">02 / Current Unreal implementation</span>
+      <div class="section-head">
+        <h2>The choice should<br>read before the color.</h2>
+        <p>Each capture below comes directly from the current Unreal Engine Metal build. Color supports the message, but ring position, core shape, and ground geometry carry it first.</p>
+      </div>
+
+      <div class="well-state-grid">
+        <article class="well-state-card">
+          <figure><picture><source type="image/webp" srcset="assets/engine/future-well-dormant-in-engine.webp?v=20260829h"><img src="assets/engine/future-well-dormant-in-engine.png?v=20260829h" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal capture of a dormant Future Well with aligned pale rings, a compact core, and no active ground path."></picture></figure>
+          <div class="well-state-body">
+            <span class="well-state-number">00</span>
+            <small>Unchosen state</small>
+            <h3>Dormant</h3>
+            <div class="well-state-role">Aligned rings · Quiet core · No claimed path</div>
+            <p>The Well waits without promising that every future inside it can be saved. Reaching it gives the player a decision, not an automatic reward.</p>
+            <div class="well-state-facts"><span>Battlefield meaning<b>Decision available</b></span><span>Visual motion<b>Restrained</b></span></div>
+          </div>
+        </article>
+
+        <article class="well-state-card">
+          <figure><picture><source type="image/webp" srcset="assets/engine/future-well-harvest-in-engine.webp?v=20260829h"><img src="assets/engine/future-well-harvest-in-engine.png?v=20260829h" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal capture of a harvested Future Well with rings collapsed inward, a narrow bright core, and an orange inward path."></picture></figure>
+          <div class="well-state-body">
+            <span class="well-state-number">01</span>
+            <small>Immediate power</small>
+            <h3>Harvest</h3>
+            <div class="well-state-role">Collapsed rings · Pinched core · Inward drain</div>
+            <p>Harvest takes power now. The structure folds toward its center as the available possibility is consumed. In the current source prototype, Harvest applies as soon as the worker reaches and interacts with the Well, granting the authored 500 Dawn and leaving the Well permanently collapsed. A 180-tick public telegraph is a design target; it is not implemented in the accepted runtime.</p>
+            <div class="well-state-facts"><span>Current value<b>500 Dawn</b></span><span>Long-term result<b>Possibility erased</b></span></div>
+          </div>
+        </article>
+
+        <article class="well-state-card">
+          <figure><picture><source type="image/webp" srcset="assets/engine/future-well-preserve-in-engine.webp?v=20260829h"><img src="assets/engine/future-well-preserve-in-engine.png?v=20260829h" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal capture of a preserved Future Well with expanded balanced rings, a broad cyan-gold core, and stable outward paths."></picture></figure>
+          <div class="well-state-body">
+            <span class="well-state-number">02</span>
+            <small>Sustained possibility</small>
+            <h3>Preserve</h3>
+            <div class="well-state-role">Expanded halo · Stable core · Branching paths</div>
+            <p>Preserve keeps the Well open, but the choice is not automatically gentle. Someone must hold the ground. The current prototype returns 15 Dawn every 300 ticks and provides a 1,400 cm intelligence radius while controlled.</p>
+            <div class="well-state-facts"><span>Current value<b>15 Dawn / interval</b></span><span>Strategic cost<b>Must be defended</b></span></div>
+          </div>
+        </article>
+
+        <article class="well-state-card">
+          <figure><picture><source type="image/webp" srcset="assets/engine/future-well-reshape-in-engine.webp?v=20260829h"><img src="assets/engine/future-well-reshape-in-engine.png?v=20260829h" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal capture of a reshaped Future Well with intersecting tilted rings, a divided violet-cyan core, and crossed ground paths."></picture></figure>
+          <div class="well-state-body">
+            <span class="well-state-number">03</span>
+            <small>Temporary terrain</small>
+            <h3>Reshape</h3>
+            <div class="well-state-role">Crossed planes · Divided core · Bent road</div>
+            <p>Reshape borrows a road, bridge, cavern, or cover line from a future that almost existed. In the current source prototype, the choice applies as soon as the worker reaches and interacts with the Well, costs the authored 120 Dawn, and keeps the change open for 1,800 ticks. The 180-tick public telegraph and a player-visible pre-expiry warning are design targets; neither is implemented in the accepted runtime.</p>
+            <div class="well-state-facts"><span>Current cost<b>120 Dawn</b></span><span>Current duration<b>1,800 ticks</b></span></div>
+          </div>
+        </article>
+      </div>
+      <p class="prototype-data">Ticks are deterministic simulation units, not a promise about final match pacing. The economy and active-duration values are current authored data; the telegraph and warning remain unimplemented design targets. All remain subject to balance and usability testing.</p>
+    </section>
+
+    <section class="content-band">
+      <span class="section-kicker">03 / The campaign remembers</span>
+      <div class="section-head">
+        <h2>A decision is<br><em>not finished when clicked.</em></h2>
+        <p>The opening campaign records what the player chose and carries that fact into later operations. It changes routes, priorities, and what each side believes the earlier decision meant.</p>
+      </div>
+
+      <article class="campaign-consequence">
+        <div class="mission-number">M01</div>
+        <div><h3>What the Ledger Keeps</h3><p>Mara Vey recovers a lost archive, reaches the Glass Scar Well, commits one protocol, and withdraws. Destroying everything is not the objective.</p></div>
+        <p class="consequence-note">The first irreversible choice is written to the campaign record: Harvest, Preserve, or Reshape.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M02</div>
+        <div><h3>Seven Accounts of Rain</h3><p>Oruun enters from the Kharuun side. The earlier choice changes the available terrain and where memory can be recovered.</p></div>
+        <p class="consequence-note">The same event becomes evidence in another culture’s history, not a clean good-or-evil result.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M03</div>
+        <div><h3>A City on Reserve</h3><p>Lume Reach cannot power every district at once. The Well decision changes which continuity priority—life support, transit, or archive—comes first.</p></div>
+        <p class="consequence-note">The player must reconnect real districts; victory is measured by powered systems and survival.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M04</div>
+        <div><h3>The Unburied Road</h3><p>Only one Glass Scar crossing remains available. The Kharuun must move a Waystone, establish listening infrastructure, and recover a shard along that inherited route.</p></div>
+        <p class="consequence-note">Harvest opens Ash Cut, Preserve leaves the Buried Causeway, and Reshape creates the Folded Verge.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M05</div>
+        <div><h3>Terms of Continuance</h3><p>A treaty operation buckles under unresolved pressure while Meridian personnel synchronize two interfaces and protect both witnesses through a fixed survival window.</p></div>
+        <p class="consequence-note">The operation consumes the same four-record history. It opens the campaign’s larger mystery, but the current mission does not identify the attacker.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M06</div>
+        <div><h3>Names Without Births</h3><p>Talar follows an erased census into one of three inherited records: the Foundry Roll, Missing Quarter, or Folded Register. He must locate the evidence before a worker can restore archive power.</p></div>
+        <p class="consequence-note">Both civilian proxies must reach shelter before Talar extracts the record. The evidence proves that names are missing—not who removed them, why they vanished, or whether one hidden enemy is responsible.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M07</div>
+        <div><h3>The Shape of Silence</h3><p>The first Well decision selects Cinder Hollow, Held Hollow, or Folded Hollow. Oruun relocates a Waystone, raises listening infrastructure, positions two witnesses, and reaches their confluence.</p></div>
+        <p class="consequence-note">The result records an observed correspondence between the census absence and communal-memory hollow. It does not prove cause, hidden authorship, or a Choir identity.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M08</div>
+        <div><h3>The Shape Beside Us</h3><p>The inherited choice selects one of three echo geometries. Talar, a relay worker, and two distinct witnesses make reciprocal contact repeatable through ordinary movement and construction.</p></div>
+        <p class="consequence-note">The contact is actionable inside the authored operation, but Mission 08 does not establish a unified Choir identity or grant Choir command.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M09</div>
+        <div><h3>Reserve Authority</h3><p>The inherited Well doctrine sets Mara’s authority site and recommends Life Support, Transit, or Archive without forcing the allocation. Exactly two districts can receive the finite reserve.</p></div>
+        <p class="consequence-note">The intact unpowered district remains visible and enters the ninth record. This establishes one local decision, not wider-city recovery or civilian-survival evidence.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M10</div>
+        <div><h3>The Choir at Lume Reach</h3><p>The founding doctrine selects public contact and Mission 09’s deferred district becomes the local liability. Oruun re-roots the Waystone, raises two Listening Spines, and commits a separate Harvest, Preserve, or Reshape protocol at the Lume Well.</p></div>
+        <p class="consequence-note">The tenth record preserves that new Lume decision. Mara remains off-map, the Choir is public contact rather than commandable in Mission 10, and Meridian opposition does not prove Compact-wide action.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M11</div>
+        <div><h3>No Neutral Ledger</h3><p>The founding route, Mission 09’s exact powered-district pair, and Mission 10’s Lume protocol produce 27 plans. Oruun’s Kharuun force links neutral district interfaces, attests neutral public evidence endpoints, applies only the recorded protocol, and rallies.</p></div>
+        <p class="consequence-note">The eleventh record proves one bounded local coalition assembly—not mixed-faction command, Choir authority in Mission 11, hidden trust, or a modeled survivor roster.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M12</div>
+        <div><h3>The Future That Won</h3><p>Oruun and an independent Kharuun verifier establish paired readback, workers complete two exact links near the inherited district inputs, and a separate Future Well accepts only the recorded Lume protocol. After a 300-tick stability hold, the scouts observe both district sites.</p></div>
+        <p class="consequence-note">The twelfth record establishes local protocol activation and paired readback only—not population restoration, permanence, civilian survival, consent, trust, mixed-faction command, or playable Rhyse.</p>
+      </article>
+      <article class="campaign-consequence">
+        <div class="mission-number">M13</div>
+        <div><h3>Assembly of the Missing</h3><p>The exact twelve-record ledger carries the founding doctrine, powered-district pair, and recorded Lume protocol into paired public-record readback. Oruun’s Kharuun force links the neutral Crownfall public index and observes two separate assembly witness sites.</p></div>
+        <p class="consequence-note">The Lume protocol is inherited as a fact, but this operation offers no selectable Well. Its thirteenth record establishes only bounded public readback, linkage, and observation—not responsibility, authorship, trust, consent, civilian or survivor state, mixed-faction command, or Choir authority in Mission 13.</p>
+      </article>
+
+      <article class="campaign-consequence">
+        <div class="mission-number">M14</div>
+        <div><h3>Several Voices, One Command</h3><p>The exact thirteen-record ledger carries the recorded protocol into a Hollow Choir command crisis. A Possible voice, a Manifest voice, and Neme occupy separate inherited sites before Shared Resolution permits a Phase Anchor and a 160-fixed-tick hold.</p></div>
+        <p class="consequence-note">Mission 14 offers no new Well choice. Its fourteenth record proves only the bounded command-crisis contract—not the Choir’s final fate, a permanent unified identity, broad faction balance, or campaign completion.</p>
+      </article>
+
+      <article class="campaign-consequence">
+        <div class="mission-number">M15</div>
+        <div><h3>The Broken Sun</h3><p>The exact fourteen-record ledger carries the founding doctrine, powered-district pair, and recorded Lume protocol into an explicit earned set of Restoration, Controlled Stabilization, Extinguishment, and Open Evolution. One selected resolution requires its own conduit and fixed-step hold.</p></div>
+        <p class="consequence-note">The fifteenth record stores one named ending, its availability mask, and its stable plan key. One plan-07 Controlled Stabilization route is covered by bounded automation; this is not ordinary play or release evidence, and unchosen endings and wider social consequences are not inferred.</p>
+      </article>
+
+      <div class="status-note"><strong>Campaign boundary:</strong> These fifteen operations exist as bounded development missions with deterministic rules and automated coverage. One downstream route reaches one recorded ending; alternate routes and endings do not have complete playthrough evidence. This is not an ordinary-player-completed campaign, final dialogue, cinematics, broad player-tested balance, or a finished release.</div>
+    </section>
+
+    <section class="dark-band">
+      <span class="section-kicker">04 / Readability contract</span>
+      <div class="section-head">
+        <h2>Understandable at<br>strategy distance.</h2>
+        <p>A landmark this important cannot depend on tiny details or a single color. Its state must survive camera distance, motion settings, display variation, and the visual noise of a battle.</p>
+      </div>
+      <div class="readability-contract">
+        <article><h3>Shape first</h3><p>Collapsed, expanded, and crossed ring layouts remain different in grayscale and at the normal RTS camera angle.</p></article>
+        <article><h3>Color second</h3><p>Gold, orange, cyan, and violet reinforce meaning without carrying the whole message.</p></article>
+        <article><h3>Motion optional</h3><p>Reduced-motion mode freezes the orbit and pulse while preserving the selected state’s geometry.</p></article>
+      </div>
+      <a class="back" href="glass-scar.html">Continue to the Glass Scar and its three inherited roads →</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand" href="index.html"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
+    <span>World archive · Concept targets and current engine captures clearly labeled</span>
+  </footer>
+</body>
+</html>

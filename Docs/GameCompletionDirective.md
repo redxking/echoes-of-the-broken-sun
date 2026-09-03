@@ -762,8 +762,9 @@ Add to this list rather than guessing. Each entry needs the question, the option
    **RESOLVED 2026-09-01 (Angelis):** Space Grotesk for interface chrome + IBM Plex Mono for
    tactical readouts, both SIL OFL 1.1, licenses vendored into `Docs/` and recorded in
    `AssetRegister.md` on first embedding. No paid or original commission needed.
-3. **`site/` versus `website/`** (blocks J2). Two web properties exist. Decide the authoritative one,
-   fold or retire the other, and record where it is hosted and deployed.
+3. **`site/` versus `website/`** (blocks J2). Two web properties exist. 
+   **RESOLVED 2026-09-03 (Angelis):** Consolidated. Retained `website/` as the sole framework host running Next.js/Vite to fulfill Track J requirements. Migrated all core content assets and HTML pages from `site/` into `website/public/` to prevent loss of marketing copy and imagery. `site/` has been purged from the repository.
+
 4. **Niagara adoption** (A6). Permitted only where mesh VFX cannot carry an effect; each system is a
    recorded provenance and performance exception.
 5. **Difficulty options** (F1). The Bible allows assisted levels with labeled modifiers. Confirm which

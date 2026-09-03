@@ -1,0 +1,14 @@
+/* Accessibility safety layer: explicit text colors avoid inherited opacity. */
+.light .section-kicker,
+.content-band .section-kicker,
+.tint-band .section-kicker,
+.page-hero .section-kicker { color: #286b61; }
+
+.dark .section-kicker,
+.dark-band .section-kicker,
+.story-feature .section-kicker { color: #9ce9dd; }
+
+.light p, .content-band p, .tint-band p, .page-hero p { color: #344349; }
+.dark p, .dark-band p, .story-feature p { color: #cbd5d7; }
+.content-band .route-card p { color: #cbd5d7; }
+.site-footer span { color: #bac6c9; }
