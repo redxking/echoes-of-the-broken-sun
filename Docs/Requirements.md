@@ -149,36 +149,36 @@ requirements, so those release records stand on their own authority until the sp
 ## Specification Blueprint & Structural Framework
 
 The normative requirements of *Echoes of the Broken Sun* are divided into two primary parts:
-* **Part I — Core Specifications (`SPEC-*`):** Sections 1 through 31 define the deterministic simulation core, unit archetypes, game rules, and world systems.
+* **Part I — Core Specifications (`SPEC-*`):** Sections §1 through §31 define the deterministic simulation core, unit archetypes, game rules, and world systems.
 * **Part II — Release Specifications (`REL-*`):** Sections §6 through §26 define commercial release requirements, content tracks, platform packaging, and QA gates.
 
 ### Core Architectural Pillars
 * **Governance and Change Control:** Single source of truth, normative language (*shall* / *may*), zero silent invention, and atomic inline changes (governed by `SPEC-AUTH-001..006` and `REL-GOV-001..015`).
 * **Visual-Auditory Infrastructure:** Silhouette-first tactical readability, 5-color palette, matte terrain (roughness $\ge 0.85$), and BS.1770-4 audio mastering at -16 LUFS (governed by `SPEC-ART-*`, `SPEC-AUD-*`, `REL-ART-*`, and `REL-AUD-*`).
-* **Economy and Logistics:** Matter harvesting on a calibrated 20-tick cadence, deposit saturation, fail-closed Dawn accounting, and 200-cap Logistics networks (governed by `SPEC-RES-*`, `SPEC-LOG-*`, and `REL-ECO-001..020`).
-* **Movement, Control, and Micro-Management:** Any-angle string-pulled movement, soft separation, 3-tick command responsiveness, and micro-management honoring (governed by `SPEC-MOV-001..013`, `SPEC-CTL-001..019`, and `REL-CMB-001..029`).
-* **Tactical Interface and Interaction:** Production UMG/Slate framework, 3x3 command card, 7-target screen resolution matrix (1280x720 to 2560x1440), and 80%–150% UI scaling (governed by `SPEC-UI-*`, `SPEC-HUD-*`, and `REL-UI-001..026`).
+* **Economy and Logistics:** Matter harvesting on a calibrated 20-tick cadence, deposit saturation, fail-closed Dawn accounting, and 200-cap Logistics networks (governed by `SPEC-RES-*` and `REL-ECO-001..017`).
+* **Movement, Control, and Micro-Management:** Any-angle string-pulled movement, soft separation, 3-tick command responsiveness, and micro-management honoring (governed by `SPEC-MOV-001..013`, `SPEC-CTL-001..019`, and `REL-CMB-001..027`).
+* **Tactical Interface and Interaction:** Production UMG/Slate framework, 3x3 command card, 7-target screen resolution matrix (1280x720 to 2560x1440), and 80%–150% UI scaling (governed by `SPEC-UI-*` and `REL-UI-001..024`).
 
 ---
 
 ## Part III — Atomic Acceptance Card Template Blueprint
 
-Every requirement row in active phase development must populate this data-contract verification layout before moving from `IN PROGRESS` to `AGENT VERIFIED` [5]:
+Every requirement row in active phase development must populate this data-contract verification layout before moving from `IN PROGRESS` to `AGENT VERIFIED`:
 
 ### [Acceptance Card: REL-CMB-019.SIG — Contextual Selection Pick]
-* **.PRE (Preconditions):** Packaged `arm64` shipping configuration build running on baseline Mac local hardware [5, 7]. Active selection contains exactly 3 Meridian Lancer units [10]. Camera is tracking at standard RTS distance zoom heights [7].
-* **.ACT (Actions):** Issue a right-click targeted command directly at the top 15% visual edge of a moving Kharuun Riftstalker silhouette [5, 10]. Intentionally mis-click 5 pixels off the visual mesh boundary into open vitrified ground [5].
-* **.AUTH (Authoritative Results):** Layer 1 Pick trace intercept validates target entity pointer ID successfully; issues explicit combat order line [5]. Layer 2 click fallback algorithm catches the proximity vector; confirms target entity instead of triggering standard terrain Move [5].
-* **.VIS (Visual Presentation):** A targeted cyan targeting ring wraps the enemy silhouette instantly upon order entry [5, 6].
-* **.AUD (Audio Feedback):** Meridian Operations Annunciator fires the brief acknowledgment cue via the interface audio submix bus [3].
-* **.FAIL (Failure Behavior):** Clicking empty ground outside the 12px fallback boundary safely executes a standard Move; tracking sigils display on the ground mesh surface [5].
-* **.PERF (Performance):** Projection matrix math checks remain under ≤0.5ms on the core loop thread.
-* **.AUTO (Automation Test):** Verification suite runs exact projection matrix math inside `EchoesPlayerControllerTest.cpp`; asserts zero thread leaks [5].
-* **.PKG (Packaged Test):** Physical interaction testing verified clean across the full `REL-UI-013` screen resolution profile matrix [5].
-* **.HUM (Human Usability):** Testing shows 5/5 naive users execute targeted focus-firing patterns on moving actors without click frustration [5, 8].
+* **REL-CMB-019.PRE (Preconditions):** Packaged `arm64` shipping configuration build running on baseline Mac local hardware. Active selection contains exactly 3 Meridian Lancer units. Camera is tracking at standard RTS distance zoom heights.
+* **REL-CMB-019.ACT (Actions):** Issue a right-click targeted command directly at the top 15% visual edge of a moving Kharuun Riftstalker silhouette. Intentionally mis-click 5 pixels off the visual mesh boundary into open vitrified ground.
+* **REL-CMB-019.AUTH (Authoritative Results):** Layer 1 Pick trace intercept validates target entity pointer ID successfully; issues explicit combat order line. Layer 2 click fallback algorithm catches the proximity vector; confirms target entity instead of triggering standard terrain Move.
+* **REL-CMB-019.VIS (Visual Presentation):** A targeted cyan targeting ring wraps the enemy silhouette instantly upon order entry.
+* **REL-CMB-019.AUD (Audio Feedback):** Meridian Operations Annunciator fires the brief acknowledgment cue via the interface audio submix bus.
+* **REL-CMB-019.FAIL (Failure Behavior):** Clicking empty ground outside the 12px fallback boundary safely executes a standard Move; tracking sigils display on the ground mesh surface.
+* **REL-CMB-019.PERF (Performance):** Projection matrix math checks remain under ≤0.5ms on the core loop thread.
+* **REL-CMB-019.AUTO (Automation Test):** Verification suite runs exact projection matrix math inside `EchoesPlayerControllerTest.cpp`; asserts zero thread leaks.
+* **REL-CMB-019.PKG (Packaged Test):** Physical interaction testing verified clean across the full `REL-UI-013` screen resolution profile matrix.
+* **REL-CMB-019.HUM (Human Usability):** Testing shows 5/5 naive users execute targeted focus-firing patterns on moving actors without click frustration.
 
 
-## 1. Authority, interpretation, and change control
+## §1. Authority, interpretation, and change control
 
 * **SPEC-AUTH-001 —** Single source of truth. This document owns the complete intended player experience, game rules, content boundaries, system contracts, and acceptance criteria for the first commercial release.
 * **SPEC-AUTH-002 —** Normative language. Shall means mandatory. May means permitted. Tuning baseline means a binding starting value that may change only through documented balance review without changing the element's purpose or counterplay.
@@ -191,8 +191,7 @@ Every requirement row in active phase development must populate this data-contra
 |---|
 
 
-## 2. Product definition and release boundary
-
+## §2. Product definition and release boundary
 
 | ID | Decision | Binding definition |
 |---|---|---|
@@ -207,38 +206,28 @@ Every requirement row in active phase development must populate this data-contra
 | SPEC-PRD-009 | Expected match length | 20–35 minutes on Standard. Campaign operations target 20–45 minutes according to mission scale. |
 | SPEC-PRD-010 | Business model | Complete premium game. No advertising, loot boxes, premium currency, battle pass, gacha, or pay-to-win progression. |
 
-
-### 2.1 Included systems
-
+### §2.1 Included systems
 * All three playable factions and the exact twelve-unit/twelve-structure launch roster defined here.
 * Matter, Dawn, Logistics, construction, production, research, combat, fog, reconnaissance, terrain interaction, Future Wells, saves, replays, tutorial, accessibility, campaign persistence, and post-match reporting.
 * Professional original environments, models, animation, effects, interface, music, ambience, sound effects, character voice, in-engine cinematics, subtitles, manual, support information, signing, notarization, and clean-machine installation.
 
-### 2.2 Explicit exclusions
-
+### §2.2 Explicit exclusions
 * Multiplayer, matchmaking, accounts, social features, teams, free-for-all, cooperative campaign, and live-service systems.
 * Combat aircraft, air transports, air pathfinding, altitude combat, naval units, water combat, and amphibious systems.
 * Unrestricted burrowing. Kharuun subsurface movement is limited to visible map-authored entrance/exit passages.
 * Random weapon accuracy, random critical hits, hidden damage modifiers, and undisclosed AI information or resource advantages.
-* Skirmish heroes, persistent hero leveling, garrisons, walls, gates, structure capture, unit conversion, and Command Core reconstruction.
-* Cloud saves, achievements, controller support, user-generated content, mod tools, and alternate standard-match victory conditions.
 
-## 3. Creative canon, setting, and lore
+## §3. Creative canon, setting, and lore
 
-* **SPEC-CAN-001 —** Central theme. Echoes of the Broken Sun is about the cost of making one future real. Strategy, narrative, economy, interface, art, and sound must repeatedly express the tension between immediate survival and futures that become impossible.
-* **SPEC-CAN-002 —** Tone. The tone is urgent, humane, and occasionally dry. No faction is a proxy for good or evil. Characters act from incomplete evidence and defensible needs. Painful choices remain understandable rather than becoming morality quizzes.
+* **SPEC-CANON-015 — Central theme:** *Echoes of the Broken Sun* is about the cost of making one future real. Strategy, narrative, economy, interface, art, and sound must repeatedly express the tension between immediate survival and futures that become impossible.
+* **SPEC-CANON-016 — Tone:** The tone is urgent, humane, and occasionally dry. No faction is a proxy for good or evil. Characters act from incomplete evidence and defensible needs. Painful choices remain understandable rather than becoming morality quizzes.
 
-### 3.1 Soryn and the Crownfall
-
-
+### §3.1 Soryn and the Crownfall
 Soryn orbits a field of stellar fragments called the Crownfall. The breaking of the sun condensed unrealized causal branches into mineral-organic Dawnshards. A shard can power a city or expose a technology that never developed in the surviving timeline; consuming it also closes the possibility it contains. Future Wells are large deposits where several futures remain locally coherent.
-
 
 Probability leakage appears as duplicated shadows, memories of streets never built, tools worn by absent hands, mineral-organic growth, and temporary contradictory geometry. The Hollow Choir consists of linked consciousness retained by erased branches. The Choir is not supernatural shorthand; it is a civilization struggling to remain coherent while several incompatible futures speak through it.
 
-
-### 3.2 Historical frame
-
+### §3.2 Historical frame
 
 | ID | Era | Canon |
 |---|---|---|
@@ -248,9 +237,7 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 | SPEC-CANON-004 | Quiet Omissions | Kharuun memory-bearers and Compact historians independently discover gaps: curated ancestral memories and census references to neighborhoods that no archive contains. |
 | SPEC-CANON-005 | Present War | Unstable Wells threaten ark-city reserves and Kharuun birthing caverns. Both sides mobilize for survival; apparent anomalies become the first coherent Choir incursions. |
 
-
-### 3.3 Cultures and language
-
+### §3.3 Cultures and language
 
 | ID | Culture | Identity and language rules |
 |---|---|---|
@@ -258,9 +245,7 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 | SPEC-CANON-007 | Kharuun Assemblies | A person is present consciousness, custodian of ancestral fragments, and participant in an imperfectly combined assembly. Names describe chosen relations. Humor arises from inherited certainty colliding with present evidence. |
 | SPEC-CANON-008 | Hollow Choir | Members select stable speech from incompatible phrasings. Precision prevents one component future from dominating. Dialogue may overlap or resolve in more than one direction but must remain intelligible. |
 
-
-### 3.4 Principal characters
-
+### §3.4 Principal characters
 
 | ID | Character | Role, motivation, and dramatic pressure |
 |---|---|---|
@@ -271,41 +256,34 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 | SPEC-CANON-013 | Chancellor Cael Rhyse | Meridian political architect who can point to cities saved by controlled extraction. His effort to restore one stable future is credible governance pursued to an existentially unacceptable conclusion. |
 | SPEC-CANON-014 | Meridian Operations Annunciator | Operational system voice. It states class, location, urgency, and recovery information. It never comforts, moralizes, jokes, addresses the player as 'you,' or replaces character dialogue. |
 
-
-### 3.5 Writing rules
-
+### §3.5 Writing rules
 * Characters speak from immediate needs, partial evidence, and distinct institutional histories.
 * Exposition occurs through disagreement, action, evidence, or consequence; no villain explains the setting.
 * No civilization speaks with one opinion, and strong belief does not make an interpretation automatically true.
 * Humor comes from character and circumstance, never from undermining loss or turning lore into quips.
 * Mission and result text states what happened and what remains unresolved. It does not invent population counts, consent, trust, moral correctness, or wider consequences that the game did not model.
 
-## 4. Player experience pillars and gameplay loops
-
+## §4. Player experience pillars and gameplay loops
 
 | ID | Pillar | Required player experience |
 |---|---|---|
-| SPEC-PIL-001 | Spatial economy | Resource choices change routes, exposure, drop-off value, vision, and timing. A resource is never only a number. |
-| SPEC-PIL-002 | Asymmetric planning | Meridian establishes networks; Kharuun changes terrain and composition; Choir spends possibility and manages temporary coherence. |
-| SPEC-PIL-003 | Readable consequence | The player can identify ownership, role, order, threat, cost, duration, terrain effect, and Well state at combat speed. |
-| SPEC-PIL-004 | Fair uncertainty | Scouting matters because hidden information stays hidden from player and AI. Automation reduces repetition without becoming omniscience. |
-| SPEC-PIL-005 | Recoverable command | Valid commands acknowledge immediately. Invalid commands explain why and how to recover. Context input never silently becomes a plausible wrong action. |
-| SPEC-PIL-006 | Story through play | Objectives, terrain, resources, alerts, music, and consequences communicate the story while the player retains control. |
+| SPEC-RES-018 | Spatial economy | Resource choices change routes, exposure, drop-off value, vision, and timing. A resource is never only a number. |
+| SPEC-FACID-004 | Asymmetric planning | Meridian establishes networks; Kharuun changes terrain and composition; Choir spends possibility and manages temporary coherence. |
+| SPEC-SIM-020 | Readable consequence | The player can identify ownership, role, order, threat, cost, duration, terrain effect, and Well state at combat speed. |
+| SPEC-FOG-003 | Fair uncertainty | Scouting matters because hidden information stays hidden from player and AI. Automation reduces repetition without becoming omniscience. |
+| SPEC-SIM-021 | Recoverable command | Valid commands acknowledge immediately. Invalid commands explain why and how to recover. Context input never silently becomes a plausible wrong action. |
+| SPEC-CAM-039 | Story through play | Objectives, terrain, resources, alerts, music, and consequences communicate the story while the player retains control. |
 
-
-### 4.1 Time-scale loops
-
+### §4.1 Time-scale loops
 
 | ID | Scale | Loop | Player question |
 |---|---|---|---|
-| SPEC-PIL-007 | Seconds | Select → issue order → read acknowledgment → reposition/fire/ability → reassess. | What must move, fire, hold, retreat, or change state now? |
-| SPEC-PIL-008 | Minutes | Gather → expand Logistics → scout → choose production/research → contest routes and Wells. | Where does the next advantage come from, and what does it cost elsewhere? |
-| SPEC-PIL-009 | Match | Infer doctrine → counter visible composition → deny economy/information → create a timing → convert it into Core damage. | What is the opponent protecting, and when can that protection be broken? |
-| SPEC-PIL-010 | Campaign | Learn a system → solve a distinct operation → record consequence → receive an authored later effect → qualify an ending. | Which future did this operation make possible, and which did it close? |
+| SPEC-SIM-022 | Seconds | Select → issue order → read acknowledgment → reposition/fire/ability → reassess. | What must move, fire, hold, retreat, or change state now? |
+| SPEC-ECO-018 | Minutes | Gather → expand Logistics → scout → choose production/research → contest routes and Wells. | Where does the next advantage come from, and what does it cost elsewhere? |
+| SPEC-SIM-023 | Match | Infer doctrine → counter visible composition → deny economy/information → create a timing → convert it into Core damage. | What is the opponent protecting, and when can that protection be broken? |
+| SPEC-CAM-040 | Campaign | Learn a system → solve a distinct operation → record consequence → receive an authored later effect → qualify an ending. | Which future did this operation make possible, and which did it close? |
 
-
-### 4.2 Strategic knowledge
-
+### §4.2 Strategic knowledge
 * Which information is visible now, remembered from earlier, approximate, or unknown?
 * Where can the economy safely grow, and which route or network link makes that growth possible?
 * Should the Well be Harvested for tempo, Preserved for compounding control, or Reshaped for a temporary route?
@@ -313,43 +291,46 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 * When is a retreat, raid, flank, defense, feint, or direct Corefall commitment stronger than another fight?
 * How much Dawn remains after research, abilities, Well costs, and Choir charges already committed?
 
-## 5. Match and operation outcomes
+---
 
-* **SPEC-OUT-001 —** Corefall victory. A player wins a standard skirmish when the opposing player has no surviving Command Core. Anchor, Memory Hearth, and Concordance are Command Cores. The match ends in the authoritative resolution window in which the final enemy Core is destroyed.
-* **SPEC-OUT-002 —** Defeat. A player loses when the player's final Command Core is destroyed or the player confirms concession. Losing all workers, combat units, production, resources, or Wells is not defeat while the Core survives.
-* **SPEC-OUT-003 —** Draw. If both final Command Cores are destroyed in the same 20 Hz resolution tick, the result is Draw. Score, resources, damage, command order, and elapsed time never break the tie.
-* **SPEC-OUT-004 —** Campaign success. An operation is won only when every mandatory objective and required consequence commitment is complete. Destroying a hostile Core substitutes only where that operation explicitly names Corefall as an objective.
-* **SPEC-OUT-005 —** Campaign failure. Each operation names failure predicates before play: required Core, character, civilian, witness, route, asset, timer, or irreversible contract. Ordinary unit loss is not a hidden failure.
-* **SPEC-OUT-006 —** Result explanation. The result screen states the precise win/loss cause, optional objectives, rewards, irreversible record, elapsed time, resources, units, and Well decisions. A campaign replay cannot silently rewrite established history.
-* **SPEC-OUT-007 —** Stalemate. At 45 minutes, skirmish warns that the match is prolonged but does not force a result. An AI with no recoverable production/economy/Core-defense path concedes. The player may continue or concede at any time.
+## §5. Match and operation outcomes
 
-## 6. Authoritative simulation and command rules
+* **SPEC-SIM-013 — Corefall standard-match victory:** Standard skirmish and competitive play shall use Corefall: a player or team wins when every opposing team has no surviving Command Core. Anchor, Memory Hearth, and Concordance are faction-specific Command Cores. Destroying the final opposing Core shall end the match immediately and reject later commands. Future Well control, score, kills, resources, army size, and destruction of non-Core assets shall not independently award victory.
+* **SPEC-SIM-014 — Corefall defeat and concession:** A player loses when its final Command Core is destroyed or the player explicitly confirms concession. Zero workers, zero combat units, zero production structures, or zero resources shall not automatically defeat a player while its Core survives. Concession shall be deliberate, recoverable before confirmation, and attributable in results and replay metadata.
+* **SPEC-SIM-016 — Draw:** If all remaining Command Cores are destroyed within the same authoritative resolution window, the result shall be Draw. No hidden tiebreak based on score, damage, resources, or command order shall replace it.
+* **REL-CAM-022 — Objective-based operation victory:** A campaign operation shall be won only by completing its authored primary objective sequence. The briefing shall identify the primary objective, protected people/assets, optional objectives, and irreversible choices. Enemy-Core destruction shall not substitute for escort, recovery, hold, witness, Well, route, withdrawal, or other authored objectives unless the operation explicitly says it does.
+* **REL-CAM-023 — Objective-based operation defeat:** Each operation shall define its terminal failures: required Core loss, mission-critical unit/structure loss, expired opportunity, invalid irreversible commitment, impossible escort/evacuation, or force state that makes the primary objective impossible. Ordinary unit loss shall not silently cause defeat.
+* **REL-CAM-024 — Result causality:** Results shall state why the player won or lost, optional outcomes, the exact irreversible campaign record written, and material states not changed. Restart and alternate replay shall not silently rewrite established campaign history.
+* **SPEC-SIM-024 — Stalemate tolerance:** At 45 minutes, the simulation core warns that the match is prolonged but does not force an arbitrary termination result. An AI controller possessing zero recoverable production, economy, or Core-defense paths shall automatically execute an attributable concession command sequence.
 
-* **SPEC-SIM-001 —** Fixed time. Gameplay authority advances at 20 deterministic ticks per second. Presentation interpolates but never changes authoritative outcomes.
-* **SPEC-SIM-002 —** Authority separation. Simulation owns entities, resources, commands, movement, terrain, fog, combat, objectives, AI inputs, outcomes, save state, and replay. Rendering, sound, animation, and UI consume authorized views and cannot create gameplay facts.
-* **SPEC-SIM-003 —** Command validation. Every command is validated against ownership, visibility, target class, range, resources, Logistics, cooldown, state, footprint, path, and mode. Rejection returns a stable reason code and plain-language recovery.
-* **SPEC-SIM-004 —** Determinism. The same initial state, content identifiers, player commands, and deterministic seed produce the same authoritative result across save/load and replay.
-* **SPEC-SIM-005 —** Entity identity. Every authoritative entity has a stable identifier, faction, owner, class, role, health, position, footprint, movement domain, sight, orders, status effects, and lifecycle state.
-* **SPEC-SIM-006 —** Limits. Entity and command limits fail visibly and safely. They never delete another entity, discard paid production, or corrupt a save to make room.
-* **SPEC-SIM-007 —** Player time. UI expresses durations in seconds, with optional detailed tick values. One second equals 20 ticks.
 
-### 6.1 Common commands
+## §6. Authoritative simulation and command rules
 
+* **SPEC-SIM-001 — Fixed time authority:** Gameplay simulation state shall advance at exactly 20 deterministic ticks per second (50.0 ms steps). The presentation layer interpolates mesh transforms smoothly between ticks but cannot mutate authoritative simulation outcomes.
+* **SPEC-SIM-002 — View and simulation separation:** The simulation core owns all entities, resources, commands, movement grids, fog states, combat loops, and outcomes. Rendering, audio, animation, and UI consume read-only authorized state views and shall never create gameplay facts.
+* **SPEC-SIM-003 — Command validation pipeline:** Every command undergoes immediate validation against ownership, visibility, target class, weapon range, resource loops, Logistics, cooldowns, and entity footprints. Rejections instantly return a stable error code.
+* **SPEC-SIM-004 — Absolute determinism:** Given an identical initial state, content pack hashes, player command histories, and initial random seeds, the simulation core shall produce 100% byte-identical outcomes across save restoration and replay playbacks.
+* **SPEC-SIM-005 — Authoritative entity properties:** Every simulated entity carries an uncompromised state data set: stable unique ID, faction association, player owner, archetype class, role, health/shields, coordinates, orders queue, status effects, and lifecycle phase.
+* **SPEC-SIM-006 — Safe allocation limits:** Entity and command limits shall fail visibly and safely. Exceeding system allocation caps shall display an explicit layout alert and block inputs rather than silently deleting active entities or corrupting save records.
+* **SPEC-SIM-007 — Time display representation:** The user interface shall express durations and match clocks in seconds (`MM:SS`). Internal logs, network message packets, and replay transport files shall carry deterministic tick integers where 1 second equals exactly 20 ticks.
+
+### §6.1 Common commands
 
 | ID | Command | Behavior | Failure examples |
 |---|---|---|---|
-| SPEC-CMD-001 | Move / Context | Move to ground or invoke the unambiguous legal action on a visible target. | No path; invalid terrain; target lost; ambiguous hit. |
-| SPEC-CMD-002 | Direct Attack | Attack one visible valid hostile until destroyed, lost, invalid, or superseded. | Not hostile; not visible; cannot target class; no path/range. |
-| SPEC-CMD-003 | Attack-move | Move toward a point, engage visible hostiles within stance leash, then resume. | No path; no attack-capable units. |
-| SPEC-CMD-004 | Patrol | Repeat between waypoints and engage according to stance. | Invalid waypoint; no route. |
-| SPEC-CMD-005 | Guard | Maintain radius around an owned or allied target and intercept legal threats. | Invalid target; guardee lost; no route. |
-| SPEC-CMD-006 | Hold Position | Do not translate; acquire and fire on legal targets in range. | Unit cannot attack; state prevents firing. |
-| SPEC-CMD-007 | Stop | Cancel reversible active orders and remain in place. Irreversible costs stay committed where stated. | Locked transition or non-cancelable consequence. |
-| SPEC-CMD-008 | Ability | Preview and execute the selected named ability. | Cost, cooldown, target, state, range, terrain, connection, or mode invalid. |
-| SPEC-CMD-009 | Rally | Set or clear the emergence destination for future units. | Destination permanently unreachable; producer inactive. |
-| SPEC-CMD-010 | Interact | Use an authored mission/world interaction. | Wrong entity, phase, range, or prerequisite. |
+| SPEC-CMD-001 | Move / Context | Move to ground coordinates or invoke the unambiguous legal contextual action on a valid visible target. | No path found; invalid terrain type; target vision lost; ambiguous hit bounding region. |
+| SPEC-CMD-002 | Direct Attack | Attack one visible valid hostile entity until destroyed, vision loss, state invalidation, or order supersession. | Target not hostile; target hidden by fog; cannot attack target class; chokepoint block. |
+| SPEC-CMD-003 | Attack-move | Advance toward destination coordinates, immediately engaging visible hostiles entering stance leash, then resume pathing. | Path completely blocked; no attack-capable units present in active selection group. |
+| SPEC-CMD-004 | Patrol | Cycle continuously along a vector path between waypoints, automatically engaging threats according to active stance. | Invalid waypoint coordinates; path cuts across blocked water/void boundaries. |
+| SPEC-CMD-005 | Guard | Maintain protective radius around an owned or allied target entity and automatically intercept valid legal threats. | Invalid target pointer; guardee destroyed; chokepoint architecture separates escort. |
+| SPEC-CMD-006 | Hold Position | Lock spatial coordinates and clamp translation velocity to zero; acquire and fire on legal targets entering weapon range. | Selection contains zero attack-capable units; active entity state transitions prevent firing loops. |
+| SPEC-CMD-007 | Stop | Cancel reversible active orders and clear target queues immediately. Irreversible protocol or construction costs stay committed. | Entity is locked inside an un-cancelable transition or irreversible consequence contract. |
+| SPEC-CMD-008 | Ability | Preview targeted ability range/footprint, validate resource costs, and execute the selected named ability action. | Resource pool insufficient; cooldown active; target outside cast range; footprint layout blocked. |
+| SPEC-CMD-009 | Rally | Establish or clear the emergence destination coordinate spline for future units produced by the selected facility. | Destination permanently unreachable; producer facility offline or missing power links. |
+| SPEC-CMD-010 | Interact | Execute an authored mission trigger or localized world mechanism when within valid interaction proximity. | Wrong interaction phase; target entity outside interaction range; prerequisite ledger missing. |
 
-### 6.1 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting
+### §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting
+
 * **SPEC-CMD-011 — Shift-Queued Order Chaining:** Players shall chain sequential orders by holding `Shift` while issuing commands (Move, Gather, Build, Patrol, Ability). The unit shall execute orders sequentially without dropping waypoints, supporting a queue depth of up to 16 commands.
   * **SPEC-CMD-011.AUTH:** Completing a leg immediately advances to the next queued order on the subsequent simulation tick.
   * **SPEC-CMD-011.FAIL:** Dropping intermediate waypoints or freezing upon completing a leg fails queue processing.
@@ -380,26 +361,17 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
   * **SPEC-CMD-015.VERIF:** `SRC` (focus-fire chase bound and retargeting test).
   * **SPEC-CMD-015.LANE:** Core Gameplay (`EchoesSimCore`).
 
+Here is the finalized and formatted section §7. Movement, pathfinding, formations, and terrain. This update completely resolves heading styling anomalies and bridges your high-level terrain types directly into the deterministic, float-free fixed-point math and path-smoothing structures required by your architecture.
+------------------------------
+## §7. Movement, pathfinding, formations, and terrain
 
-## 7. Movement, pathfinding, formations, and terrain
+* **SPEC-MOV-001 — Ground-only domain restriction:** All controllable and simulated mobile launch entities shall use a single surface-ground domain. Visual hovering components do not grant variations in passability, collision, vision layers, or ranged combat targetability. Subterranean movement remains strictly prohibited outside the visible, map-authored fixed passages defined in §7.1.
+* **SPEC-MOV-002 — Bounded deterministic pathfinding:** Path routing shall execute in the core fixed-point engine using deterministic destination-tile cost vectors, unit footprint dimensions, and goal reservations. If an actor becomes blocked, the pathfinder shall immediately issue explicit NO PATH, ROUTE BLOCKED, or DESTINATION OCCUPIED codes rather than causing indefinite random wandering.
+* **SPEC-MOV-003 — Local steering avoidance & allied yielding:** Enemy and neutral solid entity footprints block movement paths rigidly. Allied mobile entities crossing shared ground coordinates shall use lateral steering repulsion forces to push past one another without locking; a lower-priority unit shall automatically step aside to let a higher-priority unit pass chokepoints cleanly.
+* **SPEC-MOV-004 — Dynamic terrain modification re-pathing:** When underlying terrain properties mutate dynamically due to a Future Well Reshape protocol or mission script event, units traversing affected cells shall recalculate paths on the next tick. If zero passability vectors remain, entities halt safely at the perimeter and emit a layout alert.
+* **SPEC-MOV-005 — Group tactical formations:** Selected unit groups shall distribute destination slots based on stable entity IDs, footprints, and minimum travel velocities. Box enforces compact mixed group transit; Line maximizes frontage perpendicular to travel heading; Wedge projects a structural forward apex. Cohesion temporarily yields before accepting chokepoint damage.
 
-* **SPEC-MOV-001 —** Ground-only domain. All controllable launch units use one surface-ground domain. There are no combat flying units, air transports, naval units, or unrestricted subterranean movement. Visual hovering does not grant different passability, collision, vision, or targeting; fixed subsurface passages are the sole exception and follow section 7.1.
-* **SPEC-MOV-002 —** Pathfinding. Paths use deterministic destination-tile cost, known passability, unit footprint, reserved goals, dynamic obstruction, and bounded recalculation. Failure produces NO PATH, ROUTE BLOCKED, or DESTINATION OCCUPIED rather than wandering.
-* **SPEC-MOV-003 —** Avoidance and body blocking. Enemy and neutral solid entities block movement. Allied mobile units use soft separation and yield rules; they may not permanently imprison one another. Large units reserve more clearance at chokes.
-* **SPEC-MOV-004 —** Route change. When terrain changes under a route, units recalculate at the next tick. If no route remains, they stop at the last safe position, preserve their order as blocked, and alert the owner.
-* **SPEC-MOV-005 —** Formations. Box provides compact travel, Line maximizes frontage perpendicular to movement, and Wedge points its apex toward travel. Units receive deterministic slots by footprint, speed, and stable identifier, regroup after obstacles, and abandon cohesion before accepting damage or blocking the path.
-
-| ID | Terrain/object | Movement | Construction | Vision / fire | Gameplay meaning |
-|---|---|---|---|---|---|
-| SPEC-TER-001 | Open | 100% speed | Allowed on clear footprint | Does not block | Normal surface. |
-| SPEC-TER-002 | Scarred | 85% speed | Not allowed until stabilized | Does not block | Visible Crownfall damage; route friction and lost build space. |
-| SPEC-TER-003 | Blocked | Impassable | Not allowed | Blocks line of fire and sight only when marked as an occluding obstacle | Cliff, wall, deep fracture, or authored obstruction. |
-| SPEC-TER-004 | Water / void | Impassable | Not allowed | Does not imply naval play | Presentation and map boundary. |
-| SPEC-TER-005 | Mineral Cover | Impassable occupied tile | Temporary object | Blocks projectiles intersecting its volume; never grants hidden armor | Player-created temporary lane control. |
-| SPEC-TER-006 | Subsurface Passage | Transit between fixed entrances | Entrance footprint fixed | No unit vision or attack in transit | Kharuun route shortcut with public counterplay. |
-
-
-### 7.1 Subsurface passage contract
+## §7.1 Subsurface passage contract
 
 * Entrances and exits are visible, targetable map objects with public capacity and travel time.
 * Eligible Kharuun units queue visibly; each entrance moves at most four units concurrently, with one unit entering every 10 ticks.
@@ -407,7 +379,7 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 * Units have no attack, vision, ability, direction change, or targetability during transit; Resonants and Listening Spines show anonymous vibration along the passage.
 * If the entrance is destroyed after entry, units continue to the exit. If the exit is destroyed or blocked, units wait up to 100 ticks, then return to the entrance; if both ends are gone, they emerge at the nearest authored fallback.
 
-### 7.2 Environmental boundaries
+## §7.2 Environmental boundaries
 
 * Elevation, weather, fog drift, pale tides, ambient flying creatures, distant vehicles, and decorative vegetation are presentation-only.
 * Shivergrass is an information signal: it bends for a nearby possible footfall but never reveals identity or accepts a direct target.
@@ -415,85 +387,64 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 * Bridges and routes change only through a mission event or Future Well Reshape with telegraph, timer, fallback, fog, minimap, AI, and replay rules.
 * Decorative rubble, cliffs, vegetation, shards, and architecture must match the authoritative collision and cover truth. Art cannot imply an interaction that rules do not provide.
 
-### 7.3 Advanced Movement, Control Responsiveness, and Determinism (`SPEC-MOV-*`, `SPEC-CTL-*`)
+## §7.3 Advanced Movement, Control Responsiveness, and Determinism
 
-* **SPEC-MOV-006 — Any-Angle Movement:** Mobile units shall move at arbitrary angles along the most direct path permitted by ground passability, string-pulling waypoints across the terrain distance field rather than staircasing along grid cell axes.
-  * **SPEC-MOV-006.PRE:** Unit ordered to a passable ground destination on an unobstructed straight-line trajectory.
-  * **SPEC-MOV-006.ACT:** Path solver computes trajectory using Euclidean ray-cast / integer supercover line-of-sight test (`Simulation::HasLineOfSight`).
-  * **SPEC-MOV-006.AUTH:** On open ground, a unit ordered along an exact 45-degree diagonal shall deviate from the ideal trajectory by no more than 0.25 tiles at every tick of the journey.
-  * **SPEC-MOV-006.FAIL:** If an obstacle intercepts the direct line during transit, the unit shall fall back to the nearest smoothed grid waypoint without stalling.
-  * **SPEC-MOV-006.VERIF:** `SRC` (native simulation test: `any-angle movement takes straight lines`).
-  * **SPEC-MOV-006.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-006 — Any-Angle String-Pulled Movement:** Mobile units shall move at arbitrary angles along the most direct path permitted by ground passability, string-pulling waypoints across the terrain distance field via Euclidean line-of-sight raycasts rather than staircasing along grid cell axes.
+* **SPEC-MOV-006.PRE:** Unit ordered to a passable ground destination on an unobstructed straight-line trajectory.
+   * **SPEC-MOV-006.ACT:** Path solver computes trajectory using Euclidean ray-cast / integer supercover line-of-sight test (Simulation::HasLineOfSight).
+   * **SPEC-MOV-006.AUTH:** On open ground, a unit ordered along an exact 45-degree diagonal shall deviate from the ideal trajectory by no more than 0.25 tiles at every tick of the journey.
+   * **SPEC-MOV-006.FAIL:** If an obstacle intercepts the direct line during transit, the unit shall fall back to the nearest smoothed grid waypoint without stalling.
+   * **SPEC-MOV-006.VERIF:** SRC (native simulation test: any-angle movement takes straight lines).
+   * **SPEC-MOV-006.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-007 — Direction-Independent Speed:** A unit shall cover identical ground distance per simulation tick regardless of travel heading. Movement speed shall be a scalar property of the unit archetype, never skewed by grid axis orientation.
-  * **SPEC-MOV-007.AUTH:** Distance traversed over a fixed tick duration on a diagonal heading shall match distance traversed on a cardinal axis to within 2.0% tolerance, using Euclidean metric normalisation (`IntegerSqrt64`).
-  * **SPEC-MOV-007.FAIL:** Manhattan metric (|dx| + |dy|) is strictly prohibited; any regression resulting in ~29% diagonal speed attenuation shall fail automated validation.
-  * **SPEC-MOV-007.VERIF:** `SRC` (native speed-ratio assertion across 8 cardinal and intercardinal headings).
-  * **SPEC-MOV-007.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-007.AUTH:** Distance traversed over a fixed tick duration on a diagonal heading shall match distance traversed on a cardinal axis to within 2.0% tolerance, using Euclidean metric normalisation (IntegerSqrt64).
+   * **SPEC-MOV-007.FAIL:** Manhattan metric (|dx| + |dy|) is strictly prohibited; any regression resulting in ~29% diagonal speed attenuation shall fail automated validation.
+   * **SPEC-MOV-007.VERIF:** SRC (native speed-ratio assertion across 8 cardinal and intercardinal headings).
+   * **SPEC-MOV-007.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-008 — Soft Separation and Non-Imprisonment:** Allied mobile units sharing ground space shall maintain clearance via local steering forces, pushing past one another rather than colliding rigidly, and shall never permanently trap or imprison another allied unit.
-  * **SPEC-MOV-008.AUTH:** No two allied mobile units shall remain overlapped beyond their combined clearance radii for more than 20 consecutive simulation ticks (1.0 second).
-  * **SPEC-MOV-008.ACT:** When two allied units are ordered to swap positions on open ground, both units shall resolve opposing velocities via lateral deflection and reach their destinations.
-  * **SPEC-MOV-008.PERF:** In a 200-tick soak test with 40 units ordered simultaneously to a single focal point, zero units shall remain permanently deadlocked; every unit shall either reach the destination or stabilize within its arrival packing radius.
-  * **SPEC-MOV-008.FAIL:** If separation forces cannot resolve within 40 ticks, the lower-priority unit shall yield by taking a temporary lateral step.
-  * **SPEC-MOV-008.VERIF:** `PKG-AUTO` (40-unit focal soak and position-swap test).
-  * **SPEC-MOV-008.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-008.AUTH:** No two allied mobile units shall remain overlapped beyond their combined clearance radii for more than 20 consecutive simulation ticks (1.0 second).
+   * **SPEC-MOV-008.ACT:** When two allied units are ordered to swap positions on open ground, both units shall resolve opposing velocities via lateral deflection and reach their destinations.
+   * **SPEC-MOV-008.PERF:** In a 200-tick soak test with 40 units ordered simultaneously to a single focal point, zero units shall remain permanently deadlocked; every unit shall either reach the destination or stabilize within its arrival packing radius.
+   * **SPEC-MOV-008.FAIL:** If separation forces cannot resolve within 40 ticks, the lower-priority unit shall yield by taking a temporary lateral step.
+   * **SPEC-MOV-008.VERIF:** PKG-AUTO (40-unit focal soak and position-swap test).
+   * **SPEC-MOV-008.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-009 — Chokepoint Negotiation Without Deadlock:** Clustered mobile units traversing narrow terrain apertures (chokepoints) shall funnel through sequentially without jamming or permanent stoppage.
-  * **SPEC-MOV-009.AUTH:** When 12 units are ordered through a 1-tile-wide aperture, all units shall clear the choke within a bounded tick budget derived from unit speed and count, with no unit remaining stationary for more than 40 consecutive ticks while its path remains valid.
-  * **SPEC-MOV-009.FAIL:** Queue deadlocks or cyclic priority locks at choke mouths are classified as release-blocking defects.
-  * **SPEC-MOV-009.VERIF:** `PKG-AUTO` (12-unit 1-tile choke throughput benchmark).
-  * **SPEC-MOV-009.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-009.AUTH:** When 12 units are ordered through a 1-tile-wide aperture, all units shall clear the choke within a bounded tick budget derived from unit speed and count, with no unit remaining stationary for more than 40 consecutive ticks while its path remains valid.
+   * **SPEC-MOV-009.FAIL:** Queue deadlocks or cyclic priority locks at choke mouths are classified as release-blocking defects.
+   * **SPEC-MOV-009.VERIF:** PKG-AUTO (12-unit 1-tile choke throughput benchmark).
+   * **SPEC-MOV-009.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-010 — Travel Facing and Presentation Decoupling:** Units shall face their active direction of travel and turn with bounded angular rates. Travel facing is strictly presentational in 1.0 and shall not alter simulation targeting, collision, or damage.
-  * **SPEC-MOV-010.AUTH:** Rendered mesh facing shall align with velocity heading within 5 degrees during steady movement, sweeping at an authored rate of 720 deg/s.
-  * **SPEC-MOV-010.ACC:** Under the Reduced Motion accessibility preset, rotational sweeping shall be instantaneous, eliminating visual spin while preserving instantaneous facing accuracy.
-  * **SPEC-MOV-010.VERIF:** `PKG-REND` (`AEchoesEntityView::UpdateTravelFacing` capture review).
-  * **SPEC-MOV-010.LANE:** Visual Presentation (`EchoesOfTheBrokenSun`).
-
+* **SPEC-MOV-010.AUTH:** Rendered mesh facing shall align with velocity heading within 5 degrees during steady movement, sweeping at an authored rate of 720 deg/s.
+   * **SPEC-MOV-010.ACC:** Under the Reduced Motion accessibility preset, rotational sweeping shall be instantaneous, eliminating visual spin while preserving instantaneous facing accuracy.
+   * **SPEC-MOV-010.VERIF:** PKG-REND (AEchoesEntityView::UpdateTravelFacing capture review).
+   * **SPEC-MOV-010.LANE:** Visual Presentation (EchoesOfTheBrokenSun).
 * **SPEC-MOV-011 — Group Cohesion and Centroid Navigation:** Multi-unit selection groups issued a shared movement order shall navigate as a coherent force rather than collapsing to a single coordinate point.
-  * **SPEC-MOV-011.AUTH:** Target destinations shall be distributed across an arrival area scaled to the group's collective footprint; units shall not fight over a single destination tile.
-  * **SPEC-MOV-011.ACT:** In transit, group movement speeds shall clamp to the maximum speed of the slowest selected member until contact is initiated or the formation breaks.
-  * **SPEC-MOV-011.FAIL:** If path obstacles break formation alignment, units shall navigate independently through the obstacle and automatically reform within 40 ticks of reaching open ground.
-  * **SPEC-MOV-011.VERIF:** `PKG-AUTO` (mixed-speed group travel cohesion test).
-  * **SPEC-MOV-011.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-011.AUTH:** Target destinations shall be distributed across an arrival area scaled to the group's collective footprint; units shall not fight over a single destination tile.
+   * **SPEC-MOV-011.ACT:** In transit, group movement speeds shall clamp to the maximum speed of the slowest selected member until contact is initiated or the formation breaks.
+   * **SPEC-MOV-011.FAIL:** If path obstacles break formation alignment, units shall navigate independently through the obstacle and automatically reform within 40 ticks of reaching open ground.
+   * **SPEC-MOV-011.VERIF:** PKG-AUTO (mixed-speed group travel cohesion test).
+   * **SPEC-MOV-011.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-012 — Damped Clean Arrival:** Units reaching their destination shall halt cleanly without overshooting, jittering against neighbors, or oscillating between adjacent waypoints.
-  * **SPEC-MOV-012.AUTH:** Upon entering the arrival radius, a unit's position shall change by no more than 0.05 tiles over 20 consecutive ticks.
-  * **SPEC-MOV-012.FAIL:** Unstable microscopic oscillation between waypoints or repulsive neighbor pushing at rest shall immediately trigger arrival velocity clamping to zero.
-  * **SPEC-MOV-012.VERIF:** `SRC` (single-unit and multi-unit arrival velocity settle test).
-  * **SPEC-MOV-012.LANE:** Core Gameplay (`EchoesSimCore`).
-
+* **SPEC-MOV-012.AUTH:** Upon entering the arrival radius, a unit's position shall change by no more than 0.05 tiles over 20 consecutive ticks.
+   * **SPEC-MOV-012.FAIL:** Unstable microscopic oscillation between waypoints or repulsive neighbor pushing at rest shall immediately trigger arrival velocity clamping to zero.
+   * **REL-MOV-012.VERIF:** SRC (single-unit and multi-unit arrival velocity settle test).
+   * **REL-MOV-012.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-013 — Movement Determinism & Sanitizer Invariance:** All movement, steering, and pathfinding math shall execute strictly within the deterministic core under Q22.10 fixed point, yielding byte-identical state checksums across platforms and compilers.
-  * **SPEC-MOV-013.AUTH:** Identical movement command sequences shall yield 100% byte-identical state checksums across Clang on Apple Silicon, GCC on Linux x86_64, and MSVC on Windows, across Optimized, Debug, and ASan+UBSan configurations.
-  * **SPEC-MOV-013.FAIL:** Any use of `float`, `double`, trigonometric standard library functions, or non-deterministic container iteration in movement logic shall fail compilation closed.
-  * **SPEC-MOV-013.VERIF:** `SRC` (cross-build determinism suite and sanitizer matrix).
-  * **SPEC-MOV-013.LANE:** Core Gameplay (`EchoesSimCore`).
+* **SPEC-MOV-013.AUTH:** Identical movement command sequences shall yield 100% byte-identical state checksums across Clang on Apple Silicon, GCC on Linux x86_64, and MSVC on Windows, across Optimized, Debug, and ASan+UBSan configurations.
+   * **SPEC-MOV-013.FAIL:** Any use of float, double, trigonometric standard library functions, or non-deterministic container iteration in movement logic shall fail compilation closed.
+   * **SPEC-MOV-013.VERIF:** SRC (cross-build determinism suite and sanitizer matrix).
+   * **SPEC-MOV-013.LANE:** Core Gameplay (EchoesSimCore).
 
-* **SPEC-CTL-016 — Command Responsiveness Invariant:** Player commands shall produce instantaneous visual acknowledgement in the received frame and execute authoritatively within the lockstep input delay window.
-  * **SPEC-CTL-016.AUTH:** Order acknowledgement audio/visual markers shall fire in the exact frame the click is sampled (≤16.67 ms at 60 fps). Authoritative order execution shall occur within `minimumInputDelayTicks` (3 ticks = 150 ms) in single-player mode.
-  * **SPEC-CTL-016.FAIL:** If simulation tick processing stalls, the input buffer shall queue orders without dropping clicks, up to a depth of 16 commands.
-  * **SPEC-CTL-016.VERIF:** `PKG-PHYS` (high-speed capture measuring click-to-ring latency).
-  * **SPEC-CTL-016.LANE:** Player Experience (`EchoesPlayerController`).
+## §7.4 Terrain Surface Truth Matrix
 
-* **SPEC-CTL-017 — Fluid Command Interruptibility:** In-flight movement and combat orders shall be immediately replaceable on the subsequent simulation tick without penalty stalls or artificial replanning delays.
-  * **SPEC-CTL-017.AUTH:** Issuing a new move order to a unit already in motion shall repath and redirect velocity on the very next simulation tick (≤50 ms).
-  * **SPEC-CTL-017.FAIL:** The unit shall not decelerate to zero before starting the new path unless the heading change exceeds 135 degrees.
-  * **SPEC-CTL-017.VERIF:** `SRC` (re-path latency and velocity continuity test).
-  * **SPEC-CTL-017.LANE:** Core Gameplay (`EchoesSimCore`).
-
-* **SPEC-CTL-018 — Micro-Management Usability Preservation:** The control system shall preserve high-cadence player micro-management (stutter-stepping, focus-firing, damaged unit retraction) without input dropping, queue starvation, or camera hitching.
-  * **SPEC-CTL-018.AUTH:** Rapid sequential selection and order issuance at up to 300 actions per minute (APM) shall process with 0% command drop and 100% spatial target fidelity.
-  * **SPEC-CTL-018.FAIL:** Any input queue drop under 300 APM bursts shall fail acceptance.
-  * **SPEC-CTL-018.VERIF:** `HUM` (experienced RTS player usability sessions under VAL-001 protocol).
-  * **SPEC-CTL-018.LANE:** Player Experience & QA.
-
-* **SPEC-CTL-019 — Simulation Tick Cost Ceiling for Steering:** Movement, steering, and separation calculations for up to 400 active units shall fit within the per-tick game thread budget.
-  * **SPEC-CTL-019.AUTH:** Total movement and path resolution time for 400 mobile units shall not exceed 3.0 ms per simulation tick on the baseline M1 Pro Apple Silicon processor. Spatial queries shall use an O(N) spatial hash grid, strictly prohibiting O(N^2) pairwise distance scans.
-  * **SPEC-CTL-019.FAIL:** Tick processing exceeding 4.0 ms shall flag a performance regression.
-  * **SPEC-CTL-019.VERIF:** `PKG-AUTO` (400-unit steering benchmark harness).
-  * **SPEC-CTL-019.LANE:** Core Gameplay & Performance (`EchoesSimCore`).
-
+| ID | Terrain Class | Movement Friction | Construction Rules | Vision & Target Occlusion |
+|---|---|---|---|---|
+| SPEC-TER-001 | Open Landscape | 100% Nominal Scalar Speed | Allowed on completely vacant footprints | Does not block vision rays or projectiles |
+| SPEC-TER-002 | Scarred Ground | 85% Scalar Speed Drag | Not allowed until fully stabilized | Does not block vision rays or projectiles |
+| SPEC-TER-003 | Blocked / Cliffs | Completely Impassable | Strictly prohibited inside compilation masks | Blocks line of fire and sight exclusively if occluding |
+| SPEC-TER-004 | Water / Void Rift | Completely Impassable | Strictly prohibited inside compilation masks | Does not obstruct line of fire or vision layers |
+| SPEC-TER-005 | Mineral Cover | Completely Impassable | Temporary object; rejects building placement | Cylindrical collision volume shatters projectiles |
+| SPEC-TER-006 | Subsurface Conduit | Fixed transit velocity caps | Entrance/Exit footprints remain static | Suppresses internal entity vision and attack loops |
 
 ## 8. Fog of war, intelligence, alerts, and reconnaissance
 
@@ -510,8 +461,7 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 * **SPEC-FOG-001 —** Single information boundary. World rendering, terrain, minimap, targeting, alerts, AI, audio, and effects consume the same player-scoped information view. No subsystem may disclose hidden live state by reading the full simulation.
 * **SPEC-FOG-002 —** Alert anatomy. An alert has class, urgency, short text, world location when legitimate, timestamp, source, acknowledgment state, and recovery action. Critical alerts use sound, text, shape, and minimap pulse; rate limiting never suppresses the only warning of a terminal threat.
 
-### 8.1 Automatic scouting
-
+### §8.1 Automatic scouting
 
 | ID | Order | Player defines | Completion |
 |---|---|---|---|
@@ -520,686 +470,294 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 | SPEC-INFO-009 | Locate Hostiles | Area, hostile classes, and observation distance | First qualifying contact reported or area exhausted. |
 | SPEC-INFO-010 | Screen Route | Guarded force, lead distance, and contact response | Force reaches destination, route is blocked, or scout is lost. |
 
-* **SPEC-SCT-001 —** Eligible scouts. Relay Skiff, Resonant, and Afterimage may use every reconnaissance order. Other mobile combat units may Explore Area and Screen Route but do not gain specialist threat routing.
-* **SPEC-SCT-002 —** Legal routing. Automation searches reachable unexplored frontier from player-known terrain. It never queries hidden enemies, resources, structures, routes, or Well state to choose a path.
-* **SPEC-SCT-003 —** Policies. CAUTIOUS reports and returns on contact; OBSERVE maintains the player-set distance without attacking; PERSIST continues until health reaches the player-set threshold or a manual order overrides it.
-* **SPEC-SCT-004 —** Player control. Selection shows mission, boundary, planned route, progress, discoveries, response policy, health threshold, and return point. Manual commands interrupt immediately; resume or return is explicit.
-* **SPEC-SCT-005 —** Outcomes. Matter, Well, route, hostile unit, hostile structure, damage, blocked path, and scout loss generate distinct fair alerts. An exhausted order reports SEARCH COMPLETE, NO UNEXPLORED AREA, or NO SAFE ROUTE as applicable instead of wandering indefinitely.
-* **SPEC-SCT-006 —** Authority limit. Reconnaissance never selects a Well protocol, gathers a newly found resource, attacks unless stance permits, spends resources, changes identity/adaptation, or commits a campaign decision.
-
-## 9. Economy, resources, Logistics, and forecasting
-
-
-| ID | Resource | Source | Uses | Strategic pressure |
-|---|---|---|---|---|
-| SPEC-RES-001 | Matter | Finite visible strata; reclaimed mission-specific wreckage | Workers, units, structures, repair, and research | Route length, saturation, drop-off position, depletion, protection, and harassment. |
-| SPEC-RES-002 | Dawn | Starting reserve, Harvest, controlled Preserve income, and authored campaign rewards | Advanced units, research, Well Reshape, faction abilities, adaptation, identity, and Choir coherence | Every spend closes another timing or possibility; commitments must be forecast. |
-| SPEC-RES-003 | Logistics | Command Core and faction infrastructure; temporary Compact Relay | Capacity for completed and queued units | Infrastructure loss blocks new production; temporary capacity creates visible expiry risk. |
-
-* **SPEC-ECO-001 —** Starting resources. Skirmish presets are Scarce 250 Matter/18 Dawn, Standard 400/30, and Abundant 700/60. Both players receive the same preset and begin with one Command Core and five workers.
-* **SPEC-ECO-002 —** Matter deposits. A standard deposit contains 1,500 Matter and supports three workers without queue delay. Additional workers may be assigned but wait visibly. Workers gather work-rate units over 20 ticks and carry up to their cargo capacity.
-* **SPEC-ECO-003 —** Automatic gather cycle. A Gather order repeats source → gather → valid drop-off → deliver until depletion, invalid route/drop-off, explicit danger policy, or player override. The worker does not require manual delivery legs.
-* **SPEC-ECO-004 —** Drop-off choice. Workers choose the assigned operational drop-off; if none is assigned, they choose the reachable drop-off with lowest predicted round-trip time. The player may lock an assignment. Loss triggers DROP-OFF LOST and requests reassignment.
-* **SPEC-ECO-005 —** Depletion. A depleted deposit remains as a visible exhausted marker for 200 ticks, then becomes non-interactable remembered terrain. Assigned workers seek no new hidden deposit; they become idle and alert.
-* **SPEC-ECO-006 —** Logistics loss. Units already completed remain controllable when capacity falls below use. New units and queued units that have not reserved capacity cannot begin. Reserved production remains reserved until completion or cancellation.
-
-### 9.1 Resource monitor
-
-* Current Matter and Dawn balances; separate Matter income and Dawn income realized over the previous 30 and 60 seconds.
-* Workers total, idle, gathering, delivering, traveling, blocked, constructing, and repairing.
-* Assignments, capacity, saturation, known remaining amount, travel time, projected income, and estimated depletion time for each known deposit.
-* Operational and lost drop-offs, severed routes, and worker reassignment controls.
-* Logistics used, durable, temporary, reserved, blocked, and expiring, including the Relay Skiff countdown.
-* Production, construction, research, ability, Preserve, and Choir commitments; projected Dawn after each upcoming charge.
-* Alerts at 30, 15, and 5 seconds before a forecasted capacity expiry or Choir insolvency, plus immediate alerts for route loss, idle workers, depletion, and blocked spending.
-* Forecasts use only owned and legitimately observed data, identify their time window, and round conservatively rather than promising unavailable resources.
-
-## 10. Construction, production, repair, and research
-
-* **SPEC-BLD-001 —** Placement. Construction preview shows faction-specific name, cost, footprint, rotation, buildability, worker route, expected completion, network/Logistics effect, and whether the finished structure will operate. Buildings rotate in 90-degree increments only; facing changes no footprint except an explicitly directional weapon.
-* **SPEC-BLD-002 —** Payment. Construction and unit costs are paid when the order enters its active slot. A queued item shows its uncommitted cost but does not reserve resources until activation. Research cost is paid at start and is never refunded.
-* **SPEC-BLD-003 —** Builders. One worker builds at 100% rate. A second and third assist at 60% and 40%. More than three may repair or wait but add no construction speed. If all builders leave or die, progress pauses without decay.
-* **SPEC-BLD-004 —** Incomplete structures. An incomplete structure is targetable, has health proportional to completion with a 10% minimum, provides no production/Logistics/power/vision beyond its construction site, and can be repaired only up to its completion-limited health.
-* **SPEC-BLD-005 —** Cancellation. Cancel construction or unit production before 50% progress for a 75% Matter/Dawn refund; at or after 50%, refund 50%. Research interruption refunds nothing. The confirmation preview states the exact refund.
-* **SPEC-BLD-006 —** Queues. Each producer has a five-unit queue and one active slot. Units may be reordered except the active item. A production structure may research instead of producing; one research project may be active per player.
-* **SPEC-BLD-007 —** Emergence. A completed unit appears at the nearest free legal tile to the producer, then follows its rally route. If no tile is free for 100 ticks, production pauses at complete, retains the unit safely, and alerts SPAWN BLOCKED.
-* **SPEC-BLD-008 —** Rally. The player may set one destination or a Shift-queued route. Rally paths may target terrain, a friendly guard target, or a valid resource for workers. If blocked, the unit stops at the last safe point and alerts.
-* **SPEC-BLD-009 —** Base rules. Players may build multiple production, supply, utility, and drop-off structures, but no additional Command Core. Structures cannot be sold, captured, garrisoned, abandoned, or converted. They may be destroyed or canceled while incomplete.
-* **SPEC-BLD-010 —** Repair. All workers repair allied completed units and structures using the worker-specific repair language defined in unit cards. Repair cannot exceed maximum health, resurrect, rewind, remove a status effect, or operate without Matter.
-
-### 10.1 Technology model
-
-
-Launch research is intentionally compact: two sequential faction technologies. Each creates a visible timing tradeoff because it consumes Dawn, Matter, and the producer's active slot. Effects apply immediately to all living eligible units and future eligible units. Research cannot be reversed.
-
-
-## 11. Combat resolution, stances, and counterplay
-
-* **SPEC-CMB-001 —** Deterministic direct hit. Weapons have no random accuracy or critical hits. A valid attack deals the stated damage when its deterministic projectile or contact resolves.
-* **SPEC-CMB-002 —** Damage model. Launch combat has one damage class and no armor-class multipliers. Health, range, cadence, movement, vision, cover, state, and positioning create soft counters.
-* **SPEC-CMB-003 —** Projectiles. Ranged attacks create deterministic projectiles traveling 1,200 cm/s. Damage resolves on impact. A projectile striking valid mineral or Bulwark cover resolves against that protection. It does not retarget after launch.
-* **SPEC-CMB-004 —** Line of fire. A ray from muzzle to target checks authored occluders, temporary cover, and protected Bulwark geometry. Units do not block allied fire. Decorative art cannot block or permit a shot independently of the simulation.
-* **SPEC-CMB-005 —** Friendly fire. Ordinary weapons and launch abilities do not damage allies or the firing unit. Area damage does not exist unless a later named ability defines it explicitly.
-* **SPEC-CMB-006 —** Fire and movement. All units except Riftstalker Slipfire stop to fire. They rotate within the wind-up, attack, then may resume movement after recovery.
-
-CMB-006A — Range and facing. Launch weapons have zero minimum range. Facing never changes accuracy or damage. A unit turns toward its target during the stated wind-up; if it cannot complete facing before resolution, the attack waits rather than firing backward.
-
-* **SPEC-CMB-007 —** Acquisition. Default target priority is immediate threat to self/guardee, then lowest predicted time-to-disable within range, then nearest visible target, resolved by stable entity identifier. The player may focus any legal visible target.
-* **SPEC-CMB-008 —** Overkill. Units with no explicit focus order avoid launching damage already predicted to exceed a target's remaining health by more than one attack. Focus-fire obeys the player even when it overkills.
-* **SPEC-CMB-009 —** Death. At zero health, an entity loses authority immediately, plays faction/role-readable destruction, blocks no commands, and leaves non-interactable remains for 200 ticks. Wreckage yields Matter only in missions that explicitly mark it salvageable.
-* **SPEC-CMB-010 —** Retreat. Retreat is ordinary movement, not a hidden morale state. No disengagement penalty exists. Wounded units receive visible health alerts and may be included in player-defined automatic retreat policy.
-* **SPEC-CMB-011 —** No hidden systems. There is no suppression, morale, stun, knockback, capture, stealth, camouflage, resurrection, or regeneration unless an explicit named ability in this document supplies the complete rule.
-
-### 11.1 Stances
-
-
-| ID | Stance | Acquire | Pursuit | Ability use |
-|---|---|---|---|---|
-| SPEC-STANCE-001 | Aggressive | Any visible legal hostile within sight | Up to 900 cm from order path/anchor | Off unless separately toggled |
-| SPEC-STANCE-002 | Defensive (default) | Threats within weapon range or attacking self/guardee | Up to 400 cm | Off |
-| SPEC-STANCE-003 | Hold Position | Legal hostile in weapon range | None | Off |
-| SPEC-STANCE-004 | Return Fire | Only a unit that damages self/guardee | Up to 250 cm | Off |
-| SPEC-STANCE-005 | Hold Fire | None | None | Off |
-
-* **SPEC-CMB-012 —** Automation. Automatic ability use is disabled by default. A player may enable an ability-specific toggle where offered; the toggle shows allowed targets, resource floor, and cancellation. Automation never spends the last 20 Dawn unless the player lowers that reserve.
-
-### 11.2 Unit and worker automation
-
-* **SPEC-AUT-001 —** Player-owned policy. Every automation is opt-in, visible on the selection card, constrained by player-set area, target class, health threshold, and resource reserve, and canceled immediately by a manual command. Automation executes policy; it never chooses technology, Well protocol, adaptation, identity, campaign consequence, or another irreversible strategic commitment.
-* **SPEC-AUT-002 —** Worker auto-repair. Disabled by default. When enabled for a worker or control group, the worker may repair the nearest damaged eligible allied target inside a player-set radius only while the projected Matter balance remains above the player-set floor. It returns to its prior assignment when the target is full or invalid and reports when no legal repair remains.
-* **SPEC-AUT-003 —** Worker flee. Disabled by default. The player selects a health threshold and owned safe point or operational drop-off. On hostile damage below that threshold, the worker stops gathering, building, or repairing and moves to the safe point using known passability; NO SAFE ROUTE leaves it stopped and alerts. The flee policy never discovers a hidden route or threat.
-* **SPEC-AUT-004 —** Idle workers. A worker with no valid order remains idle, receives the idle-worker marker and alert, and may be selected through the idle-worker control. It does not independently choose a resource, construction, repair, or risk policy.
-* **SPEC-AUT-005 —** Reinforcement policy. Each production structure may optionally assign completed combat units to one control group and send them along its rally route. The option is explicit, survives save/load, stops when the group is full or invalid, and never replaces an existing unit order after the unit joins.
-
-## 12. Factions and strategic identities
-
-
-| ID | Faction | Plan | Strength | Failure pressure |
-|---|---|---|---|---|
-| SPEC-FACID-001 | Meridian Compact | Extend a connected network, establish reliable firing positions, and convert information into precise pressure. | Infrastructure reliability, range, directional defense, temporary supply. | Network severance, flanks, forced movement, slow expansion. |
-| SPEC-FACID-002 | Kharuun Assemblies | Change route geometry and force composition through migration, cover, adaptation, and vibration intelligence. | Mobility, terrain control, scouting, post-contact adaptation. | Root/molt exposure, expensive adaptation, weak prolonged frontal exchanges. |
-| SPEC-FACID-003 | Hollow Choir | Commit units to Manifest or Possible, create fair uncertainty, and sustain temporary infrastructure through Dawn. | Flexible timing, route pressure, control, temporary possibility. | Public transitions, recurring costs, Dawn insolvency, forced commitment. |
-
-
-### 12.1 Meridian Compact units
-
-
-#### SPEC-UNIT-001 — Surveyor
-
-
-| Field | Binding value |
-|---|---|
-| Role | Worker |
-| Cost | 50 Matter / 0 Dawn |
-| Health / speed / sight | 90 / 360 cm/s / 900 cm |
-| Logistics / production | 1 / 60 ticks (3.0 s) |
-| Worker | Work rate 10; cargo 10; no attack |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Build and sustain the Compact economy and network. |
-| What can it do? | Move, Gather, Deliver, Build, Repair, Future Well protocol, Guard, Stop. |
-| Signature rule | Network Repair: channel on an allied Compact unit or structure within 200 cm; restore 10 health per second at 1 Matter per 10 health. Up to three workers may repair one target at 100%, 60%, and 40% efficiency. Damage interrupts for 1 second. |
-| How should it be used? | Keep a short protected Matter route, extend Power Links deliberately, repair severed infrastructure, and approach Wells only after the route is scouted. |
-| When does it not help? | No attack, low health, and high strategic value. It cannot repair enemies, temporary cover, or a structure that is being dismantled. |
-| How does the opponent answer it? | Raid cargo routes, force workers off construction, and sever the network faster than Surveyors can restore it. |
-
-
-#### SPEC-UNIT-002 — Lancer
-
-
-| Field | Binding value |
-|---|---|
-| Role | Ranged Line |
-| Cost | 85 Matter / 20 Dawn |
-| Health / speed / sight | 145 / 320 cm/s / 1100 cm |
-| Logistics / production | 2 / 100 ticks (5.0 s) |
-| Attack | 18 damage, 650 cm, 30 ticks (1.50 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Deliver reliable ranged line damage. |
-| What can it do? | All common combat orders and stances. |
-| Signature rule | No activated ability. Its value comes from range, positioning, target choice, and protected firing time. |
-| How should it be used? | Fight behind Bulwarks, use Skiff vision, focus exposed targets, and retreat before fast units close the distance. |
-| When does it not help? | Moderate health and no close-combat escape. It must stop to fire. |
-| How does the opponent answer it? | Flank it, break its screen, force repeated repositioning, or attack from more than one route. |
-
-
-#### SPEC-UNIT-003 — Bulwark Team
-
-
-| Field | Binding value |
-|---|---|
-| Role | Heavy Screen |
-| Cost | 130 Matter / 25 Dawn |
-| Health / speed / sight | 260 / 230 cm/s / 850 cm |
-| Logistics / production | 3 / 140 ticks (7.0 s) |
-| Attack | 10 damage, 300 cm, 24 ticks (1.20 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Create directional protection for a Compact firing line. |
-| What can it do? | Common combat orders; Deploy Facing; Pack. |
-| Signature rule | Deploy: after a 20-tick setup, project a 350 cm deep by 500 cm wide directional cover zone and reduce qualifying incoming damage by 40%. Movement falls to 35%. Packing takes 15 ticks. |
-| How should it be used? | Anchor a choke, cover Lancers or a retreat, and rotate before the enemy completes a flank. |
-| When does it not help? | Slow, short-ranged, and vulnerable from the sides and rear. Directional protection never becomes universal armor. |
-| How does the opponent answer it? | Bypass, split pressure, displace, attack from behind, or force it to pack and redeploy. |
-
-
-#### SPEC-UNIT-004 — Relay Skiff
-
-
-| Field | Binding value |
-|---|---|
-| Role | Scout Support |
-| Cost | 70 Matter / 20 Dawn |
-| Health / speed / sight | 75 / 500 cm/s / 1500 cm |
-| Logistics / production | 1 / 80 ticks (4.0 s) |
-| Attack | 6 damage, 400 cm, 24 ticks (1.20 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Scout, screen routes, extend vision, and provide temporary Logistics. |
-| What can it do? | Common combat orders; all reconnaissance orders; Extend Relay. |
-| Signature rule | Extend Relay: while within 700 cm of a connected Compact node, grant 4 temporary Logistics for 400 ticks; 800-tick cooldown. Expiration blocks new production but never kills fielded units. |
-| How should it be used? | Find expansions and enemy approaches, screen a moving force, and bridge short production timing windows. |
-| When does it not help? | Fragile and weak in combat. It visually hovers but uses the ground movement layer and cannot cross blocked terrain or water. |
-| How does the opponent answer it? | Destroy or drive it away, sever its network connection, and time pressure around the visible capacity-expiration warning. |
-
-
-### 12.2 Kharuun Assemblies units
-
-
-#### SPEC-UNIT-005 — Tender
-
-
-| Field | Binding value |
-|---|---|
-| Role | Worker |
-| Cost | 50 Matter / 0 Dawn |
-| Health / speed / sight | 100 / 390 cm/s / 920 cm |
-| Logistics / production | 1 / 60 ticks (3.0 s) |
-| Worker | Work rate 9; cargo 10; no attack |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Grow Kharuun economy, structures, and usable terrain. |
-| What can it do? | Move, Gather, Deliver, Build, Repair, Stabilize Scar, Future Well protocol, Guard, Stop. |
-| Signature rule | Stabilize Scar: spend 15 Dawn and channel for 120 ticks on one Scarred tile within 300 cm, converting it to Open. The tile must be empty and outside an active Well manifestation. Interruption refunds no Dawn after channel start. |
-| How should it be used? | Move drop-off capacity with Waystones, convert an important build tile, and support post-contact migration. |
-| When does it not help? | No attack. Stabilization is slow, visible, and too expensive for indiscriminate terrain clearing. |
-| How does the opponent answer it? | Contest the channel, deny the intended footprint, and punish exposed Tenders during migration. |
-
-
-#### SPEC-UNIT-006 — Riftstalker
-
-
-| Field | Binding value |
-|---|---|
-| Role | Mobile Skirmisher |
-| Cost | 75 Matter / 30 Dawn |
-| Health / speed / sight | 125 / 410 cm/s / 1050 cm |
-| Logistics / production | 2 / 100 ticks (5.0 s) |
-| Attack | 14 damage, 500 cm, 22 ticks (1.10 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Take short mobile trades and pressure exposed routes. |
-| What can it do? | All common combat orders and stances; eligible fixed-passage transit. |
-| Signature rule | Slipfire: may fire while moving at 75% normal damage and a 125% cooldown. Stopping restores normal weapon performance. |
-| How should it be used? | Probe, kite slower units, raid workers, escort a Resonant, and disengage before a frontal fight becomes prolonged. |
-| When does it not help? | Low staying power and reduced moving-fire efficiency. |
-| How does the opponent answer it? | Corner it with route control, use long-range fire, screen workers, or force it to fight inside a defended position. |
-
-
-#### SPEC-UNIT-007 — Cairnback
-
-
-| Field | Binding value |
-|---|---|
-| Role | Assault Screen |
-| Cost | 120 Matter / 30 Dawn |
-| Health / speed / sight | 245 / 270 cm/s / 800 cm |
-| Logistics / production | 3 / 140 ticks (7.0 s) |
-| Attack | 16 damage, 200 cm, 28 ticks (1.40 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Absorb pressure and reshape a firing lane with temporary mineral cover. |
-| What can it do? | All common combat orders and stances; Raise Mineral Cover; Warform Adaptation. |
-| Signature rule | Raise Mineral Cover: 15 Dawn, 450 cm range, 180 health, 300-tick duration, 600-tick cooldown. The cover occupies one tile, blocks ground movement and line of fire, and can be destroyed by either player. |
-| How should it be used? | Break a firing lane, protect a retreat, divide a choke, or give skirmishers time to reposition. |
-| When does it not help? | Slow, short-ranged, and vulnerable to being bypassed. Cover can obstruct allies. |
-| How does the opponent answer it? | Destroy the cover, attack another lane, wait out the duration, or force the Cairnback to spend Dawn defensively. |
-
-
-#### SPEC-UNIT-008 — Resonant
-
-
-| Field | Binding value |
-|---|---|
-| Role | Scout Counter Scout |
-| Cost | 80 Matter / 25 Dawn |
-| Health / speed / sight | 85 / 470 cm/s / 1550 cm |
-| Logistics / production | 1 / 80 ticks (4.0 s) |
-| Attack | 8 damage, 380 cm, 20 ticks (1.00 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Scout and detect moving threats without granting perfect information. |
-| What can it do? | Common combat orders; all reconnaissance orders; eligible fixed-passage transit; Warform Adaptation. |
-| Signature rule | Passive vibration sense: moving enemy signatures within 2,200 cm appear for 40 ticks at 200 cm positional resolution. Contacts have no identity and cannot be directly targeted. |
-| How should it be used? | Watch approaches, identify route pressure, verify safe migration, and distinguish movement from silence. |
-| When does it not help? | Fragile; stationary enemies produce no vibration contact; approximate contacts are not vision. |
-| How does the opponent answer it? | Stop outside direct vision, use decoys or split movement, destroy the Resonant, or approach through multiple intervals. |
-
-
-### 12.3 Hollow Choir units
-
-
-#### SPEC-UNIT-009 — Threadkeeper
-
-
-| Field | Binding value |
-|---|---|
-| Role | Worker |
-| Cost | 55 Matter / 5 Dawn |
-| Health / speed / sight | 80 / 380 cm/s / 1000 cm |
-| Logistics / production | 1 / 65 ticks (3.2 s) |
-| Worker | Work rate 9; cargo 12; no attack |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Build the Choir economy while forecasting coherence obligations. |
-| What can it do? | Move, Gather, Deliver, Build, Repair, Future Well protocol, Guard, Stop. |
-| Signature rule | Reconcile Structure: standard worker repair rules, but the command surface also shows the target's next coherence charge and projected Dawn after repair. |
-| How should it be used? | Maintain a compact affordable structure field and avoid creating more recurring obligations than Dawn can sustain. |
-| When does it not help? | No attack, includes a Dawn production cost, and cannot waive coherence charges. |
-| How does the opponent answer it? | Pressure several Choir structures before the next charge, attack Threadkeepers, and force a choice between repair and upkeep. |
-
-
-#### SPEC-UNIT-010 — Intervalist
-
-
-| Field | Binding value |
-|---|---|
-| Role | Phase Skirmisher |
-| Cost | 80 Matter / 35 Dawn |
-| Health / speed / sight | 115 / 350 cm/s / 1150 cm |
-| Logistics / production | 2 / 100 ticks (5.0 s) |
-| Attack | 16 damage, 550 cm, 25 ticks (1.25 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Serve as the Choir's flexible line skirmisher. |
-| What can it do? | All common combat orders and stances; Reconcile Identity. |
-| Signature rule | Reconcile Identity: 20 Dawn; transition for 160 ticks; then Manifest grants 130% damage or Possible grants 130% movement and 125% vision. A new change waits through the transition and a 400-tick cooldown. |
-| How should it be used? | Select Manifest for a committed damage window or Possible for scouting, pursuit, and escape. Change before the engagement, not after the outcome is obvious. |
-| When does it not help? | The transition is public and expensive. One state cannot retain the other's bonus. |
-| How does the opponent answer it? | Disengage from Manifest, pressure during transition, trap Possible units away from damage support, and tax Dawn. |
-
-
-#### SPEC-UNIT-011 — Lacuna Warden
-
-
-| Field | Binding value |
-|---|---|
-| Role | Recovery Controller |
-| Cost | 140 Matter / 45 Dawn |
-| Health / speed / sight | 230 / 260 cm/s / 900 cm |
-| Logistics / production | 3 / 150 ticks (7.5 s) |
-| Attack | 15 damage, 400 cm, 30 ticks (1.50 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Hold the Choir center and control an enemy's retreat or pursuit. |
-| What can it do? | All common combat orders and stances; Reconcile Identity; Bind Interval. |
-| Signature rule | Bind Interval: 25 Dawn, 500 cm range, 80-tick duration, 500-tick cooldown. One visible enemy is slowed by 35% and cannot activate abilities. The effect breaks if the Warden dies, moves more than 700 cm from the target, or loses vision for 20 ticks. |
-| How should it be used? | Protect a retreat, prevent a key ability, or hold a target inside a Manifest damage window. |
-| When does it not help? | Slow and expensive; no healing, resurrection, rewind, or hidden-information recovery. |
-| How does the opponent answer it? | Break vision, focus the Warden, move beyond its tether, or bait the cooldown with a lower-value target. |
-
-
-#### SPEC-UNIT-012 — Afterimage
-
-
-| Field | Binding value |
-|---|---|
-| Role | Misdirection Support |
-| Cost | 75 Matter / 35 Dawn |
-| Health / speed / sight | 70 / 520 cm/s / 1600 cm |
-| Logistics / production | 1 / 85 ticks (4.2 s) |
-| Attack | 7 damage, 420 cm, 22 ticks (1.10 s) cooldown |
-
-
-| Player question | Answer |
-|---|---|
-| Why build it? | Scout, pressure routes, and create fair tactical misdirection. |
-| What can it do? | Common combat orders; all reconnaissance orders; Reconcile Identity; Forked Trace. |
-| Signature rule | Forked Trace: 15 Dawn, 120-tick duration, 500-tick cooldown. Create two player-directed projection paths. Each projection has 1 health, no attack, no collision, and no vision. It appears as an uncertain contact under fog and is labeled PROJECTION when directly seen. |
-| How should it be used? | Test reactions, disguise the direction of a real scout, split sensor attention, or screen a retreat. |
-| When does it not help? | A projection cannot capture, scout, deal damage, block movement, or preserve hidden information. |
-| How does the opponent answer it? | Use direct vision, destroy the 1-health projection, wait for expiry, and verify with multiple information sources. |
-
-
-### 12.4 Kharuun Warform Adaptation
-
-
-An eligible Riftstalker, Cairnback, or Resonant within 600 cm of a completed Growth Basin may spend 25 Dawn and molt for 80 ticks while taking 150% damage. Carapace sets health to 135% and movement to 80%; Striker sets damage to 125% and cooldown to 85%. Adaptation replaces any prior adaptation. It is public, interruptible by death, and never automatic.
-
-
-### 12.5 Choir Identity Reconciliation
-
-
-Intervalist, Lacuna Warden, and Afterimage may spend 20 Dawn to enter a 160-tick public transition. Manifest grants 130% damage. Possible grants 130% movement and 125% vision. The next change becomes legal only after transition plus a 400-tick cooldown. Transition does not teleport, duplicate, heal, rewind, or restore hidden information.
-
-
-## 13. Buildings and base-management actions
-
-
-### 13.1 Meridian Compact structures
-
-
-#### SPEC-STR-001 — Anchor
-
-
-| Field | Binding value |
-|---|---|
-| Role | Headquarters Dropoff |
-| Cost | 0 Matter / 0 Dawn |
-| Health / sight | 1400 / 800 cm |
-| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
-| Logistics | 12 |
-| Special | None |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Compact Command Core, worker producer, network root, and Matter drop-off. |
-| Selection options | Produce Surveyor; set rally; inspect economy/network; repair. |
-| How to use | Protect it because its loss is defeat. It cannot be rebuilt or replaced in standard play. |
-| Counterplay | Attack from several routes, sever outward links, and force the Compact to defend its center. |
-
-
-#### SPEC-STR-002 — Power Link
-
-
-| Field | Binding value |
-|---|---|
-| Role | Supply Node |
-| Cost | 90 Matter / 10 Dawn |
-| Health / sight | 450 / 500 cm |
-| Construction / footprint | 100 ticks (5.0 s) / 2×2 tiles |
-| Logistics | 6 |
-| Special | None |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Extend the Compact network, Matter drop-off coverage, and Logistics. |
-| Selection options | Inspect connection; set worker drop-off priority; dismantle is not available. |
-| How to use | Place links with overlap and defensible spacing; one link should not expose the whole chain. |
-| Counterplay | Sever narrow links and attack the isolated systems they supported. |
-
-
-#### SPEC-STR-003 — Array Foundry
-
-
-| Field | Binding value |
-|---|---|
-| Role | Production |
-| Cost | 180 Matter / 30 Dawn |
-| Health / sight | 760 / 500 cm |
-| Construction / footprint | 160 ticks (8.0 s) / 4×4 tiles |
-| Logistics | 0 |
-| Special | None |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Produce all Compact combat units and research Compact technology. |
-| Selection options | Queue up to five units; research one technology; reorder/cancel units; set rally. |
-| How to use | Add production only when resources and Logistics can sustain it; research consumes its active slot. |
-| Counterplay | Raid it during research, block emergence, or force production away from the needed counter. |
-
-
-#### SPEC-STR-004 — Aegis Post
-
-
-| Field | Binding value |
-|---|---|
-| Role | Defense |
-| Cost | 130 Matter / 30 Dawn |
-| Health / sight | 520 / 700 cm |
-| Construction / footprint | 120 ticks (6.0 s) / 2×2 tiles |
-| Logistics | 0 |
-| Special | Powered attack: 28 damage, 900 cm, 20 ticks; connection 800 cm. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Provide powered automatic area defense. |
-| Selection options | Inspect network source, power state, range, target priority, and hold-fire toggle. |
-| How to use | Cover an economy route or network junction; combine with units rather than relying on it alone. |
-| Counterplay | Sever power, attack beyond its arc/range, overwhelm another route, or focus it with a screened force. |
-
-
-### 13.2 Kharuun Assemblies structures
-
-
-#### SPEC-STR-005 — Memory Hearth
-
-
-| Field | Binding value |
-|---|---|
-| Role | Headquarters Dropoff |
-| Cost | 0 Matter / 0 Dawn |
-| Health / sight | 1300 / 800 cm |
-| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
-| Logistics | 12 |
-| Special | None |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Kharuun Command Core, worker producer, adaptation root, and Matter drop-off. |
-| Selection options | Produce Tender; set rally; inspect economy and migration network. |
-| How to use | Protect it because its loss is defeat. It cannot be rebuilt in standard play. |
-| Counterplay | Draw mobile forces away, deny rooted Waystones, then pressure the Hearth. |
-
-
-#### SPEC-STR-006 — Waystone
-
-
-| Field | Binding value |
-|---|---|
-| Role | Mobile Supply Node |
-| Cost | 80 Matter / 20 Dawn |
-| Health / sight | 390 / 500 cm |
-| Construction / footprint | 100 ticks (5.0 s) / 2×2 tiles |
-| Logistics | 5 |
-| Special | Uproot 40 ticks; move 120 cm/s at 125% damage; root 60 ticks. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Mobile Logistics and Matter drop-off node. |
-| Selection options | Root, Uproot, move while uprooted, set drop-off priority, inspect affected capacity. |
-| How to use | Root after scouting, then migrate when the value of a new route exceeds the exposure window. |
-| Counterplay | Attack during uproot/root, force capacity loss, occupy the intended footprint, or harass the new route. |
-
-
-#### SPEC-STR-007 — Growth Basin
-
-
-| Field | Binding value |
-|---|---|
-| Role | Production |
-| Cost | 165 Matter / 35 Dawn |
-| Health / sight | 700 / 500 cm |
-| Construction / footprint | 160 ticks (8.0 s) / 4×4 tiles |
-| Logistics | 0 |
-| Special | Adaptation site within 600 cm; see Warform Adaptation. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Produce Kharuun combat units, research, and enable Warform Adaptation. |
-| Selection options | Queue/reorder/cancel units; research; set rally; inspect nearby eligible units and molt risk. |
-| How to use | Place where returning units can adapt without exposing the entire economy. |
-| Counterplay | Attack during research or molt, deny the 600 cm site, and force repeated expensive adaptations. |
-
-
-#### SPEC-STR-008 — Listening Spine
-
-
-| Field | Binding value |
-|---|---|
-| Role | Detection |
-| Cost | 115 Matter / 25 Dawn |
-| Health / sight | 440 / 900 cm |
-| Construction / footprint | 120 ticks (6.0 s) / 2×2 tiles |
-| Logistics | 0 |
-| Special | Moving signatures within 2600 cm; 200 cm resolution; 40 ticks. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Provide broad anonymous vibration detection. |
-| Selection options | Inspect coverage and contact history; toggle alert threshold. |
-| How to use | Cover routes that direct vision cannot safely hold and combine with Resonants for confirmation. |
-| Counterplay | Approach stationary, split routes, use projections, or destroy the Spine. |
-
-
-### 13.3 Hollow Choir structures
-
-
-#### SPEC-STR-009 — Concordance
-
-
-| Field | Binding value |
-|---|---|
-| Role | Headquarters Dropoff |
-| Cost | 0 Matter / 0 Dawn |
-| Health / sight | 1250 / 900 cm |
-| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
-| Logistics | 12 |
-| Special | None |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Choir Command Core, worker producer, Matter drop-off, and coherence summary. |
-| Selection options | Produce Threadkeeper; set rally; inspect all upcoming structure charges. |
-| How to use | Anchor the economy and keep a Dawn reserve. It has no ordinary coherence charge and cannot be rebuilt. |
-| Counterplay | Pressure Dawn and structures simultaneously, then attack the Core when the field contracts. |
-
-
-#### SPEC-STR-010 — Interval Loom
-
-
-| Field | Binding value |
-|---|---|
-| Role | Supply Node |
-| Cost | 85 Matter / 25 Dawn |
-| Health / sight | 400 / 600 cm |
-| Construction / footprint | 110 ticks (5.5 s) / 2×2 tiles |
-| Logistics | 6 |
-| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Provide Logistics and a Matter drop-off while adding a recurring coherence obligation. |
-| Selection options | Inspect next charge, route assignment, capacity, and projected insolvency. |
-| How to use | Build only when its route and added capacity generate more value than its 5-Dawn charge every 600 ticks. |
-| Counterplay | Force the Choir to choose between the Loom, production, abilities, and Well control. |
-
-
-#### SPEC-STR-011 — Chorus Loom
-
-
-| Field | Binding value |
-|---|---|
-| Role | Production |
-| Cost | 175 Matter / 40 Dawn |
-| Health / sight | 680 / 550 cm |
-| Construction / footprint | 170 ticks (8.5 s) / 4×4 tiles |
-| Logistics | 0 |
-| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Produce Choir combat units and research Choir technology. |
-| Selection options | Queue/reorder/cancel units; research; set rally; inspect production plus coherence forecast. |
-| How to use | Synchronize production with Dawn income and identity windows. |
-| Counterplay | Attack before a charge, interrupt a key unit, and force the Choir to overspend. |
-
-
-#### SPEC-STR-012 — Phase Anchor
-
-
-| Field | Binding value |
-|---|---|
-| Role | Coherence |
-| Cost | 120 Matter / 35 Dawn |
-| Health / sight | 480 / 800 cm |
-| Construction / footprint | 130 ticks (6.5 s) / 2×2 tiles |
-| Logistics | 0 |
-| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
-
-
-| Player question | Answer |
-|---|---|
-| Purpose | Reduce the recurring cost of a compact Choir position. |
-| Selection options | Inspect coherence field, protected structures, next charges, and hold-fire. |
-| How to use | Within 700 cm, each eligible non-Core Choir structure pays 4 rather than 5 Dawn per charge. Fields do not stack. |
-| Counterplay | Destroy or bypass it; when its field ends, the next full charges remain due and must be forecast. |
-
-
-## 14. Technology and strategic progression
-
+* **SPEC-SCT-001 — Eligible scouts mapping:** Relay Skiff, Resonant, and Afterimage may use every reconnaissance order. Other mobile combat units may Explore Area and Screen Route but do not gain specialist threat routing.
+* **SPEC-SCT-002 — Legal routing constraint:** Automation searches reachable unexplored frontier from player-known terrain. It never queries hidden enemies, resources, structures, routes, or Well state to choose a path.
+* **SPEC-SCT-003 — Automated response policies:** CAUTIOUS reports and returns on contact; OBSERVE maintains the player-set distance without attacking; PERSIST continues until health reaches the player-set threshold or a manual order overrides it.
+* **SPEC-SCT-004 — Active mission selection feedback:** Selection shows mission, boundary, planned route, progress, discoveries, response policy, health threshold, and return point. Manual commands interrupt immediately; resume or return is explicit.
+* **SPEC-SCT-005 — Autonomous mission outcomes:** Matter, Well, route, hostile unit, hostile structure, damage, blocked path, and scout loss generate distinct fair alerts. An exhausted order reports SEARCH COMPLETE, NO UNEXPLORED AREA, or NO SAFE ROUTE as applicable instead of wandering indefinitely.
+* **SPEC-SCT-006 — Structural authority boundaries:** Reconnaissance never selects a Well protocol, gathers a newly found resource, attacks unless stance permits, spends resources, changes identity/adaptation, or commits a campaign decision.
+
+## §9. Economy, resources, Logistics, and forecasting
+
+* **SPEC-RES-001 — Three resource pillars:** The economic engine shall be governed strictly by three resources: Matter (primary construction/production), Dawn (advanced tech, abilities, and Future Well commitment), and Logistics (population throughput ceiling). No secondary unmodeled currencies, hidden reserves, or temporal build-tokens shall exist.
+* **SPEC-RES-002 — Starting resources preset:** Standard skirmish and campaign operations shall initialize player resource balances strictly from the authored difficulty presets: Scarce (250 Matter / 18 Dawn), Standard (400 Matter / 30 Dawn), and Abundant (700 Matter / 60 Dawn). Both players receive identical starting balances and initialize with one Command Core and five worker units.
+* **SPEC-RES-003 — Matter deposit extraction constraints:** Matter deposits shall carry a finite resource volume (Standard node = 1,500 Matter). A single deposit node supports a maximum allocation of two worker units at optimal extraction rates; additional workers assigned to the same node shall wait visibly in an arrival queue. Workers extract Matter over a 20-tick harvest phase to fill a 10-unit cargo capacity.
+* **SPEC-RES-004 — Continuous automated worker gathering loop:** A valid Gather order shall transition a worker into an autonomous continuous state loop: Move to Node → Harvest 20 Ticks → Move to Drop-off → Deposit Cargo → Return to Node without requiring repeated manual clicks. The cycle repeats until deposit depletion, path invalidation, or manual command override.
+* **SPEC-RES-005 — Drop-off target selection:** Workers carrying cargo shall dynamically select the closest operational, reachable friendly drop-off structure. If the targeted drop-off is destroyed or disconnected en route, the worker shall recalculate pathing to the nearest alternate drop-off within exactly 1 simulation tick.
+* **SPEC-RES-006 — Deposit depletion lifecycle:** When a Matter deposit's volume reaches zero, it shall deplete immediately and leave a non-interactable remembered terrain marker. Assigned workers shall halt, cease collection loops, enter the Idle Worker registry, and fire a high-priority HUD alert. Workers shall never independently seek un-scouted resource nodes.
+* **SPEC-RES-007 — Logistics cap enforcement & supply deficit:** When committed population equals total Logistics capacity, production queues attempting to train new units shall freeze with the status LOGISTICS FULL. Destroying a supply structure while at maximum capacity places the player in supply deficit; existing units remain active and controllable, but all new production is blocked until supply infrastructure is restored.
+
+## §9.1 Resource monitor and telemetry deck tracking
+The persistent economy interface shall consume player-scoped visibility authority exclusively and render the following unified tracking rows within the top-left HUD telemetry deck:
+
+* Current Balances: Real-time values of liquid Matter and Dawn reserves mapped to 64-bit simulation integer fields.
+* Income Velocity: Separate trailing Matter income and Dawn income averages calculated continuously over the previous 30 and 60 seconds.
+* Worker Allocation Registry: Total worker units, sub-classified by active states: idle, gathering, delivering, traveling, blocked, constructing, and repairing.
+* Deposit Metrics: Active assignments, saturation levels, known remaining volume, travel durations, and estimated depletion timelines for all scouted deposits.
+* Logistics Telemetry: Logistics counters detailing capacity used, durable capacity, temporary capacity buffers, reserved queue requirements, and active capacity expiration timers.
+* Insolvency Forecasting Banners: Real-time tracking of upcoming Choir coherence upkeep cycles and dynamic Skiff relay expirations, firing immediate visual and audio warnings at 30, 15, and 5 seconds before a forecasted bankruptcy event. Forecasts shall round conservatively rather than promising unavailable resources.
+
+## §10. Construction, production, repair, and research
+
+* **SPEC-BLD-001 — Blueprint placement validation:** Structural placement previews shall expose faction-specific nomenclature, exact resource costs, structural footprints, rotation vectors, buildability, assigned worker pathing routes, remaining assembly durations, and expected network power status layers. Buildings rotate strictly in 90-degree increments; altering facing geometry shall never change layout footprint metrics except for explicit directional weapons systems.
+* **SPEC-BLD-002 — Transactional cost subtraction:** Construction and unit production costs shall subtract authoritatively from player resource banks the exact simulation tick the order transitions into its active manufacturing slot. A queued item displays its uncommitted value but shall never lock or reserve resource balances until activation. Technology research costs are subtracted immediately at start and are completely non-refundable.
+* **SPEC-BLD-003 — Multi-builder speed scaling falloff:** Assigning multiple worker units to assist construction shall follow a strict diminishing return formula: 1st worker = 100% build rate; 2nd worker = +60%; 3rd worker = +40%; 4th+ workers = +0% build speed. Additional workers beyond three may execute structural repairs if supported or wait in an idle state. If all assisting builders are killed or redirected, construction progress pauses instantly without decay over time.
+* **SPEC-BLD-004 — Incomplete structure vulnerability:** Structures under construction are targetable by enemy weapons, take standard combat damage, and carry maximum health values directly proportional to assembly progress with a baseline minimum floor of 10% HP. Incomplete foundations provide zero production, logistics, power links, or vision detection parameters beyond their local site boundaries, and accept repairs exclusively up to their progress-limited health ceiling.
+* **SPEC-BLD-005 — Manufacturing cancellation refunds:** Cancelling an incomplete structure or unit production queue entry before achieving 50% assembly progress shall trigger an immediate 75% Matter and 75% Dawn resource refund. Cancelling at or after 50% progress limits reclamation to exactly 50% Matter and 50% Dawn. Research projects interrupt without any refund. Interface confirmation prompts shall calculate and display the exact refund sums prior to closure.
+* **SPEC-BLD-006 — Production queue depth mapping:** Active manufacturing structures shall support one active execution slot plus up to 4 queued entries (maximum queue depth 5). Queued items can be reordered at any time except for the actively processing item. A production structure may execute technology research upgrades within its active execution slot, halting parallel unit training for the duration of the research cycle. One research project may be active per player.
+* **SPEC-BLD-007 — Unit emergence obstruction loops:** Completed units shall emerge from the facility's exit vector at the nearest free legal tile, automatically executing their assigned rally route. If the emergence zone is physically blocked by obstructions or dense unit packing for 100 consecutive ticks, production pauses at 100% completion, retains the unit safely inside the facility framework, and emits a high-priority `[SPAWN BLOCKED]` alert.
+* **SPEC-BLD-008 — Rally path routing:** Facility controllers shall support a single rally coordinate or a Shift-queued command pipeline sequence. Rally trajectories may target explicit ground paths, an allied target entity to invoke automatic Guard behavior, or a valid resource node to initialize immediate worker gathering loops upon unit emergence. If the target coordinates become blocked or permanently unreachable, emerging units halt safely at the exit and emit an alert.
+* **SPEC-BLD-009 — Base building governance infrastructure:** Players may construct multiple production, logistics supply, defense outposts, and drop-off utility structures across pathable coordinates, restricted to a maximum cap of one active Command Core per match session. Completed structures cannot be sold, captured, garrisoned, abandoned, or converted. They may be eliminated entirely via direct combat damage or cancelled while incomplete.
+* **SPEC-BLD-010 — Maintenance repair resolution:** Friendly worker units issued a direct structural maintenance order shall execute Repair at an extraction cost of 5 Matter per second, restoring completed allied entity health at 20 HP per second. Repair actions continue until the target reaches maximum health, Matter balances drop to zero, or a combat attack interrupts the worker channel for a 1-second penalty window. Repair cannot resurrect eliminated entities, remove active status effects, or operate without Matter.
+
+### §10.1 Technology model and strategic progression
+
+Launch research upgrades are intentionally compact, providing exactly two sequential faction technologies to enforce clear timing choices rather than breadth:
+* **REL-FAC-028.MC.TECH — Compact technology:** Array Foundry research shall provide Prismatic Targeting (120 Matter/40 Dawn, 180 ticks, 115% combat damage) followed by Horizon Lattice (90/55, 220 ticks, requires Tier 1, 120% combat vision).
+* **REL-FAC-028.KA.TECH — Kharuun technology:** Growth Basin research shall provide Echo Cartography (100/45, 180 ticks, 120% combat vision) followed by Ancestral Edge (110/50, 220 ticks, requires Tier 1, 115% combat damage).
+* **REL-FAC-028.HC.TECH — Choir technology:** Chorus Loom research shall provide Held Alternatives (105/50, 190 ticks, 110% combat damage and vision) followed by Shared Resolution (115/60, 230 ticks, requires Tier 1, 120% combat vision). UI shall show every applied effect.
+
+## §11. Combat resolution, stances, and counterplay
+
+* **SPEC-CMB-001 — Deterministic direct combat resolution:** All combat weapon exchanges shall calculate damage outcomes deterministically via exact data tables, completely eliminating random critical strikes, hidden accuracy percentages, and dice rolls. A valid attack deals its complete stated value when its tracking projectile or contact frame resolves against the target entity.
+* **SPEC-CMB-002 — Unified damage calculation model:** Launch combat features a single damage class with no abstract armor-class multipliers. Units counter one another via observable operational variables: firing range, movement speed, maximum health/shields, vision fields, deployment state, and spatial positioning.
+* **SPEC-CMB-003 — Ballistic projectile travel simulation:** Ranged combat weapons shall simulate discrete, tracking projectile entities traveling through the world simulation coordinates at an authored velocity of 1,200 cm/s. Damage resolves authoritatively on the exact simulation tick the projectile hits its target. Projectiles intersecting valid Mineral Cover or a deployed Bulwark shield area resolve damage directly against that protection asset instead of the unit.
+* **SPEC-CMB-004 — Terrain line-of-sight projectile occlusion:** Weapon firing loops require unoccluded straight-line line of sight from muzzle to target. Projectiles whose 3D flight trajectory raycasts intercept impassable cliff geometry or occluding structures shall impact the obstruction and drop out of the simulation, dealing 0 damage to the intended target.
+* **SPEC-CMB-005 — Friendly fire immunity invariant:** Standard weapons and activated faction abilities shall inflict exactly 0 damage to allied units or the firing unit. Projectiles and area damage passes safely through allied entity view actors without breaking line-of-sight trajectory channels or triggering collision events.
+* **SPEC-CMB-006 — Fire and movement constraints:** All combat units except the moving Kharuun Riftstalker operating under Slipfire rules must halt to execute an attack. Units rotate toward their target during their authored wind-up interval; if a target breaks visibility thresholds or range boundaries before the wind-up finishes, the attack waits rather than firing backward.
+* **SPEC-CMB-007 — Autonomous threat acquisition priority:** When operating without explicit player manual targets, entities acquire and prioritize threats based on an automated hierarchy: (1) Immediate active attackers within range; (2) Mobile armed combatants; (3) Defensive structures; (4) Unarmed workers or supply infrastructure. Pairings are broken by evaluating lowest remaining health, resolved by stable entity unique IDs.
+* **SPEC-CMB-008 — Intelligent overkill damage avoidance:** Units operating under autonomous targeting filters shall evaluate in-flight projectile damage already directed at their target entity. If cumulative pending damage is predicted to meet or exceed the target's remaining health, subsequent units automatically retarget the next viable hostile rather than wasting attacks. Focus-fire commands bypass this and always obey the player.
+* **SPEC-CMB-009 — Lifecycle termination and remains cleanup:** When an entity's health reaches 0, it loses authority immediately, drops active order queues, clears its collision footprint from the spatial hash grid, and instantiates a cosmetic destruction view actor. Ruin wreckage blocks zero unit paths or commands, remaining on screen for exactly 200 simulation ticks before executing a clean fade out.
+* **SPEC-CMB-010 — Tactical disengagement and retreat:** Unit retreat is handled as ordinary user-directed movement, carrying zero hidden disengagement penalties or artificial morale state nerfs. Wounded units receive immediate low-health notifications and may be included in player-configured automatic automated retreat policies to designated safe nodes.
+
+## §11.1 Combat stances
+All combat units support five explicit combat stances switchable via the HUD command card or hotkey cycling (F). Stance states govern autonomous acquisition range and maximum pursuit distance thresholds:
+
+| ID | Stance | Autonomous Target Acquisition | Maximum Pursuit Leash Distance |
+|---|---|---|---|
+| SPEC-STANCE-001 | Aggressive | Any visible legal hostile within full sight radius | Pursues up to 900 cm from initial order coordinate |
+| SPEC-STANCE-002 | Defensive (Default) | Threats within weapon range or attacking allied units | Pursues up to 400 cm from initial order coordinate |
+| SPEC-STANCE-003 | Hold Position | Valid visible hostile inside weapon range only | Zero pursuit translation allowed (0.0 cm) |
+| SPEC-STANCE-004 | Return Fire | Engages exclusively units that damage self or guardee | Pursues up to 250 cm from initial damage coordinate |
+| SPEC-STANCE-005 | Hold Fire | None; suppresses all autonomous attack behaviors | Zero pursuit translation allowed (0.0 cm) |
+
+## §11.2 Unit and worker automation policies
+
+* **SPEC-AUT-001 — Player-owned automation guidelines:** Every automated behavior is strictly opt-in, toggled via selection panels, and immediately cancelled by any direct manual command. Automation handles execution tasks only; it is completely barred from choosing research, tech paths, adaptation states, or irreversible Well decisions.
+* **SPEC-AUT-002 — Worker automated repair policy:** When enabled inside an active selection group, workers may autonomously repair the closest damaged completed allied target within a player-set radius. Repair loops execute exclusively while the player's projected Matter balance remains above a user-defined threshold, automatically returning the worker to its prior task when the target is fully repaired.
+* **SPEC-AUT-003 — Worker automated flee policy:** Players may set a health threshold and designated fallback node (e.g. Anchor, Hearth, Concordance). Upon receiving hostile damage below that threshold, the worker drops active tasks and flees toward the safe point using known pathing, emitting a high-priority alert if no safe path is found.
+* **SPEC-AUT-004 — Idle worker registry tracking:** A worker unit with zero valid orders remains idle, receives an overhead idle indicator, and appends to the global idle-worker registry index. Idle workers never independently harvest, build, repair, or move into un-scouted territory.
+
+## §12. Factions and strategic identities
+
+* **SPEC-FACID-001 — Meridian Compact strategic alignment:** The Meridian Compact shall operate on a rigid, interconnected power grid and orthogonal defensive lines. Strategic power derives from secure choke control, long-range disciplined fire, directional front shielding, and temporary logistics line extensions.
+* **SPEC-FACID-002 — Kharuun Assemblies strategic alignment:** The Kharuun Assemblies shall operate via mobile infrastructure, post-contact warform mutations, and seismic movement tracking. Strategic power derives from multi-route skirmishing, dynamic terrain cover placement, and rapid base migration across resource fields.
+* **SPEC-FACID-003 — Hollow Choir strategic alignment:** The Hollow Choir shall operate via quantum superposition states, temporal reconciliation, and active Dawn accounting. Strategic power derives from flexible identity splitting, short visual masking, and timing bursts purchased at the cost of recurring structure coherence upkeep.
+
+## §12.1 Meridian Compact unit rosters
+
+### SPEC-UNIT-001 — Surveyor
+* **Data Metrics:** Cost: 50 Matter / 0 Dawn. Health: 90 HP. Movement Speed: 360 cm/s. Sight Radius: 900 cm. Logistics Footprint: 1. Production Time: 60 ticks (3.0s). Work Rate: 10. Cargo Capacity: 10 Matter. Weapon Attack: 0 Damage (Unarmed).
+* **Player Purpose:** Core economic builder and logistics conduit. Gathers Matter, constructs Compact structures, operates Future Wells, and provides baseline maintenance.
+* **Signature Mechanism:** Network Repair: Channels on an allied unit or building within 200 cm, restoring 10 health per second at a cost of 1 Matter per 10 HP. Up to three Surveyors scale repair efficiency at 100%, 60%, and 40%. Combat damage interrupts the channel for 20 ticks.
+* **Strategic Playbook:** Keep routes short and heavily scouted. Place links with interlocking fields. Retreat immediately upon hostile radar spikes; a worker has zero close-combat escape capabilities.
+
+### SPEC-UNIT-002 — Lancer
+* **Data Metrics:** Cost: 85 Matter / 20 Dawn. Health: 145 HP. Movement Speed: 320 cm/s. Sight Radius: 1,100 cm. Logistics Footprint: 2. Production Time: 100 ticks (5.0s). Weapon Attack: 18 Damage, 650 cm range, 30 ticks (1.5s) weapon cooldown.
+* **Player Purpose:** Disciplined ranged line damage dealer. Strongest when integrated behind thick defensive screens and coupled with long-range scout support.
+* **Signature Mechanism:** No activated ability. Weapon value maps to raw range, high continuous damage output, and uncompromised focus-fire line tracking.
+* **Strategic Playbook:** Mass Lancers behind deployed Bulwark teams. Turn toward targets early during weapon wind-up to avoid turning stalls. Retreat along a prepared path link line before mobile skirmishers close the distance gap; Lancers must halt to fire.
+
+### SPEC-UNIT-003 — Bulwark Team
+* **Data Metrics:** Cost: 130 Matter / 25 Dawn. Health: 260 HP. Movement Speed: 230 cm/s. Sight Radius: 850 cm. Logistics Footprint: 3. Production Time: 140 ticks (7.0s). Weapon Attack: 10 Damage, 300 cm range, 24 ticks (1.2s) weapon cooldown.
+* **Player Purpose:** Heavy directional frontline screen. Creates localized, movable cover to protect fragile ranged fire units from direct frontal projectile fire.
+* **Signature Mechanism:** Deploy Barrier: After a 20-tick mechanical setup, anchors to coordinates, projects a 120-degree frontal shield arc granting 40% incoming projectile damage reduction, and drops movement speed to 35%. Packing takes 15 ticks.
+* **Strategic Playbook:** Anchor narrow chokepoints or resource entries. Combine with Lancers to force uneconomical head-on trades. Rotate facing vectors manually before fast skirmishers execute a flank maneuver; rear hits bypass all shield reduction.
+
+### SPEC-UNIT-004 — Relay Skiff
+* **Data Metrics:** Cost: 70 Matter / 20 Dawn. Health: 75 HP. Movement Speed: 500 cm/s. Sight Radius: 1,500 cm. Logistics Footprint: 1. Production Time: 80 ticks (4.0s). Weapon Attack: 6 Damage, 400 cm range, 24 ticks (1.2s) weapon cooldown.
+* **Player Purpose:** High-speed scout and temporary logistics multiplier. Extends vision lines across fog corridors and bridges brief production supply bottlenecks.
+* **Signature Mechanism:** Extend Relay: While positioned within 700 cm of a connected Compact grid node, grants +4 temporary Logistics capacity for 400 simulation ticks, bound to an 800-tick cooldown loop.
+* **Strategic Playbook:** Use autonomous scouting orders to map frontier tiles. Deploy temporary supply bursts to squeeze out an extra combat squad without waiting for Power Link construction. Never fly into unrevealed static batteries; visual hovering uses the standard ground pathing mask.
+
+## §12.2 Kharuun Assemblies unit rosters
+
+### SPEC-UNIT-005 — Tender
+* **Data Metrics:** Cost: 50 Matter / 0 Dawn. Health: 100 HP. Movement Speed: 390 cm/s. Sight Radius: 920 cm. Logistics Footprint: 1. Production Time: 60 ticks (3.0s). Work Rate: 9. Cargo Capacity: 10 Matter. Weapon Attack: 0 Damage (Unarmed).
+* **Player Purpose:** Core economic worker and terrain manipulator. Gathers Matter, grows Assemblies structures, operates Wells, and migrates base assets.
+* **Signature Mechanism:** Stabilize Scar: Spends 15 Dawn and channels continuously for 120 ticks on an empty Scarred terrain tile within 300 cm, permanently converting it to an Open terrain tile. Interruption forfeits spent Dawn.
+* **Strategic Playbook:** Accompany Waystone relocations to quickly clear passability chokes. Stabilize critical build tiles around resource expansions.approach Wells under the protection of Cairnback cover.
+
+### SPEC-UNIT-006 — Riftstalker
+* **Data Metrics:** Cost: 75 Matter / 30 Dawn. Health: 125 HP. Movement Speed: 410 cm/s. Sight Radius: 1,050 cm. Logistics Footprint: 2. Production Time: 100 ticks (5.0s). Weapon Attack: 14 Damage, 500 cm range, 22 ticks (1.1s) weapon cooldown.
+* **Player Purpose:** High-speed mobile harasser and flank skirmisher. Designed to probe perimeter defenses, raid exposed worker routes, and isolate separated targets.
+* **Signature Mechanism:** Slipfire: May fire weapon while executing a movement order, dealing 75% normal damage at a 125% weapon cooldown cost. Stopping instantly restores 100% weapon efficiency.
+* **Strategic Playbook:** Use hit-and-run kiting mechanics against slow lines. Exploit subsurface passages for unexpected flank exits. Disengage immediately if trapped inside a static defensive arc; Riftstalkers have low staying power in prolonged fights.
+
+### SPEC-UNIT-007 — Cairnback
+* **Data Metrics:** Cost: 120 Matter / 30 Dawn. Health: 245 HP. Movement Speed: 270 cm/s. Sight Radius: 800 cm. Logistics Footprint: 3. Production Time: 140 ticks (7.0s). Weapon Attack: 16 Damage, 200 cm range, 28 ticks (1.4s) weapon cooldown.
+* **Player Purpose:** Assault screen and lane controller. Absorbs incoming fire and physically breaks enemy firing lines with temporary, destructible cover geometry.
+* **Signature Mechanism:** Raise Mineral Cover: Spends 15 Dawn to instantiate a temporary 180-HP block of mineral cover at a target coordinate within 450 cm. The cover blocks all ground movement and projectile trajectories across 300 ticks, bound to a 600-tick cooldown.
+* **Strategic Playbook:** Launch mineral cover directly between enemy gun lines and your retreating skirmishers. Split narrow chokepoints to divide superior enemy armies. Undergo Carapace molting at a Growth Basin to transform into a high-HP vanguard anchor.
+
+### SPEC-UNIT-008 — Resonant
+* **Data Metrics:** Cost: 80 Matter / 25 Dawn. Health: 85 HP. Movement Speed: 470 cm/s. Sight Radius: 1,550 cm. Logistics Footprint: 1. Production Time: 80 ticks (4.0s). Weapon Attack: 8 Damage, 380 cm range, 20 ticks (1.0s) weapon cooldown.
+* **Player Purpose:** Specialized sensor scout and anti-scout combatant. Detects hidden movement patterns across long distances without exposing its own visual coordinates.
+* **Signature Mechanism:** Passive Vibration Sense: Moving enemy signatures within 2,200 cm generate anonymous, identity-free pings on the minimap at 200 cm positional resolution, lingering for 40 ticks. Stationary targets generate exactly zero tracking signatures.
+* **Strategic Playbook:** Position at critical route intersections to monitor enemy army staging. Screen moving columns to detect enemy skiffs or projections early. Dodge long-range direct combat lines; the Resonant carries a minimal health pool.
+
+
+## §12.3 Hollow Choir unit rosters
+
+### SPEC-UNIT-009 — Threadkeeper
+* **Data Metrics:** Cost: 55 Matter / 5 Dawn. Health: 80 HP. Movement Speed: 380 cm/s. Sight Radius: 1,000 cm. Logistics Footprint: 1. Production Time: 65 ticks (3.2s). Work Rate: 9. Cargo Capacity: 12 Matter. Weapon Attack: 0 Damage (Unarmed).
+* **Player Purpose:** Core Choir worker and coherence forecasting terminal. Gathers Matter, builds structures, and exposes the resource health of the network.
+* **Signature Mechanism:** Reconcile Structure: Executes standard maintenance repairs on Choir assets, while the command overlay exposes the target building's next upkeep tick and the player's projected Dawn solvency after repair.
+* **Strategic Playbook:** Keep close watch on upcoming coherence deadlines; overproducing structures updates the selector forecast to alert of imminent insolvency. Maintain worker lines under the protective field of a Phase Anchor.
+
+### SPEC-UNIT-010 — Intervalist
+* **Data Metrics:** Cost: 80 Matter / 35 Dawn. Health: 115 HP. Movement Speed: 350 cm/s. Sight Radius: 1,150 cm. Logistics Footprint: 2. Production Time: 100 ticks (5.0s). Weapon Attack: 16 Damage, 550 cm range, 25 ticks (1.25s) weapon cooldown.
+* **Player Purpose:** Flexible phase skirmisher and core line unit. Morphs statistics dynamically to shift between raw damage output and high-speed battlefield evasion.
+* **Signature Mechanism:** Identity Reconciliation: Spends 20 Dawn to enter a 160-tick public transition window. Upon completion, selects Manifest (130% damage modifier) or Possible (130% speed, 125% vision). The choice is mutually exclusive and locks behind a 400-tick cooldown.
+* **Strategic Playbook:** Morph into Possible state to scout approaches, execute rapid flanks, or disengage from traps. Transition into Manifest state once a clean, screened firing position is secured behind a warden line.
+
+### SPEC-UNIT-011 — Lacuna Warden
+* **Data Metrics:** Cost: 140 Matter / 45 Dawn. Health: 230 HP. Movement Speed: 260 cm/s. Sight Radius: 900 cm. Logistics Footprint: 3. Production Time: 150 ticks (7.5s). Weapon Attack: 15 Damage, 400 cm range, 30 ticks (1.5s) weapon cooldown.
+* **Player Purpose:** Durable heavy controller and anchor unit. Controls enemy displacement, shuts down high-threat active abilities, and secures the Choir center.
+* **Signature Mechanism:** Bind Interval: Spends 25 Dawn to project a tether beam at a visible enemy within 500 cm. The tether lasts 80 ticks, slowing the target by 35% and disabling all active ability keys. Beam shatters if line-of-sight is lost for 20 ticks or distance exceeds 700 cm.
+* **Strategic Playbook:** Bind high-threat enemy casters or heavy frontlines (like deploying Bulwarks) to lock them out of active abilities. Use the slow modifier to trap fleeing forces inside a Manifest Intervalist kill pocket.
+
+### SPEC-UNIT-012 — Afterimage
+* **Data Metrics:** Cost: 75 Matter / 35 Dawn. Health: 70 HP. Movement Speed: 520 cm/s. Sight Radius: 1,600 cm. Logistics Footprint: 1. Production Time: 85 ticks (4.2s). Weapon Attack: 7 Damage, 420 cm range, 22 ticks (1.1s) weapon cooldown.
+* **Player Purpose:** High-speed scout and tactical misdirection support. Focuses on sensor deception and mapping route coverage across explored fog lines.
+* **Signature Mechanism:** Forked Trace: Spends 15 Dawn to instantiate two player-directed projection vectors with a 120-tick duration timer (500-tick cooldown). Projections appear as anonymous moving signatures under enemy fog, carry 1 HP, and possess zero collision or attack vectors.
+* **Strategic Playbook:** Trigger Forked Trace right before a push to flood enemy Listening Spines with false movement pings. Send projections down alternate map corridors to bait defensive responses or screen the real approach path of your main army.
+
+## §12.4 Kharuun Warform Adaptation Modification
+An eligible Riftstalker, Cairnback, or Resonant unit positioned within 600 cm of a completed friendly Growth Basin structure may spend 25 Dawn to undergo an 80-tick public molt window, replacing any prior adaptation. Molting units take 150% incoming damage from all weapons, and death cancels the modification without resource refund.
+
+* Carapace Adaptation: Authoritatively sets maximum health to 135% and clamps base translation movement speed to 80%.
+* Striker Adaptation: Authoritatively sets combat attack damage to 125% and scales weapon cooldown intervals down to 85%.
+
+## §12.5 Choir Identity Reconciliation Transition
+An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to enter a 160-tick public identity reconciliation window on the GPU. The transition window represents a vulnerable state carrying both identity markers without stat bonuses. The next transition becomes legal only after the 160-tick resolution plus a 400-tick tracking cooldown concludes.
+
+* Manifest Identity: Grants an authoritative 130% scalar multiplier to all base weapon damage values.
+* Possible Identity: Grants an authoritative 130% multiplier to movement speed and a 125% extension to vision fields.
+
+## §13. Buildings and base-management actions
+### §13.1 Meridian Compact structures
+
+#### SPEC-BLD-015.MC.ANCHOR — Anchor
+* **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,400 HP. Sight Radius: 800 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Faction Command Core network root.
+* **Player Purpose:** Compact Command Core, primary worker producer, power network source vertex, and secure Matter resource drop-off.
+* **Selection Interface Options:** Queue Surveyor production; set emergence rally points; inspect global economy/power matrices; execute Surveyor maintenance repairs.
+* **Strategic Playbook:** Protect this structure at all costs because its total destruction instantly inflicts match defeat. It cannot be rebuilt or replaced in standard skirmish play.
+* **Opponent Counterplay:** Launch multi-route harassment runs, sever narrow outward power link segments, and isolate the facility center from military reinforcements.
+#### SPEC-BLD-015.MC.LINK — Power Link
+* **Data Metrics:** Role: Supply Node. Cost: 90 Matter / 10 Dawn. Health: 450 HP. Sight Radius: 500 cm. Construction Time: 100 ticks (5.0s). Base Footprint: 2×2 tiles. Logistics Modifier: +6 Capacity. Special: Operational Matter cargo drop-off.
+* **Player Purpose:** Extends the Compact's power grid topology, provides regional Logistics capacity, and expands local worker harvesting drop-off coverage.
+* **Selection Interface Options:** Inspect network link grid pathing; set worker delivery priority overrides; manual dismantling remains unavailable.
+* **Strategic Playbook:** Deploy links with deliberate overlap boundaries; a single link node must never be placed so far forward that its destruction severs your entire sub-grid chain.
+* **Opponent Counterplay:** Pinpoint and eliminate weak link connections to immediately disable dependent forward automated defenses.
+#### SPEC-BLD-015.MC.FOUNDRY — Array Foundry
+* **Data Metrics:** Role: Production Center. Cost: 180 Matter / 30 Dawn. Health: 760 HP. Sight Radius: 500 cm. Construction Time: 160 ticks (8.0s). Base Footprint: 4×4 tiles. Logistics Modifier: 0. Special: Hosts faction research projects.
+* **Player Purpose:** Manufactures all Compact mobile combat forces and researches specialized tier modifications.
+* **Selection Interface Options:** Queue up to five units; research active tech; drag-reorder/cancel items; set emergence rally routes.
+* **Strategic Playbook:** Add additional assembly facilities only when your worker saturation can sustain the drain; remember that tech research occupies the facility's active slot, completely pausing unit production.
+* **Opponent Counterplay:** Launch targeted raids when research tickers are active, jam emergence vectors with bodies, or force production away from the needed unit counter.
+#### SPEC-BLD-015.MC.AEGIS — Aegis Post
+* **Data Metrics:** Role: Automated Defense. Cost: 130 Matter / 30 Dawn. Health: 520 HP. Sight Radius: 700 cm. Construction Time: 120 ticks (6.0s). Base Footprint: 2×2 tiles. Logistics Modifier: 0. Special: Powered attack: 28 damage, 900 cm range, 20 ticks cooldown; network connection radius: 800 cm.
+* **Player Purpose:** Provides powered automatic high-impact defensive zone protection against ground threats.
+* **Selection Interface Options:** Inspect local network energy source, power connectivity layer, target ranking modifiers, and hold-fire status toggle.
+* **Strategic Playbook:** Cover essential mineral extraction routes or vital network joints; combine with active line units rather than relying on automated defense alone.
+* **Opponent Counterplay:** Sever its connecting link node to drop the weapon offline instantly, or bypass its fixed firing arc entirely using mobile skirmishers.
+
+### §13.2 Kharuun Assemblies structures
+
+#### SPEC-BLD-016.KA.HEARTH — Memory Hearth
+* **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,300 HP. Sight Radius: 800 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Faction Command Core adaptation root.
+* **Player Purpose:** Kharuun Command Core, primary worker producer, roster adaptation authority, and secure Matter resource drop-off.
+* **Selection Interface Options:** Produce Tender units; set emergence rally routes; inspect local economy and structural migration loops.
+* **Strategic Playbook:** Guard the Hearth center with frontline screens because its destruction inflicts match defeat. It cannot be rebuilt in standard play.
+* **Opponent Counterplay:** Deploy mobile forces to draw defenders away, destroy rooted outpost nodes, then commit to a heavy push on the Hearth.
+#### SPEC-BLD-016.KA.WAYSTONE — Waystone
+* **Data Metrics:** Role: Mobile Supply Node. Cost: 80 Matter / 20 Dawn. Health: 390 HP. Sight Radius: 500 cm. Construction Time: 100 ticks (5.0s). Base Footprint: 2×2 tiles. Logistics Modifier: +5 Capacity while rooted. Special: Uproot takes 40 ticks; mobile velocity: 120 cm/s taking 125% damage; Root takes 60 ticks.
+* **Player Purpose:** Relocatable logistics anchor and adaptable Matter cargo drop-off node.
+* **Selection Interface Options:** Execute Root; execute Uproot; issue mobile movement commands; configure worker drop-off routing layers.
+* **Strategic Playbook:** Scout destination footprints thoroughly before relocating; migrate infrastructure dynamically when the value of a fresh deposit outweighs the exposure window.
+* **Opponent Counterplay:** Attack the monolith during its vulnerable uproot/root phases, or physically occupy its intended destination footprint.
+#### SPEC-BLD-016.KA.BASIN — Growth Basin
+* **Data Metrics:** Role: Production Center. Cost: 165 Matter / 35 Dawn. Health: 700 HP. Sight Radius: 500 cm. Construction Time: 160 ticks (8.0s). Base Footprint: 4×4 tiles. Logistics Modifier: 0. Special: Enables Warform Adaptation mutations within a 600 cm radius.
+* **Player Purpose:** Trains all Assemblies combat units, researches technology upgrades, and enables warform molting options.
+* **Selection Interface Options:** Queue/reorder/cancel unit production; research tech updates; set rally lines; inspect nearby eligible units and molt risk.
+* **Strategic Playbook:** Build inside secure interior pockets so returning wounded combat forces can adapt their warforms safely without exposing the baseline economy.
+* **Opponent Counterplay:** Strike the site when multiple units enter the 80-tick molting phase, as they absorb 150% damage during the mutation.
+#### SPEC-BLD-016.KA.SPINE — Listening Spine
+* **Data Metrics:** Role: Seismic Detection. Cost: 115 Matter / 25 Dawn. Health: 440 HP. Sight Radius: 900 cm. Construction Time: 120 ticks (6.0s). Base Footprint: 2×2 tiles. Logistics Modifier: 0. Special: Detects moving signatures within 2,600 cm at 200 cm resolution, lingering for 40 ticks.
+* **Player Purpose:** Provides broad, long-distance anonymous seismic vibration tracking across fog tiles.
+* **Selection Interface Options:** Inspect radar coverage maps and historic contact registries; toggle alert threshold sensitivity filters.
+* **Strategic Playbook:** Cover avenues of approach that direct visual scouting cannot safely anchor, and pair with Resonants to confirm anonymous pings.
+* **Opponent Counterplay:** Order forces to complete paths stationary or move via split alternative routes to mask true army numbers.
+
+### §13.3 Hollow Choir structures
+
+#### SPEC-BLD-017.HC.CONCORDANCE — Concordance
+* **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,250 HP. Sight Radius: 900 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Reclaimed from ordinary non-Core coherence upkeep rules.
+* **Player Purpose:** Choir Command Core, primary worker producer, Matter resource drop-off, and global coherence obligation monitor.
+* **Selection Interface Options:** Produce Threadkeeper units; set emergence rally routes; inspect the master ledger of all upcoming structural charges.
+* **Strategic Playbook:** Keep a baseline liquid Dawn reserve of at least 20 units at all times; use the summary panel to track upcoming infrastructure payment weights.
+* **Opponent Counterplay:** Pressure multiple Choir outposts simultaneously to strain their Dawn pool, forcing structure shutdowns prior to a core assault.
+#### SPEC-BLD-017.HC.INTERVAL — Interval Loom
+* **Data Metrics:** Role: Supply Node. Cost: 85 Matter / 25 Dawn. Health: 400 HP. Sight Radius: 600 cm. Construction Time: 110 ticks (5.5s). Base Footprint: 2×2 tiles. Logistics Modifier: +6 Capacity. Special: Coherence: charges 5 Dawn every 600 ticks; reduced to 4 within a Phase Anchor field.
+* **Player Purpose:** Generates Logistics throughput capacity and serves as a local Matter resource drop-off point while introducing a recurring coherence obligation.
+* **Selection Interface Options:** Inspect next charge ticker, cargo assignment, capacity balances, and projected insolvency alerts.
+* **Strategic Playbook:** Build only when the economic value generated by its worker route strictly outpaces its 5-Dawn recurring debt loop every 30.0 seconds.
+* **Opponent Counterplay:** Sever harvesting routes to starve the Loom's economic justification while allowing its debt loop to drain the player's Dawn reserves.
+#### SPEC-BLD-017.HC.CHORUS — Chorus Loom
+* **Data Metrics:** Role: Production Center. Cost: 175 Matter / 40 Dawn. Health: 680 HP. Sight Radius: 550 cm. Construction Time: 170 ticks (8.5s). Base Footprint: 4×4 tiles. Logistics Modifier: 0. Special: Coherence: charges 5 Dawn every 600 ticks; reduced to 4 within a Phase Anchor field.
+* **Player Purpose:** Trains all Choir mobile combat units, hosts research upgrades, and carries a recurring coherence upkeep debt loop.
+* **Selection Interface Options:** Queue/reorder/cancel units; research tech; set rally paths; inspect production slots and coherence timeline counters together.
+* **Strategic Playbook:** Synchronize unit manufacturing queues with Dawn collection cadences; never launch deep tech research projects if it threatens upkeep insolvency.
+* **Opponent Counterplay:** Attack the facility 30 ticks before its upkeep deadline to force a choice between defending or maintaining network solvency.
+
+#### SPEC-BLD-017.HC.ANCHOR — Phase Anchor
+* **Data Metrics:** Role: Coherence Optimizer. Cost: 120 Matter / 35 Dawn. Health: 480 HP. Sight Radius: 800 cm. Construction Time: 130 ticks (6.5s). Base Footprint: 2×2 tiles. Logistics Modifier: 0. Special: Coherence: charges 5 Dawn every 600 ticks; projects a 700 cm cost reduction aura field.
+* **Player Purpose:** Optimizes and secures compact Choir bases by reducing the recurring upkeep costs of all non-Core Choir structures within its 700 cm coverage field.
+* **Selection Interface Options:** Inspect active coverage aura lines, protected structure counts, next payment tickers, and hold-fire settings.
+* **Strategic Playbook:** Position centrally so its 700 cm stabilization field envelopes both your Chorus Loom and Interval Loom, dropping their upkeep costs from 5 to 4 Dawn. Fields do not stack.
+* **Opponent Counterplay:** Focus or bypass the anchor; when its optimization field collapse, the next structure charges instantly spike back to full 5-Dawn costs.
+
+## §14. Technology and strategic progression
 
 | ID | Faction | Technology | Cost | Time | Requires | Effect | Why choose it |
 |---|---|---|---|---|---|---|---|
-| SPEC-TECH-001 | Meridian Compact | Prismatic Targeting | 120 M / 40 D | 180 ticks (9.0s) | None | Damage 115%; vision 100% | Create a decisive Lancer/Bulwark damage timing. |
-| SPEC-TECH-002 | Meridian Compact | Horizon Lattice | 90 M / 55 D | 220 ticks (11.0s) | mc_prismatic_targeting | Damage 100%; vision 120% | Extend safe acquisition and network-supported pressure. |
-| SPEC-TECH-003 | Kharuun Assemblies | Echo Cartography | 100 M / 45 D | 180 ticks (9.0s) | None | Damage 100%; vision 120% | Improve scouting, route control, and pre-contact adaptation. |
-| SPEC-TECH-004 | Kharuun Assemblies | Ancestral Edge | 110 M / 50 D | 220 ticks (11.0s) | ka_echo_cartography | Damage 115%; vision 100% | Convert successful approach and adaptation into damage. |
-| SPEC-TECH-005 | Hollow Choir | Held Alternatives | 105 M / 50 D | 190 ticks (9.5s) | None | Damage 110%; vision 110% | Increase both present combat value and information before the final commitment. |
-| SPEC-TECH-006 | Hollow Choir | Shared Resolution | 115 M / 60 D | 230 ticks (11.5s) | hc_held_alternatives | Damage 100%; vision 120% | Extend vision for coordinated identity and coherence play. |
+| SPEC-TEC-003 | Meridian Compact | Prismatic Targeting | 120 M / 40 D | 180 ticks (9.0s) | None | Damage 115%; vision 100% | Create a decisive Lancer/Bulwark damage timing. |
+| SPEC-TEC-004 | Meridian Compact | Horizon Lattice | 90 M / 55 D | 220 ticks (11.0s) | SPEC-TEC-003 | Damage 100%; vision 120% | Extend safe acquisition and network-supported pressure. |
+| SPEC-TEC-005 | Kharuun Assemblies | Echo Cartography | 100 M / 45 D | 180 ticks (9.0s) | None | Damage 100%; vision 120% | Improve scouting, route control, and pre-contact adaptation. |
+| SPEC-TEC-006 | Kharuun Assemblies | Ancestral Edge | 110 M / 50 D | 220 ticks (11.0s) | SPEC-TEC-005 | Damage 115%; vision 100% | Convert successful approach and adaptation into damage. |
+| SPEC-TEC-007 | Hollow Choir | Held Alternatives | 105 M / 50 D | 190 ticks (9.5s) | None | Damage 110%; vision 110% | Increase both present combat value and information before the final commitment. |
+| SPEC-TEC-008 | Hollow Choir | Shared Resolution | 115 M / 60 D | 230 ticks (11.5s) | SPEC-TEC-007 | Damage 100%; vision 120% | Extend vision for coordinated identity and coherence play. |
 
-* **SPEC-TEC-001 —** Research visibility. The archive shows exact cost, time, effects, prerequisite, affected units, producer contention, queue state, and no-refund interruption before confirmation.
-* **SPEC-TEC-002 —** Strategic sufficiency. These two steps are the complete launch tree. Their purpose is a readable timing choice rather than breadth. Campaign rewards are separate and never appear in skirmish.
+* **SPEC-TEC-001 — Research interface visibility verification:** The in-game tech archive shell shall render exact resource costs, progress bars, active facility constraints, prerequisite lines, and affected roster roles. Interrupting research triggers a clear zero-refund prompt prior to confirmation.
+* **SPEC-TEC-002 — Strategic sufficiency paradigm:** These two sequential technology tiers represent the complete tactical upgrade framework available for competitive skirmish. Advanced campaign mission rewards remain structurally separate and cannot appear inside skirmish matrices.
 
-## 15. Future Wells
+---
 
+## §15. Future Wells
 
-A Future Well is a contested strategic site, not a victory point. One eligible worker captures within a 420 cm radius over 300 uncontested ticks. Enemy contest pauses progress. Leaving the radius reverses uncaptured progress at one tick per tick. Control can change hands until Harvest permanently collapses the Well.
+* **SPEC-WEL-004 — Contested landmark entity rule:** A Future Well exists as an impassable, indestructible neutral spatial map landmark. One eligible friendly worker unit captures within an authored 420 cm zone over 300 uncontested simulation ticks. Enemy contestation instantly halts progress; vacating the zone decays progress at -1 point per tick. Control can change hands continuously until a protocol is committed.
 
-
-| ID | Protocol | Commitment | Effect | When it helps | Cost and counterplay |
+| ID | Protocol | Cost & Commitment | Primary Gameplay Effect | Strategic Value | Trade-off & Counterplay |
 |---|---|---|---|---|---|
-| SPEC-WELLP-001 | Harvest | 180-tick public telegraph | Gain 500 Dawn; permanently collapse the Well; execute the map's named permanent terrain consequence. | An emergency reserve, decisive production timing, evacuation power, or final attack. | Loses future income and alternatives. Break control before completion. |
-| SPEC-WELLP-002 | Preserve | Control remains contestable | Controller gains 15 Dawn every 300 ticks and faction-appropriate intelligence within 1,400 cm. | A defensible long game, recurring Dawn, and information advantage. | Requires continued defense; capture transfers rather than duplicates benefits. |
-| SPEC-WELLP-003 | Reshape | Pay 120 Dawn; 180-tick public telegraph | Manifest one map-authored route, bridge, cover, cavern, or evacuation possibility for 1,800 ticks. | A temporary flank, reinforcement route, retreat, denial, or rescue window. | Both players may exploit it; expiry warns at 300/100/20 ticks and uses authored fallback displacement. |
+| SPEC-WELLP-001 | Harvest Well Protocol | 180-tick global public telegraph; 0 initial cost | Awards +500 liquid Dawn immediately on success; permanently collapses the Well mesh. | Emergency reserve loop, decisive macro-production timing window, or final strike power. | Permanently forfeits all future income and alternatives; triggers map-specific permanent scarring. Intercept control to abort. |
+| SPEC-WELLP-002 | Preserve Well Protocol | 0 initial cost; control remains completely contestable | Awards +15 liquid Dawn every 300 ticks; projects continuous 1,400 cm radar vision. | Long-game economy scaling, persistent Dawn income, and regional information dominance. | Requires continuous military defense; ownership transfer immediately routes benefits to the capturing player. |
+| SPEC-WELLP-003 | Reshape Well Protocol | 120 Dawn cost; 180-tick global public telegraph | Manifests one map-authored route, bridge, or pass chokepoint for 1,800 ticks. | Temporary flank maneuvers, rapid force reinforcement lines, or tactical extraction gates. | Both players may exploit the changed pathfield. Expiration triggers safe boundary displacement vectors. |
 
-* **SPEC-WEL-001 —** Confirmation. Before commitment, three comparable cards show immediate benefit, resource cost, telegraph, duration, permanence, exact map consequence, interruption, and known campaign consequence. The player confirms the selected protocol.
-* **SPEC-WEL-002 —** Strategic neutrality. No protocol changes a hidden morality score or directly wins. Each is situationally rational and creates visible opponent counterplay.
-* **SPEC-WEL-003 —** Fog and replay. Capture, contest, telegraph, protocol, terrain change, timers, income, control transfer, interruption, save/load, minimap, AI, and replay obey the common information and determinism rules.
+* **SPEC-WEL-001 — Protocol commitment confirmation:** Prior to protocol confirmation, the interface shall generate three comparable visual cards detailing immediate resource yields, exact Dawn costs, telegraph timelines, total lifetimes, and structural tradeoffs. The player must explicitly click to confirm the selected protocol action.
+* **SPEC-WEL-002 — Strategic selection neutrality:** No protocol choice alters a hidden morality score or directly wins matches. Each protocol option represents a situationally rational tactical commitment designed with explicit, readable opponent counterplay.
+* **SPEC-WEL-003 — Information and determinism invariance:** Capture tracking, contestation states, public telegraph warnings, landscape deformations, income intervals, and ownership transfers shall pass through the same client visibility masks. All state transitions must persist deterministically across save/load records and replays.
+
 
 ## 16. Single-player opponent AI
 
@@ -1296,6 +854,15 @@ A Future Well is a contested strategic site, not a victory point. One eligible w
   * **SPEC-BAL-008.VERIF:** `SRC` + `PKG-AUTO` (AI competency verification suite).
   * **SPEC-BAL-008.LANE:** Opponent AI (`EchoesAIController`).
 
+
+
+### §16.5 AI Architecture and Fair-Fog Decision Weights
+
+* **REL-AI-016 — Strategic Controller State Expansion:** The AI controller shall transition between macroscopic strategy states using a strict, fair-fog weighted evaluation matrix rather than omniscient thresholding.
+  * **REL-AI-016.ESTABLISH_ECONOMY:** Base weight 100. Multiplied by 1.5 if `Worker_Count < Optimal_Saturation`. Multiplied by 0.2 if `Logistics_Cap_Reached`.
+  * **REL-AI-016.RAID:** Base weight 40. Multiplied by 2.0 if an un-defended enemy worker route is identified in scout memory. Multiplied by 0.1 if `Enemy_Defensive_Structures > 2` near target.
+  * **REL-AI-016.RECOVER:** Base weight 0. Jumps to 200 (Highest Priority) if `Command_Core_HP < 50%` or `Dawn_Balance < 0` (Insolvency).
+  * **REL-AI-016.FAIL:** Any AI state transition triggered by information hidden within the fog of war (e.g., enemy queuing a unit outside of vision) fails the fair-play constraint.
 
 ## 17. Skirmish configuration and maps
 
@@ -1673,6 +1240,14 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | Branch tradeoffs | Restoration: Design target: the held futures return to the ground they were taken from, slowly and guarded, at the longest cost but one.<br>ControlledStabilization: Design target: the Crownfall is held at its current pitch, a managed wound that asks the least and promises the same.<br>Extinguishment: Design target: the remaining held futures are spent to close the Crownfall permanently, silencing what argued through it.<br>OpenEvolution: Design target: the Crownfall is released to continue becoming, unmanaged, with the longest hold of the four and no guarantee attached. |
 
 
+
+## §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`)
+
+* **REL-AUD-001 — BS.1770-4 Loudness Compliance:** All audio submixes (music, dialogue, SFX) shall be mastered to a combined target integrated loudness of -16 LUFS (±1 LU), with a true peak no higher than -1 dBTP.
+  * **REL-AUD-001.VERIF:** `PKG-AUTO` (BS.1770-4 programmatic meter measurement across a 30-minute standard match).
+* **REL-AUD-002 — Dynamic Side-Chain Vocal Ducking (Dumper Loops):** When critical narrative or Meridian Operations Annunciator dialogue is triggered, the engine shall apply a 300ms attack / 500ms release ducking loop, reducing the `SFX` and `Music` submixes by exactly -6 dB to guarantee vocal intelligibility without jarring drops.
+* **REL-AUD-003 — Low-Level PBR Audio Cue Parameters:** Physical combat and movement sounds shall use physically-based spatial attenuation. Sound radii must match the simulated unit footprint and decay logarithmically to 0% volume at 2,500 cm.
+
 ## 20. Interface, selection, controls, and player feedback
 
 * **SPEC-UI-001 —** Selection answer. Every selection answers: what is it, what is it doing, what can I order, what will that cost or require, why would I choose it, when does it fail, and how can the opponent answer it?
@@ -1858,6 +1433,25 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | Release | Frozen candidate, signed/notarized distribution, support materials, owner authorization. |
 
 
+
+### §28.1 Low-Level Verification Suite Expansion
+
+#### [Acceptance Card: REL-AI-016.SIG — Competitive Balance Matchup AI Fair-Play]
+* **REL-AI-016.PRE:** Headless match simulation environment instantiated. AI Doctrine set to `Raider`. Enemy base constructed entirely within fog of war without ever being scouted by the AI.
+* **REL-AI-016.ACT:** Advance simulation 5,000 ticks. Evaluate AI decision weight vectors.
+* **REL-AI-016.AUTH:** The RAID weight evaluates to 40 (Base), ignoring the hidden enemy worker line. The AI does not route units to the hidden base.
+* **REL-AI-016.FAIL:** AI routes a strike force directly to the hidden base, failing the fair-fog constraint.
+* **REL-AI-016.VERIF:** `SRC` (`EchoesAIControllerFogTest.cpp`) asserting that `OpponentMemoryState` contains zero references to the hidden coordinates.
+* **REL-AI-016.LANE:** Opponent AI & QA.
+
+#### [Acceptance Card: REL-SAV-008.SIG — Cross-Platform Endian-Safe Binary Serialization]
+* **REL-SAV-008.PRE:** A complex, 45-minute campaign save file (`Save01.sav`) generated on an Apple Silicon (little-endian) architecture containing 2,000 active entities.
+* **REL-SAV-008.ACT:** Read binary file via the internal platform-agnostic bitstream deserializer. Compare header CRC32 checksums.
+* **REL-SAV-008.AUTH:** Deserialized entity property floats and integer flags map perfectly into engine structs without bit-shifting corruption.
+* **REL-SAV-008.FAIL:** Big-endian misinterpretation corrupts entity health to NaN or absurd values, crashing the simulation tick.
+* **REL-SAV-008.VERIF:** `PKG-AUTO` cross-compilation harness writing and verifying dummy saves via the bitstream parser.
+* **REL-SAV-008.LANE:** Core Gameplay & Save Recovery.
+
 ## 29. Requirement acceptance-card template
 
 
@@ -1917,7 +1511,7 @@ defaults, per-requirement state, and the change log live in `RequirementsState.m
 
 ## A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit)
 
-* DEMO-GOV-001 — The current demo shall remain classified as `HUMAN REJECTED` until I accept a later identified packaged build.
+* **DEMO-GOV-001 — The current demo shall remain classified as `HUMAN REJECTED` until I accept a later identified packaged build.
 * DEMO-GOV-002 — Every implementation task, commit, test, capture, and defect shall map to one or more requirement IDs.
 * DEMO-GOV-003 — Every evidence claim shall identify the exact commit, dirty or clean tree state, package, operating system, hardware, resolution, and graphics preset.
 * DEMO-GOV-004 — Source code, tests, editor demonstrations, screenshots, and packaged human play shall remain separate evidence classes.
@@ -1928,9 +1522,9 @@ defaults, per-requirement state, and the change log live in `RequirementsState.m
 * DEMO-GOV-009 — Genre references shall guide interaction quality and design discipline without copying protected expression.
 * DEMO-GOV-010 — A requirement shall not be called complete until its evidence is ready and I explicitly accept it.
 
-## B. Complete player journey (owner: Player+Campaign; verify: PKG-PHYS + HUM + OWNER)
+## B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER)
 
-* DEMO-JRN-001 — A clean first-time profile shall complete the entire golden path without a terminal, editor, developer console, cheat, state injection, or developer coaching.
+* **DEMO-JRN-001 — A clean first-time profile shall complete the entire golden path without a terminal, editor, developer console, cheat, state injection, or developer coaching.
 * DEMO-JRN-002 — Every required menu and transition shall be usable with a physical mouse.
 * DEMO-JRN-003 — First-time players shall complete the tutorial before the full AI demo unlocks.
 * DEMO-JRN-004 — After tutorial completion, replay and approved skip behavior may become available for later sessions.
@@ -1938,17 +1532,17 @@ defaults, per-requirement state, and the change log live in `RequirementsState.m
 * DEMO-JRN-006 — The demo shall end with a complete victory or defeat result and understandable replay, restart, and exit choices.
 * DEMO-JRN-007 — The player shall never need an external manual, developer explanation, or hidden control to complete the intended demo journey.
 
-## C. Opening story and player orientation (owner: Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER)
+## C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER)
 
-* DEMO-NAR-001 — The first launch shall present a polished title and opening sequence before normal gameplay.
+* **DEMO-NAR-001 — The first launch shall present a polished title and opening sequence before normal gameplay.
 * DEMO-NAR-002 — The opening shall establish the broken world of Soryn, the Crownfall, and the immediate situation without contradicting the Development Bible.
 * DEMO-NAR-003 — The opening shall tell the player who they are, what role they occupy, what immediate problem they face, what they must do next, and why it matters.
 * DEMO-NAR-004 — The opening shall use authored in-engine visuals, motion, lighting, voice-over, exact subtitles, music, ambience, and deliberate transitions. A silent flyover, static text card, storyboard, or lore dump does not pass.
 * DEMO-NAR-005 — The opening should remain focused enough to preserve player attention; the proposed maximum is 90 seconds unless I approve another duration.
 * DEMO-NAR-006 — The sequence shall support pause, accessible subtitle controls, replay, and approved skip behavior without losing required gameplay information.
 * DEMO-NAR-007 — The transition from cinematic to playable tutorial shall be coherent and shall immediately connect the story problem to the player's first action.
-* DEMO-NAR-008 — At least four of five uncoached, project-naive testers shall be able to explain the player's identity, immediate situation, first objective, and why it matters. (Verify: HUM)
-* DEMO-NAR-009 — I shall personally accept the opening's story clarity, emotional tone, pacing, visual direction, and ability to create interest in continuing. (Verify: OWNER)
+* DEMO-NAR-008 — At least four of five uncoached, project-naive testers shall be able to explain the player's identity, immediate situation, first objective, and why it matters. (Verify:** HUM)
+* **DEMO-NAR-009 — I shall personally accept the opening's story clarity, emotional tone, pacing, visual direction, and ability to create interest in continuing. (Verify:** OWNER)
 
 * **DEMO-NAR-010 —** Before voice production, every speaking character and system voice in the demo shall have a designed identity: who they are in the story, their role, personality, motivations, speech patterns, and relationship to the player — such that the player connects with them (someone they want to be, help, or listen to). Voices shall match the designed character or system identity. Voice design (AUD-004 redo) depends on this and is sequenced after it. Verify: OWNER acceptance of the character bible; HUM comprehension/connection signals at DEMO-NAR-008/VAL sessions. *(Owner-added 2026-09-02; body recovered from the change log during consolidation, where it had never been seated in a section.)*
 * **DEMO-NAR-011 —** a full review of everything in the game — story, setting, characters, missions/campaign, every screen element, mechanic, sound, and interaction — answering WHY it exists and how it ties into the storyline. Elements without a story/world justification are flagged for redesign, rejustification, or removal. The review's output is the design foundation that informs how everything looks, acts, sounds, and feels; presentation work (UI remake, art direction, audio direction, mission staging) shall trace to it. Output: one owner-reviewed document (`Docs/NarrativeCoherenceReview.md`), Campaign-led with per-lane contributions. Sequenced with DEMO-NAR-010; both precede large-scale presentation/voice production. *(Owner-added 2026-09-02; body recovered from the change log during consolidation, where it had never been seated in a section.)*
@@ -1957,7 +1551,7 @@ defaults, per-requirement state, and the change log live in `RequirementsState.m
 
 Lesson cycle (binding for every lesson): Explain → highlight or demonstrate → allow the player to act → verify the real game state → acknowledge success → explain why it mattered → unlock the next lesson.
 
-* DEMO-TUT-001 — The tutorial shall assume no prior RTS knowledge.
+* **DEMO-TUT-001 — The tutorial shall assume no prior RTS knowledge.
 * DEMO-TUT-002 — It shall begin in a safe, low-pressure situation and introduce one coherent concept at a time.
 * DEMO-TUT-003 — It shall teach camera movement, zoom, recentering, and navigation.
 * DEMO-TUT-004 — It shall teach left-click selection, deselection, selection feedback, and how to identify the selected entity.
@@ -1977,12 +1571,12 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-TUT-018 — Every step shall have recovery, retry, reset, save, and resume behavior that prevents a soft lock.
 * DEMO-TUT-019 — The tutorial shall not introduce unexplained controls or mechanics immediately after claiming the fundamentals are learned.
 * DEMO-TUT-020 — Tutorial completion shall transition naturally into the full AI portion of the demo.
-* DEMO-TUT-021 — At least four of five project-naive testers shall complete the tutorial without verbal coaching. (Verify: HUM)
-* DEMO-TUT-022 — I shall personally accept the tutorial's pacing, clarity, instructional quality, and mastery threshold. (Verify: OWNER)
+* DEMO-TUT-021 — At least four of five project-naive testers shall complete the tutorial without verbal coaching. (Verify:** HUM)
+* **DEMO-TUT-022 — I shall personally accept the tutorial's pacing, clarity, instructional quality, and mastery threshold. (Verify:** OWNER)
 
 ## E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER)
 
-* DEMO-INP-001 — Every visible title, menu, settings, pause, tutorial, gameplay, results, confirmation, and error-dialog control shall work with mouse hover and click.
+* **DEMO-INP-001 — Every visible title, menu, settings, pause, tutorial, gameplay, results, confirmation, and error-dialog control shall work with mouse hover and click.
 * DEMO-INP-002 — Left click shall select valid units and buildings; clicking empty terrain shall clear selection when appropriate.
 * DEMO-INP-003 — Dragging shall create a predictable selection box with visible feedback.
 * DEMO-INP-004 — Shift modification, double-click selection, and multi-selection shall behave consistently where supported.
@@ -1996,11 +1590,11 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-INP-012 — Accepted and rejected commands shall receive immediate visual and audible acknowledgment.
 * DEMO-INP-013 — No normal player path shall depend on a keyboard-only fallback because mouse interaction is broken.
 * DEMO-INP-014 — A packaged-build interaction matrix shall verify every control at all supported window modes and target resolutions. Calling event handlers directly does not satisfy this requirement.
-* DEMO-INP-015 — I shall physically test and accept the mouse, keyboard, menu, camera, selection, command, and remapping behavior. (Verify: OWNER)
+* DEMO-INP-015 — I shall physically test and accept the mouse, keyboard, menu, camera, selection, command, and remapping behavior. (Verify:** OWNER)
 
 ## F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER)
 
-* DEMO-UI-001 — The existing prototype-like UI shall be replaced by one coherent, original RTS interface system, not merely recolored.
+* **DEMO-UI-001 — The existing prototype-like UI shall be replaced by one coherent, original RTS interface system, not merely recolored.
 * DEMO-UI-002 — The front door shall clearly present the guided demo, continue when valid, skirmish, options, accessibility, credits, and exit behavior appropriate to the accepted demo scope.
 * DEMO-UI-003 — Every menu option shall provide a concise plain-language explanation on hover and keyboard focus.
 * DEMO-UI-004 — Hovered, focused, pressed, selected, disabled, loading, warning, error, and confirmed states shall be visually distinct. Disabled controls shall explain why.
@@ -2012,11 +1606,11 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-UI-010 — Results screens shall clearly explain the outcome and provide working replay, restart, and return choices.
 * DEMO-UI-011 — The interface shall be inspected at 1280×720, 1440×900, 1600×900, 1920×1080, and 2560×1440, with no clipped, overlapping, unreadable, or unreachable controls.
 * DEMO-UI-012 — Debug overlays, prototype instructions, engine-default styling, and internal validation text shall not appear in the public demo path.
-* DEMO-UI-013 — I shall personally accept the UI's appearance, hierarchy, readability, discoverability, responsiveness, and consistency with the game universe. (Verify: OWNER)
+* DEMO-UI-013 — I shall personally accept the UI's appearance, hierarchy, readability, discoverability, responsiveness, and consistency with the game universe. (Verify:** OWNER)
 
 ## G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER)
 
-* DEMO-AUD-001 — No player-facing scene or required action shall be unintentionally silent.
+* **DEMO-AUD-001 — No player-facing scene or required action shall be unintentionally silent.
 * DEMO-AUD-002 — The title, menus, opening, tutorial, gameplay, combat, results, victory, and defeat shall have appropriate original music and ambience.
 * DEMO-AUD-003 — The opening and tutorial shall contain directed, final-demo-quality voice performances with synchronized subtitles.
 * DEMO-AUD-004 — Proposed character and narrator voice profiles shall receive my listening approval before large-scale generation or final integration. (OWNER decision gate)
@@ -2028,11 +1622,11 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-AUD-010 — Music, voice, effects, interface, and ambience volumes shall be independently adjustable and persistent. Voice-off shall preserve all required information through text.
 * DEMO-AUD-011 — Subtitle text shall match the spoken meaning and support accepted size and background controls.
 * DEMO-AUD-012 — Audio files merely existing in the project shall not count; their correct triggering, routing, spatial behavior, transitions, and mix shall be verified in the packaged build.
-* DEMO-AUD-013 — I shall listen to and accept the opening, tutorial, menu, representative gameplay, and result-state audio from the candidate package. (Verify: OWNER)
+* DEMO-AUD-013 — I shall listen to and accept the opening, tutorial, menu, representative gameplay, and result-state audio from the candidate package. (Verify:** OWNER)
 
 ## H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER)
 
-* DEMO-VIS-001 — The demo path shall use one coherent original visual language derived from Soryn, its factions, and the Development Bible.
+* **DEMO-VIS-001 — The demo path shall use one coherent original visual language derived from Soryn, its factions, and the Development Bible.
 * DEMO-VIS-002 — Terrain shall use sufficiently detailed materials, landmarks, elevation cues, boundaries, and environmental dressing to communicate place and gameplay function.
 * DEMO-VIS-003 — Friendly units, enemies, unit classes, and factions shall have distinct silhouettes, scale, materials, motion, and non-color identity cues.
 * DEMO-VIS-004 — Buildings shall communicate faction, purpose, operational state, construction state, damage, and production activity at ordinary gameplay distance.
@@ -2043,12 +1637,12 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-VIS-009 — Visual acceptance shall be judged at the normal RTS camera height and during motion, not only through close-up screenshots or isolated asset previews.
 * DEMO-VIS-010 — No placeholder cubes, primitive stand-ins, default materials, temporary icons, missing portraits, or visually unintegrated assets shall remain on the accepted demo path.
 * DEMO-VIS-011 — Greater geometric or texture detail alone shall not pass if new players still cannot distinguish entities and gameplay states.
-* DEMO-VIS-012 — At least four of five project-naive testers shall correctly identify representative allies, enemies, buildings, resources, objectives, and interactable locations. (Verify: HUM)
-* DEMO-VIS-013 — I shall personally accept the terrain, units, buildings, animation, effects, visual hierarchy, and overall presentation. (Verify: OWNER)
+* DEMO-VIS-012 — At least four of five project-naive testers shall correctly identify representative allies, enemies, buildings, resources, objectives, and interactable locations. (Verify:** HUM)
+* **DEMO-VIS-013 — I shall personally accept the terrain, units, buildings, animation, effects, visual hierarchy, and overall presentation. (Verify:** OWNER)
 
 ## I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER)
 
-* DEMO-PERF-001 — The implementation shall identify the exact CPU, GPU, memory, display, operating system, and relevant rendering capabilities without assuming the developer's exact M1 model.
+* **DEMO-PERF-001 — The implementation shall identify the exact CPU, GPU, memory, display, operating system, and relevant rendering capabilities without assuming the developer's exact M1 model.
 * DEMO-PERF-002 — On first run, Auto quality shall execute a representative rendering benchmark or calibration rather than selecting a preset solely from a device-name table.
 * DEMO-PERF-003 — The game shall provide understandable Auto, Low, Medium, High, and highest-supported presets with clear descriptions of performance and visual consequences.
 * DEMO-PERF-004 — Auto shall choose a conservative stable starting configuration based on measured performance and shall record why that configuration was selected.
@@ -2062,11 +1656,11 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-PERF-012 — A safe graphics fallback shall recover after a settings-related crash or failed launch.
 * DEMO-PERF-013 — Higher-end qualification requires execution on an actual materially stronger supported computer. Simulated settings or theoretical scalability do not prove hardware support. (External hardware — owner-gated)
 * DEMO-PERF-014 — The current platform boundary remains macOS Apple Silicon unless I approve expansion. Do not claim Windows, Linux, or discrete-GPU qualification without a package and direct evidence from that platform.
-* DEMO-PERF-015 — I shall accept the visual-quality/performance tradeoff on the baseline Mac and any higher-capability system used for demo qualification. (Verify: OWNER)
+* DEMO-PERF-015 — I shall accept the visual-quality/performance tradeoff on the baseline Mac and any higher-capability system used for demo qualification. (Verify:** OWNER)
 
 ## J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER)
 
-* DEMO-AI-001 — First-time players shall enter the AI skirmish only after completing the required tutorial mastery gates.
+* **DEMO-AI-001 — First-time players shall enter the AI skirmish only after completing the required tutorial mastery gates.
 * DEMO-AI-002 — The skirmish setup shall clearly explain map, faction, AI personality or difficulty, starting conditions, victory conditions, and game speed.
 * DEMO-AI-003 — Every option presented as selectable shall change the match as described and shall be operable by mouse and keyboard.
 * DEMO-AI-004 — The AI shall gather resources, construct, produce units, respond to threats, expand or reposition where appropriate, attack, defend, and reach victory or defeat through actual gameplay systems.
@@ -2075,20 +1669,20 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-AI-007 — The skirmish shall use the same mechanics and controls taught in the tutorial. Unexplained new requirements shall not be introduced at the transition.
 * DEMO-AI-008 — Victory, defeat, pause, restart, rematch, and return-to-menu behavior shall work without debug intervention.
 * DEMO-AI-009 — At least one complete unassisted victory and one complete defeat or controlled defeat-path validation shall be recorded from the packaged build.
-* DEMO-AI-010 — I shall play and accept the AI experience, difficulty, pacing, clarity, and match lifecycle. (Verify: OWNER)
+* DEMO-AI-010 — I shall play and accept the AI experience, difficulty, pacing, clarity, and match lifecycle. (Verify:** OWNER)
 
 ## K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER)
 
-* DEMO-ACC-001 — Subtitle size, subtitle background, UI scale, high-contrast mode, and color-vision-safe/non-color markers shall change actual packaged behavior.
+* **DEMO-ACC-001 — Subtitle size, subtitle background, UI scale, high-contrast mode, and color-vision-safe/non-color markers shall change actual packaged behavior.
 * DEMO-ACC-002 — Reduced motion, reduced flashing, adjustable camera motion, and reduced dynamic range shall operate across the opening, tutorial, UI, and gameplay.
 * DEMO-ACC-003 — Keyboard navigation shall remain available throughout menus even though mouse interaction is mandatory.
 * DEMO-ACC-004 — Tutorial voice, text, hints, pacing, pause, replay, and recovery shall support players who require more time without automatically performing the lesson.
 * DEMO-ACC-005 — Remapped controls and accessibility settings shall persist and remain reflected accurately in every prompt and tooltip.
-* DEMO-ACC-006 — I shall verify and accept the accessibility behaviors included in the demo. (Verify: OWNER)
+* DEMO-ACC-006 — I shall verify and accept the accessibility behaviors included in the demo. (Verify:** OWNER)
 
 ## L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row)
 
-* DEMO-VAL-001 — All acceptance evidence shall come from one clearly identified candidate package built from the recorded source state.
+* **DEMO-VAL-001 — All acceptance evidence shall come from one clearly identified candidate package built from the recorded source state.
 * DEMO-VAL-002 — A clean profile shall travel continuously from cold launch through opening, tutorial, AI match, result, and return to menu.
 * DEMO-VAL-003 — The end-to-end evidence shall use physical mouse and keyboard input. Editor play, headless automation, scripted controllers, state injection, and stitched unrelated clips do not pass.
 * DEMO-VAL-004 — Existing automated suites shall remain green, but their claims shall remain limited to the behavior they actually exercise.
@@ -2102,8 +1696,8 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 * DEMO-VAL-012 — At least four of five participants shall state that the demo is clear and that they would voluntarily continue playing. This is a bounded internal usability signal, not proof of market success.
 * DEMO-VAL-013 — Failures found in human sessions shall become tracked defects and, where technically appropriate, regression tests before retesting.
 * DEMO-VAL-014 — I shall receive the same candidate package, a short review path, evidence summary, known limitations, and exact requirement IDs being offered for acceptance.
-* DEMO-VAL-015 — I shall personally play the candidate and explicitly accept or reject each review batch. (Verify: OWNER)
-* DEMO-VAL-016 — The aggregate demo may be called `COMPLETE` or `DEMO-READY` only after every mandatory requirement is `HUMAN ACCEPTED` for the same candidate build.
+* DEMO-VAL-015 — I shall personally play the candidate and explicitly accept or reject each review batch. (Verify:** OWNER)
+* **DEMO-VAL-016 — The aggregate demo may be called `COMPLETE` or `DEMO-READY` only after every mandatory requirement is `HUMAN ACCEPTED` for the same candidate build.
 * DEMO-VAL-017 — My final acceptance is a demo decision only. It does not by itself establish full-game completion, public release readiness, notarization, broad hardware compatibility, or market acceptance.
 
 
@@ -2115,7 +1709,7 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 Governance and bodies migrated verbatim from `InitialReleaseRequirements.md` on 2026-09-03.
 
 
-Authority: owner order of 2026-09-02 ("Initial-Release Requirements Expansion and Agent
+Authority:** owner order of 2026-09-02 ("Initial-Release Requirements Expansion and Agent
 Synchronization Order"), received verbatim by the Claude Code coordinator. Owner and final
 acceptance authority: Angelis Pseftis. This file is the sole normative ledger for `REL-*`
 requirements (REL-GOV-001). It references and never duplicates `DEMO-*` bodies
@@ -2180,18 +1774,17 @@ no multiplayer; no Windows/Linux; no maps beyond approved. One consolidated scop
 decision packet SHALL be prepared (recommendation, cost, schedule, dependencies, playable
 consequences per item) and presented together:
 
-* TBR-SCP-001 — Keep multiplayer out of 1.0 or add human-versus-human multiplayer.
-* TBR-SCP-002 — Keep one skirmish map or expand the launch map set. Proposed professional breadth: at least six fully finished skirmish maps unless human testing supports an intentionally compact alternative.
-* TBR-SCP-003 — Keep the currently observed approximate roster of four units, four buildings, and two technologies per faction or expand strategic breadth. Proposed review target: at least eight fieldable unit roles, six constructed building roles, and ten meaningful technology or upgrade decisions per faction, unless a smaller roster demonstrates equivalent strategic depth.
-* TBR-SCP-004 — Direct-download release, Steam release, or both.
+* **TBR-SCP-001 — Keep multiplayer out of 1.0 or add human-versus-human multiplayer.
+* TBR-SCP-002 — Keep one skirmish map or expand the launch map set. Proposed professional breadth:** at least six fully finished skirmish maps unless human testing supports an intentionally compact alternative.
+* **TBR-SCP-003 — Keep the currently observed approximate roster of four units, four buildings, and two technologies per faction or expand strategic breadth. Proposed review target:** at least eight fieldable unit roles, six constructed building roles, and ten meaningful technology or upgrade decisions per faction, unless a smaller roster demonstrates equivalent strategic depth.
+* **TBR-SCP-004 — Direct-download release, Steam release, or both.
 * TBR-SCP-005 — English-only launch or additional launch languages.
 * TBR-SCP-006 — Local saves only or platform cloud synchronization.
 * TBR-SCP-007 — Required replay browser, observer tools, achievements, and platform integration.
 * TBR-SCP-008 — Mouse-and-keyboard only or optional controller support.
 * TBR-SCP-009 — Final campaign and skirmish difficulty tiers.
 * TBR-SCP-010 — Minimum and recommended supported Apple Silicon hardware and macOS versions.
-* TBR-SCP-011 — How much portability and graphics-scalability enforcement lands in the initial release:
-  automated guards inside the ordinary suite (REL-PORT-008) and a second-toolchain, second-architecture
+* TBR-SCP-011 — How much portability and graphics-scalability enforcement lands in the initial release:** automated guards inside the ordinary suite (REL-PORT-008) and a second-toolchain, second-architecture
   determinism run (REL-PORT-002), versus a recorded release-time audit only. Low-cost candidate to price:
   an `x86_64` build of `EchoesSimCore` run under Rosetta 2 on the existing Mac for the second architecture,
   and a second compiler for the second toolchain — neither needs a second machine. The packet states cost,
@@ -2214,8 +1807,99 @@ this ledger is authoritative once the transcription audit (QA lane) confirms fid
 ### §14 Campaign and narrative — REL-CAM-001..021
 ### §15 Skirmish, AI, difficulty, balance — REL-AI-001..021 (balance target REL-AI-016: no non-mirror Standard matchup outside 40–60% and no start-position advantage >5 points over the approved test set, absent owner-accepted design reason)
 ### §16 Replays and QoL — REL-QOL-001..012 (unless owner excludes at scope approval)
-### §17 UI and interaction — REL-UI-001..016 (resolution matrix REL-UI-013: 1280×720, 1440×900, 1600×900, 1920×1080, 2560×1440, baseline native, windowed, fullscreen, live resize)
-### §18 World art, units, structures, animation, VFX — REL-ART-001..020 (asset completion cards mandatory per family)
+## §17 UI and interaction
+
+[... existing REL-UI-001 through REL-UI-016 requirements live here ...]
+
+### §17.1 Tactical HUD and Command Deck Specifications
+* **REL-UI-017 — Production UMG/Slate Command Deck Architecture:** The lower-right viewport HUD interface shall render as a rigid 3x3 interactive command grid built within a modular UMG framework...
+* **REL-UI-018 — Interface Atlas and Multi-Channel Affiliation Feedback:** All interface highlight assets, slot backings, and status toggles shall be compiled into a single 1024x1024 compression-optimized UI texture atlas...
+#### [Interface Sheet: REL-UI-004 — Upper Resource Telemetry Deck Layout]
+* **.WIDGET_GEOM:** Fixed horizontal bounding box ($420 \times 60 \text{ pixels}$) anchored tightly to the top-left viewport corner. Grids use an explicit 9-slice boundary layout with a persistent 30% text expansion safety margin.
+* **.TELEMETRY_DATA:** Matter and Dawn resource text labels map dynamically to 64-bit integer values. Trailing 30s and 60s income velocity metrics stream via low-overhead dynamic array sampling fields, updating every 20 simulation ticks.
+* **.VIS_FEEDBACK:** Resource values flash a low-frequency ambient alert pulse if expenditures drop net values near zero. Toggling the high-contrast accessibility preset replaces alpha-blended backgrounds with flat, high-contrast black backings.
+
+#### [Interface Sheet: REL-UI-003 — Selection Inspector Panel Layout]
+* **.WIDGET_GEOM:** Balanced central panel container ($680 \times 180 \text{ pixels}$) anchored cleanly to the bottom-center screen margin, fully supporting a runtime interface scaling range of 80% to 150% without bounding box clipping.
+* **.INSPECTOR_DATA:** Displays a 2D portrait texture, 32-bit unique entity identifier string, alphanumeric health/shield values, and a dynamic cargo grid array. Multi-unit grouping creates a clean grid of type-classified unit icons embedded with numeric quantity badges.
+* **.VIS_FEEDBACK:** Selected units project a ground selection ring matching faction identity. Hovering mouse cursors over component slots exposes tooltips detailing active unit roles, limiting, and precise mechanical counterplay.
+
+#### [Interface Sheet: REL-UI-005 — Tactical Minimap Window Layout]
+* **.WIDGET_GEOM:** Rigid square container ($240 \times 240 \text{ pixels}$) anchored to the bottom-left screen border, constructed within Unreal's production Slate architecture to completely bypass Canvas immediate-mode drawing loops.
+* **.MAP_DATA:** Renders static 64x64 navigation cost grid contours, friendly unit positions, revealed enemy entities, and telegraphed Well pings using dual-channel non-color vector markers. Superimposes a dynamic bounding box tracking the main camera viewport frustum.
+* **.VIS_FEEDBACK:** Left-clicking or click-dragging on the minimap surface updates camera coordinates instantaneously. Clicks falling outside active vision boundaries route commands to a 12px proximity vector fallback layer to handle input triggers with 100% spatial target fidelity.
+
+#### [Interface Sheet: REL-UI-010 — Mission Briefing Terminal Layout]
+* **.WIDGET_GEOM:** Modal overlay container panel ($1280 \times 720 \text{ pixels}$) scaling dynamically across the 7-target screen resolution matrix without text clipping or widget clipping defects.
+* **.TERMINAL_DATA:** Renders level map topography vectors, briefing dialogue text strings, character portrait channels, primary/optional objective tracking rows, and high-visibility irreversible choice warnings.
+* **.VIS_FEEDBACK:** Hovered menu buttons play the interface click audio cue. Clicking the primary `DEPLOY` action executes validation locks, clears the terminal, and launches the active single-player simulation loop within exactly 1 tick.
+
+## §18 World art, units, structures, animation, VFX
+
+[... existing REL-ART-001 through REL-ART-020 requirements live here ...]
+
+### §18.1 Faction Asset Material and Geometry Manifests
+* **REL-ART-024 — Meridian Roster Engineering form Language:** All Meridian units and structures shall package finished production models enforcing an engineered silhouette language: heavy plates, orthogonal load frames, and exposed conduits. Model properties scale to a maximum LOD0 cap of ≤8,000 triangles, transitioning smoothly down to ≤3,500 triangles at distancezoom thresholds. Team color accent mapping uses exclusive vertex ID masks.
+* **REL-ART-025 — Kharuun Roster Grown Mineral Architecture:** All Kharuun units and structures shall package models enforcing a faceted basalt silhouette layout with zero organic smoothing properties. Carapace plates use packed 2048x2048 PBR texture stacks mapping micro-noise normal maps. Dynamic molten or adaptation textures route through localized subsurface-scattering shaders, clamping Broken-Sun Amber emissive channels to a strict maximum floor of ≤15.0% mesh surface area.
+* **REL-ART-026 — Glass Scar Landscape Passability Truth:** Environmental terrain geometry maps shall compute passability parameters across an authoritative 64x64 navigation cost grid. Natural cliff spurs and rock meshes are locked to strict Blocked cell properties, while open paths clamp decorative ground assets to a maximum vertical displacement threshold of ≤20 cm. All landscape surfaces enforce a strict matte roughness floor of ≥0.85 to completely eliminate glint reflection noise.
+
+### §18.2 Production Visual Asset Cards
+#### [Asset Card: REL-ART-005.MC.LANCER — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤8,000 tris; LOD1 ceiling ≤3,3500 tris. Sub-object separation required for Turret_Y and Barrel_X actors.
+* .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Emissive Mask). Ceramic surfaces locked to a micro-noise detail normal map.
+* .MAT_RULE: Albedo channel masked by TeamColor vertex data. Emissive channel restricted to the 15% surface area rule using an un-bloomed Amber/Cyan shader blend.
+* .ANIM_RIG: 18-bone kinematic layout. Skeleton requires named sockets: `Muzzle_Flash_01`, `Target_Anchor_Center`, and `Left_Tread_Vector`.
+* .VFX_POLY: Niagara system attachment bounds restricted to local emitter nodes. Particles utilize the default un-shadowed optimization profile.
+
+#### [Asset Card: REL-FAC-025.MC.SURVEYOR — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤4,500 tris; LOD1 ceiling ≤1,800 tris. Model properties enforce an engineered industrial look: orthogonal frames, heavy machined chassis plates, visible conduit tracks, and modular hardpoint mounts.
+* .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Emissive Mask). Ceramic chassis plates use a micro-noise normal map. Cargo handling tools use a packed grease/scratch utility map.
+* .MAT_RULE: Albedo channel masked by TeamColor vertex data. Faction emissive conduit paths utilize a steady Cyan color space shader, restricted to ≤5% mesh surface area to guarantee tactical readability. No attack properties exist.
+* .ANIM_RIG: 12-bone kinematic rigging layout. Includes fixed named socket nodes: `Harvest_Tether_Muzzle`, `Cargo_Drop_Anchor`, and `Center_Hitbox_Socket`. Locomotion rotates mechanical treads relative to velocity.
+* .VFX_POLY: Activating `Network Repair` or Well harvesting projects a linear Cyan particle stream linking muzzle to target. Niagara system emitters are presentation-only, drawing zero shadow cascades to preserve performance.
+
+#### [Asset Card: REL-FAC-025.MC.BULWARK — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤8,200 tris; LOD1 ceiling ≤3,600 tris. Heavy, mechanical box outline built from thick segmented plates. Sub-object separation required for `Left_Shield_Panel` and `Right_Shield_Panel` components to handle physical transformation.
+* .TEX_MAPS: 2048x2048 PBR texture stack mapping heavy matte ceramic panel values. Shield boundaries apply an un-glinted scuff noise layer to preserve clean readability.
+* .MAT_RULE: Base material applies a strict matte roughness floor of ≥0.85. Deployed states project a 120-degree directional visual shield gradient, rendering dynamic chromatic ripple animations upon projectile impact that scale with hit damage.
+* .ANIM_RIG: 18-bone mechanical transformation rig. Setup action drives a 20-tick deployment sequence uncoupling side shielding to form a rigid frontal wall; packing folds panels to a compact travel profile over 15 ticks.
+* .VFX_POLY: Niagara concussive flash emitters hook onto forward muzzle sockets. Destroyed units spawn decoupled cosmetic debris pieces that tumble dynamically down slopes on the client thread with zero navigation influence.
+
+#### [Asset Card: REL-FAC-025.MC.SKIFF — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤5,000 tris; LOD1 ceiling ≤2,100 tris. Light, aerodynamic scout silhouette following an orthogonal rail framework. Main hull floats cleanly above an engineered anti-gravity radiator core.
+* .TEX_MAPS: 2048x2048 PBR stack mapping polished ceramic textures and copper Link link conduits. Includes a dedicated dynamic opacity map to handle temporary logistics relay visualizations.
+* .MAT_RULE: Continuous Cyan link conduit lines glow with an un-bloomed, low-saturation material shader, physically capped to ≤8% visible mesh surface area. Hovering behaviors use standard ground raycasts to float the view actor without altering simulation passability.
+* .ANIM_RIG: 8-bone rigging layout carrying a continuous harmonic hover bobbing component. Includes fixed named sockets: `Scouting_Sensor_Pod` and `Logistics_Relay_Beam`. Snaps facing instantly under Reduced Motion accessibility profiles.
+* .VFX_POLY: Activating `Extend Relay` projects a wide conical Cyan vector volume toward the nearest grid node within 700 cm. Emitters discard runtime CPU dynamic heap allocations to stay strictly within the performance budget.
+
+#### [Asset Card: REL-BLD-015.MC.LINK — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤3,500 tris; LOD1 ceiling ≤1,200 tris. Compact 2x2 tile footprint. Heavy vertical antenna mast locked onto an orthogonal concrete base foundation ring.
+* .TEX_MAPS: 1024x1024 compact PBR texture maps (Albedo, Normal, packed Metallic/Roughness utility channels). Surface panels apply high-contrast non-color grid markings to satisfy accessibility rules.
+* .MAT_RULE: Network connection lines project a continuous Cyan light spline linking adjacent links within 800 cm. Severing a node immediately darkens the conduit line within 1 tick, altering the structure's visual state to offline.
+* .ANIM_RIG: NOT APPLICABLE. Structure remains statically batched on the GPU thread. Destructible states trigger structural material degradation animations when health drops below 30%.
+* .VFX_POLY: Ruin states trigger destruction VFX and clear terrain footprints after exactly 200 ticks. Environmental particle cascades run on the GPU thread with zero shadow allocations.
+
+#### [Asset Card: REL-BLD-015.MC.FOUNDRY — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤8,000 tris; LOD1 ceiling ≤3,400 tris. Heavy 4x4 tile base footprint. Industrial manufacturing center featuring orthogonal gantries, visible crane rails, and thick assembly plates.
+* .TEX_MAPS: 2048x2048 PBR texture pack mapping grit, oxidation, and industrial grease noise layers. Output bays include high-contrast yellow non-color directional markers.
+* .MAT_RULE: Operational states update albedo textures to reveal interior assembly lights. Processing research upgrades hooks a progress percentage vector to an exterior data status band. Entire mesh maintains a matte roughness floor of ≥0.85.
+* .ANIM_RIG: 6-bone mechanical animation rig controlling exit bay blast doors and unit assembly rails. Emergence actions trigger code-driven doors opening sequences relative to production tickers.
+* .VFX_POLY: Exit paths generate subtle Cyan grid lighting rings during active assembly. Structural death shatters the metal shell into low-cost non-colliding debris chunks that fade cleanly out over 200 ticks.
+
+#### [Asset Card: REL-BLD-015.MC.CORE — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤12,000 tris; LOD1 ceiling ≤4,500 tris. Massive 5x5 tile command headquarters anchor footprint. Multi-tiered complex structure made of interlocking heavy protective plates wrapping a central reactor.
+* .TEX_MAPS: 4096x4096 PBR texture pack mapping pale civic ceramics and reinforced steel load frames. Font files for data readout arrays are compiled natively to eliminate texture sampling blur.
+* .MAT_RULE: Main hull albedo channels are locked to a desaturated value scale. Reactor core conduit lines utilize an intense, un-bloomed Cyan emissive shader, clamped strictly beneath the 15% mesh area rule to protect viewport clarity.
+* .ANIM_RIG: 4-bone rigging controlling core exhaust vanes and data grid extensions. Critical damage triggers macro panel deformation states, venting black smoke and electrical sparks when health falls below 30%.
+* .VFX_POLY: Core collapse initializes a massive, screen-space independent Cyan blast wave decal ring that vitrifies adjacent ground coordinates without altering simulation data. Purges from render pipelines within 200 ticks.
+
+.MAT_RULE: Firing loops update barrel emissive lines to an intense Cyan-white state. Severing connected network power links immediately darkens all status bands, dropping the turret into a heavy, drooping unpowered offline visual pose within 1 tick..ANIM_RIG: 2-bone pitch and yaw turret aiming rig. Rotation velocities sweep smoothly at 360 deg/s to track authoritative target positions, snapping instantly if accessibility profiles request it..VFX_POLY: Discharges instantiate heavy Blue linear tracer beams traveling at 1,200 cm/s toward the target coordinate. Muzzle concussions project brief smoke ring decals onto adjacent landscape planes.
+
+#### [Asset Card: REL-BLD-015.MC.AEGIS — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤4,000 tris; LOD1 ceiling ≤1,600 tris. 2x2 tile localized defensive outpost footprint. Vertical heavy turret barrel mounted onto an elevated orthogonal protective concrete pillbox carriage.
+* .TEX_MAPS: 2048x2048 PBR texture pack. Barrel rails map high-frequency heat-distortion patterns to handle sustained rapid combat engagements.
+
+
 ### §19 Audio, voice, music, cinematics — REL-AUD-001..015, REL-CIN-001..008 (mix standard REL-AUD-010: −16 LUFS ±1 integrated, true peak ≤ −1 dBTP unless owner revises)
 ### §20 Saves, profiles, progression, recovery — REL-SAV-001..014
 ### §21 Accessibility and localization readiness — REL-ACC-001..017, REL-LOC-001..006
@@ -3524,12 +3208,28 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-FAC-010.FAIL:** Erection on impassable tiles or overlapping existing units rejects cleanly.
   * **REL-FAC-010.VERIF:** `SRC` (Cairnback cover placement and projectile blocking tests).
   * **REL-FAC-010.LANE:** Core Gameplay & Factions.
+#### [Acceptance Card: REL-FAC-011.SIG — Structural Coherence Upkeep Cycle]
+* **REL-FAC-011.PRE (Preconditions):** Packaged arm64 shipping configuration build running on baseline Mac hardware. The active scene contains one completed friendly Hollow Choir production facility (Chorus Loom) located at coordinates (24,24). The global player resource bank initializes with a liquid reserve of exactly 24 Dawn. The simulation master tick accumulator is tracking at standard time step speed.
+* **REL-FAC-011.ACT (Actions):**
+  1. Allow the simulation to advance continuously up to tick 599. Observe the structural telemetry values and resource balances in the upper resource telemetry deck.
+  2. At exactly tick 600, sample the global Dawn asset pool.
+  3. Allow the simulation to advance up to tick 1,199. Manually exhaust the remaining resource bank by executing an ability command, bringing the liquid player balance to exactly 0 Dawn.
+  4. Observe the structure's physical lifecycle states as the simulation passes tick 1,200, tick 1,800, tick 2,400, and tick 3,000.
+* **REL-FAC-011.AUTH (Authoritative Results):**
+  * **Tick 600 Pass Case:** The core engine executes the first upkeep validation check on tick 600. The structure consumes exactly 5 Dawn from the asset pool, updating the player balance to 19 Dawn within a single simulation tick. The structure stays 100% active and fully functional.
+  * **Tick 1,200 Overdraft Zone:** At tick 1,200, the engine detects a resource deficit (Balance: 0; Upkeep Cost: 5). The transaction fails closed. The structure remains standing but transitions cleanly into its first warning threshold state.
+  * **Tick 1,800 Stage 2 Warning:** The structure advances to warning tier 2 on tick 1,800 as the resource pool remains empty.
+  * **Tick 2,400 Final Warning:** The structure enters its final tier 3 warning threshold on tick 2,400.
+  * **Tick 3,000 Invariance Collapse:** At exactly tick 3,000 (representing 4 consecutive failed payments across 2,400 ticks total), the structure loses authority completely, purges its entity footprint from the spatial grid, and triggers instant demolition. Net liquid balance is locked safely at 0 Dawn, preventing any negative resource exploits or underflows.
+* **REL-FAC-011.VIS (Visual Presentation):**
+  * **Normal Loop (Ticks 1–1,199):** The structural panel displays a ticking vector circular countdown timer measuring the approach of the next upkeep charge window.
+  * **Warning Stage 1 (Tick 1,200):** The bounding selection ring shifts to a low-frequency pulsing Magenta Fracture line asset. The HUD sidebar flashes a structural hazard alert banner: [WARNING: INTERVAL LOOM INSTABILITY — DAWN DEFICIT].
+  * **Warning Stage 2 & 3 (Ticks 1,800–2,999):** The structure vents erratic, bright magenta electrical sparks (FX_Choir_Bleed_Spark) from its core nodes. The mesh albedo desaturates dynamically by 30%.
+  * **Under Accessibility Toggles:** If Reduced Flashing is enabled, pulsing energy strobes are completely suppressed, replacing particle sparks with a static, bright magenta outline border highlight.
+* **REL-FAC-011.AUD (Audio Feedback):** On the exact tick of overdraft entry (tick 1,200), the Hollow Choir tactical announcer fires the high-priority, rate-limited spoken alert cue VO_Choir_Dawn_Deficit over the Interface submix bus. During the warning phases, the structure emits a localized, low-frequency phase distortion hum (AUE_Structure_Unstable_Lp). Instant destruction on tick 3,000 triggers a crisp crystalline dissolution audio cue (AUE_Choir_Material_Collapse) mastered performantly at -16 LUFS.
+* **REL-FAC-011.FAIL (Failure Behavior):** If the player injects a temporary Dawn inflow (e.g., via a successful Future Well Harvest protocol) prior to tick 3,000, the warning timers instantly clear, the structure stabilizes, and normal asset deductions resume. If the local Command Core is destroyed at any point during an active warning cycle, the match ends instantly in Corefall defeat, safely rejecting all subsequent dynamic structure upkeep evaluations.
+* **REL-FAC-011.PERF (Performance):** Total array traversal and upkeep balance checking logic for up to 100 simultaneous active Choir structures remains strictly bounded under ≤ 0.05 ms per tick on the game loop thread, processing cleanly within a spatial hash grid optimization layer.
 
-* **REL-FAC-011 — Hollow Choir Structural Coherence Upkeep Cycle:** Completed Hollow Choir structures (`Interval Loom`, `Chorus Loom`, `Phase Anchor`) shall independently consume 5 Dawn every 600 simulation ticks (30.0 seconds) to maintain quantum coherence (resolving C20).
-  * **REL-FAC-011.AUTH:** The HUD economy monitor shall display upcoming coherence charge countdowns. If Dawn is insufficient at charge tick, the structure emits 3 warnings before collapsing.
-  * **REL-FAC-011.FAIL:** Instant untelegraphed destruction without 3 prior warning telemetry states is prohibited.
-  * **REL-FAC-011.VERIF:** `SRC` + `PKG-REND` (Choir upkeep cycle and warning alerts test).
-  * **REL-FAC-011.LANE:** Core Gameplay & Player Experience.
 
 * **REL-FAC-012 — Hollow Choir Reconciliation Identity Transition:** Choir combat units may spend 20 Dawn to reconcile into `Manifest` (130% damage) or `Possible` (130% speed, 125% vision).
   * **REL-FAC-012.AUTH:** The 160-tick transition window is a liability state with a 400-tick cooldown; units shall NEVER receive both Manifest and Possible bonuses simultaneously (resolving C19).
@@ -4286,6 +3986,53 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ART-027.FAIL:** Buildings at 1% HP looking pristine and undamaged fails visual reality.
   * **REL-ART-027.VERIF:** `PKG-REND` (damaged structure visual inspection).
   * **REL-ART-027.LANE:** Visual Presentation.
+#### [Asset Card: REL-ART-005.KA.RIFTSTALKER — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤7,500 tris; LOD1 ceiling ≤3,200 tris. Sub-object geometry must enforce hard-faceted crystalline silhouettes with jagged mineral-organic seams, preventing any smoothed topology or primitive curves. Requires 3 vertex ID coloring channels for public molting phase transitions.
+* .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Emissive Mask). Obsidian armor plates must apply a high-frequency fractured detail normal map. Molt transitions utilize a secondary 512x512 translucent core blending skin mask.
+* .MAT_RULE: Carapace base shader utilizes an opaque volcanic value mask. Emissive cracks are bound strictly to the Broken-Sun Amber color space, limited to ≤15% mesh surface area to prevent camera lens bloom under heavy tactical micro-management bursts.
+* .ANIM_RIG: 14-bone kinematic rigging layout. Skeleton layout carries fixed named sockets: `VFX_Muzzle_Shard_01`, `VFX_Molt_Origin_Base`, and `Target_Hitbox_Center`. Locomotion requires direction-independent movement speeds and turn rates with instant snaps under Reduced Motion.
+* .VFX_POLY: Projectile particle discharges simulate linear physical entities traveling at an uncompromised velocity of 1,200 cm/s. Niagara attachment bounds are restricted to localized emitters using zero shadow cascades or mid-frame runtime CPU allocations.
+
+#### [Asset Card: REL-ART-021.TERRAIN.GLASS_SCAR — Terrain Surface Manifest]
+* .MESH_PROP: Authoritative 64x64 navigation cost heightfield grid. Step-height cliff elevations use 159-unit modular rocky formations. Walkable open corridors must clear unit passability profiles, clamping decorative dressing meshes to a maximum vertical displacement height of ≤20 cm.
+* .TEX_MAPS: Shared landscape tile material layers packed into an un-mirrored 4096x4096 stream array (Vitrified Glass base/normals, Charcoal Scar ash mask, normal detail layers).
+* .MAT_RULE: Ground surfaces apply an un-glinted matte roughness floor of ≥0.85 to completely eliminate specular glare. Vitrified glass cracks use a dynamic, high-exposure Magenta Fracture emissive shader loop restricted to ≤10% footprint. True 3D volumetric fog must project a pitch-black charcoal shroud over unrevealed coordinate lines from tick 0.
+* .ANIM_RIG: NOT APPLICABLE. Landscape geometry remains statically batched on the GPU thread. Dynamic bridge transformations and rift expansions triggered via the Reshape protocol must update distance-field arrays across both players within exactly 1 simulation tick.
+* .VFX_POLY: Low-overhead environmental ash drift particle vectors use static velocity meshes. Explosive concussions or building collapses instantiate persistent, low-cost scorch decal rings onto the terrain plane that linger for the remainder of the match with 0% performance cost.
+
+#### [Asset Card: REL-UI-002.COMMAND_CARD — Interface Widget Sheet]
+* .MESH_PROP: Modular 3x3 interactive command deck widget grid built within a Production UMG/Slate framework, discarding all immediate-mode Canvas drawing hooks. Panel containers apply a standard 9-slice layout carrying a persistent 30% text expansion margin to prevent localization clipping.
+* .TEX_MAPS: Core widget skins (Normal slot, Hover highlight, Selected border, Locked icon overlay) packed into a single 1024x1024 compression-optimized UI texture atlas. Selection indicators utilize high-contrast non-color symbols alongside color elements to satisfy accessibility.
+* .MAT_RULE: Panel backings use an opaque, dark charcoal luma layer to maintain clean battlefield readability. Focused or hovered skill slots update highlight states instantly within ≤1 frame (16.67 ms at 60 fps), projecting luminous outlines when accessibility filters are toggled.
+* .ANIM_RIG: UI layout scale supports a continuous runtime dynamic range adjustment from 80% to 150% via settings configuration, dynamically recalculating anchor boundaries without requiring a game application reboot.
+* .VFX_POLY: Selecting active abilities projects an interactive targeting spline vector. Click interception passes through a 12px proximity vector fallback layer to handle input triggers with 100% spatial target fidelity under rapid bursts.
+#### [Asset Card: REL-FAC-027.HC.THREADKEEPER — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤6,800 tris; LOD1 ceiling ≤2,800 tris. Silhouette must project a floating, multi-limbed weaver outline. The main torso mass features an offset duplicate mesh layer offset by 3 cm, rendering with a fluctuating transparency profile to visualize reality bleed.
+* .TEX_MAPS: 2048x2048 PBR texture stack (Albedo, Normal, Packed Roughness/Metallic, Superposition Mask). Textures map a shifting silk-matter weave over a solid vitrified glass core.
+* .MAT_RULE: Carapace plates apply an opaque charcoal value mask. Luminous crystalline edges use a specialized dynamic fresnel material shader tied to the Magenta Fracture color space, restricted to ≤12% visible surface footprint to maintain tactical camera legibility. 
+* .ANIM_RIG: 16-bone hovering rigging layout. Locomotion uses a fluid, floating harmonic wave component with zero mechanical joints or footstep impact physics. Rotation sweeping switches to instantaneous snaps when the Reduced Motion accessibility preset is toggled.
+* .VFX_POLY: Gathering or structural reconciliation actions project continuous dual-strand magenta light lattices intersecting target geometries. Emitters are presentation-only, running on local Niagara nodes with zero shadow cascades or CPU dynamic memory allocations.
+
+#### [Asset Card: REL-FAC-027.HC.INTERVALIST — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤7,200 tris; LOD1 ceiling ≤3,100 tris. Mesh geometry enforces a split-silhouette profile representing competing possibility states. Requires 2 distinct structural variations compiled into sub-object actors to handle dynamic state transitions.
+* .TEX_MAPS: Twin 2048x2048 PBR texture stacks mapping independent surface values for Manifest and Possible identities. Carapace uses a micro-noise interference pattern map to simulate shifting light boundaries.
+* .MAT_RULE: Transitioning states triggers a 160-tick public identity reconciliation window on the GPU. Manifest state drives a high-saturation Magenta emissive pulse up to the strict 15% surface area limit. Possible state shifts material luma toward a desaturated, transparent light lattice.
+* .ANIM_RIG: 14-bone kinematic rigging layout featuring named sockets: `VFX_Phase_Lance_01`, `Target_Hitbox_Center`, and `VFX_Reconcile_Anchor`. Frontage facing is decoupled from simulation targeting loops; turning sweeping sweeps at 720 deg/s.
+* .VFX_POLY: Firing lances instantiate linear phase bolt projectiles traveling at an uncompromised velocity of 1,200 cm/s. Weapon muzzle discharge and collision impact effects are rate-limited to prevent visual noise during multi-unit engagements.
+
+#### [Asset Card: REL-FAC-027.HC.WARDEN — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤8,500 tris; LOD1 ceiling ≤3,800 tris. Heavy line silhouette framing a massive, centralized hollow cavity enclosing a suspended, non-colliding crystalline core. Outer plates use a heavy, angular ceramic value structure.
+* .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Tether Mask). Micro-fractured stone textures blend into smooth pale civic ceramics along structural boundaries.
+* .MAT_RULE: Base material applies a strict matte roughness floor of ≥0.85 to isolate the unit against the landscape background. Activating `Bind Interval` projects a 500 cm physical vector tether beam toward the target coordinate. The tether shader clamps to a low-frequency Magenta ripple, fading cleanly on vision loss or warden translation beyond 700 cm.
+* .ANIM_RIG: 18-bone heavy kinematic layout. Locomotion features slow, rhythmic step cadences that automatically align with box, line, or wedge group centroid arrival points. Core oscillations clamp to zero under the Reduced Motion preset.
+* .VFX_POLY: Emitters are bound to native skeletal socket anchors. Destruction events trigger a bespoke structural collapse effect: dissolving the outer shell into fading light interference waves over exactly 200 ticks, leaving no colliding remnants.
+
+#### [Asset Card: REL-FAC-027.HC.AFTERIMAGE — Visual Asset Manifest]
+* .MESH_PROP: LOD0 polycount ceiling ≤5,500 tris; LOD1 ceiling ≤2,200 tris. Sharp, elongated scout silhouette featuring twin trailing mesh echoes. The trailing echo geometries use a vertex-shimmer shader to project anonymous approximate contact indicators through fog.
+* .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Packed Utility maps). Projections generated via `Forked Trace` inherit the base mesh boundary data but strip custom textures, rendering as 1-health anonymous pings.
+* .MAT_RULE: Core material loops an animated phase shift shader across the superposition mask. Emissive outlines use an un-bloomed Magenta/Cyan shader blend. Direct player observation instantly overrides the anonymous shader state, rendering the explicit text sigil `PROJECTION` above the entity view.
+* .ANIM_RIG: 12-bone high-speed rigging layout. High-cadence micro-management commands process at up to 300 APM bursts with zero input drop, maintaining a steady travel facing alignment tracking velocity.
+* .VFX_POLY: Forked Trace initialization instantiates two player-directed projection vectors with a 120-tick duration timer. Emitters discard all CPU heap allocations, processing within the O(N) spatial hash grid performantly.
 
 ---
 
@@ -6063,21 +5810,21 @@ All 995 identifiers in this document.
 | `REL-AI-019` | AI Concession & Elimination Protocol | §15 Skirmish, AI, Difficulty, and Balance |
 | `REL-AI-020` | Skirmish Mirror Matchup Support | §15 Skirmish, AI, Difficulty, and Balance |
 | `REL-AI-021` | Elimination of Undocumented AI Doctrines | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-022` | see Part III | Initial release |
-| `REL-AI-023` | see Part III | Initial release |
-| `REL-AI-024` | see Part III | Initial release |
-| `REL-AI-025` | see Part III | Initial release |
-| `REL-AI-026` | see Part III | Initial release |
-| `REL-AI-027` | see Part III | Initial release |
-| `REL-AI-028` | see Part III | Initial release |
-| `REL-AI-029` | see Part III | Initial release |
-| `REL-AI-030` | see Part III | Initial release |
-| `REL-AI-031` | see Part III | Initial release |
-| `REL-AI-032` | see Part III | Initial release |
-| `REL-AI-033` | see Part III | Initial release |
-| `REL-AI-034` | see Part III | Initial release |
-| `REL-AI-035` | see Part III | Initial release |
-| `REL-AI-036` | see Part III | Initial release |
+| `REL-AI-022` | Meridian strategy | Initial release |
+| `REL-AI-023` | Kharuun strategy | Initial release |
+| `REL-AI-024` | Choir strategy | Initial release |
+| `REL-AI-025` | Advantage conversion | Initial release |
+| `REL-AI-026` | Skirmish contract | Initial release |
+| `REL-AI-027` | Layered AI architecture | Initial release |
+| `REL-AI-028` | Mission director separation | Initial release |
+| `REL-AI-029` | Fair information model | Initial release |
+| `REL-AI-030` | Dynamic threat assessment | Initial release |
+| `REL-AI-031` | Perceived intelligence behaviors | Initial release |
+| `REL-AI-032` | Doctrine differentiation | Initial release |
+| `REL-AI-033` | Scalable difficulty | Initial release |
+| `REL-AI-034` | AI reconnaissance parity | Initial release |
+| `REL-AI-035` | AI recovery and surrender | Initial release |
+| `REL-AI-036` | AI acceptance | Initial release |
 | `REL-ART-001` | Five-Color Aesthetic Palette Enforcement | §18 World Art, Units, Structures, Animatio... |
 | `REL-ART-002` | One-Second Tactical Readability Invariant | §18 World Art, Units, Structures, Animatio... |
 | `REL-ART-003` | Matte Terrain Surface Anti-Glint Specification | §18 World Art, Units, Structures, Animatio... |
@@ -6098,9 +5845,9 @@ All 995 identifiers in this document.
 | `REL-ART-018` | Explored Shroud Object Memory Persistence | §18 World Art, Units, Structures, Animatio... |
 | `REL-ART-019` | Rigorous Exposure & Lighting Calibration | §18 World Art, Units, Structures, Animatio... |
 | `REL-ART-020` | Particle VFX Performance & Collision Discipline | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-021` | see Part III | Initial release |
-| `REL-ART-022` | see Part III | Initial release |
-| `REL-ART-023` | see Part III | Initial release |
+| `REL-ART-021` | Gameplay-truthful terrain | Initial release |
+| `REL-ART-022` | Cover truth | Initial release |
+| `REL-ART-023` | Ecological signal boundary | Initial release |
 | `REL-AUD-001` | Five-Category Submix Hierarchy | §19 Audio, Voice, Music, and Cinematics |
 | `REL-AUD-002` | Integrated Loudness & True Peak Mastering Target | §19 Audio, Voice, Music, and Cinematics |
 | `REL-AUD-003` | Dynamic Side-Chain Vocal Ducking | §19 Audio, Voice, Music, and Cinematics |
@@ -6131,12 +5878,12 @@ All 995 identifiers in this document.
 | `REL-BLD-012` | Technology Irreversibility & Zero Refund | §10 Construction, Production, and Research |
 | `REL-BLD-013` | Structural Repair Resolution | §10 Construction, Production, and Research |
 | `REL-BLD-014` | Structural Destruction Debris & Footprint Clearance | §10 Construction, Production, and Research |
-| `REL-BLD-015` | see Part III | Initial release |
-| `REL-BLD-016` | see Part III | Initial release |
-| `REL-BLD-017` | see Part III | Initial release |
-| `REL-BLD-018` | see Part III | Initial release |
-| `REL-BLD-019` | see Part III | Initial release |
-| `REL-BLD-020` | see Part III | Initial release |
+| `REL-BLD-015` | Meridian Compact Structure Manifests | Initial release |
+| `REL-BLD-016` | Kharuun Assemblies Structure Manifests | Initial release |
+| `REL-BLD-017` | Hollow Choir Structure Manifests | Initial release |
+| `REL-BLD-018` | Faction-specific construction language | Initial release |
+| `REL-BLD-019` | Producer inspection | Initial release |
+| `REL-BLD-020` | Cancellation policy | Initial release |
 | `REL-CAM-001` | Fifteen-Operation Continuous Campaign Lifecycle | §14 Campaign and Narrative |
 | `REL-CAM-002` | Act I | §14 Campaign and Narrative |
 | `REL-CAM-003` | Act II | §14 Campaign and Narrative |
@@ -6158,17 +5905,17 @@ All 995 identifiers in this document.
 | `REL-CAM-019` | Mission 14 | §14 Campaign and Narrative |
 | `REL-CAM-020` | Mission 15 | §14 Campaign and Narrative |
 | `REL-CAM-021` | Campaign Objective Decoupling from Corefall | §14 Campaign and Narrative |
-| `REL-CAM-022` | see Part III | Initial release |
-| `REL-CAM-023` | see Part III | Initial release |
-| `REL-CAM-024` | see Part III | Initial release |
-| `REL-CAM-025` | see Part III | Initial release |
-| `REL-CAM-026` | see Part III | Initial release |
-| `REL-CAM-027` | see Part III | Initial release |
-| `REL-CAM-028` | see Part III | Initial release |
-| `REL-CAM-029` | see Part III | Initial release |
-| `REL-CAM-030` | see Part III | Initial release |
-| `REL-CAM-031` | see Part III | Initial release |
-| `REL-CAM-032` | see Part III | Initial release |
+| `REL-CAM-022` | Objective-based operation victory | Initial release |
+| `REL-CAM-023` | Objective-based operation defeat | Initial release |
+| `REL-CAM-024` | Result causality | Initial release |
+| `REL-CAM-025` | Progressive capability introduction | Initial release |
+| `REL-CAM-026` | Objective portfolio | Initial release |
+| `REL-CAM-027` | Mission pacing | Initial release |
+| `REL-CAM-028` | Environmental storytelling | Initial release |
+| `REL-CAM-029` | Persistent progression contract | Initial release |
+| `REL-CAM-030` | Meaningful campaign rewards | Initial release |
+| `REL-CAM-031` | Feature teaching gate | Initial release |
+| `REL-CAM-032` | Scripted-event fairness | Initial release |
 | `REL-CIN-001` | Sequencer In-Engine Cutscene Pipeline | §19 Audio, Voice, Music, and Cinematics |
 | `REL-CIN-002` | In-Engine Title Cinematic Sequence | §19 Audio, Voice, Music, and Cinematics |
 | `REL-CIN-003` | Act I Transition Sequence ("Necessary Fires") | §19 Audio, Voice, Music, and Cinematics |
@@ -6195,15 +5942,15 @@ All 995 identifiers in this document.
 | `REL-CMB-016` | Multi-Channel Combat Damage Feedback | §11 Selection, Movement, Commands, and Combat |
 | `REL-CMB-017` | Fog of War Engagement Constraints | §11 Selection, Movement, Commands, and Combat |
 | `REL-CMB-018` | Worker Disarmament Invariant | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-019` | see Part III | Initial release |
-| `REL-CMB-020` | see Part III | Initial release |
-| `REL-CMB-021` | see Part III | Initial release |
-| `REL-CMB-022` | see Part III | Initial release |
-| `REL-CMB-023` | see Part III | Initial release |
-| `REL-CMB-024` | see Part III | Initial release |
-| `REL-CMB-025` | see Part III | Initial release |
-| `REL-CMB-026` | see Part III | Initial release |
-| `REL-CMB-027` | see Part III | Initial release |
+| `REL-CMB-019` | Common mobile commands | Initial release |
+| `REL-CMB-020` | Formation meaning | Initial release |
+| `REL-CMB-021` | Control groups | Initial release |
+| `REL-CMB-022` | Worker authority | Initial release |
+| `REL-CMB-023` | Repair resolution | Initial release |
+| `REL-CMB-024` | Rally resolution | Initial release |
+| `REL-CMB-025` | Player-issued reconnaissance | Initial release |
+| `REL-CMB-026` | Reconnaissance lifecycle | Initial release |
+| `REL-CMB-027` | Automation authority boundary | Initial release |
 | `REL-DIST-001` | Standalone macOS Application Bundle | §23 Security, Privacy, Packaging, and Dist... |
 | `REL-DIST-002` | Apple Silicon ARM64 Native Architecture | §23 Security, Privacy, Packaging, and Dist... |
 | `REL-DIST-003` | Apple Developer ID Code Signing | §23 Security, Privacy, Packaging, and Dist... |
@@ -6235,9 +5982,9 @@ All 995 identifiers in this document.
 | `REL-ECO-012` | Logistics Cap Enforcement & Supply Deficit | §9 Economy and Logistics |
 | `REL-ECO-013` | Temporary Logistics Burst Dynamics | §9 Economy and Logistics |
 | `REL-ECO-014` | Asymmetric Faction Economy Rules | §9 Economy and Logistics |
-| `REL-ECO-015` | see Part III | Initial release |
-| `REL-ECO-016` | see Part III | Initial release |
-| `REL-ECO-017` | see Part III | Initial release |
+| `REL-ECO-015` | Continuous worker economy | Initial release |
+| `REL-ECO-016` | Dawn sources and obligations | Initial release |
+| `REL-ECO-017` | Resource monitor | Initial release |
 | `REL-FAC-001` | Tripartite Asymmetric Strategic Identity | §12 Factions, Rosters, and Strategic Depth |
 | `REL-FAC-002` | Meridian Compact Power Grid Topology | §12 Factions, Rosters, and Strategic Depth |
 | `REL-FAC-003` | Meridian Power Link Distribution & Throughput | §12 Factions, Rosters, and Strategic Depth |
@@ -6251,22 +5998,22 @@ All 995 identifiers in this document.
 | `REL-FAC-011` | Hollow Choir Structural Coherence Upkeep Cycle | §12 Factions, Rosters, and Strategic Depth |
 | `REL-FAC-012` | Hollow Choir Reconciliation Identity Transition | §12 Factions, Rosters, and Strategic Depth |
 | `REL-FAC-013` | Hollow Choir Phase Anchor Coherence Field | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-014` | see Part III | Initial release |
-| `REL-FAC-015` | see Part III | Initial release |
-| `REL-FAC-016` | see Part III | Initial release |
-| `REL-FAC-017` | see Part III | Initial release |
-| `REL-FAC-018` | see Part III | Initial release |
-| `REL-FAC-019` | see Part III | Initial release |
-| `REL-FAC-020` | see Part III | Initial release |
-| `REL-FAC-021` | see Part III | Initial release |
-| `REL-FAC-022` | see Part III | Initial release |
-| `REL-FAC-023` | see Part III | Initial release |
-| `REL-FAC-024` | see Part III | Initial release |
-| `REL-FAC-025` | see Part III | Initial release |
-| `REL-FAC-026` | see Part III | Initial release |
-| `REL-FAC-027` | see Part III | Initial release |
-| `REL-FAC-028` | see Part III | Initial release |
-| `REL-FAC-029` | see Part III | Initial release |
+| `REL-FAC-014` | Strategic loop | Initial release |
+| `REL-FAC-015` | Economic allocation | Initial release |
+| `REL-FAC-016` | Route economy | Initial release |
+| `REL-FAC-017` | Logistics strategy | Initial release |
+| `REL-FAC-018` | Information strategy | Initial release |
+| `REL-FAC-019` | Soft-counter strategy | Initial release |
+| `REL-FAC-020` | Engagement choice | Initial release |
+| `REL-FAC-021` | Production tempo | Initial release |
+| `REL-FAC-022` | Territory and conversion | Initial release |
+| `REL-FAC-023` | Attention strategy | Initial release |
+| `REL-FAC-024` | Strategic knowledge boundary | Initial release |
+| `REL-FAC-025` | Meridian Compact Unit Manifests | Initial release |
+| `REL-FAC-026` | Kharuun Assemblies Unit Manifests | Initial release |
+| `REL-FAC-027` | Hollow Choir Unit Manifests | Initial release |
+| `REL-FAC-028` | Faction Technology Manifests | Initial release |
+| `REL-FAC-029` | Technology purpose | Initial release |
 | `REL-FTU-001` | Clean-Machine Cold Launch Reliability | §7 First-Run, Front Door, and Onboarding |
 | `REL-FTU-002` | Atmospheric World-Coherent Title Treatment | §7 First-Run, Front Door, and Onboarding |
 | `REL-FTU-003` | Primary Navigation Hub Ergonomics | §7 First-Run, Front Door, and Onboarding |
@@ -6316,7 +6063,7 @@ All 995 identifiers in this document.
 | `REL-MP-014` | Host Migration & Listen-Server Resilience | §26 Conditional Multiplayer Module |
 | `REL-MP-015` | Matchmaking Rating (MMR) Calculation Model | §26 Conditional Multiplayer Module |
 | `REL-MP-016` | Absolute Single-Player Network Isolation | §26 Conditional Multiplayer Module |
-| `REL-MP-017` | see Part III | Initial release |
+| `REL-MP-017` | Development network boundary | Initial release |
 | `REL-PERF-001` | 60 FPS Target on Baseline Apple Silicon | §22 Graphics Scalability, Performance, and... |
 | `REL-PERF-002` | Frame Time Distribution & Spike Ceiling | §22 Graphics Scalability, Performance, and... |
 | `REL-PERF-003` | Game Thread Execution Budget | §22 Graphics Scalability, Performance, and... |
@@ -6335,23 +6082,23 @@ All 995 identifiers in this document.
 | `REL-PERF-016` | Headless Simulation Execution Throughput | §22 Graphics Scalability, Performance, and... |
 | `REL-PERF-017` | Asynchronous Worker Thread Work Scheduler | §22 Graphics Scalability, Performance, and... |
 | `REL-PERF-018` | Zero Mid-Frame Heap Allocation Invariant | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-019` | see Part III | Initial release |
-| `REL-PERF-020` | see Part III | Initial release |
-| `REL-PERF-021` | see Part III | Initial release |
-| `REL-PERF-022` | see Part III | Initial release |
-| `REL-PERF-023` | see Part III | Initial release |
-| `REL-PERF-024` | see Part III | Initial release |
-| `REL-PERF-025` | see Part III | Initial release |
-| `REL-PORT-001` | see Part III | Initial release |
-| `REL-PORT-002` | see Part III | Initial release |
-| `REL-PORT-003` | see Part III | Initial release |
-| `REL-PORT-004` | see Part III | Initial release |
-| `REL-PORT-005` | see Part III | Initial release |
-| `REL-PORT-006` | see Part III | Initial release |
-| `REL-PORT-007` | see Part III | Initial release |
-| `REL-PORT-008` | see Part III | Initial release |
-| `REL-PORT-009` | see Part III | Initial release |
-| `REL-PORT-010` | see Part III | Initial release |
+| `REL-PERF-019` | Quality tiers are data, not code | Initial release |
+| `REL-PERF-020` | Settings forward and backward compatibility | Initial release |
+| `REL-PERF-021` | Presentation cannot reach authority | Initial release |
+| `REL-PERF-022` | Budgets bind to a measured device class | Initial release |
+| `REL-PERF-023` | Capability detection and fallback | Initial release |
+| `REL-PERF-024` | Readability floor across every tier | Initial release |
+| `REL-PERF-025` | Graphics expansion is dormant | Initial release |
+| `REL-PORT-001` | Portability constraint authority | Initial release |
+| `REL-PORT-002` | Toolchain and architecture determinism | Initial release |
+| `REL-PORT-003` | Asset and content path portability | Initial release |
+| `REL-PORT-004` | Container encoding portability | Initial release |
+| `REL-PORT-005` | Input and binding portability | Initial release |
+| `REL-PORT-006` | Dependency portability register | Initial release |
+| `REL-PORT-007` | Generator and compiler platform behavior | Initial release |
+| `REL-PORT-008` | Portability guard runs continuously | Initial release |
+| `REL-PORT-009` | No unsupported platform claim | Initial release |
+| `REL-PORT-010` | Roadmap modules are dormant | Initial release |
 | `REL-PUB-001` | Absolute Truth in Public Gameplay Claims | §24 Public Website, Manual, Claims, and Su... |
 | `REL-PUB-002` | Comprehensive Standalone Game Manual (PDF) | §24 Public Website, Manual, Claims, and Su... |
 | `REL-PUB-003` | Authoritative Manual Content Architecture | §24 Public Website, Manual, Claims, and Su... |
@@ -6399,10 +6146,10 @@ All 995 identifiers in this document.
 | `REL-QA-030` | Master Evidence Archive Binding | §25 QA, Human Validation, and Release Bloc... |
 | `REL-QA-031` | Continuous CI Regression Guard Locks | §25 QA, Human Validation, and Release Bloc... |
 | `REL-QA-032` | Post-Release Hotfix Qualification Protocol | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-033` | see Part III | Initial release |
-| `REL-QA-034` | see Part III | Initial release |
-| `REL-QA-035` | see Part III | Initial release |
-| `REL-QA-036` | see Part III | Initial release |
+| `REL-QA-033` | No purposeless element | Initial release |
+| `REL-QA-034` | No fiction-only verbs | Initial release |
+| `REL-QA-035` | Purpose comprehension | Initial release |
+| `REL-QA-036` | Evidence separation | Initial release |
 | `REL-QOL-001` | Control Group Assignment & Selection | §16 Replays and Quality-of-Life |
 | `REL-QOL-002` | Control Group Camera Centering | §16 Replays and Quality-of-Life |
 | `REL-QOL-003` | Multi-Unit Subgroup Navigation | §16 Replays and Quality-of-Life |
@@ -6447,13 +6194,13 @@ All 995 identifiers in this document.
 | `REL-SIM-010` | Map Spatial Boundary Invariant | §8 Core Simulation, Time, and Player Autho... |
 | `REL-SIM-011` | Transactional State Checksum Verification | §8 Core Simulation, Time, and Player Autho... |
 | `REL-SIM-012` | Core Tick Processing Time Ceiling | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-013` | see Part III | Initial release |
-| `REL-SIM-014` | see Part III | Initial release |
-| `REL-SIM-015` | see Part III | Initial release |
-| `REL-SIM-016` | see Part III | Initial release |
-| `REL-SIM-017` | see Part III | Initial release |
-| `REL-SIM-018` | see Part III | Initial release |
-| `REL-SIM-019` | see Part III | Initial release |
+| `REL-SIM-013` | Corefall standard-match victory | Initial release |
+| `REL-SIM-014` | Corefall defeat and concession | Initial release |
+| `REL-SIM-015` | Team elimination | Initial release |
+| `REL-SIM-016` | Draw | Initial release |
+| `REL-SIM-017` | Outcome comprehension | Initial release |
+| `REL-SIM-018` | Initial-release outcome scope | Initial release |
+| `REL-SIM-019` | Visibility-scoped world presentation | Initial release |
 | `REL-STAB-001` | Sixty-Minute Sustained Gameplay Stability | §22 Graphics Scalability, Performance, and... |
 | `REL-STAB-002` | Match Restart Memory Leak Invariance | §22 Graphics Scalability, Performance, and... |
 | `REL-STAB-003` | Graceful Crash Minidump Capture | §22 Graphics Scalability, Performance, and... |
@@ -6475,14 +6222,14 @@ All 995 identifiers in this document.
 | `REL-UI-014` | Calibrated UI Scale Dynamic Range | §17 UI and Interaction |
 | `REL-UI-015` | Input Keybind Deconfliction Invariant | §17 UI and Interaction |
 | `REL-UI-016` | Layout Safety Margins for Localization | §17 UI and Interaction |
-| `REL-UI-017` | see Part III | Initial release |
-| `REL-UI-018` | see Part III | Initial release |
-| `REL-UI-019` | see Part III | Initial release |
-| `REL-UI-020` | see Part III | Initial release |
-| `REL-UI-021` | see Part III | Initial release |
-| `REL-UI-022` | see Part III | Initial release |
-| `REL-UI-023` | see Part III | Initial release |
-| `REL-UI-024` | see Part III | Initial release |
+| `REL-UI-017` | Selection identity | Initial release |
+| `REL-UI-018` | Selection state | Initial release |
+| `REL-UI-019` | Purpose and counterplay | Initial release |
+| `REL-UI-020` | Action availability | Initial release |
+| `REL-UI-021` | Action feedback | Initial release |
+| `REL-UI-022` | Input parity | Initial release |
+| `REL-UI-023` | Binding exclusivity | Initial release |
+| `REL-UI-024` | Tactical overview truth | Initial release |
 | `REL-WEL-001` | Future Well Landmark Entity Authority | §13 Future Wells |
 | `REL-WEL-002` | Future Well Dormant State & Telemetry | §13 Future Wells |
 | `REL-WEL-003` | Contested Well Capture Resolution | §13 Future Wells |
@@ -6495,12 +6242,12 @@ All 995 identifiers in this document.
 | `REL-WEL-010` | Reshape Protocol Invocation | §13 Future Wells |
 | `REL-WEL-011` | Reshape Terrain Transformation Passability | §13 Future Wells |
 | `REL-WEL-012` | Reshape Expiration & Safe Boundary Displacement | §13 Future Wells |
-| `REL-WEL-013` | see Part III | Initial release |
-| `REL-WEL-014` | see Part III | Initial release |
-| `REL-WEL-015` | see Part III | Initial release |
-| `REL-WEL-016` | see Part III | Initial release |
-| `REL-WEL-017` | see Part III | Initial release |
-| `REL-WEL-018` | see Part III | Initial release |
+| `REL-WEL-013` | Well selection | Initial release |
+| `REL-WEL-014` | Well capture | Initial release |
+| `REL-WEL-015` | Harvest | Initial release |
+| `REL-WEL-016` | Preserve | Initial release |
+| `REL-WEL-017` | Reshape | Initial release |
+| `REL-WEL-018` | Strategic neutrality | Initial release |
 | `REL-ACC-018` | Active Tactical Pause (Single Player) | §21 Accessibility and localization readiness |
 | `REL-ACC-019` | Continuous Simulation Speed Scaling | §21 Accessibility and localization readiness |
 | `REL-ACC-020` | Smart Macro Assist & Auto-Queue Toggle | §21 Accessibility and localization readiness |

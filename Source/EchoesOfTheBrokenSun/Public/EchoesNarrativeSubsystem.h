@@ -48,6 +48,8 @@ public:
     [[nodiscard]] const FString& GetLoadError() const { return LoadError; }
     [[nodiscard]] int32 GetOperationCount() const { return Operations.Num(); }
     [[nodiscard]] int32 GetTotalLineCount() const { return TotalLineCount; }
+    [[nodiscard]] int32 GetDemoLineCount() const { return DemoLines.Num(); }
+    [[nodiscard]] const TArray<FEchoesNarrativeLine>& GetDemoLines() const { return DemoLines; }
     [[nodiscard]] const FString& GetPackDigest() const { return PackDigest; }
 
     /** True when a narrative contract exists for the operation. */
@@ -139,6 +141,7 @@ private:
     void LoadPack();
 
     TMap<FString, FOperationNarrative> Operations;
+    TArray<FEchoesNarrativeLine> DemoLines;
     TArray<FEchoesNarrativeLine> SubtitleQueue;
     double ActiveLineStartSeconds = -1.0;
     FString PackDigest;

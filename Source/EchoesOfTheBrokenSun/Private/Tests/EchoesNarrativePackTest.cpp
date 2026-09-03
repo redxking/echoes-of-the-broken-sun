@@ -41,6 +41,13 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("The pack digest is a full SHA-256"),
               Narrative->GetPackDigest().Len(),
               64);
+    TestEqual(TEXT("The demo tutorial and annunciator line count is carried"),
+              Narrative->GetDemoLineCount(),
+              55);
+    TestTrue(TEXT("Tutorial signal resolves Mara Vey survey line"),
+             Narrative->GetLinesForSignal(
+                 EEchoesOperationMode::Skirmish,
+                 TEXT("tutorial_lesson_opened:survey")).Num() > 0);
 
     // Every campaign operation with an authored contract binds completely.
     const EEchoesOperationMode Authored[] = {

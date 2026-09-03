@@ -259,6 +259,41 @@ void UEchoesNarrativeSubsystem::LoadPack()
         Operations.Add(Pair.Key, MoveTemp(Narrative));
     }
 
+    // Parse demo subtree carrying system_voice and tutorial lines
+    DemoLines.Reset();
+    const TSharedPtr<FJsonObject>* DemoObject = nullptr;
+    if (Root->TryGetObjectField(TEXT("demo"), DemoObject) &&
+        DemoObject != nullptr && (*DemoObject)->IsValid())
+    {
+        for (const auto& DemoPair : (*DemoObject)->Values)
+        {
+            const TSharedPtr<FJsonObject>* CategoryObj = nullptr;
+            if (DemoPair.Value.IsValid() && DemoPair.Value->TryGetObject(CategoryObj) &&
+                CategoryObj != nullptr && (*CategoryObj)->IsValid())
+            {
+                const TArray<TSharedPtr<FJsonValue>>* DemoLineValues = nullptr;
+                if ((*CategoryObj)->TryGetArrayField(TEXT("lines"), DemoLineValues) &&
+                    DemoLineValues != nullptr)
+                {
+                    for (const TSharedPtr<FJsonValue>& LineValue : *DemoLineValues)
+                    {
+                        const TSharedPtr<FJsonObject>* LineObject = nullptr;
+                        FEchoesNarrativeLine Line;
+                        if (LineValue.IsValid() && LineValue->TryGetObject(LineObject) &&
+                            LineObject != nullptr && (*LineObject)->IsValid() &&
+                            (*LineObject)->TryGetStringField(TEXT("id"), Line.Id) &&
+                            (*LineObject)->TryGetStringField(TEXT("speaker"), Line.Speaker) &&
+                            (*LineObject)->TryGetStringField(TEXT("signal"), Line.Signal) &&
+                            (*LineObject)->TryGetStringField(TEXT("text"), Line.Text))
+                        {
+                            DemoLines.Add(MoveTemp(Line));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     PackDigest = ActualDigest;
     bReady = true;
 }
@@ -336,15 +371,24 @@ TArray<FEchoesNarrativeLine> UEchoesNarrativeSubsystem::GetLinesForSignal(
     TArray<FEchoesNarrativeLine> Matched;
     const FOperationNarrative* Found =
         Operations.Find(OperationPackKey(Operation));
-    if (Found == nullptr)
+    if (Found != nullptr)
     {
-        return Matched;
-    }
-    for (const FEchoesNarrativeLine& Line : Found->Lines)
-    {
-        if (Line.Signal == Signal)
+        for (const FEchoesNarrativeLine& Line : Found->Lines)
         {
-            Matched.Add(Line);
+            if (Line.Signal == Signal)
+            {
+                Matched.Add(Line);
+            }
+        }
+    }
+    if (Matched.IsEmpty())
+    {
+        for (const FEchoesNarrativeLine& Line : DemoLines)
+        {
+            if (Line.Signal == Signal)
+            {
+                Matched.Add(Line);
+            }
         }
     }
     return Matched;
@@ -395,15 +439,27 @@ void UEchoesNarrativeSubsystem::EnqueueSignal(
 {
     const FOperationNarrative* Found =
         Operations.Find(OperationPackKey(Operation));
-    if (Found == nullptr)
+    bool bAdded = false;
+    if (Found != nullptr)
     {
-        return;
-    }
-    for (const FEchoesNarrativeLine& Line : Found->Lines)
-    {
-        if (Line.Signal == Signal)
+        for (const FEchoesNarrativeLine& Line : Found->Lines)
         {
-            SubtitleQueue.Add(Line);
+            if (Line.Signal == Signal)
+            {
+                SubtitleQueue.Add(Line);
+                bAdded = true;
+            }
+        }
+    }
+    if (!bAdded)
+    {
+        for (const FEchoesNarrativeLine& Line : DemoLines)
+        {
+            if (Line.Signal == Signal)
+            {
+                SubtitleQueue.Add(Line);
+                bAdded = true;
+            }
         }
     }
     if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())

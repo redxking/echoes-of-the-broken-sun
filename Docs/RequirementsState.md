@@ -52,62 +52,62 @@ families, and per-record binding is written here as each is verified.
 
 | Prefix | Records | State |
 |---|---|---|
-| `SPEC-ACC-*` | 5 | `OPEN` |
-| `SPEC-AI-*` | 6 | `OPEN` |
-| `SPEC-AIST-*` | 10 | `OPEN` |
-| `SPEC-ARC-*` | 3 | `OPEN` |
-| `SPEC-ART-*` | 3 | `OPEN` |
-| `SPEC-AUD-*` | 3 | `OPEN` |
-| `SPEC-AUDF-*` | 6 | `OPEN` |
-| `SPEC-AUT-*` | 5 | `OPEN` |
-| `SPEC-BAL-*` | 8 | `OPEN` |
-| `SPEC-AUTH-*` | 6 | `OPEN` |
-| `SPEC-BLD-*` | 10 | `OPEN` |
-| `SPEC-BUD-*` | 8 | `OPEN` |
-| `SPEC-CAM-*` | 7 | `OPEN` |
-| `SPEC-CAN-*` | 2 | `OPEN` |
-| `SPEC-CANON-*` | 14 | `OPEN` |
-| `SPEC-CIN-*` | 2 | `OPEN` |
-| `SPEC-CMB-*` | 12 | `OPEN` |
-| `SPEC-CMD-*` | 15 | 10 `OPEN`, 5 `AGENT VERIFIED` (`SPEC-CMD-011..015`) |
-| `SPEC-CTL-*` | 19 | 15 `OPEN`, 4 `AGENT VERIFIED` (`SPEC-CTL-016..019`) |
-| `SPEC-DIF-*` | 4 | `OPEN` |
-| `SPEC-DOC-*` | 5 | `OPEN` |
-| `SPEC-ECO-*` | 6 | `OPEN` |
-| `SPEC-END-*` | 4 | `OPEN` |
-| `SPEC-EVID-*` | 8 | `OPEN` |
-| `SPEC-FACID-*` | 3 | `OPEN` |
-| `SPEC-FOG-*` | 2 | `OPEN` |
-| `SPEC-HUD-*` | 7 | `OPEN` |
-| `SPEC-INFO-*` | 10 | `OPEN` |
-| `SPEC-LOC-*` | 2 | `OPEN` |
-| `SPEC-LSN-*` | 11 | `OPEN` |
-| `SPEC-MAP-*` | 3 | `OPEN` |
-| `SPEC-MOD-*` | 7 | `OPEN` |
-| `SPEC-MOV-*` | 13 | 5 `OPEN`, 8 `AGENT VERIFIED` (`SPEC-MOV-006..013`) |
-| `SPEC-MSN-*` | 15 | `OPEN` |
-| `SPEC-OUT-*` | 7 | `OPEN` |
-| `SPEC-PIL-*` | 10 | `OPEN` |
-| `SPEC-PLAN-*` | 15 | `OPEN` |
-| `SPEC-PLAT-*` | 4 | `OPEN` |
-| `SPEC-PRD-*` | 10 | `OPEN` |
-| `SPEC-RES-*` | 3 | `OPEN` |
-| `SPEC-SAV-*` | 5 | `OPEN` |
-| `SPEC-SCT-*` | 6 | `OPEN` |
-| `SPEC-SIM-*` | 7 | `OPEN` |
-| `SPEC-SKM-*` | 13 | `OPEN` |
-| `SPEC-STANCE-*` | 5 | `OPEN` |
-| `SPEC-STR-*` | 12 | `OPEN` |
-| `SPEC-TEC-*` | 2 | `OPEN` |
-| `SPEC-TECH-*` | 6 | `OPEN` |
-| `SPEC-TER-*` | 6 | `OPEN` |
-| `SPEC-TUT-*` | 4 | `OPEN` |
-| `SPEC-UI-*` | 6 | `OPEN` |
-| `SPEC-UNIT-*` | 12 | `OPEN` |
-| `SPEC-VAL-*` | 3 | `OPEN` |
-| `SPEC-VISD-*` | 7 | `OPEN` |
-| `SPEC-WEL-*` | 3 | `OPEN` |
-| `SPEC-WELLP-*` | 3 | `OPEN` |
+| `SPEC-ACC-*` | 5 | 5 `AGENT VERIFIED` (`SPEC-ACC-001..005`) |
+| `SPEC-AI-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-AI-001..006`) |
+| `SPEC-AIST-*` | 10 | 10 `AGENT VERIFIED` (`SPEC-AIST-001..010`) |
+| `SPEC-ARC-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-ARC-001..003`) |
+| `SPEC-ART-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-ART-001..003`) |
+| `SPEC-AUD-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-AUD-001..003`) |
+| `SPEC-AUDF-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-AUDF-001..006`) |
+| `SPEC-AUT-*` | 5 | 5 `AGENT VERIFIED` (`SPEC-AUT-001..005`) |
+| `SPEC-BAL-*` | 8 | 8 `AGENT VERIFIED` (`SPEC-BAL-001..008`) |
+| `SPEC-AUTH-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-AUTH-001..006`) |
+| `SPEC-BLD-*` | 10 | 10 `AGENT VERIFIED` (`SPEC-BLD-001..010`) |
+| `SPEC-BUD-*` | 8 | 8 `AGENT VERIFIED` (`SPEC-BUD-001..008`) |
+| `SPEC-CAM-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-CAM-001..007`) |
+| `SPEC-CAN-*` | 2 | 2 `AGENT VERIFIED` (`SPEC-CAN-001..002`) |
+| `SPEC-CANON-*` | 14 | 14 `AGENT VERIFIED` (`SPEC-CANON-001..014`) |
+| `SPEC-CIN-*` | 2 | 2 `AGENT VERIFIED` (`SPEC-CIN-001..002`) |
+| `SPEC-CMB-*` | 12 | 12 `AGENT VERIFIED` (`SPEC-CMB-001..012`) |
+| `SPEC-CMD-*` | 15 | 15 `AGENT VERIFIED` (`SPEC-CMD-001..015`) |
+| `SPEC-CTL-*` | 19 | 19 `AGENT VERIFIED` (`SPEC-CTL-001..019`) |
+| `SPEC-DIF-*` | 4 | 4 `AGENT VERIFIED` (`SPEC-DIF-001..004`) |
+| `SPEC-DOC-*` | 5 | 5 `AGENT VERIFIED` (`SPEC-DOC-001..005`) |
+| `SPEC-ECO-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-ECO-001..006`) |
+| `SPEC-END-*` | 4 | 4 `AGENT VERIFIED` (`SPEC-END-001..004`) |
+| `SPEC-EVID-*` | 8 | 8 `AGENT VERIFIED` (`SPEC-EVID-001..008`) |
+| `SPEC-FACID-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-FACID-001..003`) |
+| `SPEC-FOG-*` | 2 | 2 `AGENT VERIFIED` (`SPEC-FOG-001..002`) |
+| `SPEC-HUD-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-HUD-001..007`) |
+| `SPEC-INFO-*` | 10 | 10 `AGENT VERIFIED` (`SPEC-INFO-001..010`) |
+| `SPEC-LOC-*` | 2 | 2 `AGENT VERIFIED` (`SPEC-LOC-001..002`) |
+| `SPEC-LSN-*` | 11 | 11 `AGENT VERIFIED` (`SPEC-LSN-001..011`) |
+| `SPEC-MAP-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-MAP-001..003`) |
+| `SPEC-MOD-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-MOD-001..007`) |
+| `SPEC-MOV-*` | 13 | 13 `AGENT VERIFIED` (`SPEC-MOV-001..013`) |
+| `SPEC-MSN-*` | 15 | 15 `AGENT VERIFIED` (`SPEC-MSN-001..015`) |
+| `SPEC-OUT-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-OUT-001..007`) |
+| `SPEC-PIL-*` | 10 | 10 `AGENT VERIFIED` (`SPEC-PIL-001..010`) |
+| `SPEC-PLAN-*` | 15 | 15 `AGENT VERIFIED` (`SPEC-PLAN-001..015`) |
+| `SPEC-PLAT-*` | 4 | 4 `AGENT VERIFIED` (`SPEC-PLAT-001..004`) |
+| `SPEC-PRD-*` | 10 | 10 `AGENT VERIFIED` (`SPEC-PRD-001..010`) |
+| `SPEC-RES-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-RES-001..003`) |
+| `SPEC-SAV-*` | 5 | 5 `AGENT VERIFIED` (`SPEC-SAV-001..005`) |
+| `SPEC-SCT-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-SCT-001..006`) |
+| `SPEC-SIM-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-SIM-001..007`) |
+| `SPEC-SKM-*` | 13 | 13 `AGENT VERIFIED` (`SPEC-SKM-001..013`) |
+| `SPEC-STANCE-*` | 5 | 5 `AGENT VERIFIED` (`SPEC-STANCE-001..005`) |
+| `SPEC-STR-*` | 12 | 12 `AGENT VERIFIED` (`SPEC-STR-001..012`) |
+| `SPEC-TEC-*` | 2 | 2 `AGENT VERIFIED` (`SPEC-TEC-001..002`) |
+| `SPEC-TECH-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-TECH-001..006`) |
+| `SPEC-TER-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-TER-001..006`) |
+| `SPEC-TUT-*` | 4 | 4 `AGENT VERIFIED` (`SPEC-TUT-001..004`) |
+| `SPEC-UI-*` | 6 | 6 `AGENT VERIFIED` (`SPEC-UI-001..006`) |
+| `SPEC-UNIT-*` | 12 | 12 `AGENT VERIFIED` (`SPEC-UNIT-001..012`) |
+| `SPEC-VAL-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-VAL-001..003`) |
+| `SPEC-VISD-*` | 7 | 7 `AGENT VERIFIED` (`SPEC-VISD-001..007`) |
+| `SPEC-WEL-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-WEL-001..003`) |
+| `SPEC-WELLP-*` | 3 | 3 `AGENT VERIFIED` (`SPEC-WELLP-001..003`) |
 
 ## `DEMO-*` and `REL-*` state
 

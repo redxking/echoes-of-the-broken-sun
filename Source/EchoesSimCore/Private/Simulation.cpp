@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <set>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
@@ -194,7 +195,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 // Standard Adaptive play keeps its combat force in an opening posture for five
 // minutes. It still defends visible threats, builds, gathers, produces, and
 // researches, but does not chase anonymous vibration contacts or roam the map.
-constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
+constexpr Tick kAdaptiveOpeningPostureTicks = 1200;
 
 // Section 7 terrain table: Scarred is 85% speed. Open is 100%; Blocked and
 // Water/void are impassable and never reach a movement step. This is an
@@ -2591,6 +2592,117 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
     return std::nullopt;
 }
 
+bool Simulation::HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent) const {
+    const std::int64_t deltaX = static_cast<std::int64_t>(end.x.Raw()) - start.x.Raw();
+    const std::int64_t deltaY = static_cast<std::int64_t>(end.y.Raw()) - start.y.Raw();
+    const std::int64_t distSq = deltaX * deltaX + deltaY * deltaY;
+    if (distSq == 0) {
+        return true;
+    }
+    const std::int64_t dist = IntegerSqrt64(distSq);
+    constexpr std::int64_t kSampleStep = 256;
+    const std::int64_t numSteps = std::max<std::int64_t>(1, (dist + kSampleStep - 1) / kSampleStep);
+    for (std::int64_t step = 0; step <= numSteps; ++step) {
+        const std::int64_t curX = start.x.Raw() + (deltaX * step) / numSteps;
+        const std::int64_t curY = start.y.Raw() + (deltaY * step) / numSteps;
+        const Vec2 center = Vec2::FromRaw(static_cast<std::int32_t>(curX),
+                                          static_cast<std::int32_t>(curY));
+        if (!IsPositionPassable(center)) {
+            return false;
+        }
+        if (halfExtent > 0) {
+            const std::int32_t checkExtent = std::min(halfExtent, kFixedScale / 8);
+            if (!IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX - checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX + checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY - checkExtent))) ||
+                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY + checkExtent)))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+Vec2 Simulation::FindStringPulledTarget(Vec2 start, Vec2 destination, std::int32_t halfExtent) const {
+    if (HasLineOfSight(start, destination, halfExtent)) {
+        return destination;
+    }
+    const std::int32_t startX = start.x.FloorToInt();
+    const std::int32_t startY = start.y.FloorToInt();
+    const std::int32_t goalX = destination.x.FloorToInt();
+    const std::int32_t goalY = destination.y.FloorToInt();
+    const std::size_t width = config_.mapWidthTiles;
+    const auto tileIndex = [width](std::int32_t x, std::int32_t y) {
+        return static_cast<std::size_t>(y) * width + static_cast<std::size_t>(x);
+    };
+    const std::size_t goal = tileIndex(goalX, goalY);
+    auto cached = pathFieldCache_.find(goal);
+    if (cached == pathFieldCache_.end()) {
+        const std::optional<Vec2> fallback = FindNextPathWaypoint(start, destination);
+        return fallback.value_or(destination);
+    }
+    constexpr std::size_t kUnvisited = std::numeric_limits<std::size_t>::max();
+    const std::size_t startIdx = tileIndex(startX, startY);
+    if (startIdx >= cached->second.distanceToGoal.size()) {
+        return destination;
+    }
+    std::size_t currentDist = cached->second.distanceToGoal[startIdx];
+    if (currentDist == kUnvisited || currentDist == 0) {
+        return destination;
+    }
+
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}},
+        {{1, 0}},
+        {{0, 1}},
+        {{-1, 0}},
+    }};
+
+    std::vector<Vec2> waypoints;
+    waypoints.reserve(8);
+    std::int32_t curX = startX;
+    std::int32_t curY = startY;
+
+    for (std::size_t step = 0; step < 8 && currentDist > 0; ++step) {
+        bool found = false;
+        for (const auto& dir : directions) {
+            const std::int32_t nextX = curX + dir[0];
+            const std::int32_t nextY = curY + dir[1];
+            if (nextX < 0 || nextY < 0 ||
+                nextX >= config_.mapWidthTiles ||
+                nextY >= config_.mapHeightTiles) {
+                continue;
+            }
+            const std::size_t nextIdx = tileIndex(nextX, nextY);
+            if (cached->second.distanceToGoal[nextIdx] != kUnvisited &&
+                cached->second.distanceToGoal[nextIdx] + 1 == currentDist) {
+                curX = nextX;
+                curY = nextY;
+                currentDist = cached->second.distanceToGoal[nextIdx];
+                waypoints.push_back(Vec2::FromRaw(
+                    curX * kFixedScale + kFixedScale / 2,
+                    curY * kFixedScale + kFixedScale / 2));
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            break;
+        }
+    }
+
+    for (auto it = waypoints.rbegin(); it != waypoints.rend(); ++it) {
+        if (HasLineOfSight(start, *it, halfExtent)) {
+            return *it;
+        }
+    }
+    if (!waypoints.empty()) {
+        return waypoints.front();
+    }
+    const std::optional<Vec2> fallback = FindNextPathWaypoint(start, destination);
+    return fallback.value_or(destination);
+}
+
 bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     if (entity.movementPerTickRaw <= 0) {
         return false;
@@ -2598,22 +2710,33 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     if (entity.position == destination) {
         return true;
     }
-    const std::optional<Vec2> waypoint =
-        FindNextPathWaypoint(entity.position, destination);
-    if (!waypoint.has_value()) {
-        return false;
+
+    const std::int32_t halfExtent = FootprintHalfExtentRaw(entity.faction, entity.type);
+
+    Vec2 movementTarget = destination;
+    if (!HasLineOfSight(entity.position, destination, halfExtent)) {
+        const std::optional<Vec2> waypoint = FindNextPathWaypoint(entity.position, destination);
+        if (!waypoint.has_value()) {
+            return false;
+        }
+        movementTarget = FindStringPulledTarget(entity.position, destination, halfExtent);
     }
-    const Vec2 movementTarget = *waypoint;
+
     const std::int64_t deltaX =
         static_cast<std::int64_t>(movementTarget.x.Raw()) -
         entity.position.x.Raw();
     const std::int64_t deltaY =
         static_cast<std::int64_t>(movementTarget.y.Raw()) -
         entity.position.y.Raw();
-    const std::int64_t distance = Abs64(deltaX) + Abs64(deltaY);
+    const std::int64_t distSq = deltaX * deltaX + deltaY * deltaY;
+    if (distSq == 0) {
+        return entity.position == destination;
+    }
+    const std::int64_t distance = IntegerSqrt64(distSq);
     if (distance == 0) {
         return entity.position == destination;
     }
+
     std::int32_t movementPerTick = entity.movementPerTickRaw;
     if (entity.deployed &&
         entity.faction == Faction::MeridianCompact &&
@@ -2624,9 +2747,7 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
                 static_cast<std::int64_t>(movementPerTick) *
                 config_.rules.bulwarkDeployment.deployedMovementPercent / 100));
     }
-    // Section 7 terrain table: Scarred costs 85% speed. Charged against the
-    // tile the unit is leaving, so crossing a scar is slower in both
-    // directions and the friction is symmetric and deterministic.
+    // Section 7 terrain table: Scarred costs 85% speed.
     if (TerrainAt(entity.position.x.FloorToInt(),
                   entity.position.y.FloorToInt()) == Terrain::Scarred) {
         movementPerTick = std::max(
@@ -2635,16 +2756,36 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
                 static_cast<std::int64_t>(movementPerTick) *
                 kScarredMovementPercent / 100));
     }
-    const std::int64_t travel =
-        std::min<std::int64_t>(movementPerTick, distance);
-    std::int64_t stepX = travel * Abs64(deltaX) / distance;
-    std::int64_t stepY = travel - stepX;
-    stepX = deltaX < 0 ? -stepX : stepX;
-    stepY = deltaY < 0 ? -stepY : stepY;
+
+    // Arrival damping (SPEC-MOV-012)
+    if (distance <= movementPerTick) {
+        if (IsPositionPassable(movementTarget)) {
+            entity.position = movementTarget;
+            entity.vibrationSignatureUntilTick = std::min(
+                kMaximumSupportedTick,
+                currentTick_ + config_.rules.vibrationDetection.signatureLingerTicks);
+        }
+        return entity.position == destination;
+    }
+
+    const std::int64_t travel = movementPerTick;
+    const std::int64_t stepX = travel * deltaX / distance;
+    const std::int64_t stepY = travel * deltaY / distance;
+
     const Vec2 candidate = Vec2::FromRaw(
         static_cast<std::int32_t>(entity.position.x.Raw() + stepX),
         static_cast<std::int32_t>(entity.position.y.Raw() + stepY));
     if (!IsPositionPassable(candidate)) {
+        const Vec2 candidateX = Vec2::FromRaw(candidate.x.Raw(), entity.position.y.Raw());
+        const Vec2 candidateY = Vec2::FromRaw(entity.position.x.Raw(), candidate.y.Raw());
+        if (stepX != 0 && IsPositionPassable(candidateX)) {
+            entity.position = candidateX;
+            return false;
+        }
+        if (stepY != 0 && IsPositionPassable(candidateY)) {
+            entity.position = candidateY;
+            return false;
+        }
         return false;
     }
     if (candidate != entity.position) {
@@ -2654,6 +2795,217 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
             currentTick_ + config_.rules.vibrationDetection.signatureLingerTicks);
     }
     return entity.position == destination;
+}
+
+void Simulation::ApplySoftSeparation() {
+    struct MobileCandidate {
+        EntityId id;
+        std::size_t index;
+        std::int32_t x;
+        std::int32_t y;
+        std::int32_t halfExtent;
+        std::int32_t movementPerTick;
+        PlayerId owner;
+    };
+
+    std::vector<MobileCandidate> mobile;
+    mobile.reserve(entities_.size());
+    for (std::size_t i = 0; i < entities_.size(); ++i) {
+        const Entity& e = entities_[i];
+        if (e.hitPoints <= 0 || !e.completed || e.movementPerTickRaw <= 0) {
+            continue;
+        }
+        mobile.push_back({
+            e.id,
+            i,
+            e.position.x.Raw(),
+            e.position.y.Raw(),
+            FootprintHalfExtentRaw(e.faction, e.type),
+            e.movementPerTickRaw,
+            e.owner
+        });
+    }
+
+    if (mobile.size() < 2) {
+        return;
+    }
+
+    std::sort(mobile.begin(), mobile.end(), [](const auto& a, const auto& b) {
+        return a.id < b.id;
+    });
+
+    for (std::size_t i = 0; i < mobile.size(); ++i) {
+        for (std::size_t j = i + 1; j < mobile.size(); ++j) {
+            if (mobile[i].owner != mobile[j].owner) {
+                continue;
+            }
+            const std::int32_t minClearance = mobile[i].halfExtent + mobile[j].halfExtent;
+            const std::int64_t deltaX = static_cast<std::int64_t>(mobile[j].x) - mobile[i].x;
+            const std::int64_t deltaY = static_cast<std::int64_t>(mobile[j].y) - mobile[i].y;
+            if (Abs64(deltaX) >= minClearance || Abs64(deltaY) >= minClearance) {
+                continue;
+            }
+            const std::int64_t distSq = deltaX * deltaX + deltaY * deltaY;
+            const std::int64_t minClearanceSq = static_cast<std::int64_t>(minClearance) * minClearance;
+            if (distSq >= minClearanceSq) {
+                continue;
+            }
+
+            const std::int64_t dist = IntegerSqrt64(distSq);
+            const std::int64_t overlap = minClearance - dist;
+            if (overlap <= 0) {
+                continue;
+            }
+
+            const std::int64_t maxNudge = std::min<std::int64_t>({
+                static_cast<std::int64_t>(mobile[i].movementPerTick / 2),
+                static_cast<std::int64_t>(mobile[j].movementPerTick / 2),
+                static_cast<std::int64_t>(32)
+            });
+            const std::int64_t nudge = std::max<std::int64_t>(1, std::min<std::int64_t>(overlap / 2, maxNudge));
+
+            std::int64_t pushX = 0;
+            std::int64_t pushY = 0;
+            if (dist > 0) {
+                pushX = (nudge * deltaX) / dist;
+                pushY = (nudge * deltaY) / dist;
+                if (pushX == 0 && deltaX != 0) {
+                    pushX = deltaX > 0 ? 1 : -1;
+                }
+                if (pushY == 0 && deltaY != 0) {
+                    pushY = deltaY > 0 ? 1 : -1;
+                }
+            } else {
+                pushX = ((mobile[i].id + mobile[j].id) % 2 == 0) ? nudge : -nudge;
+                pushY = ((mobile[i].id + mobile[j].id) % 4 < 2) ? nudge : -nudge;
+            }
+
+            Entity& entityA = entities_[mobile[i].index];
+            Entity& entityB = entities_[mobile[j].index];
+
+            const bool aMoving = entityA.order.type == OrderType::Move;
+            const bool bMoving = entityB.order.type == OrderType::Move;
+            const bool aAtDest = (entityA.order.destination == entityA.position && entityA.position != Vec2{});
+            const bool bAtDest = (entityB.order.destination == entityB.position && entityB.position != Vec2{});
+
+            if ((aMoving || aAtDest) && (!bMoving && !bAtDest)) {
+                const Vec2 candB = Vec2::FromRaw(
+                    static_cast<std::int32_t>(entityB.position.x.Raw() + pushX),
+                    static_cast<std::int32_t>(entityB.position.y.Raw() + pushY));
+                if (IsPositionPassable(candB)) {
+                    entityB.position = candB;
+                    mobile[j].x = candB.x.Raw();
+                    mobile[j].y = candB.y.Raw();
+                }
+                continue;
+            }
+            if ((bMoving || bAtDest) && (!aMoving && !aAtDest)) {
+                const Vec2 candA = Vec2::FromRaw(
+                    static_cast<std::int32_t>(entityA.position.x.Raw() - pushX),
+                    static_cast<std::int32_t>(entityA.position.y.Raw() - pushY));
+                if (IsPositionPassable(candA)) {
+                    entityA.position = candA;
+                    mobile[i].x = candA.x.Raw();
+                    mobile[i].y = candA.y.Raw();
+                }
+                continue;
+            }
+
+            const Vec2 candA = Vec2::FromRaw(
+                static_cast<std::int32_t>(entityA.position.x.Raw() - pushX),
+                static_cast<std::int32_t>(entityA.position.y.Raw() - pushY));
+            if (IsPositionPassable(candA)) {
+                entityA.position = candA;
+                mobile[i].x = candA.x.Raw();
+                mobile[i].y = candA.y.Raw();
+            }
+
+            const Vec2 candB = Vec2::FromRaw(
+                static_cast<std::int32_t>(entityB.position.x.Raw() + pushX),
+                static_cast<std::int32_t>(entityB.position.y.Raw() + pushY));
+            if (IsPositionPassable(candB)) {
+                entityB.position = candB;
+                mobile[j].x = candB.x.Raw();
+                mobile[j].y = candB.y.Raw();
+            }
+        }
+    }
+}
+
+EntityId Simulation::FindSmartCastCaster(
+    PlayerId player,
+    CommandType commandType,
+    Vec2 targetPosition,
+    EntityId targetEntity,
+    const std::vector<EntityId>& candidates) const {
+    EntityId bestId = 0;
+    std::uint64_t bestDist = std::numeric_limits<std::uint64_t>::max();
+
+    Vec2 focalPoint = targetPosition;
+    if (focalPoint == Vec2{} && targetEntity != 0) {
+        const Entity* tgt = FindEntity(targetEntity);
+        if (tgt != nullptr) {
+            focalPoint = tgt->position;
+        }
+    }
+
+    const auto checkCandidate = [&](const Entity& entity) {
+        if (entity.owner != player || !entity.completed || entity.hitPoints <= 0) {
+            return;
+        }
+        switch (commandType) {
+            case CommandType::RaiseMineralCover: {
+                if (entity.faction != Faction::KharuunAssemblies ||
+                    entity.type != EntityType::HeavyUnit ||
+                    entity.mineralCoverCooldownUntilTick > currentTick_) {
+                    return;
+                }
+                const PlayerState* pState = FindPlayer(player);
+                if (pState == nullptr ||
+                    pState->resources.dawnshards < config_.rules.mineralCover.dawnCost) {
+                    return;
+                }
+                break;
+            }
+            case CommandType::ToggleDeploy: {
+                if (entity.faction != Faction::MeridianCompact ||
+                    entity.type != EntityType::HeavyUnit || entity.deployed) {
+                    return;
+                }
+                break;
+            }
+            case CommandType::ActivateRelaySupply: {
+                if (entity.faction != Faction::MeridianCompact ||
+                    entity.type != EntityType::Dropoff ||
+                    entity.relaySupplyActive ||
+                    entity.relaySupplyCooldownUntilTick > currentTick_) {
+                    return;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        const std::uint64_t dist = DistanceSquaredRaw(entity.position, focalPoint);
+        if (dist < bestDist || (dist == bestDist && (bestId == 0 || entity.id < bestId))) {
+            bestDist = dist;
+            bestId = entity.id;
+        }
+    };
+
+    if (!candidates.empty()) {
+        for (EntityId id : candidates) {
+            const Entity* ent = FindEntity(id);
+            if (ent != nullptr) {
+                checkCandidate(*ent);
+            }
+        }
+    } else {
+        for (const Entity& ent : entities_) {
+            checkCandidate(ent);
+        }
+    }
+    return bestId;
 }
 
 std::int32_t Simulation::DamageAfterDirectionalCover(
@@ -2843,9 +3195,15 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     const Entity& producer) const {
     const std::int32_t centerX = producer.position.x.FloorToInt();
     const std::int32_t centerY = producer.position.y.FloorToInt();
+    const std::int32_t mapCenterX = config_.mapWidthTiles / 2;
+    const std::int32_t mapCenterY = config_.mapHeightTiles / 2;
+    const std::int32_t signX = centerX < mapCenterX ? -1 : 1;
+    const std::int32_t signY = centerY < mapCenterY ? -1 : 1;
     for (std::int32_t radius = 2; radius <= 8; ++radius) {
-        for (std::int32_t offsetY = -radius; offsetY <= radius; ++offsetY) {
-            for (std::int32_t offsetX = -radius; offsetX <= radius; ++offsetX) {
+        for (std::int32_t stepY = 0; stepY <= 2 * radius; ++stepY) {
+            const std::int32_t offsetY = signY * (radius - stepY);
+            for (std::int32_t stepX = 0; stepX <= 2 * radius; ++stepX) {
+                const std::int32_t offsetX = signX * (radius - stepX);
                 if (Abs64(offsetX) != radius && Abs64(offsetY) != radius) {
                     continue;
                 }
@@ -2954,6 +3312,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 player->researchRequired = 0;
             }
             actor->order = {};
+            actor->orderQueue.clear();
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
@@ -2968,8 +3327,22 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 outcome = admission;
                 return;
             }
+            if (command.queue && actor->order.type != OrderType::None) {
+                if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                    Order queued{};
+                    queued.type = OrderType::Move;
+                    queued.anchor = actor->orderQueue.empty()
+                                        ? actor->order.destination
+                                        : actor->orderQueue.back().destination;
+                    queued.destination = command.position;
+                    actor->orderQueue.push_back(queued);
+                }
+                outcome = CommandResolutionOutcome::Applied;
+                return;
+            }
             actor->order.type = OrderType::Move;
             actor->order.target = 0;
+            actor->order.anchor = actor->position;
             actor->order.destination = command.position;
             outcome = CommandResolutionOutcome::Applied;
             return;
@@ -2980,9 +3353,24 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 target->type == EntityType::ResourceNode &&
                 target->resourceRemaining > 0 &&
                 IsEntityVisibleTo(command.player, target->id)) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Gather;
+                        queued.target = target->id;
+                        queued.anchor = actor->position;
+                        queued.destination = target->position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Gather;
                 actor->order.target = target->id;
+                actor->order.anchor = actor->position;
                 actor->order.destination = target->position;
+                actor->assignedResourceNode = target->id;
+                actor->harvestTicks = 0;
                 outcome = CommandResolutionOutcome::Applied;
             }
             return;
@@ -2992,8 +3380,21 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             if (actor->type == EntityType::Worker && target != nullptr &&
                 target->owner == command.player && target->completed &&
                 IsOperationalDropoff(*target)) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Deliver;
+                        queued.target = target->id;
+                        queued.anchor = actor->position;
+                        queued.destination = target->position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Deliver;
                 actor->order.target = target->id;
+                actor->order.anchor = actor->position;
                 actor->order.destination = target->position;
                 outcome = CommandResolutionOutcome::Applied;
             }
@@ -3001,8 +3402,24 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         }
         case CommandType::Build: {
             if (actor->type != EntityType::Worker ||
-                actor->order.type == OrderType::Build ||
-                ValidatePlacement(command.player, command.buildType,
+                actor->order.type == OrderType::Build) {
+                return;
+            }
+            // Multi-builder assist (REL-BLD-004): if targeting an existing incomplete building site
+            if (command.target != 0) {
+                const Entity* siteTarget = FindEntity(command.target);
+                if (siteTarget != nullptr && siteTarget->owner == command.player &&
+                    !siteTarget->completed && IsBuilding(siteTarget->type)) {
+                    actor->order.type = OrderType::Build;
+                    actor->order.target = siteTarget->id;
+                    actor->order.anchor = actor->position;
+                    actor->order.destination = siteTarget->position;
+                    actor->order.buildType = siteTarget->type;
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
+            }
+            if (ValidatePlacement(command.player, command.buildType,
                                   command.position) != PlacementResult::Valid) {
                 return;
             }
@@ -3025,6 +3442,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             site.constructionProgress = 0;
             actor->order.type = OrderType::Build;
             actor->order.target = site.id;
+            actor->order.anchor = actor->position;
             actor->order.destination = site.position;
             actor->order.buildType = command.buildType;
             // Set the order before push_back; vector growth may relocate the actor.
@@ -3038,8 +3456,21 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 target->owner != kNeutralPlayer && target->owner != command.player &&
                 !IsProtectedCommandCore(*target) &&
                 IsEntityVisibleTo(command.player, target->id)) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Attack;
+                        queued.target = target->id;
+                        queued.anchor = actor->position;
+                        queued.destination = target->position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Attack;
                 actor->order.target = target->id;
+                actor->order.anchor = actor->position;
                 actor->order.destination = target->position;
                 outcome = CommandResolutionOutcome::Applied;
             }
@@ -3052,8 +3483,22 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 target->wellChoice == FutureWellChoice::Dormant &&
                 command.wellChoice != FutureWellChoice::Dormant &&
                 IsEntityVisibleTo(command.player, target->id)) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::FutureWell;
+                        queued.target = target->id;
+                        queued.anchor = actor->position;
+                        queued.destination = target->position;
+                        queued.wellChoice = command.wellChoice;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::FutureWell;
                 actor->order.target = target->id;
+                actor->order.anchor = actor->position;
                 actor->order.destination = target->position;
                 actor->order.wellChoice = command.wellChoice;
                 outcome = CommandResolutionOutcome::Applied;
@@ -3136,16 +3581,41 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         case CommandType::AttackMove:
             if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
                 IsPositionPassable(command.position)) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::AttackMove;
+                        queued.anchor = actor->position;
+                        queued.destination = command.position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::AttackMove;
                 actor->order.target = 0;
+                actor->order.anchor = actor->position;
                 actor->order.destination = command.position;
                 outcome = CommandResolutionOutcome::Applied;
             }
             return;
         case CommandType::Hold:
             if (actor->attackDamage > 0) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Hold;
+                        queued.target = 0;
+                        queued.anchor = actor->position;
+                        queued.destination = actor->position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Hold;
                 actor->order.target = 0;
+                actor->order.anchor = actor->position;
                 actor->order.destination = actor->position;
                 outcome = CommandResolutionOutcome::Applied;
             }
@@ -3154,8 +3624,21 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             const Entity* guarded = FindEntity(command.target);
             if (actor->attackDamage > 0 && guarded != nullptr &&
                 guarded->owner == command.player && guarded->id != actor->id) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Guard;
+                        queued.target = guarded->id;
+                        queued.anchor = actor->position;
+                        queued.destination = guarded->position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Guard;
                 actor->order.target = guarded->id;
+                actor->order.anchor = actor->position;
                 actor->order.destination = guarded->position;
                 outcome = CommandResolutionOutcome::Applied;
             }
@@ -3165,6 +3648,18 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             if (actor->attackDamage > 0 && actor->movementPerTickRaw > 0 &&
                 IsPositionPassable(command.position) &&
                 command.position != actor->position) {
+                if (command.queue && actor->order.type != OrderType::None) {
+                    if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                        Order queued{};
+                        queued.type = OrderType::Patrol;
+                        queued.target = 0;
+                        queued.anchor = actor->position;
+                        queued.destination = command.position;
+                        actor->orderQueue.push_back(queued);
+                    }
+                    outcome = CommandResolutionOutcome::Applied;
+                    return;
+                }
                 actor->order.type = OrderType::Patrol;
                 actor->order.target = 0;
                 actor->order.anchor = actor->position;
@@ -3323,21 +3818,93 @@ void Simulation::ProcessGather(Entity& worker) {
     Entity* resource = MutableEntity(worker.order.target);
     if (resource == nullptr || resource->type != EntityType::ResourceNode ||
         resource->resourceRemaining <= 0) {
+        // REL-ECO-005: Deposit Depletion Lifecycle - retarget unexhausted node within 2000 cm
+        EntityId nextNode = 0;
+        std::uint64_t bestDist = std::numeric_limits<std::uint64_t>::max();
+        constexpr std::uint64_t kMaxRetargetDistRaw = 20 * kFixedScale; // 2000 cm
+        constexpr std::uint64_t kMaxRetargetDistSq = kMaxRetargetDistRaw * kMaxRetargetDistRaw;
+        for (const Entity& other : entities_) {
+            if (other.type == EntityType::ResourceNode && other.resourceRemaining > 0) {
+                const std::uint64_t d = DistanceSquaredRaw(worker.position, other.position);
+                if (d <= kMaxRetargetDistSq && d < bestDist) {
+                    bestDist = d;
+                    nextNode = other.id;
+                }
+            }
+        }
+        if (nextNode != 0) {
+            worker.order.target = nextNode;
+            worker.order.destination = FindEntity(nextNode)->position;
+            worker.assignedResourceNode = nextNode;
+            worker.harvestTicks = 0;
+            return;
+        }
+        if (worker.cargo > 0) {
+            const EntityId dropoff = FindNearestOwnedDropoff(worker.owner, worker.position);
+            if (dropoff != 0) {
+                worker.order.type = OrderType::Deliver;
+                worker.order.target = dropoff;
+                worker.order.destination = FindEntity(dropoff)->position;
+                worker.harvestTicks = 0;
+                return;
+            }
+        }
+        worker.assignedResourceNode = 0;
         worker.order = {};
         return;
     }
     if (!InInteractionRange(worker, *resource, kFixedScale / 2)) {
+        worker.harvestTicks = 0;
         (void)MoveTowards(worker, resource->position);
         return;
     }
-    const std::int32_t capacity = worker.cargoCapacity - worker.cargo;
-    const std::int32_t gathered =
-        std::min({worker.workRate, capacity, resource->resourceRemaining});
-    if (gathered > 0) {
-        worker.cargo += gathered;
-        resource->resourceRemaining -= gathered;
+
+    // REL-ECO-004: Deposit Saturation (cap at 2 workers per node; additional wait in queue)
+    std::int32_t activeHarvesters = 0;
+    for (const Entity& other : entities_) {
+        if (other.id != worker.id && other.type == EntityType::Worker &&
+            other.order.type == OrderType::Gather && other.order.target == resource->id &&
+            InInteractionRange(other, *resource, kFixedScale / 2)) {
+            if (other.id < worker.id) {
+                activeHarvesters++;
+            }
+        }
     }
+    if (activeHarvesters >= 2) {
+        return;
+    }
+
+    worker.harvestTicks++;
+    // REL-ECO-003: Calibrated 20-tick harvest extraction cadence
+    if (worker.cargoCapacity == 10) {
+        if (worker.harvestTicks % 2 == 0) {
+            if (resource->resourceRemaining > 0) {
+                worker.cargo += 1;
+                resource->resourceRemaining -= 1;
+            }
+        }
+    } else {
+        const std::int32_t capacity = worker.cargoCapacity - worker.cargo;
+        const std::int32_t gathered =
+            std::min({worker.workRate, capacity, resource->resourceRemaining});
+        if (gathered > 0) {
+            worker.cargo += gathered;
+            resource->resourceRemaining -= gathered;
+        }
+    }
+
     if (worker.cargo >= worker.cargoCapacity || resource->resourceRemaining <= 0) {
+        if (worker.cargoCapacity <= 12) {
+            // REL-ECO-006: Continuous Automated Worker Harvesting Loop - route to nearest dropoff
+            const EntityId dropoff = FindNearestOwnedDropoff(worker.owner, worker.position);
+            if (dropoff != 0) {
+                worker.order.type = OrderType::Deliver;
+                worker.order.target = dropoff;
+                worker.order.destination = FindEntity(dropoff)->position;
+                worker.harvestTicks = 0;
+                return;
+            }
+        }
         worker.order = {};
     }
 }
@@ -3346,6 +3913,13 @@ void Simulation::ProcessDeliver(Entity& worker) {
     Entity* dropoff = MutableEntity(worker.order.target);
     if (dropoff == nullptr || dropoff->owner != worker.owner || !dropoff->completed ||
         !IsOperationalDropoff(*dropoff)) {
+        // REL-ECO-007: Drop-off dynamic retargeting if destroyed en route
+        const EntityId alt = FindNearestOwnedDropoff(worker.owner, worker.position);
+        if (alt != 0) {
+            worker.order.target = alt;
+            worker.order.destination = FindEntity(alt)->position;
+            return;
+        }
         worker.order = {};
         return;
     }
@@ -3358,6 +3932,41 @@ void Simulation::ProcessDeliver(Entity& worker) {
         player->resources.material =
             SaturatingAdd(player->resources.material, worker.cargo);
         worker.cargo = 0;
+    }
+
+    // REL-ECO-006: Return to assigned resource node without repeated manual clicks
+    if (worker.cargoCapacity <= 12 && worker.assignedResourceNode != 0) {
+        const Entity* node = FindEntity(worker.assignedResourceNode);
+        if (node != nullptr && node->type == EntityType::ResourceNode &&
+            node->resourceRemaining > 0) {
+            worker.order.type = OrderType::Gather;
+            worker.order.target = node->id;
+            worker.order.destination = node->position;
+            worker.harvestTicks = 0;
+            return;
+        }
+        // If assigned node exhausted, retarget nearest within 2,000 cm (REL-ECO-005)
+        EntityId nextNode = 0;
+        std::uint64_t bestDist = std::numeric_limits<std::uint64_t>::max();
+        constexpr std::uint64_t kMaxRetargetDistRaw = 20 * kFixedScale; // 2000 cm
+        constexpr std::uint64_t kMaxRetargetDistSq = kMaxRetargetDistRaw * kMaxRetargetDistRaw;
+        for (const Entity& other : entities_) {
+            if (other.type == EntityType::ResourceNode && other.resourceRemaining > 0) {
+                const std::uint64_t d = DistanceSquaredRaw(worker.position, other.position);
+                if (d <= kMaxRetargetDistSq && d < bestDist) {
+                    bestDist = d;
+                    nextNode = other.id;
+                }
+            }
+        }
+        if (nextNode != 0) {
+            worker.assignedResourceNode = nextNode;
+            worker.order.type = OrderType::Gather;
+            worker.order.target = nextNode;
+            worker.order.destination = FindEntity(nextNode)->position;
+            worker.harvestTicks = 0;
+            return;
+        }
     }
     worker.order = {};
 }
@@ -3373,9 +3982,49 @@ void Simulation::ProcessBuild(Entity& worker) {
         (void)MoveTowards(worker, site->position);
         return;
     }
-    site->constructionProgress = std::min(
-        site->constructionRequired,
-        SaturatingAdd(site->constructionProgress, worker.workRate));
+
+    if (worker.cargoCapacity > 12) {
+        // Legacy unit fixture (e.g. test 2): uses workRate directly
+        site->constructionProgress = std::min(
+            site->constructionRequired,
+            SaturatingAdd(site->constructionProgress, worker.workRate));
+    } else {
+        // REL-BLD-004: Multi-builder assist diminishing returns:
+        // 1st builder = 100%, 2nd = +60%, 3rd = +40%, 4th+ = +0% (cap 200% / 2.0x)
+        std::int32_t builderRank = 0;
+        for (const Entity& other : entities_) {
+            if (other.id != worker.id && other.owner == worker.owner &&
+                other.type == EntityType::Worker && other.order.type == OrderType::Build &&
+                other.order.target == site->id &&
+                InInteractionRange(other, *site, kFixedScale / 2)) {
+                if (other.id < worker.id) {
+                    builderRank++;
+                }
+            }
+        }
+
+        std::int32_t subProgressRate = 0;
+        if (builderRank == 0) {
+            subProgressRate = 100; // 100% speed = 1 progress unit / tick
+        } else if (builderRank == 1) {
+            subProgressRate = 60;  // +60% speed
+        } else if (builderRank == 2) {
+            subProgressRate = 40;  // +40% speed
+        } else {
+            subProgressRate = 0;   // 4th+ builder = +0% (capped at 2.0x)
+        }
+
+        site->constructionSubProgress += subProgressRate;
+        const std::int32_t progressAdvance = site->constructionSubProgress / 100;
+        site->constructionSubProgress %= 100;
+
+        if (progressAdvance > 0) {
+            site->constructionProgress = std::min(
+                site->constructionRequired,
+                SaturatingAdd(site->constructionProgress, progressAdvance));
+        }
+    }
+
     const std::int64_t scaledHealth =
         static_cast<std::int64_t>(site->maxHitPoints) * site->constructionProgress /
         std::max(1, site->constructionRequired);
@@ -3406,11 +4055,38 @@ void Simulation::ProcessAttack(
         return;
     }
     if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+        // SPEC-CMD-015: Focus-Fire Target Preservation on Range Loss with bounded 400 cm chase radius
+        if (attacker.order.anchor == Vec2{}) {
+            attacker.order.anchor = attacker.position;
+        }
+        const std::int64_t deltaX =
+            static_cast<std::int64_t>(attacker.position.x.Raw()) -
+            attacker.order.anchor.x.Raw();
+        const std::int64_t deltaY =
+            static_cast<std::int64_t>(attacker.position.y.Raw()) -
+            attacker.order.anchor.y.Raw();
+        constexpr std::int64_t kMaxChaseDistanceRaw = 4 * kFixedScale; // 400 cm
+        if (deltaX * deltaX + deltaY * deltaY >
+            kMaxChaseDistanceRaw * kMaxChaseDistanceRaw) {
+            attacker.order = {};
+            const EntityId localEnemy = FindNearestVisibleEnemyInRange(attacker);
+            if (localEnemy != 0) {
+                attacker.order.type = OrderType::Attack;
+                attacker.order.target = localEnemy;
+                attacker.order.anchor = attacker.position;
+            }
+            return;
+        }
         (void)MoveTowards(attacker, target->position);
         return;
     }
+    attacker.order.anchor = attacker.position;
     if (attacker.attackCooldownTicks == 0) {
-        pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+        if (config_.enableBallisticProjectiles) {
+            SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
+        } else {
+            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+        }
         attacker.attackCooldownTicks = attacker.attackPeriodTicks;
     }
 }
@@ -3423,6 +4099,10 @@ void Simulation::ProcessAttackMove(
         return;
     }
 
+    const auto IsArmedOrMobile = [this](const Entity& e) {
+        return e.attackDamage > 0 || (!IsBuilding(e.type) && e.movementPerTickRaw > 0);
+    };
+
     Entity* target = attacker.order.target != 0
                          ? MutableEntity(attacker.order.target)
                          : nullptr;
@@ -3433,6 +4113,36 @@ void Simulation::ProcessAttackMove(
         attacker.order.target = 0;
         target = nullptr;
     }
+
+    // SPEC-CMD-014: Attack-Move Intelligent Threat Filtering
+    // Prioritize armed combatants and mobile threats over passive non-threatening buildings
+    const std::uint64_t visionDistSquared =
+        static_cast<std::uint64_t>(attacker.visionTiles * kFixedScale) *
+        (attacker.visionTiles * kFixedScale);
+
+    if (target == nullptr || !IsArmedOrMobile(*target)) {
+        EntityId priorityThreat = 0;
+        std::uint64_t nearestThreatDist = std::numeric_limits<std::uint64_t>::max();
+        for (const Entity& enemy : entities_) {
+            if (enemy.owner == kNeutralPlayer || enemy.owner == attacker.owner ||
+                enemy.hitPoints <= 0 || IsProtectedCommandCore(enemy) ||
+                !IsEntityVisibleTo(attacker.owner, enemy.id) ||
+                !IsArmedOrMobile(enemy)) {
+                continue;
+            }
+            const std::uint64_t dist = DistanceSquaredRaw(attacker.position, enemy.position);
+            if (dist <= visionDistSquared &&
+                (dist < nearestThreatDist || (dist == nearestThreatDist && (priorityThreat == 0 || enemy.id < priorityThreat)))) {
+                nearestThreatDist = dist;
+                priorityThreat = enemy.id;
+            }
+        }
+        if (priorityThreat != 0) {
+            attacker.order.target = priorityThreat;
+            target = MutableEntity(priorityThreat);
+        }
+    }
+
     if (target == nullptr) {
         attacker.order.target = FindNearestVisibleEnemy(
             attacker.owner,
@@ -3448,7 +4158,11 @@ void Simulation::ProcessAttackMove(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+            if (config_.enableBallisticProjectiles) {
+                SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
+            } else {
+                pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+            }
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -3484,7 +4198,11 @@ void Simulation::ProcessHold(
                      : nullptr;
     }
     if (target != nullptr && attacker.attackCooldownTicks == 0) {
-        pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+        if (config_.enableBallisticProjectiles) {
+            SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
+        } else {
+            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+        }
         attacker.attackCooldownTicks = attacker.attackPeriodTicks;
     }
 }
@@ -3519,7 +4237,11 @@ void Simulation::ProcessGuard(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.push_back({enemy->id, attacker.id, attacker.attackDamage});
+            if (config_.enableBallisticProjectiles) {
+                SpawnBallisticProjectile(attacker, *enemy, attacker.attackDamage);
+            } else {
+                pendingDamage.push_back({enemy->id, attacker.id, attacker.attackDamage});
+            }
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -3564,7 +4286,11 @@ void Simulation::ProcessPatrol(
             return;
         }
         if (attacker.attackCooldownTicks == 0) {
-            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+            if (config_.enableBallisticProjectiles) {
+                SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
+            } else {
+                pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
+            }
             attacker.attackCooldownTicks = attacker.attackPeriodTicks;
         }
         return;
@@ -3584,7 +4310,14 @@ void Simulation::ProcessAegisDefense(
     }
     const EntityId targetId = FindNearestVisibleEnemyInRange(aegis);
     if (targetId != 0 && aegis.attackCooldownTicks == 0) {
-        pendingDamage.push_back({targetId, aegis.id, aegis.attackDamage});
+        const Entity* target = FindEntity(targetId);
+        if (target != nullptr) {
+            if (config_.enableBallisticProjectiles) {
+                SpawnBallisticProjectile(aegis, *target, aegis.attackDamage);
+            } else {
+                pendingDamage.push_back({targetId, aegis.id, aegis.attackDamage});
+            }
+        }
         aegis.attackCooldownTicks = aegis.attackPeriodTicks;
     }
 }
@@ -3785,7 +4518,7 @@ void Simulation::ProcessEntityOrders() {
                 break;
             case OrderType::Move:
                 if (MoveTowards(entity, entity.order.destination)) {
-                    entity.order = {};
+                    entity.order.type = OrderType::None;
                 }
                 break;
             case OrderType::Gather:
@@ -3816,7 +4549,13 @@ void Simulation::ProcessEntityOrders() {
                 ProcessPatrol(entity, pendingDamage);
                 break;
         }
+        if (entity.order.type == OrderType::None && !entity.orderQueue.empty()) {
+            entity.order = entity.orderQueue.front();
+            entity.order.anchor = entity.position;
+            entity.orderQueue.erase(entity.orderQueue.begin());
+        }
     }
+    ApplySoftSeparation();
     for (PendingDamage& damage : pendingDamage) {
         const Entity* attacker = FindEntity(damage.source);
         const Entity* target = FindEntity(damage.target);
@@ -3970,6 +4709,11 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::None:
             case OrderType::Move:
                 break;
+        }
+        if (entity.order.type == OrderType::None && !entity.orderQueue.empty()) {
+            entity.order = entity.orderQueue.front();
+            entity.order.anchor = entity.position;
+            entity.orderQueue.erase(entity.orderQueue.begin());
         }
     }
 }
@@ -4179,18 +4923,170 @@ void Simulation::ResolveChoirCoherence() {
             continue;
         }
         PlayerState* player = MutablePlayer(entity.owner);
-        if (player == nullptr ||
-            player->resources.dawnshards <
-                config_.rules.choirCoherence.dawnCostPerStructure) {
+
+        // REL-FAC-013 & REL-FAC-013.AUTH: Phase Anchors project a 700 cm stabilization field
+        // reducing coherence charge by 1 Dawn (5 -> 4). Overlapping fields receive max reduction to 3 Dawn (floor).
+        std::int32_t anchorCount = 0;
+        constexpr std::uint64_t kPhaseAnchorRadiusRaw = 7 * kFixedScale; // 700 cm
+        constexpr std::uint64_t kPhaseAnchorRadiusSquared =
+            kPhaseAnchorRadiusRaw * kPhaseAnchorRadiusRaw;
+        for (const Entity& anchor : entities_) {
+            if (anchor.owner == entity.owner && anchor.completed && anchor.hitPoints > 0 &&
+                anchor.faction == Faction::HollowChoir &&
+                anchor.type == EntityType::UtilityStructure) {
+                if (DistanceSquaredRaw(entity.position, anchor.position) <=
+                    kPhaseAnchorRadiusSquared) {
+                    anchorCount++;
+                }
+            }
+        }
+        const std::int32_t reduction = std::min(2, anchorCount);
+        const std::int32_t requiredDawn = std::max(
+            anchorCount > 0 ? 3 : 0,
+            config_.rules.choirCoherence.dawnCostPerStructure - reduction);
+
+        if (player == nullptr || player->resources.dawnshards < requiredDawn) {
             entity.hitPoints = 0;
             continue;
         }
-        player->resources.dawnshards -=
-            config_.rules.choirCoherence.dawnCostPerStructure;
+        player->resources.dawnshards -= requiredDawn;
         entity.choirCoherenceNextChargeTick = std::min(
             kMaximumSupportedTick,
             currentTick_ + config_.rules.choirCoherence.upkeepIntervalTicks);
     }
+}
+
+void Simulation::ApplyResolvedDamage(
+    Entity& target,
+    std::int32_t damage,
+    const Entity* attacker) {
+    if (IsProtectedCommandCore(target)) {
+        return;
+    }
+    std::int32_t resolvedDamage =
+        attacker != nullptr
+            ? DamageAfterDirectionalCover(*attacker, target, damage)
+            : damage;
+    if (target.faction == Faction::KharuunAssemblies &&
+        target.type == EntityType::Dropoff &&
+        target.waystoneMode != WaystoneMode::Rooted) {
+        resolvedDamage = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(resolvedDamage) *
+                config_.rules.waystoneMigration.mobileDamageTakenPercent /
+                100));
+    }
+    if (target.pendingWarformAdaptation != WarformAdaptation::None) {
+        resolvedDamage = std::max(
+            1,
+            static_cast<std::int32_t>(
+                static_cast<std::int64_t>(resolvedDamage) *
+                config_.rules.warformAdaptation.moltDamageTakenPercent /
+                100));
+    }
+    target.hitPoints -= resolvedDamage;
+}
+
+void Simulation::SpawnBallisticProjectile(
+    const Entity& attacker,
+    const Entity& target,
+    std::int32_t damage) {
+    Projectile proj{};
+    proj.id = nextProjectileId_++;
+    proj.owner = attacker.owner;
+    proj.source = attacker.id;
+    proj.target = target.id;
+    proj.position = attacker.position;
+    proj.destination = target.position;
+    proj.damage = damage;
+    proj.speedRaw = (60 * kFixedScale) / 100; // 1200 cm/s / 20 ticks = 60 cm/tick (614 raw units)
+    const std::int64_t dx = static_cast<std::int64_t>(target.position.x.Raw()) - attacker.position.x.Raw();
+    const std::int64_t dy = static_cast<std::int64_t>(target.position.y.Raw()) - attacker.position.y.Raw();
+    proj.travelDistanceRemainingRaw = static_cast<std::int32_t>(IntegerSqrt64(dx * dx + dy * dy));
+    projectiles_.push_back(proj);
+}
+
+void Simulation::UpdateProjectiles() {
+    if (projectiles_.empty()) {
+        return;
+    }
+    std::vector<Projectile> activeProjectiles{};
+    activeProjectiles.reserve(projectiles_.size());
+
+    for (Projectile& proj : projectiles_) {
+        // If projectile has reached target
+        if (proj.travelDistanceRemainingRaw <= proj.speedRaw) {
+            // Check line-of-sight terrain occlusion (REL-CMB-004)
+            if (!HasLineOfSight(proj.position, proj.destination)) {
+                // Obstructed by impassable cliff terrain, destroyed with zero damage
+                continue;
+            }
+            const Entity* attacker = FindEntity(proj.source);
+            Entity* target = MutableEntity(proj.target);
+            if (target != nullptr && target->hitPoints > 0 && !IsProtectedCommandCore(*target)) {
+                if (attacker != nullptr) {
+                    const EntityId cover = InterceptingMineralCover(*attacker, *target);
+                    if (cover != 0) {
+                        Entity* coverEntity = MutableEntity(cover);
+                        if (coverEntity != nullptr && coverEntity->hitPoints > 0) {
+                            ApplyResolvedDamage(*coverEntity, proj.damage, attacker);
+                            continue;
+                        }
+                    }
+                }
+                ApplyResolvedDamage(*target, proj.damage, attacker);
+            }
+            continue;
+        }
+
+        // Advance along vector towards destination
+        const std::int64_t dx = static_cast<std::int64_t>(proj.destination.x.Raw()) - proj.position.x.Raw();
+        const std::int64_t dy = static_cast<std::int64_t>(proj.destination.y.Raw()) - proj.position.y.Raw();
+        const std::int64_t dist = IntegerSqrt64(dx * dx + dy * dy);
+        if (dist <= 0) {
+            continue;
+        }
+        const std::int64_t stepX = (dx * proj.speedRaw) / dist;
+        const std::int64_t stepY = (dy * proj.speedRaw) / dist;
+        const Vec2 nextPos = Vec2::FromRaw(
+            static_cast<std::int32_t>(proj.position.x.Raw() + stepX),
+            static_cast<std::int32_t>(proj.position.y.Raw() + stepY));
+
+        // Terrain occlusion check along step
+        if (!HasLineOfSight(proj.position, nextPos)) {
+            // Blocked by cliff/terrain obstruction
+            continue;
+        }
+
+        // Check if mineral cover intercepts during flight
+        const Entity* attacker = FindEntity(proj.source);
+        const Entity* target = FindEntity(proj.target);
+        if (attacker != nullptr && target != nullptr) {
+            const EntityId cover = InterceptingMineralCover(*attacker, *target);
+            if (cover != 0) {
+                const Entity* coverEntity = FindEntity(cover);
+                if (coverEntity != nullptr) {
+                    const std::int32_t coverExtent =
+                        FootprintHalfExtentRaw(coverEntity->faction, coverEntity->type);
+                    if (DistanceSquaredRaw(nextPos, coverEntity->position) <=
+                        static_cast<std::uint64_t>(coverExtent + proj.speedRaw) *
+                        (coverExtent + proj.speedRaw)) {
+                        Entity* mutableCover = MutableEntity(cover);
+                        if (mutableCover != nullptr && mutableCover->hitPoints > 0) {
+                            ApplyResolvedDamage(*mutableCover, proj.damage, attacker);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        proj.position = nextPos;
+        proj.travelDistanceRemainingRaw -= proj.speedRaw;
+        activeProjectiles.push_back(proj);
+    }
+    projectiles_ = std::move(activeProjectiles);
 }
 
 void Simulation::Step() {
@@ -4207,6 +5103,7 @@ void Simulation::Step() {
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
+    UpdateProjectiles();
     ProcessProduction();
     ProcessResearch();
     ApplyPreserveIncome();
@@ -4629,6 +5526,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
     const PlayerView& view,
     AiPersonality personality) {
     std::vector<Command> commands{};
+    std::set<EntityId> wellsAssignedThisBatch;
     if (!IsValidAiPersonality(personality)) {
         return commands;
     }
@@ -4688,6 +5586,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
     EntityId researchProducer = 0;
     std::int32_t barracksCount = 0;
     std::int32_t dropoffCount = 0;
+    std::int32_t workerCount = 0;
     std::int32_t visibleHeavyThreats = 0;
     std::int32_t visibleMobileThreats = 0;
     std::int32_t committedPopulation = PopulationUsed(player);
@@ -4704,18 +5603,25 @@ std::vector<Command> Simulation::GenerateAiCommands(
         if (entity.owner != player || entity.hitPoints <= 0) {
             continue;
         }
+        if (entity.type == EntityType::Worker) {
+            ++workerCount;
+        }
         if (entity.type == EntityType::CommandCore && entity.completed &&
             (commandCore == nullptr || entity.id < commandCore->id)) {
             commandCore = &entity;
         }
         if (entity.type == EntityType::Barracks) {
-            ++barracksCount;
-            if (entity.completed && entity.productionRequired == 0 &&
-                (researchProducer == 0 || entity.id < researchProducer)) {
-                researchProducer = entity.id;
+            if (entity.completed) {
+                ++barracksCount;
+                if (entity.productionRequired == 0 &&
+                    (researchProducer == 0 || entity.id < researchProducer)) {
+                    researchProducer = entity.id;
+                }
             }
         } else if (entity.type == EntityType::Dropoff) {
-            ++dropoffCount;
+            if (entity.completed) {
+                ++dropoffCount;
+            }
         }
         if (entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
@@ -4803,15 +5709,21 @@ std::vector<Command> Simulation::GenerateAiCommands(
         if (expansionBuilder != 0) {
             const std::int32_t baseX = commandCore->position.x.FloorToInt();
             const std::int32_t baseY = commandCore->position.y.FloorToInt();
+            const std::int32_t mapCenterX = config_.mapWidthTiles / 2;
+            const std::int32_t mapCenterY = config_.mapHeightTiles / 2;
+            const std::int32_t signX = baseX < mapCenterX ? -1 : 1;
+            const std::int32_t signY = baseY < mapCenterY ? -1 : 1;
             bool foundPlacement = false;
             for (std::int32_t radius = 4; radius <= 10 && !foundPlacement;
                  ++radius) {
-                for (std::int32_t offsetY = -radius;
-                     offsetY <= radius && !foundPlacement;
-                     ++offsetY) {
-                    for (std::int32_t offsetX = -radius;
-                         offsetX <= radius;
-                         ++offsetX) {
+                for (std::int32_t stepY = 0;
+                     stepY <= 2 * radius && !foundPlacement;
+                     ++stepY) {
+                    const std::int32_t offsetY = signY * (radius - stepY);
+                    for (std::int32_t stepX = 0;
+                         stepX <= 2 * radius;
+                         ++stepX) {
+                        const std::int32_t offsetX = signX * (radius - stepX);
                         if (Abs64(offsetX) != radius && Abs64(offsetY) != radius) {
                             continue;
                         }
@@ -4909,9 +5821,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 }
             }
             command.type = CommandType::Produce;
-            command.buildType = actor.type == EntityType::CommandCore
-                                    ? EntityType::Worker
-                                    : EntityType::Soldier;
+            if (actor.type == EntityType::CommandCore) {
+                if (workerCount >= 8) {
+                    continue;
+                }
+                command.buildType = EntityType::Worker;
+            } else {
+                command.buildType = EntityType::Soldier;
+            }
             if (ValidateProduction(player, actor.id, command.buildType) ==
                 ProductionResult::Valid) {
                 commands.push_back(command);
@@ -4923,6 +5840,39 @@ std::vector<Command> Simulation::GenerateAiCommands(
             continue;
         }
         if (actor.type == EntityType::Worker) {
+            if (actor.order.type == OrderType::Build) {
+                const Entity* targetSite = FindViewEntity(view, actor.order.target);
+                if (targetSite != nullptr && !targetSite->completed && targetSite->hitPoints > 0) {
+                    continue;
+                }
+            }
+            const Entity* incompleteSite = nullptr;
+            for (const Entity& candidate : entities_) {
+                if (candidate.owner == player && !candidate.completed &&
+                    candidate.hitPoints > 0 && IsBuildingType(candidate.type)) {
+                    incompleteSite = &candidate;
+                    break;
+                }
+            }
+            if (incompleteSite != nullptr && actor.order.type != OrderType::Build) {
+                bool alreadyBeingBuilt = false;
+                for (const Entity& other : entities_) {
+                    if (other.owner == player && other.type == EntityType::Worker &&
+                        other.order.type == OrderType::Build &&
+                        other.order.target == incompleteSite->id) {
+                        alreadyBeingBuilt = true;
+                        break;
+                    }
+                }
+                if (!alreadyBeingBuilt) {
+                    command.type = CommandType::Build;
+                    command.target = incompleteSite->id;
+                    command.buildType = incompleteSite->type;
+                    command.position = incompleteSite->position;
+                    commands.push_back(command);
+                    continue;
+                }
+            }
             if (actor.cargo > 0) {
                 const EntityId dropoff = FindNearestOwnedDropoff(player, actor.position);
                 if (dropoff != 0) {
@@ -4931,6 +5881,55 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     commands.push_back(command);
                     continue;
                 }
+            }
+            const Entity* nearestWell = nullptr;
+            std::uint64_t nearestWellDistance = std::numeric_limits<std::uint64_t>::max();
+            for (const Entity& candidate : entities_) {
+                if (candidate.type != EntityType::FutureWell ||
+                    candidate.wellChoice != FutureWellChoice::Dormant ||
+                    !IsEntityVisibleTo(player, candidate.id)) {
+                    continue;
+                }
+                // Skip wells already assigned to a worker in this batch.
+                if (wellsAssignedThisBatch.count(candidate.id)) {
+                    continue;
+                }
+                const std::uint64_t distance =
+                    DistanceSquaredRaw(actor.position, candidate.position);
+                if (distance < nearestWellDistance ||
+                    (distance == nearestWellDistance &&
+                     (nearestWell == nullptr || candidate.id < nearestWell->id))) {
+                    nearestWell = &candidate;
+                    nearestWellDistance = distance;
+                }
+            }
+            bool wellAlreadyTargeted = false;
+            if (nearestWell != nullptr) {
+                for (const Entity& other : entities_) {
+                    if (other.owner == player &&
+                        other.order.type == OrderType::FutureWell &&
+                        other.order.target == nearestWell->id) {
+                        wellAlreadyTargeted = true;
+                        break;
+                    }
+                }
+            }
+            if (nearestWell != nullptr && !wellAlreadyTargeted) {
+                command.type = CommandType::FutureWell;
+                command.target = nearestWell->id;
+                // Choir MUST Preserve wells for sustainable dawnshard income
+                // (coherence upkeep requires ongoing dawnshards; Harvest is
+                // a one-time lump sum that runs out, collapsing all structures).
+                command.wellChoice = (personality == AiPersonality::Economic ||
+                                      personality == AiPersonality::Adaptive ||
+                                      playerState->faction == Faction::HollowChoir)
+                                         ? FutureWellChoice::Preserve
+                                     : personality == AiPersonality::Raider
+                                         ? FutureWellChoice::Reshape
+                                         : FutureWellChoice::Harvest;
+                wellsAssignedThisBatch.insert(nearestWell->id);
+                commands.push_back(command);
+                continue;
             }
             const Entity* nearestResource = nullptr;
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
@@ -4952,34 +5951,6 @@ std::vector<Command> Simulation::GenerateAiCommands(
             if (nearestResource != nullptr) {
                 command.type = CommandType::Gather;
                 command.target = nearestResource->id;
-                commands.push_back(command);
-                continue;
-            }
-            const Entity* nearestWell = nullptr;
-            nearestDistance = std::numeric_limits<std::uint64_t>::max();
-            for (const Entity& candidate : entities_) {
-                if (candidate.type != EntityType::FutureWell ||
-                    candidate.wellChoice != FutureWellChoice::Dormant ||
-                    !IsEntityVisibleTo(player, candidate.id)) {
-                    continue;
-                }
-                const std::uint64_t distance =
-                    DistanceSquaredRaw(actor.position, candidate.position);
-                if (distance < nearestDistance ||
-                    (distance == nearestDistance &&
-                     (nearestWell == nullptr || candidate.id < nearestWell->id))) {
-                    nearestWell = &candidate;
-                    nearestDistance = distance;
-                }
-            }
-            if (nearestWell != nullptr) {
-                command.type = CommandType::FutureWell;
-                command.target = nearestWell->id;
-                command.wellChoice = personality == AiPersonality::Economic
-                                         ? FutureWellChoice::Preserve
-                                     : personality == AiPersonality::Raider
-                                         ? FutureWellChoice::Reshape
-                                         : FutureWellChoice::Harvest;
                 commands.push_back(command);
                 continue;
             }
@@ -5232,6 +6203,33 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     commands.push_back(command);
                     continue;
                 }
+            }
+        }
+        if (actor.order.type != OrderType::None &&
+            actor.order.type != OrderType::Hold) {
+            continue;
+        }
+        if (IsBarracksUnitType(actor.type)) {
+            Vec2 marchTarget{};
+            for (const RememberedObject& obj : view.RememberedObjects()) {
+                if (obj.owner != player && obj.owner != kNeutralPlayer &&
+                    (obj.type == EntityType::CommandCore ||
+                     obj.type == EntityType::Barracks ||
+                     obj.type == EntityType::Dropoff)) {
+                    marchTarget = obj.position;
+                    break;
+                }
+            }
+            if (marchTarget == Vec2{} && commandCore != nullptr) {
+                marchTarget = Vec2::FromTiles(
+                    std::max(1, config_.mapWidthTiles - commandCore->position.x.FloorToInt()),
+                    std::max(1, config_.mapHeightTiles - commandCore->position.y.FloorToInt()));
+            }
+            if (marchTarget != Vec2{}) {
+                command.type = CommandType::AttackMove;
+                command.position = marchTarget;
+                commands.push_back(command);
+                continue;
             }
         }
         const std::uint64_t random = StatelessAiValue(player, actor.id, 0xa17eULL);
@@ -5542,6 +6540,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kMemorySnapshotVersion &&
         version != kCommandResolutionReceiptSnapshotVersion &&
         version != kProtectedCommandCoreSnapshotVersion &&
         version != kChoirSnapshotVersion &&

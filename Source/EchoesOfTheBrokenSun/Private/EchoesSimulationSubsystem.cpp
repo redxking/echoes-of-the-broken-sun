@@ -9552,7 +9552,8 @@ FEchoesPrologueMissionFacts UEchoesSimulationSubsystem::GatherPrologueFacts() co
             PrologueSiteRadiusTiles);
     }
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId &&
@@ -10731,7 +10732,8 @@ UEchoesSimulationSubsystem::GatherSevenAccountsFacts() const
             Route.WaystoneAnchor,
             SevenAccountsSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId &&
@@ -10779,7 +10781,8 @@ FEchoesCityReserveMissionFacts UEchoesSimulationSubsystem::GatherCityReserveFact
     Facts.bArchivePowered =
         Facts.bArchiveIntact && Archive->aegisPowered;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId &&
@@ -10832,7 +10835,8 @@ UEchoesSimulationSubsystem::GatherUnburiedRoadFacts() const
             Route.Roadhead,
             UnburiedRoadSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
@@ -10931,7 +10935,8 @@ UEchoesSimulationSubsystem::GatherTermsOfContinuanceFacts() const
     Facts.bKharuunWitnessExtracted =
         Facts.bContinuanceWindowHeld && bKharuunWitnessAtExtraction;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
@@ -11008,7 +11013,8 @@ UEchoesSimulationSubsystem::GatherNamesWithoutBirthsFacts() const
             Plan.EvidenceExtractionSite,
             NamesWithoutBirthsSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     for (const echoes::sim::Entity& Entity : Simulation->Entities())
     {
         if (Entity.owner == LocalPlayerId && Entity.hitPoints > 0 &&
@@ -11098,7 +11104,8 @@ UEchoesSimulationSubsystem::GatherShapeOfSilenceFacts() const
             Plan.ConfluenceSite,
             ShapeOfSilenceSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesShapeOfSilencePhase
@@ -11177,7 +11184,8 @@ UEchoesSimulationSubsystem::GatherShapeBesideUsFacts() const
             Plan.ConvergenceSite,
             ShapeBesideUsSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesShapeBesideUsPhase
@@ -11246,7 +11254,8 @@ UEchoesSimulationSubsystem::GatherReserveAuthorityFacts() const
             ReserveAuthoritySiteRadiusTiles);
     }
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesReserveAuthorityPhase
@@ -11345,7 +11354,8 @@ UEchoesSimulationSubsystem::GatherChoirAtLumeReachFacts() const
         Facts.bDeferredLiabilityResolved || Facts.bFirstAnchorRaised ||
         Facts.bSecondAnchorRaised || Facts.bFutureWellProtocolChosen;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesChoirAtLumeReachPhase
@@ -11496,7 +11506,8 @@ UEchoesSimulationSubsystem::GatherNoNeutralLedgerFacts() const
         Plan.LumeProtocol == FutureWellChoice::Reshape &&
         Well->reshapeUntilTick == 0 && !Facts.bCoalitionRallied;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesNoNeutralLedgerPhase
@@ -11653,7 +11664,8 @@ UEchoesSimulationSubsystem::GatherFutureThatWonFacts() const
         Plan.RecordedProtocol == FutureWellChoice::Reshape &&
         Well->reshapeUntilTick == 0 && !Facts.bStabilityWindowHeld;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesFutureThatWonPhase
@@ -11755,7 +11767,8 @@ UEchoesSimulationSubsystem::GatherAssemblyOfTheMissingFacts() const
             Plan.KharuunAssemblyWitnessSite,
             AssemblyOfTheMissingSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesAssemblyOfTheMissingPhase
@@ -11884,7 +11897,8 @@ UEchoesSimulationSubsystem::GatherSeveralVoicesOneCommandFacts() const
             Plan.NemeCommandSite,
             SeveralVoicesOneCommandSiteRadiusTiles);
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     Facts.bCrisisContractFailed =
         bSeveralVoicesCrisisContractFailed;
     return Facts;
@@ -12071,7 +12085,8 @@ FEchoesBrokenSunMissionFacts UEchoesSimulationSubsystem::GatherBrokenSunFacts() 
     Facts.bResolutionContractFailed =
         bBrokenSunResolutionContractFailed;
     Facts.bSkirmishStillOngoing =
-        Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing;
+        (Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing ||
+         Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory);
     return Facts;
 }
 EEchoesBrokenSunPhase UEchoesSimulationSubsystem::GetBrokenSunPhase() const

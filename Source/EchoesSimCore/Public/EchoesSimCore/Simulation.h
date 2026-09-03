@@ -115,6 +115,22 @@ struct Vec2 final {
     friend constexpr bool operator==(const Vec2&, const Vec2&) = default;
 };
 
+[[nodiscard]] constexpr std::int64_t IntegerSqrt64(std::int64_t n) {
+    if (n <= 0) {
+        return 0;
+    }
+    std::int64_t x0 = n / 2;
+    if (x0 == 0) {
+        return 1;
+    }
+    std::int64_t x1 = (x0 + n / x0) / 2;
+    while (x1 < x0) {
+        x0 = x1;
+        x1 = (x0 + n / x0) / 2;
+    }
+    return x0;
+}
+
 enum class Faction : std::uint8_t {
     MeridianCompact = 0,
     KharuunAssemblies = 1,
@@ -594,7 +610,12 @@ struct Entity final {
     bool completed = true;
     std::int32_t constructionProgress = 0;
     std::int32_t constructionRequired = 0;
+    std::int32_t constructionSubProgress = 0;
+    Tick harvestTicks = 0;
+    EntityId assignedResourceNode = 0;
     Order order{};
+    static constexpr std::size_t kMaxQueuedOrders = 16;
+    std::vector<Order> orderQueue{};
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
     // The first completed protocol tick. This is authoritative, monotonic,
     // and lets downstream scenarios measure an intact activation interval
@@ -643,6 +664,7 @@ struct Command final {
     FutureWellChoice wellChoice = FutureWellChoice::Dormant;
     WarformAdaptation warformAdaptation = WarformAdaptation::None;
     ResearchType researchType = ResearchType::None;
+    bool queue = false;
 
     friend bool operator==(const Command&, const Command&) = default;
 };
@@ -663,6 +685,24 @@ struct CommandResolutionReceipt final {
                            const CommandResolutionReceipt&) = default;
 };
 
+/**
+ * REL-CMB-003 ballistic projectile entity travelling at 1,200 cm/s (60 cm/tick).
+ * Damage is resolved authoritatively upon arrival or intercepted by terrain/cover.
+ */
+struct Projectile final {
+    EntityId id = 0;
+    PlayerId owner = kNeutralPlayer;
+    EntityId source = 0;
+    EntityId target = 0;
+    Vec2 position{};
+    Vec2 destination{};
+    std::int32_t damage = 0;
+    std::int32_t speedRaw = 60 * kFixedScale;
+    std::int32_t travelDistanceRemainingRaw = 0;
+
+    friend bool operator==(const Projectile&, const Projectile&) = default;
+};
+
 struct SimulationConfig final {
     std::int32_t mapWidthTiles = 64;
     std::int32_t mapHeightTiles = 64;
@@ -673,6 +713,7 @@ struct SimulationConfig final {
     // default remains zero so authored matches retain their normal outcome
     // contract; deterministic endurance fixtures opt in explicitly.
     std::uint8_t protectedCommandCorePlayerMask = 0;
+    bool enableBallisticProjectiles = false;
 
     friend bool operator==(const SimulationConfig&,
                            const SimulationConfig&) = default;
@@ -773,6 +814,7 @@ public:
     [[nodiscard]] const SimulationConfig& Config() const { return config_; }
     [[nodiscard]] Tick CurrentTick() const { return currentTick_; }
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
+    [[nodiscard]] const std::vector<Projectile>& Projectiles() const { return projectiles_; }
     [[nodiscard]] const std::vector<Command>& CommandLog() const {
         return commandLog_;
     }
@@ -809,6 +851,15 @@ public:
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
+    [[nodiscard]] bool HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent = 0) const;
+    [[nodiscard]] Vec2 FindStringPulledTarget(Vec2 start, Vec2 destination, std::int32_t halfExtent = 0) const;
+    void ApplySoftSeparation();
+    [[nodiscard]] EntityId FindSmartCastCaster(
+        PlayerId player,
+        CommandType commandType,
+        Vec2 targetPosition,
+        EntityId targetEntity = 0,
+        const std::vector<EntityId>& candidates = {}) const;
     /** Terrain- and footprint-aware admission check for controlled spawning. */
     [[nodiscard]] bool IsSpawnPositionAvailable(Faction faction,
                                                 EntityType type,
@@ -1003,6 +1054,9 @@ private:
         const Entity& attacker,
         const Entity& target,
         std::int32_t damage) const;
+    void ApplyResolvedDamage(Entity& target,
+                             std::int32_t damage,
+                             const Entity* attacker);
     [[nodiscard]] EntityId FindNearestOwnedDropoff(PlayerId player,
                                                    Vec2 from) const;
     [[nodiscard]] EntityId FindNearestVisibleEnemy(PlayerId player,
@@ -1088,6 +1142,10 @@ private:
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
     std::array<bool, kMaximumPlayers> hasExecutedSequence_{};
     mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};
+    std::vector<Projectile> projectiles_{};
+    EntityId nextProjectileId_ = 1;
+    void UpdateProjectiles();
+    void SpawnBallisticProjectile(const Entity& attacker, const Entity& target, std::int32_t damage);
 };
 
 }  // namespace echoes::sim

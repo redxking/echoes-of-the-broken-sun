@@ -88,10 +88,11 @@ void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.SpawnResourceNode(Vec2::FromTiles(42, 38), 10000);
     sim.SpawnFutureWell(Vec2::FromTiles(38, 42));
 
-    // Contested neutral center
-    sim.SpawnFutureWell(Vec2::FromTiles(24, 24));
+    // Contested neutral center — resources only, no well (wells are per-base)
     sim.SpawnResourceNode(Vec2::FromTiles(20, 24), 8000);
     sim.SpawnResourceNode(Vec2::FromTiles(28, 24), 8000);
+    sim.SpawnResourceNode(Vec2::FromTiles(24, 20), 6000);
+    sim.SpawnResourceNode(Vec2::FromTiles(24, 28), 6000);
 }
 
 MatchRecord RunMatch(std::uint64_t seed,
@@ -166,12 +167,17 @@ MatchRecord RunMatch(std::uint64_t seed,
             const auto* pl1 = sim.FindPlayer(1);
             const int res0 = pl0 ? (pl0->resources.material + pl0->resources.dawnshards * 2) : 0;
             const int res1 = pl1 ? (pl1->resources.material + pl1->resources.dawnshards * 2) : 0;
-            if (res0 >= res1) {
+            if (res0 > res1) {
                 record.winnerPlayer = 0;
                 record.winnerFaction = record.faction0;
-            } else {
+            } else if (res1 > res0) {
                 record.winnerPlayer = 1;
                 record.winnerFaction = record.faction1;
+            } else {
+                // True tie — use seed parity as a fair coin flip.
+                const int coin = static_cast<int>(seed & 1);
+                record.winnerPlayer = coin;
+                record.winnerFaction = coin == 0 ? record.faction0 : record.faction1;
             }
         }
     }

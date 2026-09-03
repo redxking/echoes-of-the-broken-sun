@@ -1,5 +1,8 @@
 # CLAUDE.md — Echoes of the Broken Sun
 
+<!-- Binds to global AI project instructions -->
+<!-- See: AGENTS.md -->
+
 **Author and owner:** Angelis Pseftis
 **Repository root:** `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project`
 **Current objective:** finish the game to a professional public release — player versus AI, Glass Scar skirmish plus all fifteen campaign operations, with professional visuals, the full original score and audio, voiced and subtitled storytelling, and in-engine cinematics. macOS ships first; Linux/SteamOS and then Windows follow in later releases.
