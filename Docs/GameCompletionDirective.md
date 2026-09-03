@@ -78,27 +78,15 @@ section 6 are the work.
 
 ## 1. Authority and sources
 
-The repository is the sole authority on how this game works. Before designing anything, read the file
-that owns the question:
+This directive is a backlog, sequencing plan, and tracking matrix. It does not establish, author, or waive software or game design requirements. The repository is the sole authority on how this game works. Before designing, building, or verifying any feature, a session must read and defer to the explicit documents that own the domain:
 
-- `Docs/Archive/DevelopmentBible.md` — world, factions, Future Wells, combat, controls, campaign
-  outline, interface, accessibility, art and audio direction, writing rules. **The Bible is the sole
-  creative authority. Where this directive and the Bible disagree about creative intent, the Bible wins
-  and this directive is wrong — fix it in place.**
-- `Docs/Archive/TechnicalArchitecture.md` — simulation, Unreal integration, AI, networking, save,
-  replay, build architecture.
-- `Docs/Archive/ProjectLedger.md` — decisions, milestones, performance budgets, the evidence register,
-  risks, and current known limitations. This is where you learn what is actually proven.
-- `Docs/Archive/AssetRegister.md` — asset provenance, generation records, and the rules that govern
-  them.
-- `Docs/Archive/SetupAndBuild.md` — host state, toolchain, and the build/test/package procedures.
-- `Content/Data/Source`, `Content/Narrative/Source`, `Content/World/Source` — authoritative source
-  data. Edit source, recompile; never hand-edit compiled output.
-- [`DemoReleaseDirective.md`](Archive/Superseded/DemoReleaseDirective.md) — superseded planning record. Its gate evidence
-  is carried into section 10; consult it for the history of how those gates passed, not for scope.
+1. **Docs/Requirements.md (Tier 1 — Ultimate Normative Authority):** This file is the absolute driver for all game development, features, mechanics, mathematical models, and balance implementations. If any behavioral description in this directive or any historical source contradicts `Docs/Requirements.md`, `Docs/Requirements.md` wins unconditionally.
+2. **Docs/Archive/DevelopmentBible.md (Tier 1 — Creative Authority):** The sole normative source for world, factions, characters, Future Wells, and narrative intent. This directive raises the execution bar on what the player experiences, but never alters the canon authorized by the Bible.
+3. **Docs/RequirementsState.md (Tier 1 — Lifecycle Authority):** The sole registry tracking whether an individual requirement is OPEN, WIP, or VERIFIED. 
+4. **Docs/Archive/ProjectLedger.md (Tier 2 — Historic Evidence Register):** Tracks verified software performance limits, known limitations, and accepted engineering outcomes.
 
-Design recollections carried from other tools or earlier conversations are hypotheses. Check them
-against these files before acting on them.
+Design recollections carried from other tools or earlier conversations are hypotheses. Check them against these tracking files before acting on them.
+
 
 ## 2. Scope
 
