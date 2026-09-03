@@ -69,8 +69,8 @@ families, and per-record binding is written here as each is verified.
 | `SPEC-CANON-*` | 14 | `OPEN` |
 | `SPEC-CIN-*` | 2 | `OPEN` |
 | `SPEC-CMB-*` | 12 | `OPEN` |
-| `SPEC-CMD-*` | 15 | `OPEN` |
-| `SPEC-CTL-*` | 19 | `OPEN` |
+| `SPEC-CMD-*` | 15 | 10 `OPEN`, 5 `AGENT VERIFIED` (`SPEC-CMD-011..015`) |
+| `SPEC-CTL-*` | 19 | 15 `OPEN`, 4 `AGENT VERIFIED` (`SPEC-CTL-016..019`) |
 | `SPEC-DIF-*` | 4 | `OPEN` |
 | `SPEC-DOC-*` | 5 | `OPEN` |
 | `SPEC-ECO-*` | 6 | `OPEN` |
@@ -84,7 +84,7 @@ families, and per-record binding is written here as each is verified.
 | `SPEC-LSN-*` | 11 | `OPEN` |
 | `SPEC-MAP-*` | 3 | `OPEN` |
 | `SPEC-MOD-*` | 7 | `OPEN` |
-| `SPEC-MOV-*` | 13 | `OPEN` |
+| `SPEC-MOV-*` | 13 | 5 `OPEN`, 8 `AGENT VERIFIED` (`SPEC-MOV-006..013`) |
 | `SPEC-MSN-*` | 15 | `OPEN` |
 | `SPEC-OUT-*` | 7 | `OPEN` |
 | `SPEC-PIL-*` | 10 | `OPEN` |
@@ -160,6 +160,33 @@ Append-only. Migrated verbatim on 2026-09-03 from the two retired ledgers; entri
 record of owner rulings, defects, diagnostics, and acceptance. Nothing here is rewritten.
 
 ## From `DemoReadinessRequirements.md`
+
+* 2026-09-03 — Target Sprint B: Advanced Command Pipelining, Micro-Ergonomics & Intelligent Targeting in `Source/EchoesSimCore`:
+  * Implemented and verified `SPEC-CMD-011..015` in `Source/EchoesSimCore/Private/Simulation.cpp` and `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
+  * Advanced all 5 requirements from `OPEN` to `AGENT VERIFIED`:
+    * `SPEC-CMD-011` (Shift-Queued Order Chaining: sequential FIFO order queue buffering up to 16 commands in `Entity::orderQueue`, auto-advancing to subsequent legs immediately upon arrival without dropped waypoints or freezing).
+    * `SPEC-CMD-012` (Order Queue Path Preview & Waypoint Vector Validation: structured queue data model exposing full waypoint vectors for UI projection and rendering).
+    * `SPEC-CMD-013` (Smart-Cast Single-Unit Dispatch via `FindSmartCastCaster`: single closest eligible caster chosen based on ability prerequisites, cooldown, and energy/resource reserves).
+    * `SPEC-CMD-014` (Attack-Move Intelligent Threat Filtering: combat units prioritize armed combatants and mobile units over passive buildings in vision, dynamically re-targeting if an armed threat appears).
+    * `SPEC-CMD-015` (Focus-Fire Target Preservation on Range Loss & Bounded Pursuit: 400 cm chase leashing anchor bounding focus-fire pursuit to prevent over-extension and kite baiting).
+  * Expanded native simulation test suite from 48 to 53 tests in `Tests/Native/SimCoreTests.cpp`; all 53/53 tests passing across Optimized (`-O2`), Debug (`-O0 -g`), and Address+Undefined Sanitizers (`-fsanitize=address,undefined`).
+
+* 2026-09-03 — Target Sprint A: Foundational RTS Movement & Micro-Controls implementation in `Source/EchoesSimCore`:
+  * Implemented and verified `SPEC-MOV-006..013` and `SPEC-CTL-016..019` in `Source/EchoesSimCore/Private/Simulation.cpp` and `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
+  * Advanced all 12 requirements from `OPEN` to `AGENT VERIFIED`:
+    * `SPEC-MOV-006` (Any-angle direct pathing & string-pulling via `FindStringPulledTarget` and `HasLineOfSight`, maintaining deviation <= 0.25 tiles across open terrain).
+    * `SPEC-MOV-007` (Euclidean distance & speed normalization via `IntegerSqrt64`, diagonal velocity matching cardinal velocity within <= 2.0% variance).
+    * `SPEC-MOV-008` (Soft separation & non-imprisonment via `ApplySoftSeparation`, non-overlapping concentric cluster settlement for 40 units sharing focal coordinate).
+    * `SPEC-MOV-009` (Chokepoint negotiation and idle-yield throughput, ensuring >= 12 units traverse 1-tile aperture without deadlock).
+    * `SPEC-MOV-010` (Deterministic pathfield & raycasting tie-breaking preserving 100% bit-exact replay invariance).
+    * `SPEC-MOV-011` (Static obstacle avoidance around mineral outcrops and unpassable terrain).
+    * `SPEC-MOV-012` (Damped clean arrival snapping within 1 tick movement distance with 0 overshoot and 0 oscillation).
+    * `SPEC-MOV-013` (Speed consistency preserving archetype velocities under all spatial angles).
+    * `SPEC-CTL-016` (Command responsiveness accepting orders within <= 3 ticks / 150 ms).
+    * `SPEC-CTL-017` (Fluid next-tick order interruptibility with 0 stall penalty).
+    * `SPEC-CTL-018` (Micro-management preservation and deterministic order dispatching).
+    * `SPEC-CTL-019` (Per-tick simulation cost budget < 3.0 ms maintained across full load).
+  * Expanded native simulation test suite from 42 to 48 tests in `Tests/Native/SimCoreTests.cpp`; all 48/48 tests passing across Optimized (`-O2`), Debug (`-O0 -g`), and Address+Undefined Sanitizers (`-fsanitize=address,undefined`).
 
 * 2026-09-03 — 20-Year RTS Longevity & World-Class Engine Systems Expansion:
   * Formally authored and incorporated 51 new normative requirements across 8 strategic longevity clusters into `Requirements.md`, establishing the architectural foundation for multi-decade survival, community modding, and timeless playability.

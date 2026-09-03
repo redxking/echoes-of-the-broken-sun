@@ -39,7 +39,7 @@ Carried forward from the build specification and still binding:
 ## Identifier namespaces
 
 Identifiers are permanent. Nothing here is ever renumbered, reused, or deleted: 335 citations in
-`../WorkstreamControl/` evidence logs, QA matrices, and lane handoffs resolve against these IDs, and
+evidence logs, QA matrices, and lane handoffs resolve against these IDs, and
 renumbering would break the evidence trail for work already accepted. A withdrawn requirement keeps its ID
 and reads `SUPERSEDED BY <id>` or `WITHDRAWN — <authority, date>`.
 
