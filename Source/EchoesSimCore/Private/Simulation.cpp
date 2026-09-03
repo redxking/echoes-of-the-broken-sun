@@ -144,7 +144,15 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 [[nodiscard]] bool IsValidCommandResolutionOutcome(
     CommandResolutionOutcome outcome) {
     return outcome >= CommandResolutionOutcome::Applied &&
-           outcome <= CommandResolutionOutcome::InvalidPosition;
+           outcome <= CommandResolutionOutcome::DestinationOccupied;
+}
+
+/** True for the MOV-002 movement rejection vocabulary. */
+[[nodiscard]] bool IsMovementRejectionOutcome(
+    CommandResolutionOutcome outcome) {
+    return outcome == CommandResolutionOutcome::NoPath ||
+           outcome == CommandResolutionOutcome::RouteBlocked ||
+           outcome == CommandResolutionOutcome::DestinationOccupied;
 }
 
 [[nodiscard]] bool IsValidResearchType(ResearchType type) {
@@ -811,6 +819,44 @@ void WriteCommand(Writer& writer, const Command& command) {
 }
 
 }  // namespace
+
+const char* CommandRejectionReasonCode(CommandResolutionOutcome outcome) {
+    switch (outcome) {
+    case CommandResolutionOutcome::NoPath:
+        return "NO PATH";
+    case CommandResolutionOutcome::RouteBlocked:
+        return "ROUTE BLOCKED";
+    case CommandResolutionOutcome::DestinationOccupied:
+        return "DESTINATION OCCUPIED";
+    case CommandResolutionOutcome::InvalidPosition:
+        return "INVALID POSITION";
+    case CommandResolutionOutcome::Applied:
+    case CommandResolutionOutcome::NoEffect:
+        break;
+    }
+    return "";
+}
+
+const char* CommandRejectionRecovery(CommandResolutionOutcome outcome) {
+    switch (outcome) {
+    case CommandResolutionOutcome::NoPath:
+        return "Your map shows no route to that tile. Scout a connecting "
+               "route or order the move to ground you can already reach.";
+    case CommandResolutionOutcome::RouteBlocked:
+        return "This unit is walled in. Clear or destroy the obstruction "
+               "beside it, then order the move again.";
+    case CommandResolutionOutcome::DestinationOccupied:
+        return "That tile is not open ground. Order the move to a clear tile "
+               "next to it.";
+    case CommandResolutionOutcome::InvalidPosition:
+        return "That position is outside the playable map. Pick a tile inside "
+               "the battlefield.";
+    case CommandResolutionOutcome::Applied:
+    case CommandResolutionOutcome::NoEffect:
+        break;
+    }
+    return "";
+}
 
 SimulationRules DefaultSimulationRules() {
     SimulationRules rules{};
@@ -2211,6 +2257,154 @@ bool Simulation::InInteractionRange(const Entity& first,
            static_cast<std::uint64_t>(range * range);
 }
 
+bool Simulation::IsTileKnownPassableTo(PlayerId player,
+                                       std::int32_t tileX,
+                                       std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return false;
+    }
+    const Vec2 position = Vec2::FromTiles(tileX, tileY);
+    const Visibility visibility = VisibilityAt(player, position);
+    if (visibility == Visibility::Unexplored) {
+        // MOV-002 pathing works from known passability. Ground this player has
+        // never observed is assumed open, so an order they cannot yet disprove
+        // stays admissible and no receipt reveals what is really there.
+        return true;
+    }
+    if (visibility == Visibility::Visible) {
+        return IsPositionPassable(position);
+    }
+    // Remembered ground. This mirrors CreatePlayerView: a remembered temporary
+    // mineral cover reverts to the terrain it masked, because the player holds
+    // no live evidence that the cover still stands.
+    Terrain remembered = TerrainAt(tileX, tileY);
+    if (remembered == Terrain::Blocked) {
+        for (const Entity& entity : entities_) {
+            if (entity.temporaryMineralCover && entity.hitPoints > 0 &&
+                entity.position.x.FloorToInt() == tileX &&
+                entity.position.y.FloorToInt() == tileY) {
+                remembered = entity.mineralCoverUnderlyingTerrain;
+                break;
+            }
+        }
+    }
+    return remembered != Terrain::Blocked;
+}
+
+bool Simulation::IsTileReachableInPlayerKnowledge(
+    PlayerId player,
+    std::int32_t startTileX,
+    std::int32_t startTileY,
+    std::int32_t goalTileX,
+    std::int32_t goalTileY) const {
+    if (startTileX == goalTileX && startTileY == goalTileY) {
+        return true;
+    }
+    const std::size_t width = static_cast<std::size_t>(config_.mapWidthTiles);
+    const std::size_t tileCount =
+        width * static_cast<std::size_t>(config_.mapHeightTiles);
+    const auto tileIndex = [width](std::int32_t tileX, std::int32_t tileY) {
+        return static_cast<std::size_t>(tileY) * width +
+               static_cast<std::size_t>(tileX);
+    };
+    const std::size_t goal = tileIndex(goalTileX, goalTileY);
+
+    // Deterministic breadth-first flood in the same N/E/S/W order the
+    // authoritative path field expands, over player-known passability only.
+    std::vector<std::uint8_t> reached(tileCount, 0);
+    std::vector<std::size_t> frontier{};
+    frontier.reserve(std::min<std::size_t>(tileCount, 4096));
+    reached[tileIndex(startTileX, startTileY)] = 1;
+    frontier.push_back(tileIndex(startTileX, startTileY));
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}},
+        {{1, 0}},
+        {{0, 1}},
+        {{-1, 0}},
+    }};
+    std::size_t head = 0;
+    while (head < frontier.size()) {
+        const std::size_t current = frontier[head++];
+        const std::int32_t currentX = static_cast<std::int32_t>(current % width);
+        const std::int32_t currentY = static_cast<std::int32_t>(current / width);
+        for (const auto& direction : directions) {
+            const std::int32_t nextX = currentX + direction[0];
+            const std::int32_t nextY = currentY + direction[1];
+            if (nextX < 0 || nextY < 0 || nextX >= config_.mapWidthTiles ||
+                nextY >= config_.mapHeightTiles) {
+                continue;
+            }
+            const std::size_t next = tileIndex(nextX, nextY);
+            if (reached[next] != 0 ||
+                !IsTileKnownPassableTo(player, nextX, nextY)) {
+                continue;
+            }
+            if (next == goal) {
+                return true;
+            }
+            reached[next] = 1;
+            frontier.push_back(next);
+        }
+    }
+    return false;
+}
+
+CommandResolutionOutcome Simulation::ValidateMoveOrder(PlayerId player,
+                                                       EntityId actorId,
+                                                       Vec2 destination) const {
+    const Entity* actor = FindEntity(actorId);
+    // These refusals predate reason codes and stay NoEffect so existing
+    // receipts are unchanged; only genuinely unreachable ground gains a code.
+    if (actor == nullptr || actor->owner != player || !actor->completed ||
+        actor->hitPoints <= 0 || actor->movementPerTickRaw <= 0) {
+        return CommandResolutionOutcome::NoEffect;
+    }
+    if (actor->waystoneMode != WaystoneMode::NotWaystone &&
+        actor->waystoneMode != WaystoneMode::Mobile) {
+        return CommandResolutionOutcome::NoEffect;
+    }
+    if (!IsInsideMap(destination)) {
+        return CommandResolutionOutcome::NoEffect;
+    }
+
+    const std::int32_t startX = actor->position.x.FloorToInt();
+    const std::int32_t startY = actor->position.y.FloorToInt();
+    const std::int32_t goalX = destination.x.FloorToInt();
+    const std::int32_t goalY = destination.y.FloorToInt();
+    if (startX == goalX && startY == goalY) {
+        return CommandResolutionOutcome::Applied;
+    }
+    if (!IsTileKnownPassableTo(player, goalX, goalY)) {
+        return CommandResolutionOutcome::DestinationOccupied;
+    }
+    // A unit whose own tile has no known-open neighbour cannot start any route.
+    // Checked before connectivity so an enclosed unit names the obstruction
+    // beside it instead of reporting a map-wide absence of routes.
+    bool hasOpenNeighbour = false;
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}},
+        {{1, 0}},
+        {{0, 1}},
+        {{-1, 0}},
+    }};
+    for (const auto& direction : directions) {
+        if (IsTileKnownPassableTo(player, startX + direction[0],
+                                  startY + direction[1])) {
+            hasOpenNeighbour = true;
+            break;
+        }
+    }
+    if (!hasOpenNeighbour) {
+        return CommandResolutionOutcome::RouteBlocked;
+    }
+    if (!IsTileReachableInPlayerKnowledge(player, startX, startY, goalX,
+                                          goalY)) {
+        return CommandResolutionOutcome::NoPath;
+    }
+    return CommandResolutionOutcome::Applied;
+}
+
 std::optional<Vec2> Simulation::FindNextPathWaypoint(
     Vec2 from,
     Vec2 destination) const {
@@ -2716,16 +2910,23 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
-        case CommandType::Move:
-            if (actor->movementPerTickRaw > 0 && IsInsideMap(command.position) &&
-                (actor->waystoneMode == WaystoneMode::NotWaystone ||
-                 actor->waystoneMode == WaystoneMode::Mobile)) {
-                actor->order.type = OrderType::Move;
-                actor->order.target = 0;
-                actor->order.destination = command.position;
-                outcome = CommandResolutionOutcome::Applied;
+        case CommandType::Move: {
+            // MOV-002 / SIM-003: an order the ordering player's own map proves
+            // impossible is refused with a stable reason code instead of being
+            // receipted as Applied and then failing silently in MoveTowards
+            // for the rest of the match.
+            const CommandResolutionOutcome admission =
+                ValidateMoveOrder(command.player, actor->id, command.position);
+            if (admission != CommandResolutionOutcome::Applied) {
+                outcome = admission;
+                return;
             }
+            actor->order.type = OrderType::Move;
+            actor->order.target = 0;
+            actor->order.destination = command.position;
+            outcome = CommandResolutionOutcome::Applied;
             return;
+        }
         case CommandType::Gather: {
             const Entity* target = FindEntity(command.target);
             if (actor->type == EntityType::Worker && target != nullptr &&
@@ -5982,6 +6183,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                      CommandResolutionOutcome::InvalidPosition &&
                  stored.receipt.commandType !=
                      CommandType::RaiseMineralCover) ||
+                (IsMovementRejectionOutcome(stored.receipt.outcome) &&
+                 stored.receipt.commandType != CommandType::Move) ||
                 (simulation.config_.rules.version < 2 &&
                  stored.receipt.commandType > CommandType::Research)) {
                 SetError(error,

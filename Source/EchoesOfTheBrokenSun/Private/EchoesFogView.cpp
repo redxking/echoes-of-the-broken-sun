@@ -10,6 +10,27 @@
 namespace
 {
 const FName FogColorParameterName(TEXT("Color"));
+
+// /Engine/BasicShapes/Cube.Cube is a 100 uu centre-origin cube, so a component
+// scale of 1.0 spans 100 world units.
+constexpr float BasicCubeSize = 100.0f;
+
+// The unexplored shroud has to occlude every silhouette a tile can raise, not
+// merely tint the ground plate under it. AEchoesTerrainView instances
+// SM_World_GlassScarRidge with a Z scale of 0.62 lifted 8 uu; that authored
+// tooth reaches 244 uu in mesh space (Scripts/generate_art_assets.py,
+// world_glass_scar_ridge: its tallest cone rises 196 uu from a 48 uu base) and
+// bottoms out at -9 uu, so a blocked tile occupies roughly 2..160 uu of world
+// height. The shelf used for scarred tiles stays under 7 uu. These bounds give
+// the shroud margin at both ends; raise the top if a taller authored tile mesh
+// is ever instanced by the terrain view.
+constexpr float UnexploredShroudBottom = -16.0f;
+constexpr float UnexploredShroudTop = 184.0f;
+
+// Explored tiles must keep showing remembered terrain, so that layer stays the
+// thin dimming slab it has always been and deliberately does not occlude.
+constexpr float ExploredShroudCentre = 14.0f;
+constexpr float ExploredShroudHeight = 6.0f;
 }
 
 AEchoesFogView::AEchoesFogView()
@@ -44,20 +65,29 @@ AEchoesFogView::AEchoesFogView()
     Tags.Add(TEXT("EchoesFogView"));
 }
 
-FTransform AEchoesFogView::TileTransform(int32 TileX, int32 TileY) const
+FTransform AEchoesFogView::TileTransform(
+    int32 TileX,
+    int32 TileY,
+    bool bUnexplored) const
 {
     const float HalfWidth = static_cast<float>(MapWidthTiles) * 0.5f;
     const float HalfHeight = static_cast<float>(MapHeightTiles) * 0.5f;
+    const float Height =
+        bUnexplored ? UnexploredShroudTop - UnexploredShroudBottom
+                    : ExploredShroudHeight;
+    const float Centre = bUnexplored
+        ? UnexploredShroudBottom + Height * 0.5f
+        : ExploredShroudCentre;
     return FTransform(
         FRotator::ZeroRotator,
         FVector(
             (static_cast<float>(TileX) - HalfWidth) * WorldUnitsPerTile,
             (static_cast<float>(TileY) - HalfHeight) * WorldUnitsPerTile,
-            14.0f),
+            Centre),
         FVector(
-            WorldUnitsPerTile / 100.0f,
-            WorldUnitsPerTile / 100.0f,
-            0.06f));
+            WorldUnitsPerTile / BasicCubeSize,
+            WorldUnitsPerTile / BasicCubeSize,
+            Height / BasicCubeSize));
 }
 
 FTransform AEchoesFogView::HiddenTransform()
@@ -167,11 +197,10 @@ bool AEchoesFogView::SyncScopedVisibility(
                 continue;
             }
             CachedVisibility[TileIndex] = Encoded;
-            const FTransform VisibleTransform = TileTransform(TileX, TileY);
             UnexploredTiles->UpdateInstanceTransform(
                 TileIndex,
                 Visibility == echoes::sim::Visibility::Unexplored
-                    ? VisibleTransform
+                    ? TileTransform(TileX, TileY, true)
                     : Hidden,
                 false,
                 false,
@@ -179,7 +208,7 @@ bool AEchoesFogView::SyncScopedVisibility(
             ExploredTiles->UpdateInstanceTransform(
                 TileIndex,
                 Visibility == echoes::sim::Visibility::Explored
-                    ? VisibleTransform
+                    ? TileTransform(TileX, TileY, false)
                     : Hidden,
                 false,
                 false,
@@ -232,11 +261,10 @@ bool AEchoesFogView::SyncVisibility(
                 continue;
             }
             CachedVisibility[TileIndex] = Encoded;
-            const FTransform VisibleTransform = TileTransform(TileX, TileY);
             UnexploredTiles->UpdateInstanceTransform(
                 TileIndex,
                 Visibility == echoes::sim::Visibility::Unexplored
-                    ? VisibleTransform
+                    ? TileTransform(TileX, TileY, true)
                     : Hidden,
                 false,
                 false,
@@ -244,7 +272,7 @@ bool AEchoesFogView::SyncVisibility(
             ExploredTiles->UpdateInstanceTransform(
                 TileIndex,
                 Visibility == echoes::sim::Visibility::Explored
-                    ? VisibleTransform
+                    ? TileTransform(TileX, TileY, false)
                     : Hidden,
                 false,
                 false,

@@ -15,6 +15,11 @@ class UStaticMesh;
  * Disposable presentation of the local player's authoritative visibility grid.
  * One instanced layer is opaque unexplored fog; the second is the dim explored
  * shroud. Currently visible tiles hide both layers.
+ *
+ * The unexplored layer is a volume tall enough to occlude the terrain view's
+ * tile silhouettes, not a ground-level tint, so an unscouted cliff cannot be
+ * read over the top of it. The explored layer stays a thin slab because the
+ * information-state table lets a player keep remembered terrain.
  */
 UCLASS(NotBlueprintable)
 class ECHOESOFTHEBROKENSUN_API AEchoesFogView final : public AActor
@@ -54,7 +59,12 @@ public:
     }
 
 private:
-    [[nodiscard]] FTransform TileTransform(int32 TileX, int32 TileY) const;
+    // bUnexplored selects the tall occluding volume; otherwise the thin
+    // explored dimming slab.
+    [[nodiscard]] FTransform TileTransform(
+        int32 TileX,
+        int32 TileY,
+        bool bUnexplored) const;
     [[nodiscard]] static FTransform HiddenTransform();
 
     UPROPERTY(VisibleAnywhere)

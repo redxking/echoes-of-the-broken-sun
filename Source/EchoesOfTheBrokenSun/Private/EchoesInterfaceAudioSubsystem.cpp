@@ -59,7 +59,7 @@ void UEchoesInterfaceAudioSubsystem::Initialize(
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_INTERFACE_AUDIO_READY] cues=%d authored=%s routing=%s interfaceCooldownMs=60 alertCooldownMs=4000 runtimeAuthority=presentation finalAudio=false"),
+        TEXT("[ECHOES_INTERFACE_AUDIO_READY] cues=%d authored=%s routing=%s interfaceCooldownMs=60 alertCooldownMs=4000 terminalAlertCooldownMs=500 terminalAlertExemptFromClassWindow=true runtimeAuthority=presentation finalAudio=false"),
         GetLoadedCueCount(),
         HasAllAuthoredCues() ? TEXT("true") : TEXT("false"),
         HasInterfaceSubmixRouting() ? TEXT("true") : TEXT("false"));
@@ -218,6 +218,101 @@ bool UEchoesInterfaceAudioSubsystem::PlayAlert(EEchoesAlertCue Alert)
     return true;
 }
 
+bool UEchoesInterfaceAudioSubsystem::RaiseTerminalAlert(
+    EEchoesAlertCue Alert,
+    double Seconds)
+{
+    if (!FMath::IsFinite(Seconds))
+    {
+        return false;
+    }
+    // The dedicated window. Deliberately NOT LastAlertSeconds[Alert]: FOG-002
+    // forbids rate limiting from suppressing the only warning of a terminal
+    // threat, and OUT-002 makes the loss of a final Command Core terminal. A
+    // Barracks lost two seconds earlier closes the shared StructureLost
+    // window; it must not close this one. The reverse also holds -- a terminal
+    // warning does not spend the shared window, so a following ordinary loss
+    // still reports normally.
+    if (Seconds < LastTerminalSeconds ||
+        Seconds - LastTerminalSeconds < GetTerminalAlertCooldownSeconds())
+    {
+        return false;
+    }
+    LastTerminalSeconds = Seconds;
+
+    // The sound channel is best-effort: muted interface audio, muted master,
+    // or an unresolved cue asset silences it. None of those may cost the
+    // player the warning, so the record below is written either way and the
+    // HUD's text, shape, and minimap-pulse channels read it.
+    bool bAudiblePlayed = false;
+    UWorld* World = GetWorld();
+    USoundBase* Sound = ResolveAlertCue(Alert);
+    if (World != nullptr && Sound != nullptr && IsInterfaceAudible())
+    {
+        UGameplayStatics::PlaySound2D(World, Sound);
+        ++AlertPlayCount;
+        bAudiblePlayed = true;
+    }
+
+    LastTerminalAlert.Alert = Alert;
+    LastTerminalAlert.RaisedSeconds = Seconds;
+    LastTerminalAlert.bAudiblePlayed = bAudiblePlayed;
+    LastTerminalAlert.bAcknowledged = false;
+    bHasTerminalAlert = true;
+
+    // Warning level, not Verbose: a terminal warning that reached no channel
+    // the player could perceive still has to be recoverable from a log.
+    UE_LOG(
+        LogEchoes,
+        Warning,
+        TEXT("[ECHOES_TERMINAL_ALERT] alert=%d audible=%s cueResolved=%s sharedClassWindowBypassed=true visualChannelsPending=text,shape,minimapPulse"),
+        static_cast<int32>(Alert),
+        bAudiblePlayed ? TEXT("true") : TEXT("false"),
+        Sound != nullptr ? TEXT("true") : TEXT("false"));
+    return true;
+}
+
+bool UEchoesInterfaceAudioSubsystem::PlayTerminalAlert(EEchoesAlertCue Alert)
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return false;
+    }
+    return RaiseTerminalAlert(Alert, World->GetRealTimeSeconds());
+}
+
+bool UEchoesInterfaceAudioSubsystem::HasTerminalAlert() const
+{
+    return bHasTerminalAlert;
+}
+
+const FEchoesTerminalAlert&
+UEchoesInterfaceAudioSubsystem::GetLastTerminalAlert() const
+{
+    return LastTerminalAlert;
+}
+
+bool UEchoesInterfaceAudioSubsystem::IsTerminalAlertActive(
+    double NowSeconds) const
+{
+    if (!bHasTerminalAlert || LastTerminalAlert.bAcknowledged ||
+        !FMath::IsFinite(NowSeconds))
+    {
+        return false;
+    }
+    const double Elapsed = NowSeconds - LastTerminalAlert.RaisedSeconds;
+    // A negative elapsed time means the clock was rebased under us (new world,
+    // restored save). Keep drawing rather than silently dropping the warning.
+    return Elapsed < 0.0 ||
+        Elapsed <= static_cast<double>(GetTerminalAlertDisplaySeconds());
+}
+
+void UEchoesInterfaceAudioSubsystem::AcknowledgeTerminalAlert()
+{
+    LastTerminalAlert.bAcknowledged = true;
+}
+
 bool UEchoesInterfaceAudioSubsystem::HasAllAuthoredCues() const
 {
     return GetLoadedCueCount() ==
@@ -279,7 +374,17 @@ void UEchoesInterfaceAudioSubsystem::ResetRateLimitsForTest()
     {
         Last = -1000.0;
     }
+    LastTerminalSeconds = -1000.0;
+    LastTerminalAlert = FEchoesTerminalAlert();
+    bHasTerminalAlert = false;
     InterfacePlayCount = 0;
     AlertPlayCount = 0;
+}
+
+bool UEchoesInterfaceAudioSubsystem::RaiseTerminalAlertForTest(
+    EEchoesAlertCue Alert,
+    double Seconds)
+{
+    return RaiseTerminalAlert(Alert, Seconds);
 }
 #endif

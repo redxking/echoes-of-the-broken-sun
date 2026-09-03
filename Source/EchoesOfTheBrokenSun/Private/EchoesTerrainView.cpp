@@ -79,11 +79,58 @@ FTransform AEchoesTerrainView::HiddenTransform()
         FVector::ZeroVector);
 }
 
+uint8 AEchoesTerrainView::EncodeTileState(
+    echoes::sim::Terrain Terrain,
+    echoes::sim::Visibility Visibility)
+{
+    return static_cast<uint8>(
+        static_cast<uint8>(Terrain) |
+        static_cast<uint8>(static_cast<uint8>(Visibility) << 2));
+}
+
+void AEchoesTerrainView::ApplyTileState(
+    int32 TileIndex,
+    int32 TileX,
+    int32 TileY,
+    echoes::sim::Terrain Terrain,
+    echoes::sim::Visibility Visibility)
+{
+    // The information-state table allows no terrain detail on an unexplored
+    // tile, so neither layer may raise a silhouette there. Explored tiles keep
+    // their remembered terrain, which the table explicitly permits.
+    const bool bKnown = Visibility != echoes::sim::Visibility::Unexplored;
+    const FTransform Hidden = HiddenTransform();
+    BlockedTiles->UpdateInstanceTransform(
+        TileIndex,
+        bKnown && Terrain == echoes::sim::Terrain::Blocked
+            ? TileTransform(TileX, TileY, Terrain)
+            : Hidden,
+        false,
+        false,
+        true);
+    ScarredTiles->UpdateInstanceTransform(
+        TileIndex,
+        bKnown && Terrain == echoes::sim::Terrain::Scarred
+            ? TileTransform(TileX, TileY, Terrain)
+            : Hidden,
+        false,
+        false,
+        true);
+}
+
 bool AEchoesTerrainView::InitializeTerrain(
     const echoes::sim::Simulation& Simulation,
     float TileWorldSize,
-    EEchoesSkirmishMapPreset MapPreset)
+    EEchoesSkirmishMapPreset MapPreset,
+    std::optional<echoes::sim::PlayerId> ScopedPlayer)
 {
+    // A named player must exist, otherwise the caller believes it is scoping
+    // the view when it is not.
+    if (ScopedPlayer.has_value() &&
+        Simulation.FindPlayer(*ScopedPlayer) == nullptr)
+    {
+        return false;
+    }
     if (!InitializeScopedTerrain(
             Simulation.Config().mapWidthTiles,
             Simulation.Config().mapHeightTiles,
@@ -92,6 +139,7 @@ bool AEchoesTerrainView::InitializeTerrain(
     {
         return false;
     }
+    ScopedPlayerId = ScopedPlayer;
     return SyncTerrain(Simulation);
 }
 
@@ -118,6 +166,14 @@ bool AEchoesTerrainView::InitializeScopedTerrain(
     MapWidthTiles = InMapWidthTiles;
     MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
+    // The scoped-network path carries the player's information state in the
+    // tile payload itself, so a rebuild starts unscoped and InitializeTerrain
+    // re-applies a player only when its caller supplied one.
+    ScopedPlayerId.reset();
+    BlockedTileCount = 0;
+    ScarredTileCount = 0;
+    InstancedBlockedTileCount = 0;
+    InstancedScarredTileCount = 0;
     const int32 TileCount = MapWidthTiles * MapHeightTiles;
     CachedTerrain.Init(255, TileCount);
     BlockedTiles->SetStaticMesh(BlockedMesh);
@@ -225,41 +281,40 @@ bool AEchoesTerrainView::SyncScopedTerrain(
     }
     BlockedTileCount = 0;
     ScarredTileCount = 0;
+    InstancedBlockedTileCount = 0;
+    InstancedScarredTileCount = 0;
     bool bChanged = false;
-    const FTransform Hidden = HiddenTransform();
     for (int32 TileY = 0; TileY < MapHeightTiles; ++TileY)
     {
         for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
         {
             const int32 TileIndex = TileY * MapWidthTiles + TileX;
-            const echoes::sim::Terrain Terrain =
-                Tiles[static_cast<std::size_t>(TileIndex)].terrain;
+            const echoes::sim::net::ScopedTileState& Tile =
+                Tiles[static_cast<std::size_t>(TileIndex)];
+            const echoes::sim::Terrain Terrain = Tile.terrain;
+            // The scoped protocol forces an unexplored tile to the Blocked
+            // sentinel, so its terrain field is an absence of information and
+            // not a cliff. Drawing it would invent terrain the player has never
+            // scouted, which is why the gate below is on visibility, never on
+            // the terrain value.
+            const echoes::sim::Visibility Visibility = Tile.visibility;
+            const bool bKnown =
+                Visibility != echoes::sim::Visibility::Unexplored;
             BlockedTileCount +=
                 Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
             ScarredTileCount +=
                 Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
-            const uint8 Encoded = static_cast<uint8>(Terrain);
+            InstancedBlockedTileCount +=
+                bKnown && Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
+            InstancedScarredTileCount +=
+                bKnown && Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
+            const uint8 Encoded = EncodeTileState(Terrain, Visibility);
             if (CachedTerrain[TileIndex] == Encoded)
             {
                 continue;
             }
             CachedTerrain[TileIndex] = Encoded;
-            BlockedTiles->UpdateInstanceTransform(
-                TileIndex,
-                Terrain == echoes::sim::Terrain::Blocked
-                    ? TileTransform(TileX, TileY, Terrain)
-                    : Hidden,
-                false,
-                false,
-                true);
-            ScarredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Terrain == echoes::sim::Terrain::Scarred
-                    ? TileTransform(TileX, TileY, Terrain)
-                    : Hidden,
-                false,
-                false,
-                true);
+            ApplyTileState(TileIndex, TileX, TileY, Terrain, Visibility);
             bChanged = true;
         }
     }
@@ -286,8 +341,9 @@ bool AEchoesTerrainView::SyncTerrain(
 
     BlockedTileCount = 0;
     ScarredTileCount = 0;
+    InstancedBlockedTileCount = 0;
+    InstancedScarredTileCount = 0;
     bool bChanged = false;
-    const FTransform Hidden = HiddenTransform();
     for (int32 TileY = 0; TileY < MapHeightTiles; ++TileY)
     {
         for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
@@ -295,30 +351,31 @@ bool AEchoesTerrainView::SyncTerrain(
             const int32 TileIndex = TileY * MapWidthTiles + TileX;
             const echoes::sim::Terrain Terrain =
                 Simulation.TerrainAt(TileX, TileY);
+            // Reading the simulation is only legal here because nothing is
+            // drawn from it until the player's own information state allows it.
+            // Without a scoped player the caller has claimed full disclosure,
+            // which is the legacy behaviour this overload preserves.
+            const echoes::sim::Visibility Visibility =
+                ScopedPlayerId.has_value()
+                    ? Simulation.VisibilityAt(
+                          *ScopedPlayerId,
+                          echoes::sim::Vec2::FromTiles(TileX, TileY))
+                    : echoes::sim::Visibility::Visible;
+            const bool bKnown =
+                Visibility != echoes::sim::Visibility::Unexplored;
             BlockedTileCount += Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
             ScarredTileCount += Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
-            const uint8 Encoded = static_cast<uint8>(Terrain);
+            InstancedBlockedTileCount +=
+                bKnown && Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
+            InstancedScarredTileCount +=
+                bKnown && Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
+            const uint8 Encoded = EncodeTileState(Terrain, Visibility);
             if (CachedTerrain[TileIndex] == Encoded)
             {
                 continue;
             }
             CachedTerrain[TileIndex] = Encoded;
-            BlockedTiles->UpdateInstanceTransform(
-                TileIndex,
-                Terrain == echoes::sim::Terrain::Blocked
-                    ? TileTransform(TileX, TileY, Terrain)
-                    : Hidden,
-                false,
-                false,
-                true);
-            ScarredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Terrain == echoes::sim::Terrain::Scarred
-                    ? TileTransform(TileX, TileY, Terrain)
-                    : Hidden,
-                false,
-                false,
-                true);
+            ApplyTileState(TileIndex, TileX, TileY, Terrain, Visibility);
             bChanged = true;
         }
     }

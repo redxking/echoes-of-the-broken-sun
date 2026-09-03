@@ -996,6 +996,195 @@ void TestDeterministicObstaclePathing() {
     REQUIRE(invalidation.FindEntity(rerouted)->order.type == OrderType::None);
 }
 
+// MOV-002 / SIM-003: a move the ordering player's own map proves impossible is
+// refused with a stable reason code and plain-language recovery, instead of
+// being receipted as Applied and then deadlocking in MoveTowards forever.
+void TestMovementOrderRejectionReasons() {
+    REQUIRE(std::string(CommandRejectionReasonCode(
+                CommandResolutionOutcome::NoPath)) == "NO PATH");
+    REQUIRE(std::string(CommandRejectionReasonCode(
+                CommandResolutionOutcome::RouteBlocked)) == "ROUTE BLOCKED");
+    REQUIRE(std::string(CommandRejectionReasonCode(
+                CommandResolutionOutcome::DestinationOccupied)) ==
+            "DESTINATION OCCUPIED");
+    REQUIRE(std::string(CommandRejectionReasonCode(
+                CommandResolutionOutcome::Applied)).empty());
+    REQUIRE(std::string(CommandRejectionReasonCode(
+                CommandResolutionOutcome::NoEffect)).empty());
+    for (const CommandResolutionOutcome rejection :
+         {CommandResolutionOutcome::NoPath,
+          CommandResolutionOutcome::RouteBlocked,
+          CommandResolutionOutcome::DestinationOccupied,
+          CommandResolutionOutcome::InvalidPosition}) {
+        REQUIRE(!std::string(CommandRejectionRecovery(rejection)).empty());
+    }
+    REQUIRE(std::string(CommandRejectionRecovery(
+                CommandResolutionOutcome::Applied)).empty());
+
+    // A wall the scout can see splits the map. The far side is unreachable and
+    // stays unreachable, so the order is refused rather than accepted.
+    Simulation severed({9, 9, 20, 0x4d4f5645524a4354ULL});
+    REQUIRE(severed.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    for (std::int32_t tileY = 0; tileY < 9; ++tileY) {
+        REQUIRE(severed.SetTerrainTile(4, tileY, Terrain::Blocked));
+    }
+    const EntityId scout = severed.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(1, 4));
+    REQUIRE(scout != 0);
+
+    Simulation severedCopy = severed;
+    Command crossWall = MakeCommand(0, 0, 1, CommandType::Move, scout);
+    crossWall.position = Vec2::FromTiles(7, 4);
+    REQUIRE(severed.QueueCommand(crossWall));
+    REQUIRE(severedCopy.QueueCommand(crossWall));
+    severed.Step();
+    severedCopy.Step();
+
+    const std::optional<CommandResolutionReceipt> noPath =
+        severed.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(noPath.has_value());
+    REQUIRE(noPath->commandType == CommandType::Move);
+    REQUIRE(noPath->outcome == CommandResolutionOutcome::NoPath);
+    // The refused order is not installed, so the unit is idle and re-orderable
+    // rather than frozen on an order that can never complete.
+    REQUIRE(severed.FindEntity(scout)->order.type == OrderType::None);
+    REQUIRE(severed.FindEntity(scout)->position == Vec2::FromTiles(1, 4));
+    severed.Step(60);
+    REQUIRE(severed.FindEntity(scout)->order.type == OrderType::None);
+    severedCopy.Step(60);
+    REQUIRE(severed.StateChecksum() == severedCopy.StateChecksum());
+
+    // The wall tile itself cannot be stood on.
+    REQUIRE(severed.ValidateMoveOrder(0, scout, Vec2::FromTiles(4, 4)) ==
+            CommandResolutionOutcome::DestinationOccupied);
+    Command ontoWall = MakeCommand(
+        severed.CurrentTick(), 0, 2, CommandType::Move, scout);
+    ontoWall.position = Vec2::FromTiles(4, 4);
+    REQUIRE(severed.QueueCommand(ontoWall));
+    severed.Step();
+    const std::optional<CommandResolutionReceipt> occupied =
+        severed.FindCommandResolutionReceipt(0, 2);
+    REQUIRE(occupied.has_value());
+    REQUIRE(occupied->outcome ==
+            CommandResolutionOutcome::DestinationOccupied);
+    REQUIRE(severed.FindEntity(scout)->order.type == OrderType::None);
+
+    // Reachable ground on the unit's own side is still admitted.
+    REQUIRE(severed.ValidateMoveOrder(0, scout, Vec2::FromTiles(3, 7)) ==
+            CommandResolutionOutcome::Applied);
+    // Structural refusals that predate reason codes keep reporting NoEffect.
+    REQUIRE(severed.ValidateMoveOrder(0, scout, Vec2::FromTiles(50, 50)) ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(severed.ValidateMoveOrder(0, 4242, Vec2::FromTiles(3, 7)) ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(severed.ValidateMoveOrder(1, scout, Vec2::FromTiles(3, 7)) ==
+            CommandResolutionOutcome::NoEffect);
+
+    // A rejection receipt survives persistence, and the load path refuses a
+    // forged movement reason attached to a non-movement command.
+    const std::vector<std::uint8_t> rejectionSnapshot = severed.SaveSnapshot();
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(rejectionSnapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->FindCommandResolutionReceipt(0, 2) == occupied);
+
+    constexpr std::size_t kSerializedReceiptBytes = 19;
+    constexpr std::size_t kReceiptCommandTypeOffset = 9;
+    const std::size_t lastReceiptOffset =
+        rejectionSnapshot.size() - 8U - kSerializedReceiptBytes;
+    REQUIRE(rejectionSnapshot[lastReceiptOffset + kReceiptCommandTypeOffset] ==
+            static_cast<std::uint8_t>(CommandType::Move));
+    std::vector<std::uint8_t> forgedPairing = rejectionSnapshot;
+    forgedPairing[lastReceiptOffset + kReceiptCommandTypeOffset] =
+        static_cast<std::uint8_t>(CommandType::Hold);
+    ResignSnapshot(forgedPairing);
+    REQUIRE(!Simulation::LoadSnapshot(forgedPairing, &error).has_value());
+    REQUIRE(error == "snapshot command resolution receipt is invalid");
+
+    // A unit sealed in by terrain it can see reports the obstruction beside it.
+    Simulation walledIn({9, 9, 20, 0x4d4f5645454e4331ULL});
+    REQUIRE(walledIn.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    REQUIRE(walledIn.SetTerrainTile(3, 4, Terrain::Blocked));
+    REQUIRE(walledIn.SetTerrainTile(5, 4, Terrain::Blocked));
+    REQUIRE(walledIn.SetTerrainTile(4, 3, Terrain::Blocked));
+    REQUIRE(walledIn.SetTerrainTile(4, 5, Terrain::Blocked));
+    const EntityId sealed = walledIn.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(4, 4));
+    REQUIRE(sealed != 0);
+    Command escape = MakeCommand(0, 0, 1, CommandType::Move, sealed);
+    escape.position = Vec2::FromTiles(7, 7);
+    REQUIRE(walledIn.QueueCommand(escape));
+    walledIn.Step();
+    const std::optional<CommandResolutionReceipt> routeBlocked =
+        walledIn.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(routeBlocked.has_value());
+    REQUIRE(routeBlocked->outcome == CommandResolutionOutcome::RouteBlocked);
+    REQUIRE(walledIn.FindEntity(sealed)->order.type == OrderType::None);
+
+    // Terrain the player has never observed must not reject the order, and
+    // must not be disclosed by one. The wall here is far outside scout vision.
+    Simulation unscouted({40, 40, 20, 0x4d4f5645554e4b4eULL});
+    REQUIRE(unscouted.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    for (std::int32_t tileY = 0; tileY < 40; ++tileY) {
+        REQUIRE(unscouted.SetTerrainTile(20, tileY, Terrain::Blocked));
+    }
+    const EntityId prober = unscouted.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier,
+        Vec2::FromTiles(2, 20));
+    REQUIRE(prober != 0);
+    REQUIRE(unscouted.VisibilityAt(0, Vec2::FromTiles(20, 20)) ==
+            Visibility::Unexplored);
+    Command intoTheDark = MakeCommand(0, 0, 1, CommandType::Move, prober);
+    intoTheDark.position = Vec2::FromTiles(35, 20);
+    REQUIRE(unscouted.QueueCommand(intoTheDark));
+    unscouted.Step();
+    const std::optional<CommandResolutionReceipt> admitted =
+        unscouted.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(admitted.has_value());
+    REQUIRE(admitted->outcome == CommandResolutionOutcome::Applied);
+    REQUIRE(unscouted.FindEntity(prober)->order.type == OrderType::Move);
+
+    // A blocker that can move away is transient and must never reject.
+    Simulation crowded({9, 9, 20, 0x4d4f56454f434350ULL});
+    REQUIRE(crowded.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    const EntityId mover = crowded.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(1, 1));
+    const EntityId standing = crowded.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(5, 5));
+    REQUIRE(mover != 0 && standing != 0);
+    Command ontoAlly = MakeCommand(0, 0, 1, CommandType::Move, mover);
+    ontoAlly.position = Vec2::FromTiles(5, 5);
+    REQUIRE(crowded.QueueCommand(ontoAlly));
+    crowded.Step();
+    const std::optional<CommandResolutionReceipt> allyOccupied =
+        crowded.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(allyOccupied.has_value());
+    REQUIRE(allyOccupied->outcome == CommandResolutionOutcome::Applied);
+    crowded.Step(200);
+    REQUIRE(crowded.FindEntity(mover)->position == Vec2::FromTiles(5, 5));
+    REQUIRE(crowded.FindEntity(mover)->order.type == OrderType::None);
+
+    // An ordinary move across open ground is unchanged.
+    Simulation open({9, 9, 20, 0x4d4f5645504c4149ULL});
+    REQUIRE(open.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    const EntityId walker = open.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(1, 4));
+    REQUIRE(walker != 0);
+    Command stroll = MakeCommand(0, 0, 1, CommandType::Move, walker);
+    stroll.position = Vec2::FromTiles(7, 4);
+    REQUIRE(open.QueueCommand(stroll));
+    open.Step(200);
+    const std::optional<CommandResolutionReceipt> strollReceipt =
+        open.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(strollReceipt.has_value());
+    REQUIRE(strollReceipt->outcome == CommandResolutionOutcome::Applied);
+    REQUIRE(open.FindEntity(walker)->position == Vec2::FromTiles(7, 4));
+    REQUIRE(open.FindEntity(walker)->order.type == OrderType::None);
+}
+
 void TestProductionPopulationAndVictory() {
     Simulation production({32, 32, 20, 0x51});
     AddTwoPlayers(production, {1000, 200}, {1000, 200});
@@ -4522,15 +4711,11 @@ void TestReshapeExpiryStopsWithoutTeleporting() {
     const Tick end = reshapedWell->reshapeUntilTick;
     REQUIRE(end > reshape.CurrentTick());
 
-    // Close every tile within two of the stranded soldier while the Reshape
-    // still holds its 3x3 open. When the Reshape lapses there is no safe
-    // ground within reach at all.
-    for (std::int32_t tileY = 3; tileY <= 9; ++tileY) {
-        for (std::int32_t tileX = 4; tileX <= 10; ++tileX) {
-            REQUIRE(reshape.SetTerrainTile(tileX, tileY, Terrain::Blocked));
-        }
-    }
-
+    // MOV-004 governs terrain that changes UNDER a route, so both orders are
+    // issued and accepted while the ground is still open. Closing the pocket
+    // first would instead exercise SIM-003 path validation, which refuses an
+    // unroutable destination at issue time and never creates the moving unit
+    // this requirement is about.
     Command strandedOrder = MakeCommand(
         reshape.CurrentTick(), 0, 2, CommandType::Move, stranded);
     strandedOrder.position = Vec2::FromTiles(18, 18);
@@ -4541,7 +4726,32 @@ void TestReshapeExpiryStopsWithoutTeleporting() {
     REQUIRE(reshape.QueueCommand(nudgedOrder));
     reshape.Step();
     REQUIRE(reshape.FindEntity(stranded)->order.type == OrderType::Move);
-    REQUIRE(reshape.FindEntity(stranded)->position == Vec2::FromTiles(7, 6));
+    REQUIRE(reshape.FindEntity(nudged)->order.type == OrderType::Move);
+
+    // Both units are under way and still inside the tiles they started on, so
+    // the pocket closed below still traps them exactly as it did before.
+    REQUIRE(reshape.FindEntity(stranded)->position.x.FloorToInt() == 7);
+    REQUIRE(reshape.FindEntity(stranded)->position.y.FloorToInt() == 6);
+
+    // Now close every tile within two of the stranded soldier while the
+    // Reshape still holds its 3x3 open. When the Reshape lapses there is no
+    // safe ground within reach at all.
+    for (std::int32_t tileY = 3; tileY <= 9; ++tileY) {
+        for (std::int32_t tileX = 4; tileX <= 10; ++tileX) {
+            REQUIRE(reshape.SetTerrainTile(tileX, tileY, Terrain::Blocked));
+        }
+    }
+
+    // One tick for the recalculation MOV-004 requires at the next tick.
+    reshape.Step();
+    const Entity* strandedStopped = reshape.FindEntity(stranded);
+    REQUIRE(strandedStopped != nullptr);
+    REQUIRE(strandedStopped->order.type == OrderType::Move);
+    REQUIRE(reshape.IsPositionPassable(strandedStopped->position));
+    const Vec2 lastSafe = strandedStopped->position;
+    // Last safe position, not an arbitrary one: it never left its start tile.
+    REQUIRE(lastSafe.x.FloorToInt() == 7);
+    REQUIRE(lastSafe.y.FloorToInt() == 6);
 
     reshape.Step(end - reshape.CurrentTick());
     REQUIRE(reshape.FindEntity(well)->reshapeUntilTick == 0);
@@ -4551,7 +4761,7 @@ void TestReshapeExpiryStopsWithoutTeleporting() {
     // pocket; MOV-004 grants no displacement of unbounded distance.
     const Entity* strandedAfter = reshape.FindEntity(stranded);
     REQUIRE(strandedAfter != nullptr);
-    REQUIRE(strandedAfter->position == Vec2::FromTiles(7, 6));
+    REQUIRE(strandedAfter->position == lastSafe);
     REQUIRE(reshape.IsPositionPassable(strandedAfter->position));
     // The order survives the ground closing under it.
     REQUIRE(strandedAfter->order.type == OrderType::Move);
@@ -4634,6 +4844,8 @@ int main() {
         {"patrol reverses persists and bounds engagements",
          TestPatrolReversesPersistsAndBoundsEngagements},
         {"deterministic obstacle pathing", TestDeterministicObstaclePathing},
+        {"movement order rejection reasons",
+         TestMovementOrderRejectionReasons},
         {"production population and victory", TestProductionPopulationAndVictory},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"four-player visibility snapshot and outcome",

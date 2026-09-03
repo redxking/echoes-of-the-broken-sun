@@ -198,7 +198,30 @@ enum class CommandResolutionOutcome : std::uint8_t {
     Applied = 0,
     NoEffect = 1,
     InvalidPosition = 2,
+    // MOV-002 movement rejection vocabulary. Every one of these is derived
+    // only from the ordering player's own known passability, so a rejection
+    // receipt can never disclose terrain that player has not observed
+    // (FOG-001). Unobserved ground is treated as open, which keeps an order
+    // the player cannot yet disprove admissible.
+    NoPath = 3,
+    RouteBlocked = 4,
+    DestinationOccupied = 5,
 };
+
+/**
+ * SIM-003 stable reason code for a rejected command, or an empty string when
+ * the outcome is not a rejection. The returned pointer is a literal with
+ * static storage duration.
+ */
+[[nodiscard]] ECHOESSIMCORE_API const char* CommandRejectionReasonCode(
+    CommandResolutionOutcome outcome);
+
+/**
+ * SIM-003 plain-language recovery for a rejected command, or an empty string
+ * when the outcome is not a rejection.
+ */
+[[nodiscard]] ECHOESSIMCORE_API const char* CommandRejectionRecovery(
+    CommandResolutionOutcome outcome);
 
 enum class ChoirIdentityState : std::uint8_t {
     NotChoir = 0,
@@ -785,6 +808,24 @@ public:
         PlayerId player,
         EntityId actor,
         Vec2 position) const;
+    /**
+     * MOV-002 / SIM-003 movement admission. Returns Applied when the order is
+     * admissible, NoPath / RouteBlocked / DestinationOccupied when the
+     * ordering player's own map already proves it cannot be carried out, and
+     * NoEffect for the structural refusals that predate reason codes
+     * (missing or foreign actor, immobile actor, rooted Waystone,
+     * off-map destination).
+     *
+     * Reachability is judged against player-known passability only, so terrain
+     * the player has not observed is assumed open. A blockage that can lift —
+     * an unscouted wall, another unit standing in the way, a Reshape that has
+     * not been cast yet — therefore never rejects the order; those are left to
+     * MOV-004 route recalculation.
+     */
+    [[nodiscard]] CommandResolutionOutcome ValidateMoveOrder(
+        PlayerId player,
+        EntityId actor,
+        Vec2 destination) const;
     [[nodiscard]] ChoirReconciliationResult ValidateChoirReconciliation(
         PlayerId player,
         EntityId actor,
@@ -886,6 +927,18 @@ private:
         const Entity& producer) const;
     [[nodiscard]] bool IsReshapedOpen(std::int32_t tileX,
                                       std::int32_t tileY) const;
+    // Passability as the ordering player's own map records it. Unexplored
+    // ground reads as open so movement admission never rejects on, nor
+    // discloses, terrain that player has not observed.
+    [[nodiscard]] bool IsTileKnownPassableTo(PlayerId player,
+                                             std::int32_t tileX,
+                                             std::int32_t tileY) const;
+    [[nodiscard]] bool IsTileReachableInPlayerKnowledge(
+        PlayerId player,
+        std::int32_t startTileX,
+        std::int32_t startTileY,
+        std::int32_t goalTileX,
+        std::int32_t goalTileY) const;
     [[nodiscard]] bool InInteractionRange(const Entity& first,
                                           const Entity& second,
                                           std::int32_t extraRangeRaw) const;
