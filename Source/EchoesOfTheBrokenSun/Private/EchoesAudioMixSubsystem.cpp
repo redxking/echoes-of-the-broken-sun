@@ -27,11 +27,13 @@ constexpr TCHAR MasterSubmixName[] = TEXT("EchoesMasterSubmix");
             return TEXT("EchoesEffectsSubmix");
     }
 }
-}
+} // namespace
 
 void UEchoesAudioMixSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    CurrentDuckingGain = 1.0f;
+    bDialogueDuckingActive = false;
     BuildGraph();
     ApplyPlayerVolumes();
 
@@ -131,7 +133,7 @@ void UEchoesAudioMixSubsystem::ApplyPlayerVolumes()
 
 void UEchoesAudioMixSubsystem::ApplyVolumes(
     const FEchoesAudioMixVolumes& Volumes,
-    bool bReducedDynamicRange)
+    const bool bReducedDynamicRange)
 {
     AppliedVolumes = Volumes;
     bAppliedReducedDynamicRange = bReducedDynamicRange;
@@ -147,20 +149,26 @@ void UEchoesAudioMixSubsystem::ApplyVolumes(
             Volumes,
             Category,
             bReducedDynamicRange);
-        AppliedGains[Index] = Gain;
+        BaseAppliedGains[Index] = Gain;
+
+        const float DuckMultiplier =
+            EchoesAudioMix::IsCategoryDuckedByDialogue(Category)
+                ? CurrentDuckingGain
+                : 1.0f;
+        AppliedGains[Index] = Gain * DuckMultiplier;
 
         USoundSubmix* Submix = CategorySubmixes.IsValidIndex(Index)
             ? CategorySubmixes[Index].Get()
             : nullptr;
         if (Submix != nullptr && bHasAudioDevice)
         {
-            Submix->SetSubmixOutputVolume(World, Gain);
+            Submix->SetSubmixOutputVolume(World, AppliedGains[Index]);
         }
     }
 }
 
 float UEchoesAudioMixSubsystem::GetAppliedCategoryGain(
-    EEchoesAudioCategory Category) const
+    const EEchoesAudioCategory Category) const
 {
     const int32 Index = EchoesAudioMix::CategoryIndex(Category);
     if (Index < 0 || Index >= EchoesAudioCategoryCount)
@@ -171,7 +179,7 @@ float UEchoesAudioMixSubsystem::GetAppliedCategoryGain(
 }
 
 USoundSubmix* UEchoesAudioMixSubsystem::GetCategorySubmix(
-    EEchoesAudioCategory Category) const
+    const EEchoesAudioCategory Category) const
 {
     const int32 Index = EchoesAudioMix::CategoryIndex(Category);
     return CategorySubmixes.IsValidIndex(Index)
@@ -227,4 +235,71 @@ float UEchoesAudioMixSubsystem::GetAppliedGainSpread() const
         Highest = FMath::Max(Highest, AppliedGains[Index]);
     }
     return Highest - Lowest;
+}
+
+void UEchoesAudioMixSubsystem::SetDialogueDuckingActive(const bool bActive)
+{
+    bDialogueDuckingActive = bActive;
+}
+
+void UEchoesAudioMixSubsystem::AdvanceDucking(const float DeltaSeconds)
+{
+    const float TargetGain = bDialogueDuckingActive
+        ? EchoesAudioMix::DialogueDuckingGainMultiplier
+        : 1.0f;
+
+    if (FMath::IsNearlyEqual(CurrentDuckingGain, TargetGain, 0.0001f))
+    {
+        CurrentDuckingGain = TargetGain;
+        RefreshSubmixVolumes();
+        return;
+    }
+
+    if (CurrentDuckingGain > TargetGain)
+    {
+        // Attack phase (gain dropping toward -9 dB target)
+        const float Rate = (1.0f - EchoesAudioMix::DialogueDuckingGainMultiplier) /
+            EchoesAudioMix::DialogueDuckingAttackSeconds;
+        CurrentDuckingGain = FMath::Max(TargetGain, CurrentDuckingGain - Rate * DeltaSeconds);
+    }
+    else
+    {
+        // Release phase (gain rising toward unity 1.0)
+        const float Rate = (1.0f - EchoesAudioMix::DialogueDuckingGainMultiplier) /
+            EchoesAudioMix::DialogueDuckingReleaseSeconds;
+        CurrentDuckingGain = FMath::Min(TargetGain, CurrentDuckingGain + Rate * DeltaSeconds);
+    }
+
+    RefreshSubmixVolumes();
+}
+
+void UEchoesAudioMixSubsystem::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    AdvanceDucking(DeltaTime);
+}
+
+void UEchoesAudioMixSubsystem::RefreshSubmixVolumes()
+{
+    UWorld* World = GetWorld();
+    const bool bHasAudioDevice =
+        World != nullptr && World->GetAudioDeviceRaw() != nullptr;
+
+    for (const EEchoesAudioCategory Category : EchoesAudioCategories)
+    {
+        const int32 Index = EchoesAudioMix::CategoryIndex(Category);
+        const float DuckMultiplier =
+            EchoesAudioMix::IsCategoryDuckedByDialogue(Category)
+                ? CurrentDuckingGain
+                : 1.0f;
+        AppliedGains[Index] = BaseAppliedGains[Index] * DuckMultiplier;
+
+        USoundSubmix* Submix = CategorySubmixes.IsValidIndex(Index)
+            ? CategorySubmixes[Index].Get()
+            : nullptr;
+        if (Submix != nullptr && bHasAudioDevice)
+        {
+            Submix->SetSubmixOutputVolume(World, AppliedGains[Index]);
+        }
+    }
 }

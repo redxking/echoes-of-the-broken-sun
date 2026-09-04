@@ -335,6 +335,74 @@ bool FEchoesAudioMixTest::RunTest(const FString& Parameters)
                          EEchoesAudioCategory::Effects),
                      0.5f));
 
+    // --- Dialogue sidechain ducking (-9 dB on Music/Ambience, 0 dB on Effects/Interface) ---
+    FEchoesAudioMixVolumes UnityVolumes;
+    UnityVolumes.Master = 1.0f;
+    UnityVolumes.Music = 1.0f;
+    UnityVolumes.Dialogue = 1.0f;
+    UnityVolumes.Interface = 1.0f;
+    UnityVolumes.Ambience = 1.0f;
+    UnityVolumes.Effects = 1.0f;
+    Mix->ApplyVolumes(UnityVolumes, false);
+
+    TestFalse(TEXT("Ducking inactive by default"), Mix->IsDialogueDuckingActive());
+    TestEqual(TEXT("Ducking gain is unity when inactive"), Mix->GetDialogueDuckingGain(), 1.0f);
+
+    // Activate ducking and advance through attack envelope (120ms)
+    Mix->SetDialogueDuckingActive(true);
+    TestTrue(TEXT("Ducking is active after set"), Mix->IsDialogueDuckingActive());
+    Mix->AdvanceDucking(0.150f); // Advance past attack time (120ms)
+
+    TestTrue(TEXT("Ducking gain reached -9 dB target multiplier"),
+             FMath::IsNearlyEqual(
+                 Mix->GetDialogueDuckingGain(),
+                 EchoesAudioMix::DialogueDuckingGainMultiplier,
+                 0.005f));
+
+    // Verify ducked categories (Music and Ambience)
+    TestTrue(TEXT("Music gain is ducked by -9 dB"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Music),
+                 EchoesAudioMix::DialogueDuckingGainMultiplier,
+                 0.005f));
+    TestTrue(TEXT("Ambience gain is ducked by -9 dB"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Ambience),
+                 EchoesAudioMix::DialogueDuckingGainMultiplier,
+                 0.005f));
+
+    // Verify protected categories (Effects and Interface) remain at 1.0 (zero ducking)
+    TestTrue(TEXT("Effects category is NEVER ducked (inviolable combat readability)"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Effects),
+                 1.0f,
+                 KINDA_SMALL_NUMBER));
+    TestTrue(TEXT("Interface category is NEVER ducked (inviolable UI feedback)"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Interface),
+                 1.0f,
+                 KINDA_SMALL_NUMBER));
+    TestTrue(TEXT("Dialogue itself is unducked"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Dialogue),
+                 1.0f,
+                 KINDA_SMALL_NUMBER));
+
+    // Release ducking and advance through release envelope (400ms)
+    Mix->SetDialogueDuckingActive(false);
+    Mix->AdvanceDucking(0.450f); // Advance past release time (400ms)
+    TestEqual(TEXT("Ducking gain returns to unity"), Mix->GetDialogueDuckingGain(), 1.0f);
+    TestTrue(TEXT("Music gain restored to unity"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Music),
+                 1.0f,
+                 KINDA_SMALL_NUMBER));
+    TestTrue(TEXT("Ambience gain restored to unity"),
+             FMath::IsNearlyEqual(
+                 Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Ambience),
+                 1.0f,
+                 KINDA_SMALL_NUMBER));
+
     Settings->SetMasterVolume(Restore.Master);
     Settings->SetMusicVolume(Restore.Music);
     Settings->SetDialogueVolume(Restore.Dialogue);

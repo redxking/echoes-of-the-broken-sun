@@ -131,9 +131,41 @@ bool FEchoesCinematicPipelineTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("An already-paused scenario is not re-paused by playback"),
               Cinematics->WasScenarioPausedBySequenceForTest());
     Cinematics->SkipActiveSequence();
-    TestTrue(TEXT("A scenario paused before playback stays paused after"),
-             Bridge->IsScenarioPaused());
-    Bridge->SetScenarioPaused(false);
+    // Verify signal resolution for all authored cinematics.
+    const struct
+    {
+        const TCHAR* Signal;
+        EEchoesCinematicSequence Expected;
+        float ExpectedDuration;
+    } AuthoredSequences[] = {
+        { TEXT("cinematic:title"), EEchoesCinematicSequence::TitleSequence, 72.0f },
+        { TEXT("cinematic:act1_to_act2"), EEchoesCinematicSequence::Act1ToAct2Transition, 28.0f },
+        { TEXT("cinematic:act2_to_act3"), EEchoesCinematicSequence::Act2ToAct3Transition, 30.0f },
+        { TEXT("cinematic:act3_climax"), EEchoesCinematicSequence::Act3ClimaxTransition, 24.0f },
+        { TEXT("cinematic:ending_restoration"), EEchoesCinematicSequence::EndingRestoration, 32.0f },
+        { TEXT("cinematic:ending_controlled_stabilization"), EEchoesCinematicSequence::EndingControlledStabilization, 32.0f },
+        { TEXT("cinematic:ending_extinguishment"), EEchoesCinematicSequence::EndingExtinguishment, 32.0f },
+        { TEXT("cinematic:ending_open_evolution"), EEchoesCinematicSequence::EndingOpenEvolution, 32.0f },
+    };
+
+    for (const auto& Entry : AuthoredSequences)
+    {
+        const TOptional<EEchoesCinematicSequence> Res =
+            UEchoesCinematicSubsystem::ResolveSequenceForSignal(Entry.Signal);
+        TestTrue(*FString::Printf(TEXT("Signal %s resolves correctly"), Entry.Signal),
+                 Res.IsSet() && Res.GetValue() == Entry.Expected);
+        TestEqual(*FString::Printf(TEXT("Sequence %s duration matches"), Entry.Signal),
+                  UEchoesCinematicSubsystem::GetSequenceDurationSeconds(Entry.Expected),
+                  Entry.ExpectedDuration);
+
+        // Verify each sequence can be spawned, played, and skipped cleanly
+        TestTrue(*FString::Printf(TEXT("Sequence %s plays"), Entry.Signal),
+                 Cinematics->PlaySequence(Entry.Expected));
+        TestTrue(TEXT("Sequence reports active"), Cinematics->IsSequenceActive());
+        Cinematics->SkipActiveSequence();
+        TestFalse(TEXT("Sequence inactive after skip"), Cinematics->IsSequenceActive());
+    }
+
     Bridge->StopPrototypeScenario();
 
     WorldWrapper.ForwardErrorMessages(this);

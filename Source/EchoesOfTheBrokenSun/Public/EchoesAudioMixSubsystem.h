@@ -14,22 +14,33 @@ class USoundSubmix;
  * children — music, dialogue, interface, ambience, and effects.
  *
  * The subsystem is the authority on the linear gain each category carries. It
- * resolves that gain from the player's own volume controls and the reduced
- * dynamic range setting, applies it to the category's submix, and retains the
- * applied value so a headless test can read exactly what the graph carries.
+ * resolves that gain from the player's own volume controls, reduced dynamic
+ * range, and dialogue sidechain ducking.
+ *
+ * Dialogue sidechain ducking: when dialogue is active, Music and Ambience are
+ * ducked by -9 dB with a 120ms attack and 400ms release curve. Effects and
+ * Interface submixes are strictly unducked (0 dB change) to preserve combat
+ * readability and tactical feedback.
  *
  * The graph is presentation only. It never feeds command validation,
  * simulation timing, visibility, saves, replays, or checksums.
  */
 UCLASS()
 class ECHOESOFTHEBROKENSUN_API UEchoesAudioMixSubsystem final
-    : public UWorldSubsystem
+    : public UTickableWorldSubsystem
 {
     GENERATED_BODY()
 
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
+    virtual void Tick(float DeltaTime) override;
+    virtual TStatId GetStatId() const override
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(
+            UEchoesAudioMixSubsystem, STATGROUP_Tickables);
+    }
+    virtual bool IsTickableInEditor() const override { return false; }
 
     /** Re-reads the player's settings and reapplies every category gain. */
     void ApplyPlayerVolumes();
@@ -74,8 +85,29 @@ public:
     /** Largest minus smallest applied gain across the five categories. */
     [[nodiscard]] float GetAppliedGainSpread() const;
 
+    // --- Dialogue sidechain ducking ---------------------------------------
+
+    /** Sets dialogue sidechain ducking active state. */
+    void SetDialogueDuckingActive(bool bActive);
+
+    /** True when dialogue sidechain ducking is requested. */
+    [[nodiscard]] bool IsDialogueDuckingActive() const
+    {
+        return bDialogueDuckingActive;
+    }
+
+    /** The current linear ducking multiplier on ducked categories. */
+    [[nodiscard]] float GetDialogueDuckingGain() const
+    {
+        return CurrentDuckingGain;
+    }
+
+    /** Advances ducking envelope directly (used by world tick and tests). */
+    void AdvanceDucking(float DeltaSeconds);
+
 private:
     void BuildGraph();
+    void RefreshSubmixVolumes();
 
     UPROPERTY(Transient)
     TObjectPtr<USoundSubmix> MasterSubmix;
@@ -86,6 +118,9 @@ private:
     UPROPERTY(Transient)
     FEchoesAudioMixVolumes AppliedVolumes;
 
+    float BaseAppliedGains[EchoesAudioCategoryCount] = {};
     float AppliedGains[EchoesAudioCategoryCount] = {};
+    float CurrentDuckingGain = 1.0f;
+    bool bDialogueDuckingActive = false;
     bool bAppliedReducedDynamicRange = false;
 };

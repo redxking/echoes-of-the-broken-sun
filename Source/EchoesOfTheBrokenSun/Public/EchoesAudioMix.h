@@ -99,4 +99,20 @@ inline constexpr float ReducedRangeRetainedSpread = 0.55f;
     const FEchoesAudioMixVolumes& Volumes,
     EEchoesAudioCategory Category,
     bool bReducedDynamicRange);
+
+/** Dialogue sidechain ducking parameters (-9 dB target attenuation). */
+inline constexpr float DialogueDuckingAttenuationDb = -9.0f;
+inline constexpr float DialogueDuckingGainMultiplier = 0.3548134f; // 10^(-9/20)
+inline constexpr float DialogueDuckingAttackSeconds = 0.120f;
+inline constexpr float DialogueDuckingHoldSeconds = 0.150f;
+inline constexpr float DialogueDuckingReleaseSeconds = 0.400f;
+
+/** Returns true if the given category is subject to dialogue bus ducking. */
+[[nodiscard]] inline constexpr bool IsCategoryDuckedByDialogue(
+    EEchoesAudioCategory Category)
+{
+    return Category == EEchoesAudioCategory::Music ||
+           Category == EEchoesAudioCategory::Ambience;
 }
+}
+

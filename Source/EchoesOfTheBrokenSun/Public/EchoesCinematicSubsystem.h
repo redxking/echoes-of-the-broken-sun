@@ -16,7 +16,31 @@ enum class EEchoesCinematicSequence : uint8
 {
     /** The D1 reference sequence: one measured, ground-referenced move over
      *  the battlefield origin, proving trigger, playback, skip, and return. */
-    Reference
+    Reference,
+
+    /** Title Sequence: The Fracture of Soryn (72s). */
+    TitleSequence,
+
+    /** Act I -> II Transition: Descent to the Unburied Road (28s). */
+    Act1ToAct2Transition,
+
+    /** Act II -> III Transition: The Crownfall Rift (30s). */
+    Act2ToAct3Transition,
+
+    /** Act III Climax Transition: The Solar-Fall Convergence (24s). */
+    Act3ClimaxTransition,
+
+    /** Ending A: Restoration - Reconstituting the central power grid (32s). */
+    EndingRestoration,
+
+    /** Ending B: Controlled Stabilization - Assembly quotas and balanced flow (32s). */
+    EndingControlledStabilization,
+
+    /** Ending C: Extinguishment - Draining the solar core into cold silence (32s). */
+    EndingExtinguishment,
+
+    /** Ending D: Open Evolution - Releasing the choir harmonic frequency (32s). */
+    EndingOpenEvolution
 };
 
 /**
@@ -64,6 +88,10 @@ public:
 
     [[nodiscard]] bool IsSequenceActive() const { return bSequenceActive; }
 
+    /** Authoring duration query for any sequence. */
+    [[nodiscard]] static float GetSequenceDurationSeconds(
+        EEchoesCinematicSequence Sequence);
+
     /** Reference-sequence camera language constants. */
     [[nodiscard]] static constexpr float GetReferenceDurationSeconds()
     {
@@ -96,7 +124,25 @@ public:
 #endif
 
 private:
+    [[nodiscard]] ULevelSequence* BuildCustomSequence(
+        const TCHAR* SequenceName,
+        const TCHAR* CameraBindingName,
+        float DurationSeconds,
+        const FVector& StartLocation,
+        const FRotator& StartRotation,
+        const FVector& EndLocation,
+        const FRotator& EndRotation);
+
     [[nodiscard]] ULevelSequence* BuildReferenceSequence();
+    [[nodiscard]] ULevelSequence* BuildTitleSequence();
+    [[nodiscard]] ULevelSequence* BuildAct1ToAct2Sequence();
+    [[nodiscard]] ULevelSequence* BuildAct2ToAct3Sequence();
+    [[nodiscard]] ULevelSequence* BuildAct3ClimaxSequence();
+    [[nodiscard]] ULevelSequence* BuildEndingRestorationSequence();
+    [[nodiscard]] ULevelSequence* BuildEndingControlledStabilizationSequence();
+    [[nodiscard]] ULevelSequence* BuildEndingExtinguishmentSequence();
+    [[nodiscard]] ULevelSequence* BuildEndingOpenEvolutionSequence();
+
     void FinishActiveSequence(bool bSkipped);
 
     UPROPERTY(Transient)

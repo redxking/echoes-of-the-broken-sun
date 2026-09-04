@@ -46,12 +46,76 @@ void AddTravelKeys(FMovieSceneDoubleChannel* Channel,
 }
 } // namespace
 
+float UEchoesCinematicSubsystem::GetSequenceDurationSeconds(
+    const EEchoesCinematicSequence Sequence)
+{
+    switch (Sequence)
+    {
+        case EEchoesCinematicSequence::Reference:
+            return 8.0f;
+        case EEchoesCinematicSequence::TitleSequence:
+            return 72.0f;
+        case EEchoesCinematicSequence::Act1ToAct2Transition:
+            return 28.0f;
+        case EEchoesCinematicSequence::Act2ToAct3Transition:
+            return 30.0f;
+        case EEchoesCinematicSequence::Act3ClimaxTransition:
+            return 24.0f;
+        case EEchoesCinematicSequence::EndingRestoration:
+        case EEchoesCinematicSequence::EndingControlledStabilization:
+        case EEchoesCinematicSequence::EndingExtinguishment:
+        case EEchoesCinematicSequence::EndingOpenEvolution:
+            return 32.0f;
+        default:
+            return 8.0f;
+    }
+}
+
 TOptional<EEchoesCinematicSequence>
 UEchoesCinematicSubsystem::ResolveSequenceForSignal(const FString& Signal)
 {
     if (Signal == TEXT("cinematic:reference"))
     {
         return EEchoesCinematicSequence::Reference;
+    }
+    if (Signal == TEXT("cinematic:title") || Signal == TEXT("nar_frontdoor_title"))
+    {
+        return EEchoesCinematicSequence::TitleSequence;
+    }
+    if (Signal == TEXT("cinematic:act1_to_act2") ||
+        Signal == TEXT("nar_m05_evt_withdrawal_complete"))
+    {
+        return EEchoesCinematicSequence::Act1ToAct2Transition;
+    }
+    if (Signal == TEXT("cinematic:act2_to_act3") ||
+        Signal == TEXT("nar_m09_evt_power_cascade"))
+    {
+        return EEchoesCinematicSequence::Act2ToAct3Transition;
+    }
+    if (Signal == TEXT("cinematic:act3_climax") ||
+        Signal == TEXT("nar_m14_evt_sanctum_collapse"))
+    {
+        return EEchoesCinematicSequence::Act3ClimaxTransition;
+    }
+    if (Signal == TEXT("cinematic:ending_restoration") ||
+        Signal == TEXT("nar_m15_evt_restoration_committed"))
+    {
+        return EEchoesCinematicSequence::EndingRestoration;
+    }
+    if (Signal == TEXT("cinematic:ending_controlled_stabilization") ||
+        Signal == TEXT("nar_m15_evt_stabilization_committed"))
+    {
+        return EEchoesCinematicSequence::EndingControlledStabilization;
+    }
+    if (Signal == TEXT("cinematic:ending_extinguishment") ||
+        Signal == TEXT("nar_m15_evt_extinguishment_committed"))
+    {
+        return EEchoesCinematicSequence::EndingExtinguishment;
+    }
+    if (Signal == TEXT("cinematic:ending_open_evolution") ||
+        Signal == TEXT("nar_m15_evt_evolution_committed"))
+    {
+        return EEchoesCinematicSequence::EndingOpenEvolution;
     }
     return TOptional<EEchoesCinematicSequence>();
 }
@@ -84,8 +148,40 @@ bool UEchoesCinematicSubsystem::PlaySequence(
         return false;
     }
 
-    check(Sequence == EEchoesCinematicSequence::Reference);
-    ULevelSequence* Built = BuildReferenceSequence();
+    ULevelSequence* Built = nullptr;
+    switch (Sequence)
+    {
+        case EEchoesCinematicSequence::Reference:
+            Built = BuildReferenceSequence();
+            break;
+        case EEchoesCinematicSequence::TitleSequence:
+            Built = BuildTitleSequence();
+            break;
+        case EEchoesCinematicSequence::Act1ToAct2Transition:
+            Built = BuildAct1ToAct2Sequence();
+            break;
+        case EEchoesCinematicSequence::Act2ToAct3Transition:
+            Built = BuildAct2ToAct3Sequence();
+            break;
+        case EEchoesCinematicSequence::Act3ClimaxTransition:
+            Built = BuildAct3ClimaxSequence();
+            break;
+        case EEchoesCinematicSequence::EndingRestoration:
+            Built = BuildEndingRestorationSequence();
+            break;
+        case EEchoesCinematicSequence::EndingControlledStabilization:
+            Built = BuildEndingControlledStabilizationSequence();
+            break;
+        case EEchoesCinematicSequence::EndingExtinguishment:
+            Built = BuildEndingExtinguishmentSequence();
+            break;
+        case EEchoesCinematicSequence::EndingOpenEvolution:
+            Built = BuildEndingOpenEvolutionSequence();
+            break;
+        default:
+            return false;
+    }
+
     if (Built == nullptr)
     {
         return false;
@@ -192,7 +288,14 @@ void UEchoesCinematicSubsystem::FinishActiveSequence(const bool bSkipped)
     ++CompletedPlaybackCount;
 }
 
-ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
+ULevelSequence* UEchoesCinematicSubsystem::BuildCustomSequence(
+    const TCHAR* SequenceName,
+    const TCHAR* CameraBindingName,
+    const float DurationSeconds,
+    const FVector& StartLocation,
+    const FRotator& StartRotation,
+    const FVector& EndLocation,
+    const FRotator& EndRotation)
 {
     UWorld* World = GetWorld();
     if (World == nullptr)
@@ -200,14 +303,11 @@ ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
         return nullptr;
     }
 
-    // The camera the sequence possesses. Spawned collision-free and
-    // shadow-free per the presentation rules; destroyed on finish.
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     ACineCameraActor* Camera = World->SpawnActor<ACineCameraActor>(
-        FVector(ReferenceStartX, ReferenceStartY, GetReferenceCameraHeight()),
-        FRotator(ReferenceCameraPitch, 0.0f, 0.0f), SpawnParameters);
+        StartLocation, StartRotation, SpawnParameters);
     if (Camera == nullptr)
     {
         return nullptr;
@@ -215,21 +315,20 @@ ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
     Camera->SetActorEnableCollision(false);
 
     ULevelSequence* Sequence = NewObject<ULevelSequence>(
-        this, TEXT("EchoesReferenceSequence"), RF_Transient);
+        this, SequenceName, RF_Transient);
     Sequence->Initialize();
 
     UMovieScene* MovieScene = Sequence->GetMovieScene();
     MovieScene->SetDisplayRate(FFrameRate(CinematicFramesPerSecond, 1));
     const FFrameRate TickResolution = MovieScene->GetTickResolution();
     const FFrameNumber EndFrame =
-        (GetReferenceDurationSeconds() * TickResolution).CeilToFrame();
+        (DurationSeconds * TickResolution).CeilToFrame();
     MovieScene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), EndFrame));
 
     const FGuid CameraBinding = MovieScene->AddPossessable(
-        TEXT("EchoesReferenceCamera"), ACineCameraActor::StaticClass());
+        CameraBindingName, ACineCameraActor::StaticClass());
     Sequence->BindPossessableObject(CameraBinding, *Camera, World);
 
-    // One measured move: transform track with start/end keys per channel.
     UMovieScene3DTransformTrack* TransformTrack =
         MovieScene->AddTrack<UMovieScene3DTransformTrack>(CameraBinding);
     UMovieScene3DTransformSection* TransformSection =
@@ -243,16 +342,14 @@ ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
             .GetChannels<FMovieSceneDoubleChannel>();
     if (Channels.Num() >= 9)
     {
-        AddTravelKeys(Channels[0], EndFrame, ReferenceStartX, ReferenceEndX);
-        AddTravelKeys(Channels[1], EndFrame, ReferenceStartY, ReferenceEndY);
-        AddTravelKeys(Channels[2], EndFrame, GetReferenceCameraHeight(),
-                      GetReferenceCameraHeight());
-        AddTravelKeys(Channels[4], EndFrame, ReferenceCameraPitch,
-                      ReferenceCameraPitch);
+        AddTravelKeys(Channels[0], EndFrame, StartLocation.X, EndLocation.X);
+        AddTravelKeys(Channels[1], EndFrame, StartLocation.Y, EndLocation.Y);
+        AddTravelKeys(Channels[2], EndFrame, StartLocation.Z, EndLocation.Z);
+        AddTravelKeys(Channels[3], EndFrame, StartRotation.Roll, EndRotation.Roll);
+        AddTravelKeys(Channels[4], EndFrame, StartRotation.Pitch, EndRotation.Pitch);
+        AddTravelKeys(Channels[5], EndFrame, StartRotation.Yaw, EndRotation.Yaw);
     }
 
-    // The camera cut hands the view to the possessed camera for the full
-    // playback range.
     UMovieSceneCameraCutTrack* CutTrack = Cast<UMovieSceneCameraCutTrack>(
         MovieScene->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass()));
     CutTrack->AddNewCameraCut(
@@ -261,4 +358,112 @@ ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
 
     CameraActor = Camera;
     return Sequence;
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildReferenceSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesReferenceSequence"),
+        TEXT("EchoesReferenceCamera"),
+        GetReferenceDurationSeconds(),
+        FVector(ReferenceStartX, ReferenceStartY, GetReferenceCameraHeight()),
+        FRotator(ReferenceCameraPitch, 0.0f, 0.0f),
+        FVector(ReferenceEndX, ReferenceEndY, GetReferenceCameraHeight()),
+        FRotator(ReferenceCameraPitch, 0.0f, 0.0f));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildTitleSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesTitleSequence"),
+        TEXT("EchoesTitleCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::TitleSequence),
+        FVector(-3200.0, -2400.0, 1800.0),
+        FRotator(-28.0, 35.0, 0.0),
+        FVector(0.0, 0.0, 1200.0),
+        FRotator(-55.0, 0.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildAct1ToAct2Sequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesAct1ToAct2Sequence"),
+        TEXT("EchoesAct1ToAct2Camera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::Act1ToAct2Transition),
+        FVector(600.0, 1700.0, 1500.0),
+        FRotator(-42.0, -110.0, 0.0),
+        FVector(200.0, 400.0, 800.0),
+        FRotator(-30.0, -75.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildAct2ToAct3Sequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesAct2ToAct3Sequence"),
+        TEXT("EchoesAct2ToAct3Camera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::Act2ToAct3Transition),
+        FVector(0.0, -2200.0, 2200.0),
+        FRotator(-25.0, 90.0, 0.0),
+        FVector(0.0, 0.0, 1200.0),
+        FRotator(-52.0, 90.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildAct3ClimaxSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesAct3ClimaxSequence"),
+        TEXT("EchoesAct3ClimaxCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::Act3ClimaxTransition),
+        FVector(1400.0, 1400.0, 1600.0),
+        FRotator(-45.0, -135.0, 0.0),
+        FVector(0.0, 0.0, 950.0),
+        FRotator(-55.0, -135.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildEndingRestorationSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesEndingRestorationSequence"),
+        TEXT("EchoesEndingRestorationCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::EndingRestoration),
+        FVector(0.0, -1800.0, 850.0),
+        FRotator(-25.0, 90.0, 0.0),
+        FVector(0.0, 0.0, 1600.0),
+        FRotator(-60.0, 90.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildEndingControlledStabilizationSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesEndingControlledStabilizationSequence"),
+        TEXT("EchoesEndingControlledStabilizationCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::EndingControlledStabilization),
+        FVector(-1600.0, -1600.0, 900.0),
+        FRotator(-32.0, 45.0, 0.0),
+        FVector(0.0, 0.0, 1400.0),
+        FRotator(-48.0, 45.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildEndingExtinguishmentSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesEndingExtinguishmentSequence"),
+        TEXT("EchoesEndingExtinguishmentCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::EndingExtinguishment),
+        FVector(1200.0, -1200.0, 1000.0),
+        FRotator(-35.0, 135.0, 0.0),
+        FVector(0.0, 0.0, 1800.0),
+        FRotator(-70.0, 135.0, 0.0));
+}
+
+ULevelSequence* UEchoesCinematicSubsystem::BuildEndingOpenEvolutionSequence()
+{
+    return BuildCustomSequence(
+        TEXT("EchoesEndingOpenEvolutionSequence"),
+        TEXT("EchoesEndingOpenEvolutionCamera"),
+        GetSequenceDurationSeconds(EEchoesCinematicSequence::EndingOpenEvolution),
+        FVector(0.0, 1600.0, 750.0),
+        FRotator(-20.0, -90.0, 0.0),
+        FVector(0.0, 0.0, 1500.0),
+        FRotator(-42.0, -90.0, 0.0));
 }

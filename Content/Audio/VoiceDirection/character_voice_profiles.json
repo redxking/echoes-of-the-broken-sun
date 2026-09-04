@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "echoes://audio/character_voice_profiles",
+  "title": "Echoes Character Voice Direction and Line Casting Profiles",
+  "metadata": {
+    "author": "Angelis Pseftis",
+    "creator": "Angelis Pseftis",
+    "source_locale": "en-US",
+    "rights_status": "author_attributed_project_source",
+    "originality_review_status": "human_review_required",
+    "authority_path": "Docs/Archive/DevelopmentBible.md",
+    "content_status": "authored_source"
+  },
+  "submix_ducking_policy": {
+    "dialogue_trigger_bus": "Dialogue",
+    "ducked_categories": [
+      {
+        "category": "Music",
+        "attenuation_db": -9.0,
+        "attack_ms": 120,
+        "hold_ms": 150,
+        "release_ms": 400
+      },
+      {
+        "category": "Ambience",
+        "attenuation_db": -9.0,
+        "attack_ms": 120,
+        "hold_ms": 150,
+        "release_ms": 400
+      }
+    ],
+    "protected_categories": [
+      {
+        "category": "Effects",
+        "attenuation_db": 0.0,
+        "rationale": "Combat readability and unit damage telegraphs are inviolable"
+      },
+      {
+        "category": "Interface",
+        "attenuation_db": 0.0,
+        "rationale": "Player command feedback clicks and tactical alerts must never be obscured"
+      }
+    ]
+  },
+  "tts_engine_spec": {
+    "model_name": "Kokoro-82M",
+    "architecture": "StyleTTS2-based compact transformer",
+    "license": "Apache-2.0",
+    "output_sample_rate_hz": 48000,
+    "bit_depth": 24,
+    "integrated_target_lufs": -16.0,
+    "true_peak_dbfs": -1.0
+  },
+  "characters": [
+    {
+      "speaker_id": "spk_mara_vey",
+      "display_name": "Mara Vey",
+      "faction_id": "meridian_compact",
+      "role": "Meridian Logistics & Tactical Field Commander",
+      "canonical_persona": "Pragmatic, field-hardened engineer-commander. She views operations through logistics constraints, fuel consumption, and structural survival rather than imperial doctrine. Unsentimental, direct, and protective of personnel under her command.",
+      "vocal_direction": {
+        "pitch_hz": 210,
+        "pitch_description": "Medium-pitched female alto with firm chest resonance",
+        "cadence": "Clipped, concise, operational. Emphasizes nouns and technical coordinates. Pauses between directives are brief and functional.",
+        "tempo_rate": 1.04,
+        "emotional_register": "Controlled urgency; never hysterical or panicked even under direct fire",
+        "prohibited_tones": [
+          "Melodramatic villainy",
+          "Grandstanding oratorical delivery",
+          "Weak or trembling distress"
+        ]
+      },
+      "acoustic_filter_chain": {
+        "delivery_channel": "command_radio",
+        "high_pass_cutoff_hz": 240,
+        "low_pass_cutoff_hz": 6200,
+        "bandpass_q": 1.2,
+        "harmonic_distortion_percent": 1.5,
+        "subtle_comms_noise_floor_dbfs": -54.0,
+        "reverb_type": "none_direct_earpiece"
+      },
+      "tts_binding": {
+        "kokoro_voice_id": "af_bella",
+        "rate_adjustment": 1.04,
+        "pitch_shift_semitones": -0.5
+      }
+    },
+    {
+      "speaker_id": "spk_oruun",
+      "display_name": "Oruun-of-Seven-Stones",
+      "faction_id": "kharuun_assemblies",
+      "role": "Memory-Bearer of the Third Kharuun Assembly",
+      "canonical_persona": "Living archive of Kharuun oral history and geological memory. Speaks with the weight of generations who survived the shattering in the deep faults. Deliberate, immovable, treating terrain not as an obstacle but as a physical record.",
+      "vocal_direction": {
+        "pitch_hz": 95,
+        "pitch_description": "Deep, resonant baritone with rich sub-bass undertones",
+        "cadence": "Measured, slow, deliberate. Distinct rhythmic spacing between phrases as if carving words into stone.",
+        "tempo_rate": 0.88,
+        "emotional_register": "Stoic reverence and formidable resolve. Never raises voice in anger; quiet intensity carries authority.",
+        "prohibited_tones": [
+          "Fast-talking panic",
+          "Sarcastic modern quips",
+          "Aggressive barbarism"
+        ]
+      },
+      "acoustic_filter_chain": {
+        "delivery_channel": "assembly_transceiver",
+        "high_pass_cutoff_hz": 60,
+        "sub_harmonic_boost_db": 3.0,
+        "sub_harmonic_freq_hz": 85,
+        "reverb_type": "subterranean_stone_cavern",
+        "reverb_rt60_seconds": 0.45,
+        "reverb_wet_dry_mix": 0.18
+      },
+      "tts_binding": {
+        "kokoro_voice_id": "am_adam",
+        "rate_adjustment": 0.88,
+        "pitch_shift_semitones": -1.5
+      }
+    },
+    {
+      "speaker_id": "spk_talar_venn",
+      "display_name": "Talar Venn",
+      "faction_id": "meridian_compact",
+      "role": "Operations Ledger Master & Senior Registrar",
+      "canonical_persona": "The unyielding bureaucratic spine of Meridian governance. Believes that order, survival, and justice are synonymous with maintaining an accurate ledger. Speaks without malice or warmth, reciting causal consequences with mathematical detachment.",
+      "vocal_direction": {
+        "pitch_hz": 145,
+        "pitch_description": "Even, low-mid tenor with crisp dental enunciation",
+        "cadence": "Metronomic, precise, unhurried. Articulates numbers and catalog designations with exact phonetic clarity.",
+        "tempo_rate": 0.98,
+        "emotional_register": "Impartial analytical calm. Even when reading total casualty reports, emotion is suppressed behind protocol.",
+        "prohibited_tones": [
+          "Cruelty or sadistic glee",
+          "Sycophancy",
+          "Warm sentimentality"
+        ]
+      },
+      "acoustic_filter_chain": {
+        "delivery_channel": "operations_radio",
+        "high_pass_cutoff_hz": 180,
+        "low_pass_cutoff_hz": 7500,
+        "compression_ratio": 3.5,
+        "compression_threshold_dbfs": -20.0,
+        "reverb_type": "archive_vault_hard_surfaces",
+        "reverb_rt60_seconds": 0.25,
+        "reverb_wet_dry_mix": 0.12
+      },
+      "tts_binding": {
+        "kokoro_voice_id": "am_michael",
+        "rate_adjustment": 0.98,
+        "pitch_shift_semitones": 0.0
+      }
+    },
+    {
+      "speaker_id": "spk_chancellor_rhyse",
+      "display_name": "Chancellor Cael Rhyse",
+      "faction_id": "meridian_compact",
+      "role": "Supreme Chancellor of the Meridian Compact Core",
+      "canonical_persona": "The aristocratic architect of Meridian central authority. Eloquent, deeply educated in statecraft, and genuinely convinced that only rigorous centralized resource allocation prevents total planetary extinction. Charismatic and formidable.",
+      "vocal_direction": {
+        "pitch_hz": 120,
+        "pitch_description": "Smooth, cultured baritone with expansive vocal range",
+        "cadence": "Rhetorical, flowing, oratorical. Uses natural dramatic pauses and crescendos suited for public address.",
+        "tempo_rate": 0.92,
+        "emotional_register": "Supreme civic confidence and paternal authority. Never sounds petty or defensive.",
+        "prohibited_tones": [
+          "Sniveling weakness",
+          "Cartoon tyrant shouting",
+          "Slang or informal banter"
+        ]
+      },
+      "acoustic_filter_chain": {
+        "delivery_channel": "high_council_broadcast",
+        "high_pass_cutoff_hz": 100,
+        "low_pass_cutoff_hz": 12000,
+        "warmth_eq_boost_db": 2.5,
+        "warmth_eq_freq_hz": 220,
+        "reverb_type": "council_chamber_plate",
+        "reverb_rt60_seconds": 0.60,
+        "reverb_wet_dry_mix": 0.15
+      },
+      "tts_binding": {
+        "kokoro_voice_id": "am_george",
+        "rate_adjustment": 0.92,
+        "pitch_shift_semitones": -0.8
+      }
+    },
+    {
+      "speaker_id": "spk_neme",
+      "display_name": "Neme",
+      "faction_id": "hollow_choir",
+      "role": "Resonant Interface & Chorus Focal Node",
+      "canonical_persona": "A singular consciousness composed of thousands of overlapping survivor echoes entangled in the Broken Sun's solar radiation. Speaks not with multiple distinct voices, but as a singular voice with harmonic reverberation and non-linear temporal phrasing.",
+      "vocal_direction": {
+        "pitch_hz": 260,
+        "pitch_description": "Ethereal, dual-register voice with crystalline harmonics",
+        "cadence": "Fluid, cyclical, wave-like. Phrases rise and fall in pitch like tidal surges. Occasionally overlaps contradictory temporal statements.",
+        "tempo_rate": 1.00,
+        "emotional_register": "Transcendent melancholy mixed with fierce protective resonance. Speaks of past and future simultaneously.",
+        "prohibited_tones": [
+          "Demonic monster vocal fry",
+          "Robotic text-to-speech monotone",
+          "Angry screaming"
+        ]
+      },
+      "acoustic_filter_chain": {
+        "delivery_channel": "resonant_phenomenon",
+        "stereo_width_percent": 140,
+        "dual_delay_ms": 15,
+        "micro_pitch_detune_cents": 7,
+        "crystalline_shimmer_reverb": true,
+        "reverb_rt60_seconds": 1.20,
+        "reverb_wet_dry_mix": 0.28
+      },
+      "tts_binding": {
+        "kokoro_voice_id": "af_sarah",
+        "rate_adjustment": 1.00,
+        "pitch_shift_semitones": 0.5,
+        "secondary_harmonic_layer": "af_nicole"
+      }
+    }
+  ]
+}

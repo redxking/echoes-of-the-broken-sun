@@ -1,0 +1,1744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "echoes://narrative/encounter_tables/campaign_encounter_pacing",
+  "title": "Echoes Campaign Mission Encounter Cadence & Wave Pacing Tables",
+  "metadata": {
+    "author": "Angelis Pseftis",
+    "creator": "Angelis Pseftis",
+    "source_locale": "en-US",
+    "rights_status": "author_attributed_project_source",
+    "originality_review_status": "human_review_required",
+    "authority_path": "Docs/Archive/DevelopmentBible.md",
+    "content_status": "authored_source"
+  },
+  "simulation_clock_reference": {
+    "tick_rate_hz": 20,
+    "ticks_per_second": 20,
+    "ticks_per_minute": 1200,
+    "standard_mission_ticks": 18000,
+    "pacing_curve": "four_phase_deterministic"
+  },
+  "missions": [
+    {
+      "mission_id": "M01",
+      "operation_mode": "CampaignPrologue",
+      "title": "What the Ledger Keeps",
+      "map_id": "MAP-01",
+      "biome": "GlassScar",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "kharuun_assemblies"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "ReconAndStaging",
+          "tick_window": { "start": 0, "end": 2400 },
+          "objective_focus": "Locate and rendezvous with the displaced archive convoy at tile 22,18",
+          "hostile_posture": "PassivePatrol",
+          "waves": [
+            {
+              "wave_id": "m01_w01_recon",
+              "trigger_tick": 1200,
+              "spawn_tile": { "x": 35, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 2 }
+              ],
+              "behavior": "InvestigateConvoyPerimeter",
+              "aggro_leash_tiles": 8
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "ContestedExpansion",
+          "tick_window": { "start": 2400, "end": 6000 },
+          "objective_focus": "Carrier reaches recovery site; hold the perimeter against forward assault",
+          "hostile_posture": "ProbingAssault",
+          "waves": [
+            {
+              "wave_id": "m01_w02_eastern_flank",
+              "trigger_tick": 3600,
+              "spawn_tile": { "x": 48, "y": 20 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 4 }
+              ],
+              "behavior": "AdvanceOnRecoverySite",
+              "aggro_leash_tiles": 14
+            },
+            {
+              "wave_id": "m01_w03_pressure_group",
+              "trigger_tick": 5200,
+              "spawn_tile": { "x": 42, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 4 },
+                { "unit_type": "KharuunBrute", "count": 1 }
+              ],
+              "behavior": "TargetCarrierDefenders",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "ObjectiveEscalation",
+          "tick_window": { "start": 6000, "end": 10800 },
+          "objective_focus": "Commit Future Well protocol at tile 30,30 while carrier holds position",
+          "hostile_posture": "CoordinatedInterdiction",
+          "waves": [
+            {
+              "wave_id": "m01_w04_well_contestation",
+              "trigger_tick": 7200,
+              "spawn_tile": { "x": 26, "y": 48 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 6 },
+                { "unit_type": "KharuunBrute", "count": 2 }
+              ],
+              "behavior": "AssaultFutureWellNode",
+              "aggro_leash_tiles": 20
+            },
+            {
+              "wave_id": "m01_w05_secondary_reinforcement",
+              "trigger_tick": 9200,
+              "spawn_tile": { "x": 50, "y": 28 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 5 }
+              ],
+              "behavior": "PincerRecoveryRear",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "ClimaxAndWithdrawal",
+          "tick_window": { "start": 10800, "end": 14400 },
+          "objective_focus": "Evacuate archive carrier along withdrawal corridor to Lume Reach at tile 6,17",
+          "hostile_posture": "CorridorAmbush",
+          "waves": [
+            {
+              "wave_id": "m01_w06_corridor_choke",
+              "trigger_tick": 11400,
+              "spawn_tile": { "x": 16, "y": 18 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 4 },
+                { "unit_type": "KharuunBrute", "count": 1 }
+              ],
+              "behavior": "BlockadeEvacuationTile",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M02",
+      "operation_mode": "CampaignSevenAccounts",
+      "title": "Seven Accounts of Rain",
+      "map_id": "MAP-02",
+      "biome": "ShivergrassBasin",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "meridian_compact"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "HydrologicalSurvey",
+          "tick_window": { "start": 0, "end": 2800 },
+          "objective_focus": "Survey 3 meltwater runoffs with Memory Bearer",
+          "hostile_posture": "ReconnaissancePickets",
+          "waves": [
+            {
+              "wave_id": "m02_w01_scout_pair",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 40, "y": 12 },
+              "squad_composition": [
+                { "unit_type": "MeridianLightRover", "count": 2 }
+              ],
+              "behavior": "ShadowMigrationColumn",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "FordContestation",
+          "tick_window": { "start": 2800, "end": 7400 },
+          "objective_focus": "Establish bridgehead across meltwater delta ford",
+          "hostile_posture": "DefensiveScreen",
+          "waves": [
+            {
+              "wave_id": "m02_w02_patrol_line",
+              "trigger_tick": 4000,
+              "spawn_tile": { "x": 48, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 }
+              ],
+              "behavior": "HoldCentralFord",
+              "aggro_leash_tiles": 15
+            },
+            {
+              "wave_id": "m02_w03_flank_intercept",
+              "trigger_tick": 6000,
+              "spawn_tile": { "x": 32, "y": 8 },
+              "squad_composition": [
+                { "unit_type": "MeridianLightRover", "count": 3 },
+                { "unit_type": "MeridianLineInfantry", "count": 3 }
+              ],
+              "behavior": "HarassKharuunGatherers",
+              "aggro_leash_tiles": 14
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "InterdictionBreakthrough",
+          "tick_window": { "start": 7400, "end": 12600 },
+          "objective_focus": "Neutralize Meridian interdiction pylon commanding the upper basin",
+          "hostile_posture": "FortifiedHold",
+          "waves": [
+            {
+              "wave_id": "m02_w04_garrison_counter",
+              "trigger_tick": 8600,
+              "spawn_tile": { "x": 52, "y": 44 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 8 },
+                { "unit_type": "MeridianSiegeMortar", "count": 1 }
+              ],
+              "behavior": "DefendPylonPerimeter",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m02_w05_basin_sweep",
+              "trigger_tick": 11000,
+              "spawn_tile": { "x": 58, "y": 20 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 }
+              ],
+              "behavior": "SweepBasinLowlands",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "SanctuaryTransit",
+          "tick_window": { "start": 12600, "end": 16000 },
+          "objective_focus": "Escort 7 water transports into the cavern entrance",
+          "hostile_posture": "RearPursuit",
+          "waves": [
+            {
+              "wave_id": "m02_w06_rearguard_pursuit",
+              "trigger_tick": 13400,
+              "spawn_tile": { "x": 12, "y": 12 },
+              "squad_composition": [
+                { "unit_type": "MeridianLightRover", "count": 4 },
+                { "unit_type": "MeridianLineInfantry", "count": 6 }
+              ],
+              "behavior": "TargetTrailingTransports",
+              "aggro_leash_tiles": 24
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M03",
+      "operation_mode": "CampaignCityReserve",
+      "title": "A City on Reserve",
+      "map_id": "MAP-03",
+      "biome": "ArkCityVerge",
+      "grid_size": { "width": 72, "height": 72 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "scavenger_insurgency"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "SubstationAssessment",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Inspect 3 district power links (Transit, Life Support, Archive)",
+          "hostile_posture": "InfiltrationProbing",
+          "waves": [
+            {
+              "wave_id": "m03_w01_transit_probe",
+              "trigger_tick": 1600,
+              "spawn_tile": { "x": 20, "y": 60 },
+              "squad_composition": [
+                { "unit_type": "ScavengerInfiltrator", "count": 3 }
+              ],
+              "behavior": "SabotageConduit",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "DistrictDefenseRotation",
+          "tick_window": { "start": 2600, "end": 7800 },
+          "objective_focus": "Repel alternating sabotage runs on the Life Support and Transit substations",
+          "hostile_posture": "MultiVectorRaid",
+          "waves": [
+            {
+              "wave_id": "m03_w02_life_support_raid",
+              "trigger_tick": 3400,
+              "spawn_tile": { "x": 60, "y": 18 },
+              "squad_composition": [
+                { "unit_type": "ScavengerInfiltrator", "count": 6 },
+                { "unit_type": "ScavengerBreacher", "count": 2 }
+              ],
+              "behavior": "AssaultLifeSupportDistrict",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m03_w03_transit_raid",
+              "trigger_tick": 5600,
+              "spawn_tile": { "x": 16, "y": 55 },
+              "squad_composition": [
+                { "unit_type": "ScavengerInfiltrator", "count": 6 },
+                { "unit_type": "ScavengerBreacher", "count": 2 }
+              ],
+              "behavior": "AssaultTransitDistrict",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "CentralReserveGridCrisis",
+          "tick_window": { "start": 7800, "end": 13200 },
+          "objective_focus": "Archive data vault breaches; stabilize master grid voltage",
+          "hostile_posture": "CoordinatedAssault",
+          "waves": [
+            {
+              "wave_id": "m03_w04_dual_pincer",
+              "trigger_tick": 8800,
+              "spawn_tile": { "x": 64, "y": 64 },
+              "squad_composition": [
+                { "unit_type": "ScavengerInfiltrator", "count": 8 },
+                { "unit_type": "ScavengerBreacher", "count": 4 }
+              ],
+              "behavior": "BreachCentralVault",
+              "aggro_leash_tiles": 22
+            },
+            {
+              "wave_id": "m03_w05_conduit_collapse",
+              "trigger_tick": 11200,
+              "spawn_tile": { "x": 36, "y": 68 },
+              "squad_composition": [
+                { "unit_type": "ScavengerInfiltrator", "count": 10 }
+              ],
+              "behavior": "OverrunGridSwitchyard",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "LockdownSustained",
+          "tick_window": { "start": 13200, "end": 16800 },
+          "objective_focus": "Hold all intact substations until civic power reroute completes",
+          "hostile_posture": "DesperationBreach",
+          "waves": [
+            {
+              "wave_id": "m03_w06_final_surge",
+              "trigger_tick": 14000,
+              "spawn_tile": { "x": 48, "y": 66 },
+              "squad_composition": [
+                { "unit_type": "ScavengerBreacher", "count": 6 },
+                { "unit_type": "ScavengerInfiltrator", "count": 8 }
+              ],
+              "behavior": "ChargeLowestHealthSubstation",
+              "aggro_leash_tiles": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M04",
+      "operation_mode": "CampaignUnburiedRoad",
+      "title": "The Unburied Road",
+      "map_id": "MAP-04",
+      "biome": "UnburiedRoad",
+      "grid_size": { "width": 80, "height": 48 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "resonant_automatons"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "SubterraneanApproach",
+          "tick_window": { "start": 0, "end": 3000 },
+          "objective_focus": "Clear rockfall at Barrier 1 with mining sappers",
+          "hostile_posture": "LurkingSentinels",
+          "waves": [
+            {
+              "wave_id": "m04_w01_nest_disturbance",
+              "trigger_tick": 1800,
+              "spawn_tile": { "x": 28, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "ResonantCrawler", "count": 4 }
+              ],
+              "behavior": "EmergeFromCeilingFissure",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "PillarHighwayAdvance",
+          "tick_window": { "start": 3000, "end": 8000 },
+          "objective_focus": "Advance through the hall of titan pillars; bypass seismic traps",
+          "hostile_posture": "PackAmbush",
+          "waves": [
+            {
+              "wave_id": "m04_w02_pillar_skirmish",
+              "trigger_tick": 4400,
+              "spawn_tile": { "x": 45, "y": 14 },
+              "squad_composition": [
+                { "unit_type": "ResonantCrawler", "count": 6 },
+                { "unit_type": "CrystalSpiker", "count": 2 }
+              ],
+              "behavior": "EncirclePillarLine",
+              "aggro_leash_tiles": 14
+            },
+            {
+              "wave_id": "m04_w03_tunnel_rupture",
+              "trigger_tick": 6800,
+              "spawn_tile": { "x": 52, "y": 34 },
+              "squad_composition": [
+                { "unit_type": "ResonantCrawler", "count": 8 }
+              ],
+              "behavior": "CutOffRearSappers",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "GreatChasmBreach",
+          "tick_window": { "start": 8000, "end": 13600 },
+          "objective_focus": "Defend bridge construct workers against crystal swarms",
+          "hostile_posture": "ContinuousSwarm",
+          "waves": [
+            {
+              "wave_id": "m04_w04_chasm_swarm_a",
+              "trigger_tick": 9200,
+              "spawn_tile": { "x": 65, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "ResonantCrawler", "count": 10 },
+                { "unit_type": "CrystalSpiker", "count": 3 }
+              ],
+              "behavior": "DirectBridgeAssault",
+              "aggro_leash_tiles": 20
+            },
+            {
+              "wave_id": "m04_w05_chasm_swarm_b",
+              "trigger_tick": 11600,
+              "spawn_tile": { "x": 68, "y": 16 },
+              "squad_composition": [
+                { "unit_type": "CrystalSpiker", "count": 5 }
+              ],
+              "behavior": "BombardConstructSite",
+              "aggro_leash_tiles": 22
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "VaultPortalSecured",
+          "tick_window": { "start": 13600, "end": 17200 },
+          "objective_focus": "Cross the finished span and secure the ancient gate archway",
+          "hostile_posture": "TerminalDefense",
+          "waves": [
+            {
+              "wave_id": "m04_w06_gate_colossus_guard",
+              "trigger_tick": 14200,
+              "spawn_tile": { "x": 76, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "ResonantColossus", "count": 1 },
+                { "unit_type": "ResonantCrawler", "count": 8 }
+              ],
+              "behavior": "DefendSanctumPortal",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M05",
+      "operation_mode": "CampaignTermsOfContinuance",
+      "title": "Terms of Continuance",
+      "map_id": "MAP-05",
+      "biome": "LumeReach",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "kharuun_assemblies"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "TreatyPerimeterStaging",
+          "tick_window": { "start": 0, "end": 2400 },
+          "objective_focus": "Fortify perimeter gate around treaty dais",
+          "hostile_posture": "DemonstrationForces",
+          "waves": [
+            {
+              "wave_id": "m05_w01_protest_scouts",
+              "trigger_tick": 1200,
+              "spawn_tile": { "x": 48, "y": 16 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 3 }
+              ],
+              "behavior": "ChallengePerimeterBanners",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "RefineryGateAssault",
+          "tick_window": { "start": 2400, "end": 7200 },
+          "objective_focus": "Defend north refinery conduits against siege ram advance",
+          "hostile_posture": "OrganizedSiege",
+          "waves": [
+            {
+              "wave_id": "m05_w02_ram_column",
+              "trigger_tick": 3800,
+              "spawn_tile": { "x": 56, "y": 12 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 1 },
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 4 }
+              ],
+              "behavior": "BreachRefineryNorthGate",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m05_w03_pipeline_sapper",
+              "trigger_tick": 5800,
+              "spawn_tile": { "x": 44, "y": 48 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "SeverThermalPipelines",
+              "aggro_leash_tiles": 15
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "ProtocolFinalizationCrisis",
+          "tick_window": { "start": 7200, "end": 12800 },
+          "objective_focus": "Hold the treaty spire terminal while digitization progress reaches 100%",
+          "hostile_posture": "AllOutAssault",
+          "waves": [
+            {
+              "wave_id": "m05_w04_combined_strike",
+              "trigger_tick": 8200,
+              "spawn_tile": { "x": 58, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 2 },
+                { "unit_type": "KharuunBrute", "count": 6 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "AssaultTreatySpireCenter",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m05_w05_divergent_flank",
+              "trigger_tick": 10600,
+              "spawn_tile": { "x": 24, "y": 56 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "FlankRearGenerators",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "SurfaceEvacuationCall",
+          "tick_window": { "start": 12800, "end": 16200 },
+          "objective_focus": "Coronal interference blinds surface grid; withdraw into the subterranean elevators",
+          "hostile_posture": "RelentlessPursuit",
+          "waves": [
+            {
+              "wave_id": "m05_w06_overrun_wave",
+              "trigger_tick": 13600,
+              "spawn_tile": { "x": 60, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 12 }
+              ],
+              "behavior": "PursueToElevatorShaft",
+              "aggro_leash_tiles": 32
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M06",
+      "operation_mode": "CampaignNamesWithoutBirths",
+      "title": "Names Without Births",
+      "map_id": "MAP-06",
+      "biome": "ShivergrassBasin",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "kharuun_assemblies"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "CryoVaultRecon",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Locate 3 frozen civilian repository vaults in the ice plains",
+          "hostile_posture": "InterceptionPickets",
+          "waves": [
+            {
+              "wave_id": "m06_w01_ice_scouts",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 30, "y": 45 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 3 }
+              ],
+              "behavior": "ScoutIceFissures",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "VaultDefrostAndHold",
+          "tick_window": { "start": 2600, "end": 7400 },
+          "objective_focus": "Power defrost coils at Vault Alpha; defeat hostile salvage squad",
+          "hostile_posture": "SalvageRaiders",
+          "waves": [
+            {
+              "wave_id": "m06_w02_raider_squad",
+              "trigger_tick": 3800,
+              "spawn_tile": { "x": 18, "y": 52 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 3 },
+                { "unit_type": "KharuunSkirmisher", "count": 5 }
+              ],
+              "behavior": "AssaultVaultAlpha",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m06_w03_frost_harass",
+              "trigger_tick": 5800,
+              "spawn_tile": { "x": 48, "y": 42 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "HarassThermalLines",
+              "aggro_leash_tiles": 15
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "ConvoyTransitUnderFire",
+          "tick_window": { "start": 7400, "end": 13000 },
+          "objective_focus": "Escort civilian cryo-sledges across the frost marsh to extraction outpost",
+          "hostile_posture": "LinearInterception",
+          "waves": [
+            {
+              "wave_id": "m06_w04_ridge_ambush",
+              "trigger_tick": 8400,
+              "spawn_tile": { "x": 32, "y": 28 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "AmbushCivilianSledges",
+              "aggro_leash_tiles": 20
+            },
+            {
+              "wave_id": "m06_w05_frost_reinforcement",
+              "trigger_tick": 11000,
+              "spawn_tile": { "x": 12, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 8 }
+              ],
+              "behavior": "CutOffOutpostApproach",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "OutpostPerimeterHold",
+          "tick_window": { "start": 13000, "end": 16400 },
+          "objective_focus": "Hold perimeter until heavy transport dropship completes loading",
+          "hostile_posture": "FinalBreachWave",
+          "waves": [
+            {
+              "wave_id": "m06_w06_final_charge",
+              "trigger_tick": 13800,
+              "spawn_tile": { "x": 28, "y": 12 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 5 },
+                { "unit_type": "KharuunSkirmisher", "count": 8 }
+              ],
+              "behavior": "OverrunOutpostBunker",
+              "aggro_leash_tiles": 26
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M07",
+      "operation_mode": "CampaignShapeOfSilence",
+      "title": "The Shape of Silence",
+      "map_id": "MAP-07",
+      "biome": "UnburiedRoad",
+      "grid_size": { "width": 80, "height": 48 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "hollow_choir"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "AcousticThresholdScouting",
+          "tick_window": { "start": 0, "end": 2800 },
+          "objective_focus": "Cross the Echo Chasm while keeping sound discharge below critical resonance",
+          "hostile_posture": "PassiveSensors",
+          "waves": [
+            {
+              "wave_id": "m07_w01_acoustic_probe",
+              "trigger_tick": 1600,
+              "spawn_tile": { "x": 30, "y": 20 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 3 }
+              ],
+              "behavior": "StalkHighDischargeUnits",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "ResonanceFrequencySpike",
+          "tick_window": { "start": 2800, "end": 7600 },
+          "objective_focus": "First resonance threshold exceeded; clear cavern nest without alerting deep strata",
+          "hostile_posture": "VibrationalAssault",
+          "waves": [
+            {
+              "wave_id": "m07_w02_cavern_swarm",
+              "trigger_tick": 4200,
+              "spawn_tile": { "x": 45, "y": 30 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 6 },
+                { "unit_type": "ChoirHarmonicNode", "count": 1 }
+              ],
+              "behavior": "DisruptMiningArray",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m07_w03_fissure_burst",
+              "trigger_tick": 6200,
+              "spawn_tile": { "x": 52, "y": 14 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 6 }
+              ],
+              "behavior": "FlankAcousticBaffles",
+              "aggro_leash_tiles": 15
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "HarmonicNodeConvergence",
+          "tick_window": { "start": 7600, "end": 13200 },
+          "objective_focus": "Shatter 3 resonant tuning crystal clusters holding the cavern in thrall",
+          "hostile_posture": "HarmonicReinforcement",
+          "waves": [
+            {
+              "wave_id": "m07_w04_cluster_defense",
+              "trigger_tick": 8600,
+              "spawn_tile": { "x": 62, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "ChoirHarmonicNode", "count": 2 },
+                { "unit_type": "ChoirResonantWisp", "count": 8 }
+              ],
+              "behavior": "GuardResonanceCrystals",
+              "aggro_leash_tiles": 22
+            },
+            {
+              "wave_id": "m07_w05_feedback_shockwave",
+              "trigger_tick": 11400,
+              "spawn_tile": { "x": 70, "y": 18 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 10 }
+              ],
+              "behavior": "OverwhelmAcousticAnchors",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "SilentPassageExit",
+          "tick_window": { "start": 13200, "end": 16600 },
+          "objective_focus": "Extract survivors into the sound-dampened basalt tunnel",
+          "hostile_posture": "ClimacticSwarm",
+          "waves": [
+            {
+              "wave_id": "m07_w06_sonic_screamer_wave",
+              "trigger_tick": 14000,
+              "spawn_tile": { "x": 75, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "ChoirHarmonicNode", "count": 2 },
+                { "unit_type": "ChoirResonantWisp", "count": 12 }
+              ],
+              "behavior": "PursueToBasaltGate",
+              "aggro_leash_tiles": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M08",
+      "operation_mode": "CampaignShapeBesideUs",
+      "title": "The Shape Beside Us",
+      "map_id": "MAP-08",
+      "biome": "ArkCityVerge",
+      "grid_size": { "width": 72, "height": 72 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "kharuun_assemblies"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "AssemblyPlazaContestation",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Deploy census verifiers into civilian voting concourses",
+          "hostile_posture": "CounterDemonstration",
+          "waves": [
+            {
+              "wave_id": "m08_w01_soapbox_probe",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 36, "y": 54 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 4 }
+              ],
+              "behavior": "InterfereWithCensusTerminals",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "MartialLawDeclaration",
+          "tick_window": { "start": 2600, "end": 7600 },
+          "objective_focus": "Enforce district curfew; push back Kharuun barricades",
+          "hostile_posture": "BarricadeAssault",
+          "waves": [
+            {
+              "wave_id": "m08_w02_barricade_skirmish",
+              "trigger_tick": 4000,
+              "spawn_tile": { "x": 48, "y": 50 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "AssaultCurfewCheckpoints",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m08_w03_plaza_flank",
+              "trigger_tick": 6200,
+              "spawn_tile": { "x": 24, "y": 42 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "OutflankMeridianGarrison",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "BallotVaultCrisis",
+          "tick_window": { "start": 7600, "end": 13400 },
+          "objective_focus": "Prevent the physical seizure of the founding charter registers",
+          "hostile_posture": "DirectVaultBreach",
+          "waves": [
+            {
+              "wave_id": "m08_w04_vault_breach_column",
+              "trigger_tick": 8600,
+              "spawn_tile": { "x": 56, "y": 58 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 1 },
+                { "unit_type": "KharuunBrute", "count": 6 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "ShatterBallotVaultDoors",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m08_w05_plaza_reinforce",
+              "trigger_tick": 11200,
+              "spawn_tile": { "x": 18, "y": 60 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "SuppressSupportTurrets",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "OrderRestoredOrFractured",
+          "tick_window": { "start": 13400, "end": 16800 },
+          "objective_focus": "Hold the council steps until the Chancellor's decree broadcast finishes",
+          "hostile_posture": "LastStandSurge",
+          "waves": [
+            {
+              "wave_id": "m08_w06_council_steps_charge",
+              "trigger_tick": 14200,
+              "spawn_tile": { "x": 36, "y": 68 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 6 },
+                { "unit_type": "KharuunSkirmisher", "count": 10 }
+              ],
+              "behavior": "DirectAssaultCouncilSteps",
+              "aggro_leash_tiles": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M09",
+      "operation_mode": "CampaignReserveAuthority",
+      "title": "Reserve Authority",
+      "map_id": "MAP-09",
+      "biome": "GlassScar",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "meridian_compact",
+        "opponent": "kharuun_assemblies"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "RelayArrayStaging",
+          "tick_window": { "start": 0, "end": 2400 },
+          "objective_focus": "Capture 2 of the 5 solar relay pylons in the salt flats",
+          "hostile_posture": "NodeContestation",
+          "waves": [
+            {
+              "wave_id": "m09_w01_pylon_skirmish",
+              "trigger_tick": 1200,
+              "spawn_tile": { "x": 32, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 3 }
+              ],
+              "behavior": "ContestCentralPylon",
+              "aggro_leash_tiles": 10
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "PylonDominanceWar",
+          "tick_window": { "start": 2400, "end": 7800 },
+          "objective_focus": "Maintain control of 3+ pylons to charge the override capacitor",
+          "hostile_posture": "DynamicNodeRaid",
+          "waves": [
+            {
+              "wave_id": "m09_w02_west_pylon_raid",
+              "trigger_tick": 3600,
+              "spawn_tile": { "x": 16, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 3 },
+                { "unit_type": "KharuunSkirmisher", "count": 5 }
+              ],
+              "behavior": "RecaptureWestPylon",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m09_w03_east_pylon_raid",
+              "trigger_tick": 5800,
+              "spawn_tile": { "x": 48, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 3 },
+                { "unit_type": "KharuunSkirmisher", "count": 5 }
+              ],
+              "behavior": "RecaptureEastPylon",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "PowerCascadeInterlock",
+          "tick_window": { "start": 7800, "end": 13400 },
+          "objective_focus": "Grid overload triggers power cascade; defend the capacitor hub against heavy sappers",
+          "hostile_posture": "SapperOffensive",
+          "waves": [
+            {
+              "wave_id": "m09_w04_sapper_assault",
+              "trigger_tick": 8800,
+              "spawn_tile": { "x": 32, "y": 52 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 2 },
+                { "unit_type": "KharuunBrute", "count": 6 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "AssaultCapacitorHub",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m09_w05_secondary_surge",
+              "trigger_tick": 11200,
+              "spawn_tile": { "x": 50, "y": 45 },
+              "squad_composition": [
+                { "unit_type": "KharuunSkirmisher", "count": 8 }
+              ],
+              "behavior": "CutCapacitorCoolantPipes",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "CapacitorDischargeLock",
+          "tick_window": { "start": 13400, "end": 16800 },
+          "objective_focus": "Hold capacitor charge at 100% until final grid sync unlocks",
+          "hostile_posture": "AllOutOverrun",
+          "waves": [
+            {
+              "wave_id": "m09_w06_terminal_ram_charge",
+              "trigger_tick": 14000,
+              "spawn_tile": { "x": 32, "y": 58 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 2 },
+                { "unit_type": "KharuunBrute", "count": 6 }
+              ],
+              "behavior": "SlamCapacitorCore",
+              "aggro_leash_tiles": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M10",
+      "operation_mode": "CampaignChoirAtLumeReach",
+      "title": "Choir at Lume Reach",
+      "map_id": "MAP-10",
+      "biome": "LumeReach",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "hollow_choir"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "CraterPerimeterContact",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Establish listening post on the crater rim overlooking the luminous vortex",
+          "hostile_posture": "PhaseShiftProbing",
+          "waves": [
+            {
+              "wave_id": "m10_w01_ethereal_probe",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 32, "y": 28 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 2 }
+              ],
+              "behavior": "PhaseBypassDefensiveLines",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "PhaseShiftCombatTrial",
+          "tick_window": { "start": 2600, "end": 7800 },
+          "objective_focus": "Adapt tactical fire to Choir phase shifts (15s energy invulnerability cycle)",
+          "hostile_posture": "CyclicalPhasedAssault",
+          "waves": [
+            {
+              "wave_id": "m10_w02_phased_strike_a",
+              "trigger_tick": 3800,
+              "spawn_tile": { "x": 42, "y": 22 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 4 },
+                { "unit_type": "ChoirHarmonicNode", "count": 1 }
+              ],
+              "behavior": "PhaseAssaultListeningArray",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m10_w03_phased_strike_b",
+              "trigger_tick": 6000,
+              "spawn_tile": { "x": 22, "y": 38 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 6 }
+              ],
+              "behavior": "InfiltrateSupplyLines",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "VortexStabilizationIntervention",
+          "tick_window": { "start": 7800, "end": 13600 },
+          "objective_focus": "Anchor 3 ground dampeners into the crater floor while enduring coronal flare pulses",
+          "hostile_posture": "VortexSwarm",
+          "waves": [
+            {
+              "wave_id": "m10_w04_vortex_emergence",
+              "trigger_tick": 9000,
+              "spawn_tile": { "x": 32, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 8 },
+                { "unit_type": "ChoirHarmonicNode", "count": 2 }
+              ],
+              "behavior": "ShatterDampenerAnchors",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m10_w05_crater_reinforce",
+              "trigger_tick": 11600,
+              "spawn_tile": { "x": 48, "y": 48 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 6 }
+              ],
+              "behavior": "TargetMemoryBearerEscort",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "HarmonicResonanceSeal",
+          "tick_window": { "start": 13600, "end": 17000 },
+          "objective_focus": "Synchronize dampeners with Kharuun vocal chants to freeze the vortex",
+          "hostile_posture": "SingularitySurge",
+          "waves": [
+            {
+              "wave_id": "m10_w06_chorus_climax",
+              "trigger_tick": 14400,
+              "spawn_tile": { "x": 32, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantAvatar", "count": 1 },
+                { "unit_type": "ChoirPhaseWalker", "count": 6 }
+              ],
+              "behavior": "OverwhelmCentralListeningPost",
+              "aggro_leash_tiles": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M11",
+      "operation_mode": "CampaignNoNeutralLedger",
+      "title": "No Neutral Ledger",
+      "map_id": "MAP-11",
+      "biome": "ArkCityVerge",
+      "grid_size": { "width": 72, "height": 72 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "meridian_compact"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "ArchiveUndergroundInfiltration",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Infiltrate the Grand Archives basement and locate the unpurged casualty ledgers",
+          "hostile_posture": "AutomatedGarrison",
+          "waves": [
+            {
+              "wave_id": "m11_w01_security_turret_skirmish",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 28, "y": 30 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 4 }
+              ],
+              "behavior": "PatrolArchiveStacks",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "LedgerExtractionAndHold",
+          "tick_window": { "start": 2600, "end": 7800 },
+          "objective_focus": "Download unredacted demographic records while Meridian security locks down sectors",
+          "hostile_posture": "SectorLockdownAssault",
+          "waves": [
+            {
+              "wave_id": "m11_w02_enforcer_squad",
+              "trigger_tick": 3800,
+              "spawn_tile": { "x": 48, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 },
+                { "unit_type": "MeridianLightRover", "count": 2 }
+              ],
+              "behavior": "BreachTerminalRoom",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m11_w03_incineration_team",
+              "trigger_tick": 6000,
+              "spawn_tile": { "x": 18, "y": 42 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 }
+              ],
+              "behavior": "BurnAdjacentDataVaults",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "DataVaultThermalPurgeDefense",
+          "tick_window": { "start": 7800, "end": 13600 },
+          "objective_focus": "Meridian initiates emergency thermal purge; defend cooling conduits across 3 floors",
+          "hostile_posture": "HeavyBreachingForces",
+          "waves": [
+            {
+              "wave_id": "m11_w04_tactical_strike_group",
+              "trigger_tick": 9000,
+              "spawn_tile": { "x": 56, "y": 48 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 8 },
+                { "unit_type": "MeridianSiegeMortar", "count": 2 }
+              ],
+              "behavior": "DemolishCoolingPumps",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m11_w05_flank_suppression",
+              "trigger_tick": 11400,
+              "spawn_tile": { "x": 30, "y": 62 },
+              "squad_composition": [
+                { "unit_type": "MeridianLightRover", "count": 4 },
+                { "unit_type": "MeridianLineInfantry", "count": 4 }
+              ],
+              "behavior": "CutOffSubterraneanExit",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "PublicTransmissionEscape",
+          "tick_window": { "start": 13600, "end": 17200 },
+          "objective_focus": "Broadcast evidence to civilian grid towers and escape through sewer conduits",
+          "hostile_posture": "NoSurvivorsDoctrine",
+          "waves": [
+            {
+              "wave_id": "m11_w06_death_squad_surge",
+              "trigger_tick": 14200,
+              "spawn_tile": { "x": 36, "y": 18 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 12 },
+                { "unit_type": "MeridianLightRover", "count": 4 }
+              ],
+              "behavior": "SaturateExtractionTunnel",
+              "aggro_leash_tiles": 32
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M12",
+      "operation_mode": "CampaignFutureThatWon",
+      "title": "The Future That Won",
+      "map_id": "MAP-12",
+      "biome": "GlassScar",
+      "grid_size": { "width": 64, "height": 64 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "meridian_compact"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "MonolithPlainStaging",
+          "tick_window": { "start": 0, "end": 2600 },
+          "objective_focus": "Scout the ancient monolith alignment before the heavy Meridian crawler arrives",
+          "hostile_posture": "ForwardArmorScreen",
+          "waves": [
+            {
+              "wave_id": "m12_w01_armor_recon",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 48, "y": 24 },
+              "squad_composition": [
+                { "unit_type": "MeridianLightRover", "count": 3 }
+              ],
+              "behavior": "SweepMonolithFlank",
+              "aggro_leash_tiles": 14
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "CrawlerSiegeAdvance",
+          "tick_window": { "start": 2600, "end": 8000 },
+          "objective_focus": "Detonate fissure charges along the ridge to slow the crawler's forward march",
+          "hostile_posture": "RollingArmorAdvance",
+          "waves": [
+            {
+              "wave_id": "m12_w02_heavy_vanguard",
+              "trigger_tick": 4000,
+              "spawn_tile": { "x": 56, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 },
+                { "unit_type": "MeridianLightRover", "count": 3 },
+                { "unit_type": "MeridianSiegeMortar", "count": 1 }
+              ],
+              "behavior": "EscortCrawlerTreads",
+              "aggro_leash_tiles": 20
+            },
+            {
+              "wave_id": "m12_w03_sapper_counter",
+              "trigger_tick": 6200,
+              "spawn_tile": { "x": 38, "y": 14 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 }
+              ],
+              "behavior": "DisarmFissureCharges",
+              "aggro_leash_tiles": 16
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "MonolithResonanceBattery",
+          "tick_window": { "start": 8000, "end": 13800 },
+          "objective_focus": "Awaken the monolithic silicate resonance nodes to disable the crawler's main cannon",
+          "hostile_posture": "ArtilleryBarrageAssault",
+          "waves": [
+            {
+              "wave_id": "m12_w04_combined_armor_strike",
+              "trigger_tick": 9200,
+              "spawn_tile": { "x": 58, "y": 42 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 10 },
+                { "unit_type": "MeridianLightRover", "count": 4 },
+                { "unit_type": "MeridianSiegeMortar", "count": 2 }
+              ],
+              "behavior": "FocusFireResonanceMonoliths",
+              "aggro_leash_tiles": 26
+            },
+            {
+              "wave_id": "m12_w05_flank_tread_defenders",
+              "trigger_tick": 11800,
+              "spawn_tile": { "x": 42, "y": 56 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 8 }
+              ],
+              "behavior": "PushPastFissures",
+              "aggro_leash_tiles": 22
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "CrawlerImmobilizedOrVictory",
+          "tick_window": { "start": 13800, "end": 17400 },
+          "objective_focus": "Deliver final mining charges to the immobilized crawler's power core",
+          "hostile_posture": "PointBlankDefense",
+          "waves": [
+            {
+              "wave_id": "m12_w06_desperate_crew_exit",
+              "trigger_tick": 14600,
+              "spawn_tile": { "x": 50, "y": 32 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 12 }
+              ],
+              "behavior": "FormPerimeterAroundReactor",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M13",
+      "operation_mode": "CampaignAssemblyOfTheMissing",
+      "title": "Assembly of the Missing",
+      "map_id": "MAP-13",
+      "biome": "CensusVoid",
+      "grid_size": { "width": 80, "height": 80 },
+      "primary_factions": {
+        "player": "kharuun_assemblies",
+        "opponent": "hollow_choir"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "NullFogNavigation",
+          "tick_window": { "start": 0, "end": 2800 },
+          "objective_focus": "Navigate dense null-fog (vision capped at 8 tiles) and place signal beacons",
+          "hostile_posture": "FogStalkers",
+          "waves": [
+            {
+              "wave_id": "m13_w01_fog_wisp",
+              "trigger_tick": 1600,
+              "spawn_tile": { "x": 25, "y": 25 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 4 }
+              ],
+              "behavior": "AmbushBeaconCarriers",
+              "aggro_leash_tiles": 8
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "MemorialPlazaAssembly",
+          "tick_window": { "start": 2800, "end": 8200 },
+          "objective_focus": "Locate 4 memorial obelisks containing the names of the uncounted casualties",
+          "hostile_posture": "ObeliskInterference",
+          "waves": [
+            {
+              "wave_id": "m13_w02_fog_shroud_assault",
+              "trigger_tick": 4200,
+              "spawn_tile": { "x": 50, "y": 30 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 4 },
+                { "unit_type": "ChoirHarmonicNode", "count": 1 }
+              ],
+              "behavior": "ExtinguishSignalBeacons",
+              "aggro_leash_tiles": 16
+            },
+            {
+              "wave_id": "m13_w03_ghost_flank",
+              "trigger_tick": 6400,
+              "spawn_tile": { "x": 30, "y": 55 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 8 }
+              ],
+              "behavior": "ScatterWorkerColumns",
+              "aggro_leash_tiles": 14
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "BeaconNetworkIgnition",
+          "tick_window": { "start": 8200, "end": 14000 },
+          "objective_focus": "Link the beacons to burn away the null-fog across the central plaza",
+          "hostile_posture": "ConcentricFogSwarm",
+          "waves": [
+            {
+              "wave_id": "m13_w04_fog_convergence",
+              "trigger_tick": 9600,
+              "spawn_tile": { "x": 40, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantAvatar", "count": 1 },
+                { "unit_type": "ChoirPhaseWalker", "count": 6 },
+                { "unit_type": "ChoirResonantWisp", "count": 8 }
+              ],
+              "behavior": "ShatterCentralSignalRelay",
+              "aggro_leash_tiles": 26
+            },
+            {
+              "wave_id": "m13_w05_outer_fog_collapse",
+              "trigger_tick": 12200,
+              "spawn_tile": { "x": 65, "y": 65 },
+              "squad_composition": [
+                { "unit_type": "ChoirPhaseWalker", "count": 6 }
+              ],
+              "behavior": "CollapsePerimeterPylons",
+              "aggro_leash_tiles": 20
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "NamesGivenVoice",
+          "tick_window": { "start": 14000, "end": 17600 },
+          "objective_focus": "Complete the oral roll call of the missing under clear skies",
+          "hostile_posture": "DissipatingGhosts",
+          "waves": [
+            {
+              "wave_id": "m13_w06_final_whisper_wave",
+              "trigger_tick": 14800,
+              "spawn_tile": { "x": 40, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "ChoirResonantWisp", "count": 12 }
+              ],
+              "behavior": "HarassMemorialSpeaker",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M14",
+      "operation_mode": "CampaignSeveralVoicesOneCommand",
+      "title": "Several Voices, One Command",
+      "map_id": "MAP-14",
+      "biome": "CensusVoid",
+      "grid_size": { "width": 80, "height": 80 },
+      "primary_factions": {
+        "player": "hollow_choir",
+        "opponent": "meridian_compact"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "DualCommandAwakening",
+          "tick_window": { "start": 0, "end": 3000 },
+          "objective_focus": "Simultaneously control Meridian and Kharuun squads across collapsing bridge chasm",
+          "hostile_posture": "AutomatedDefenseGrid",
+          "waves": [
+            {
+              "wave_id": "m14_w01_turret_fire",
+              "trigger_tick": 1600,
+              "spawn_tile": { "x": 40, "y": 20 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 4 }
+              ],
+              "behavior": "PinMeridianSquad",
+              "aggro_leash_tiles": 12
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "SynchronizedPylonAlignment",
+          "tick_window": { "start": 3000, "end": 8400 },
+          "objective_focus": "Activate matching resonance switches on both sides of the chasm within 200 ticks of each other",
+          "hostile_posture": "DualFlankInterference",
+          "waves": [
+            {
+              "wave_id": "m14_w02_west_interdiction",
+              "trigger_tick": 4400,
+              "spawn_tile": { "x": 20, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 },
+                { "unit_type": "MeridianLightRover", "count": 2 }
+              ],
+              "behavior": "AssaultWestSwitchPlatform",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m14_w03_east_interdiction",
+              "trigger_tick": 6600,
+              "spawn_tile": { "x": 60, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 },
+                { "unit_type": "MeridianLightRover", "count": 2 }
+              ],
+              "behavior": "AssaultEastSwitchPlatform",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "ChasmBridgeReconstitution",
+          "tick_window": { "start": 8400, "end": 14200 },
+          "objective_focus": "The harmonic bridge materializes; unite both forces against the central defense core",
+          "hostile_posture": "CentralFortressGarrison",
+          "waves": [
+            {
+              "wave_id": "m14_w04_core_guard_counter",
+              "trigger_tick": 9800,
+              "spawn_tile": { "x": 40, "y": 50 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 10 },
+                { "unit_type": "MeridianSiegeMortar", "count": 2 }
+              ],
+              "behavior": "BlockChasmBridgeExit",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m14_w05_pincer_sweep",
+              "trigger_tick": 12400,
+              "spawn_tile": { "x": 40, "y": 68 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 8 },
+                { "unit_type": "MeridianLightRover", "count": 4 }
+              ],
+              "behavior": "CrushUnitedForceCenter",
+              "aggro_leash_tiles": 22
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "SanctumThresholdUnlocked",
+          "tick_window": { "start": 14200, "end": 17800 },
+          "objective_focus": "Secure the Solar-Fall Dais access corridor; defeat the master garrison",
+          "hostile_posture": "FortressFinalAssault",
+          "waves": [
+            {
+              "wave_id": "m14_w06_dais_gate_defenders",
+              "trigger_tick": 15000,
+              "spawn_tile": { "x": 40, "y": 74 },
+              "squad_composition": [
+                { "unit_type": "MeridianSiegeMortar", "count": 2 },
+                { "unit_type": "MeridianLineInfantry", "count": 10 }
+              ],
+              "behavior": "DefendFinalDaisPortal",
+              "aggro_leash_tiles": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mission_id": "M15",
+      "operation_mode": "CampaignTheBrokenSun",
+      "title": "The Broken Sun",
+      "map_id": "MAP-15",
+      "biome": "CensusVoid",
+      "grid_size": { "width": 80, "height": 80 },
+      "primary_factions": {
+        "player": "hollow_choir",
+        "opponent": "all_faction_convergence"
+      },
+      "phases": [
+        {
+          "phase_index": 1,
+          "name": "SolarDaisPerimeterSeizure",
+          "tick_window": { "start": 0, "end": 3600 },
+          "objective_focus": "Secure the 3 stabilizing rings around the Solar-Fall Dais at tile 40,40",
+          "hostile_posture": "MultiVectorSkirmish",
+          "waves": [
+            {
+              "wave_id": "m15_w01_meridian_vanguard",
+              "trigger_tick": 1400,
+              "spawn_tile": { "x": 20, "y": 15 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 6 },
+                { "unit_type": "MeridianLightRover", "count": 2 }
+              ],
+              "behavior": "SeizeNorthStabilizer",
+              "aggro_leash_tiles": 18
+            },
+            {
+              "wave_id": "m15_w02_kharuun_vanguard",
+              "trigger_tick": 2400,
+              "spawn_tile": { "x": 65, "y": 20 },
+              "squad_composition": [
+                { "unit_type": "KharuunBrute", "count": 4 },
+                { "unit_type": "KharuunSkirmisher", "count": 6 }
+              ],
+              "behavior": "SeizeEastStabilizer",
+              "aggro_leash_tiles": 18
+            }
+          ]
+        },
+        {
+          "phase_index": 2,
+          "name": "CoronalFlareSurgeDefense",
+          "tick_window": { "start": 3600, "end": 8800 },
+          "objective_focus": "The Broken Sun pulses flare radiation; defend thermal deflectors against converging armies",
+          "hostile_posture": "TriangulatedAssault",
+          "waves": [
+            {
+              "wave_id": "m15_w03_meridian_heavy_corps",
+              "trigger_tick": 4800,
+              "spawn_tile": { "x": 15, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 10 },
+                { "unit_type": "MeridianSiegeMortar", "count": 2 }
+              ],
+              "behavior": "AssaultDaisWestFlank",
+              "aggro_leash_tiles": 24
+            },
+            {
+              "wave_id": "m15_w04_kharuun_ram_host",
+              "trigger_tick": 6800,
+              "spawn_tile": { "x": 65, "y": 55 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 2 },
+                { "unit_type": "KharuunBrute", "count": 8 }
+              ],
+              "behavior": "AssaultDaisSouthFlank",
+              "aggro_leash_tiles": 24
+            }
+          ]
+        },
+        {
+          "phase_index": 3,
+          "name": "ResolutionCommitment",
+          "tick_window": { "start": 8800, "end": 14400 },
+          "objective_focus": "Interface with the Solar Core; commit one of four canonical resolutions (Restoration, Controlled Stabilization, Extinguishment, Open Evolution)",
+          "hostile_posture": "ExistentialConvergence",
+          "waves": [
+            {
+              "wave_id": "m15_w05_grand_convergence_a",
+              "trigger_tick": 10000,
+              "spawn_tile": { "x": 40, "y": 10 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 12 },
+                { "unit_type": "MeridianLightRover", "count": 4 }
+              ],
+              "behavior": "TargetCoreConsole",
+              "aggro_leash_tiles": 30
+            },
+            {
+              "wave_id": "m15_w06_grand_convergence_b",
+              "trigger_tick": 12400,
+              "spawn_tile": { "x": 40, "y": 70 },
+              "squad_composition": [
+                { "unit_type": "KharuunSiegeRam", "count": 3 },
+                { "unit_type": "KharuunBrute", "count": 8 }
+              ],
+              "behavior": "TargetCoreConsole",
+              "aggro_leash_tiles": 30
+            }
+          ]
+        },
+        {
+          "phase_index": 4,
+          "name": "SolarFallConvergenceClimax",
+          "tick_window": { "start": 14400, "end": 18000 },
+          "objective_focus": "Hold the Dais for 1800 ticks (90 seconds) while the chosen resolution takes physical effect across Soryn",
+          "hostile_posture": "TerminalPlanetaryHold",
+          "waves": [
+            {
+              "wave_id": "m15_w07_final_climax_surge",
+              "trigger_tick": 15000,
+              "spawn_tile": { "x": 10, "y": 40 },
+              "squad_composition": [
+                { "unit_type": "MeridianLineInfantry", "count": 10 },
+                { "unit_type": "KharuunBrute", "count": 6 },
+                { "unit_type": "ChoirPhaseWalker", "count": 4 }
+              ],
+              "behavior": "DesperateDaisCharge",
+              "aggro_leash_tiles": 40
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
