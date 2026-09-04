@@ -379,6 +379,21 @@ scene (in-engine, using registered assets, slow enough to hold under reduced mot
 and music from track B, and no visible loading seam between title, brief, and deployment. Evidence: a
 rendered capture of the title-to-deployment path with no placeholder frame.
 
+**A10 — Glass Scar composed frame.** The owner-supplied concept `CONCEPT-004`
+(`site/assets/concepts/target-render-vertical-slice.jpg`) is the composition target for the Glass
+Scar skirmish frame, judged as one frame rather than per element. The frame must show: the central
+Well as a built dais with concentric rings and a readable shard, standing on a chasm crossed by the
+buried causeway, with cliff silhouettes on both banks; the two armies on their banks at a scale where
+a heavy unit reads as roughly one fifth of the dais diameter; unit-facing that shows the faction
+silhouette three-quarter to the camera, not edge-on; the Broken Sun as a fractured sphere with
+drifting shards, not a flat disc; crystal deposits subordinate to the Well in size and brightness;
+terrain as vitrified charcoal ground, not loose plates. Rendered under the A1 rig with no
+fixture-only exposure or bloom override. The review fixture (`-EchoesGlassScarReview=VerticalSlice`)
+is an authoring preview of this frame; acceptance evidence is the same composition captured from live
+Glass Scar skirmish play. Evidence: fixture capture and live-play capture at 1920×1080 and 2560×1440,
+each paired with the concept in one sheet, with commit, preset, and date recorded; the owner reviews
+the pair.
+
 ---
 
 ### Track B — Audio completion
@@ -855,6 +870,7 @@ passed. "OD n" means open decision n in section 9 must be resolved first.
 | 47 | Website at the bar: identity, real footage, claims audit, `site/`/`website/` resolved | J2 | 29, OD 3 | NOT RUN |
 | 48 | Ledger, asset register (all exceptions), manual, and rights position complete | J3 | 44 | NOT RUN |
 | 49 | Known-limitations page shipped in build and on site, accurate | J4 | 48 | NOT RUN |
+| 50 | Glass Scar composed frame matches `CONCEPT-004` as one frame: dais Well, chasm and cliffs, unit scale and facing, fractured sun | A10 | 3, 5, 6 | OPEN — gate created 2026-09-04 on owner decision; staging fixture exists and Bulwark shield facing corrected at `19906f9` (local fixture capture `BuildArtifacts/Evidence/VerticalSliceReview-bulwark-yaw-20260904.png`); terrain, Well dais, unit scale, and Broken Sun remain far from target; no live-play capture yet |
 
 Gate 2 is carried and standing; gate 1 regressed on `main` at `76dfaf1` and must be repaired before any merge to `main` (see its row). Five roots unblock the graph and can start in parallel now:
 **3** (exposure), **12** (score), **17** (voice pipeline, after OD 1), **22** (cinematic pipeline),
