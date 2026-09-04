@@ -97,4 +97,14 @@ void AEchoesWeatherView::ApplyAtmosphere(float NormalizedDrift)
         LowColor,
         HighColor,
         Drift));
+    // Directional inscattering: the haze warms toward the sun so the sky band
+    // reads as a gradient lit by the Broken Sun rather than a flat field
+    // (CONCEPT-004). A fog term, not an atmosphere component: no extra pass.
+    const FLinearColor SunHaze =
+        ActiveMapPreset == EEchoesSkirmishMapPreset::GlassScar
+            ? FLinearColor(0.34f, 0.19f, 0.07f)
+            : FLinearColor(0.12f, 0.10f, 0.08f);
+    HeightFog->SetDirectionalInscatteringColor(SunHaze);
+    HeightFog->SetDirectionalInscatteringExponent(6.0f);
+    HeightFog->SetDirectionalInscatteringStartDistance(2500.0f);
 }
