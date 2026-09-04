@@ -1013,14 +1013,96 @@ void AEchoesHUD::DrawHUD()
             EchoesTypeface::Chrome(),
             0.88f * HudScale,
             false);
+        const TArray<uint32>& PanelSelection =
+            EchoesController != nullptr
+                ? EchoesController->GetSelectedEntityIds()
+                : TArray<uint32>();
+        const float PortraitSize = FMath::Min(
+            96.0f * HudScale, SelectionPanel.GetSize().Y - 56.0f * HudScale);
+        const FVector2D PortraitMin(
+            SelectionPanel.Min.X + 18.0f * HudScale,
+            SelectionPanel.Min.Y + 40.0f * HudScale);
+        const echoes::sim::Entity* Focus =
+            PanelSelection.Num() >= 1 && Bridge != nullptr
+                ? Bridge->FindEntity(PanelSelection[0])
+                : nullptr;
+        float TextLeft = SelectionPanel.Min.X + 18.0f * HudScale;
+        if (Focus != nullptr && PortraitSize >= 48.0f)
+        {
+            // Portrait block: the faction sigil on a charcoal plate, the way a
+            // Compact deck shows an asset card.
+            DrawRect(
+                FLinearColor(Theme.ElevatedSurface.R, Theme.ElevatedSurface.G, Theme.ElevatedSurface.B, 0.95f),
+                PortraitMin.X,
+                PortraitMin.Y,
+                PortraitSize,
+                PortraitSize);
+            const EEchoesVisualFaction PortraitFaction =
+                Focus->faction == echoes::sim::Faction::MeridianCompact
+                    ? EEchoesVisualFaction::MeridianCompact
+                : Focus->faction == echoes::sim::Faction::KharuunAssemblies
+                    ? EEchoesVisualFaction::KharuunAssemblies
+                : Focus->faction == echoes::sim::Faction::HollowChoir
+                    ? EEchoesVisualFaction::HollowChoir
+                    : EEchoesVisualFaction::Neutral;
+            DrawFactionSigil(
+                PortraitFaction,
+                PortraitMin + FVector2D(PortraitSize * 0.5f, PortraitSize * 0.5f),
+                PortraitSize * 0.34f,
+                Theme,
+                1.0f);
+            TextLeft = PortraitMin.X + PortraitSize + 16.0f * HudScale;
+        }
         DrawText(
             SelectionLine,
             FLinearColor(0.76f, 0.92f, 1.0f),
-            SelectionPanel.Min.X + 18.0f * HudScale,
+            TextLeft,
             SelectionPanel.Min.Y + 40.0f * HudScale,
             EchoesTypeface::Chrome(),
             1.0f * HudScale,
             false);
+        if (Focus != nullptr && Focus->maxHitPoints > 0)
+        {
+            // Integrity bar: pale ceramic, turning amber under a third.
+            const float Fraction = FMath::Clamp(
+                static_cast<float>(Focus->hitPoints) / static_cast<float>(Focus->maxHitPoints), 0.0f, 1.0f);
+            const float BarWidth = FMath::Min(
+                320.0f * HudScale, SelectionPanel.Max.X - TextLeft - 18.0f * HudScale);
+            const float BarTop = SelectionPanel.Min.Y + 88.0f * HudScale;
+            DrawText(
+                FString::Printf(TEXT("INTEGRITY  %d / %d"), Focus->hitPoints, Focus->maxHitPoints),
+                SecondaryColor,
+                TextLeft,
+                BarTop - 18.0f * HudScale,
+                EchoesTypeface::Readout(),
+                0.82f * HudScale,
+                false);
+            DrawRect(
+                FLinearColor(Theme.ElevatedSurface.R, Theme.ElevatedSurface.G, Theme.ElevatedSurface.B, 1.0f),
+                TextLeft, BarTop, BarWidth, 8.0f * HudScale);
+            DrawRect(
+                Fraction < 0.34f ? FLinearColor(1.0f, 0.55f, 0.12f) : FLinearColor(0.86f, 0.84f, 0.80f),
+                TextLeft, BarTop, BarWidth * Fraction, 8.0f * HudScale);
+        }
+        if (PanelSelection.Num() > 1 && EchoesController != nullptr)
+        {
+            const FEchoesCommandDeckProfile GroupProfile =
+                EchoesController->BuildCommandDeckProfile();
+            DrawText(
+                FString::Printf(
+                    TEXT("GROUP  %d     COMBAT %d    WORKERS %d    STRUCTURES %d    OTHER %d"),
+                    PanelSelection.Num(),
+                    GroupProfile.CombatCount,
+                    GroupProfile.WorkerCount,
+                    GroupProfile.StructureCount,
+                    GroupProfile.OtherCount),
+                SecondaryColor,
+                TextLeft,
+                SelectionPanel.Min.Y + 110.0f * HudScale,
+                EchoesTypeface::Readout(),
+                0.82f * HudScale,
+                false);
+        }
     }
 
     const echoes::sim::net::ScopedViewKeyframe* NetworkView =

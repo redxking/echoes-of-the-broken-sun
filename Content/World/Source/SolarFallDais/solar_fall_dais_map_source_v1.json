@@ -1,0 +1,56 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "The Solar Fall Dais (The Broken Sun)",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract for M15 The Solar Fall Dais per Docs/MapTechnicalBlueprint.md (§3.15). Author: Angelis Pseftis. Defines floating obsidian dais suspended directly beneath the shattered star, void abysses, and coronal flare rifts.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "allied-base", "x": 14, "y": 32},
+    {"id": "choir-core", "x": 50, "y": 32},
+    {"id": "solar-dais", "x": 32, "y": 32},
+    {"id": "resource-0", "x": 20, "y": 20},
+    {"id": "resource-1", "x": 20, "y": 44},
+    {"id": "resource-2", "x": 44, "y": 20},
+    {"id": "resource-3", "x": 44, "y": 44}
+  ],
+  "variants": [
+    {
+      "id": "campaign-solar-fall-dais",
+      "family": "campaign-solardais",
+      "branch": "none",
+      "operations_note": "Four 10x10 outer corner void chasms (SW, SE, NW, NE), flanking north and south coronal rifts (x=26-37, y=44-52 and y=12-20), and south coronal pylon anchor (x=31-32, y=2-3), funneling movement across the central obsidian dais at y=32.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 0, "x1": 9, "y0": 0, "y1": 9},
+        {"op": "block", "x0": 54, "x1": 63, "y0": 0, "y1": 9},
+        {"op": "block", "x0": 0, "x1": 9, "y0": 54, "y1": 63},
+        {"op": "block", "x0": 54, "x1": 63, "y0": 54, "y1": 63},
+        {"op": "block", "x0": 26, "x1": 37, "y0": 44, "y1": 52},
+        {"op": "block", "x0": 26, "x1": 37, "y0": 12, "y1": 20},
+        {"op": "block", "x0": 31, "x1": 32, "y0": 2, "y1": 3}
+      ],
+      "expected_blocked_cells": 620,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

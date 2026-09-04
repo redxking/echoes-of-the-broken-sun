@@ -289,8 +289,18 @@ private:
     {
         None,
         GlassScar,
-        LumeReach
+        LumeReach,
+        ShivergrassBasin,
+        SubterraneanCaverns,
+        ArkCityFoundry,
+        CrownfallVoid,
+        SolarFallDais
     };
+
+    [[nodiscard]] EDressingSiteProfile GetActiveDressingProfile() const
+    {
+        return ActiveDressingProfile;
+    }
 
     EDressingSiteProfile ActiveDressingProfile = EDressingSiteProfile::None;
     FString ActiveDressingSiteId;

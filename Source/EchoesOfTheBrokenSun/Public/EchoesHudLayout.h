@@ -52,9 +52,10 @@ struct FEchoesHudLayout final
         const float InnerBottom = Height - Gap;
 
         // Minimap: a square at the bar's left
-        const float MinimapSize = InnerBottom - InnerTop;
+        // 18 px caption strip above the map keeps its label inside the bar.
+        const float MinimapSize = InnerBottom - InnerTop - 18.0f;
         Layout.MinimapPanel = FBox2D(
-            FVector2D(Gap, InnerTop),
+            FVector2D(Gap, InnerTop + 18.0f),
             FVector2D(Gap + MinimapSize, InnerBottom));
         Layout.bMinimapVisible = Layout.bBottomBarVisible && MinimapSize >= 120.0f;
 

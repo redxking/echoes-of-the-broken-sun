@@ -1,0 +1,53 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "Shivergrass Basin (Seven Accounts of Rain)",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract for M02 Shivergrass Basin per Docs/MapTechnicalBlueprint.md (§3.2). Author: Angelis Pseftis. Defines deterministic 64x64 terrain, migration waystone anchors, and basalt scarp barriers.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-core", "x": 12, "y": 14},
+    {"id": "opponent-core", "x": 52, "y": 50},
+    {"id": "waystone-reroot", "x": 36, "y": 42},
+    {"id": "witness-site", "x": 48, "y": 48},
+    {"id": "resource-0", "x": 8, "y": 16},
+    {"id": "resource-1", "x": 16, "y": 8},
+    {"id": "resource-2", "x": 46, "y": 54},
+    {"id": "resource-3", "x": 54, "y": 46},
+    {"id": "dawnshard-0", "x": 32, "y": 30}
+  ],
+  "variants": [
+    {
+      "id": "campaign-shivergrass-basin",
+      "family": "campaign-shivergrass",
+      "branch": "none",
+      "operations_note": "Northwest impassable basalt scarp (x=0-13, y=50-63) and outcropping ridge (x=14-15, y=54-60), preserving the central resonance prairie and southeastern bog terrain.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 0, "x1": 13, "y0": 50, "y1": 63},
+        {"op": "block", "x0": 14, "x1": 15, "y0": 54, "y1": 60}
+      ],
+      "expected_blocked_cells": 210,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

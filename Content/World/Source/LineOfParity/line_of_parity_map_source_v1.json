@@ -1,0 +1,54 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "The Line of Parity (Terms of Continuance)",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract for M05 The Line of Parity per Docs/MapTechnicalBlueprint.md (§3.5). Author: Angelis Pseftis. Defines symmetrical demarcation glacis, treaty proxy pylons, and defensive earthwork revetments.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-proxy-west", "x": 10, "y": 32},
+    {"id": "local-proxy-east", "x": 54, "y": 32},
+    {"id": "pylon-west", "x": 26, "y": 32},
+    {"id": "pylon-east", "x": 38, "y": 32},
+    {"id": "resource-0", "x": 14, "y": 20},
+    {"id": "resource-1", "x": 14, "y": 44},
+    {"id": "resource-2", "x": 50, "y": 20},
+    {"id": "resource-3", "x": 50, "y": 44}
+  ],
+  "variants": [
+    {
+      "id": "campaign-line-of-parity",
+      "family": "campaign-line-of-parity",
+      "branch": "none",
+      "operations_note": "North and south boundary chasm faults (x=28-35, y=56-63 and y=0-7) and defensive earthwork revetments (x=21-22 and x=41-42, y=19-46), framing the central treaty corridor.",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 28, "x1": 35, "y0": 56, "y1": 63},
+        {"op": "block", "x0": 28, "x1": 35, "y0": 0, "y1": 7},
+        {"op": "block", "x0": 21, "x1": 22, "y0": 19, "y1": 46},
+        {"op": "block", "x0": 41, "x1": 42, "y0": 19, "y1": 46}
+      ],
+      "expected_blocked_cells": 240,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

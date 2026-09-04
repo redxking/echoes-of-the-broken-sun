@@ -326,6 +326,17 @@ void AEchoesRTSCameraPawn::BeginPlay()
         // (-EchoesArtReviewScout=X,Y, issued through the ordinary command
         // path) can reach and reveal the framed area first.
         FParse::Value(FCommandLine::Get(), TEXT("EchoesArtReviewDelay="), ArtReviewCaptureDelaySeconds);
+        // -EchoesArtReviewHighContrast renders the review in the high-contrast
+        // HUD variant so the accessibility branch is captured, not assumed.
+        if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewHighContrast")))
+        {
+            if (UEchoesGameUserSettings* ReviewSettings = UEchoesGameUserSettings::Get())
+            {
+                bArtReviewContrastOverridden = true;
+                bArtReviewContrastPrevious = ReviewSettings->IsHighContrastHudEnabled();
+                ReviewSettings->SetHighContrastHudEnabled(true);
+            }
+        }
         ArtReviewCaptureDelaySeconds = FMath::Clamp(ArtReviewCaptureDelaySeconds, 2.0f, 600.0f);
         SetActorLocation(Center);
         SpringArm->TargetArmLength = FMath::Clamp(Zoom, 600.0f, 6000.0f);
@@ -342,6 +353,19 @@ void AEchoesRTSCameraPawn::BeginPlay()
     }
 #endif
     SetActorLocation(FVector(-3000.0f, -3000.0f, 100.0f));
+}
+
+void AEchoesRTSCameraPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (bArtReviewContrastOverridden)
+    {
+        if (UEchoesGameUserSettings* ReviewSettings = UEchoesGameUserSettings::Get())
+        {
+            ReviewSettings->SetHighContrastHudEnabled(bArtReviewContrastPrevious);
+        }
+        bArtReviewContrastOverridden = false;
+    }
+    Super::EndPlay(EndPlayReason);
 }
 
 void AEchoesRTSCameraPawn::SetupPlayerInputComponent(
@@ -439,6 +463,17 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                                 Feedback))
                         {
                             ++Ordered;
+                        }
+                    }
+                    // -EchoesArtReviewSelectForce keeps the ordered combat force
+                    // selected through the ordinary selection path, so the
+                    // selection panel and command card are captured armed.
+                    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewSelectForce")))
+                    {
+                        if (AEchoesPlayerController* ReviewController =
+                                Cast<AEchoesPlayerController>(GetController()))
+                        {
+                            ReviewController->SelectCombatForce();
                         }
                     }
                     UE_LOG(

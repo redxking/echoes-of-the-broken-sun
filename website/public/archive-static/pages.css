@@ -1150,4 +1150,225 @@
 
 .evidence-figure.concept-proof,
 .evidence-figure.well-concept,
-.evidence-figure.scar-concept { border-top: 4px solid #8a5a00; }
+.evidence-figure.scar-concept,
+.evidence-figure.atlas-concept { border-top: 4px solid #8a5a00; }
+
+/* Tactical Atlas Styles */
+.atlas-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 36px;
+}
+
+.atlas-card {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--paper-card);
+}
+
+.dark-band .atlas-card {
+  border-color: var(--night-line);
+  background: var(--night-card);
+}
+
+.atlas-card figure {
+  margin: -24px -24px 20px -24px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: #080c0f;
+}
+
+.dark-band .atlas-card figure {
+  border-bottom-color: var(--night-line);
+}
+
+.atlas-card figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  transition: transform .4s ease;
+}
+
+.atlas-card:hover figure img {
+  transform: scale(1.02);
+}
+
+.atlas-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sector-code {
+  font: 700 12px/1 'DM Mono', monospace;
+  letter-spacing: .08em;
+  color: var(--teal);
+  text-transform: uppercase;
+}
+
+.dark-band .sector-code {
+  color: var(--teal-bright);
+}
+
+.biome-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid rgba(56, 173, 163, .35);
+  background: rgba(56, 173, 163, .08);
+  color: var(--teal);
+  font: 600 11px/1 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.dark-band .biome-badge {
+  border-color: rgba(56, 173, 163, .45);
+  color: var(--teal-bright);
+}
+
+.atlas-card h3 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.atlas-card p {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.sensor-specs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 16px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font: 12px/1.4 'DM Mono', monospace;
+}
+
+.dark-band .sensor-specs {
+  border-top-color: var(--night-line);
+}
+
+.sensor-specs div span {
+  display: block;
+  color: var(--body);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .75;
+}
+
+.dark-band .sensor-specs div span {
+  color: var(--night-body);
+}
+
+.sensor-specs div strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dark-band .sensor-specs div strong {
+  color: var(--night-text);
+}
+
+/* Interactive Radar Component */
+.interactive-radar-panel {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 28px;
+  margin-top: 36px;
+  padding: 24px;
+  border: 1px solid var(--night-line);
+  background: #0b1116;
+}
+
+.radar-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.radar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #131b22;
+  border: 1px solid #1f2c37;
+  color: #b0c0c6;
+  font: 500 12px/1 'DM Mono', monospace;
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.radar-btn:hover {
+  background: #1c2732;
+  color: #ffffff;
+  border-color: #3f5262;
+}
+
+.radar-btn.active {
+  background: #1f353d;
+  border-color: #38ada3;
+  color: #38ada3;
+  font-weight: 700;
+}
+
+.radar-display-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.radar-screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 480px;
+  background: #070a0d;
+  border: 1px solid #202c35;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-screen canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.radar-meta {
+  padding: 14px 18px;
+  border: 1px solid #1f2c37;
+  background: #10161b;
+  font: 12px/1.5 'DM Mono', monospace;
+  color: #c9d3d1;
+}
+
+.radar-meta h4 {
+  margin: 0 0 6px;
+  color: #ffffff;
+  font: 600 16px 'Space Grotesk', sans-serif;
+}
+
+@media (max-width: 980px) {
+  .atlas-overview-grid { grid-template-columns: 1fr; }
+  .interactive-radar-panel { grid-template-columns: 1fr; }
+}
+

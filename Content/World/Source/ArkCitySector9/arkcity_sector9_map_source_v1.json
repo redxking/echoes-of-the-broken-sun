@@ -1,0 +1,56 @@
+{
+  "source_format": "echoes-overlay-map-source",
+  "source_version": 1,
+  "display_name": "Ark-City Sector 9 (Names Without Births)",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Proposed source contract for M06 Ark-City Sector 9 per Docs/MapTechnicalBlueprint.md (§3.6). Author: Angelis Pseftis. Defines sheared urban industrial foundations, void cleave chasms, and hardened blast shelter zones.",
+  "base_contracts": {
+    "open-grid": {
+      "description": "All 4096 cells ground-passable before ops apply."
+    }
+  },
+  "shared_sites": [
+    {"id": "local-core", "x": 8, "y": 12},
+    {"id": "encroachment-east", "x": 56, "y": 52},
+    {"id": "encroachment-north", "x": 12, "y": 56},
+    {"id": "census-trace", "x": 30, "y": 45},
+    {"id": "blast-shelter", "x": 12, "y": 16},
+    {"id": "resource-0", "x": 14, "y": 10},
+    {"id": "resource-1", "x": 10, "y": 22},
+    {"id": "resource-2", "x": 42, "y": 38}
+  ],
+  "variants": [
+    {
+      "id": "campaign-arkcity-sector9",
+      "family": "campaign-arkcity",
+      "branch": "none",
+      "operations_note": "Diagonal stepped void cleave segments where residential districts sheared away (x=0-14, y=36-41; x=15-25, y=42-47; x=26-36, y=48-53), collapsed northern foundations (x=37-45, y=54-61), collapsed substation rubble (x=46-52, y=24-30), and transit pylon foot (x=2-3, y=2).",
+      "base": "open-grid",
+      "ops": [
+        {"op": "block", "x0": 0, "x1": 14, "y0": 36, "y1": 41},
+        {"op": "block", "x0": 15, "x1": 25, "y0": 42, "y1": 47},
+        {"op": "block", "x0": 26, "x1": 36, "y0": 48, "y1": 53},
+        {"op": "block", "x0": 37, "x1": 45, "y0": 54, "y1": 61},
+        {"op": "block", "x0": 46, "x1": 52, "y0": 24, "y1": 30},
+        {"op": "block", "x0": 2, "x1": 3, "y0": 2, "y1": 2}
+      ],
+      "expected_blocked_cells": 345,
+      "expected_passable_components": 1,
+      "expected_blocked_sites": []
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption of this data",
+      "spawn balance or resource pacing",
+      "measured travel time or gameplay pacing",
+      "NavMesh, formation traversal, or camera behavior"
+    ]
+  }
+}

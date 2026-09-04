@@ -538,37 +538,89 @@ bool AEchoesTerrainView::InitializeDressing()
     DressingShelves->ClearInstances();
     DressingShards->ClearInstances();
 
-    bool bIsLumeReach = false;
     if (ActiveOperationMode.has_value())
     {
         switch (*ActiveOperationMode)
         {
             case EEchoesOperationMode::CampaignPrologue:
-            case EEchoesOperationMode::CampaignChoirAtLumeReach:
-            case EEchoesOperationMode::CampaignNoNeutralLedger:
+                ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+                break;
+            case EEchoesOperationMode::CampaignSevenAccounts:
+            case EEchoesOperationMode::CampaignShapeOfSilence:
+                ActiveDressingProfile = EDressingSiteProfile::ShivergrassBasin;
+                break;
+            case EEchoesOperationMode::CampaignCityReserve:
+            case EEchoesOperationMode::CampaignNamesWithoutBirths:
+                ActiveDressingProfile = EDressingSiteProfile::ArkCityFoundry;
+                break;
+            case EEchoesOperationMode::CampaignUnburiedRoad:
             case EEchoesOperationMode::CampaignFutureThatWon:
+                ActiveDressingProfile = EDressingSiteProfile::SubterraneanCaverns;
+                break;
+            case EEchoesOperationMode::CampaignTermsOfContinuance:
+            case EEchoesOperationMode::CampaignShapeBesideUs:
+            case EEchoesOperationMode::CampaignReserveAuthority:
+            case EEchoesOperationMode::CampaignNoNeutralLedger:
+                ActiveDressingProfile = EDressingSiteProfile::CrownfallVoid;
+                break;
+            case EEchoesOperationMode::CampaignChoirAtLumeReach:
+                ActiveDressingProfile = EDressingSiteProfile::LumeReach;
+                break;
             case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
             case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
             case EEchoesOperationMode::CampaignTheBrokenSun:
-                bIsLumeReach = true;
+                ActiveDressingProfile = EDressingSiteProfile::SolarFallDais;
                 break;
+            case EEchoesOperationMode::Skirmish:
             default:
-                bIsLumeReach = false;
+                if (ActiveMapPreset == EEchoesSkirmishMapPreset::GlassScar)
+                {
+                    ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+                }
+                else if (ActiveMapPreset == EEchoesSkirmishMapPreset::CrownfallBasin)
+                {
+                    ActiveDressingProfile = EDressingSiteProfile::CrownfallVoid;
+                }
+                else if (ActiveMapPreset == EEchoesSkirmishMapPreset::SorynConfluence)
+                {
+                    ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+                }
+                else
+                {
+                    ActiveDressingProfile = EDressingSiteProfile::None;
+                }
                 break;
         }
     }
-
-    if (bIsLumeReach)
-    {
-        ActiveDressingProfile = EDressingSiteProfile::LumeReach;
-    }
-    else if (ActiveMapPreset == EEchoesSkirmishMapPreset::GlassScar)
-    {
-        ActiveDressingProfile = EDressingSiteProfile::GlassScar;
-    }
     else
     {
-        ActiveDressingProfile = EDressingSiteProfile::None;
+        // Auto-detect topology if operation mode is not explicitly specified
+        const int32 LumeReachCheckIndex = 29 * MapWidthTiles + 9;
+        if (CachedTerrain.IsValidIndex(LumeReachCheckIndex) &&
+            (CachedTerrain[LumeReachCheckIndex] & 0x03) == static_cast<uint8>(echoes::sim::Terrain::Blocked))
+        {
+            ActiveDressingProfile = EDressingSiteProfile::LumeReach;
+        }
+        else if (ActiveMapPreset == EEchoesSkirmishMapPreset::GlassScar)
+        {
+            ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+        }
+        else if (ActiveMapPreset == EEchoesSkirmishMapPreset::CrownfallBasin)
+        {
+            ActiveDressingProfile = EDressingSiteProfile::CrownfallVoid;
+        }
+        else if (ActiveMapPreset == EEchoesSkirmishMapPreset::SorynConfluence)
+        {
+            ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+        }
+        else
+        {
+            ActiveDressingProfile = EDressingSiteProfile::None;
+        }
+    }
+
+    if (ActiveDressingProfile == EDressingSiteProfile::None)
+    {
         return true;
     }
 
@@ -696,6 +748,41 @@ bool AEchoesTerrainView::InitializeDressing()
             ActiveRec.Id = Record.Id;
             ActiveDressingRecords.Add(ActiveRec);
         }
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::ShivergrassBasin)
+    {
+        ActiveDressingSiteId = TEXT("shivergrass-basin");
+        ActiveDressingPackSha = TEXT("pending-authoring");
+        ActiveDressingBasePackSha = TEXT("pending-authoring");
+        DressingRecordCount = 0;
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::SubterraneanCaverns)
+    {
+        ActiveDressingSiteId = TEXT("subterranean-caverns");
+        ActiveDressingPackSha = TEXT("pending-authoring");
+        ActiveDressingBasePackSha = TEXT("pending-authoring");
+        DressingRecordCount = 0;
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::ArkCityFoundry)
+    {
+        ActiveDressingSiteId = TEXT("arkcity-foundry");
+        ActiveDressingPackSha = TEXT("pending-authoring");
+        ActiveDressingBasePackSha = TEXT("pending-authoring");
+        DressingRecordCount = 0;
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::CrownfallVoid)
+    {
+        ActiveDressingSiteId = TEXT("crownfall-void");
+        ActiveDressingPackSha = TEXT("pending-authoring");
+        ActiveDressingBasePackSha = TEXT("pending-authoring");
+        DressingRecordCount = 0;
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::SolarFallDais)
+    {
+        ActiveDressingSiteId = TEXT("solar-fall-dais");
+        ActiveDressingPackSha = TEXT("pending-authoring");
+        ActiveDressingBasePackSha = TEXT("pending-authoring");
+        DressingRecordCount = 0;
     }
 
     const FTransform Hidden = HiddenTransform();

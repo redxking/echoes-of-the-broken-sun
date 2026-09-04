@@ -18,6 +18,7 @@ public:
     AEchoesRTSCameraPawn();
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
@@ -52,6 +53,10 @@ private:
     float ArtReviewAssetWaitSeconds = 0.0f;
     float ArtReviewCaptureDelaySeconds = 2.0f;
     bool bArtReviewScoutIssued = false;
+    // Review-only high-contrast override: the previous user value is restored
+    // at end of play so a capture never rewrites the saved setting.
+    bool bArtReviewContrastOverridden = false;
+    bool bArtReviewContrastPrevious = false;
 
     UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
     float PanSpeed = 2400.0f;
