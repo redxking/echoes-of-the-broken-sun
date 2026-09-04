@@ -30,36 +30,40 @@ struct FEchoesCommandDeckLayout final
         }
         const float Scale = FMath::Clamp(HudScale, 0.85f, 1.35f);
         const float Margin = 16.0f * Scale;
-        const float ButtonHeight = FMath::Min(
-            28.0f * Scale,
-            FMath::Max(0.0f, CommandDeckPanel.GetSize().Y * 0.34f));
-        // The button row replaces the primary-action text line, above the
-        // formation/context line the deck keeps drawing.
+        const float Gap = 8.0f * Scale;
+        // Command card: a grid, three columns when the panel is card-shaped,
+        // one row across when it is wide. Room stays below for the context line.
+        const float PanelWidth = CommandDeckPanel.GetSize().X;
+        const int32 Columns = FMath::Clamp(PanelWidth >= 640.0f * Scale ? ClampedCount : 3, 1, ClampedCount);
+        const int32 Rows = (ClampedCount + Columns - 1) / Columns;
         const float RowTop = CommandDeckPanel.Min.Y + 56.0f * Scale;
         const float RowLeft = CommandDeckPanel.Min.X + Margin;
         const float RowRight = CommandDeckPanel.Max.X - Margin;
-        const float Gap = 8.0f * Scale;
+        const float ContextReserve = 30.0f * Scale;
+        const float AvailableHeight =
+            CommandDeckPanel.Max.Y - ContextReserve - RowTop - Gap * static_cast<float>(Rows - 1);
+        const float ButtonHeight = FMath::Min(46.0f * Scale, AvailableHeight / static_cast<float>(Rows));
         const float ButtonWidth =
-            (RowRight - RowLeft - Gap * static_cast<float>(ClampedCount - 1)) /
-            static_cast<float>(ClampedCount);
-        if (ButtonWidth < MinimumButtonWidth ||
-            ButtonHeight < 12.0f ||
-            RowTop + ButtonHeight > CommandDeckPanel.Max.Y)
+            (RowRight - RowLeft - Gap * static_cast<float>(Columns - 1)) /
+            static_cast<float>(Columns);
+        if (ButtonWidth < MinimumButtonWidth || ButtonHeight < 22.0f)
         {
             return Layout;
         }
         for (int32 Index = 0; Index < ClampedCount; ++Index)
         {
+            const int32 Column = Index % Columns;
+            const int32 Row = Index / Columns;
             const float ButtonLeft =
-                RowLeft + static_cast<float>(Index) * (ButtonWidth + Gap);
+                RowLeft + static_cast<float>(Column) * (ButtonWidth + Gap);
+            const float ButtonTop = RowTop + static_cast<float>(Row) * (ButtonHeight + Gap);
             Layout.Buttons.Add(FBox2D(
-                FVector2D(ButtonLeft, RowTop),
-                FVector2D(ButtonLeft + ButtonWidth, RowTop + ButtonHeight)));
+                FVector2D(ButtonLeft, ButtonTop),
+                FVector2D(ButtonLeft + ButtonWidth, ButtonTop + ButtonHeight)));
         }
         return Layout;
     }
 
-    /** Index of the button under a screen position, or INDEX_NONE. */
     [[nodiscard]] int32 HitTest(const FVector2D& ScreenPosition) const
     {
         for (int32 Index = 0; Index < Buttons.Num(); ++Index)

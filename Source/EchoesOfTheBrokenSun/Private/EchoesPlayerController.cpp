@@ -9159,15 +9159,7 @@ void AEchoesPlayerController::ContextOrderPressed()
                 ViewportSize,
                 Settings != nullptr ? Settings->GetHudScale() : 1.0f,
                 !GetStatusMessage().IsEmpty());
-            if (Layout.MainPanel.IsInsideOrOn(PointerPosition) ||
-                (Layout.bCommandDeckVisible &&
-                 Layout.CommandDeckPanel.IsInsideOrOn(PointerPosition)) ||
-                (Layout.bObjectiveVisible &&
-                 Layout.ObjectivePanel.IsInsideOrOn(PointerPosition)) ||
-                (Layout.bStatusVisible &&
-                 Layout.StatusPanel.IsInsideOrOn(PointerPosition)) ||
-                (Layout.bMinimapVisible &&
-                 Layout.MinimapPanel.IsInsideOrOn(PointerPosition)))
+            if (Layout.IsPointerOnChrome(PointerPosition))
             {
                 return;
             }
@@ -12337,13 +12329,7 @@ bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
 
     // Any other visible HUD panel absorbs the press: a click on the interface
     // must never fall through and clear the player's selection.
-    return Layout.MainPanel.IsInsideOrOn(ScreenPosition) ||
-           (Layout.bObjectiveVisible &&
-            Layout.ObjectivePanel.IsInsideOrOn(ScreenPosition)) ||
-           (Layout.bStatusVisible &&
-            Layout.StatusPanel.IsInsideOrOn(ScreenPosition)) ||
-           (Layout.bMinimapVisible &&
-            Layout.MinimapPanel.IsInsideOrOn(ScreenPosition));
+    return Layout.IsPointerOnChrome(ScreenPosition);
 }
 
 bool AEchoesPlayerController::HandleModalOverlayPointer(

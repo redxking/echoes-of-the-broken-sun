@@ -84,33 +84,52 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     const FEchoesHudLayout MaximumLayout =
         FEchoesHudLayout::Build(ReviewViewport, 1.35f, true);
     TestTrue(
-        TEXT("Maximum-scale objective clears the main panel"),
+        TEXT("Maximum-scale objective clears the command strip"),
         MaximumLayout.ObjectivePanel.Min.Y >=
             MaximumLayout.MainPanel.Max.Y + 16.0f);
     TestTrue(
-        TEXT("Maximum-scale command deck clears the objective fallback"),
-        MaximumLayout.CommandDeckPanel.Min.Y >=
-            MaximumLayout.ObjectivePanel.Max.Y + 12.0f);
-    TestEqual(
-        TEXT("Maximum-scale status backing grows with the main HUD"),
-        MaximumLayout.StatusPanel.Max.X,
-        MaximumLayout.MainPanel.Max.X);
+        TEXT("Maximum-scale command card sits inside the bottom bar"),
+        MaximumLayout.bCommandDeckVisible &&
+            MaximumLayout.CommandDeckPanel.Min.Y >= MaximumLayout.BottomBar.Min.Y &&
+            MaximumLayout.CommandDeckPanel.Max.Y <= MaximumLayout.BottomBar.Max.Y &&
+            MaximumLayout.CommandDeckPanel.Min.Y >=
+                MaximumLayout.ObjectivePanel.Max.Y + 12.0f);
+    TestTrue(
+        TEXT("Maximum-scale minimap sits inside the bar left of the command card"),
+        MaximumLayout.bMinimapVisible &&
+            MaximumLayout.MinimapPanel.Max.X + 14.0f <= MaximumLayout.CommandDeckPanel.Min.X);
+    TestTrue(
+        TEXT("Maximum-scale status line clears the bar and the objectives"),
+        MaximumLayout.bStatusVisible &&
+            MaximumLayout.StatusPanel.Max.Y <= MaximumLayout.BottomBar.Min.Y &&
+            MaximumLayout.StatusPanel.Min.Y >= MaximumLayout.ObjectivePanel.Max.Y + 8.0f);
+    TestTrue(
+        TEXT("Maximum-scale ledger sits top-right clear of the command strip"),
+        MaximumLayout.bResourceVisible &&
+            MaximumLayout.ResourcePanel.Min.X >= MaximumLayout.MainPanel.Max.X + 14.0f);
 
     const FEchoesHudLayout CompactMaximumLayout =
         FEchoesHudLayout::Build(FVector2D(1280.0f, 720.0f), 1.35f, true);
     TestTrue(
         TEXT("Compact maximum-scale objective remains visible"),
         CompactMaximumLayout.bObjectiveVisible);
-    TestFalse(
-        TEXT("Compact maximum-scale command deck hides instead of overlapping objectives"),
-        CompactMaximumLayout.bCommandDeckVisible);
+    TestTrue(
+        TEXT("Compact maximum-scale command card still fits the bar"),
+        CompactMaximumLayout.bCommandDeckVisible &&
+            CompactMaximumLayout.bMinimapVisible &&
+            CompactMaximumLayout.MinimapPanel.Max.X + 14.0f <=
+                CompactMaximumLayout.CommandDeckPanel.Min.X);
 
     const FEchoesHudLayout DefaultLayout =
         FEchoesHudLayout::Build(ReviewViewport, 1.0f, true);
     TestFalse(
-        TEXT("Battlefield visibility rejects a target behind the main HUD"),
+        TEXT("Battlefield visibility rejects a target behind the command strip"),
         DefaultLayout.IsBattlefieldPointClear(
-            FVector2D(800.0f, 111.0f), ReviewViewport));
+            DefaultLayout.MainPanel.GetCenter(), ReviewViewport));
+    TestFalse(
+        TEXT("Battlefield visibility rejects a target behind the bottom bar"),
+        DefaultLayout.IsBattlefieldPointClear(
+            DefaultLayout.BottomBar.GetCenter(), ReviewViewport));
     TestTrue(
         TEXT("Battlefield visibility accepts a clear default target"),
         DefaultLayout.IsBattlefieldPointClear(

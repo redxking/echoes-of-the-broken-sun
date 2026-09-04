@@ -538,6 +538,22 @@ void AEchoesHUD::DrawHUD()
             false);
     }
 
+    // Instrument bar across the bottom: minimap, selection, command card.
+    if (HudLayout.bBottomBarVisible)
+    {
+        DrawRect(
+            PanelColor,
+            HudLayout.BottomBar.Min.X,
+            HudLayout.BottomBar.Min.Y,
+            HudLayout.BottomBar.GetSize().X,
+            HudLayout.BottomBar.GetSize().Y);
+        DrawRect(
+            FLinearColor(AccentColor.R, AccentColor.G, AccentColor.B, 0.55f),
+            HudLayout.BottomBar.Min.X,
+            HudLayout.BottomBar.Min.Y,
+            HudLayout.BottomBar.GetSize().X,
+            2.0f);
+    }
     DrawRect(
         PanelColor,
         HudLayout.MainPanel.Min.X,
@@ -641,14 +657,42 @@ void AEchoesHUD::DrawHUD()
                 EchoesController->GetNetworkPresentedEntityCount());
         }
     }
-    DrawText(
-        ResourceLine,
-        FLinearColor::White,
-        TextX,
-        HudY(40.0f),
-        EchoesTypeface::Readout(),
-        1.0f * HudScale,
-        false);
+    if (HudLayout.bResourceVisible)
+    {
+        DrawRect(
+            PanelColor,
+            HudLayout.ResourcePanel.Min.X,
+            HudLayout.ResourcePanel.Min.Y,
+            HudLayout.ResourcePanel.GetSize().X,
+            HudLayout.ResourcePanel.GetSize().Y);
+        DrawText(
+            TEXT("LEDGER"),
+            AccentColor,
+            HudLayout.ResourcePanel.Min.X + 16.0f,
+            HudLayout.ResourcePanel.Min.Y + 8.0f,
+            EchoesTypeface::Chrome(),
+            0.78f * HudScale,
+            false);
+        DrawText(
+            ResourceLine,
+            FLinearColor::White,
+            HudLayout.ResourcePanel.Min.X + 16.0f,
+            HudLayout.ResourcePanel.Min.Y + 26.0f * HudScale,
+            EchoesTypeface::Readout(),
+            1.0f * HudScale,
+            false);
+    }
+    else
+    {
+        DrawText(
+            ResourceLine,
+            FLinearColor::White,
+            TextX,
+            HudY(40.0f),
+            EchoesTypeface::Readout(),
+            1.0f * HudScale,
+            false);
+    }
 
     FString SelectionLine = TEXT("Selected  0");
     if (EchoesController != nullptr)
@@ -940,26 +984,54 @@ void AEchoesHUD::DrawHUD()
         SelectionLine,
         FLinearColor(0.76f, 0.92f, 1.0f),
         TextX,
-        HudY(64.0f),
+        HudY(HudLayout.bResourceVisible ? 40.0f : 64.0f),
         EchoesTypeface::Chrome(),
         1.0f * HudScale,
         false);
+    DrawText(
+        ResearchLine,
+        SecondaryColor,
+        TextX,
+        HudY(HudLayout.bResourceVisible ? 64.0f : 86.0f),
+        EchoesTypeface::Chrome(),
+        0.86f * HudScale,
+        false);
+    if (HudLayout.bSelectionVisible)
+    {
+        const FBox2D& SelectionPanel = HudLayout.SelectionPanel;
+        DrawRect(
+            FLinearColor(AccentColor.R, AccentColor.G, AccentColor.B, 0.65f),
+            SelectionPanel.Min.X,
+            SelectionPanel.Min.Y,
+            4.0f * HudScale,
+            SelectionPanel.GetSize().Y);
+        DrawText(
+            TEXT("SELECTION"),
+            AccentColor,
+            SelectionPanel.Min.X + 18.0f * HudScale,
+            SelectionPanel.Min.Y + 13.0f * HudScale,
+            EchoesTypeface::Chrome(),
+            0.88f * HudScale,
+            false);
+        DrawText(
+            SelectionLine,
+            FLinearColor(0.76f, 0.92f, 1.0f),
+            SelectionPanel.Min.X + 18.0f * HudScale,
+            SelectionPanel.Min.Y + 40.0f * HudScale,
+            EchoesTypeface::Chrome(),
+            1.0f * HudScale,
+            false);
+    }
 
     const echoes::sim::net::ScopedViewKeyframe* NetworkView =
         EchoesController != nullptr
             ? EchoesController->GetNetworkScopedView()
             : nullptr;
     const bool bNetworkRemoteView = NetworkView != nullptr;
-    DrawText(
+    const FString CameraControlLine =
         bNetworkRemoteView
             ? TEXT("ONLINE  WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Space] keyboard order")
-            : TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order"),
-        SecondaryColor,
-        TextX,
-        HudY(90.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
+            : TEXT("WASD / edge: pan  Wheel: zoom  LMB/drag: select  RMB: pointer order  [Home] Key target  [End] Snap  [Arrows] Move  [Space] Order");
     const echoes::sim::Faction PresentedFaction =
         NetworkView != nullptr
             ? NetworkView->faction
@@ -979,14 +1051,6 @@ void AEchoesHUD::DrawHUD()
             FactionControlLine = TEXT("[F] Attack-move  [T] Patrol  [H] Hold  [J] Guard  [X] Stop  [Shift+F3] Manifest  [Shift+F4] Possible");
             break;
     }
-    DrawText(
-        FactionControlLine,
-        SecondaryColor,
-        TextX,
-        HudY(113.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
     const FString GroupControlLine = bNetworkRemoteView
         ? FString::Printf(
               TEXT("Seat %u  //  two-Hz scoped state  //  base-linked delta recovery  //  hidden authority state excluded"),
@@ -996,14 +1060,6 @@ void AEchoesHUD::DrawHUD()
               EchoesController != nullptr
                   ? *EchoesController->GetFormationLabel()
                   : TEXT("BOX"));
-    DrawText(
-        GroupControlLine,
-        SecondaryColor,
-        TextX,
-        HudY(136.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
     const FString FactionStatusLine = bNetworkRemoteView
         ? FString::Printf(
               TEXT("Connection-bound local seat: %s     Opponent: %s"),
@@ -1014,22 +1070,6 @@ void AEchoesHUD::DrawHUD()
               EchoesController != nullptr
                   ? *EchoesController->GetLocalFactionLabel()
                   : TEXT("MERIDIAN COMPACT"));
-    DrawText(
-        FactionStatusLine,
-        SecondaryColor,
-        TextX,
-        HudY(159.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
-    DrawText(
-        ResearchLine,
-        SecondaryColor,
-        TextX,
-        HudY(182.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
 
     const FString SettingsLine = FString::Printf(
         TEXT("[U] UI %d%%  [I] Contrast %s  [O] Reduced motion %s  [/] Reduced flash %s  [Y] Edge pan %s"),
@@ -1038,14 +1078,6 @@ void AEchoesHUD::DrawHUD()
         Settings != nullptr && Settings->IsReducedMotionEnabled() ? TEXT("ON") : TEXT("OFF"),
         Settings != nullptr && Settings->IsReducedFlashingEnabled() ? TEXT("ON") : TEXT("OFF"),
         Settings == nullptr || Settings->IsEdgePanEnabled() ? TEXT("ON") : TEXT("OFF"));
-    DrawText(
-        SettingsLine,
-        AccentColor,
-        TextX,
-        HudY(205.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
 
     const FString CameraSettingsLine = FString::Printf(
         TEXT("[Left/Right bracket] Pan speed %d%%    [Comma/Period] Zoom step %d%%"),
@@ -1053,14 +1085,14 @@ void AEchoesHUD::DrawHUD()
             (Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f) * 100.0f),
         FMath::RoundToInt(
             (Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f) * 100.0f));
-    DrawText(
-        CameraSettingsLine,
-        SecondaryColor,
-        TextX,
-        HudY(228.0f),
-        EchoesTypeface::Chrome(),
-        0.86f * HudScale,
-        false);
+
+    FieldKeyLines.Reset();
+    FieldKeyLines.Add(CameraControlLine);
+    FieldKeyLines.Add(FactionControlLine);
+    FieldKeyLines.Add(GroupControlLine);
+    FieldKeyLines.Add(FactionStatusLine);
+    FieldKeyLines.Add(SettingsLine);
+    FieldKeyLines.Add(CameraSettingsLine);
 
     DrawCommandDeck(EchoesController, Bridge, Settings);
 
@@ -1503,6 +1535,34 @@ void AEchoesHUD::DrawCommandDeck(
     const TArray<uint32>& SelectedIds = EchoesController->GetSelectedEntityIds();
     if (SelectedIds.IsEmpty())
     {
+        // The command card keeps its place on the instrument bar with nothing
+        // selected, so the bar reads as one deck rather than a hole.
+        const UEchoesGameUserSettings* EmptySettings = Settings;
+        const float EmptyScale = EmptySettings != nullptr ? EmptySettings->GetHudScale() : 1.0f;
+        const FEchoesHudLayout EmptyLayout = FEchoesHudLayout::Build(
+            FVector2D(Canvas->ClipX, Canvas->ClipY), EmptyScale, false);
+        if (EmptyLayout.bCommandDeckVisible)
+        {
+            const FEchoesVisualTheme EmptyTheme = UEchoesVisualThemeSettings::Resolve(
+                EmptySettings != nullptr && EmptySettings->IsHighContrastHudEnabled());
+            DrawVisualPanel(EmptyLayout.CommandDeckPanel, EmptyTheme, true);
+            DrawText(
+                TEXT("TACTICAL COMMAND  //  NO SELECTION"),
+                EmptyTheme.Accent,
+                EmptyLayout.CommandDeckPanel.Min.X + 18.0f * EmptyScale,
+                EmptyLayout.CommandDeckPanel.Min.Y + 13.0f * EmptyScale,
+                EchoesTypeface::Chrome(),
+                0.88f * EmptyScale,
+                false);
+            DrawText(
+                TEXT("Select owned units or a structure to arm the card."),
+                EmptyTheme.TextSecondary,
+                EmptyLayout.CommandDeckPanel.Min.X + 18.0f * EmptyScale,
+                EmptyLayout.CommandDeckPanel.Min.Y + 39.0f * EmptyScale,
+                EchoesTypeface::Chrome(),
+                0.78f * EmptyScale,
+                false);
+        }
         return;
     }
 
@@ -1636,7 +1696,7 @@ void AEchoesHUD::DrawCommandDeck(
         ContextLine,
         Accent,
         Left + 18.0f * HudScale,
-        Top + 87.0f * HudScale,
+        Top + PanelHeight - 24.0f * HudScale,
         SmallFont,
         0.72f * HudScale,
         false);
@@ -5137,9 +5197,17 @@ void AEchoesHUD::DrawPauseMenu(
              SmallFont, 0.88f * TextScale, false);
     DrawText(SettingsLineE, Body, Left + 42.0f, Top + 418.0f * ContentScale,
              SmallFont, 0.78f * TextScale, false);
+    DrawText(TEXT("FIELD KEYS"), Accent, Left + 42.0f,
+             Top + 452.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+    for (int32 KeyIndex = 0; KeyIndex < FieldKeyLines.Num(); ++KeyIndex)
+    {
+        DrawText(FieldKeyLines[KeyIndex], Muted, Left + 42.0f,
+                 Top + (476.0f + 20.0f * static_cast<float>(KeyIndex)) * ContentScale,
+                 SmallFont, 0.74f * TextScale, false);
+    }
     DrawText(
         TEXT("Only implemented, behavior-verified options are exposed in this build."),
-        Muted, Left + 42.0f, Top + 458.0f * ContentScale,
+        Muted, Left + 42.0f, Top + 604.0f * ContentScale,
         SmallFont, 0.78f * TextScale, false);
 
     DrawRect(Accent,

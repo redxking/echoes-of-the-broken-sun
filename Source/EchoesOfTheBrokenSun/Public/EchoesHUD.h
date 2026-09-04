@@ -24,6 +24,9 @@ public:
     virtual void DrawHUD() override;
 
 private:
+    // Field-key legend lines composed each frame for the field menu (the
+    // in-match HUD no longer carries the cheat sheet).
+    TArray<FString> FieldKeyLines;
     void DrawTitleScreen(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
