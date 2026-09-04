@@ -1810,7 +1810,10 @@ void AEchoesGameMode::BeginPlay()
                     0.0f);
 
                 // West Cliff (Screen Left): Meridian Compact strike force
-                // Frontline Bulwarks deployed with hexagonal holographic energy shield barrier wings
+                // Frontline Bulwarks deployed with hexagonal holographic energy shield barrier wings.
+                // The shield wings sit on the mesh local +X; with the review camera at yaw 43 a
+                // heading near 135 puts the wings edge-on to the lens. Headings near 165 keep them
+                // bearing on the Well (bearing ~153 from the rim) while showing the cells three-quarter.
                 // Bulwark 1: Holding the cliff rim overlooking the Future Well dais
                 SpawnPreview(
                     920101,
@@ -1823,7 +1826,7 @@ void AEchoesGameMode::BeginPlay()
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
                     FVector(360.0f, -180.0f, 12.0f),
-                    135.0f);
+                    168.0f);
 
                 // Bulwark 2: Midground battle line anchor
                 SpawnPreview(
@@ -1837,7 +1840,7 @@ void AEchoesGameMode::BeginPlay()
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
                     FVector(520.0f, -340.0f, 12.0f),
-                    140.0f);
+                    172.0f);
 
                 // Bulwark 3: Outer flank defense
                 SpawnPreview(
@@ -1851,7 +1854,7 @@ void AEchoesGameMode::BeginPlay()
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
                     FVector(680.0f, -220.0f, 12.0f),
-                    130.0f);
+                    162.0f);
 
                 // Lancers in advancing tactical wedge formation along the bridge ramp and cliff rim
                 // Lancer 1: Foreground bridge approach
