@@ -5373,6 +5373,12 @@ void AEchoesPlayerController::PresentTitleScreen()
             : TEXT("false"));
 
 #if !UE_BUILD_SHIPPING
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesSkirmishReviewAssisted")))
+    {
+        PendingSkirmishSetup.Difficulty = EEchoesSkirmishDifficulty::Assisted;
+        SkirmishSetupFocusRow = 5;
+    }
+
     // Rendered-review fixture: open the selected operation brief without
     // ordinary input so headless captures can photograph the briefing panel.
     if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewOpenBrief")))
