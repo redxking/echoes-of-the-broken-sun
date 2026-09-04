@@ -34,8 +34,8 @@ fi
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! grep -Eq '\[ECHOES_ART_COMPLETE\] generated=48 roster=24 landmarks=4 environment=8 vfx=9 destructionVfx=3' "$log"; then
-  print -u2 "The Unreal art generator did not report all 48 assets."
+if ! grep -Eq '\[ECHOES_ART_COMPLETE\] generated=49 roster=24 landmarks=4 environment=9 vfx=9 destructionVfx=3' "$log"; then
+  print -u2 "The Unreal art generator did not report all 49 assets."
   print -u2 "Inspect: $log"
   exit 3
 fi

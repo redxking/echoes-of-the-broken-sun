@@ -2219,6 +2219,9 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UStaticMesh* BrokenSunSkyMesh = LoadObject<UStaticMesh>(
         nullptr,
         TEXT("/Game/Art/Generated/World/Environment/SM_World_BrokenSunSky.SM_World_BrokenSunSky"));
+    UStaticMesh* SkyDomeMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_SkyDome.SM_World_SkyDome"));
     if (CubeMesh == nullptr || SurfaceMaterial == nullptr || ShelfMesh == nullptr ||
         RidgeMesh == nullptr || ShardMesh == nullptr ||
         AshCutMesh == nullptr || BuriedCausewayMesh == nullptr ||
@@ -2738,6 +2741,57 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             }
         }
 
+        // Sky dome (gate 50): four self-lit bands grade the sky from a warm
+        // horizon haze to a near-black zenith. One inward-facing mesh far
+        // outside the camera bounds; no atmosphere pass on the M1 Pro budget.
+        if (SkyDomeMesh != nullptr)
+        {
+            AStaticMeshActor* SkyDome = World->SpawnActor<AStaticMeshActor>(
+                FVector(0.0f, 0.0f, -1500.0f),
+                FRotator::ZeroRotator,
+                SkyActorSpawnParameters);
+            if (SkyDome != nullptr)
+            {
+                SkyDome->Tags.Add(TEXT("EchoesPlaceholder"));
+                SkyDome->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                EchoesBattlefieldPresentation::RegisterPresetActorTags(
+                    SkyDome->Tags,
+                    EEchoesSkirmishMapPreset::GlassScar);
+                SkyDome->Tags.Add(TEXT("EchoesSkyDome"));
+                UStaticMeshComponent* DomeComp = SkyDome->GetStaticMeshComponent();
+                DomeComp->SetMobility(EComponentMobility::Movable);
+                DomeComp->SetStaticMesh(SkyDomeMesh);
+                DomeComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                DomeComp->SetCanEverAffectNavigation(false);
+                DomeComp->SetGenerateOverlapEvents(false);
+                DomeComp->SetCastShadow(false);
+                DomeComp->SetReceivesDecals(false);
+                // Horizon haze, low indigo, deep indigo, zenith: the palette's
+                // indigo fill graded, with a warm horizon under the Broken Sun.
+                const FLinearColor DomeColors[4] = {
+                    FLinearColor(0.11f, 0.10f, 0.27f),
+                    FLinearColor(0.055f, 0.062f, 0.21f),
+                    FLinearColor(0.028f, 0.032f, 0.13f),
+                    FLinearColor(0.012f, 0.012f, 0.055f)};
+                // Kept low so the frame's mean luma stays inside the A1 window
+                // (50-70): the first pass at 0.9 pushed the fixture to 72.
+                const float DomeEmissive[4] = {0.55f, 0.45f, 0.35f, 0.30f};
+                for (int32 Slot = 0; Slot < 4; ++Slot)
+                {
+                    UMaterialInstanceDynamic* DomeMat =
+                        UMaterialInstanceDynamic::Create(SurfaceMaterial, SkyDome);
+                    if (DomeMat != nullptr)
+                    {
+                        DomeMat->SetVectorParameterValue(EnvironmentColorParameterName, DomeColors[Slot]);
+                        DomeMat->SetScalarParameterValue(EnvironmentMetallicParameterName, 0.0f);
+                        DomeMat->SetScalarParameterValue(EnvironmentRoughnessParameterName, 1.0f);
+                        DomeMat->SetScalarParameterValue(EnvironmentEmissiveParameterName, DomeEmissive[Slot]);
+                        DomeComp->SetMaterial(Slot, DomeMat);
+                    }
+                }
+            }
+        }
+
         if (bVerticalSliceMode)
         {
             // Upward warm golden aperture illumination inside the Future Well dais
@@ -2832,7 +2886,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v6 authoredAssets=7 shelves=0 chasm=terrain-view routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v6 authoredAssets=8 skyDome=banded shelves=0 chasm=terrain-view routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,

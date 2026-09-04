@@ -55,6 +55,9 @@ GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-vitrified-v2"
 # Broken Sun: a fractured stellar sphere (crust plates over a molten core, shards drifting in
 # three dimensions) replacing the v1 flattened disc with rings (gate 50).
 BROKEN_SUN_SKY_ASSET_REVISION = "broken-sun-sky-fractured-v3"
+# Sky dome: four inward-facing bands from a warm horizon haze to a near-black zenith, so the
+# sky reads as a lit gradient instead of the flat fog colour (gate 50). One mesh, no atmosphere pass.
+SKY_DOME_ASSET_REVISION = "sky-dome-banded-v1"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
@@ -1180,6 +1183,35 @@ def world_broken_sun_sky(mesh: unreal.DynamicMesh, high: bool) -> None:
             cone(mesh, 70.0, 12.0, 170.0, at, GLOW, (float(index * 23 % 60), float(index * 41 % 90), 0.0), 5)
 
 
+def world_sky_dome(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Sky dome: four stacked, open, inward-facing cone bands around the whole map, one per
+    material zone, so the runtime can grade the sky from a warm horizon haze (zone 0) through
+    indigo (zones 1-2) to a near-black zenith (zone 3). Presentation only; sits far outside
+    the camera bounds and behind the Broken Sun."""
+    sides = 48 if high else 24
+    # (material, bottom z, top z, bottom radius, top radius)
+    for material_id, z0, z1, r0, r1 in (
+        (PRIMARY, -3000.0, 5000.0, 42000.0, 40500.0),
+        (DARK, 5000.0, 14000.0, 40500.0, 34000.0),
+        (LIGHT, 14000.0, 26000.0, 34000.0, 21000.0),
+        (GLOW, 26000.0, 40000.0, 21000.0, 800.0),
+    ):
+        options = unreal.GeometryScriptPrimitiveOptions(
+            material_id=material_id, flip_orientation=True
+        )
+        mesh.append_cone(
+            options,
+            transform((0.0, 0.0, (z0 + z1) * 0.5)),
+            r0,
+            r1,
+            z1 - z0,
+            sides,
+            1,
+            False,
+            unreal.GeometryScriptPrimitiveOriginMode.CENTER,
+        )
+
+
 def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
     """Production-oriented Ash Cut trench with layered banks and a continuous bed."""
     segment_specs = (
@@ -1645,6 +1677,7 @@ ASSETS = (
     AssetSpec("World", "Environment", "GlassScarBuriedCauseway", "Buried Causeway crossing", "straight central route signature", world_glass_scar_buried_causeway),
     AssetSpec("World", "Environment", "GlassScarFoldedVerge", "Folded Verge crossing", "offset eastern route signature", world_glass_scar_folded_verge),
     AssetSpec("World", "Environment", "BrokenSunSky", "Broken Sun celestial sky", "signature fractured sun sky object", world_broken_sun_sky),
+    AssetSpec("World", "Environment", "SkyDome", "Sky dome", "banded inward-facing sky gradient shell", world_sky_dome),
     AssetSpec("World", "Resources", "MatterDeposit", "Matter deposit", "neutral gatherable resource landmark", world_matter_deposit),
 )
 
@@ -2917,6 +2950,7 @@ def create_static_mesh(
     environment_revisions = {
         "GlassScarShelf": GLASS_SCAR_SHELF_ASSET_REVISION,
         "BrokenSunSky": BROKEN_SUN_SKY_ASSET_REVISION,
+        "SkyDome": SKY_DOME_ASSET_REVISION,
     }
     environment_revision = environment_revisions.get(spec.name)
     roster_factions = ("Meridian", "Kharuun", "Choir")
@@ -3312,7 +3346,7 @@ def main() -> None:
     )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "
-        f"roster=24 landmarks=4 environment=8 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
+        f"roster=24 landmarks=4 environment=9 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
         f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 

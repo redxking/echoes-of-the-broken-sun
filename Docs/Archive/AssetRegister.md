@@ -182,6 +182,15 @@ This is the single authoritative provenance register and is edited in place. An 
 - Two LODs (LOD0 2,356 vertices / 1,416 triangles; LOD1 1,470 vertices / 708 triangles), two UV channels per LOD, four material zones, runtime collision disabled. Mesh SHA-256 `80962927c61a878747293359f906ea830e593b0a390509cdd411b68c0636cc0e`; instances `1938197b…` (Ceramic), `176c5952…` (Obsidian), `22d25c60…` (Phase), `d8665097…` (Rift). Supersedes the ART-007 mesh identity, retained in historical evidence.
 - Evidence: fixture capture `fixture-piers-1920x1080.png` in the same evidence set; a Folded Verge live capture is still owed.
 
+## ART-021 generation record
+
+- Generator: `Scripts/generate_art_assets.py`; wrapper: `Scripts/generate_art_assets.sh` (asset count raised 48→49, environment 8→9); generation log `Saved/Logs/ArtAssetGeneration.log` dated 2026-09-04.
+- Output: new `SM_World_SkyDome` under `Content/Art/Generated/World/Environment` at revision `sky-dome-banded-v1` (in the generator's environment-revision map).
+- Why: the sky behind the Glass Scar frame was the flat height-fog colour (directive gate 50); CONCEPT-004 reads a graded indigo sky with a warm haze under the Broken Sun. Rather than the engine atmosphere component, which adds a render pass on the M1 Pro budget, the sky is one inward-facing shell: four stacked open cone bands (horizon, low, deep, zenith) built with the primitive flip-orientation option, radius 42,000 at the horizon to a near-point zenith at 40,000 up, one material zone per band so the runtime grades it.
+- Two LODs (LOD0 588 vertices / 768 triangles; LOD1 392 vertices / 384 triangles), four material zones on the shared world-surface material, no collision, navigation, or gameplay meaning. Runtime binding: self-lit band colours (0.11, 0.10, 0.27) → (0.012, 0.012, 0.055) at emissive 0.55 → 0.30, metallic 0, roughness 1, spawned at (0, 0, −1,500) on the Glass Scar preset; the first pass at emissive 0.9 pushed the fixture's mean luma to 72 and was reduced to stay inside the A1 window.
+- Asset SHA-256 `288a2a8ad32d0671cb030f44039313e2fcdf32f63397c61bb93271da01fcf1e5`.
+- Evidence: fixture and scouted live captures `fixture-skydome-*` / `live-well-skydome-*` under `BuildArtifacts/Evidence/release-gate50-composed-frame-20260904/` (editor build, local), exposure measured. Owner review still owed.
+
 ## AUDIO-001 generation and playback evidence record
 
 - Exact accepted source: version 0.71.0 commit `5368aec5d86a6bf5566c3445890323432f8cba1f`; generator and audit wrapper: `Scripts/generate_audio_assets.py` and `Scripts/generate_audio_assets.sh`; exact generation-log SHA-256 `08b29f29cd005084c5ccb1d5c2d25fec760a4180258e14920bf51cacafd669b0`.
