@@ -3,6 +3,8 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "EchoesGameUserSettings.h"
+#include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
@@ -51,6 +53,7 @@ AEchoesFogView::AEchoesFogView()
     {
         Layer->SetMobility(EComponentMobility::Movable);
         Layer->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Layer->SetCanEverAffectNavigation(false);
         Layer->SetGenerateOverlapEvents(false);
         Layer->SetCastShadow(false);
         Layer->SetReceivesDecals(false);
@@ -98,6 +101,76 @@ FTransform AEchoesFogView::HiddenTransform()
         FVector::ZeroVector);
 }
 
+void AEchoesFogView::ApplyMaterials()
+{
+    if (UnexploredMaterial == nullptr || ExploredMaterial == nullptr)
+    {
+        return;
+    }
+
+    const float EffectiveBleedStrength = bReducedFlashing ? 0.05f : UnexploredBleedStrength;
+    const FLinearColor CompositeUnexplored =
+        UnexploredBaseColor + (UnexploredBleedColor * EffectiveBleedStrength);
+
+    UnexploredMaterial->SetVectorParameterValue(FogColorParameterName, CompositeUnexplored);
+    ExploredMaterial->SetVectorParameterValue(FogColorParameterName, ExploredColor);
+}
+
+void AEchoesFogView::UpdateAccessibilitySettings(bool bInReducedMotion, bool bInReducedFlashing)
+{
+    bReducedMotion = bInReducedMotion;
+    bReducedFlashing = bInReducedFlashing;
+    ApplyMaterials();
+}
+
+bool AEchoesFogView::HasCollisionDisabled() const
+{
+    for (const UInstancedStaticMeshComponent* Layer : {UnexploredTiles.Get(), ExploredTiles.Get()})
+    {
+        if (Layer != nullptr && Layer->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AEchoesFogView::HasNavigationDisabled() const
+{
+    for (const UInstancedStaticMeshComponent* Layer : {UnexploredTiles.Get(), ExploredTiles.Get()})
+    {
+        if (Layer != nullptr && Layer->CanEverAffectNavigation())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AEchoesFogView::HasShadowsDisabled() const
+{
+    for (const UInstancedStaticMeshComponent* Layer : {UnexploredTiles.Get(), ExploredTiles.Get()})
+    {
+        if (Layer != nullptr && Layer->CastShadow)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AEchoesFogView::HasOverlapsDisabled() const
+{
+    for (const UInstancedStaticMeshComponent* Layer : {UnexploredTiles.Get(), ExploredTiles.Get()})
+    {
+        if (Layer != nullptr && Layer->GetGenerateOverlapEvents())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool AEchoesFogView::InitializeFog(
     const echoes::sim::Simulation& Simulation,
     echoes::sim::PlayerId Player,
@@ -132,7 +205,9 @@ bool AEchoesFogView::InitializeScopedFog(
     MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
     const int32 TileCount = MapWidthTiles * MapHeightTiles;
-    CachedVisibility.Init(255, TileCount);
+    CachedVisibility.Init(
+        static_cast<uint8>(echoes::sim::Visibility::Unexplored),
+        TileCount);
     UnexploredTiles->SetStaticMesh(CubeMesh);
     ExploredTiles->SetStaticMesh(CubeMesh);
     UnexploredMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
@@ -141,12 +216,12 @@ bool AEchoesFogView::InitializeScopedFog(
     {
         return false;
     }
-    UnexploredMaterial->SetVectorParameterValue(
-        FogColorParameterName,
-        FLinearColor(0.001f, 0.003f, 0.008f));
-    ExploredMaterial->SetVectorParameterValue(
-        FogColorParameterName,
-        FLinearColor(0.018f, 0.032f, 0.052f));
+    if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+    {
+        bReducedMotion = Settings->IsReducedMotionEnabled();
+        bReducedFlashing = Settings->IsReducedFlashingEnabled();
+    }
+    ApplyMaterials();
     UnexploredTiles->SetMaterial(0, UnexploredMaterial);
     ExploredTiles->SetMaterial(0, ExploredMaterial);
     UnexploredTiles->ClearInstances();
@@ -156,7 +231,9 @@ bool AEchoesFogView::InitializeScopedFog(
     const FTransform Hidden = HiddenTransform();
     for (int32 TileIndex = 0; TileIndex < TileCount; ++TileIndex)
     {
-        UnexploredTiles->AddInstance(Hidden, false);
+        const int32 TileX = TileIndex % MapWidthTiles;
+        const int32 TileY = TileIndex / MapWidthTiles;
+        UnexploredTiles->AddInstance(TileTransform(TileX, TileY, true), false);
         ExploredTiles->AddInstance(Hidden, false);
     }
     return true;
@@ -173,6 +250,7 @@ bool AEchoesFogView::SyncScopedVisibility(
     {
         return false;
     }
+    const double StartSeconds = FPlatformTime::Seconds();
     UnexploredTileCount = 0;
     ExploredTileCount = 0;
     VisibleTileCount = 0;
@@ -221,6 +299,8 @@ bool AEchoesFogView::SyncScopedVisibility(
         UnexploredTiles->MarkRenderStateDirty();
         ExploredTiles->MarkRenderStateDirty();
     }
+    LastSyncDurationMs = (FPlatformTime::Seconds() - StartSeconds) * 1000.0;
+    ++TotalSyncCount;
     return true;
 }
 
@@ -236,6 +316,7 @@ bool AEchoesFogView::SyncVisibility(
         return false;
     }
 
+    const double StartSeconds = FPlatformTime::Seconds();
     UnexploredTileCount = 0;
     ExploredTileCount = 0;
     VisibleTileCount = 0;
@@ -285,5 +366,7 @@ bool AEchoesFogView::SyncVisibility(
         UnexploredTiles->MarkRenderStateDirty();
         ExploredTiles->MarkRenderStateDirty();
     }
+    LastSyncDurationMs = (FPlatformTime::Seconds() - StartSeconds) * 1000.0;
+    ++TotalSyncCount;
     return true;
 }

@@ -452,6 +452,21 @@ AEchoesEntityView::AEchoesEntityView()
     AegisPowerField->SetReceivesDecals(false);
     AegisPowerField->SetVisibility(false);
 
+    GatherBeam = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GatherBeam"));
+    ConstructionField = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstructionField"));
+    ReshapeTelegraph = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ReshapeTelegraph"));
+
+    for (UStaticMeshComponent* VFXComp : {GatherBeam, ConstructionField, ReshapeTelegraph})
+    {
+        VFXComp->SetupAttachment(SceneRoot);
+        VFXComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        VFXComp->SetGenerateOverlapEvents(false);
+        VFXComp->SetCanEverAffectNavigation(false);
+        VFXComp->SetCastShadow(false);
+        VFXComp->SetReceivesDecals(false);
+        VFXComp->SetVisibility(false);
+    }
+
     FutureWellOrbitOuter = CreateDefaultSubobject<UStaticMeshComponent>(
         TEXT("FutureWellOrbitOuter"));
     FutureWellOrbitInner = CreateDefaultSubobject<UStaticMeshComponent>(
@@ -564,6 +579,9 @@ AEchoesEntityView::AEchoesEntityView()
     FutureWellCore->SetStaticMesh(FutureWellCoreMesh);
     FutureWellGroundGlyphA->SetStaticMesh(FutureWellGlyphMesh);
     FutureWellGroundGlyphB->SetStaticMesh(FutureWellGlyphMesh);
+    GatherBeam->SetStaticMesh(CylinderMesh);
+    ConstructionField->SetStaticMesh(CylinderMesh);
+    ReshapeTelegraph->SetStaticMesh(CylinderMesh);
     SelectionRing->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
     SelectionRing->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.025f));
 
@@ -662,6 +680,23 @@ void AEchoesEntityView::PrepareForPool()
     SelectionVFXEmissiveStrength = 0.0f;
     bSelectionReducedMotionApplied = false;
     bSelectionReducedFlashingApplied = false;
+    PreviousAuthoritativeLocation = FVector::ZeroVector;
+    AuthoritativeVelocity = FVector::ZeroVector;
+    AuthoritativeSpeed = 0.0f;
+    CurrentHeadingYaw = 0.0f;
+    TargetHeadingYaw = 0.0f;
+    WalkCyclePhase = 0.0f;
+    HoverPhaseTime = 0.0f;
+    IdlePhaseTime = 0.0f;
+    WorkerHarvestPhaseTime = 0.0f;
+    HoverBobOffsetCentimetres = 0.0f;
+    CarriedCargoAmount = 0;
+    bLocomotionActive = false;
+    bIsHoverUnit = false;
+    bIsWalkerUnit = false;
+    bWorkerHarvestingActive = false;
+    bMotionReducedMotionApplied = false;
+    BaseSilhouetteAccentRotation = FRotator::ZeroRotator;
     const int32 MaterialSlotsToClear =
         FMath::Max(ActiveBodyMaterialSlotCount, 4);
     for (int32 MaterialIndex = 0;
@@ -968,7 +1003,10 @@ void AEchoesEntityView::ResetOwnedMaterialParameters()
              WaystoneStateFieldMaterial,
              WarformStateFieldMaterial,
              ChoirIdentityFieldMaterial,
-             AegisPowerFieldMaterial})
+             AegisPowerFieldMaterial,
+             GatherBeamMaterial,
+             ConstructionFieldMaterial,
+             ReshapeTelegraphMaterial})
     {
         ResetMaterial(Material);
     }
@@ -1011,6 +1049,9 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
              WarformStateField,
              ChoirIdentityField,
              AegisPowerField,
+             GatherBeam,
+             ConstructionField,
+             ReshapeTelegraph,
              FutureWellOrbitOuter,
              FutureWellOrbitInner,
              FutureWellCore,
@@ -1034,11 +1075,21 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
+    GatherBeam->SetRelativeLocation(FVector::ZeroVector);
+    ConstructionField->SetRelativeLocation(FVector::ZeroVector);
+    ReshapeTelegraph->SetRelativeLocation(FVector::ZeroVector);
     FutureWellOrbitOuter->SetRelativeLocation(FVector::ZeroVector);
     FutureWellOrbitInner->SetRelativeLocation(FVector::ZeroVector);
     FutureWellCore->SetRelativeLocation(FVector::ZeroVector);
     FutureWellGroundGlyphA->SetRelativeLocation(FVector::ZeroVector);
     FutureWellGroundGlyphB->SetRelativeLocation(FVector::ZeroVector);
+
+    bGatherBeamActive = false;
+    bConstructionFieldActive = false;
+    bReshapeTelegraphActive = false;
+    ConstructionFraction = 0.0f;
+    GatherBeamPulsePhase = 0.0f;
+    ReshapeTelegraphPulsePhase = 0.0f;
 }
 
 void AEchoesEntityView::Tick(float DeltaSeconds)
@@ -1057,6 +1108,29 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
     SetActorLocation(SmoothedLocation, false, nullptr, ETeleportType::None);
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    bMotionReducedMotionApplied =
+        Settings != nullptr && Settings->IsReducedMotionEnabled();
+
+    if (bIsHoverUnit || bIsWalkerUnit)
+    {
+        if (!bMotionReducedMotionApplied)
+        {
+            CurrentHeadingYaw = FMath::FInterpTo(
+                CurrentHeadingYaw,
+                TargetHeadingYaw,
+                DeltaSeconds,
+                10.0f);
+        }
+        else
+        {
+            CurrentHeadingYaw = TargetHeadingYaw;
+        }
+    }
+    UpdateComponentMotion(DeltaSeconds, bMotionReducedMotionApplied);
+    const bool bReducedFlashing =
+        Settings != nullptr && Settings->IsReducedFlashingEnabled();
+    UpdateCombatVFX(DeltaSeconds, bMotionReducedMotionApplied, bReducedFlashing);
+
     if (bSelected && SelectionRing != nullptr && RingMaterial != nullptr)
     {
         bSelectionReducedMotionApplied =
@@ -1207,7 +1281,90 @@ void AEchoesEntityView::ApplyAuthoritativeState(
         return;
     }
 
-    AuthoritativeWorldLocation = Bridge->SimToWorld(State.position);
+    bIsHoverUnit = false;
+    bIsWalkerUnit = false;
+
+    if (EntityType == echoes::sim::EntityType::ScoutUnit)
+    {
+        if (EntityFaction == echoes::sim::Faction::MeridianCompact ||
+            EntityFaction == echoes::sim::Faction::HollowChoir)
+        {
+            bIsHoverUnit = true;
+        }
+        else
+        {
+            bIsWalkerUnit = true;
+        }
+    }
+    else if (EntityFaction == echoes::sim::Faction::HollowChoir)
+    {
+        if (EntityType == echoes::sim::EntityType::Worker ||
+            EntityType == echoes::sim::EntityType::Soldier ||
+            EntityType == echoes::sim::EntityType::HeavyUnit)
+        {
+            bIsHoverUnit = true;
+        }
+    }
+    else if (EntityType == echoes::sim::EntityType::Worker ||
+             EntityType == echoes::sim::EntityType::Soldier ||
+             EntityType == echoes::sim::EntityType::HeavyUnit)
+    {
+        bIsWalkerUnit = true;
+    }
+
+    bWorkerHarvestingActive =
+        (EntityType == echoes::sim::EntityType::Worker) && (State.harvestTicks > 0);
+    CarriedCargoAmount = State.cargo;
+    bGatherBeamActive = bWorkerHarvestingActive;
+    bConstructionFieldActive = (!State.completed && State.constructionProgress > 0);
+    ConstructionFraction = (State.constructionRequired > 0)
+        ? FMath::Clamp(static_cast<float>(State.constructionProgress) / static_cast<float>(State.constructionRequired), 0.0f, 1.0f)
+        : 0.0f;
+    bReshapeTelegraphActive = (State.reshapeUntilTick > 0);
+
+    const FVector NewWorldLocation = Bridge->SimToWorld(State.position);
+    if (!bTeleport && bHasAuthoritativeLocation)
+    {
+        const FVector Displacement = NewWorldLocation - PreviousAuthoritativeLocation;
+        AuthoritativeVelocity = Displacement * 20.0f;
+        AuthoritativeSpeed = AuthoritativeVelocity.Size2D();
+        if (AuthoritativeSpeed > 8.0f)
+        {
+            TargetHeadingYaw = FMath::RadiansToDegrees(
+                FMath::Atan2(Displacement.Y, Displacement.X));
+            bLocomotionActive = true;
+        }
+        else
+        {
+            bLocomotionActive = false;
+            AuthoritativeVelocity = FVector::ZeroVector;
+            AuthoritativeSpeed = 0.0f;
+        }
+    }
+    else
+    {
+        AuthoritativeVelocity = FVector::ZeroVector;
+        AuthoritativeSpeed = 0.0f;
+        bLocomotionActive = false;
+        if (bDeployed)
+        {
+            TargetHeadingYaw = FMath::RadiansToDegrees(
+                FMath::Atan2(
+                    static_cast<float>(DeploymentFacing.y.Raw()),
+                    static_cast<float>(DeploymentFacing.x.Raw())));
+            CurrentHeadingYaw = TargetHeadingYaw;
+        }
+    }
+    if (bDeployed)
+    {
+        TargetHeadingYaw = FMath::RadiansToDegrees(
+            FMath::Atan2(
+                static_cast<float>(DeploymentFacing.y.Raw()),
+                static_cast<float>(DeploymentFacing.x.Raw())));
+    }
+    PreviousAuthoritativeLocation = NewWorldLocation;
+    AuthoritativeWorldLocation = NewWorldLocation;
+
     if (bTeleport || !bHasAuthoritativeLocation)
     {
         SetActorLocation(
@@ -1607,6 +1764,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
+    BaseSilhouetteAccentRotation = AccentRotation;
     const bool bSilhouetteAccentDrawn =
         bShowSilhouetteAccent && !bUsingAuthoredRosterMesh &&
         !bUsingAuthoredFutureWellMesh;
@@ -2691,3 +2849,451 @@ FString AEchoesEntityView::GetDisplayName() const
     }
     return TEXT("Unknown Entity");
 }
+
+void AEchoesEntityView::UpdateComponentMotion(
+    float DeltaSeconds,
+    bool bReducedMotion)
+{
+    if (BodyMesh == nullptr)
+    {
+        return;
+    }
+
+    if (bReducedMotion)
+    {
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        if (SilhouetteAccent != nullptr)
+        {
+            SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
+            SilhouetteAccent->SetRelativeRotation(
+                BaseSilhouetteAccentRotation + FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+            SilhouetteAccent->SetRelativeScale3D(FVector::OneVector);
+        }
+        HoverBobOffsetCentimetres = 0.0f;
+        UpdateTacticalStateMotion(DeltaSeconds, true);
+        return;
+    }
+
+    if (bIsWalkerUnit)
+    {
+        UpdateWalkerMotion(DeltaSeconds, AuthoritativeSpeed, false);
+    }
+    else if (bIsHoverUnit)
+    {
+        UpdateHoverMotion(DeltaSeconds, AuthoritativeSpeed, false);
+    }
+    else
+    {
+        UpdateIdleMotion(DeltaSeconds, false);
+    }
+
+    UpdateTacticalStateMotion(DeltaSeconds, false);
+    UpdateWorkerResourceMotion(DeltaSeconds, false);
+}
+
+void AEchoesEntityView::UpdateWalkerMotion(
+    float DeltaSeconds,
+    float Speed,
+    bool bReducedMotion)
+{
+    if (bReducedMotion)
+    {
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        return;
+    }
+
+    if (Speed > 8.0f)
+    {
+        const float StrideCadence = 0.065f;
+        WalkCyclePhase += Speed * DeltaSeconds * StrideCadence;
+        if (WalkCyclePhase > 2.0f * PI)
+        {
+            WalkCyclePhase = FMath::Fmod(WalkCyclePhase, 2.0f * PI);
+        }
+
+        const float StrideBounce = FMath::Abs(FMath::Sin(WalkCyclePhase)) * 4.5f;
+        const float StridePitch = FMath::Sin(WalkCyclePhase * 2.0f) * 2.2f;
+        const float StrideRoll = FMath::Cos(WalkCyclePhase) * 2.5f;
+
+        BodyMesh->SetRelativeLocation(FVector(0.0f, 0.0f, StrideBounce));
+        BodyMesh->SetRelativeRotation(
+            FRotator(StridePitch, CurrentHeadingYaw, StrideRoll));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        if (SilhouetteAccent != nullptr)
+        {
+            SilhouetteAccent->SetRelativeLocation(FVector(0.0f, 0.0f, StrideBounce));
+            SilhouetteAccent->SetRelativeRotation(
+                BaseSilhouetteAccentRotation +
+                FRotator(StridePitch, CurrentHeadingYaw, StrideRoll));
+        }
+    }
+    else
+    {
+        UpdateIdleMotion(DeltaSeconds, false);
+    }
+}
+
+void AEchoesEntityView::UpdateHoverMotion(
+    float DeltaSeconds,
+    float Speed,
+    bool bReducedMotion)
+{
+    if (bReducedMotion)
+    {
+        HoverBobOffsetCentimetres = 0.0f;
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        return;
+    }
+
+    HoverPhaseTime += DeltaSeconds;
+    const float BobZ = FMath::Sin(HoverPhaseTime * 2.2f) * 5.5f;
+    HoverBobOffsetCentimetres = BobZ;
+
+    float BankRoll = 0.0f;
+    float AccelPitch = 0.0f;
+    if (Speed > 8.0f)
+    {
+        const float YawDelta =
+            FMath::FindDeltaAngleDegrees(CurrentHeadingYaw, TargetHeadingYaw);
+        BankRoll = FMath::Clamp(-YawDelta * 0.35f, -8.0f, 8.0f);
+        AccelPitch = -2.5f;
+    }
+    else
+    {
+        BankRoll = FMath::Sin(HoverPhaseTime * 1.4f) * 1.2f;
+        AccelPitch = FMath::Cos(HoverPhaseTime * 1.1f) * 1.0f;
+    }
+
+    const float BaseHoverElevation = 10.0f;
+    BodyMesh->SetRelativeLocation(
+        FVector(0.0f, 0.0f, BaseHoverElevation + BobZ));
+    BodyMesh->SetRelativeRotation(
+        FRotator(AccelPitch, CurrentHeadingYaw, BankRoll));
+    BodyMesh->SetRelativeScale3D(FVector::OneVector);
+
+    if (SilhouetteAccent != nullptr)
+    {
+        SilhouetteAccent->SetRelativeLocation(
+            FVector(0.0f, 0.0f, BaseHoverElevation + BobZ));
+        SilhouetteAccent->SetRelativeRotation(
+            BaseSilhouetteAccentRotation +
+            FRotator(AccelPitch, CurrentHeadingYaw, BankRoll));
+    }
+}
+
+void AEchoesEntityView::UpdateIdleMotion(
+    float DeltaSeconds,
+    bool bReducedMotion)
+{
+    if (bReducedMotion)
+    {
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        if (SilhouetteAccent != nullptr)
+        {
+            SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
+        }
+        return;
+    }
+
+    IdlePhaseTime += DeltaSeconds;
+
+    if (EntityFaction == echoes::sim::Faction::MeridianCompact)
+    {
+        const float ServoCycle = FMath::Sin(IdlePhaseTime * 0.8f);
+        const float ServoTick =
+            (ServoCycle > 0.85f) ? (ServoCycle - 0.85f) * 6.0f * 0.8f : 0.0f;
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(
+            FRotator(0.0f, CurrentHeadingYaw + ServoTick, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+        if (SilhouetteAccent != nullptr)
+        {
+            SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
+            SilhouetteAccent->SetRelativeRotation(
+                BaseSilhouetteAccentRotation +
+                FRotator(0.0f, CurrentHeadingYaw + ServoTick, 0.0f));
+        }
+    }
+    else if (EntityFaction == echoes::sim::Faction::KharuunAssemblies)
+    {
+        const float Breath = FMath::Sin(IdlePhaseTime * 1.5f);
+        const float ScaleY = 1.0f + 0.015f * Breath;
+        const float ScaleZ = 1.0f + 0.018f * Breath;
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector(1.0f, ScaleY, ScaleZ));
+        if (SilhouetteAccent != nullptr)
+        {
+            SilhouetteAccent->SetRelativeLocation(FVector::ZeroVector);
+            SilhouetteAccent->SetRelativeScale3D(FVector(1.0f, ScaleY, ScaleZ));
+        }
+    }
+    else if (EntityFaction == echoes::sim::Faction::HollowChoir)
+    {
+        const float DriftX = FMath::Sin(IdlePhaseTime * 1.3f) * 2.2f;
+        const float DriftY = FMath::Cos(IdlePhaseTime * 1.7f) * 2.2f;
+        const float DriftZ = FMath::Sin(IdlePhaseTime * 2.1f) * 1.8f;
+
+        BodyMesh->SetRelativeLocation(FVector(DriftX, DriftY, DriftZ));
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+
+        if (SilhouetteAccent != nullptr)
+        {
+            const float OffsetX =
+                FMath::Sin((IdlePhaseTime + 0.8f) * 1.3f) * -2.0f;
+            const float OffsetY =
+                FMath::Cos((IdlePhaseTime + 0.8f) * 1.7f) * -2.0f;
+            const float OffsetZ =
+                FMath::Sin((IdlePhaseTime + 0.8f) * 2.1f) * -1.5f;
+            SilhouetteAccent->SetRelativeLocation(
+                FVector(OffsetX, OffsetY, OffsetZ));
+        }
+    }
+    else
+    {
+        BodyMesh->SetRelativeLocation(FVector::ZeroVector);
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, CurrentHeadingYaw, 0.0f));
+        BodyMesh->SetRelativeScale3D(FVector::OneVector);
+    }
+}
+
+void AEchoesEntityView::UpdateTacticalStateMotion(
+    float DeltaSeconds,
+    bool bReducedMotion)
+{
+    if (DeploymentCover != nullptr && DeploymentCover->IsVisible())
+    {
+        const FVector TargetCoverScale =
+            bDeployed ? FVector(1.0f, 1.0f, 1.0f) : FVector(0.01f, 0.01f, 0.01f);
+        if (bReducedMotion)
+        {
+            DeploymentCover->SetRelativeScale3D(TargetCoverScale);
+        }
+        else
+        {
+            DeploymentCover->SetRelativeScale3D(
+                FMath::VInterpTo(
+                    DeploymentCover->GetRelativeScale3D(),
+                    TargetCoverScale,
+                    DeltaSeconds,
+                    8.0f));
+        }
+    }
+
+    if (bTemporaryMineralCover && BodyMesh != nullptr)
+    {
+        FVector CurrentLoc = BodyMesh->GetRelativeLocation();
+        CurrentLoc.Z -= 18.0f;
+        BodyMesh->SetRelativeLocation(CurrentLoc);
+    }
+
+    if (WaystoneStateField != nullptr && WaystoneStateField->IsVisible())
+    {
+        if (WaystoneMode == echoes::sim::WaystoneMode::Rooted)
+        {
+            WaystoneStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 2.0f));
+        }
+        else if (WaystoneMode == echoes::sim::WaystoneMode::Mobile)
+        {
+            const float ElevateZ =
+                bReducedMotion
+                    ? 6.0f
+                    : 6.0f + FMath::Sin(IdlePhaseTime * 2.0f) * 1.5f;
+            WaystoneStateField->SetRelativeLocation(
+                FVector(0.0f, 0.0f, ElevateZ));
+        }
+    }
+}
+
+void AEchoesEntityView::UpdateWorkerResourceMotion(
+    float DeltaSeconds,
+    bool bReducedMotion)
+{
+    if (EntityType != echoes::sim::EntityType::Worker || BodyMesh == nullptr)
+    {
+        return;
+    }
+
+    if (bWorkerHarvestingActive)
+    {
+        WorkerHarvestPhaseTime += DeltaSeconds;
+        if (!bReducedMotion)
+        {
+            const float HarvestPitch =
+                FMath::Sin(WorkerHarvestPhaseTime * 5.0f) * 3.5f;
+            FRotator CurrentRot = BodyMesh->GetRelativeRotation();
+            CurrentRot.Pitch += HarvestPitch;
+            BodyMesh->SetRelativeRotation(CurrentRot);
+        }
+    }
+    else
+    {
+        WorkerHarvestPhaseTime = 0.0f;
+    }
+
+    if (CarriedCargoAmount > 0 && !bReducedMotion)
+    {
+        FRotator CurrentRot = BodyMesh->GetRelativeRotation();
+        CurrentRot.Pitch -= 1.8f;
+        BodyMesh->SetRelativeRotation(CurrentRot);
+    }
+}
+
+FVector AEchoesEntityView::GetBodyMeshRelativeLocation() const
+{
+    return BodyMesh != nullptr ? BodyMesh->GetRelativeLocation() : FVector::ZeroVector;
+}
+
+FRotator AEchoesEntityView::GetBodyMeshRelativeRotation() const
+{
+    return BodyMesh != nullptr ? BodyMesh->GetRelativeRotation() : FRotator::ZeroRotator;
+}
+
+FVector AEchoesEntityView::GetBodyMeshRelativeScale() const
+{
+    return BodyMesh != nullptr ? BodyMesh->GetRelativeScale3D() : FVector::OneVector;
+}
+
+FVector AEchoesEntityView::GetSilhouetteAccentRelativeLocation() const
+{
+    return SilhouetteAccent != nullptr
+               ? SilhouetteAccent->GetRelativeLocation()
+               : FVector::ZeroVector;
+}
+
+void AEchoesEntityView::UpdateCombatVFX(
+    float DeltaSeconds,
+    bool bReducedMotion,
+    bool bReducedFlashing)
+{
+    // 1. Worker Gather Beam
+    if (bGatherBeamActive && GatherBeam != nullptr)
+    {
+        if (GatherBeamMaterial == nullptr && AuthoredPresentationVFXMaterial != nullptr)
+        {
+            GatherBeamMaterial = CreateOwnedMaterial(AuthoredPresentationVFXMaterial);
+            GatherBeam->SetMaterial(0, GatherBeamMaterial);
+        }
+        GatherBeamPulsePhase += DeltaSeconds * 6.0f;
+        FLinearColor BeamColor;
+        switch (EntityFaction)
+        {
+        case echoes::sim::Faction::MeridianCompact:
+            BeamColor = FLinearColor(0.12f, 0.88f, 1.0f, 1.0f);
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            BeamColor = FLinearColor(1.0f, 0.52f, 0.06f, 1.0f);
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            BeamColor = FLinearColor(0.85f, 0.22f, 0.95f, 1.0f);
+            break;
+        default:
+            BeamColor = FLinearColor::White;
+            break;
+        }
+
+        const float BaseEmissive = bReducedFlashing ? 1.0f : 3.5f;
+        const float Pulse = bReducedMotion ? 0.0f : FMath::Sin(GatherBeamPulsePhase) * 0.5f;
+        if (GatherBeamMaterial != nullptr)
+        {
+            GatherBeamMaterial->SetVectorParameterValue(TEXT("Color"), BeamColor);
+            GatherBeamMaterial->SetScalarParameterValue(
+                TEXT("EmissiveStrength"),
+                BaseEmissive + Pulse);
+        }
+
+        GatherBeam->SetRelativeLocation(FVector(40.0f, 0.0f, 25.0f));
+        GatherBeam->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+        GatherBeam->SetRelativeScale3D(FVector(0.04f, 0.04f, 0.75f));
+        GatherBeam->SetVisibility(true);
+    }
+    else if (GatherBeam != nullptr)
+    {
+        GatherBeam->SetVisibility(false);
+    }
+
+    // 2. Construction Assembly Field
+    if (bConstructionFieldActive && ConstructionField != nullptr)
+    {
+        if (ConstructionFieldMaterial == nullptr && AuthoredPresentationVFXMaterial != nullptr)
+        {
+            ConstructionFieldMaterial = CreateOwnedMaterial(AuthoredPresentationVFXMaterial);
+            ConstructionField->SetMaterial(0, ConstructionFieldMaterial);
+        }
+        FLinearColor FieldColor;
+        switch (EntityFaction)
+        {
+        case echoes::sim::Faction::MeridianCompact:
+            FieldColor = FLinearColor(0.15f, 0.85f, 1.0f, 0.8f);
+            break;
+        case echoes::sim::Faction::KharuunAssemblies:
+            FieldColor = FLinearColor(1.0f, 0.6f, 0.1f, 0.8f);
+            break;
+        case echoes::sim::Faction::HollowChoir:
+            FieldColor = FLinearColor(0.8f, 0.2f, 0.9f, 0.8f);
+            break;
+        default:
+            FieldColor = FLinearColor(0.7f, 0.7f, 0.7f, 0.8f);
+            break;
+        }
+
+        if (ConstructionFieldMaterial != nullptr)
+        {
+            ConstructionFieldMaterial->SetVectorParameterValue(TEXT("Color"), FieldColor);
+            ConstructionFieldMaterial->SetScalarParameterValue(
+                TEXT("EmissiveStrength"),
+                bReducedFlashing ? 0.8f : 1.8f);
+        }
+
+        const float BaseRadius = 1.4f;
+        const float CurrentHeight = FMath::Lerp(0.15f, 1.2f, ConstructionFraction);
+        ConstructionField->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f * CurrentHeight));
+        ConstructionField->SetRelativeRotation(FRotator::ZeroRotator);
+        ConstructionField->SetRelativeScale3D(FVector(BaseRadius, BaseRadius, CurrentHeight));
+        ConstructionField->SetVisibility(true);
+    }
+    else if (ConstructionField != nullptr)
+    {
+        ConstructionField->SetVisibility(false);
+    }
+
+    // 3. Reshape Telegraph Ground Sigil
+    if (bReshapeTelegraphActive && ReshapeTelegraph != nullptr)
+    {
+        if (ReshapeTelegraphMaterial == nullptr && AuthoredPresentationVFXMaterial != nullptr)
+        {
+            ReshapeTelegraphMaterial = CreateOwnedMaterial(AuthoredPresentationVFXMaterial);
+            ReshapeTelegraph->SetMaterial(0, ReshapeTelegraphMaterial);
+        }
+        ReshapeTelegraphPulsePhase += DeltaSeconds * 3.0f;
+        const FLinearColor TelegraphColor(0.92f, 0.12f, 0.85f, 1.0f);
+        const float Pulse = bReducedMotion ? 0.0f : FMath::Sin(ReshapeTelegraphPulsePhase) * 0.4f;
+        if (ReshapeTelegraphMaterial != nullptr)
+        {
+            ReshapeTelegraphMaterial->SetVectorParameterValue(TEXT("Color"), TelegraphColor);
+            ReshapeTelegraphMaterial->SetScalarParameterValue(
+                TEXT("EmissiveStrength"),
+                (bReducedFlashing ? 0.9f : 2.5f) + Pulse);
+        }
+
+        ReshapeTelegraph->SetRelativeLocation(FVector(0.0f, 0.0f, 4.0f));
+        ReshapeTelegraph->SetRelativeRotation(FRotator::ZeroRotator);
+        ReshapeTelegraph->SetRelativeScale3D(FVector(3.5f, 3.5f, 0.05f));
+        ReshapeTelegraph->SetVisibility(true);
+    }
+    else if (ReshapeTelegraph != nullptr)
+    {
+        ReshapeTelegraph->SetVisibility(false);
+    }
+}
+
+

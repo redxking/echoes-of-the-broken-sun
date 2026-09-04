@@ -195,7 +195,11 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 // Standard Adaptive play keeps its combat force in an opening posture for five
 // minutes. It still defends visible threats, builds, gathers, produces, and
 // researches, but does not chase anonymous vibration contacts or roam the map.
-constexpr Tick kAdaptiveOpeningPostureTicks = 1200;
+// SPEC-DOC-005 "moderate opening": Standard Adaptive holds its Command Core
+// opening posture for 300 s (ledger SIM-033) before its barracks units march.
+// The 1200-tick value introduced with the march behaviour had no requirement
+// authority and sent raids into Missions 10 and 15 mid-contract.
+constexpr Tick kAdaptiveOpeningPostureTicks = 6000;
 
 // Section 7 terrain table: Scarred is 85% speed. Open is 100%; Blocked and
 // Water/void are impassable and never reach a movement step. This is an
@@ -2786,6 +2790,46 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
             entity.position = candidateY;
             return false;
         }
+        // SPEC-MOV-006.FAIL: the direct step clipped an obstacle corner the
+        // sampled line-of-sight test did not see. Fall back to the centre of
+        // the next grid waypoint for this tick instead of stalling in place.
+        const std::optional<Vec2> gridWaypoint =
+            FindNextPathWaypoint(entity.position, destination);
+        if (gridWaypoint.has_value()) {
+            const std::int32_t waypointTileX = gridWaypoint->x.FloorToInt();
+            const std::int32_t waypointTileY = gridWaypoint->y.FloorToInt();
+            const Vec2 gridTarget =
+                (waypointTileX == destination.x.FloorToInt() &&
+                 waypointTileY == destination.y.FloorToInt())
+                    ? destination
+                    : Vec2::FromRaw(
+                          waypointTileX * kFixedScale + kFixedScale / 2,
+                          waypointTileY * kFixedScale + kFixedScale / 2);
+            const std::int64_t gridDeltaX =
+                static_cast<std::int64_t>(gridTarget.x.Raw()) -
+                entity.position.x.Raw();
+            const std::int64_t gridDeltaY =
+                static_cast<std::int64_t>(gridTarget.y.Raw()) -
+                entity.position.y.Raw();
+            const std::int64_t gridDistance =
+                IntegerSqrt64(gridDeltaX * gridDeltaX + gridDeltaY * gridDeltaY);
+            if (gridDistance > 0) {
+                const std::int64_t gridTravel =
+                    std::min<std::int64_t>(travel, gridDistance);
+                const Vec2 gridCandidate = Vec2::FromRaw(
+                    static_cast<std::int32_t>(
+                        entity.position.x.Raw() + gridTravel * gridDeltaX / gridDistance),
+                    static_cast<std::int32_t>(
+                        entity.position.y.Raw() + gridTravel * gridDeltaY / gridDistance));
+                if (gridCandidate != entity.position &&
+                    IsPositionPassable(gridCandidate)) {
+                    entity.position = gridCandidate;
+                    entity.vibrationSignatureUntilTick = std::min(
+                        kMaximumSupportedTick,
+                        currentTick_ + config_.rules.vibrationDetection.signatureLingerTicks);
+                }
+            }
+        }
         return false;
     }
     if (candidate != entity.position) {
@@ -2797,7 +2841,68 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     return entity.position == destination;
 }
 
-void Simulation::ApplySoftSeparation() {
+bool Simulation::IsSeparationCandidate(const Entity& entity) const {
+    if (entity.hitPoints <= 0 || !entity.completed ||
+        entity.movementPerTickRaw <= 0) {
+        return false;
+    }
+    if (IsBuilding(entity.type)) {
+        // A Kharuun Waystone takes part only while it travels. Rooted and
+        // transitioning Waystones are stationary supply structures that must
+        // hold their site; SPEC-MOV-008 governs mobile units.
+        return entity.faction == Faction::KharuunAssemblies &&
+               entity.type == EntityType::Dropoff &&
+               entity.waystoneMode == WaystoneMode::Mobile;
+    }
+    return entity.type == EntityType::Worker ||
+           entity.type == EntityType::Soldier ||
+           entity.type == EntityType::HeavyUnit ||
+           entity.type == EntityType::ScoutUnit;
+}
+
+bool Simulation::ShouldPackAtDestination(const Entity& entity) const {
+    // Packing is a group-of-units behaviour; a travelling structure such as a
+    // mobile Waystone must reach its exact ordered site so it can root there.
+    if (entity.order.type != OrderType::Move ||
+        entity.position == entity.order.destination ||
+        IsBuilding(entity.type) ||
+        !IsSeparationCandidate(entity)) {
+        return false;
+    }
+    const std::int64_t halfExtent =
+        FootprintHalfExtentRaw(entity.faction, entity.type);
+    const std::int64_t reach = entity.movementPerTickRaw;
+    for (const Entity& other : entities_) {
+        if (other.id == entity.id || other.owner != entity.owner ||
+            other.order.type != OrderType::None ||
+            other.order.destination != entity.order.destination ||
+            !IsSeparationCandidate(other)) {
+            continue;
+        }
+        // The resting neighbour shares this destination: stop before the
+        // next step would overlap it (SPEC-MOV-011 arrival area,
+        // SPEC-MOV-012 clean halt without neighbour pushing).
+        const std::int64_t contact =
+            halfExtent +
+            FootprintHalfExtentRaw(other.faction, other.type) + reach;
+        const std::int64_t deltaX =
+            static_cast<std::int64_t>(other.position.x.Raw()) -
+            entity.position.x.Raw();
+        const std::int64_t deltaY =
+            static_cast<std::int64_t>(other.position.y.Raw()) -
+            entity.position.y.Raw();
+        if (Abs64(deltaX) >= contact || Abs64(deltaY) >= contact) {
+            continue;
+        }
+        if (deltaX * deltaX + deltaY * deltaY < contact * contact) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Simulation::ApplySoftSeparation(
+    const std::vector<Vec2>& positionsBeforeOrders) {
     struct MobileCandidate {
         EntityId id;
         std::size_t index;
@@ -2806,15 +2911,19 @@ void Simulation::ApplySoftSeparation() {
         std::int32_t halfExtent;
         std::int32_t movementPerTick;
         PlayerId owner;
+        bool moving;
     };
 
     std::vector<MobileCandidate> mobile;
     mobile.reserve(entities_.size());
     for (std::size_t i = 0; i < entities_.size(); ++i) {
         const Entity& e = entities_[i];
-        if (e.hitPoints <= 0 || !e.completed || e.movementPerTickRaw <= 0) {
+        if (!IsSeparationCandidate(e)) {
             continue;
         }
+        const bool moving =
+            i < positionsBeforeOrders.size() &&
+            positionsBeforeOrders[i] != e.position;
         mobile.push_back({
             e.id,
             i,
@@ -2822,7 +2931,8 @@ void Simulation::ApplySoftSeparation() {
             e.position.y.Raw(),
             FootprintHalfExtentRaw(e.faction, e.type),
             e.movementPerTickRaw,
-            e.owner
+            e.owner,
+            moving
         });
     }
 
@@ -2883,23 +2993,54 @@ void Simulation::ApplySoftSeparation() {
             Entity& entityA = entities_[mobile[i].index];
             Entity& entityB = entities_[mobile[j].index];
 
-            const bool aMoving = entityA.order.type == OrderType::Move;
-            const bool bMoving = entityB.order.type == OrderType::Move;
-            const bool aAtDest = (entityA.order.destination == entityA.position && entityA.position != Vec2{});
-            const bool bAtDest = (entityB.order.destination == entityB.position && entityB.position != Vec2{});
-
-            if ((aMoving || aAtDest) && (!bMoving && !bAtDest)) {
-                const Vec2 candB = Vec2::FromRaw(
-                    static_cast<std::int32_t>(entityB.position.x.Raw() + pushX),
-                    static_cast<std::int32_t>(entityB.position.y.Raw() + pushY));
-                if (IsPositionPassable(candB)) {
-                    entityB.position = candB;
-                    mobile[j].x = candB.x.Raw();
-                    mobile[j].y = candB.y.Raw();
+            // SPEC-MOV-008/012 yield policy. A unit that moved this tick
+            // deflects around a resting neighbour instead of shoving it,
+            // unless the mover's ordered destination is the spot the resting
+            // unit occupies: a parked blocker is transient and yields so the
+            // order can complete. Two resting units that still overlap share
+            // the correction, except that a unit standing exactly on its own
+            // ordered destination holds its ground.
+            const auto wantsSpotOf = [minClearance](const Entity& mover,
+                                                    const Entity& resting) {
+                const std::int64_t wantX =
+                    static_cast<std::int64_t>(mover.order.destination.x.Raw()) -
+                    resting.position.x.Raw();
+                const std::int64_t wantY =
+                    static_cast<std::int64_t>(mover.order.destination.y.Raw()) -
+                    resting.position.y.Raw();
+                return Abs64(wantX) < minClearance && Abs64(wantY) < minClearance &&
+                       wantX * wantX + wantY * wantY <
+                           static_cast<std::int64_t>(minClearance) * minClearance;
+            };
+            const auto holdsGround = [](const Entity& resting) {
+                return resting.position == resting.order.destination &&
+                       resting.position != Vec2{};
+            };
+            bool pushA = true;
+            bool pushB = true;
+            if (mobile[i].halfExtent != mobile[j].halfExtent) {
+                // Footprint mass: the smaller unit yields to the larger one
+                // whether or not either is moving, so a travelling Waystone
+                // reaches its exact rooting site through resting workers
+                // instead of being deflected off it.
+                pushA = mobile[i].halfExtent < mobile[j].halfExtent;
+                pushB = !pushA;
+            } else if (mobile[i].moving && !mobile[j].moving) {
+                pushB = wantsSpotOf(entityA, entityB);
+                pushA = !pushB;
+            } else if (mobile[j].moving && !mobile[i].moving) {
+                pushA = wantsSpotOf(entityB, entityA);
+                pushB = !pushA;
+            } else if (!mobile[i].moving && !mobile[j].moving) {
+                const bool aHolds = holdsGround(entityA);
+                const bool bHolds = holdsGround(entityB);
+                if (aHolds != bHolds) {
+                    pushA = !aHolds;
+                    pushB = !bHolds;
                 }
-                continue;
             }
-            if ((bMoving || bAtDest) && (!aMoving && !aAtDest)) {
+
+            if (pushA) {
                 const Vec2 candA = Vec2::FromRaw(
                     static_cast<std::int32_t>(entityA.position.x.Raw() - pushX),
                     static_cast<std::int32_t>(entityA.position.y.Raw() - pushY));
@@ -2908,25 +3049,16 @@ void Simulation::ApplySoftSeparation() {
                     mobile[i].x = candA.x.Raw();
                     mobile[i].y = candA.y.Raw();
                 }
-                continue;
             }
-
-            const Vec2 candA = Vec2::FromRaw(
-                static_cast<std::int32_t>(entityA.position.x.Raw() - pushX),
-                static_cast<std::int32_t>(entityA.position.y.Raw() - pushY));
-            if (IsPositionPassable(candA)) {
-                entityA.position = candA;
-                mobile[i].x = candA.x.Raw();
-                mobile[i].y = candA.y.Raw();
-            }
-
-            const Vec2 candB = Vec2::FromRaw(
-                static_cast<std::int32_t>(entityB.position.x.Raw() + pushX),
-                static_cast<std::int32_t>(entityB.position.y.Raw() + pushY));
-            if (IsPositionPassable(candB)) {
-                entityB.position = candB;
-                mobile[j].x = candB.x.Raw();
-                mobile[j].y = candB.y.Raw();
+            if (pushB) {
+                const Vec2 candB = Vec2::FromRaw(
+                    static_cast<std::int32_t>(entityB.position.x.Raw() + pushX),
+                    static_cast<std::int32_t>(entityB.position.y.Raw() + pushY));
+                if (IsPositionPassable(candB)) {
+                    entityB.position = candB;
+                    mobile[j].x = candB.x.Raw();
+                    mobile[j].y = candB.y.Raw();
+                }
             }
         }
     }
@@ -4501,6 +4633,11 @@ void Simulation::ProcessResearch() {
 
 void Simulation::ProcessEntityOrders() {
     std::vector<PendingDamage> pendingDamage{};
+    std::vector<Vec2> positionsBeforeOrders{};
+    positionsBeforeOrders.reserve(entities_.size());
+    for (const Entity& entity : entities_) {
+        positionsBeforeOrders.push_back(entity.position);
+    }
     for (Entity& entity : entities_) {
         if (entity.hitPoints <= 0 || !entity.completed) {
             continue;
@@ -4517,7 +4654,8 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::None:
                 break;
             case OrderType::Move:
-                if (MoveTowards(entity, entity.order.destination)) {
+                if (ShouldPackAtDestination(entity) ||
+                    MoveTowards(entity, entity.order.destination)) {
                     entity.order.type = OrderType::None;
                 }
                 break;
@@ -4555,7 +4693,7 @@ void Simulation::ProcessEntityOrders() {
             entity.orderQueue.erase(entity.orderQueue.begin());
         }
     }
-    ApplySoftSeparation();
+    ApplySoftSeparation(positionsBeforeOrders);
     for (PendingDamage& damage : pendingDamage) {
         const Entity* attacker = FindEntity(damage.source);
         const Entity* target = FindEntity(damage.target);

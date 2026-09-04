@@ -172,17 +172,16 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
     BaseConfig.rules = Rules;
     BaseConfig.randomSeed = 1;
 
-    // Scenario 1 — escort pace gap under waypoint-clamped movement. Path
-    // waypoints are the origins of adjacent tiles (4-directional field), and
-    // MoveTowards clamps each tick's travel at the next waypoint, so any
-    // per-tick residual is lost at every tile boundary. A 256-raw Skiff
-    // divides the 1024-raw tile exactly and sustains full speed; a 163-raw
-    // Lancer needs 7 ticks per tile (6x163 + 46), an effective 1024/7 =
-    // ~146.3 raw per tick — the gap therefore grows lumpily (+93 on plain
-    // ticks, +210 on the Lancer's clamp ticks), not by the nominal speed
-    // delta. The test mirrors that model tick-for-tick and derives the
-    // leash-crossing tick from it (38 with current content values; the
-    // linear nominal-delta model wrongly predicts 45).
+    // Scenario 1 — escort pace gap under any-angle movement (SPEC-MOV-006,
+    // SPEC-MOV-007). On an open straight column the destination is in line
+    // of sight, so MoveTowards travels the full nominal speed every tick with
+    // no waypoint clamping and no per-tile residual loss: a 256-raw Skiff and
+    // a 163-raw Lancer open the gap by exactly the nominal speed delta each
+    // tick. The test mirrors that linear model tick-for-tick and derives the
+    // leash-crossing tick from it (45 with current content values). Before
+    // SPEC-MOV-007 the accepted waypoint-clamped model lost the Lancer's
+    // residual at every tile boundary and broke the leash at tick 38; that
+    // Manhattan/clamped behaviour is now prohibited.
     {
         sim::Simulation Simulation(BaseConfig);
         TestTrue(TEXT("S1: local player joins"),
@@ -219,18 +218,13 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("S1: guarded unit is strictly faster than its escort"),
                  VipSpeed > GuardSpeed);
 
-        // Tick mirror of MoveTowards on a straight open column: advance
-        // clamps at the next kFixedScale (tile-origin) boundary; the
-        // residual beyond the boundary is lost for that tick.
+        // Tick mirror of MoveTowards on a straight open column: with the
+        // destination in line of sight the unit advances its full nominal
+        // speed every tick (arrival clamps at the goal).
         const auto ClampedAdvance = [](std::int64_t PositionRaw,
                                        std::int32_t SpeedRaw) -> std::int64_t
         {
-            // On a boundary the remainder is 0 and the next waypoint is a
-            // full tile away, so ToBoundary lands in [1, kFixedScale].
-            const std::int64_t ToBoundary =
-                sim::kFixedScale - (PositionRaw % sim::kFixedScale);
-            return PositionRaw +
-                   std::min<std::int64_t>(SpeedRaw, ToBoundary);
+            return PositionRaw + SpeedRaw;
         };
         const std::int64_t VipGoalRaw =
             static_cast<std::int64_t>(52) * sim::kFixedScale;
@@ -307,12 +301,12 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
             }
             MaximumGap = std::max(MaximumGap, Gap);
         }
-        TestTrue(TEXT("S1: measured gap equals the waypoint-clamped model on every movement tick"),
+        TestTrue(TEXT("S1: measured gap equals the any-angle linear model on every movement tick"),
                  ModelMatchedEveryTick);
         TestEqual(TEXT("S1: gap crosses the 6-tile leash at the model-derived tick"),
                   ObservedBreakTick, ModelBreakTick);
-        TestEqual(TEXT("S1: model-derived leash-break tick is 38 with current content stats"),
-                  ModelBreakTick, static_cast<std::int64_t>(38));
+        TestEqual(TEXT("S1: model-derived leash-break tick is 45 with current content stats"),
+                  ModelBreakTick, static_cast<std::int64_t>(45));
         TestTrue(TEXT("S1: transit gap exceeds the leash — the escort cannot protect in transit"),
                  MaximumGap > ExpectedGuardLeashRaw);
 

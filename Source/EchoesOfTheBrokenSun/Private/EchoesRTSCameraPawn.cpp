@@ -207,6 +207,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
         const bool bFoldedVerge = GlassScarReviewMode.Equals(
             TEXT("FoldedVerge"),
             ESearchCase::IgnoreCase);
+        const bool bBrokenSun = GlassScarReviewMode.Equals(
+            TEXT("BrokenSun"),
+            ESearchCase::IgnoreCase);
         const float CenterX =
             GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase)
                 ? -3800.0f
@@ -217,16 +220,28 @@ void AEchoesRTSCameraPawn::BeginPlay()
                 : 0.0f;
         bArtReviewMode = true;
         SetActorLocation(FVector(CenterX, 0.0f, 100.0f));
-        SpringArm->TargetArmLength =
-            bOverview
-                ? 10800.0f
-                : (bFoldedVerge ? 3350.0f : (bBuriedCauseway ? 2850.0f : 2300.0f));
-        SpringArm->SetRelativeRotation(
-            FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
+        if (bBrokenSun)
+        {
+            SetActorLocation(FVector(2800.0f, -2000.0f, 650.0f));
+            SpringArm->TargetArmLength = 0.0f;
+            SpringArm->SetRelativeRotation(FRotator(32.0f, 145.0f, 0.0f));
+            Camera->SetFieldOfView(72.0f);
+            Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+            Camera->PostProcessSettings.AutoExposureBias = 0.0f;
+        }
+        else
+        {
+            SpringArm->TargetArmLength =
+                bOverview
+                    ? 10800.0f
+                    : (bFoldedVerge ? 3350.0f : (bBuriedCauseway ? 2850.0f : 2300.0f));
+            SpringArm->SetRelativeRotation(
+                FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
+            Camera->SetFieldOfView(bOverview ? 58.0f : 52.0f);
+            Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+            Camera->PostProcessSettings.AutoExposureBias = bOverview ? -0.05f : 0.15f;
+        }
         SpringArm->bEnableCameraLag = false;
-        Camera->SetFieldOfView(bOverview ? 58.0f : 52.0f);
-        Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
-        Camera->PostProcessSettings.AutoExposureBias = bOverview ? -0.05f : 0.15f;
         Camera->PostProcessBlendWeight = 1.0f;
         UE_LOG(
             LogEchoes,

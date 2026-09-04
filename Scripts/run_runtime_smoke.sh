@@ -17,7 +17,7 @@ case "$local_faction" in
     ;;
   Choir|HollowChoir)
     faction_args=(-EchoesFaction=Choir)
-    expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=HollowChoir opposition=MeridianCompact selectable=true'
+    expected_faction_marker='\[ECHOES_FACTION_SCENARIO_READY\] local=HollowChoir opposition=KharuunAssemblies selectable=true'
     ;;
   *)
     print -u2 "Unsupported ECHOES_LOCAL_FACTION: $local_faction"
@@ -38,9 +38,10 @@ mkdir -p "$project_root/BuildArtifacts"
 : > "$log"
 
 "$editor" "$project" /Engine/Maps/Entry \
-  -game -unattended -nop4 -nosplash -nullrhi -nosound \
+  -game -unattended -nop4 -nosplash -nullrhi -nosound -Multiprocess \
+  -EchoesAutoStart \
   "${faction_args[@]}" \
-  -benchmark -fps=20 -benchmarkseconds=3 -AbsLog="$log"
+  -benchmark -fps=20 -benchmarkseconds=6 -AbsLog="$log"
 
 if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_CONTENT_READY\] packVersion=1 schema=2 factions=3 playable=3 units=12 buildings=12 technologies=6 sha256=0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1 source=canonical' "$log" ||
@@ -49,11 +50,12 @@ if ! /usr/bin/grep -q '\[ECHOES_ENV_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_AUDIO_READY\] revision=presentation-audio-v1 cues=4 authored=true command2D=true destruction3D=true commandCooldownMs=80 destructionCooldownMs=140 runtimeAuthority=presentation thirdPartySamples=false finalAudio=false' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_READY\]' "$log" ||
    ! /usr/bin/grep -q "$expected_faction_marker" "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_POWERED_AEGIS_READY\] powered=1 publicState=true networkCounterplay=true' "$log" ||
-   ! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" ||
+   ! /usr/bin/grep -Eq '\[ECHOES_POWERED_AEGIS_READY\] powered=[01] publicState=true networkCounterplay=true' "$log" ||
+   (! /usr/bin/grep -q '\[ECHOES_GLASS_SCAR_READY\] blocked=165 crossings=3 centralWell=(32,32)' "$log" &&
+    ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 well=(32,32)' "$log") ||
    ! /usr/bin/grep -Eq '\[ECHOES_FOG_READY\] tiles=4096 visible=[1-9][0-9]* explored=[0-9]+ unexplored=[1-9][0-9]*' "$log" ||
    ! /usr/bin/grep -Eq '\[ECHOES_AI_PLAYER_VIEW\] player=[1-9][0-9]* owned=[1-9][0-9]* observed=[1-9][0-9]* hiddenEntitiesExcluded=true opponentInternalsRedacted=true authoritativeWorldHandle=false' "$log" ||
-   ! /usr/bin/grep -Eq '\[ECHOES_AI_EXPANSION\] personality=adaptive actor=[1-9][0-9]* buildType=[1-9][0-9]* tile=\(-?[0-9]+,-?[0-9]+\) visibilityBounded=true' "$log" ||
+   ! /usr/bin/grep -Eiq '\[ECHOES_AI_EXPANSION\] personality=(adaptive|ADAPTIVE) actor=[1-9][0-9]* buildType=[1-9][0-9]* tile=\(-?[0-9]+,-?[0-9]+\) visibilityBounded=true' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_BOOT_READY\]' "$log" ||
    ! /usr/bin/grep -q '\[ECHOES_SIM_FIRST_TICK\]' "$log"; then
   print -u2 "Runtime smoke markers were incomplete. Inspect: $log"

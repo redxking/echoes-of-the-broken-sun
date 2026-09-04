@@ -127,7 +127,7 @@ fi
 
 set +e
 "$editor" "$project" \
-  -unattended -nop4 -nosplash -nullrhi \
+  -unattended -nop4 -nosplash -nullrhi -Multiprocess \
   -EchoesSaveGameDirectory="$suite_storage_root" \
   -ExecCmds="Automation RunTests Echoes.; Quit" \
   -TestExit="Automation Test Queue Empty" \
@@ -184,12 +184,12 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "72" ||
+if [[ "$(read_report_value succeeded)" != "76" ||
       "$(read_report_value succeededWithWarnings)" != "0" ||
       "$(read_report_value failed)" != "0" ||
       "$(read_report_value notRun)" != "0" ||
       "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the expected 72/72 clean result."
+  print -u2 "Unreal automation totals did not match the expected 76/76 clean result."
   print -u2 "Inspect: $report"
   exit 4
 fi
@@ -255,23 +255,27 @@ expected_tests=(
   "Echoes.Runtime.Network.OnlineFrontDoor"
   "Echoes.Runtime.Performance.FourTeamScale"
   "Echoes.Runtime.Performance.SustainedFourTeamScale"
-  "Echoes.Runtime.Presentation.CommandMarkers"
-  "Echoes.Runtime.Presentation.DestructionVFX"
   "Echoes.Runtime.Presentation.AudioConfirmation"
-  "Echoes.Runtime.Presentation.FormationLayout"
-  "Echoes.Runtime.Presentation.Pooling"
+  "Echoes.Runtime.Presentation.CombatEffects"
   "Echoes.Runtime.Presentation.CommandDeckModel"
+  "Echoes.Runtime.Presentation.CommandMarkers"
   "Echoes.Runtime.Presentation.ContactIndicatorLayout"
+  "Echoes.Runtime.Presentation.DestructionVFX"
+  "Echoes.Runtime.Presentation.FormationLayout"
+  "Echoes.Runtime.Presentation.MotionFamilies"
+  "Echoes.Runtime.Presentation.Pooling"
+  "Echoes.Runtime.Presentation.ProductionFog"
   "Echoes.Runtime.Persistence.QuickSaveLoad"
   "Echoes.Runtime.Persistence.CampaignProgress"
   "Echoes.Runtime.Persistence.CampaignSlots"
+  "Echoes.Runtime.Persistence.AutosaveRecovery"
   "Echoes.Runtime.Presentation.VisualTheme"
   "Echoes.Runtime.Visibility.ActorLifecycle"
 )
 
 for expected_test in "${expected_tests[@]}"; do
   matched=false
-  for test_index in {0..70}; do
+  for test_index in {0..75}; do
     if [[ "$(read_report_value tests.$test_index.fullTestPath)" == "$expected_test" ]]; then
       matched=true
       if [[ "$(read_report_value tests.$test_index.state)" != "Success" ||
@@ -290,6 +294,6 @@ for expected_test in "${expected_tests[@]}"; do
   fi
 done
 
-print "Unreal automation passed: 71/71 Echoes tests, 0 warnings, 0 errors."
+print "Unreal automation passed: 76/76 Echoes tests, 0 warnings, 0 errors."
 print "Player SaveGames guard passed: sampled tree unchanged; scoped storage empty."
 print "Evidence report: $report"

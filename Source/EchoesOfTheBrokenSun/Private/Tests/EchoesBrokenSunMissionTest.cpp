@@ -2288,16 +2288,44 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             PreservedHoldBackupBytes,
             *(QuickSavePath + TEXT(".bak"))) &&
             PreservedHoldBackupBytes == ValidHoldBackupBytes);
+    const bool bRestoredHoldCommitted = TickUntil(
+        [Bridge]()
+        {
+            return Bridge->GetCampaignProgress().FindDecision(
+                       EEchoesCampaignMissionId::TheBrokenSun) !=
+                nullptr;
+        },
+        1200);
+    if (!bRestoredHoldCommitted)
+    {
+        AddInfo(FString::Printf(
+            TEXT("[ECHOES_M15_DIAG] phase=%u contractFailed=%d tick=%llu paused=%d"),
+            static_cast<uint32>(Bridge->GetBrokenSunPhase()),
+            Bridge->GetLocalObjectiveSnapshot().bBrokenSunResolutionContractFailed ? 1 : 0,
+            static_cast<unsigned long long>(Bridge->GetSimulation()->CurrentTick()),
+            Bridge->IsScenarioPaused() ? 1 : 0));
+        for (const echoes::sim::Entity& Entity : Bridge->GetSimulation()->Entities())
+        {
+            if (Entity.owner == 0 && Entity.hitPoints > 0)
+            {
+                AddInfo(FString::Printf(
+                    TEXT("[ECHOES_M15_DIAG] entity=%u type=%u tile=(%d,%d) raw=(%d,%d) order=%u dest=(%d,%d) hp=%d"),
+                    Entity.id,
+                    static_cast<uint32>(Entity.type),
+                    Entity.position.x.FloorToInt(),
+                    Entity.position.y.FloorToInt(),
+                    Entity.position.x.Raw(),
+                    Entity.position.y.Raw(),
+                    static_cast<uint32>(Entity.order.type),
+                    Entity.order.destination.x.FloorToInt(),
+                    Entity.order.destination.y.FloorToInt(),
+                    Entity.hitPoints));
+            }
+        }
+    }
     TestTrue(
         TEXT("Holding the restored exact contract commits Mission 15"),
-        TickUntil(
-            [Bridge]()
-            {
-                return Bridge->GetCampaignProgress().FindDecision(
-                           EEchoesCampaignMissionId::TheBrokenSun) !=
-                    nullptr;
-            },
-            1200));
+        bRestoredHoldCommitted);
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheBrokenSun);

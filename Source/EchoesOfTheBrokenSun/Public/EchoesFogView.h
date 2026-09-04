@@ -58,7 +58,28 @@ public:
         return ExploredTileCount + VisibleTileCount;
     }
 
+    void UpdateAccessibilitySettings(bool bInReducedMotion, bool bInReducedFlashing);
+
+    [[nodiscard]] bool IsReducedMotionApplied() const { return bReducedMotion; }
+    [[nodiscard]] bool IsReducedFlashingApplied() const { return bReducedFlashing; }
+    [[nodiscard]] FLinearColor GetUnexploredBaseColor() const { return UnexploredBaseColor; }
+    [[nodiscard]] FLinearColor GetUnexploredBleedColor() const { return UnexploredBleedColor; }
+    [[nodiscard]] float GetUnexploredBleedStrength() const { return UnexploredBleedStrength; }
+    [[nodiscard]] FLinearColor GetExploredColor() const { return ExploredColor; }
+
+    [[nodiscard]] bool HasCollisionDisabled() const;
+    [[nodiscard]] bool HasNavigationDisabled() const;
+    [[nodiscard]] bool HasShadowsDisabled() const;
+    [[nodiscard]] bool HasOverlapsDisabled() const;
+
+    [[nodiscard]] double GetLastSyncDurationMs() const { return LastSyncDurationMs; }
+    [[nodiscard]] uint64 GetTotalSyncCount() const { return TotalSyncCount; }
+
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FEchoesProductionFogTest;
+#endif
+    void ApplyMaterials();
     // bUnexplored selects the tall occluding volume; otherwise the thin
     // explored dimming slab.
     [[nodiscard]] FTransform TileTransform(
@@ -96,4 +117,13 @@ private:
     int32 UnexploredTileCount = 0;
     int32 ExploredTileCount = 0;
     int32 VisibleTileCount = 0;
+
+    bool bReducedMotion = false;
+    bool bReducedFlashing = false;
+    FLinearColor UnexploredBaseColor = FLinearColor(0.004f, 0.003f, 0.005f, 1.0f);
+    FLinearColor UnexploredBleedColor = FLinearColor(0.06f, 0.012f, 0.08f, 1.0f);
+    float UnexploredBleedStrength = 0.35f;
+    FLinearColor ExploredColor = FLinearColor(0.015f, 0.022f, 0.035f, 0.72f);
+    double LastSyncDurationMs = 0.0;
+    uint64 TotalSyncCount = 0;
 };

@@ -9,9 +9,10 @@ struct FEchoesSkirmishSetupOverlayLayout final
     FVector2D Size = FVector2D::ZeroVector;
     float ContentScale = 1.0f;
     float TextScale = 1.0f;
-    FBox2D SettingRows[5];
-    FBox2D SettingDecrease[5];
-    FBox2D SettingIncrease[5];
+    FBox2D SettingRows[9];
+    FBox2D SettingDecrease[9];
+    FBox2D SettingIncrease[9];
+    FBox2D AssistedBannerBox;
     FBox2D ReviewButton;
 
     [[nodiscard]] static FEchoesSkirmishSetupOverlayLayout Build(
@@ -21,28 +22,28 @@ struct FEchoesSkirmishSetupOverlayLayout final
         FEchoesSkirmishSetupOverlayLayout Layout;
         Layout.Size.X = FMath::Min(
             FMath::Max(760.0f, ViewportSize.X - 60.0f),
-            FMath::Clamp(ViewportSize.X * 0.64f, 900.0f, 1240.0f));
+            FMath::Clamp(ViewportSize.X * 0.66f, 920.0f, 1260.0f));
         Layout.Size.Y = FMath::Min(
-            FMath::Max(620.0f, ViewportSize.Y - 60.0f),
-            FMath::Clamp(ViewportSize.Y * 0.78f, 680.0f, 820.0f));
+            FMath::Max(640.0f, ViewportSize.Y - 40.0f),
+            FMath::Clamp(ViewportSize.Y * 0.86f, 680.0f, 860.0f));
         Layout.Origin = (ViewportSize - Layout.Size) * 0.5f;
         Layout.ContentScale = FMath::Clamp(
-            FMath::Min(Layout.Size.X / 980.0f, Layout.Size.Y / 720.0f),
+            FMath::Min(Layout.Size.X / 980.0f, Layout.Size.Y / 740.0f),
             0.74f,
             1.2f);
         Layout.TextScale = FMath::Clamp(HudScale, 0.75f, 1.35f) *
             Layout.ContentScale;
 
-        for (int32 Row = 0; Row < 5; ++Row)
+        for (int32 Row = 0; Row < 9; ++Row)
         {
             const float RowTop = Layout.Origin.Y +
-                (146.0f + Row * 58.0f) * Layout.ContentScale;
+                (104.0f + Row * 36.0f) * Layout.ContentScale;
             const FVector2D RowMin(
                 Layout.Origin.X + 38.0f,
-                RowTop - 8.0f * Layout.ContentScale);
+                RowTop - 4.0f * Layout.ContentScale);
             const FVector2D RowMax(
                 Layout.Origin.X + Layout.Size.X - 38.0f,
-                RowTop + 38.0f * Layout.ContentScale);
+                RowTop + 28.0f * Layout.ContentScale);
             Layout.SettingRows[Row] = FBox2D(RowMin, RowMax);
             const float MidX = (RowMin.X + RowMax.X) * 0.5f;
             Layout.SettingDecrease[Row] = FBox2D(
@@ -53,9 +54,20 @@ struct FEchoesSkirmishSetupOverlayLayout final
                 RowMax);
         }
 
+        const float BannerTop = Layout.Origin.Y +
+            (104.0f + 9 * 36.0f + 4.0f) * Layout.ContentScale;
+        const FVector2D BannerMin(
+            Layout.Origin.X + 38.0f,
+            BannerTop);
+        Layout.AssistedBannerBox = FBox2D(
+            BannerMin,
+            FVector2D(
+                Layout.Origin.X + Layout.Size.X - 38.0f,
+                BannerTop + 30.0f * Layout.ContentScale));
+
         const FVector2D ReviewMin(
             Layout.Origin.X + 46.0f,
-            Layout.Origin.Y + Layout.Size.Y - 76.0f);
+            Layout.Origin.Y + Layout.Size.Y - 64.0f);
         Layout.ReviewButton = FBox2D(
             ReviewMin,
             FVector2D(
@@ -81,31 +93,31 @@ struct FEchoesSkirmishSummaryOverlayLayout final
     {
         FEchoesSkirmishSummaryOverlayLayout Layout;
         Layout.Size.X = FMath::Min(
-            FMath::Max(700.0f, ViewportSize.X - 60.0f),
-            FMath::Clamp(ViewportSize.X * 0.58f, 820.0f, 1120.0f));
+            FMath::Max(720.0f, ViewportSize.X - 60.0f),
+            FMath::Clamp(ViewportSize.X * 0.62f, 840.0f, 1160.0f));
         Layout.Size.Y = FMath::Min(
-            FMath::Max(560.0f, ViewportSize.Y - 60.0f),
-            FMath::Clamp(ViewportSize.Y * 0.70f, 620.0f, 760.0f));
+            FMath::Max(600.0f, ViewportSize.Y - 40.0f),
+            FMath::Clamp(ViewportSize.Y * 0.82f, 660.0f, 840.0f));
         Layout.Origin = (ViewportSize - Layout.Size) * 0.5f;
         Layout.ContentScale = FMath::Clamp(
-            FMath::Min(Layout.Size.X / 900.0f, Layout.Size.Y / 650.0f),
-            0.76f,
+            FMath::Min(Layout.Size.X / 920.0f, Layout.Size.Y / 720.0f),
+            0.74f,
             1.2f);
         Layout.TextScale = FMath::Clamp(HudScale, 0.75f, 1.35f) *
             Layout.ContentScale;
 
         const FVector2D BackMin(
             Layout.Origin.X + 54.0f,
-            Layout.Origin.Y + 492.0f * Layout.ContentScale);
+            Layout.Origin.Y + Layout.Size.Y - 118.0f);
         Layout.BackButton = FBox2D(
             BackMin,
             BackMin + FVector2D(
-                FMath::Min(300.0f * Layout.ContentScale,
+                FMath::Min(320.0f * Layout.ContentScale,
                            Layout.Size.X - 108.0f),
-                38.0f * Layout.ContentScale));
+                36.0f * Layout.ContentScale));
         const FVector2D DeployMin(
             Layout.Origin.X + 46.0f,
-            Layout.Origin.Y + Layout.Size.Y - 76.0f);
+            Layout.Origin.Y + Layout.Size.Y - 68.0f);
         Layout.DeployButton = FBox2D(
             DeployMin,
             FVector2D(

@@ -24,6 +24,7 @@
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
+class AEchoesCombatEffectView;
 class AEchoesDestructionView;
 class AEchoesEntityView;
 class AEchoesFogView;
@@ -31,7 +32,35 @@ class AEchoesTerrainView;
 #if WITH_DEV_AUTOMATION_TESTS
 class FEchoesPrologueMissionTest;
 class FEchoesFreshCampaignJourneyTest;
+class FEchoesAutosaveRecoveryTest;
 #endif
+
+UENUM(BlueprintType)
+enum class EEchoesAutosaveReason : uint8
+{
+    None = 0,
+    MissionEntry = 1,
+    PhaseTransition = 2,
+    Manual = 3
+};
+
+/** Candidate checkpoint discovered during interrupted-session recovery scans. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesRecoveryCandidate final
+{
+    bool bAvailable = false;
+    EEchoesOperationMode OperationMode = EEchoesOperationMode::Skirmish;
+    EEchoesCampaignMissionId MissionId = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    FString MissionName;
+    FString PhaseName;
+    uint64 SimulationTick = 0;
+    uint64 StateChecksum = 0;
+    FDateTime SaveTimestamp = FDateTime::MinValue();
+    FString SourcePath;
+    bool bRecoveredFromBackup = false;
+    uint32 ContainerCrc = 0;
+    FString RecoveryStatusText;
+    FString HonestLimitationNotice;
+};
 
 /** Information the local presentation may use without exposing hidden state. */
 struct FEchoesObjectiveSnapshot final
@@ -309,6 +338,17 @@ struct FEchoesPresentationPoolStats final
     uint64 DestructionCoalesced = 0;
     uint64 EntityOwnedMIDCreated = 0;
     uint64 DestructionOwnedMIDCreated = 0;
+    int32 ActiveCombatEffectViews = 0;
+    int32 FreeCombatEffectViews = 0;
+    int32 CombatEffectCapacity = 0;
+    int32 LastCombatEffectOverflowSlot = -1;
+    uint64 CombatEffectCreated = 0;
+    uint64 CombatEffectReused = 0;
+    uint64 CombatEffectActivated = 0;
+    uint64 CombatEffectReleased = 0;
+    uint64 CombatEffectOverflow = 0;
+    uint64 CombatEffectCoalesced = 0;
+    uint64 CombatEffectOwnedMIDCreated = 0;
 };
 
 /**
@@ -385,6 +425,38 @@ public:
     bool QuickLoadScenario(FString& OutFeedback);
 
     [[nodiscard]] static FString GetQuickSavePath();
+    [[nodiscard]] FString GetActiveQuickSavePath() const;
+
+    /** Atomically writes a validated deterministic autosave snapshot and retains one backup. */
+    bool AutosaveScenario(EEchoesAutosaveReason Reason, FString& OutFeedback);
+
+    /** The canonical autosave path. */
+    [[nodiscard]] static FString GetAutosavePath();
+
+    /** The active scenario's autosave file path inside the save directory. */
+    [[nodiscard]] FString GetActiveAutosavePath() const;
+
+    [[nodiscard]] uint64 GetLastAutosavedTick() const { return LastAutosavedTick; }
+    [[nodiscard]] EEchoesAutosaveReason GetLastAutosavedReason() const { return LastAutosavedReason; }
+    [[nodiscard]] uint8 GetLastAutosavedPhase() const { return LastAutosavedPhase; }
+
+    /** Checks if a recoverable interrupted session checkpoint exists in the save directory. */
+    bool CheckInterruptedSessionRecovery(
+        FEchoesRecoveryCandidate& OutCandidate,
+        FString& OutFeedback) const;
+
+    /** Restores an interrupted session by finding the newest valid candidate checkpoint. */
+    bool RecoverInterruptedSession(FString& OutFeedback);
+
+    /** Restores an interrupted session from the candidate checkpoint. */
+    bool RecoverInterruptedSession(
+        const FEchoesRecoveryCandidate& Candidate,
+        FString& OutFeedback);
+
+    /** Dismisses/archives the candidate interrupted session checkpoint. */
+    bool DismissInterruptedSession(
+        const FEchoesRecoveryCandidate& Candidate,
+        FString& OutFeedback);
 
     /** Queues one player command for the next deterministic simulation tick. */
     bool IssueCommand(
@@ -614,6 +686,23 @@ public:
     {
         return ActiveSkirmishSetup;
     }
+    [[nodiscard]] float GetEffectiveGameSpeedMultiplier() const;
+    [[nodiscard]] EEchoesSkirmishDifficulty GetActiveSkirmishDifficulty() const
+    {
+        return ActiveSkirmishSetup.Difficulty;
+    }
+    [[nodiscard]] EEchoesSkirmishVictoryCondition GetActiveSkirmishVictoryCondition() const
+    {
+        return ActiveSkirmishSetup.VictoryCondition;
+    }
+    [[nodiscard]] EEchoesSkirmishGameSpeed GetActiveSkirmishGameSpeed() const
+    {
+        return ActiveSkirmishSetup.GameSpeed;
+    }
+    [[nodiscard]] EEchoesSkirmishTeamSetup GetActiveSkirmishTeamSetup() const
+    {
+        return ActiveSkirmishSetup.TeamSetup;
+    }
     [[nodiscard]] int32 GetMapWidthTiles() const;
     [[nodiscard]] int32 GetMapHeightTiles() const;
 #if WITH_DEV_AUTOMATION_TESTS
@@ -634,8 +723,29 @@ private:
     friend class FEchoesPrologueMissionTest;
     friend class FEchoesFreshCampaignJourneyTest;
     friend class FEchoesPresentationPoolingTest;
+    friend class FEchoesCombatEffectsTest;
+    friend class FEchoesAutosaveRecoveryTest;
 #endif
-    [[nodiscard]] FString GetActiveQuickSavePath() const;
+    bool LoadScenarioFromPath(const FString& SavePath, FString& OutFeedback);
+    bool ValidateCheckpointFileOnDisk(
+        const FString& CandidatePath,
+        uint64 ExpectedCampaignBranchIdentity,
+        FString& OutFailure) const;
+    void CheckPhaseTransitionAutosave();
+    [[nodiscard]] uint8 GetCurrentOperationPhase() const;
+    [[nodiscard]] static bool IsOperationPhaseTerminal(EEchoesOperationMode Mode, uint8 Phase);
+    [[nodiscard]] static FString GetOperationDisplayName(EEchoesOperationMode Mode);
+    [[nodiscard]] static FString GetPhaseDisplayName(EEchoesOperationMode Mode, uint8 Phase);
+    [[nodiscard]] static bool GetMissionIdForOperation(EEchoesOperationMode Mode, EEchoesCampaignMissionId& OutMissionId);
+    static bool InspectSaveContainer(
+        const TArray<uint8>& Bytes,
+        uint8& OutVersion,
+        EEchoesOperationMode& OutOperation,
+        echoes::sim::Faction& OutFaction,
+        uint64& OutBranchIdentity,
+        uint32& OutCrc,
+        TArray<uint8>& OutPayload,
+        FString& OutError);
     void RefreshCampaignBackupState();
     EEchoesCampaignCommitStatus CommitPrologueCompletion(
         echoes::sim::FutureWellChoice CurrentChoice,
@@ -737,6 +847,19 @@ private:
         const FVector& WorldLocation,
         echoes::sim::Faction Faction,
         echoes::sim::EntityType EntityType);
+    [[nodiscard]] static int32 GetCombatEffectPoolCapacityForEffectsQuality(
+        int32 EffectsQuality);
+    [[nodiscard]] AEchoesCombatEffectView* AcquireCombatEffectView(
+        uint64 SimulationTick,
+        uint32 AttackerEntityId);
+    void ReleaseCombatEffectView(AEchoesCombatEffectView* View);
+    void ReclaimFinishedCombatEffectViews();
+    void ResetCombatEffectViewsForScenario();
+    void EmitCombatEffectPresentation(
+        echoes::sim::Faction Faction,
+        echoes::sim::EntityType EntityType,
+        const FVector& SourceLocation,
+        const FVector& TargetLocation);
     void EmitRuntimeMemoryPoolTelemetry(uint64 Tick, uint64 WallMs);
     void OnPreGarbageCollect();
     void OnPostGarbageCollect();
@@ -823,11 +946,19 @@ private:
     TArray<TObjectPtr<AEchoesDestructionView>> ActiveDestructionViews;
     UPROPERTY(Transient)
     TArray<TObjectPtr<AEchoesDestructionView>> FreeDestructionViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesCombatEffectView>> ActiveCombatEffectViews;
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AEchoesCombatEffectView>> FreeCombatEffectViews;
     TWeakObjectPtr<AEchoesFogView> FogView;
     TWeakObjectPtr<AEchoesTerrainView> TerrainView;
     double FixedTimeAccumulator = 0.0;
     uint64 NextPlayerCommandSequence = 1;
     bool bScenarioReady = false;
+    uint8 LastAutosavedPhase = 0xFF;
+    uint64 LastAutosavedTick = 0;
+    EEchoesAutosaveReason LastAutosavedReason = EEchoesAutosaveReason::None;
+    bool bSuppressAutosave = false;
 #if WITH_DEV_AUTOMATION_TESTS
     bool bFailNextScenarioStartForTesting = false;
     mutable bool bFailNextQuickSaveBackupRotationForTesting = false;
@@ -841,6 +972,7 @@ private:
     bool bLoggedAiAdaptation = false;
     bool bLoggedAiMineralCover = false;
     bool bLoggedAiVibrationResponse = false;
+    bool bLoggedAssistedAiTelemetry = false;
     bool bResearchPresentationScenario = false;
     bool bResearchInterruptionPresentationScenario = false;
     bool bKharuunSystemsPresentationScenario = false;
@@ -921,6 +1053,14 @@ private:
     uint64 EntityViewOwnedMIDCreationCount = 0;
     uint64 DestructionViewOwnedMIDCreationCount = 0;
     int32 LastDestructionOverflowSlot = -1;
+    uint64 CombatEffectViewCreatedCount = 0;
+    uint64 CombatEffectViewReusedCount = 0;
+    uint64 CombatEffectViewActivationCount = 0;
+    uint64 CombatEffectViewReleasedCount = 0;
+    uint64 CombatEffectViewOverflowCount = 0;
+    uint64 CombatEffectViewCoalescedCount = 0;
+    uint64 CombatEffectViewOwnedMIDCreationCount = 0;
+    int32 LastCombatEffectOverflowSlot = -1;
     FDelegateHandle PreGarbageCollectHandle;
     FDelegateHandle PostGarbageCollectHandle;
     uint64 NaturalGarbageCollectionCount = 0;

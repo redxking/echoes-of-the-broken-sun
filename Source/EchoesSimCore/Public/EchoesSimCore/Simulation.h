@@ -853,7 +853,18 @@ public:
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
     [[nodiscard]] bool HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent = 0) const;
     [[nodiscard]] Vec2 FindStringPulledTarget(Vec2 start, Vec2 destination, std::int32_t halfExtent = 0) const;
-    void ApplySoftSeparation();
+    // SPEC-MOV-008/012: separation acts between allied mobile units only.
+    // `positionsBeforeOrders` holds every entity's position (by index) as it
+    // stood before this tick's order pass; an entity whose position changed is
+    // "moving" and yields to resting neighbours, so a unit at rest is never
+    // displaced by traffic passing through it.
+    void ApplySoftSeparation(const std::vector<Vec2>& positionsBeforeOrders);
+    [[nodiscard]] bool IsSeparationCandidate(const Entity& entity) const;
+    // SPEC-MOV-011/012 arrival packing: a Move order resolves in place when
+    // the unit's next step would overlap an allied unit already resting at the
+    // same destination, so a group ordered to one point packs around it
+    // instead of stacking on the coordinate and pushing each other apart.
+    [[nodiscard]] bool ShouldPackAtDestination(const Entity& entity) const;
     [[nodiscard]] EntityId FindSmartCastCaster(
         PlayerId player,
         CommandType commandType,

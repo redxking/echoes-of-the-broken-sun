@@ -53,6 +53,7 @@ VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
 DESTRUCTION_VFX_ASSET_REVISION = "destruction-vfx-v1"
+ROSTER_ASSET_REVISION = "roster-silhouette-v2"
 
 PRIMARY = 0
 DARK = 1
@@ -262,377 +263,592 @@ def paired_leg(
     heavy: bool = False,
 ) -> None:
     width = 15.0 if heavy else 11.0
+    # Upper thigh strut (DARK mechanical chassis)
     box(mesh, (42.0, width, width), (-5.0, y, hip_z - 15.0), DARK, (55.0, 0.0, 0.0))
+    # Lower shin plate (LIGHT ceramic armor)
     box(mesh, (46.0, width, width), (foot_x - 8.0, y, 27.0), LIGHT, (-57.0, 0.0, 0.0))
+    # Articulated knee armor plate (PRIMARY team accent)
+    box(mesh, (16.0, width + 3.0, 14.0), (foot_x - 6.0, y, 38.0), PRIMARY, (-25.0, 0.0, 0.0))
+    # Hip pivot core (GLOW power hub)
     sphere(mesh, width * 0.72, (2.0, y, hip_z), GLOW, high_detail=False)
-    box(mesh, (30.0, width + 8.0, 10.0), (foot_x, y, 7.0), DARK)
+    # Foot ground clamp (DARK) with front toe plate (LIGHT)
+    box(mesh, (32.0, width + 8.0, 10.0), (foot_x, y, 7.0), DARK)
+    box(mesh, (14.0, width + 6.0, 6.0), (foot_x + 12.0, y, 6.0), LIGHT)
 
 
 def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Meridian Surveyor: compact engineering exoframe with twin tool arms and sensor mast."""
+    # 1. Main Torso & Cockpit Chassis
     box(mesh, (58.0, 48.0, 36.0), (0.0, 0.0, 78.0), LIGHT)
     box(mesh, (48.0, 38.0, 24.0), (-7.0, 0.0, 104.0), DARK, (-8.0, 0.0, 0.0))
-    box(mesh, (8.0, 34.0, 15.0), (27.0, 0.0, 95.0), GLOW)
+    box(mesh, (36.0, 42.0, 16.0), (4.0, 0.0, 102.0), PRIMARY, (-12.0, 0.0, 0.0))
+    box(mesh, (10.0, 34.0, 14.0), (27.0, 0.0, 95.0), GLOW)
+
+    # 2. Bipedal Locomotion
     paired_leg(mesh, -21.0, 69.0, 18.0)
     paired_leg(mesh, 21.0, 69.0, 18.0)
+
+    # 3. Articulated Manipulator Arms (Right: Rotary Drill, Left: Pincer)
+    # Right arm: Rotary Matter Drill
+    box(mesh, (43.0, 10.0, 10.0), (15.0, 39.0, 79.0), DARK, (0.0, 8.0, 15.0))
+    box(mesh, (38.0, 8.0, 8.0), (46.0, 48.0, 62.0), LIGHT, (0.0, 8.0, 30.0))
+    cone(mesh, 10.0, 2.0, 28.0, (68.0, 52.0, 54.0), GLOW, (90.0, 0.0, 0.0), 6)
+    cylinder(mesh, 10.0, 12.0, (55.0, 50.0, 58.0), PRIMARY, (90.0, 0.0, 0.0), 8)
+    # Left arm: Heavy Pincer Claw
+    box(mesh, (43.0, 10.0, 10.0), (15.0, -39.0, 79.0), DARK, (0.0, -8.0, -15.0))
+    box(mesh, (38.0, 8.0, 8.0), (46.0, -48.0, 62.0), LIGHT, (0.0, -8.0, -30.0))
+    box(mesh, (18.0, 4.0, 8.0), (66.0, -44.0, 56.0), DARK, (0.0, 15.0, -20.0))
+    box(mesh, (18.0, 4.0, 8.0), (66.0, -52.0, 56.0), DARK, (0.0, -15.0, 20.0))
+    sphere(mesh, 5.0, (56.0, -48.0, 58.0), GLOW, high_detail=False)
+
+    # 4. Rear Matter Harvest Canisters
     for side in (-1.0, 1.0):
-        box(mesh, (43.0, 10.0, 10.0), (15.0, side * 39.0, 79.0), DARK, (0.0, side * 8.0, side * 15.0))
-        box(mesh, (38.0, 8.0, 8.0), (46.0, side * 48.0, 62.0), LIGHT, (0.0, side * 8.0, side * 30.0))
-        cone(mesh, 8.0, 2.0, 22.0, (65.0, side * 52.0, 54.0), GLOW, (90.0, 0.0, 0.0), 6)
-        cylinder(mesh, 10.0, 31.0, (-27.0, side * 18.0, 91.0), DARK, sides=8)
-        cylinder(mesh, 6.0, 25.0, (-27.0, side * 18.0, 92.0), GLOW, sides=8)
+        cylinder(mesh, 11.0, 34.0, (-28.0, side * 18.0, 90.0), DARK, sides=8)
+        cylinder(mesh, 7.0, 26.0, (-28.0, side * 18.0, 90.0), GLOW, sides=8)
+        box(mesh, (8.0, 16.0, 10.0), (-24.0, side * 18.0, 104.0), PRIMARY)
+
+    # 5. Fold-Out Survey Mast & Prismatic Optics
     box(mesh, (8.0, 8.0, 55.0), (-18.0, 0.0, 137.0), DARK)
     box(mesh, (15.0, 8.0, 28.0), (-18.0, 0.0, 168.0), GLOW)
     if high:
-        box(mesh, (30.0, 5.0, 5.0), (-3.0, 0.0, 153.0), LIGHT)
-        sphere(mesh, 6.0, (12.0, 0.0, 153.0), GLOW, high_detail=False)
+        box(mesh, (32.0, 6.0, 6.0), (-3.0, 0.0, 153.0), LIGHT)
+        sphere(mesh, 7.0, (13.0, 0.0, 153.0), GLOW, high_detail=False)
+        box(mesh, (10.0, 10.0, 6.0), (-3.0, 0.0, 153.0), PRIMARY)
 
 
 def meridian_lancer(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Meridian Lancer: tall line infantry marksman with precision rail-lance."""
+    # 1. Bipedal Chassis
     paired_leg(mesh, -15.0, 72.0, 10.0)
     paired_leg(mesh, 15.0, 72.0, 10.0)
+
+    # 2. Torso Cuirass & Pauldrons
     box(mesh, (42.0, 38.0, 52.0), (-2.0, 0.0, 98.0), LIGHT)
+    box(mesh, (28.0, 32.0, 18.0), (8.0, 0.0, 106.0), PRIMARY)
     box(mesh, (34.0, 30.0, 20.0), (2.0, 0.0, 132.0), DARK)
-    box(mesh, (10.0, 23.0, 11.0), (20.0, 0.0, 133.0), GLOW)
+    box(mesh, (12.0, 24.0, 10.0), (20.0, 0.0, 133.0), GLOW)
+    box(mesh, (4.0, 4.0, 22.0), (-6.0, 12.0, 146.0), DARK)
+
+    # 3. Shoulder Pauldrons
     for side in (-1.0, 1.0):
-        sphere(mesh, 15.0, (-1.0, side * 26.0, 112.0), LIGHT, scale=(1.0, 0.75, 0.8), high_detail=False)
+        sphere(mesh, 16.0, (-1.0, side * 26.0, 112.0), LIGHT, scale=(1.05, 0.75, 0.8), high_detail=False)
+        box(mesh, (16.0, 14.0, 8.0), (-1.0, side * 27.0, 118.0), PRIMARY)
         box(mesh, (35.0, 9.0, 9.0), (15.0, side * 31.0, 94.0), DARK, (0.0, 0.0, side * 35.0))
-    box(mesh, (106.0, 12.0, 13.0), (51.0, -6.0, 90.0), DARK, (0.0, 0.0, -7.0))
-    box(mesh, (83.0, 7.0, 7.0), (64.0, -6.0, 93.0), GLOW, (0.0, 0.0, -7.0))
-    cone(mesh, 9.0, 3.0, 36.0, (116.0, -6.0, 82.0), LIGHT, (0.0, 90.0, 0.0), 6)
+
+    # 4. Precision Rail-Lance Rifle
+    box(mesh, (116.0, 12.0, 14.0), (56.0, -6.0, 90.0), DARK, (0.0, 0.0, -7.0))
+    box(mesh, (92.0, 7.0, 7.0), (70.0, -6.0, 93.0), GLOW, (0.0, 0.0, -7.0))
+    for rx in (42.0, 68.0, 94.0):
+        box(mesh, (12.0, 16.0, 18.0), (rx, -6.0, 91.0), LIGHT, (0.0, 0.0, -7.0))
+        box(mesh, (6.0, 18.0, 20.0), (rx, -6.0, 91.0), PRIMARY, (0.0, 0.0, -7.0))
+    cone(mesh, 10.0, 3.0, 38.0, (124.0, -6.0, 81.0), LIGHT, (0.0, 90.0, 0.0), 6)
+    sphere(mesh, 4.0, (144.0, -6.0, 81.0), GLOW, high_detail=False)
+
+    # 5. Backpack Capacitor
+    box(mesh, (16.0, 22.0, 32.0), (-24.0, 0.0, 106.0), DARK)
+    cylinder(mesh, 6.0, 26.0, (-24.0, 0.0, 106.0), GLOW, (90.0, 0.0, 0.0), 8)
     if high:
-        box(mesh, (7.0, 4.0, 35.0), (-18.0, -18.0, 125.0), GLOW)
-        box(mesh, (26.0, 6.0, 5.0), (18.0, 10.0, 112.0), LIGHT)
+        box(mesh, (8.0, 5.0, 36.0), (-18.0, -18.0, 125.0), GLOW)
+        box(mesh, (28.0, 8.0, 6.0), (18.0, 10.0, 112.0), LIGHT)
 
 
 def meridian_bulwark(mesh: unreal.DynamicMesh, high: bool) -> None:
-    box(mesh, (74.0, 92.0, 28.0), (-12.0, 0.0, 58.0), DARK)
+    """Meridian Bulwark: heavy two-operator mobile defensive screen platform."""
+    # 1. Broad Heavy Undercarriage
+    box(mesh, (78.0, 96.0, 30.0), (-12.0, 0.0, 58.0), DARK)
+    box(mesh, (52.0, 72.0, 20.0), (-22.0, 0.0, 74.0), PRIMARY)
     for side in (-1.0, 1.0):
-        paired_leg(mesh, side * 31.0, 55.0, 4.0, heavy=True)
-        box(mesh, (38.0, 32.0, 45.0), (-5.0, side * 24.0, 88.0), LIGHT)
-        box(mesh, (13.0, 19.0, 10.0), (17.0, side * 24.0, 104.0), GLOW)
-    for index, y in enumerate((-58.0, -29.0, 0.0, 29.0, 58.0)):
-        z = 65.0 + (8.0 if index in (1, 3) else 0.0)
-        box(mesh, (12.0, 27.0, 57.0), (55.0, y, z), LIGHT, (0.0, 0.0, -8.0))
-        box(mesh, (14.0, 21.0, 45.0), (62.0, y, z), GLOW, (0.0, 0.0, -8.0))
-    cylinder(mesh, 18.0, 75.0, (24.0, 0.0, 71.0), DARK, (90.0, 0.0, 0.0), 10)
+        paired_leg(mesh, side * 34.0, 55.0, 4.0, heavy=True)
+        box(mesh, (40.0, 34.0, 46.0), (-5.0, side * 26.0, 88.0), LIGHT)
+        box(mesh, (14.0, 20.0, 10.0), (18.0, side * 26.0, 104.0), GLOW)
+        box(mesh, (20.0, 12.0, 28.0), (-5.0, side * 44.0, 88.0), PRIMARY)
+
+    # 2. Interlocking Forward Heavy Shield Mantle (5 Staggered Plates)
+    for index, y in enumerate((-62.0, -31.0, 0.0, 31.0, 62.0)):
+        z = 66.0 + (10.0 if index in (1, 3) else 0.0)
+        box(mesh, (14.0, 29.0, 62.0), (58.0, y, z), LIGHT, (0.0, 0.0, -8.0))
+        box(mesh, (16.0, 23.0, 50.0), (65.0, y, z), GLOW, (0.0, 0.0, -8.0))
+        box(mesh, (18.0, 16.0, 24.0), (59.0, y, z), PRIMARY, (0.0, 0.0, -8.0))
+
+    # 3. Central Heavy Shield Core Emitter
+    cylinder(mesh, 22.0, 82.0, (26.0, 0.0, 72.0), DARK, (90.0, 0.0, 0.0), 10)
+    torus(mesh, 26.0, 4.0, (20.0, 0.0, 80.0), GLOW, (90.0, 0.0, 0.0), high)
+
+    # 4. Outrigger Projector Pylons
     if high:
-        torus(mesh, 24.0, 3.0, (18.0, 0.0, 79.0), GLOW, (90.0, 0.0, 0.0))
         for side in (-1.0, 1.0):
-            box(mesh, (38.0, 6.0, 6.0), (33.0, side * 47.0, 43.0), GLOW)
+            box(mesh, (42.0, 8.0, 8.0), (35.0, side * 50.0, 44.0), GLOW)
+            cone(mesh, 9.0, 2.0, 32.0, (56.0, side * 52.0, 96.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+            cylinder(mesh, 8.0, 35.0, (-38.0, side * 40.0, 42.0), DARK, (25.0, 0.0, 0.0), 8)
 
 
 def meridian_relay_skiff(mesh: unreal.DynamicMesh, high: bool) -> None:
-    box(mesh, (88.0, 34.0, 22.0), (0.0, 0.0, 54.0), DARK, (-5.0, 0.0, 0.0))
-    cone(mesh, 28.0, 4.0, 92.0, (27.0, 0.0, 55.0), LIGHT, (0.0, 90.0, 0.0), 6)
-    sphere(mesh, 24.0, (-5.0, 0.0, 67.0), GLOW, scale=(1.35, 0.72, 0.62), high_detail=high)
+    """Meridian Relay Skiff: fast triangular hovering reconnaissance craft with antenna halo."""
+    # 1. Main Lifting Fuselage
+    box(mesh, (92.0, 36.0, 24.0), (0.0, 0.0, 54.0), DARK, (-5.0, 0.0, 0.0))
+    cone(mesh, 30.0, 4.0, 96.0, (28.0, 0.0, 55.0), LIGHT, (0.0, 90.0, 0.0), 6)
+    sphere(mesh, 25.0, (-5.0, 0.0, 67.0), GLOW, scale=(1.35, 0.72, 0.62), high_detail=high)
+    box(mesh, (45.0, 28.0, 8.0), (-12.0, 0.0, 68.0), PRIMARY)
+
+    # 2. Swept Delta Winglets with Beveled Chines
     for side in (-1.0, 1.0):
-        box(mesh, (82.0, 42.0, 8.0), (-5.0, side * 42.0, 54.0), LIGHT, (0.0, side * 18.0, side * 4.0))
-        box(mesh, (56.0, 5.0, 5.0), (6.0, side * 48.0, 58.0), GLOW, (0.0, side * 18.0, side * 4.0))
-        cylinder(mesh, 8.0, 18.0, (-29.0, side * 28.0, 42.0), DARK, sides=8)
-        cylinder(mesh, 5.0, 5.0, (-29.0, side * 28.0, 31.0), GLOW, sides=8)
-    torus(mesh, 39.0, 2.5, (-18.0, 0.0, 92.0), GLOW, high_detail=high)
-    box(mesh, (5.0, 5.0, 38.0), (-18.0, 0.0, 90.0), DARK)
+        box(mesh, (86.0, 44.0, 8.0), (-5.0, side * 44.0, 54.0), LIGHT, (0.0, side * 18.0, side * 4.0))
+        box(mesh, (58.0, 6.0, 6.0), (6.0, side * 50.0, 58.0), GLOW, (0.0, side * 18.0, side * 4.0))
+        box(mesh, (32.0, 14.0, 6.0), (-18.0, side * 52.0, 56.0), PRIMARY, (0.0, side * 18.0, side * 4.0))
+        cylinder(mesh, 9.0, 22.0, (-30.0, side * 28.0, 42.0), DARK, sides=8)
+        cylinder(mesh, 6.0, 8.0, (-30.0, side * 28.0, 30.0), GLOW, sides=8)
+        cylinder(mesh, 7.0, 6.0, (-42.0, side * 28.0, 42.0), GLOW, (90.0, 0.0, 0.0), 8)
+
+    # 3. Concentric Orbital Sensor Halo
+    torus(mesh, 42.0, 3.0, (-18.0, 0.0, 94.0), GLOW, high_detail=high)
+    torus(mesh, 30.0, 2.0, (-18.0, 0.0, 94.0), PRIMARY, high_detail=high)
+    box(mesh, (6.0, 6.0, 42.0), (-18.0, 0.0, 90.0), DARK)
     if high:
-        cylinder(mesh, 9.0, 27.0, (-46.0, 0.0, 55.0), LIGHT, (90.0, 0.0, 0.0), 8)
+        sphere(mesh, 8.0, (18.0, 0.0, 40.0), GLOW, high_detail=False)
+        cylinder(mesh, 10.0, 28.0, (-48.0, 0.0, 55.0), LIGHT, (90.0, 0.0, 0.0), 8)
 
 
 def meridian_anchor(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 154.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=6)
-    cylinder(mesh, 128.0, 42.0, (0.0, 0.0, 42.0), LIGHT, sides=12)
-    cylinder(mesh, 78.0, 64.0, (0.0, 0.0, 82.0), DARK, sides=8)
+    """Meridian Anchor: hexagonal headquarters and network root with civic command bastions."""
+    # Stepped Hexagonal Foundation
+    cylinder(mesh, 158.0, 30.0, (0.0, 0.0, 15.0), DARK, sides=6)
+    cylinder(mesh, 132.0, 44.0, (0.0, 0.0, 44.0), LIGHT, sides=12)
+    cylinder(mesh, 82.0, 66.0, (0.0, 0.0, 84.0), DARK, sides=8)
+    cylinder(mesh, 90.0, 14.0, (0.0, 0.0, 68.0), PRIMARY, sides=6)
+
+    # 6 Radial Conduit Arms & Perimeter Bastions
     for angle in range(0, 360, 60):
-        radial_box(mesh, angle, 144.0, (105.0, 48.0, 38.0), 42.0, LIGHT)
-        radial_box(mesh, angle, 148.0, (77.0, 7.0, 8.0), 70.0, GLOW)
+        radial_box(mesh, angle, 146.0, (108.0, 50.0, 40.0), 44.0, LIGHT)
+        radial_box(mesh, angle, 150.0, (80.0, 8.0, 10.0), 72.0, GLOW)
+        radial_box(mesh, angle, 160.0, (30.0, 24.0, 16.0), 52.0, PRIMARY)
         if high:
-            radial_box(mesh, angle, 198.0, (34.0, 34.0, 18.0), 14.0, DARK)
-    cylinder(mesh, 40.0, 112.0, (0.0, 0.0, 132.0), LIGHT, sides=8)
-    torus(mesh, 51.0, 6.0, (0.0, 0.0, 116.0), GLOW, high_detail=high)
-    cone(mesh, 33.0, 3.0, 90.0, (0.0, 0.0, 227.0), GLOW, sides=8)
+            radial_box(mesh, angle, 202.0, (36.0, 36.0, 20.0), 15.0, DARK)
+
+    # Central Command Beacon Tower
+    cylinder(mesh, 42.0, 116.0, (0.0, 0.0, 134.0), LIGHT, sides=8)
+    torus(mesh, 54.0, 6.0, (0.0, 0.0, 118.0), GLOW, high_detail=high)
+    torus(mesh, 46.0, 4.0, (0.0, 0.0, 150.0), PRIMARY, high_detail=high)
+    cone(mesh, 34.0, 3.0, 94.0, (0.0, 0.0, 230.0), GLOW, sides=8)
     if high:
         for angle in range(30, 360, 60):
-            radial_box(mesh, angle, 94.0, (42.0, 12.0, 38.0), 91.0, DARK, -25.0)
+            radial_box(mesh, angle, 96.0, (44.0, 14.0, 40.0), 92.0, DARK, -25.0)
 
 
 def meridian_power_link(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 74.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=8)
-    cylinder(mesh, 50.0, 130.0, (0.0, 0.0, 80.0), LIGHT, sides=8)
-    cylinder(mesh, 29.0, 154.0, (0.0, 0.0, 147.0), DARK, sides=10)
-    for z, radius in ((55.0, 61.0), (118.0, 52.0), (184.0, 43.0)):
+    """Meridian Power Link: supply and network node with layered power rings."""
+    # Foundation
+    cylinder(mesh, 76.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=8)
+    cylinder(mesh, 52.0, 134.0, (0.0, 0.0, 82.0), LIGHT, sides=8)
+    cylinder(mesh, 56.0, 16.0, (0.0, 0.0, 48.0), PRIMARY, sides=8)
+    cylinder(mesh, 30.0, 158.0, (0.0, 0.0, 149.0), DARK, sides=10)
+
+    # Concentric Power Rings at 3 Elevations
+    for z, radius in ((56.0, 62.0), (120.0, 54.0), (186.0, 44.0)):
         torus(mesh, radius, 5.0, (0.0, 0.0, z), GLOW, high_detail=high)
+        torus(mesh, radius - 8.0, 2.5, (0.0, 0.0, z), PRIMARY, high_detail=high)
+
+    # 4 Radial Ground Busbars & Transformers
     for angle in range(45, 360, 90):
-        radial_box(mesh, angle, 99.0, (78.0, 12.0, 10.0), 22.0, DARK)
-        radial_box(mesh, angle, 139.0, (25.0, 25.0, 22.0), 11.0, LIGHT)
-    cone(mesh, 29.0, 2.0, 62.0, (0.0, 0.0, 255.0), GLOW, sides=8)
+        radial_box(mesh, angle, 102.0, (80.0, 14.0, 12.0), 23.0, DARK)
+        radial_box(mesh, angle, 142.0, (26.0, 26.0, 24.0), 12.0, LIGHT)
+        radial_box(mesh, angle, 120.0, (20.0, 8.0, 14.0), 32.0, GLOW)
+
+    # Crown Emitter Shroud
+    cone(mesh, 30.0, 2.0, 64.0, (0.0, 0.0, 258.0), GLOW, sides=8)
     if high:
         for angle in range(0, 360, 90):
-            radial_box(mesh, angle, 43.0, (7.0, 7.0, 92.0), 146.0, LIGHT)
+            radial_box(mesh, angle, 44.0, (8.0, 8.0, 94.0), 148.0, LIGHT)
 
 
 def meridian_array_foundry(mesh: unreal.DynamicMesh, high: bool) -> None:
-    box(mesh, (330.0, 230.0, 28.0), (0.0, 0.0, 14.0), DARK)
-    box(mesh, (275.0, 150.0, 68.0), (-12.0, 0.0, 62.0), LIGHT)
-    box(mesh, (240.0, 72.0, 58.0), (10.0, 0.0, 119.0), DARK)
-    box(mesh, (246.0, 10.0, 12.0), (10.0, 0.0, 151.0), GLOW)
-    for x in (-108.0, -38.0, 38.0, 108.0):
-        box(mesh, (18.0, 205.0, 100.0), (x, 0.0, 94.0), DARK)
-        box(mesh, (8.0, 175.0, 8.0), (x, 0.0, 148.0), GLOW)
-    box(mesh, (48.0, 106.0, 10.0), (158.0, 0.0, 18.0), LIGHT, (0.0, 0.0, -10.0))
+    """Meridian Array Foundry: unit production hall with visible gantry cranes and fabrication laser rails."""
+    # Foundation & Assembly Floor
+    box(mesh, (336.0, 236.0, 30.0), (0.0, 0.0, 15.0), DARK)
+    box(mesh, (280.0, 154.0, 70.0), (-12.0, 0.0, 64.0), LIGHT)
+    box(mesh, (244.0, 74.0, 60.0), (10.0, 0.0, 120.0), DARK)
+    # Dual Central Assembly Slipways
+    box(mesh, (250.0, 14.0, 14.0), (10.0, 20.0, 152.0), GLOW)
+    box(mesh, (250.0, 14.0, 14.0), (10.0, -20.0, 152.0), GLOW)
+    box(mesh, (260.0, 22.0, 10.0), (10.0, 0.0, 150.0), PRIMARY)
+
+    # 4 Transverse Gantry Arches
+    for x in (-110.0, -40.0, 40.0, 110.0):
+        box(mesh, (20.0, 210.0, 104.0), (x, 0.0, 96.0), DARK)
+        box(mesh, (10.0, 180.0, 10.0), (x, 0.0, 150.0), GLOW)
+        box(mesh, (22.0, 30.0, 24.0), (x, 90.0, 120.0), PRIMARY)
+        box(mesh, (22.0, 30.0, 24.0), (x, -90.0, 120.0), PRIMARY)
+
+    # Loading Ramp
+    box(mesh, (50.0, 110.0, 12.0), (162.0, 0.0, 19.0), LIGHT, (0.0, 0.0, -10.0))
     if high:
         for side in (-1.0, 1.0):
-            for x in (-108.0, -36.0, 36.0, 108.0):
-                cylinder(mesh, 9.0, 32.0, (x, side * 92.0, 54.0), GLOW, sides=8)
-        torus(mesh, 42.0, 4.0, (-120.0, 0.0, 116.0), GLOW, (90.0, 0.0, 0.0))
+            for x in (-110.0, -38.0, 38.0, 110.0):
+                cylinder(mesh, 10.0, 34.0, (x, side * 94.0, 56.0), GLOW, sides=8)
+        torus(mesh, 44.0, 4.5, (-122.0, 0.0, 118.0), GLOW, (90.0, 0.0, 0.0))
 
 
 def meridian_aegis_post(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 78.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=8)
+    """Meridian Aegis Post: network-powered defense turret with twin rail-barrels and ground cleats."""
+    # Ground Anchor Cleats
+    cylinder(mesh, 80.0, 30.0, (0.0, 0.0, 15.0), DARK, sides=8)
     for angle in range(45, 360, 90):
-        radial_box(mesh, angle, 84.0, (68.0, 28.0, 26.0), 22.0, LIGHT, -8.0)
-    cylinder(mesh, 50.0, 78.0, (0.0, 0.0, 63.0), LIGHT, sides=10)
-    torus(mesh, 54.0, 6.0, (0.0, 0.0, 92.0), GLOW, high_detail=high)
-    cylinder(mesh, 39.0, 64.0, (0.0, 0.0, 124.0), DARK, sides=10)
-    box(mesh, (145.0, 35.0, 38.0), (46.0, 0.0, 153.0), LIGHT, (0.0, 0.0, 4.0))
-    box(mesh, (122.0, 12.0, 12.0), (75.0, 0.0, 158.0), GLOW, (0.0, 0.0, 4.0))
-    cone(mesh, 17.0, 5.0, 58.0, (146.0, 0.0, 164.0), GLOW, (0.0, 90.0, 0.0), 6)
+        radial_box(mesh, angle, 86.0, (70.0, 30.0, 28.0), 23.0, LIGHT, -8.0)
+        radial_box(mesh, angle, 92.0, (40.0, 14.0, 14.0), 30.0, PRIMARY)
+
+    # Turret Pedestal
+    cylinder(mesh, 52.0, 80.0, (0.0, 0.0, 65.0), LIGHT, sides=10)
+    torus(mesh, 56.0, 6.0, (0.0, 0.0, 94.0), GLOW, high_detail=high)
+    cylinder(mesh, 41.0, 66.0, (0.0, 0.0, 126.0), DARK, sides=10)
+
+    # Armored Rotating Turret Housing
+    box(mesh, (148.0, 38.0, 40.0), (48.0, 0.0, 155.0), LIGHT, (0.0, 0.0, 4.0))
+    box(mesh, (60.0, 42.0, 30.0), (10.0, 0.0, 156.0), PRIMARY, (0.0, 0.0, 4.0))
+    # Twin Rail-Cannon Barrels
+    for side in (-1.0, 1.0):
+        box(mesh, (126.0, 10.0, 10.0), (78.0, side * 12.0, 158.0), GLOW, (0.0, 0.0, 4.0))
+        cone(mesh, 14.0, 4.0, 60.0, (148.0, side * 12.0, 164.0), LIGHT, (0.0, 90.0, 0.0), 6)
+        sphere(mesh, 5.0, (180.0, side * 12.0, 166.0), GLOW, high_detail=False)
     if high:
-        torus(mesh, 26.0, 3.0, (11.0, 0.0, 154.0), GLOW, (90.0, 0.0, 0.0))
-        box(mesh, (8.0, 8.0, 80.0), (-43.0, 0.0, 142.0), LIGHT)
+        torus(mesh, 28.0, 3.5, (12.0, 0.0, 156.0), GLOW, (90.0, 0.0, 0.0))
+        box(mesh, (10.0, 10.0, 84.0), (-45.0, 0.0, 144.0), LIGHT)
 
 
 def kharuun_tender(mesh: unreal.DynamicMesh, high: bool) -> None:
-    sphere(mesh, 37.0, (0.0, 0.0, 78.0), DARK, scale=(1.25, 0.95, 1.1), high_detail=high)
-    cone(mesh, 29.0, 8.0, 54.0, (9.0, 0.0, 108.0), LIGHT, (-18.0, 0.0, 0.0), 7)
-    box(mesh, (8.0, 30.0, 8.0), (18.0, 0.0, 101.0), GLOW, (0.0, 0.0, -18.0))
+    """Kharuun Tender: cultivator four-limbed worker with seed baskets and resonant cutters."""
+    # 1. Main Mineral Carapace & Core
+    sphere(mesh, 38.0, (0.0, 0.0, 78.0), DARK, scale=(1.25, 0.95, 1.1), high_detail=high)
+    cone(mesh, 30.0, 8.0, 56.0, (10.0, 0.0, 108.0), LIGHT, (-18.0, 0.0, 0.0), 7)
+    box(mesh, (10.0, 32.0, 10.0), (20.0, 0.0, 102.0), GLOW, (0.0, 0.0, -18.0))
+    sphere(mesh, 18.0, (-12.0, 0.0, 88.0), PRIMARY, scale=(1.1, 0.85, 0.8), high_detail=high)
+
+    # 2. Four Articulated Walking Limbs
     for angle in (45.0, 135.0, 225.0, 315.0):
         a = math.radians(angle)
-        cone(mesh, 13.0, 6.0, 62.0, (math.cos(a) * 34.0, math.sin(a) * 34.0, 39.0), LIGHT, (55.0, angle, 0.0), 6)
-        sphere(mesh, 10.0, (math.cos(a) * 55.0, math.sin(a) * 55.0, 13.0), DARK, scale=(1.4, 0.8, 0.5), high_detail=False)
+        cone(mesh, 14.0, 6.0, 64.0, (math.cos(a) * 35.0, math.sin(a) * 35.0, 40.0), LIGHT, (55.0, angle, 0.0), 6)
+        sphere(mesh, 11.0, (math.cos(a) * 56.0, math.sin(a) * 56.0, 13.0), DARK, scale=(1.4, 0.8, 0.5), high_detail=False)
+        sphere(mesh, 6.0, (math.cos(a) * 24.0, math.sin(a) * 24.0, 60.0), PRIMARY, high_detail=False)
+
+    # 3. Forward Cultivator Tendrils
     for side in (-1.0, 1.0):
-        cylinder(mesh, 5.0, 72.0, (31.0, side * 24.0, 61.0), DARK, (64.0, 0.0, 0.0), 6)
-        cone(mesh, 9.0, 2.0, 30.0, (62.0, side * 24.0, 31.0), GLOW, (78.0, 0.0, 0.0), 6)
+        cylinder(mesh, 6.0, 74.0, (32.0, side * 24.0, 61.0), DARK, (64.0, 0.0, 0.0), 6)
+        cone(mesh, 10.0, 2.0, 32.0, (64.0, side * 24.0, 30.0), GLOW, (78.0, 0.0, 0.0), 6)
+
+    # 4. Flank Seed-Crystal Panniers
+    for y in (-26.0, 26.0):
+        box(mesh, (28.0, 12.0, 18.0), (-16.0, y, 78.0), LIGHT)
+        cone(mesh, 8.0, 2.0, 22.0, (-14.0, y, 92.0), GLOW, (0.0, 0.0, 0.0), 5)
     if high:
         for y in (-19.0, 0.0, 19.0):
-            sphere(mesh, 10.0, (-35.0, y, 86.0), GLOW, scale=(0.7, 0.7, 1.25), high_detail=False)
+            sphere(mesh, 11.0, (-36.0, y, 86.0), GLOW, scale=(0.7, 0.7, 1.25), high_detail=False)
 
 
 def kharuun_riftstalker(mesh: unreal.DynamicMesh, high: bool) -> None:
-    sphere(mesh, 34.0, (0.0, 0.0, 72.0), DARK, scale=(1.85, 0.7, 0.72), high_detail=high)
-    cone(mesh, 29.0, 8.0, 75.0, (34.0, 0.0, 75.0), LIGHT, (0.0, 90.0, 0.0), 7)
-    for x in (-27.0, 29.0):
+    """Kharuun Riftstalker: sleek predatory quadruped skirmisher with dorsal resonance rail spine."""
+    # 1. Sleek Predator Basalt Body
+    sphere(mesh, 35.0, (0.0, 0.0, 72.0), DARK, scale=(1.90, 0.72, 0.74), high_detail=high)
+    cone(mesh, 30.0, 8.0, 78.0, (36.0, 0.0, 76.0), LIGHT, (0.0, 90.0, 0.0), 7)
+    sphere(mesh, 14.0, (62.0, 0.0, 74.0), GLOW, scale=(1.2, 0.6, 0.5), high_detail=False)
+    box(mesh, (45.0, 18.0, 14.0), (-8.0, 0.0, 86.0), PRIMARY)
+
+    # 2. Four Reverse-Jointed Pounce Limbs
+    for x in (-28.0, 30.0):
         for side in (-1.0, 1.0):
-            box(mesh, (55.0, 10.0, 12.0), (x, side * 27.0, 45.0), DARK, (58.0, side * 14.0, side * 12.0))
-            cone(mesh, 12.0, 4.0, 49.0, (x + 17.0, side * 43.0, 19.0), LIGHT, (65.0, side * 15.0, 0.0), 6)
-    box(mesh, (118.0, 13.0, 15.0), (11.0, 0.0, 112.0), LIGHT, (0.0, 0.0, 3.0))
-    box(mesh, (104.0, 6.0, 6.0), (20.0, 0.0, 115.0), GLOW, (0.0, 0.0, 3.0))
-    cone(mesh, 16.0, 2.0, 48.0, (91.0, 0.0, 119.0), GLOW, (0.0, 90.0, 0.0), 6)
+            box(mesh, (56.0, 11.0, 13.0), (x, side * 28.0, 46.0), DARK, (58.0, side * 14.0, side * 12.0))
+            cone(mesh, 13.0, 4.0, 52.0, (x + 18.0, side * 44.0, 20.0), LIGHT, (65.0, side * 15.0, 0.0), 6)
+            cone(mesh, 7.0, 1.0, 20.0, (x + 36.0, side * 44.0, 8.0), DARK, (0.0, 90.0, 0.0), 5)
+
+    # 3. Dorsal Resonance Rail Canal (Spine of Amber Crystals)
+    box(mesh, (120.0, 14.0, 16.0), (12.0, 0.0, 112.0), LIGHT, (0.0, 0.0, 3.0))
+    box(mesh, (108.0, 7.0, 7.0), (22.0, 0.0, 115.0), GLOW, (0.0, 0.0, 3.0))
+    cone(mesh, 17.0, 2.0, 52.0, (94.0, 0.0, 120.0), GLOW, (0.0, 90.0, 0.0), 6)
+    for x in (-32.0, -10.0, 12.0, 34.0, 56.0):
+        cone(mesh, 8.0, 1.0, 26.0, (x, 0.0, 122.0), GLOW, (0.0, 0.0, 0.0), 5)
     if high:
         for x in (-28.0, 0.0, 28.0):
-            cone(mesh, 11.0, 1.0, 29.0, (x, 0.0, 104.0), GLOW, (0.0, 0.0, 0.0), 5)
+            box(mesh, (14.0, 18.0, 6.0), (x, 0.0, 105.0), PRIMARY)
 
 
 def kharuun_cairnback(mesh: unreal.DynamicMesh, high: bool) -> None:
-    sphere(mesh, 58.0, (0.0, 0.0, 66.0), DARK, scale=(1.45, 1.05, 0.72), high_detail=high)
-    for x in (-46.0, 0.0, 46.0):
+    """Kharuun Cairnback: massive six-limbed assault screen with tiered basalt strata and magma seams."""
+    # 1. Massive Basalt Fortress Dome & Overlapping Slabs
+    sphere(mesh, 60.0, (0.0, 0.0, 66.0), DARK, scale=(1.50, 1.10, 0.74), high_detail=high)
+    for x, z, scale_x in ((-50.0, 92.0, 1.0), (-16.0, 106.0, 1.22), (24.0, 103.0, 1.12), (58.0, 89.0, 0.92)):
+        sphere(mesh, 35.0, (x, 0.0, z), LIGHT, scale=(scale_x, 1.58, 0.38), high_detail=False)
+        box(mesh, (24.0, 68.0, 8.0), (x, 0.0, z + 12.0), PRIMARY)
+
+    # 2. Six Heavy Rooted Pillar Legs
+    for x in (-48.0, 0.0, 48.0):
         for side in (-1.0, 1.0):
-            box(mesh, (48.0, 15.0, 18.0), (x, side * 51.0, 39.0), DARK, (55.0, side * 10.0, side * 18.0))
-            cone(mesh, 16.0, 5.0, 44.0, (x + 8.0, side * 65.0, 17.0), LIGHT, (65.0, side * 10.0, 0.0), 6)
-    for x, z, scale_x in ((-48.0, 91.0, 1.0), (-14.0, 105.0, 1.2), (24.0, 102.0, 1.1), (57.0, 88.0, 0.9)):
-        sphere(mesh, 34.0, (x, 0.0, z), LIGHT, scale=(scale_x, 1.55, 0.38), high_detail=False)
-    box(mesh, (120.0, 7.0, 7.0), (5.0, 0.0, 99.0), GLOW, (0.0, 0.0, 2.0))
-    cone(mesh, 31.0, 8.0, 52.0, (77.0, 0.0, 67.0), PRIMARY, (0.0, 90.0, 0.0), 7)
+            box(mesh, (50.0, 16.0, 19.0), (x, side * 52.0, 40.0), DARK, (55.0, side * 10.0, side * 18.0))
+            cone(mesh, 17.0, 5.0, 46.0, (x + 8.0, side * 66.0, 18.0), LIGHT, (65.0, side * 10.0, 0.0), 6)
+            box(mesh, (28.0, 22.0, 10.0), (x + 8.0, side * 70.0, 6.0), DARK)
+
+    # 3. Thermal Seams & Brow Wedge
+    box(mesh, (124.0, 8.0, 8.0), (5.0, 0.0, 100.0), GLOW, (0.0, 0.0, 2.0))
+    cone(mesh, 33.0, 8.0, 54.0, (80.0, 0.0, 68.0), PRIMARY, (0.0, 90.0, 0.0), 7)
+    box(mesh, (20.0, 36.0, 12.0), (92.0, 0.0, 66.0), DARK)
     if high:
-        for x in (-48.0, -14.0, 24.0, 57.0):
-            cone(mesh, 9.0, 1.0, 24.0, (x, 0.0, 123.0), GLOW, sides=5)
+        for x in (-48.0, -16.0, 24.0, 58.0):
+            cone(mesh, 10.0, 1.0, 26.0, (x, 0.0, 125.0), GLOW, sides=5)
+            box(mesh, (8.0, 48.0, 4.0), (x, 0.0, 96.0), GLOW)
 
 
 def kharuun_resonant(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cone(mesh, 27.0, 5.0, 92.0, (0.0, 0.0, 103.0), LIGHT, sides=7)
-    sphere(mesh, 20.0, (0.0, 0.0, 116.0), GLOW, scale=(0.8, 0.8, 1.2), high_detail=high)
+    """Kharuun Resonant: slender tripod reconnaissance strider with suspended amethyst geode and acoustic fins."""
+    # 1. Central Resonant Chamber & Suspended Geode
+    cone(mesh, 28.0, 5.0, 94.0, (0.0, 0.0, 104.0), LIGHT, sides=7)
+    sphere(mesh, 22.0, (0.0, 0.0, 118.0), GLOW, scale=(0.82, 0.82, 1.25), high_detail=high)
+    torus(mesh, 28.0, 4.0, (0.0, 0.0, 118.0), PRIMARY, high_detail=high)
+
+    # 2. Graceful Tripod Limbs with Ground-Contact Feelers
     for angle in (30.0, 150.0, 270.0):
         a = math.radians(angle)
-        box(mesh, (82.0, 9.0, 11.0), (math.cos(a) * 31.0, math.sin(a) * 31.0, 61.0), DARK, (63.0, angle, 0.0))
-        cone(mesh, 10.0, 2.0, 55.0, (math.cos(a) * 60.0, math.sin(a) * 60.0, 26.0), LIGHT, (75.0, angle, 0.0), 6)
-        cylinder(mesh, 2.5, 72.0, (math.cos(a) * 62.0, math.sin(a) * 62.0, 19.0), GLOW, (78.0, angle, 0.0), 5)
+        box(mesh, (84.0, 10.0, 12.0), (math.cos(a) * 32.0, math.sin(a) * 32.0, 62.0), DARK, (63.0, angle, 0.0))
+        cone(mesh, 11.0, 2.0, 58.0, (math.cos(a) * 62.0, math.sin(a) * 62.0, 27.0), LIGHT, (75.0, angle, 0.0), 6)
+        cylinder(mesh, 3.0, 76.0, (math.cos(a) * 64.0, math.sin(a) * 64.0, 20.0), GLOW, (78.0, angle, 0.0), 5)
+
+    # 3. High-Aspect Acoustic Tuning Fins
     for side in (-1.0, 1.0):
-        box(mesh, (11.0, 9.0, 118.0), (-5.0, side * 30.0, 131.0), LIGHT, (side * 17.0, 0.0, side * 8.0))
-        box(mesh, (5.0, 5.0, 93.0), (-2.0, side * 25.0, 133.0), GLOW, (side * 17.0, 0.0, side * 8.0))
+        box(mesh, (12.0, 10.0, 122.0), (-5.0, side * 31.0, 132.0), LIGHT, (side * 17.0, 0.0, side * 8.0))
+        box(mesh, (6.0, 6.0, 96.0), (-2.0, side * 26.0, 134.0), GLOW, (side * 17.0, 0.0, side * 8.0))
+        box(mesh, (14.0, 8.0, 24.0), (-5.0, side * 31.0, 160.0), PRIMARY, (side * 17.0, 0.0, side * 8.0))
     if high:
-        cone(mesh, 11.0, 1.0, 45.0, (0.0, 0.0, 174.0), GLOW, sides=6)
+        cone(mesh, 12.0, 1.0, 48.0, (0.0, 0.0, 176.0), GLOW, sides=6)
 
 
 def kharuun_memory_hearth(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 155.0, 30.0, (0.0, 0.0, 15.0), DARK, sides=12)
-    torus(mesh, 121.0, 16.0, (0.0, 0.0, 42.0), LIGHT, high_detail=high)
-    cylinder(mesh, 82.0, 48.0, (0.0, 0.0, 54.0), PRIMARY, sides=10)
+    """Kharuun Memory Hearth: circular headquarters and adaptation hearth with blooming mineral petals."""
+    # Stepped Concentric Basalt Terraces
+    cylinder(mesh, 158.0, 32.0, (0.0, 0.0, 16.0), DARK, sides=12)
+    torus(mesh, 124.0, 17.0, (0.0, 0.0, 43.0), LIGHT, high_detail=high)
+    cylinder(mesh, 84.0, 50.0, (0.0, 0.0, 55.0), PRIMARY, sides=10)
+
+    # 8 Blooming Mineral Petal Buttresses
     for angle in range(0, 360, 45):
-        radial_box(mesh, angle, 117.0, (86.0, 31.0, 24.0), 52.0, LIGHT, -15.0)
-        radial_box(mesh, angle, 96.0, (51.0, 7.0, 8.0), 74.0, GLOW, 22.0)
-        cone(mesh, 21.0, 4.0, 85.0, (math.cos(math.radians(angle)) * 93.0, math.sin(math.radians(angle)) * 93.0, 107.0), DARK, (-12.0, angle, 0.0), 7)
-    sphere(mesh, 43.0, (0.0, 0.0, 96.0), GLOW, scale=(1.0, 1.0, 1.18), high_detail=high)
-    torus(mesh, 52.0, 5.0, (0.0, 0.0, 94.0), LIGHT, high_detail=high)
+        radial_box(mesh, angle, 120.0, (88.0, 33.0, 26.0), 54.0, LIGHT, -15.0)
+        radial_box(mesh, angle, 98.0, (53.0, 8.0, 9.0), 76.0, GLOW, 22.0)
+        radial_box(mesh, angle, 135.0, (40.0, 20.0, 20.0), 40.0, PRIMARY, -10.0)
+        cone(mesh, 22.0, 4.0, 88.0, (math.cos(math.radians(angle)) * 95.0, math.sin(math.radians(angle)) * 95.0, 109.0), DARK, (-12.0, angle, 0.0), 7)
+
+    # Interior Sunken Magma Hearth & Suspended Memory Geode
+    sphere(mesh, 45.0, (0.0, 0.0, 98.0), GLOW, scale=(1.0, 1.0, 1.20), high_detail=high)
+    torus(mesh, 54.0, 6.0, (0.0, 0.0, 96.0), LIGHT, high_detail=high)
+    torus(mesh, 42.0, 4.0, (0.0, 0.0, 96.0), PRIMARY, high_detail=high)
     if high:
-        cone(mesh, 28.0, 4.0, 72.0, (0.0, 0.0, 161.0), LIGHT, sides=7)
+        cone(mesh, 30.0, 4.0, 75.0, (0.0, 0.0, 164.0), LIGHT, sides=7)
 
 
 def kharuun_waystone(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 68.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=7)
+    """Kharuun Waystone: mobile supply monolith with 3 folded root-legs and central amber core."""
+    cylinder(mesh, 70.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=7)
+    # 3 Rooted Mineral Legs with Transformation Hinges
     for angle in (30.0, 150.0, 270.0):
-        radial_box(mesh, angle, 74.0, (92.0, 25.0, 24.0), 28.0, DARK, -24.0)
+        radial_box(mesh, angle, 76.0, (94.0, 27.0, 26.0), 29.0, DARK, -24.0)
+        radial_box(mesh, angle, 90.0, (40.0, 18.0, 18.0), 45.0, PRIMARY, -15.0)
         a = math.radians(angle)
-        cone(mesh, 18.0, 5.0, 87.0, (math.cos(a) * 69.0, math.sin(a) * 69.0, 61.0), LIGHT, (42.0, angle, 0.0), 7)
-    cone(mesh, 56.0, 14.0, 188.0, (0.0, 0.0, 116.0), LIGHT, sides=7)
-    cone(mesh, 35.0, 5.0, 162.0, (0.0, 0.0, 124.0), DARK, sides=7)
-    box(mesh, (11.0, 11.0, 149.0), (17.0, 0.0, 128.0), GLOW, (0.0, 0.0, -5.0))
-    sphere(mesh, 23.0, (0.0, 0.0, 112.0), GLOW, scale=(0.9, 0.9, 1.5), high_detail=high)
+        cone(mesh, 19.0, 5.0, 90.0, (math.cos(a) * 71.0, math.sin(a) * 71.0, 63.0), LIGHT, (42.0, angle, 0.0), 7)
+
+    # Tapering Obelisk with Amber Veins
+    cone(mesh, 58.0, 14.0, 192.0, (0.0, 0.0, 118.0), LIGHT, sides=7)
+    cone(mesh, 36.0, 5.0, 166.0, (0.0, 0.0, 126.0), DARK, sides=7)
+    box(mesh, (12.0, 12.0, 152.0), (18.0, 0.0, 130.0), GLOW, (0.0, 0.0, -5.0))
+    sphere(mesh, 25.0, (0.0, 0.0, 114.0), GLOW, scale=(0.9, 0.9, 1.5), high_detail=high)
     if high:
         for angle in (0.0, 120.0, 240.0):
             a = math.radians(angle)
-            cone(mesh, 13.0, 2.0, 68.0, (math.cos(a) * 41.0, math.sin(a) * 41.0, 145.0), PRIMARY, (-12.0, angle, 0.0), 6)
+            cone(mesh, 14.0, 2.0, 70.0, (math.cos(a) * 42.0, math.sin(a) * 42.0, 147.0), PRIMARY, (-12.0, angle, 0.0), 6)
 
 
 def kharuun_growth_basin(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 148.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=12)
-    torus(mesh, 111.0, 24.0, (0.0, 0.0, 42.0), LIGHT, high_detail=high)
-    cylinder(mesh, 70.0, 22.0, (0.0, 0.0, 28.0), GLOW, sides=12)
+    """Kharuun Growth Basin: circular cultivation nursery with 8 gestation alcoves and molten amber pool."""
+    # Outer Basalt Wall & Terraced Ring
+    cylinder(mesh, 152.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=12)
+    torus(mesh, 114.0, 25.0, (0.0, 0.0, 43.0), LIGHT, high_detail=high)
+    cylinder(mesh, 72.0, 24.0, (0.0, 0.0, 29.0), GLOW, sides=12)
+
+    # 8 Ordered Cocoon Alcoves
     for angle in range(0, 360, 45):
         a = math.radians(angle)
-        sphere(mesh, 25.0, (math.cos(a) * 99.0, math.sin(a) * 99.0, 76.0), DARK, scale=(0.72, 0.72, 1.22), high_detail=high)
-        cone(mesh, 21.0, 4.0, 66.0, (math.cos(a) * 121.0, math.sin(a) * 121.0, 83.0), LIGHT, (-18.0, angle, 0.0), 7)
+        sphere(mesh, 26.0, (math.cos(a) * 102.0, math.sin(a) * 102.0, 78.0), DARK, scale=(0.72, 0.72, 1.22), high_detail=high)
+        cone(mesh, 22.0, 4.0, 68.0, (math.cos(a) * 124.0, math.sin(a) * 124.0, 85.0), LIGHT, (-18.0, angle, 0.0), 7)
+        radial_box(mesh, float(angle), 138.0, (32.0, 20.0, 16.0), 70.0, PRIMARY)
         if high:
-            sphere(mesh, 12.0, (math.cos(a) * 97.0, math.sin(a) * 97.0, 79.0), GLOW, scale=(0.7, 0.7, 1.15), high_detail=False)
-    torus(mesh, 69.0, 5.0, (0.0, 0.0, 56.0), GLOW, high_detail=high)
+            sphere(mesh, 13.0, (math.cos(a) * 100.0, math.sin(a) * 100.0, 81.0), GLOW, scale=(0.7, 0.7, 1.15), high_detail=False)
+
+    torus(mesh, 71.0, 6.0, (0.0, 0.0, 58.0), GLOW, high_detail=high)
 
 
 def kharuun_listening_spine(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 72.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=9)
+    """Kharuun Listening Spine: tall seismic sensor obelisk with staggered acoustic resonator plates."""
+    # Rooted Bedrock Anchor
+    cylinder(mesh, 74.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=9)
     for angle in range(0, 360, 60):
-        radial_box(mesh, angle, 76.0, (79.0, 21.0, 18.0), 20.0, LIGHT, -15.0)
-    cone(mesh, 48.0, 10.0, 232.0, (0.0, 0.0, 128.0), DARK, sides=7)
-    cone(mesh, 26.0, 3.0, 198.0, (0.0, 0.0, 144.0), LIGHT, sides=7)
-    box(mesh, (8.0, 8.0, 205.0), (11.0, 0.0, 138.0), GLOW, (0.0, 0.0, -3.0))
-    for index, z in enumerate((88.0, 126.0, 164.0, 202.0)):
-        length = 90.0 - index * 10.0
+        radial_box(mesh, angle, 78.0, (82.0, 23.0, 20.0), 21.0, LIGHT, -15.0)
+        radial_box(mesh, angle, 90.0, (30.0, 15.0, 14.0), 26.0, PRIMARY)
+
+    # Tapering Obelisk Body
+    cone(mesh, 50.0, 10.0, 236.0, (0.0, 0.0, 130.0), DARK, sides=7)
+    cone(mesh, 28.0, 3.0, 202.0, (0.0, 0.0, 146.0), LIGHT, sides=7)
+    box(mesh, (10.0, 10.0, 210.0), (12.0, 0.0, 140.0), GLOW, (0.0, 0.0, -3.0))
+
+    # 4 Staggered Acoustic Resonator Flanges
+    for index, z in enumerate((90.0, 128.0, 166.0, 204.0)):
+        length = 92.0 - index * 10.0
         side = -1.0 if index % 2 else 1.0
-        box(mesh, (length, 12.0, 9.0), (side * length * 0.38, 0.0, z), LIGHT, (0.0, 0.0, side * 24.0))
-        box(mesh, (length * 0.72, 5.0, 4.0), (side * length * 0.38, 0.0, z + 5.0), GLOW, (0.0, 0.0, side * 24.0))
+        box(mesh, (length, 14.0, 10.0), (side * length * 0.38, 0.0, z), LIGHT, (0.0, 0.0, side * 24.0))
+        box(mesh, (length * 0.74, 6.0, 5.0), (side * length * 0.38, 0.0, z + 5.0), GLOW, (0.0, 0.0, side * 24.0))
+        box(mesh, (24.0, 16.0, 12.0), (side * length * 0.72, 0.0, z + 8.0), PRIMARY, (0.0, 0.0, side * 24.0))
     if high:
-        torus(mesh, 46.0, 4.0, (0.0, 0.0, 70.0), GLOW)
-        cone(mesh, 17.0, 1.0, 78.0, (0.0, 0.0, 278.0), LIGHT, sides=6)
+        torus(mesh, 48.0, 4.5, (0.0, 0.0, 72.0), GLOW)
+        cone(mesh, 18.0, 1.0, 82.0, (0.0, 0.0, 282.0), LIGHT, sides=6)
 
 
 def choir_threadkeeper(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A light field body held between two visibly incompatible frames."""
-    cylinder(mesh, 20.0, 66.0, (0.0, 0.0, 74.0), DARK, sides=10)
-    sphere(mesh, 24.0, (0.0, 0.0, 112.0), PRIMARY, scale=(0.78, 0.78, 1.12), high_detail=high)
-    torus(mesh, 37.0, 4.0, (0.0, 0.0, 104.0), LIGHT, (18.0, 0.0, 0.0), high)
-    torus(mesh, 31.0, 3.0, (0.0, 0.0, 104.0), GLOW, (-18.0, 90.0, 0.0), high)
+    """Choir Threadkeeper: coherence worker holding a suspended light field between opposing gyroscope rings."""
+    # 1. Obsidian Footing & Frame
+    cylinder(mesh, 21.0, 68.0, (0.0, 0.0, 74.0), DARK, sides=10)
+    sphere(mesh, 25.0, (0.0, 0.0, 112.0), PRIMARY, scale=(0.78, 0.78, 1.12), high_detail=high)
+    torus(mesh, 38.0, 4.5, (0.0, 0.0, 104.0), LIGHT, (20.0, 0.0, 0.0), high)
+    torus(mesh, 32.0, 3.5, (0.0, 0.0, 104.0), GLOW, (-20.0, 90.0, 0.0), high)
+
+    # 2. Tripod Probe Legs
     for angle in (30.0, 150.0, 270.0):
         a = math.radians(angle)
-        box(mesh, (48.0, 9.0, 9.0), (math.cos(a) * 27.0, math.sin(a) * 27.0, 42.0), DARK, (58.0, angle, 0.0))
-        cone(mesh, 9.0, 2.0, 42.0, (math.cos(a) * 47.0, math.sin(a) * 47.0, 17.0), LIGHT, (72.0, angle, 0.0), 6)
-    box(mesh, (61.0, 6.0, 6.0), (34.0, 0.0, 70.0), GLOW, (0.0, 0.0, 12.0))
+        box(mesh, (50.0, 10.0, 10.0), (math.cos(a) * 28.0, math.sin(a) * 28.0, 42.0), DARK, (58.0, angle, 0.0))
+        cone(mesh, 10.0, 2.0, 44.0, (math.cos(a) * 48.0, math.sin(a) * 48.0, 18.0), LIGHT, (72.0, angle, 0.0), 6)
+        sphere(mesh, 4.0, (math.cos(a) * 58.0, math.sin(a) * 58.0, 5.0), GLOW, high_detail=False)
+
+    # 3. Forward Phase Probes
+    box(mesh, (64.0, 7.0, 7.0), (36.0, 0.0, 70.0), GLOW, (0.0, 0.0, 12.0))
+    cone(mesh, 6.0, 1.0, 28.0, (68.0, 0.0, 76.0), PRIMARY, (0.0, 90.0, 0.0), 6)
     if high:
-        for z in (61.0, 82.0, 126.0):
-            sphere(mesh, 5.0, (0.0, 0.0, z), GLOW, high_detail=False)
+        for z in (62.0, 84.0, 128.0):
+            sphere(mesh, 6.0, (0.0, 0.0, z), GLOW, high_detail=False)
 
 
 def choir_intervalist(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Two offset combat silhouettes occupy one readable interval."""
+    """Choir Intervalist: phase skirmisher with dual offset combat silhouettes and phase bridge."""
+    # Dual offset dart hulls
     for side in (-1.0, 1.0):
-        sphere(mesh, 25.0, (-5.0, side * 19.0, 82.0), DARK, scale=(1.25, 0.62, 1.0), high_detail=high)
-        cone(mesh, 17.0, 5.0, 58.0, (3.0, side * 20.0, 116.0), LIGHT, (-9.0, 0.0, 0.0), 7)
-        box(mesh, (51.0, 8.0, 10.0), (7.0, side * 34.0, 48.0), PRIMARY, (61.0, side * 10.0, side * 8.0))
-        cone(mesh, 9.0, 2.0, 43.0, (25.0, side * 45.0, 19.0), GLOW, (73.0, side * 12.0, 0.0), 6)
-    torus(mesh, 42.0, 4.0, (0.0, 0.0, 91.0), GLOW, (90.0, 0.0, 0.0), high)
-    box(mesh, (118.0, 11.0, 12.0), (43.0, 0.0, 101.0), LIGHT, (0.0, 0.0, 5.0))
-    box(mesh, (96.0, 5.0, 5.0), (48.0, 0.0, 105.0), GLOW, (0.0, 0.0, 5.0))
-    cone(mesh, 11.0, 2.0, 45.0, (109.0, 0.0, 111.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+        sphere(mesh, 26.0, (-5.0, side * 20.0, 82.0), DARK, scale=(1.28, 0.64, 1.0), high_detail=high)
+        cone(mesh, 18.0, 5.0, 60.0, (4.0, side * 21.0, 116.0), LIGHT, (-9.0, 0.0, 0.0), 7)
+        box(mesh, (54.0, 9.0, 11.0), (8.0, side * 35.0, 48.0), PRIMARY, (61.0, side * 10.0, side * 8.0))
+        cone(mesh, 10.0, 2.0, 45.0, (26.0, side * 46.0, 19.0), GLOW, (73.0, side * 12.0, 0.0), 6)
+        box(mesh, (32.0, 4.0, 18.0), (-16.0, side * 28.0, 96.0), PRIMARY, (0.0, 0.0, side * 25.0))
+
+    # Central Phase Bridge & Twin Lances
+    torus(mesh, 44.0, 4.5, (0.0, 0.0, 92.0), GLOW, (90.0, 0.0, 0.0), high)
+    box(mesh, (122.0, 12.0, 13.0), (45.0, 0.0, 101.0), LIGHT, (0.0, 0.0, 5.0))
+    box(mesh, (100.0, 6.0, 6.0), (50.0, 0.0, 105.0), GLOW, (0.0, 0.0, 5.0))
+    cone(mesh, 12.0, 2.0, 48.0, (112.0, 0.0, 111.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+    if high:
+        cone(mesh, 8.0, 1.0, 36.0, (-22.0, 0.0, 132.0), GLOW, (0.0, -90.0, 0.0), 5)
 
 
 def choir_lacuna_warden(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A broad controller shell wrapped around a deliberate central absence."""
-    torus(mesh, 69.0, 20.0, (0.0, 0.0, 74.0), DARK, (90.0, 0.0, 0.0), high)
-    torus(mesh, 51.0, 7.0, (0.0, 0.0, 74.0), GLOW, (90.0, 0.0, 0.0), high)
+    """Choir Lacuna Warden: broad controller shell wrapped around a deliberate central void."""
+    # Outer toroidal hull surrounding empty lacuna
+    torus(mesh, 72.0, 22.0, (0.0, 0.0, 74.0), DARK, (90.0, 0.0, 0.0), high)
+    torus(mesh, 54.0, 8.0, (0.0, 0.0, 74.0), GLOW, (90.0, 0.0, 0.0), high)
+    torus(mesh, 80.0, 5.0, (0.0, 0.0, 74.0), PRIMARY, (90.0, 0.0, 0.0), high)
+
+    # Sweeping lateral horn outriggers
     for side in (-1.0, 1.0):
-        sphere(mesh, 38.0, (-9.0, side * 48.0, 76.0), PRIMARY, scale=(1.25, 0.72, 0.82), high_detail=high)
-        box(mesh, (67.0, 18.0, 20.0), (-16.0, side * 66.0, 43.0), DARK, (52.0, side * 12.0, side * 12.0))
-        cone(mesh, 17.0, 5.0, 52.0, (2.0, side * 81.0, 18.0), LIGHT, (69.0, side * 12.0, 0.0), 7)
-        box(mesh, (72.0, 14.0, 16.0), (31.0, side * 34.0, 104.0), LIGHT, (0.0, side * 9.0, side * 8.0))
-    sphere(mesh, 21.0, (0.0, 0.0, 75.0), GLOW, scale=(0.72, 0.72, 1.35), high_detail=high)
+        sphere(mesh, 40.0, (-9.0, side * 50.0, 76.0), PRIMARY, scale=(1.25, 0.72, 0.82), high_detail=high)
+        box(mesh, (70.0, 19.0, 21.0), (-16.0, side * 68.0, 43.0), DARK, (52.0, side * 12.0, side * 12.0))
+        cone(mesh, 18.0, 5.0, 54.0, (2.0, side * 83.0, 18.0), LIGHT, (69.0, side * 12.0, 0.0), 7)
+        box(mesh, (75.0, 15.0, 17.0), (32.0, side * 36.0, 105.0), LIGHT, (0.0, side * 9.0, side * 8.0))
+        box(mesh, (45.0, 8.0, 8.0), (45.0, side * 42.0, 108.0), GLOW, (0.0, side * 9.0, side * 8.0))
+
+    # Orbiting lacuna shards (suspended inside the void)
+    sphere(mesh, 22.0, (0.0, 0.0, 75.0), GLOW, scale=(0.72, 0.72, 1.35), high_detail=high)
     if high:
-        for angle in range(0, 360, 60):
-            radial_box(mesh, float(angle), 78.0, (24.0, 5.0, 5.0), 91.0, GLOW)
+        for angle in range(0, 360, 45):
+            radial_box(mesh, float(angle), 82.0, (26.0, 6.0, 6.0), 92.0, GLOW)
 
 
 def choir_afterimage(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A fast support craft with a displaced, luminous second reading."""
-    for offset, material in ((-14.0, DARK), (14.0, LIGHT)):
-        cone(mesh, 24.0, 3.0, 105.0, (16.0 + offset, offset * 0.65, 58.0), material, (0.0, 90.0, 0.0), 7)
-        box(mesh, (74.0, 24.0, 8.0), (-3.0 + offset, offset * 0.65, 52.0), material, (0.0, offset * 0.35, 0.0))
-    sphere(mesh, 23.0, (0.0, 0.0, 66.0), PRIMARY, scale=(1.35, 0.70, 0.65), high_detail=high)
-    torus(mesh, 43.0, 3.0, (-15.0, 0.0, 78.0), GLOW, (20.0, 0.0, 0.0), high)
-    torus(mesh, 34.0, 2.5, (15.0, 0.0, 78.0), GLOW, (-20.0, 0.0, 0.0), high)
+    """Choir Afterimage: fast support craft with displaced luminous second hull."""
+    # Dual offset phase hulls
+    for offset, material in ((-15.0, DARK), (15.0, LIGHT)):
+        cone(mesh, 25.0, 3.0, 108.0, (16.0 + offset, offset * 0.65, 58.0), material, (0.0, 90.0, 0.0), 7)
+        box(mesh, (76.0, 25.0, 8.0), (-3.0 + offset, offset * 0.65, 52.0), material, (0.0, offset * 0.35, 0.0))
+    sphere(mesh, 24.0, (0.0, 0.0, 66.0), PRIMARY, scale=(1.35, 0.70, 0.65), high_detail=high)
+    # Dual interlocking phase rings
+    torus(mesh, 44.0, 3.5, (-15.0, 0.0, 78.0), GLOW, (20.0, 0.0, 0.0), high)
+    torus(mesh, 35.0, 3.0, (15.0, 0.0, 78.0), GLOW, (-20.0, 0.0, 0.0), high)
     for side in (-1.0, 1.0):
-        box(mesh, (71.0, 33.0, 7.0), (-11.0, side * 39.0, 54.0), LIGHT, (0.0, side * 14.0, side * 4.0))
-        box(mesh, (53.0, 5.0, 4.0), (-3.0, side * 45.0, 58.0), GLOW, (0.0, side * 14.0, side * 4.0))
+        box(mesh, (73.0, 34.0, 7.0), (-11.0, side * 40.0, 54.0), LIGHT, (0.0, side * 14.0, side * 4.0))
+        box(mesh, (55.0, 6.0, 5.0), (-3.0, side * 46.0, 58.0), GLOW, (0.0, side * 14.0, side * 4.0))
+        box(mesh, (30.0, 16.0, 6.0), (-20.0, side * 42.0, 56.0), PRIMARY, (0.0, side * 14.0, side * 4.0))
 
 
 def choir_concordance(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Three public voices hold one headquarters around a visible void."""
-    cylinder(mesh, 154.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=12)
-    torus(mesh, 118.0, 15.0, (0.0, 0.0, 39.0), PRIMARY, high_detail=high)
-    torus(mesh, 84.0, 6.0, (0.0, 0.0, 47.0), GLOW, high_detail=high)
+    """Choir Concordance: tri-fold headquarters holding a floating crown around a radiant empty lacuna."""
+    cylinder(mesh, 156.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=12)
+    torus(mesh, 120.0, 16.0, (0.0, 0.0, 40.0), PRIMARY, high_detail=high)
+    torus(mesh, 86.0, 7.0, (0.0, 0.0, 48.0), GLOW, high_detail=high)
+
+    # 3 Soaring Crystal Pylons Arching Inward
     for angle in (30.0, 150.0, 270.0):
         a = math.radians(angle)
-        cone(mesh, 35.0, 8.0, 202.0, (math.cos(a) * 91.0, math.sin(a) * 91.0, 126.0), LIGHT, (-10.0, angle, 0.0), 8)
-        box(mesh, (10.0, 10.0, 154.0), (math.cos(a) * 84.0, math.sin(a) * 84.0, 132.0), GLOW, (-10.0, angle, 0.0))
-        radial_box(mesh, angle, 154.0, (86.0, 34.0, 22.0), 31.0, DARK)
-    sphere(mesh, 37.0, (0.0, 0.0, 117.0), PRIMARY, scale=(0.82, 0.82, 1.18), high_detail=high)
-    torus(mesh, 49.0, 5.0, (0.0, 0.0, 117.0), GLOW, (90.0, 0.0, 0.0), high)
+        cone(mesh, 36.0, 8.0, 206.0, (math.cos(a) * 93.0, math.sin(a) * 93.0, 128.0), LIGHT, (-10.0, angle, 0.0), 8)
+        box(mesh, (12.0, 12.0, 158.0), (math.cos(a) * 86.0, math.sin(a) * 86.0, 134.0), GLOW, (-10.0, angle, 0.0))
+        radial_box(mesh, angle, 156.0, (88.0, 36.0, 24.0), 32.0, DARK)
+        radial_box(mesh, angle, 120.0, (30.0, 24.0, 30.0), 80.0, PRIMARY)
+
+    # Suspended Floating Crown & Central Lacuna
+    sphere(mesh, 38.0, (0.0, 0.0, 118.0), PRIMARY, scale=(0.82, 0.82, 1.18), high_detail=high)
+    torus(mesh, 50.0, 5.5, (0.0, 0.0, 118.0), GLOW, (90.0, 0.0, 0.0), high)
     if high:
-        torus(mesh, 57.0, 4.0, (0.0, 0.0, 117.0), LIGHT, (0.0, 90.0, 0.0), high)
+        torus(mesh, 58.0, 4.5, (0.0, 0.0, 118.0), LIGHT, (0.0, 90.0, 0.0), high)
 
 
 def choir_interval_loom(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 72.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=10)
-    cylinder(mesh, 42.0, 128.0, (0.0, 0.0, 76.0), PRIMARY, sides=10)
-    for tilt, yaw, radius in ((24.0, 0.0, 66.0), (-24.0, 90.0, 53.0)):
-        torus(mesh, radius, 6.0, (0.0, 0.0, 113.0), LIGHT, (tilt, yaw, 0.0), high)
-    torus(mesh, 39.0, 4.0, (0.0, 0.0, 113.0), GLOW, (90.0, 0.0, 0.0), high)
+    """Choir Interval Loom: supply node with interlocking orthogonal gyroscopic phase rings."""
+    cylinder(mesh, 74.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=10)
+    cylinder(mesh, 44.0, 132.0, (0.0, 0.0, 78.0), PRIMARY, sides=10)
+    for tilt, yaw, radius in ((24.0, 0.0, 68.0), (-24.0, 90.0, 55.0)):
+        torus(mesh, radius, 6.5, (0.0, 0.0, 115.0), LIGHT, (tilt, yaw, 0.0), high)
+    torus(mesh, 40.0, 4.5, (0.0, 0.0, 115.0), GLOW, (90.0, 0.0, 0.0), high)
     for angle in (45.0, 135.0, 225.0, 315.0):
-        radial_box(mesh, angle, 89.0, (61.0, 20.0, 18.0), 23.0, DARK, -18.0)
+        radial_box(mesh, angle, 91.0, (63.0, 22.0, 20.0), 24.0, DARK, -18.0)
+        radial_box(mesh, angle, 112.0, (28.0, 16.0, 24.0), 45.0, PRIMARY)
         a = math.radians(angle)
-        cone(mesh, 12.0, 3.0, 61.0, (math.cos(a) * 76.0, math.sin(a) * 76.0, 54.0), LIGHT, (49.0, angle, 0.0), 6)
-    sphere(mesh, 18.0, (0.0, 0.0, 113.0), GLOW, high_detail=high)
+        cone(mesh, 13.0, 3.0, 63.0, (math.cos(a) * 78.0, math.sin(a) * 78.0, 55.0), LIGHT, (49.0, angle, 0.0), 6)
+    sphere(mesh, 19.0, (0.0, 0.0, 115.0), GLOW, high_detail=high)
 
 
 def choir_chorus_loom(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 148.0, 28.0, (0.0, 0.0, 14.0), DARK, sides=12)
-    torus(mesh, 111.0, 19.0, (0.0, 0.0, 44.0), PRIMARY, high_detail=high)
-    cylinder(mesh, 65.0, 34.0, (0.0, 0.0, 39.0), GLOW, sides=12)
+    """Choir Chorus Loom: stepped hexagonal amphitheater with alternating crystal tuning towers."""
+    cylinder(mesh, 150.0, 30.0, (0.0, 0.0, 15.0), DARK, sides=12)
+    torus(mesh, 113.0, 20.0, (0.0, 0.0, 45.0), PRIMARY, high_detail=high)
+    cylinder(mesh, 67.0, 36.0, (0.0, 0.0, 40.0), GLOW, sides=12)
     for index, angle in enumerate(range(0, 360, 60)):
         a = math.radians(angle)
-        height = 112.0 + (index % 2) * 34.0
-        cone(mesh, 23.0, 5.0, height, (math.cos(a) * 101.0, math.sin(a) * 101.0, 57.0 + height * 0.5), LIGHT, (-13.0, angle, 0.0), 7)
-        box(mesh, (7.0, 7.0, height * 0.72), (math.cos(a) * 96.0, math.sin(a) * 96.0, 61.0 + height * 0.5), GLOW, (-13.0, angle, 0.0))
-        radial_box(mesh, float(angle), 147.0, (76.0, 25.0, 22.0), 29.0, DARK)
-    torus(mesh, 73.0, 5.0, (0.0, 0.0, 85.0), GLOW, high_detail=high)
+        height = 116.0 + (index % 2) * 36.0
+        cone(mesh, 24.0, 5.0, height, (math.cos(a) * 103.0, math.sin(a) * 103.0, 58.0 + height * 0.5), LIGHT, (-13.0, angle, 0.0), 7)
+        box(mesh, (8.0, 8.0, height * 0.74), (math.cos(a) * 98.0, math.sin(a) * 98.0, 62.0 + height * 0.5), GLOW, (-13.0, angle, 0.0))
+        radial_box(mesh, float(angle), 150.0, (78.0, 26.0, 24.0), 30.0, DARK)
+        radial_box(mesh, float(angle), 125.0, (28.0, 18.0, 28.0), 60.0, PRIMARY)
+    torus(mesh, 75.0, 5.5, (0.0, 0.0, 87.0), GLOW, high_detail=high)
     if high:
-        sphere(mesh, 26.0, (0.0, 0.0, 89.0), PRIMARY, scale=(0.78, 0.78, 1.22), high_detail=True)
+        sphere(mesh, 27.0, (0.0, 0.0, 91.0), PRIMARY, scale=(0.78, 0.78, 1.22), high_detail=True)
 
 
 def choir_phase_anchor(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 76.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=10)
+    """Choir Phase Anchor: coherence pylon with dual counter-rotating phase containment toruses."""
+    cylinder(mesh, 78.0, 26.0, (0.0, 0.0, 13.0), DARK, sides=10)
     for angle in range(0, 360, 90):
-        radial_box(mesh, float(angle), 81.0, (74.0, 20.0, 18.0), 19.0, PRIMARY, -14.0)
-    cone(mesh, 42.0, 7.0, 215.0, (0.0, 0.0, 126.0), LIGHT, sides=8)
-    cone(mesh, 23.0, 2.0, 184.0, (0.0, 0.0, 137.0), DARK, sides=8)
-    box(mesh, (8.0, 8.0, 173.0), (12.0, 0.0, 137.0), GLOW, (0.0, 0.0, -4.0))
-    torus(mesh, 55.0, 5.0, (0.0, 0.0, 117.0), GLOW, (23.0, 0.0, 0.0), high)
-    torus(mesh, 44.0, 4.0, (0.0, 0.0, 117.0), PRIMARY, (-23.0, 90.0, 0.0), high)
-    sphere(mesh, 17.0, (0.0, 0.0, 117.0), GLOW, high_detail=high)
+        radial_box(mesh, float(angle), 83.0, (76.0, 22.0, 20.0), 20.0, PRIMARY, -14.0)
+    cone(mesh, 44.0, 7.0, 220.0, (0.0, 0.0, 128.0), LIGHT, sides=8)
+    cone(mesh, 24.0, 2.0, 188.0, (0.0, 0.0, 139.0), DARK, sides=8)
+    box(mesh, (9.0, 9.0, 177.0), (13.0, 0.0, 139.0), GLOW, (0.0, 0.0, -4.0))
+    torus(mesh, 57.0, 5.5, (0.0, 0.0, 119.0), GLOW, (23.0, 0.0, 0.0), high)
+    torus(mesh, 46.0, 4.5, (0.0, 0.0, 119.0), PRIMARY, (-23.0, 90.0, 0.0), high)
+    sphere(mesh, 18.0, (0.0, 0.0, 119.0), GLOW, high_detail=high)
     if high:
-        cone(mesh, 13.0, 1.0, 71.0, (0.0, 0.0, 267.0), LIGHT, sides=6)
+        cone(mesh, 14.0, 1.0, 74.0, (0.0, 0.0, 272.0), LIGHT, sides=6)
 
 
 def world_future_well_base(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -828,6 +1044,53 @@ def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
         )
     for angle in range(0, 360, 60 if high else 120):
         radial_box(mesh, float(angle), 94.0, (88.0, 9.0, 7.0), 29.0, GLOW)
+
+
+def world_broken_sun_sky(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """The Broken Sun celestial sky object — shattered incandescent golden star with orbital shards."""
+    # 1. Central fractured stellar core
+    sphere(mesh, 1200.0, (0.0, 0.0, 0.0), GLOW, scale=(1.2, 1.2, 0.45), high_detail=high)
+    sphere(mesh, 1050.0, (-120.0, 80.0, 30.0), LIGHT, scale=(1.05, 0.95, 0.4), high_detail=high)
+    for angle, r, sz in (
+        (15.0, 680.0, (480.0, 360.0, 70.0)),
+        (105.0, 750.0, (520.0, 420.0, 80.0)),
+        (195.0, 620.0, (440.0, 310.0, 65.0)),
+        (285.0, 710.0, (550.0, 390.0, 75.0)),
+    ):
+        radial_box(mesh, angle, r, sz, 180.0, DARK, pitch=12.0)
+        radial_box(mesh, angle + 35.0, r * 1.1, (sz[0] * 0.7, sz[1] * 0.6, 60.0), -160.0, DARK, pitch=-10.0)
+
+    # 2. Orbiting incandescent Dawnshards / solar fragments broken away from the core
+    for angle, dist, sz, pitch, yaw in (
+        (22.0, 1850.0, (280.0, 190.0, 380.0), 18.0, -12.0),
+        (58.0, 2200.0, (340.0, 240.0, 460.0), -14.0, 25.0),
+        (94.0, 1980.0, (260.0, 180.0, 340.0), 22.0, -18.0),
+        (142.0, 2350.0, (420.0, 310.0, 580.0), -10.0, 8.0),
+        (185.0, 2100.0, (310.0, 220.0, 410.0), 16.0, 32.0),
+        (230.0, 2480.0, (380.0, 270.0, 520.0), -24.0, -15.0),
+        (275.0, 2050.0, (290.0, 200.0, 390.0), 12.0, 19.0),
+        (325.0, 2300.0, (410.0, 290.0, 560.0), -18.0, -28.0),
+    ):
+        a = math.radians(angle)
+        x = math.cos(a) * dist
+        y = math.sin(a) * dist
+        cone(mesh, sz[0] * 0.5, sz[1] * 0.2, sz[2], (x, y, 60.0), DARK, (pitch, yaw, float(angle)), 6 if high else 5)
+        cone(mesh, sz[0] * 0.35, sz[1] * 0.1, sz[2] * 0.85, (x, y, 90.0), GLOW, (pitch, yaw, float(angle)), 5)
+
+    if high:
+        for angle in range(10, 360, 30):
+            a = math.radians(angle)
+            dist = 2800.0 + (angle % 70) * 12.0
+            x = math.cos(a) * dist
+            y = math.sin(a) * dist
+            z = math.sin(a * 2.0) * 180.0
+            cone(mesh, 75.0, 15.0, 180.0, (x, y, z), GLOW, (float(angle % 45), float(angle), 0.0), 5)
+
+    # 3. Coronal solar filaments / plasma arc rings connecting the shards
+    torus(mesh, 1750.0, 32.0, (0.0, 0.0, 40.0), GLOW, (12.0, 0.0, 0.0), high_detail=high)
+    torus(mesh, 2300.0, 24.0, (0.0, 0.0, -20.0), GLOW, (-15.0, 25.0, 0.0), high_detail=high)
+    if high:
+        torus(mesh, 2950.0, 18.0, (0.0, 0.0, 20.0), LIGHT, (8.0, -35.0, 0.0), high_detail=False)
 
 
 def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1291,6 +1554,7 @@ ASSETS = (
     AssetSpec("World", "Environment", "GlassScarAshCut", "Ash Cut crossing", "irregular western route signature", world_glass_scar_ash_cut),
     AssetSpec("World", "Environment", "GlassScarBuriedCauseway", "Buried Causeway crossing", "straight central route signature", world_glass_scar_buried_causeway),
     AssetSpec("World", "Environment", "GlassScarFoldedVerge", "Folded Verge crossing", "offset eastern route signature", world_glass_scar_folded_verge),
+    AssetSpec("World", "Environment", "BrokenSunSky", "Broken Sun celestial sky", "signature fractured sun sky object", world_broken_sun_sky),
     AssetSpec("World", "Resources", "MatterDeposit", "Matter deposit", "neutral gatherable resource landmark", world_matter_deposit),
 )
 
@@ -2560,6 +2824,13 @@ def create_static_mesh(
     }
     route_revision = route_revisions.get(spec.name)
     is_production_route = route_revision is not None
+    roster_factions = ("Meridian", "Kharuun", "Choir")
+    is_roster_unit = spec.faction in roster_factions
+    expected_revision = (
+        route_revision
+        if is_production_route
+        else (ROSTER_ASSET_REVISION if is_roster_unit else None)
+    )
     route_labels = {
         "GlassScarAshCut": "Ash Cut",
         "GlassScarBuriedCauseway": "Buried Causeway",
@@ -2572,7 +2843,7 @@ def create_static_mesh(
             revision = unreal.EditorAssetLibrary.get_metadata_tag(
                 existing, "Echoes.AssetRevision"
             )
-            if is_production_route and revision != route_revision:
+            if expected_revision is not None and revision != expected_revision:
                 if not unreal.EditorAssetLibrary.delete_asset(spec.asset_path):
                     raise RuntimeError(
                         f"Could not replace legacy {route_label} asset: {spec.asset_path}"
@@ -2686,6 +2957,10 @@ def create_static_mesh(
         unreal.EditorAssetLibrary.set_metadata_tag(
             asset, "Echoes.CollisionPolicy", "Authored simple box; runtime disabled"
         )
+    elif is_roster_unit:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.AssetRevision", ROSTER_ASSET_REVISION
+        )
     unreal.EditorAssetLibrary.save_loaded_asset(asset, False)
 
     unreal.log(
@@ -2701,7 +2976,7 @@ def create_static_mesh(
 def main() -> None:
     unreal.log(
         "[ECHOES_ART_BEGIN] generating 24 roster assets, 4 Future Well assets, "
-        "7 Glass Scar environment assets, 8 selection/command VFX assets, "
+        "8 Glass Scar environment assets, 8 selection/command VFX assets, "
         "and 3 destruction VFX assets"
     )
     surface_textures = import_surface_textures()
@@ -2913,9 +3188,30 @@ def main() -> None:
         "simpleCollision=0 runtimeAuthority=presentation "
         "reducedMotion=steady reducedFlashing=steadyLowEmission finalArt=false"
     )
+    roster_assets = [
+        asset
+        for asset, spec in zip(generated, ASSETS)
+        if spec.faction in ("Meridian", "Kharuun", "Choir")
+    ]
+    if (
+        len(roster_assets) != 24
+        or any(asset.get_num_lods() != 2 for asset in roster_assets)
+        or any(
+            unreal.EditorAssetLibrary.get_metadata_tag(
+                asset, "Echoes.AssetRevision"
+            )
+            != ROSTER_ASSET_REVISION
+            for asset in roster_assets
+        )
+    ):
+        raise RuntimeError(f"Roster asset audit failed: count={len(roster_assets)}")
+    unreal.log(
+        "[ECHOES_ROSTER_READY] "
+        f"revision={ROSTER_ASSET_REVISION} assets=24 lods=2 runtimeAuthority=presentation"
+    )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "
-        f"roster=24 landmarks=4 environment=7 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
+        f"roster=24 landmarks=4 environment=8 vfx=9 destructionVfx=3 material={MATERIAL_PATH} "
         f"worldMaterial={WORLD_MATERIAL_PATH} vfxMaterial={VFX_MATERIAL_PATH}"
     )
 

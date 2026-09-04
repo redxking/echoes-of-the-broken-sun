@@ -793,15 +793,59 @@ bool FEchoesChoirAtLumeReachMissionTest::RunTest(const FString& Parameters)
             echoes::sim::EntityType::UtilityStructure,
             Bridge->SimToWorld(PreservePlan.SecondAnchorSite),
             Feedback));
+    const bool bSecondAnchorOpened = TickUntil(
+        [Bridge]()
+        {
+            return Bridge->GetChoirAtLumeReachPhase() ==
+                EEchoesChoirAtLumeReachPhase::CommitFutureWell;
+        },
+        4200);
+    if (!bSecondAnchorOpened)
+    {
+        for (const echoes::sim::EntityId WorkerId : Workers)
+        {
+            if (const echoes::sim::Entity* Worker = Bridge->FindEntity(WorkerId))
+            {
+                AddInfo(FString::Printf(
+                    TEXT("[ECHOES_M10_DIAG] worker=%u tile=(%d,%d) raw=(%d,%d) hp=%d order=%u dest=(%d,%d) buildType=%u completed=%d phase=%u"),
+                    Worker->id,
+                    Worker->position.x.FloorToInt(),
+                    Worker->position.y.FloorToInt(),
+                    Worker->position.x.Raw(),
+                    Worker->position.y.Raw(),
+                    Worker->hitPoints,
+                    static_cast<uint32>(Worker->order.type),
+                    Worker->order.destination.x.FloorToInt(),
+                    Worker->order.destination.y.FloorToInt(),
+                    static_cast<uint32>(Worker->order.buildType),
+                    Worker->completed ? 1 : 0,
+                    static_cast<uint32>(Bridge->GetChoirAtLumeReachPhase())));
+            }
+        }
+        for (const echoes::sim::Entity& Entity : Bridge->GetSimulation()->Entities())
+        {
+            if (Entity.type == echoes::sim::EntityType::UtilityStructure &&
+                Entity.owner == 0)
+            {
+                AddInfo(FString::Printf(
+                    TEXT("[ECHOES_M10_DIAG] spine=%u tile=(%d,%d) completed=%d hp=%d progress=%d"),
+                    Entity.id,
+                    Entity.position.x.FloorToInt(),
+                    Entity.position.y.FloorToInt(),
+                    Entity.completed ? 1 : 0,
+                    Entity.hitPoints,
+                    Entity.constructionProgress));
+            }
+        }
+        AddInfo(FString::Printf(
+            TEXT("[ECHOES_M10_DIAG] secondAnchorSite=(%d,%d) tick=%llu"),
+            PreservePlan.SecondAnchorSite.x.FloorToInt(),
+            PreservePlan.SecondAnchorSite.y.FloorToInt(),
+            static_cast<unsigned long long>(Bridge->GetSimulation()->CurrentTick())));
+    }
     TestTrue(
         TEXT("Both public anchors open the new Lume Well decision"),
-        TickUntil(
-            [Bridge]()
-            {
-                return Bridge->GetChoirAtLumeReachPhase() ==
-                    EEchoesChoirAtLumeReachPhase::CommitFutureWell;
-            },
-            4200));
+        bSecondAnchorOpened);
 
     TestTrue(
         TEXT("A worker accepts an ordinary approach to the visible Lume Well"),

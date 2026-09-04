@@ -1939,15 +1939,23 @@ void AEchoesHUD::DrawSkirmishSetup(
     const FString Labels[] = {
         TEXT("LOCAL FORCE"),
         TEXT("OPPOSING FORCE"),
+        TEXT("TEAMS"),
         TEXT("BATTLEFIELD"),
         TEXT("AI PROFILE"),
-        TEXT("STARTING RESOURCES")};
+        TEXT("DIFFICULTY"),
+        TEXT("STARTING RESOURCES"),
+        TEXT("VICTORY CONDITION"),
+        TEXT("GAME SPEED")};
     const FString Values[] = {
         FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction),
         FEchoesSkirmishSetupModel::FactionDisplayName(Setup.OpponentFaction),
+        FEchoesSkirmishSetupModel::TeamSetupDisplayName(Setup.TeamSetup),
         FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
         FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
-        FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel)};
+        FEchoesSkirmishSetupModel::DifficultyDisplayName(Setup.Difficulty),
+        FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel),
+        FEchoesSkirmishSetupModel::VictoryConditionDisplayName(Setup.VictoryCondition),
+        FEchoesSkirmishSetupModel::GameSpeedDisplayName(Setup.GameSpeed)};
 
     DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
     DrawVisualPanel(
@@ -1956,19 +1964,19 @@ void AEchoesHUD::DrawSkirmishSetup(
         FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
         Theme, Settings, bHighContrast ? 0.10f : 0.045f);
     DrawText(TEXT("SKIRMISH SETUP"), Accent,
-             Left + 46.0f, Top + 34.0f * ContentScale,
-             SmallFont, 1.58f * TextScale, false);
-    DrawText(TEXT("SORYN DEPLOYMENT AUTHORITY  //  OFFLINE 1V1"), Muted,
-             Left + 46.0f, Top + 76.0f * ContentScale,
-             SmallFont, 0.86f * TextScale, false);
-    DrawText(TEXT("[UP/DOWN or D-PAD] FOCUS    [LEFT/RIGHT or CLICK HALF] CHANGE"), Body,
-             Left + 46.0f, Top + 108.0f * ContentScale,
+             Left + 46.0f, Top + 26.0f * ContentScale,
+             SmallFont, 1.50f * TextScale, false);
+    DrawText(TEXT("SORYN DEPLOYMENT AUTHORITY  //  OFFLINE SKIRMISH"), Muted,
+             Left + 46.0f, Top + 60.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
+    DrawText(TEXT("[UP/DOWN or D-PAD] FOCUS    [LEFT/RIGHT or CLICK HALF] CHANGE"), Body,
+             Left + 46.0f, Top + 82.0f * ContentScale,
+             SmallFont, 0.78f * TextScale, false);
 
     for (int32 Row = 0; Row < UE_ARRAY_COUNT(Labels); ++Row)
     {
         const FBox2D& RowBox = Layout.SettingRows[Row];
-        const float RowTop = RowBox.Min.Y + 8.0f * ContentScale;
+        const float RowTop = RowBox.Min.Y + 5.0f * ContentScale;
         const bool bFocused = Row == FocusRow;
         DrawRect(
             bFocused
@@ -1994,15 +2002,15 @@ void AEchoesHUD::DrawSkirmishSetup(
             Left + 52.0f,
             RowTop,
             SmallFont,
-            0.86f * TextScale,
+            0.82f * TextScale,
             false);
         DrawText(
             FString::Printf(TEXT("<  %s  >"), *Values[Row]),
             Body,
-            Left + PanelWidth * 0.47f,
+            Left + PanelWidth * 0.44f,
             RowTop,
             SmallFont,
-            0.88f * TextScale,
+            0.84f * TextScale,
             false);
         if (Row < 2)
         {
@@ -2010,31 +2018,90 @@ void AEchoesHUD::DrawSkirmishSetup(
                 VisualFactionFromLabel(Values[Row]),
                 FVector2D(RowBox.Max.X - 22.0f * ContentScale,
                           (RowBox.Min.Y + RowBox.Max.Y) * 0.5f),
-                11.0f * ContentScale,
+                10.0f * ContentScale,
                 Theme,
                 bFocused ? 1.0f : 0.68f);
         }
     }
 
-    DrawText(TEXT("BATTLEFIELD CONTRACT"), Accent,
-             Left + 46.0f, Top + 448.0f * ContentScale,
-             SmallFont, 0.88f * TextScale, false);
+    if (Setup.Difficulty == EEchoesSkirmishDifficulty::Assisted)
+    {
+        const FBox2D& BannerBox = Layout.AssistedBannerBox;
+        const FLinearColor AssistedAmber(1.0f, 0.76f, 0.18f, 1.0f);
+        DrawRect(
+            Theme.WithAlpha(AssistedAmber, bHighContrast ? 0.28f : 0.20f),
+            BannerBox.Min.X,
+            BannerBox.Min.Y,
+            BannerBox.GetSize().X,
+            BannerBox.GetSize().Y);
+        DrawLine(
+            BannerBox.Min.X,
+            BannerBox.Min.Y,
+            BannerBox.Max.X,
+            BannerBox.Min.Y,
+            AssistedAmber,
+            1.5f);
+        DrawLine(
+            BannerBox.Min.X,
+            BannerBox.Max.Y,
+            BannerBox.Max.X,
+            BannerBox.Max.Y,
+            AssistedAmber,
+            1.5f);
+        DrawText(
+            FString::Printf(
+                TEXT("[ASSISTED DISCLOSURE] %s"),
+                FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
+            AssistedAmber,
+            BannerBox.Min.X + 16.0f * ContentScale,
+            BannerBox.Min.Y + 7.0f * ContentScale,
+            SmallFont,
+            0.78f * TextScale,
+            false);
+    }
+
+    const float InfoTop = Layout.AssistedBannerBox.Max.Y + 10.0f * ContentScale;
+    FString FocusDesc;
+    switch (FocusRow)
+    {
+        case 0:
+            FocusDesc = TEXT("COMMAND FORCE: Direct control of tactical operations, units, and structures.");
+            break;
+        case 1:
+            FocusDesc = TEXT("OPPOSING FORCE: Autonomous rival force commanded by offline tactical AI.");
+            break;
+        case 2:
+            FocusDesc = FEchoesSkirmishSetupModel::TeamSetupDescription(Setup.TeamSetup);
+            break;
+        case 3:
+            FocusDesc = FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset);
+            break;
+        case 4:
+            FocusDesc = FEchoesSkirmishSetupModel::AiDescription(Setup.AiPersonality);
+            break;
+        case 5:
+            FocusDesc = FEchoesSkirmishSetupModel::DifficultyDescription(Setup.Difficulty);
+            break;
+        case 6:
+            FocusDesc = FEchoesSkirmishSetupModel::ResourceDescription(Setup.ResourceLevel);
+            break;
+        case 7:
+            FocusDesc = FEchoesSkirmishSetupModel::VictoryConditionDescription(Setup.VictoryCondition);
+            break;
+        case 8:
+            FocusDesc = FEchoesSkirmishSetupModel::GameSpeedDescription(Setup.GameSpeed);
+            break;
+        default:
+            FocusDesc = TEXT("CONFIGURE SKIRMISH PARAMETERS BEFORE DEPLOYMENT.");
+            break;
+    }
+    DrawText(FocusDesc, Body, Left + 46.0f, InfoTop, SmallFont, 0.78f * TextScale, false);
     DrawText(
-        FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset),
-        Body, Left + 46.0f, Top + 478.0f * ContentScale,
-        SmallFont, 0.78f * TextScale, false);
-    DrawText(
-        FEchoesSkirmishSetupModel::AiDescription(Setup.AiPersonality),
-        Muted, Left + 46.0f, Top + 506.0f * ContentScale,
-        SmallFont, 0.76f * TextScale, false);
-    DrawText(
-        TEXT("Choices are staged only. The active simulation changes after deployment confirmation."),
-        Muted, Left + 46.0f, Top + 542.0f * ContentScale,
-        SmallFont, 0.76f * TextScale, false);
+        TEXT("Standard difficulty guarantees 100% fair information: no sight cheats, no hidden income, pure simulation rules."),
+        Muted, Left + 46.0f, InfoTop + 22.0f * ContentScale, SmallFont, 0.74f * TextScale, false);
     DrawText(
         TEXT("[F9] CAMPAIGN OPERATIONS    [C] CONTINUE CAMPAIGN    [TAB] NEXT LOCAL FORCE"),
-        Body, Left + 46.0f, Top + 574.0f * ContentScale,
-        SmallFont, 0.76f * TextScale, false);
+        Body, Left + 46.0f, InfoTop + 44.0f * ContentScale, SmallFont, 0.74f * TextScale, false);
 
     DrawRect(Accent,
              Layout.ReviewButton.Min.X,
@@ -2044,7 +2111,7 @@ void AEchoesHUD::DrawSkirmishSetup(
     DrawText(TEXT("ENTER / GAMEPAD A: REVIEW DEPLOYMENT"),
              Theme.ActionText,
              Left + PanelWidth * 0.5f - 194.0f * TextScale,
-             Top + PanelHeight - 65.0f,
+             Layout.ReviewButton.Min.Y + 10.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
 }
 
@@ -2083,10 +2150,10 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
     DrawVisualPanel(
         FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
     DrawText(TEXT("DEPLOYMENT SUMMARY"), Accent,
-             Left + 46.0f, Top + 38.0f * ContentScale,
-             SmallFont, 1.52f * TextScale, false);
+             Left + 46.0f, Top + 32.0f * ContentScale,
+             SmallFont, 1.50f * TextScale, false);
     DrawText(TEXT("VALIDATE THE COMPLETE CONTRACT BEFORE THE FIELD CHANGES"), Muted,
-             Left + 46.0f, Top + 80.0f * ContentScale,
+             Left + 46.0f, Top + 70.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
 
     const FString SummaryLines[] = {
@@ -2094,38 +2161,75 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
             FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction)),
         FString::Printf(TEXT("OPPOSITION            %s"),
             FEchoesSkirmishSetupModel::FactionDisplayName(Setup.OpponentFaction)),
+        FString::Printf(TEXT("TEAM PROTOCOL         %s"),
+            FEchoesSkirmishSetupModel::TeamSetupDisplayName(Setup.TeamSetup)),
         FString::Printf(TEXT("BATTLEFIELD           %s  //  64 x 64"),
             FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset)),
         FString::Printf(TEXT("AI PROFILE            %s"),
             FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality)),
+        FString::Printf(TEXT("DIFFICULTY TIER       %s"),
+            FEchoesSkirmishSetupModel::DifficultyDisplayName(Setup.Difficulty)),
         FString::Printf(TEXT("STARTING RESOURCES    %s"),
-            FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel))};
+            FEchoesSkirmishSetupModel::ResourceDisplayName(Setup.ResourceLevel)),
+        FString::Printf(TEXT("VICTORY CONDITION     %s"),
+            FEchoesSkirmishSetupModel::VictoryConditionDisplayName(Setup.VictoryCondition)),
+        FString::Printf(TEXT("GAME SPEED            %s"),
+            FEchoesSkirmishSetupModel::GameSpeedDisplayName(Setup.GameSpeed))};
+
     for (int32 Row = 0; Row < UE_ARRAY_COUNT(SummaryLines); ++Row)
     {
         DrawText(SummaryLines[Row], Row == 0 ? Accent : Body,
                  Left + 54.0f,
-                 Top + (136.0f + Row * 48.0f) * ContentScale,
-                 SmallFont, 0.92f * TextScale, false);
+                 Top + (102.0f + Row * 28.0f) * ContentScale,
+                 SmallFont, 0.84f * TextScale, false);
     }
     DrawFactionSigil(
         VisualFactionFromLabel(
             FEchoesSkirmishSetupModel::FactionDisplayName(Setup.LocalFaction)),
         FVector2D(Left + PanelWidth - 86.0f * ContentScale,
-                  Top + 90.0f * ContentScale),
+                  Top + 86.0f * ContentScale),
         27.0f * ContentScale,
         Theme);
+
+    const float SummaryNotesTop = Top + (102.0f + 9 * 28.0f + 6.0f) * ContentScale;
+    if (Setup.Difficulty == EEchoesSkirmishDifficulty::Assisted)
+    {
+        const FLinearColor AssistedAmber(1.0f, 0.76f, 0.18f, 1.0f);
+        DrawText(
+            FString::Printf(TEXT("ASSISTED HANDICAP ACTIVE: %s"),
+                FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
+            AssistedAmber,
+            Left + 54.0f,
+            SummaryNotesTop,
+            SmallFont,
+            0.78f * TextScale,
+            false);
+    }
+    else
+    {
+        DrawText(
+            TEXT("STANDARD RULES ACTIVE: 100% fair information. Zero resource or sight cheats."),
+            Muted,
+            Left + 54.0f,
+            SummaryNotesTop,
+            SmallFont,
+            0.76f * TextScale,
+            false);
+    }
+
     DrawText(
         FEchoesSkirmishSetupModel::MapDescription(Setup.MapPreset),
-        Muted, Left + 54.0f, Top + 392.0f * ContentScale,
-        SmallFont, 0.76f * TextScale, false);
+        Muted, Left + 54.0f, SummaryNotesTop + 22.0f * ContentScale,
+        SmallFont, 0.74f * TextScale, false);
     DrawText(
         FEchoesSkirmishSetupModel::AiDescription(Setup.AiPersonality),
-        Muted, Left + 54.0f, Top + 424.0f * ContentScale,
-        SmallFont, 0.76f * TextScale, false);
+        Muted, Left + 54.0f, SummaryNotesTop + 42.0f * ContentScale,
+        SmallFont, 0.74f * TextScale, false);
     DrawText(
         TEXT("ENTER applies changed choices atomically; an unchanged setup resumes the paused field. On failure, the prior match is restored."),
-        Body, Left + 54.0f, Top + 474.0f * ContentScale,
-        SmallFont, 0.78f * TextScale, false);
+        Body, Left + 54.0f, SummaryNotesTop + 64.0f * ContentScale,
+        SmallFont, 0.76f * TextScale, false);
+
     DrawRect(
         FLinearColor(Muted.R, Muted.G, Muted.B, 0.22f),
         Layout.BackButton.Min.X,
@@ -2152,7 +2256,7 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
     DrawText(TEXT("ENTER / GAMEPAD A: DEPLOY"),
              Theme.ActionText,
              Left + PanelWidth * 0.5f - 144.0f * TextScale,
-             Top + PanelHeight - 65.0f,
+             Layout.DeployButton.Min.Y + 10.0f * ContentScale,
              SmallFont, 0.94f * TextScale, false);
 }
 

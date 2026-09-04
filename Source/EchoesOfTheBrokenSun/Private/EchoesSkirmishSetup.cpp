@@ -7,9 +7,17 @@ namespace
 template <typename EnumType>
 EnumType CycleEnum(EnumType Value, int32 Direction, int32 Count)
 {
+    if (Count <= 0)
+    {
+        return Value;
+    }
     const int32 Current = static_cast<int32>(Value);
-    const int32 Step = Direction < 0 ? -1 : 1;
-    return static_cast<EnumType>((Current + Step + Count) % Count);
+    int32 Next = (Current + Direction) % Count;
+    if (Next < 0)
+    {
+        Next += Count;
+    }
+    return static_cast<EnumType>(Next);
 }
 
 bool IsPlayableFaction(echoes::sim::Faction Faction)
@@ -186,6 +194,30 @@ bool FEchoesSkirmishSetupModel::Validate(
         static_cast<uint8>(EEchoesSkirmishResourceLevel::Abundant))
     {
         OutError = TEXT("[SKIRMISH_RESOURCES_INVALID] Select a supported resource level.");
+        return false;
+    }
+    if (static_cast<uint8>(Setup.Difficulty) >
+        static_cast<uint8>(EEchoesSkirmishDifficulty::Sovereign))
+    {
+        OutError = TEXT("[SKIRMISH_DIFFICULTY_INVALID] Select a supported difficulty tier.");
+        return false;
+    }
+    if (static_cast<uint8>(Setup.VictoryCondition) >
+        static_cast<uint8>(EEchoesSkirmishVictoryCondition::Conquest))
+    {
+        OutError = TEXT("[SKIRMISH_VICTORY_INVALID] Select a supported victory condition.");
+        return false;
+    }
+    if (static_cast<uint8>(Setup.GameSpeed) >
+        static_cast<uint8>(EEchoesSkirmishGameSpeed::Fast))
+    {
+        OutError = TEXT("[SKIRMISH_SPEED_INVALID] Select a supported game speed.");
+        return false;
+    }
+    if (static_cast<uint8>(Setup.TeamSetup) >
+        static_cast<uint8>(EEchoesSkirmishTeamSetup::FreeForAll))
+    {
+        OutError = TEXT("[SKIRMISH_TEAM_INVALID] Select a supported team setup.");
         return false;
     }
 
@@ -395,6 +427,21 @@ const TCHAR* FEchoesSkirmishSetupModel::ResourceDisplayName(
     return TEXT("UNKNOWN RESOURCE LEVEL");
 }
 
+const TCHAR* FEchoesSkirmishSetupModel::ResourceDescription(
+    EEchoesSkirmishResourceLevel Level)
+{
+    switch (Level)
+    {
+        case EEchoesSkirmishResourceLevel::Scarce:
+            return TEXT("CONSTRAINED STOCKPILE: REQUIRES EARLY EXPANSION AND TIGHT MACRO DISCIPLINE");
+        case EEchoesSkirmishResourceLevel::Standard:
+            return TEXT("BALANCED BASELINE: STANDARD OPENING BUILD ORDERS AND ENGAGEMENT PACING");
+        case EEchoesSkirmishResourceLevel::Abundant:
+            return TEXT("GENEROUS RESERVE: FAST TECH SCALING AND IMMEDIATE MULTI-PRODUCTION");
+    }
+    return TEXT("UNKNOWN RESOURCE PROFILE");
+}
+
 echoes::sim::ResourcePool FEchoesSkirmishSetupModel::StartingResources(
     EEchoesSkirmishResourceLevel Level)
 {
@@ -405,6 +452,143 @@ echoes::sim::ResourcePool FEchoesSkirmishSetupModel::StartingResources(
         case EEchoesSkirmishResourceLevel::Abundant: return {700, 60};
     }
     return {};
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::DifficultyDisplayName(
+    EEchoesSkirmishDifficulty Difficulty)
+{
+    switch (Difficulty)
+    {
+        case EEchoesSkirmishDifficulty::Assisted:
+            return TEXT("ASSISTED // +50% DELAY, 30 APM CAP, -20% DAMAGE");
+        case EEchoesSkirmishDifficulty::Standard:
+            return TEXT("STANDARD // 100% FAIR INFORMATION, NO CHEATS");
+        case EEchoesSkirmishDifficulty::Challenging:
+            return TEXT("CHALLENGING // 0.4S REACTION, 140 APM CAP");
+        case EEchoesSkirmishDifficulty::Sovereign:
+            return TEXT("SOVEREIGN // 0.15S REACTION, 180 APM CAP");
+    }
+    return TEXT("UNKNOWN DIFFICULTY");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::DifficultyDescription(
+    EEchoesSkirmishDifficulty Difficulty)
+{
+    switch (Difficulty)
+    {
+        case EEchoesSkirmishDifficulty::Assisted:
+            return TEXT("DISCLOSED HANDICAP: +50% REACTION DELAY (1.5S), APM CEILING 30, -20% COMBAT DAMAGE");
+        case EEchoesSkirmishDifficulty::Standard:
+            return TEXT("BASELINE COMPETITIVE: ZERO HIDDEN INCOME, FAIR VISION, 0.8S REACTION, 90 APM CEILING");
+        case EEchoesSkirmishDifficulty::Challenging:
+            return TEXT("TACTICAL EXECUTION: DISCIPLINED FOCUS-FIRING, FAST EXPANSION, 0.4S REACTION, 140 APM");
+        case EEchoesSkirmishDifficulty::Sovereign:
+            return TEXT("MASTER LEVEL: OPTIMAL TARGETING AND SPREAD, 0.15S REACTION, 180 APM CEILING");
+    }
+    return TEXT("DIFFICULTY DATA UNAVAILABLE");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()
+{
+    return TEXT("+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
+    EEchoesSkirmishVictoryCondition Condition)
+{
+    switch (Condition)
+    {
+        case EEchoesSkirmishVictoryCondition::Corefall:
+            return TEXT("COREFALL // DESTROY ENEMY COMMAND CORE");
+        case EEchoesSkirmishVictoryCondition::WellControl:
+            return TEXT("WELL CONTROL // DOMINANCE");
+        case EEchoesSkirmishVictoryCondition::Conquest:
+            return TEXT("CONQUEST // ELIMINATE ALL ENEMY STRUCTURES");
+    }
+    return TEXT("UNKNOWN VICTORY CONDITION");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::VictoryConditionDescription(
+    EEchoesSkirmishVictoryCondition Condition)
+{
+    switch (Condition)
+    {
+        case EEchoesSkirmishVictoryCondition::Corefall:
+            return TEXT("MATCH ENDS WHEN EITHER SIDE'S COMMAND CORE IS DESTROYED (DEFAULT RTS CONTRACT)");
+        case EEchoesSkirmishVictoryCondition::WellControl:
+            return TEXT("CONTROL AND COMPLETE FUTURE WELL PROTOCOLS TO ACCUMULATE RESONANCE VICTORY");
+        case EEchoesSkirmishVictoryCondition::Conquest:
+            return TEXT("TOTAL ELIMINATION: SYSTEMATIC DESTRUCTION OF EVERY HOSTILE STRUCTURE REQUIRED");
+    }
+    return TEXT("VICTORY CONDITION DATA UNAVAILABLE");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::GameSpeedDisplayName(
+    EEchoesSkirmishGameSpeed Speed)
+{
+    switch (Speed)
+    {
+        case EEchoesSkirmishGameSpeed::Tactical:
+            return TEXT("TACTICAL // 0.75X SPEED");
+        case EEchoesSkirmishGameSpeed::Normal:
+            return TEXT("NORMAL // 1.0X SPEED (20 HZ)");
+        case EEchoesSkirmishGameSpeed::Fast:
+            return TEXT("FAST // 1.5X SPEED");
+    }
+    return TEXT("UNKNOWN SPEED");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::GameSpeedDescription(
+    EEchoesSkirmishGameSpeed Speed)
+{
+    switch (Speed)
+    {
+        case EEchoesSkirmishGameSpeed::Tactical:
+            return TEXT("REDUCED PACE FOR DELIBERATE TACTICAL POSITIONING (26.7 MS TICK INTERVAL)");
+        case EEchoesSkirmishGameSpeed::Normal:
+            return TEXT("STANDARD REAL-TIME RTS TICK CADENCE (50.0 MS FIXED TICK INTERVAL)");
+        case EEchoesSkirmishGameSpeed::Fast:
+            return TEXT("ACCELERATED CADENCE FOR HIGH-SPEED STRATEGIC MACRO (33.3 MS TICK INTERVAL)");
+    }
+    return TEXT("SPEED DATA UNAVAILABLE");
+}
+
+float FEchoesSkirmishSetupModel::GameSpeedMultiplier(
+    EEchoesSkirmishGameSpeed Speed)
+{
+    switch (Speed)
+    {
+        case EEchoesSkirmishGameSpeed::Tactical: return 0.75f;
+        case EEchoesSkirmishGameSpeed::Normal: return 1.00f;
+        case EEchoesSkirmishGameSpeed::Fast: return 1.50f;
+    }
+    return 1.0f;
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::TeamSetupDisplayName(
+    EEchoesSkirmishTeamSetup TeamSetup)
+{
+    switch (TeamSetup)
+    {
+        case EEchoesSkirmishTeamSetup::OneVsOne:
+            return TEXT("1V1 // LOCAL VS OPPONENT");
+        case EEchoesSkirmishTeamSetup::FreeForAll:
+            return TEXT("FREE-FOR-ALL // INDEPENDENT FORCES");
+    }
+    return TEXT("UNKNOWN TEAM SETUP");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::TeamSetupDescription(
+    EEchoesSkirmishTeamSetup TeamSetup)
+{
+    switch (TeamSetup)
+    {
+        case EEchoesSkirmishTeamSetup::OneVsOne:
+            return TEXT("STANDARD TWO-PLAYER CONFLICT: TEAM 1 DEPLOYED AGAINST TEAM 2");
+        case EEchoesSkirmishTeamSetup::FreeForAll:
+            return TEXT("INDEPENDENT SURVIVAL: EVERY FORCE HOLDS HOSTILE STANDING WITH ALL OTHERS");
+    }
+    return TEXT("TEAM SETUP DATA UNAVAILABLE");
 }
 
 FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextFaction(
@@ -419,6 +603,15 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextFaction(
     // and stops. It used to loop past any faction that matched the other side,
     // which made three of the nine required matchups unreachable in the UI.
     Target = CycleEnum(Target, Direction, 3);
+    return Result;
+}
+
+FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextTeam(
+    const FEchoesSkirmishSetup& Setup,
+    int32 Direction)
+{
+    FEchoesSkirmishSetup Result = Setup;
+    Result.TeamSetup = CycleEnum(Result.TeamSetup, Direction, 2);
     return Result;
 }
 
@@ -447,10 +640,21 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextAi(
         (Current >= First && Current < First + kAuthoredDoctrineCount)
         ? Current - First
         : 0;
-    const int32 Step = Direction < 0 ? -1 : 1;
-    Result.AiPersonality = static_cast<echoes::sim::AiPersonality>(
-        First +
-        (Index + Step + kAuthoredDoctrineCount) % kAuthoredDoctrineCount);
+    int32 Next = (Index + Direction) % kAuthoredDoctrineCount;
+    if (Next < 0)
+    {
+        Next += kAuthoredDoctrineCount;
+    }
+    Result.AiPersonality = static_cast<echoes::sim::AiPersonality>(First + Next);
+    return Result;
+}
+
+FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextDifficulty(
+    const FEchoesSkirmishSetup& Setup,
+    int32 Direction)
+{
+    FEchoesSkirmishSetup Result = Setup;
+    Result.Difficulty = CycleEnum(Result.Difficulty, Direction, 4);
     return Result;
 }
 
@@ -460,6 +664,24 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextResources(
 {
     FEchoesSkirmishSetup Result = Setup;
     Result.ResourceLevel = CycleEnum(Result.ResourceLevel, Direction, 3);
+    return Result;
+}
+
+FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextVictoryCondition(
+    const FEchoesSkirmishSetup& Setup,
+    int32 Direction)
+{
+    FEchoesSkirmishSetup Result = Setup;
+    Result.VictoryCondition = CycleEnum(Result.VictoryCondition, Direction, 3);
+    return Result;
+}
+
+FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextGameSpeed(
+    const FEchoesSkirmishSetup& Setup,
+    int32 Direction)
+{
+    FEchoesSkirmishSetup Result = Setup;
+    Result.GameSpeed = CycleEnum(Result.GameSpeed, Direction, 3);
     return Result;
 }
 

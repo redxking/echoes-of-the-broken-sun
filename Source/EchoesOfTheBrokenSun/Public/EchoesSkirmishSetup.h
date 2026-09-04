@@ -17,6 +17,34 @@ enum class EEchoesSkirmishResourceLevel : uint8
     Abundant
 };
 
+enum class EEchoesSkirmishDifficulty : uint8
+{
+    Assisted,
+    Standard,
+    Challenging,
+    Sovereign
+};
+
+enum class EEchoesSkirmishVictoryCondition : uint8
+{
+    Corefall,
+    WellControl,
+    Conquest
+};
+
+enum class EEchoesSkirmishGameSpeed : uint8
+{
+    Tactical,
+    Normal,
+    Fast
+};
+
+enum class EEchoesSkirmishTeamSetup : uint8
+{
+    OneVsOne,
+    FreeForAll
+};
+
 /** A complete, offline-only skirmish deployment request. */
 struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetup final
 {
@@ -24,12 +52,20 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetup final
         echoes::sim::Faction::MeridianCompact;
     echoes::sim::Faction OpponentFaction =
         echoes::sim::Faction::KharuunAssemblies;
+    EEchoesSkirmishTeamSetup TeamSetup =
+        EEchoesSkirmishTeamSetup::OneVsOne;
     EEchoesSkirmishMapPreset MapPreset =
         EEchoesSkirmishMapPreset::GlassScar;
     echoes::sim::AiPersonality AiPersonality =
         echoes::sim::AiPersonality::Adaptive;
+    EEchoesSkirmishDifficulty Difficulty =
+        EEchoesSkirmishDifficulty::Standard;
     EEchoesSkirmishResourceLevel ResourceLevel =
         EEchoesSkirmishResourceLevel::Standard;
+    EEchoesSkirmishVictoryCondition VictoryCondition =
+        EEchoesSkirmishVictoryCondition::Corefall;
+    EEchoesSkirmishGameSpeed GameSpeed =
+        EEchoesSkirmishGameSpeed::Normal;
 
     friend bool operator==(
         const FEchoesSkirmishSetup&,
@@ -63,12 +99,36 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetupModel final
         echoes::sim::AiPersonality Personality);
     [[nodiscard]] static const TCHAR* ResourceDisplayName(
         EEchoesSkirmishResourceLevel Level);
+    [[nodiscard]] static const TCHAR* ResourceDescription(
+        EEchoesSkirmishResourceLevel Level);
     [[nodiscard]] static echoes::sim::ResourcePool StartingResources(
         EEchoesSkirmishResourceLevel Level);
+    [[nodiscard]] static const TCHAR* DifficultyDisplayName(
+        EEchoesSkirmishDifficulty Difficulty);
+    [[nodiscard]] static const TCHAR* DifficultyDescription(
+        EEchoesSkirmishDifficulty Difficulty);
+    [[nodiscard]] static const TCHAR* AssistedDifficultyModifiers();
+    [[nodiscard]] static const TCHAR* VictoryConditionDisplayName(
+        EEchoesSkirmishVictoryCondition Condition);
+    [[nodiscard]] static const TCHAR* VictoryConditionDescription(
+        EEchoesSkirmishVictoryCondition Condition);
+    [[nodiscard]] static const TCHAR* GameSpeedDisplayName(
+        EEchoesSkirmishGameSpeed Speed);
+    [[nodiscard]] static const TCHAR* GameSpeedDescription(
+        EEchoesSkirmishGameSpeed Speed);
+    [[nodiscard]] static float GameSpeedMultiplier(
+        EEchoesSkirmishGameSpeed Speed);
+    [[nodiscard]] static const TCHAR* TeamSetupDisplayName(
+        EEchoesSkirmishTeamSetup TeamSetup);
+    [[nodiscard]] static const TCHAR* TeamSetupDescription(
+        EEchoesSkirmishTeamSetup TeamSetup);
 
     [[nodiscard]] static FEchoesSkirmishSetup WithNextFaction(
         const FEchoesSkirmishSetup& Setup,
         bool bLocal,
+        int32 Direction);
+    [[nodiscard]] static FEchoesSkirmishSetup WithNextTeam(
+        const FEchoesSkirmishSetup& Setup,
         int32 Direction);
     [[nodiscard]] static FEchoesSkirmishSetup WithNextMap(
         const FEchoesSkirmishSetup& Setup,
@@ -76,7 +136,16 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetupModel final
     [[nodiscard]] static FEchoesSkirmishSetup WithNextAi(
         const FEchoesSkirmishSetup& Setup,
         int32 Direction);
+    [[nodiscard]] static FEchoesSkirmishSetup WithNextDifficulty(
+        const FEchoesSkirmishSetup& Setup,
+        int32 Direction);
     [[nodiscard]] static FEchoesSkirmishSetup WithNextResources(
+        const FEchoesSkirmishSetup& Setup,
+        int32 Direction);
+    [[nodiscard]] static FEchoesSkirmishSetup WithNextVictoryCondition(
+        const FEchoesSkirmishSetup& Setup,
+        int32 Direction);
+    [[nodiscard]] static FEchoesSkirmishSetup WithNextGameSpeed(
         const FEchoesSkirmishSetup& Setup,
         int32 Direction);
 

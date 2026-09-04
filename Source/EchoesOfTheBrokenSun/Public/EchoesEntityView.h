@@ -183,6 +183,47 @@ public:
     [[nodiscard]] uint8 GetOwnerMarkerVariant() const;
     [[nodiscard]] FString GetDisplayName() const;
 
+    // Presentation motion families (Track A5 / Gate 7)
+    [[nodiscard]] bool IsLocomotionMotionActive() const { return bLocomotionActive; }
+    [[nodiscard]] bool IsHoverUnit() const { return bIsHoverUnit; }
+    [[nodiscard]] bool IsWalkerUnit() const { return bIsWalkerUnit; }
+    [[nodiscard]] float GetLocomotionWalkPhase() const { return WalkCyclePhase; }
+    [[nodiscard]] float GetHoverBobOffsetCentimetres() const
+    {
+        return HoverBobOffsetCentimetres;
+    }
+    [[nodiscard]] FVector GetBodyMeshRelativeLocation() const;
+    [[nodiscard]] FRotator GetBodyMeshRelativeRotation() const;
+    [[nodiscard]] FVector GetBodyMeshRelativeScale() const;
+    [[nodiscard]] FVector GetSilhouetteAccentRelativeLocation() const;
+    [[nodiscard]] bool IsMotionReducedMotionApplied() const
+    {
+        return bMotionReducedMotionApplied;
+    }
+    [[nodiscard]] bool IsWorkerHarvestingActive() const
+    {
+        return bWorkerHarvestingActive;
+    }
+    [[nodiscard]] int32 GetCarriedCargoAmount() const { return CarriedCargoAmount; }
+    [[nodiscard]] float GetHeadingYaw() const { return CurrentHeadingYaw; }
+    [[nodiscard]] FVector GetAuthoritativeVelocity() const
+    {
+        return AuthoritativeVelocity;
+    }
+    [[nodiscard]] bool IsGatherBeamActive() const { return bGatherBeamActive; }
+    [[nodiscard]] bool IsConstructionFieldActive() const
+    {
+        return bConstructionFieldActive;
+    }
+    [[nodiscard]] bool IsReshapeTelegraphActive() const
+    {
+        return bReshapeTelegraphActive;
+    }
+    [[nodiscard]] float GetConstructionFraction() const
+    {
+        return ConstructionFraction;
+    }
+
 private:
     enum class EBodyMaterialFamily : uint8
     {
@@ -219,6 +260,13 @@ private:
     void SetBodyColor(const FLinearColor& Color);
     void UpdateHealthBar();
     void UpdateDamageAcknowledgeMarker();
+    void UpdateComponentMotion(float DeltaSeconds, bool bReducedMotion);
+    void UpdateWalkerMotion(float DeltaSeconds, float Speed, bool bReducedMotion);
+    void UpdateHoverMotion(float DeltaSeconds, float Speed, bool bReducedMotion);
+    void UpdateIdleMotion(float DeltaSeconds, bool bReducedMotion);
+    void UpdateTacticalStateMotion(float DeltaSeconds, bool bReducedMotion);
+    void UpdateWorkerResourceMotion(float DeltaSeconds, bool bReducedMotion);
+    void UpdateCombatVFX(float DeltaSeconds, bool bReducedMotion, bool bReducedFlashing);
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -264,6 +312,15 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> AegisPowerField;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|VFX")
+    TObjectPtr<UStaticMeshComponent> GatherBeam;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|VFX")
+    TObjectPtr<UStaticMeshComponent> ConstructionField;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|VFX")
+    TObjectPtr<UStaticMeshComponent> ReshapeTelegraph;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
     TObjectPtr<UStaticMeshComponent> FutureWellOrbitOuter;
@@ -382,6 +439,15 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> AegisPowerFieldMaterial;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> GatherBeamMaterial;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> ConstructionFieldMaterial;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInstanceDynamic> ReshapeTelegraphMaterial;
+
     FVector AuthoritativeWorldLocation = FVector::ZeroVector;
     EBodyMaterialFamily ActiveBodyMaterialFamily =
         EBodyMaterialFamily::Basic;
@@ -436,4 +502,31 @@ private:
     bool bSelectionReducedMotionApplied = false;
     bool bSelectionReducedFlashingApplied = false;
     bool bPreparedForPool = false;
+
+    // Motion state tracking (Track A5 / Gate 7)
+    FVector PreviousAuthoritativeLocation = FVector::ZeroVector;
+    FVector AuthoritativeVelocity = FVector::ZeroVector;
+    float AuthoritativeSpeed = 0.0f;
+    float CurrentHeadingYaw = 0.0f;
+    float TargetHeadingYaw = 0.0f;
+    float WalkCyclePhase = 0.0f;
+    float HoverPhaseTime = 0.0f;
+    float IdlePhaseTime = 0.0f;
+    float WorkerHarvestPhaseTime = 0.0f;
+    float HoverBobOffsetCentimetres = 0.0f;
+    int32 CarriedCargoAmount = 0;
+    bool bLocomotionActive = false;
+    bool bIsHoverUnit = false;
+    bool bIsWalkerUnit = false;
+    bool bWorkerHarvestingActive = false;
+    bool bMotionReducedMotionApplied = false;
+    FRotator BaseSilhouetteAccentRotation = FRotator::ZeroRotator;
+
+    // Combat and presentation effects (Track A6 / Gate 8)
+    bool bGatherBeamActive = false;
+    bool bConstructionFieldActive = false;
+    bool bReshapeTelegraphActive = false;
+    float ConstructionFraction = 0.0f;
+    float GatherBeamPulsePhase = 0.0f;
+    float ReshapeTelegraphPulsePhase = 0.0f;
 };

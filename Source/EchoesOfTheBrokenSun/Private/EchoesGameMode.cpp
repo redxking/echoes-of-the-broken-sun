@@ -898,6 +898,11 @@ void AEchoesGameMode::BeginPlay()
             Display,
             TEXT("[ECHOES_FACTION_REQUESTED] value=%s accepted=true"),
             *RequestedFaction);
+        if (FApp::IsUnattended() ||
+            FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
+        {
+            Bridge->SetScenarioPaused(false);
+        }
     }
     const bool bCampaignPrologue =
         !bStressScenario &&
@@ -1643,7 +1648,8 @@ void AEchoesGameMode::BeginPlay()
             GlassScarReviewMode.Equals(TEXT("Overview"), ESearchCase::IgnoreCase) ||
             GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase) ||
             GlassScarReviewMode.Equals(TEXT("BuriedCauseway"), ESearchCase::IgnoreCase) ||
-            GlassScarReviewMode.Equals(TEXT("FoldedVerge"), ESearchCase::IgnoreCase);
+            GlassScarReviewMode.Equals(TEXT("FoldedVerge"), ESearchCase::IgnoreCase) ||
+            GlassScarReviewMode.Equals(TEXT("BrokenSun"), ESearchCase::IgnoreCase);
         if (!bKnownMode)
         {
             UE_LOG(
@@ -1778,7 +1784,10 @@ void AEchoesGameMode::BeginPlay()
                  GlassScarReviewMode) ||
              FParse::Param(
                  FCommandLine::Get(),
-                 TEXT("EchoesGlassScarArtReview"))) &&
+                 TEXT("EchoesGlassScarArtReview")) ||
+             FParse::Param(
+                 FCommandLine::Get(),
+                 TEXT("EchoesArtReviewHideUI"))) &&
             Controller->GetHUD() != nullptr)
         {
             Controller->GetHUD()->bShowHUD = false;
@@ -1856,6 +1865,9 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UStaticMesh* FoldedVergeMesh = LoadObject<UStaticMesh>(
         nullptr,
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.SM_World_GlassScarFoldedVerge"));
+    UStaticMesh* BrokenSunSkyMesh = LoadObject<UStaticMesh>(
+        nullptr,
+        TEXT("/Game/Art/Generated/World/Environment/SM_World_BrokenSunSky.SM_World_BrokenSunSky"));
     if (CubeMesh == nullptr || SurfaceMaterial == nullptr || ShelfMesh == nullptr ||
         RidgeMesh == nullptr || ShardMesh == nullptr ||
         AshCutMesh == nullptr || BuriedCausewayMesh == nullptr ||
@@ -1908,8 +1920,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         FloorMaterial->SetVectorParameterValue(
             EnvironmentColorParameterName,
             FLinearColor(0.018f, 0.027f, 0.032f));
-        FloorMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.08f);
-        FloorMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.88f);
+        FloorMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.02f);
+        FloorMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.94f);
         FloorMaterial->SetScalarParameterValue(TEXT("EmissiveStrength"), 0.0f);
         FloorMesh->SetMaterial(0, FloorMaterial);
     }
@@ -2157,15 +2169,15 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         float AttenuationRadius;
     };
     const FScarGlowSpec ScarGlows[] = {
-        {FVector(-4800.0f, -35.0f, 180.0f), FLinearColor(0.72f, 0.06f, 0.22f),
+        {FVector(-4800.0f, -35.0f, 50.0f), FLinearColor(0.72f, 0.06f, 0.22f),
          2200.0f, 1450.0f},
-        {FVector(-2400.0f, 45.0f, 160.0f), FLinearColor(0.95f, 0.24f, 0.045f),
+        {FVector(-2400.0f, 45.0f, 40.0f), FLinearColor(0.95f, 0.24f, 0.045f),
          1800.0f, 1350.0f},
-        {FVector(0.0f, 0.0f, 190.0f), FLinearColor(0.76f, 0.08f, 0.30f),
+        {FVector(0.0f, 0.0f, 50.0f), FLinearColor(0.76f, 0.08f, 0.30f),
          2600.0f, 1650.0f},
-        {FVector(2400.0f, -45.0f, 160.0f), FLinearColor(0.95f, 0.24f, 0.045f),
+        {FVector(2400.0f, -45.0f, 40.0f), FLinearColor(0.95f, 0.24f, 0.045f),
          1800.0f, 1350.0f},
-        {FVector(4800.0f, 35.0f, 180.0f), FLinearColor(0.72f, 0.06f, 0.22f),
+        {FVector(4800.0f, 35.0f, 50.0f), FLinearColor(0.72f, 0.06f, 0.22f),
          2200.0f, 1450.0f},
     };
     int32 SpawnedScarGlows = 0;
@@ -2221,6 +2233,45 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             SpawnedScarGlows,
             UE_ARRAY_COUNT(ScarGlows));
         return false;
+    }
+
+    struct FChasmDressingSpec final
+    {
+        FVector Location;
+        FRotator Rotation;
+        FVector Scale;
+        FLinearColor Color;
+    };
+    const FChasmDressingSpec ChasmRims[] = {
+        // North rim downward cliff faces
+        {FVector(-5100.0f, 440.0f, -25.0f), FRotator(-15.0f, 0.0f, 0.0f),
+         FVector(2.8f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
+        {FVector(-2200.0f, 460.0f, -25.0f), FRotator(-18.0f, 4.0f, 0.0f),
+         FVector(3.2f, 1.3f, 0.85f), FLinearColor(0.025f, 0.022f, 0.028f)},
+        {FVector(1800.0f, 450.0f, -25.0f), FRotator(-16.0f, -3.0f, 0.0f),
+         FVector(3.0f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
+        {FVector(4800.0f, 440.0f, -25.0f), FRotator(-14.0f, 2.0f, 0.0f),
+         FVector(2.6f, 1.1f, 0.85f), FLinearColor(0.024f, 0.021f, 0.026f)},
+        // South rim downward cliff faces
+        {FVector(-5100.0f, -440.0f, -25.0f), FRotator(15.0f, 0.0f, 0.0f),
+         FVector(2.8f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
+        {FVector(-2200.0f, -460.0f, -25.0f), FRotator(18.0f, -4.0f, 0.0f),
+         FVector(3.2f, 1.3f, 0.85f), FLinearColor(0.025f, 0.022f, 0.028f)},
+        {FVector(1800.0f, -450.0f, -25.0f), FRotator(16.0f, 3.0f, 0.0f),
+         FVector(3.0f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
+        {FVector(4800.0f, -440.0f, -25.0f), FRotator(14.0f, -2.0f, 0.0f),
+         FVector(2.6f, 1.1f, 0.85f), FLinearColor(0.024f, 0.021f, 0.026f)},
+    };
+    for (const FChasmDressingSpec& Spec : ChasmRims)
+    {
+        SpawnScarAccent(
+            ShelfMesh,
+            Spec.Location,
+            Spec.Rotation,
+            Spec.Scale,
+            Spec.Color,
+            TEXT("EchoesChasmRim"),
+            false);
     }
 
     AEchoesWeatherView* Weather = World->SpawnActor<AEchoesWeatherView>(
@@ -2288,6 +2339,70 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     SunComponent->SetLightColor(FLinearColor(1.0f, 0.82f, 0.62f));
     Sky->GetLightComponent()->SetIntensity(1.6f);
     Sky->GetLightComponent()->SetLightColor(FLinearColor(0.48f, 0.60f, 0.88f));
+
+    if (BrokenSunSkyMesh != nullptr)
+    {
+        FActorSpawnParameters SkyActorSpawnParameters;
+        SkyActorSpawnParameters.SpawnCollisionHandlingOverride =
+            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        // Directional light key shines along Rotator(-55, -35, 0).
+        // The celestial Broken Sun source is in the upper sky along the negative key vector:
+        // pitch +55 deg, yaw 145 deg (North-West sky dome).
+        // At RTS pitch, the Broken Sun enters the frame indirectly; in low-pitch
+        // cinematic framing, it dominates the upper sky (ArtDirection.md L73-75).
+        AStaticMeshActor* BrokenSunSky = World->SpawnActor<AStaticMeshActor>(
+            FVector(-14000.0f, 9800.0f, 24000.0f),
+            FRotator(-55.0f, -35.0f, 0.0f),
+            SkyActorSpawnParameters);
+        if (BrokenSunSky != nullptr)
+        {
+            BrokenSunSky->Tags.Add(TEXT("EchoesPlaceholder"));
+            BrokenSunSky->Tags.Add(
+                EchoesBattlefieldPresentation::LegacyGlassScarTag());
+            EchoesBattlefieldPresentation::RegisterPresetActorTags(
+                BrokenSunSky->Tags,
+                EEchoesSkirmishMapPreset::GlassScar);
+            BrokenSunSky->Tags.Add(TEXT("EchoesBrokenSunSky"));
+            UStaticMeshComponent* BrokenSunSkyComp =
+                BrokenSunSky->GetStaticMeshComponent();
+            BrokenSunSkyComp->SetMobility(EComponentMobility::Movable);
+            BrokenSunSkyComp->SetStaticMesh(BrokenSunSkyMesh);
+            BrokenSunSkyComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            BrokenSunSkyComp->SetCanEverAffectNavigation(false);
+            BrokenSunSkyComp->SetGenerateOverlapEvents(false);
+            BrokenSunSkyComp->SetCastShadow(false);
+            BrokenSunSkyComp->SetReceivesDecals(false);
+            BrokenSunSky->SetActorScale3D(FVector(6.0f, 6.0f, 6.0f));
+
+            const FLinearColor SunColors[4] = {
+                FLinearColor(0.015f, 0.018f, 0.045f),
+                FLinearColor(0.060f, 0.048f, 0.052f),
+                FLinearColor(0.88f, 0.42f, 0.12f),
+                FLinearColor(1.0f, 0.72f, 0.28f)
+            };
+            const float SunMetallic[4] = {0.0f, 0.05f, 0.10f, 0.0f};
+            const float SunRoughness[4] = {0.95f, 0.88f, 0.35f, 0.20f};
+            const float SunEmissive[4] = {0.0f, 0.0f, 0.85f, 1.6f};
+
+            for (int32 Slot = 0; Slot < 4; ++Slot)
+            {
+                UMaterialInstanceDynamic* SunMat =
+                    UMaterialInstanceDynamic::Create(SurfaceMaterial, BrokenSunSky);
+                if (SunMat != nullptr)
+                {
+                    SunMat->SetVectorParameterValue(
+                        EnvironmentColorParameterName, SunColors[Slot]);
+                    SunMat->SetScalarParameterValue(
+                        EnvironmentMetallicParameterName, SunMetallic[Slot]);
+                    SunMat->SetScalarParameterValue(
+                        EnvironmentRoughnessParameterName, SunRoughness[Slot]);
+                    SunMat->SetScalarParameterValue(
+                        EnvironmentEmissiveParameterName, SunEmissive[Slot]);
+                    BrokenSunSkyComp->SetMaterial(Slot, SunMat);
+                }
+            }
+        }
+    }
 
     UE_LOG(
         LogEchoes,

@@ -5232,6 +5232,148 @@ void TestArrivalDampingAndNoOscillation() {
     }
 }
 
+// SPEC-MOV-008 / SPEC-MOV-011 / SPEC-MOV-012: a group ordered to one point
+// packs around it without stacking on the coordinate, every unit then holds
+// still, a unit at rest is never displaced by traffic passing through it, and
+// a rooted Waystone holds its site while allied units crowd it.
+void TestGroupArrivalPackingAndRestStability() {
+    {
+        Simulation sim({30, 30, 20, 0x5041434bULL});
+        REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+        const Vec2 rally = Vec2::FromTiles(20, 20);
+        std::vector<EntityId> group;
+        for (int i = 0; i < 8; ++i) {
+            const EntityId id = sim.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::Soldier,
+                Vec2::FromTiles(4 + (i % 4) * 2, 4 + (i / 4) * 2));
+            REQUIRE(id != 0);
+            group.push_back(id);
+            Command cmd = MakeCommand(0, 0, static_cast<std::uint64_t>(i + 1),
+                                      CommandType::Move, id);
+            cmd.position = rally;
+            REQUIRE(sim.QueueCommand(cmd));
+        }
+        bool allResolved = false;
+        for (int tick = 0; tick < 600 && !allResolved; ++tick) {
+            sim.Step();
+            allResolved = true;
+            for (const EntityId id : group) {
+                const Entity* e = sim.FindEntity(id);
+                REQUIRE(e != nullptr);
+                allResolved = allResolved && e->order.type == OrderType::None;
+            }
+        }
+        REQUIRE(allResolved);
+
+        constexpr std::int64_t kPackingRadiusRaw = 2 * kFixedScale;
+        constexpr std::int64_t kClearanceRaw = 2 * (kFixedScale / 8);
+        std::vector<Vec2> settled;
+        for (std::size_t i = 0; i < group.size(); ++i) {
+            const Entity* a = sim.FindEntity(group[i]);
+            const std::int64_t rx = static_cast<std::int64_t>(a->position.x.Raw()) - rally.x.Raw();
+            const std::int64_t ry = static_cast<std::int64_t>(a->position.y.Raw()) - rally.y.Raw();
+            REQUIRE(rx * rx + ry * ry <= kPackingRadiusRaw * kPackingRadiusRaw);
+            settled.push_back(a->position);
+            for (std::size_t j = i + 1; j < group.size(); ++j) {
+                const Entity* b = sim.FindEntity(group[j]);
+                const std::int64_t dx = static_cast<std::int64_t>(b->position.x.Raw()) - a->position.x.Raw();
+                const std::int64_t dy = static_cast<std::int64_t>(b->position.y.Raw()) - a->position.y.Raw();
+                REQUIRE(dx * dx + dy * dy >= kClearanceRaw * kClearanceRaw);
+            }
+        }
+        // SPEC-MOV-012.AUTH: no more than 0.05 tiles of drift over 20 ticks.
+        constexpr std::int64_t kSettleToleranceRaw = kFixedScale / 20;
+        for (int tick = 0; tick < 20; ++tick) {
+            sim.Step();
+            for (std::size_t i = 0; i < group.size(); ++i) {
+                const Entity* e = sim.FindEntity(group[i]);
+                REQUIRE(e != nullptr);
+                REQUIRE(e->order.type == OrderType::None);
+                const std::int64_t dx = static_cast<std::int64_t>(e->position.x.Raw()) - settled[i].x.Raw();
+                const std::int64_t dy = static_cast<std::int64_t>(e->position.y.Raw()) - settled[i].y.Raw();
+                REQUIRE(dx * dx + dy * dy <= kSettleToleranceRaw * kSettleToleranceRaw);
+            }
+        }
+    }
+    {
+        // A resting unit stays put while an ally drives straight through it.
+        Simulation sim({30, 30, 20, 0x52455354ULL});
+        REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+        const Vec2 restPoint = Vec2::FromTiles(10, 10);
+        const EntityId resting = sim.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier, restPoint);
+        const EntityId passing = sim.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(4, 10));
+        REQUIRE(resting != 0 && passing != 0);
+        const Vec2 farSide = Vec2::FromTiles(16, 10);
+        Command cmd = MakeCommand(0, 0, 1, CommandType::Move, passing);
+        cmd.position = farSide;
+        REQUIRE(sim.QueueCommand(cmd));
+        sim.Step(160);
+        REQUIRE(sim.FindEntity(resting)->position == restPoint);
+        REQUIRE(sim.FindEntity(passing)->order.type == OrderType::None);
+        REQUIRE(sim.FindEntity(passing)->position == farSide);
+    }
+    {
+        // A rooted Waystone is a structure: allied units crowding its site
+        // never displace it.
+        Simulation sim({30, 30, 20, 0x57415953ULL});
+        REQUIRE(sim.AddPlayer(0, Faction::KharuunAssemblies, ResourcePool{0, 0}));
+        const Vec2 site = Vec2::FromTiles(12, 12);
+        const EntityId waystone = sim.SpawnEntity(
+            0, Faction::KharuunAssemblies, EntityType::Dropoff, site);
+        REQUIRE(waystone != 0);
+        REQUIRE(sim.FindEntity(waystone)->waystoneMode == WaystoneMode::Rooted);
+        for (int i = 0; i < 6; ++i) {
+            const EntityId worker = sim.SpawnEntity(
+                0, Faction::KharuunAssemblies, EntityType::Worker,
+                Vec2::FromTiles(6 + i, 6));
+            REQUIRE(worker != 0);
+            Command cmd = MakeCommand(0, 0, static_cast<std::uint64_t>(i + 1),
+                                      CommandType::Move, worker);
+            cmd.position = site;
+            REQUIRE(sim.QueueCommand(cmd));
+        }
+        sim.Step(200);
+        REQUIRE(sim.FindEntity(waystone)->position == site);
+        REQUIRE(sim.FindEntity(waystone)->waystoneMode == WaystoneMode::Rooted);
+    }
+    {
+        // A travelling Waystone outweighs resting workers: it reaches its
+        // exact ordered site through them and can root there.
+        Simulation sim({30, 30, 20, 0x4d4f5657ULL});
+        REQUIRE(sim.AddPlayer(0, Faction::KharuunAssemblies, ResourcePool{0, 0}));
+        const EntityId waystone = sim.SpawnEntity(
+            0, Faction::KharuunAssemblies, EntityType::Dropoff, Vec2::FromTiles(6, 12));
+        REQUIRE(waystone != 0);
+        const Vec2 routeSite = Vec2::FromTiles(18, 12);
+        for (int i = 0; i < 3; ++i) {
+            const EntityId worker = sim.SpawnEntity(
+                0, Faction::KharuunAssemblies, EntityType::Worker,
+                Vec2::FromTiles(17 + i, 12));
+            REQUIRE(worker != 0);
+        }
+        Command uproot = MakeCommand(0, 0, 1, CommandType::ToggleWaystoneRoot, waystone);
+        REQUIRE(sim.QueueCommand(uproot));
+        sim.Step(sim.Config().rules.waystoneMigration.uprootTicks + 1);
+        REQUIRE(sim.FindEntity(waystone)->waystoneMode == WaystoneMode::Mobile);
+        Command travel = MakeCommand(sim.CurrentTick(), 0, 2, CommandType::Move, waystone);
+        travel.position = routeSite;
+        REQUIRE(sim.QueueCommand(travel));
+        sim.Step(400);
+        REQUIRE(sim.FindEntity(waystone)->position == routeSite);
+        REQUIRE(sim.FindEntity(waystone)->order.type == OrderType::None);
+        sim.Step(20);
+        REQUIRE(sim.FindEntity(waystone)->position == routeSite);
+        REQUIRE(sim.ValidateWaystoneRoot(0, waystone) == WaystoneRootResult::Valid);
+        Command root = MakeCommand(sim.CurrentTick(), 0, 3, CommandType::ToggleWaystoneRoot, waystone);
+        REQUIRE(sim.QueueCommand(root));
+        sim.Step(sim.Config().rules.waystoneMigration.rootTicks + 1);
+        REQUIRE(sim.FindEntity(waystone)->waystoneMode == WaystoneMode::Rooted);
+        REQUIRE(sim.FindEntity(waystone)->position == routeSite);
+    }
+}
+
 void TestCommandResponsivenessAndInterruptibility() {
     Simulation sim({20, 20, 20, 0x4354524cULL});
     REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
@@ -7015,6 +7157,8 @@ int main() {
          TestChokepointNegotiationThroughput},
         {"arrival damping and no oscillation",
          TestArrivalDampingAndNoOscillation},
+        {"group arrival packing and rest stability",
+         TestGroupArrivalPackingAndRestStability},
         {"command responsiveness and interruptibility",
          TestCommandResponsivenessAndInterruptibility},
         {"shift-queued order chaining",

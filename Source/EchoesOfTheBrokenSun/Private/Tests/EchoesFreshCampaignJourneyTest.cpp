@@ -5247,10 +5247,19 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Bridge,
                     [Bridge, M11Start, M11Plan]()
                     {
-                        return IsAtSite(
-                            Bridge,
-                            M11Start.NoNeutralWaystoneId,
-                            M11Plan.RouteSite);
+                        // The route site sits inside a five-tile public gate,
+                        // so the three-tile Waystone footprint is only clear
+                        // once the move has actually completed there; rooting
+                        // while still travelling is a legitimate rejection.
+                        const Entity* Current = Bridge->FindEntity(
+                            M11Start.NoNeutralWaystoneId);
+                        return Current != nullptr &&
+                            Current->order.type ==
+                                echoes::sim::OrderType::None &&
+                            IsAtSite(
+                                Bridge,
+                                M11Start.NoNeutralWaystoneId,
+                                M11Plan.RouteSite);
                     },
                     5200),
                 TEXT("Mission 11 Waystone reaches its route")) ||

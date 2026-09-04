@@ -147,8 +147,9 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
             return Box.Min.X >= 0.0f && Box.Min.Y >= 0.0f &&
                 Box.Max.X <= Viewport.X && Box.Max.Y <= Viewport.Y;
         };
-        bool bSetupTargetsSafe = InsideViewport(SetupLayout.ReviewButton);
-        for (int32 Row = 0; Row < 5; ++Row)
+        bool bSetupTargetsSafe = InsideViewport(SetupLayout.ReviewButton) &&
+            InsideViewport(SetupLayout.AssistedBannerBox);
+        for (int32 Row = 0; Row < 9; ++Row)
         {
             bSetupTargetsSafe &=
                 InsideViewport(SetupLayout.SettingRows[Row]) &&
@@ -163,6 +164,9 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
                         SetupLayout.SettingRows[Row]);
             }
         }
+        bSetupTargetsSafe &=
+            !SetupLayout.SettingRows[8].Intersect(SetupLayout.AssistedBannerBox) &&
+            !SetupLayout.AssistedBannerBox.Intersect(SetupLayout.ReviewButton);
         TestTrue(
             FString::Printf(
                 TEXT("Setup pointer targets remain layout-safe at %.0fx%.0f"),
@@ -578,18 +582,35 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
     const FEchoesSkirmishSetupOverlayLayout InitialSetupLayout =
         FEchoesSkirmishSetupOverlayLayout::Build(TestViewport, 1.0f);
     TestTrue(
-        TEXT("Pointer increases the selected battlefield row"),
+        TEXT("Pointer increases the selected teams row"),
         Controller->HandleModalOverlayPointer(
             BoxCenter(InitialSetupLayout.SettingIncrease[2]),
             TestViewport,
             1.0f) &&
             Controller->GetSkirmishSetupFocusRow() == 2 &&
+            Controller->GetPendingSkirmishSetup().TeamSetup ==
+                EEchoesSkirmishTeamSetup::FreeForAll);
+    TestTrue(
+        TEXT("Pointer decreases the same teams row"),
+        Controller->HandleModalOverlayPointer(
+            BoxCenter(InitialSetupLayout.SettingDecrease[2]),
+            TestViewport,
+            1.0f) &&
+            Controller->GetPendingSkirmishSetup().TeamSetup ==
+                EEchoesSkirmishTeamSetup::OneVsOne);
+    TestTrue(
+        TEXT("Pointer increases the selected battlefield row"),
+        Controller->HandleModalOverlayPointer(
+            BoxCenter(InitialSetupLayout.SettingIncrease[3]),
+            TestViewport,
+            1.0f) &&
+            Controller->GetSkirmishSetupFocusRow() == 3 &&
             Controller->GetPendingSkirmishSetup().MapPreset ==
                 EEchoesSkirmishMapPreset::CrownfallBasin);
     TestTrue(
         TEXT("Pointer decreases the same battlefield row"),
         Controller->HandleModalOverlayPointer(
-            BoxCenter(InitialSetupLayout.SettingDecrease[2]),
+            BoxCenter(InitialSetupLayout.SettingDecrease[3]),
             TestViewport,
             1.0f) &&
             Controller->GetPendingSkirmishSetup().MapPreset ==
@@ -1068,6 +1089,192 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
     {
         FreshGlassScarProbe->Destroy();
     }
+    // --- F1 Option-by-Option Tests & Mirror Matchup Matrix ---
+    {
+        // 1. Local Faction Option
+        FEchoesSkirmishSetup LocalTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        const echoes::sim::Faction InitialLocal = LocalTestSetup.LocalFaction;
+        LocalTestSetup = FEchoesSkirmishSetupModel::WithNextFaction(LocalTestSetup, true, 1);
+        TestTrue(TEXT("Option 1 (Local Faction): Cycler changes local force"),
+                 LocalTestSetup.LocalFaction != InitialLocal);
+        TestEqual(TEXT("Option 1 (Local Faction): Displays correct name"),
+                  FString(FEchoesSkirmishSetupModel::FactionDisplayName(LocalTestSetup.LocalFaction)),
+                  FString(TEXT("KHARUUN ASSEMBLIES")));
+
+        // 2. Opponent Faction Option & 9 Matchups Matrix (including mirror matches)
+        const echoes::sim::Faction AllFactions[] = {
+            echoes::sim::Faction::MeridianCompact,
+            echoes::sim::Faction::KharuunAssemblies,
+            echoes::sim::Faction::HollowChoir};
+        int32 ValidMatchupCount = 0;
+        for (const echoes::sim::Faction LocalFac : AllFactions)
+        {
+            for (const echoes::sim::Faction OppFac : AllFactions)
+            {
+                FEchoesSkirmishSetup MatchupSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+                MatchupSetup.LocalFaction = LocalFac;
+                MatchupSetup.OpponentFaction = OppFac;
+                FString MatchupError;
+                const bool bValidMatchup = FEchoesSkirmishSetupModel::Validate(MatchupSetup, MatchupError);
+                if (bValidMatchup)
+                {
+                    ++ValidMatchupCount;
+                }
+                TestTrue(
+                    FString::Printf(TEXT("Option 2 (Opponent Faction): %s vs %s is valid (mirror=%s)"),
+                        FEchoesSkirmishSetupModel::FactionDisplayName(LocalFac),
+                        FEchoesSkirmishSetupModel::FactionDisplayName(OppFac),
+                        LocalFac == OppFac ? TEXT("true") : TEXT("false")),
+                    bValidMatchup);
+            }
+        }
+        TestEqual(TEXT("Option 2 (Opponent Faction): All 9 matchup combinations are valid"),
+                  ValidMatchupCount, 9);
+
+        // 3. Teams Option
+        FEchoesSkirmishSetup TeamTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        TestEqual(TEXT("Option 3 (Teams): Default is 1v1"),
+                  TeamTestSetup.TeamSetup, EEchoesSkirmishTeamSetup::OneVsOne);
+        TeamTestSetup = FEchoesSkirmishSetupModel::WithNextTeam(TeamTestSetup, 1);
+        TestEqual(TEXT("Option 3 (Teams): Cycles to Free-for-all"),
+                  TeamTestSetup.TeamSetup, EEchoesSkirmishTeamSetup::FreeForAll);
+        TestEqual(TEXT("Option 3 (Teams): Displays FFA name"),
+                  FString(FEchoesSkirmishSetupModel::TeamSetupDisplayName(TeamTestSetup.TeamSetup)),
+                  FString(TEXT("FREE-FOR-ALL // INDEPENDENT FORCES")));
+        TeamTestSetup = FEchoesSkirmishSetupModel::WithNextTeam(TeamTestSetup, 1);
+        TestEqual(TEXT("Option 3 (Teams): Wraps back to 1v1"),
+                  TeamTestSetup.TeamSetup, EEchoesSkirmishTeamSetup::OneVsOne);
+        TeamTestSetup = FEchoesSkirmishSetupModel::WithNextTeam(TeamTestSetup, -1);
+        TestEqual(TEXT("Option 3 (Teams): Cycles backward to Free-for-all"),
+                  TeamTestSetup.TeamSetup, EEchoesSkirmishTeamSetup::FreeForAll);
+
+        // 4. Map Preset Option
+        FEchoesSkirmishSetup MapTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        const EEchoesSkirmishMapPreset InitialMap = MapTestSetup.MapPreset;
+        MapTestSetup = FEchoesSkirmishSetupModel::WithNextMap(MapTestSetup, 1);
+        TestTrue(TEXT("Option 4 (Battlefield): Cycler changes map preset"),
+                 MapTestSetup.MapPreset != InitialMap);
+        TestEqual(TEXT("Option 4 (Battlefield): Cycles to Crownfall Basin"),
+                  MapTestSetup.MapPreset, EEchoesSkirmishMapPreset::CrownfallBasin);
+
+        // 5. AI Personality Option
+        FEchoesSkirmishSetup AiTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        const echoes::sim::AiPersonality InitialAi = AiTestSetup.AiPersonality;
+        AiTestSetup = FEchoesSkirmishSetupModel::WithNextAi(AiTestSetup, 1);
+        TestTrue(TEXT("Option 5 (AI Profile): Cycler changes AI personality"),
+                 AiTestSetup.AiPersonality != InitialAi);
+
+        // 6. Difficulty Option & Assisted Handicap Disclosure
+        FEchoesSkirmishSetup DiffTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        TestEqual(TEXT("Option 6 (Difficulty): Default is Standard"),
+                  DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Standard);
+        DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, -1);
+        TestEqual(TEXT("Option 6 (Difficulty): Cycles backward to Assisted"),
+                  DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Assisted);
+        TestEqual(TEXT("Option 6 (Difficulty): Assisted exact disclosed handicap"),
+                  FString(FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
+                  FString(TEXT("+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier")));
+        DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, 2);
+        TestEqual(TEXT("Option 6 (Difficulty): Cycles forward to Challenging"),
+                  DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Challenging);
+        DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, 1);
+        TestEqual(TEXT("Option 6 (Difficulty): Cycles forward to Sovereign"),
+                  DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Sovereign);
+
+        // 7. Starting Resources Option
+        FEchoesSkirmishSetup ResTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        const EEchoesSkirmishResourceLevel InitialRes = ResTestSetup.ResourceLevel;
+        ResTestSetup = FEchoesSkirmishSetupModel::WithNextResources(ResTestSetup, 1);
+        TestTrue(TEXT("Option 7 (Starting Resources): Cycler changes resource level"),
+                 ResTestSetup.ResourceLevel != InitialRes);
+        TestEqual(TEXT("Option 7 (Starting Resources): Cycles to Abundant"),
+                  ResTestSetup.ResourceLevel, EEchoesSkirmishResourceLevel::Abundant);
+
+        // 8. Victory Condition Option
+        FEchoesSkirmishSetup VicTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        TestEqual(TEXT("Option 8 (Victory Condition): Default is Corefall"),
+                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Corefall);
+        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
+        TestEqual(TEXT("Option 8 (Victory Condition): Cycles to Well Control"),
+                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::WellControl);
+        TestEqual(TEXT("Option 8 (Victory Condition): Displays Well Control name"),
+                  FString(FEchoesSkirmishSetupModel::VictoryConditionDisplayName(VicTestSetup.VictoryCondition)),
+                  FString(TEXT("WELL CONTROL // DOMINANCE")));
+        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
+        TestEqual(TEXT("Option 8 (Victory Condition): Cycles to Conquest"),
+                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Conquest);
+        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
+        TestEqual(TEXT("Option 8 (Victory Condition): Wraps back to Corefall"),
+                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Corefall);
+
+        // 9. Game Speed Option & Deterministic Multipliers
+        FEchoesSkirmishSetup SpeedTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        TestEqual(TEXT("Option 9 (Game Speed): Default is Normal (1.0x)"),
+                  SpeedTestSetup.GameSpeed, EEchoesSkirmishGameSpeed::Normal);
+        TestEqual(TEXT("Option 9 (Game Speed): Normal multiplier is 1.0f"),
+                  FEchoesSkirmishSetupModel::GameSpeedMultiplier(EEchoesSkirmishGameSpeed::Normal),
+                  1.0f);
+        SpeedTestSetup = FEchoesSkirmishSetupModel::WithNextGameSpeed(SpeedTestSetup, -1);
+        TestEqual(TEXT("Option 9 (Game Speed): Cycles backward to Tactical"),
+                  SpeedTestSetup.GameSpeed, EEchoesSkirmishGameSpeed::Tactical);
+        TestEqual(TEXT("Option 9 (Game Speed): Tactical multiplier is 0.75f"),
+                  FEchoesSkirmishSetupModel::GameSpeedMultiplier(EEchoesSkirmishGameSpeed::Tactical),
+                  0.75f);
+        SpeedTestSetup = FEchoesSkirmishSetupModel::WithNextGameSpeed(SpeedTestSetup, 2);
+        TestEqual(TEXT("Option 9 (Game Speed): Cycles forward to Fast"),
+                  SpeedTestSetup.GameSpeed, EEchoesSkirmishGameSpeed::Fast);
+        TestEqual(TEXT("Option 9 (Game Speed): Fast multiplier is 1.50f"),
+                  FEchoesSkirmishSetupModel::GameSpeedMultiplier(EEchoesSkirmishGameSpeed::Fast),
+                  1.50f);
+
+        // Validation rejection of invalid enums
+        FEchoesSkirmishSetup BadEnumSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        FString BadEnumError;
+        BadEnumSetup.TeamSetup = static_cast<EEchoesSkirmishTeamSetup>(255);
+        TestFalse(TEXT("Validation rejects invalid team setup"),
+                  FEchoesSkirmishSetupModel::Validate(BadEnumSetup, BadEnumError));
+        BadEnumSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        BadEnumSetup.Difficulty = static_cast<EEchoesSkirmishDifficulty>(255);
+        TestFalse(TEXT("Validation rejects invalid difficulty"),
+                  FEchoesSkirmishSetupModel::Validate(BadEnumSetup, BadEnumError));
+        BadEnumSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        BadEnumSetup.VictoryCondition = static_cast<EEchoesSkirmishVictoryCondition>(255);
+        TestFalse(TEXT("Validation rejects invalid victory condition"),
+                  FEchoesSkirmishSetupModel::Validate(BadEnumSetup, BadEnumError));
+        BadEnumSetup = FEchoesSkirmishSetupModel::DefaultSetup();
+        BadEnumSetup.GameSpeed = static_cast<EEchoesSkirmishGameSpeed>(255);
+        TestFalse(TEXT("Validation rejects invalid game speed"),
+                  FEchoesSkirmishSetupModel::Validate(BadEnumSetup, BadEnumError));
+
+        // Subsystem game speed multiplier query
+        if (FreshBridge != nullptr)
+        {
+            FEchoesSkirmishSetup SpeedApplySetup = FEchoesSkirmishSetupModel::DefaultSetup();
+            SpeedApplySetup.GameSpeed = EEchoesSkirmishGameSpeed::Fast;
+            FString SpeedFeedback;
+            FreshBridge->ApplySkirmishSetup(SpeedApplySetup, SpeedFeedback);
+            TestEqual(TEXT("Simulation subsystem reflects Fast game speed multiplier"),
+                      FreshBridge->GetEffectiveGameSpeedMultiplier(),
+                      1.50f);
+            TestEqual(TEXT("Simulation subsystem reflects active difficulty"),
+                      FreshBridge->GetActiveSkirmishDifficulty(),
+                      EEchoesSkirmishDifficulty::Standard);
+            TestEqual(TEXT("Simulation subsystem reflects active victory condition"),
+                      FreshBridge->GetActiveSkirmishVictoryCondition(),
+                      EEchoesSkirmishVictoryCondition::Corefall);
+            TestEqual(TEXT("Simulation subsystem reflects active team setup"),
+                      FreshBridge->GetActiveSkirmishTeamSetup(),
+                      EEchoesSkirmishTeamSetup::OneVsOne);
+
+            // Apply Assisted difficulty
+            SpeedApplySetup.Difficulty = EEchoesSkirmishDifficulty::Assisted;
+            FreshBridge->ApplySkirmishSetup(SpeedApplySetup, SpeedFeedback);
+            TestEqual(TEXT("Simulation subsystem reflects active Assisted difficulty"),
+                      FreshBridge->GetActiveSkirmishDifficulty(),
+                      EEchoesSkirmishDifficulty::Assisted);
+        }
+    }
+
     if (FreshBridge != nullptr)
     {
         FreshBridge->StopPrototypeScenario();

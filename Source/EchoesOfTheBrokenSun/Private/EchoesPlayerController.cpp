@@ -4840,10 +4840,10 @@ void AEchoesPlayerController::FocusPreviousSkirmishSetting()
     {
         return;
     }
-    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 4) % 5;
+    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 8) % 9;
     SetStatusMessage(
         FString::Printf(
-            TEXT("SKIRMISH SETUP — row %d of 5 selected; Left/Right changes the value."),
+            TEXT("SKIRMISH SETUP — row %d of 9 selected; Left/Right changes the value."),
             SkirmishSetupFocusRow + 1),
         3600.0f);
 }
@@ -4862,10 +4862,10 @@ void AEchoesPlayerController::FocusNextSkirmishSetting()
     {
         return;
     }
-    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 1) % 5;
+    SkirmishSetupFocusRow = (SkirmishSetupFocusRow + 1) % 9;
     SetStatusMessage(
         FString::Printf(
-            TEXT("SKIRMISH SETUP — row %d of 5 selected; Left/Right changes the value."),
+            TEXT("SKIRMISH SETUP — row %d of 9 selected; Left/Right changes the value."),
             SkirmishSetupFocusRow + 1),
         3600.0f);
 }
@@ -4890,26 +4890,57 @@ void AEchoesPlayerController::DecreaseSkirmishSetting()
             break;
         case 2:
             PendingSkirmishSetup =
-                FEchoesSkirmishSetupModel::WithNextMap(
+                FEchoesSkirmishSetupModel::WithNextTeam(
                     PendingSkirmishSetup, -1);
             break;
         case 3:
             PendingSkirmishSetup =
-                FEchoesSkirmishSetupModel::WithNextAi(
+                FEchoesSkirmishSetupModel::WithNextMap(
                     PendingSkirmishSetup, -1);
             break;
         case 4:
             PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextAi(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 5:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextDifficulty(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 6:
+            PendingSkirmishSetup =
                 FEchoesSkirmishSetupModel::WithNextResources(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 7:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextVictoryCondition(
+                    PendingSkirmishSetup, -1);
+            break;
+        case 8:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextGameSpeed(
                     PendingSkirmishSetup, -1);
             break;
         default:
             SkirmishSetupFocusRow = 0;
             break;
     }
-    SetStatusMessage(
-        TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
-        3600.0f);
+    if (PendingSkirmishSetup.Difficulty == EEchoesSkirmishDifficulty::Assisted)
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("SKIRMISH SETUP UPDATED [Assisted: %s] — Enter reviews deployment."),
+                FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
+            3600.0f);
+    }
+    else
+    {
+        SetStatusMessage(
+            TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
+            3600.0f);
+    }
 }
 
 void AEchoesPlayerController::IncreaseSkirmishSetting()
@@ -4932,26 +4963,57 @@ void AEchoesPlayerController::IncreaseSkirmishSetting()
             break;
         case 2:
             PendingSkirmishSetup =
-                FEchoesSkirmishSetupModel::WithNextMap(
+                FEchoesSkirmishSetupModel::WithNextTeam(
                     PendingSkirmishSetup, 1);
             break;
         case 3:
             PendingSkirmishSetup =
-                FEchoesSkirmishSetupModel::WithNextAi(
+                FEchoesSkirmishSetupModel::WithNextMap(
                     PendingSkirmishSetup, 1);
             break;
         case 4:
             PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextAi(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 5:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextDifficulty(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 6:
+            PendingSkirmishSetup =
                 FEchoesSkirmishSetupModel::WithNextResources(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 7:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextVictoryCondition(
+                    PendingSkirmishSetup, 1);
+            break;
+        case 8:
+            PendingSkirmishSetup =
+                FEchoesSkirmishSetupModel::WithNextGameSpeed(
                     PendingSkirmishSetup, 1);
             break;
         default:
             SkirmishSetupFocusRow = 0;
             break;
     }
-    SetStatusMessage(
-        TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
-        3600.0f);
+    if (PendingSkirmishSetup.Difficulty == EEchoesSkirmishDifficulty::Assisted)
+    {
+        SetStatusMessage(
+            FString::Printf(
+                TEXT("SKIRMISH SETUP UPDATED [Assisted: %s] — Enter reviews deployment."),
+                FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
+            3600.0f);
+    }
+    else
+    {
+        SetStatusMessage(
+            TEXT("SKIRMISH SETUP UPDATED — active simulation unchanged; Enter reviews deployment."),
+            3600.0f);
+    }
 }
 
 void AEchoesPlayerController::ReturnToSkirmishSetup()
@@ -12392,7 +12454,7 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
             FEchoesSkirmishSetupOverlayLayout::Build(
                 ViewportSize,
                 HudScale);
-        for (int32 Row = 0; Row < 5; ++Row)
+        for (int32 Row = 0; Row < 9; ++Row)
         {
             if (!Layout.SettingRows[Row].IsInsideOrOn(ScreenPosition))
             {

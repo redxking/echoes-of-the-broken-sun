@@ -1,6 +1,7 @@
 #include "EchoesSimulationSubsystem.h"
 
 #include "EchoesBattlefieldPresentation.h"
+#include "EchoesCombatEffectView.h"
 #include "EchoesContentSubsystem.h"
 #include "EchoesDestructionView.h"
 #include "EchoesEntityView.h"
@@ -80,6 +81,9 @@ constexpr int32 EntityViewFreePoolCapacity = 512;
 constexpr int32 DestructionViewLowEffectsCapacity = 64;
 constexpr int32 DestructionViewMediumEffectsCapacity = 160;
 constexpr int32 DestructionViewHighEffectsCapacity = 396;
+constexpr int32 CombatEffectLowCapacity = 48;
+constexpr int32 CombatEffectMediumCapacity = 128;
+constexpr int32 CombatEffectHighCapacity = 256;
 constexpr uint64 SustainedMemoryTelemetryIntervalTicks =
     10U * PrototypeTicksPerSecond;
 constexpr uint32 SustainedMemoryTelemetrySchema = 2;
@@ -120,7 +124,7 @@ constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
 constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
-constexpr uint8 QuickSaveContainerVersion = 3;
+constexpr uint8 QuickSaveContainerVersion = 4;
 constexpr uint8 TermsOfContinuanceTopologyRevision = 2;
 constexpr uint8 NamesWithoutBirthsTopologyRevision = 2;
 constexpr uint8 ShapeOfSilenceTopologyRevision = 2;
@@ -286,7 +290,11 @@ enum class EQuickSaveContainerRead : uint8
             static_cast<uint8>(SkirmishSetup.OpponentFaction),
             static_cast<uint8>(SkirmishSetup.MapPreset),
             static_cast<uint8>(SkirmishSetup.AiPersonality),
-            static_cast<uint8>(SkirmishSetup.ResourceLevel)};
+            static_cast<uint8>(SkirmishSetup.ResourceLevel),
+            static_cast<uint8>(SkirmishSetup.Difficulty),
+            static_cast<uint8>(SkirmishSetup.VictoryCondition),
+            static_cast<uint8>(SkirmishSetup.GameSpeed),
+            static_cast<uint8>(SkirmishSetup.TeamSetup)};
         const uint64 Hash = FXxHash64::HashBuffer(
             SetupBytes,
             UE_ARRAY_COUNT(SetupBytes)).Hash;
@@ -360,7 +368,7 @@ enum class EQuickSaveContainerRead : uint8
         return false;
     }
     OutContainer.Reserve(
-        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 25 + Payload.Num());
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 29 + Payload.Num());
     OutContainer.Append(
         QuickSaveContainerMagic,
         UE_ARRAY_COUNT(QuickSaveContainerMagic));
@@ -401,10 +409,14 @@ enum class EQuickSaveContainerRead : uint8
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.MapPreset));
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.AiPersonality));
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.ResourceLevel));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.Difficulty));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.VictoryCondition));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.GameSpeed));
+        OutContainer.Add(static_cast<uint8>(SkirmishSetup.TeamSetup));
     }
     else
     {
-        OutContainer.AddZeroed(5);
+        OutContainer.AddZeroed(9);
     }
     AppendUint32LittleEndian(
         OutContainer,
@@ -459,6 +471,8 @@ enum class EQuickSaveContainerRead : uint8
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 4;
     constexpr int32 VersionThreeHeaderSize =
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 5 + 4;
+    constexpr int32 VersionFourHeaderSize =
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 9 + 4;
     constexpr int32 ChecksumSize = 4;
     if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
     {
@@ -483,10 +497,11 @@ enum class EQuickSaveContainerRead : uint8
         OutError = TEXT("checkpoint container is truncated");
         return EQuickSaveContainerRead::Invalid;
     }
-    uint8 SetupBytes[5] = {};
-    if (Version >= 3)
+    uint8 SetupBytes[9] = {};
+    const int32 SetupBytesLength = Version >= 4 ? 9 : (Version == 3 ? 5 : 0);
+    if (SetupBytesLength > 0)
     {
-        if (Bytes.Num() - Offset < UE_ARRAY_COUNT(SetupBytes))
+        if (Bytes.Num() - Offset < SetupBytesLength)
         {
             OutError = TEXT("checkpoint container is truncated");
             return EQuickSaveContainerRead::Invalid;
@@ -494,13 +509,15 @@ enum class EQuickSaveContainerRead : uint8
         FMemory::Memcpy(
             SetupBytes,
             Bytes.GetData() + Offset,
-            UE_ARRAY_COUNT(SetupBytes));
-        Offset += UE_ARRAY_COUNT(SetupBytes);
+            SetupBytesLength);
+        Offset += SetupBytesLength;
     }
     uint32 PayloadLength = 0;
-    const int32 HeaderSize = Version >= 3
-        ? VersionThreeHeaderSize
-        : Version >= 2 ? VersionTwoHeaderSize : VersionOneHeaderSize;
+    const int32 HeaderSize = Version >= 4
+        ? VersionFourHeaderSize
+        : Version == 3
+            ? VersionThreeHeaderSize
+            : Version >= 2 ? VersionTwoHeaderSize : VersionOneHeaderSize;
     if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
         Operation != static_cast<uint8>(ExpectedOperation) ||
         PayloadLength > static_cast<uint32>(MAX_int32) ||
@@ -534,19 +551,30 @@ enum class EQuickSaveContainerRead : uint8
             static_cast<echoes::sim::AiPersonality>(SetupBytes[3]);
         RecoveredSetup.ResourceLevel =
             static_cast<EEchoesSkirmishResourceLevel>(SetupBytes[4]);
+        if (Version >= 4)
+        {
+            RecoveredSetup.Difficulty =
+                static_cast<EEchoesSkirmishDifficulty>(SetupBytes[5]);
+            RecoveredSetup.VictoryCondition =
+                static_cast<EEchoesSkirmishVictoryCondition>(SetupBytes[6]);
+            RecoveredSetup.GameSpeed =
+                static_cast<EEchoesSkirmishGameSpeed>(SetupBytes[7]);
+            RecoveredSetup.TeamSetup =
+                static_cast<EEchoesSkirmishTeamSetup>(SetupBytes[8]);
+        }
+        else
+        {
+            RecoveredSetup.Difficulty = EEchoesSkirmishDifficulty::Standard;
+            RecoveredSetup.VictoryCondition = EEchoesSkirmishVictoryCondition::Corefall;
+            RecoveredSetup.GameSpeed = EEchoesSkirmishGameSpeed::Normal;
+            RecoveredSetup.TeamSetup = EEchoesSkirmishTeamSetup::OneVsOne;
+        }
         FString SetupError;
         uint64 RecoveredIdentity = 0;
         if (!FEchoesSkirmishSetupModel::Validate(
                 RecoveredSetup,
                 SetupError) ||
-            FactionValue != SetupBytes[0] ||
-            !BuildQuickSaveBranchIdentity(
-                EEchoesOperationMode::Skirmish,
-                FEchoesCampaignProgress{},
-                RecoveredSetup,
-                RecoveredIdentity,
-                SetupError) ||
-            RecoveredIdentity != CampaignBranchIdentity)
+            FactionValue != SetupBytes[0])
         {
             OutError = FString::Printf(
                 TEXT("[LOAD_SKIRMISH_SETUP_INVALID] %s"),
@@ -554,6 +582,36 @@ enum class EQuickSaveContainerRead : uint8
                     ? TEXT("The checkpoint setup identity is inconsistent.")
                     : *SetupError);
             return EQuickSaveContainerRead::Invalid;
+        }
+        if (Version >= 4)
+        {
+            if (!BuildQuickSaveBranchIdentity(
+                    EEchoesOperationMode::Skirmish,
+                    FEchoesCampaignProgress{},
+                    RecoveredSetup,
+                    RecoveredIdentity,
+                    SetupError) ||
+                RecoveredIdentity != CampaignBranchIdentity)
+            {
+                OutError = FString::Printf(
+                    TEXT("[LOAD_SKIRMISH_SETUP_INVALID] %s"),
+                    SetupError.IsEmpty()
+                        ? TEXT("The checkpoint setup identity is inconsistent.")
+                        : *SetupError);
+                return EQuickSaveContainerRead::Invalid;
+            }
+        }
+        else
+        {
+            const uint8 V3Bytes[] = {
+                SetupBytes[0], SetupBytes[1], SetupBytes[2], SetupBytes[3], SetupBytes[4]};
+            const uint64 Hash = FXxHash64::HashBuffer(V3Bytes, 5).Hash;
+            RecoveredIdentity = Hash != 0 ? Hash : 1;
+            if (RecoveredIdentity != CampaignBranchIdentity)
+            {
+                OutError = TEXT("[LOAD_SKIRMISH_SETUP_INVALID] The legacy checkpoint setup hash does not match.");
+                return EQuickSaveContainerRead::Invalid;
+            }
         }
         OutRecoveredSkirmishSetup = RecoveredSetup;
         bOutRecoveredSkirmishSetup = true;
@@ -566,14 +624,17 @@ enum class EQuickSaveContainerRead : uint8
                 "checkpoint container does not match the active operation and faction");
             return EQuickSaveContainerRead::Invalid;
         }
-        if (Version >= 3 &&
-            (SetupBytes[0] != 0 || SetupBytes[1] != 0 ||
-             SetupBytes[2] != 0 || SetupBytes[3] != 0 ||
-             SetupBytes[4] != 0))
+        if (SetupBytesLength > 0)
         {
-            OutError = TEXT(
-                "checkpoint container carries unexpected skirmish setup data");
-            return EQuickSaveContainerRead::Invalid;
+            for (int32 ByteIdx = 0; ByteIdx < SetupBytesLength; ++ByteIdx)
+            {
+                if (SetupBytes[ByteIdx] != 0)
+                {
+                    OutError = TEXT(
+                        "checkpoint container carries unexpected skirmish setup data");
+                    return EQuickSaveContainerRead::Invalid;
+                }
+            }
         }
     }
     if (RequiresCampaignBranchBoundQuickSave(ExpectedOperation))
@@ -2261,6 +2322,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bLoggedAssistedAiTelemetry = false;
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
@@ -4488,6 +4550,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bLoggedAssistedAiTelemetry = false;
     bResearchPresentationScenario = bUseResearchPresentation;
     bResearchInterruptionPresentationScenario =
         bUseResearchInterruptionPresentation;
@@ -4866,10 +4929,13 @@ bool UEchoesSimulationSubsystem::StartScenario(
         const FIntPoint WellTile =
             FEchoesSkirmishSetupModel::FutureWellTile(
                 ActiveSkirmishSetup.MapPreset);
+        const FString AssistedLog = ActiveSkirmishSetup.Difficulty == EEchoesSkirmishDifficulty::Assisted
+            ? FString::Printf(TEXT(" assistedModifiers=\"%s\""), FEchoesSkirmishSetupModel::AssistedDifficultyModifiers())
+            : TEXT(" standardFairInfo=true hiddenIncome=none sightCheats=none");
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_SKIRMISH_MAP_READY] map=%s blocked=%d well=(%d,%d) local=%s opponent=%s ai=%s resources=%s"),
+            TEXT("[ECHOES_SKIRMISH_MAP_READY] map=%s blocked=%d well=(%d,%d) local=%s opponent=%s teams=%s ai=%s difficulty=%s resources=%s victory=%s speed=%s%s"),
             FEchoesSkirmishSetupModel::MapDisplayName(
                 ActiveSkirmishSetup.MapPreset),
             GlassScarBlockedTiles,
@@ -4877,10 +4943,19 @@ bool UEchoesSimulationSubsystem::StartScenario(
             WellTile.Y,
             FactionStableName(ScenarioLocalFaction),
             FactionStableName(ScenarioOpponentFaction),
+            FEchoesSkirmishSetupModel::TeamSetupDisplayName(
+                ActiveSkirmishSetup.TeamSetup),
             FEchoesSkirmishSetupModel::AiDisplayName(
                 ActiveSkirmishSetup.AiPersonality),
+            FEchoesSkirmishSetupModel::DifficultyDisplayName(
+                ActiveSkirmishSetup.Difficulty),
             FEchoesSkirmishSetupModel::ResourceDisplayName(
-                ActiveSkirmishSetup.ResourceLevel));
+                ActiveSkirmishSetup.ResourceLevel),
+            FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
+                ActiveSkirmishSetup.VictoryCondition),
+            FEchoesSkirmishSetupModel::GameSpeedDisplayName(
+                ActiveSkirmishSetup.GameSpeed),
+            *AssistedLog);
     }
     else
     {
@@ -5380,6 +5455,14 @@ bool UEchoesSimulationSubsystem::StartScenario(
         // bounded stable-frame window arms the sustained timing contract.
         SustainedStressReadyWallSeconds = 0.0;
     }
+    LastAutosavedPhase = GetCurrentOperationPhase();
+    LastAutosavedTick = 0;
+    LastAutosavedReason = EEchoesAutosaveReason::None;
+    if (!bSuppressAutosave && !bStressScenario && !bSustainedStressScenario && SelectedOperation != EEchoesOperationMode::Skirmish && Simulation.IsValid())
+    {
+        FString AutosaveFeedback;
+        AutosaveScenario(EEchoesAutosaveReason::MissionEntry, AutosaveFeedback);
+    }
     return true;
 }
 
@@ -5402,6 +5485,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bLoggedAiAdaptation = false;
     bLoggedAiMineralCover = false;
     bLoggedAiVibrationResponse = false;
+    bLoggedAssistedAiTelemetry = false;
     bResearchPresentationScenario = false;
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
@@ -5509,6 +5593,9 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bBrokenSunResolutionContractFailed = false;
     BrokenSunResolutionStartTick = 0;
     ResearchPresentationTechnology = echoes::sim::ResearchType::None;
+    LastAutosavedPhase = 0;
+    LastAutosavedTick = 0;
+    LastAutosavedReason = EEchoesAutosaveReason::None;
 }
 
 bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
@@ -5757,6 +5844,8 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
     const bool bPreviouslyLoggedAiMineralCover = bLoggedAiMineralCover;
     const bool bPreviouslyLoggedAiVibrationResponse =
         bLoggedAiVibrationResponse;
+    const bool bPreviouslyLoggedAssistedAiTelemetry =
+        bLoggedAssistedAiTelemetry;
     const bool bPreviouslyResearchPresentationScenario =
         bResearchPresentationScenario;
     const bool bPreviouslyResearchInterruptionPresentationScenario =
@@ -5798,25 +5887,41 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
     {
         SetScenarioPaused(bHadScenario ? bWasPaused : true);
         OutFeedback = FString::Printf(
-            TEXT("SKIRMISH DEPLOYMENT READY: %s against %s on %s // AI %s // %s."),
+            TEXT("SKIRMISH DEPLOYMENT READY: %s against %s on %s // %s // AI %s (%s) // %s // %s // %s."),
             FEchoesSkirmishSetupModel::FactionDisplayName(
                 Setup.LocalFaction),
             FEchoesSkirmishSetupModel::FactionDisplayName(
                 Setup.OpponentFaction),
             FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
+            FEchoesSkirmishSetupModel::TeamSetupDisplayName(Setup.TeamSetup),
             FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
+            FEchoesSkirmishSetupModel::DifficultyDisplayName(Setup.Difficulty),
             FEchoesSkirmishSetupModel::ResourceDisplayName(
-                Setup.ResourceLevel));
+                Setup.ResourceLevel),
+            FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
+                Setup.VictoryCondition),
+            FEchoesSkirmishSetupModel::GameSpeedDisplayName(
+                Setup.GameSpeed));
+        const FString AssistedDisclosure = Setup.Difficulty == EEchoesSkirmishDifficulty::Assisted
+            ? FString::Printf(TEXT(" assistedModifiers=\"%s\""), FEchoesSkirmishSetupModel::AssistedDifficultyModifiers())
+            : TEXT(" standardFairInfo=true hiddenIncome=none sightCheats=none");
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_SKIRMISH_SETUP_APPLIED] local=%s opponent=%s map=%s ai=%s resources=%s scenarioReset=%s paused=%s"),
+            TEXT("[ECHOES_SKIRMISH_SETUP_APPLIED] local=%s opponent=%s teams=%s map=%s ai=%s difficulty=%s resources=%s victory=%s speed=%s%s scenarioReset=%s paused=%s"),
             FactionStableName(Setup.LocalFaction),
             FactionStableName(Setup.OpponentFaction),
+            FEchoesSkirmishSetupModel::TeamSetupDisplayName(Setup.TeamSetup),
             FEchoesSkirmishSetupModel::MapDisplayName(Setup.MapPreset),
             FEchoesSkirmishSetupModel::AiDisplayName(Setup.AiPersonality),
+            FEchoesSkirmishSetupModel::DifficultyDisplayName(Setup.Difficulty),
             FEchoesSkirmishSetupModel::ResourceDisplayName(
                 Setup.ResourceLevel),
+            FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
+                Setup.VictoryCondition),
+            FEchoesSkirmishSetupModel::GameSpeedDisplayName(
+                Setup.GameSpeed),
+            *AssistedDisclosure,
             bHadScenario ? TEXT("true") : TEXT("false"),
             IsScenarioPaused() ? TEXT("true") : TEXT("false"));
         return true;
@@ -5840,6 +5945,7 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
         bLoggedAiAdaptation = bPreviouslyLoggedAiAdaptation;
         bLoggedAiMineralCover = bPreviouslyLoggedAiMineralCover;
         bLoggedAiVibrationResponse = bPreviouslyLoggedAiVibrationResponse;
+        bLoggedAssistedAiTelemetry = bPreviouslyLoggedAssistedAiTelemetry;
         bResearchPresentationScenario =
             bPreviouslyResearchPresentationScenario;
         bResearchInterruptionPresentationScenario =
@@ -7776,6 +7882,291 @@ void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
     }
 }
 
+bool UEchoesSimulationSubsystem::InspectSaveContainer(
+    const TArray<uint8>& Bytes,
+    uint8& OutVersion,
+    EEchoesOperationMode& OutOperation,
+    echoes::sim::Faction& OutFaction,
+    uint64& OutBranchIdentity,
+    uint32& OutCrc,
+    TArray<uint8>& OutPayload,
+    FString& OutError)
+{
+    OutPayload.Reset();
+    OutError.Reset();
+
+    constexpr int32 MagicSize = 8;
+    constexpr int32 VersionOneHeaderSize = MagicSize + 4 + 4;
+    constexpr int32 VersionTwoHeaderSize = MagicSize + 4 + 8 + 4;
+    constexpr int32 VersionThreeHeaderSize = MagicSize + 4 + 8 + 5 + 4;
+    constexpr int32 VersionFourHeaderSize = MagicSize + 4 + 8 + 9 + 4;
+    constexpr int32 ChecksumSize = 4;
+
+    if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
+    {
+        OutError = TEXT("checkpoint container is truncated");
+        return false;
+    }
+    if (FMemory::Memcmp(Bytes.GetData(), QuickSaveContainerMagic, MagicSize) != 0)
+    {
+        OutError = TEXT("checkpoint container magic mismatch");
+        return false;
+    }
+
+    const int32 ChecksumOffset = Bytes.Num() - ChecksumSize;
+    int32 ChecksumReadOffset = ChecksumOffset;
+    if (!ReadUint32LittleEndian(Bytes, ChecksumReadOffset, OutCrc))
+    {
+        OutError = TEXT("failed reading checkpoint checksum");
+        return false;
+    }
+    const uint32 ComputedChecksum = FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset);
+    if (OutCrc != ComputedChecksum)
+    {
+        OutError = FString::Printf(
+            TEXT("[QUICKSAVE_CRC_MISMATCH] stored=%08X computed=%08X"),
+            OutCrc,
+            ComputedChecksum);
+        return false;
+    }
+
+    int32 Offset = MagicSize;
+    OutVersion = Bytes[Offset++];
+    OutOperation = static_cast<EEchoesOperationMode>(Bytes[Offset++]);
+    OutFaction = static_cast<echoes::sim::Faction>(Bytes[Offset++]);
+    const uint8 TopologyRevision = Bytes[Offset++];
+
+    if (OutVersion < QuickSaveContainerMinimumVersion ||
+        OutVersion > QuickSaveContainerVersion)
+    {
+        OutError = TEXT("unsupported container version");
+        return false;
+    }
+
+    OutBranchIdentity = 0;
+    if (OutVersion >= 2 &&
+        !ReadUint64LittleEndian(Bytes, Offset, OutBranchIdentity))
+    {
+        OutError = TEXT("truncated branch identity");
+        return false;
+    }
+
+    if (OutVersion >= 4)
+    {
+        if (Bytes.Num() - Offset < 9)
+        {
+            OutError = TEXT("truncated skirmish setup");
+            return false;
+        }
+        Offset += 9;
+    }
+    else if (OutVersion == 3)
+    {
+        if (Bytes.Num() - Offset < 5)
+        {
+            OutError = TEXT("truncated skirmish setup");
+            return false;
+        }
+        Offset += 5;
+    }
+
+    uint32 PayloadLength = 0;
+    const int32 HeaderSize = OutVersion >= 4
+        ? VersionFourHeaderSize
+        : OutVersion == 3
+            ? VersionThreeHeaderSize
+            : OutVersion >= 2 ? VersionTwoHeaderSize : VersionOneHeaderSize;
+
+    if (!ReadUint32LittleEndian(Bytes, Offset, PayloadLength) ||
+        PayloadLength > static_cast<uint32>(MAX_int32) ||
+        Bytes.Num() != HeaderSize + static_cast<int32>(PayloadLength) + ChecksumSize)
+    {
+        OutError = TEXT("payload size mismatch");
+        return false;
+    }
+
+    OutPayload.Append(
+        Bytes.GetData() + HeaderSize,
+        static_cast<int32>(PayloadLength));
+    return true;
+}
+
+bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
+    const FString& CandidatePath,
+    uint64 ExpectedCampaignBranchIdentity,
+    FString& OutFailure) const
+{
+    TArray<uint8> CandidateBytes;
+    if (!FFileHelper::LoadFileToArray(CandidateBytes, *CandidatePath))
+    {
+        OutFailure = TEXT("file unavailable");
+        return false;
+    }
+
+    TArray<uint8> ContainerPayload;
+    const TArray<uint8>* OperationPayload = &CandidateBytes;
+    bool bRecoveredSkirmishSetup = false;
+    FEchoesSkirmishSetup RecoveredSkirmishSetup = ActiveSkirmishSetup;
+    if (UsesQuickSaveContainer(SelectedOperation))
+    {
+        const EQuickSaveContainerRead ContainerRead =
+            ExtractQuickSaveContainer(
+                SelectedOperation,
+                LocalFaction,
+                ExpectedCampaignBranchIdentity,
+                SelectedOperation != EEchoesOperationMode::Skirmish ||
+                    ActiveSkirmishSetup == FEchoesSkirmishSetupModel::DefaultSetup(),
+                CandidateBytes,
+                ContainerPayload,
+                bRecoveredSkirmishSetup,
+                RecoveredSkirmishSetup,
+                OutFailure);
+        if (ContainerRead == EQuickSaveContainerRead::Invalid)
+        {
+            return false;
+        }
+        if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+            bRecoveredSkirmishSetup &&
+            RecoveredSkirmishSetup != ActiveSkirmishSetup)
+        {
+            OutFailure = TEXT(
+                "[LOAD_SKIRMISH_SETUP_MISMATCH] This recovery generation belongs to a different skirmish setup.");
+            return false;
+        }
+        if (ContainerRead == EQuickSaveContainerRead::Wrapped)
+        {
+            OperationPayload = &ContainerPayload;
+        }
+    }
+
+    TArray<uint8> SnapshotBytes;
+    const TArray<uint8>* SnapshotPayload = OperationPayload;
+    bool bCrisisHoldStarted = false;
+    bool bCrisisContractFailed = false;
+    EEchoesFinalResolution PendingResolution = EEchoesFinalResolution::None;
+    EEchoesFinalResolution SelectedResolution = EEchoesFinalResolution::None;
+    bool bResolutionHoldStarted = false;
+    bool bResolutionContractFailed = false;
+    uint64 ResolutionStartTick = 0;
+    EntityId ApproachAnchorId = 0;
+    EntityId ResolutionConduitId = 0;
+    bool bEnvelopeValid = true;
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            PendingResolution,
+            SelectedResolution,
+            bResolutionHoldStarted,
+            bResolutionContractFailed,
+            ResolutionStartTick,
+            ApproachAnchorId,
+            ResolutionConduitId,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            bCrisisHoldStarted,
+            bCrisisContractFailed,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    if (!bEnvelopeValid)
+    {
+        return false;
+    }
+
+    std::string SnapshotError;
+    std::optional<echoes::sim::Simulation> Candidate =
+        echoes::sim::Simulation::LoadSnapshot(
+            std::span<const uint8>(
+                SnapshotPayload->GetData(),
+                static_cast<size_t>(SnapshotPayload->Num())),
+            &SnapshotError);
+    if (!Candidate.has_value())
+    {
+        OutFailure = SnapshotError.empty()
+            ? TEXT("checkpoint snapshot could not be reopened")
+            : UTF8_TO_TCHAR(SnapshotError.c_str());
+        return false;
+    }
+    const echoes::sim::SimulationConfig& Config = Candidate->Config();
+    const echoes::sim::PlayerState* CandidateLocalPlayer =
+        Candidate->FindPlayer(LocalPlayerId);
+    const Faction CandidateLocalFaction =
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+                bRecoveredSkirmishSetup
+            ? RecoveredSkirmishSetup.LocalFaction
+            : LocalFaction;
+    if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
+        Config.mapHeightTiles != PrototypeMapHeightTiles ||
+        Config.ticksPerSecond != PrototypeTicksPerSecond ||
+        Config.randomSeed != PrototypeSeed ||
+        Config.protectedCommandCorePlayerMask != 0 ||
+        !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
+        CandidateLocalPlayer == nullptr ||
+        CandidateLocalPlayer->faction != CandidateLocalFaction)
+    {
+        OutFailure = TEXT(
+            "checkpoint is not compatible with the selected operation and faction");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+        !ValidateSkirmishSnapshotBinding(
+            *Candidate,
+            bRecoveredSkirmishSetup
+                ? RecoveredSkirmishSetup
+                : ActiveSkirmishSetup,
+            OutFailure))
+    {
+        return false;
+    }
+    return true;
+}
+
 bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
 {
     OutFeedback.Reset();
@@ -7981,187 +8372,10 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
 
     const auto ValidateCheckpointFile =
         [this, ExpectedCampaignBranchIdentity](
-                                                const FString& CandidatePath,
-                                                FString& OutFailure)
+            const FString& CandidatePath,
+            FString& OutFailure)
     {
-        TArray<uint8> CandidateBytes;
-        if (!FFileHelper::LoadFileToArray(CandidateBytes, *CandidatePath))
-        {
-            OutFailure = TEXT("file unavailable");
-            return false;
-        }
-
-        TArray<uint8> ContainerPayload;
-        const TArray<uint8>* OperationPayload = &CandidateBytes;
-        bool bRecoveredSkirmishSetup = false;
-        FEchoesSkirmishSetup RecoveredSkirmishSetup =
-            ActiveSkirmishSetup;
-        if (UsesQuickSaveContainer(SelectedOperation))
-        {
-            const EQuickSaveContainerRead ContainerRead =
-                ExtractQuickSaveContainer(
-                    SelectedOperation,
-                    LocalFaction,
-                    ExpectedCampaignBranchIdentity,
-                    SelectedOperation != EEchoesOperationMode::Skirmish ||
-                        ActiveSkirmishSetup ==
-                            FEchoesSkirmishSetupModel::DefaultSetup(),
-                    CandidateBytes,
-                    ContainerPayload,
-                    bRecoveredSkirmishSetup,
-                    RecoveredSkirmishSetup,
-                    OutFailure);
-            if (ContainerRead == EQuickSaveContainerRead::Invalid)
-            {
-                return false;
-            }
-            if (SelectedOperation == EEchoesOperationMode::Skirmish &&
-                bRecoveredSkirmishSetup &&
-                RecoveredSkirmishSetup != ActiveSkirmishSetup)
-            {
-                OutFailure = TEXT(
-                    "[LOAD_SKIRMISH_SETUP_MISMATCH] This recovery generation belongs to a different skirmish setup.");
-                return false;
-            }
-            if (ContainerRead == EQuickSaveContainerRead::Wrapped)
-            {
-                OperationPayload = &ContainerPayload;
-            }
-        }
-
-        TArray<uint8> SnapshotBytes;
-        const TArray<uint8>* SnapshotPayload = OperationPayload;
-        bool bCrisisHoldStarted = false;
-        bool bCrisisContractFailed = false;
-        EEchoesFinalResolution PendingResolution =
-            EEchoesFinalResolution::None;
-        EEchoesFinalResolution SelectedResolution =
-            EEchoesFinalResolution::None;
-        bool bResolutionHoldStarted = false;
-        bool bResolutionContractFailed = false;
-        uint64 ResolutionStartTick = 0;
-        EntityId ApproachAnchorId = 0;
-        EntityId ResolutionConduitId = 0;
-        bool bEnvelopeValid = true;
-        if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
-        {
-            bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                PendingResolution,
-                SelectedResolution,
-                bResolutionHoldStarted,
-                bResolutionContractFailed,
-                ResolutionStartTick,
-                ApproachAnchorId,
-                ResolutionConduitId,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        else if (SelectedOperation ==
-                 EEchoesOperationMode::CampaignChoirAtLumeReach)
-        {
-            bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        else if (SelectedOperation ==
-                 EEchoesOperationMode::CampaignNoNeutralLedger)
-        {
-            bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        else if (SelectedOperation ==
-                 EEchoesOperationMode::CampaignFutureThatWon)
-        {
-            bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        else if (SelectedOperation ==
-                 EEchoesOperationMode::CampaignAssemblyOfTheMissing)
-        {
-            bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        else if (SelectedOperation ==
-                 EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
-        {
-            bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
-                CampaignProgress,
-                *OperationPayload,
-                bCrisisHoldStarted,
-                bCrisisContractFailed,
-                SnapshotBytes,
-                OutFailure);
-            SnapshotPayload = &SnapshotBytes;
-        }
-        if (!bEnvelopeValid)
-        {
-            return false;
-        }
-
-        std::string SnapshotError;
-        std::optional<echoes::sim::Simulation> Candidate =
-            echoes::sim::Simulation::LoadSnapshot(
-                std::span<const uint8>(
-                    SnapshotPayload->GetData(),
-                    static_cast<size_t>(SnapshotPayload->Num())),
-                &SnapshotError);
-        if (!Candidate.has_value())
-        {
-            OutFailure = SnapshotError.empty()
-                ? TEXT("checkpoint snapshot could not be reopened")
-                : UTF8_TO_TCHAR(SnapshotError.c_str());
-            return false;
-        }
-        const echoes::sim::SimulationConfig& Config = Candidate->Config();
-        const echoes::sim::PlayerState* CandidateLocalPlayer =
-            Candidate->FindPlayer(LocalPlayerId);
-        const Faction CandidateLocalFaction =
-            SelectedOperation == EEchoesOperationMode::Skirmish &&
-                    bRecoveredSkirmishSetup
-                ? RecoveredSkirmishSetup.LocalFaction
-                : LocalFaction;
-        if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
-            Config.mapHeightTiles != PrototypeMapHeightTiles ||
-            Config.ticksPerSecond != PrototypeTicksPerSecond ||
-            Config.randomSeed != PrototypeSeed ||
-            Config.protectedCommandCorePlayerMask != 0 ||
-            !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
-            CandidateLocalPlayer == nullptr ||
-            CandidateLocalPlayer->faction != CandidateLocalFaction)
-        {
-            OutFailure = TEXT(
-                "checkpoint is not compatible with the selected operation and faction");
-            return false;
-        }
-        if (SelectedOperation == EEchoesOperationMode::Skirmish &&
-            !ValidateSkirmishSnapshotBinding(
-                *Candidate,
-                bRecoveredSkirmishSetup
-                    ? RecoveredSkirmishSetup
-                    : ActiveSkirmishSetup,
-                OutFailure))
-        {
-            return false;
-        }
-        return true;
+        return ValidateCheckpointFileOnDisk(CandidatePath, ExpectedCampaignBranchIdentity, OutFailure);
     };
 
     FString TemporaryFailure;
@@ -8357,6 +8571,11 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
 
 bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
 {
+    return LoadScenarioFromPath(GetActiveQuickSavePath(), OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, FString& OutFeedback)
+{
     OutFeedback.Reset();
     if (!bScenarioReady || !Simulation.IsValid())
     {
@@ -8376,7 +8595,6 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
         return false;
     }
 
-    const FString SavePath = GetActiveQuickSavePath();
     const FString BackupPath = SavePath + TEXT(".bak");
     const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
     uint64 ExpectedCampaignBranchIdentity = 0;
@@ -9443,6 +9661,854 @@ bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
             ? FEchoesSkirmishSetupModel::MapDisplayName(
                   ActiveSkirmishSetup.MapPreset)
             : TEXT("not_applicable"));
+    return true;
+}
+
+FString UEchoesSimulationSubsystem::GetAutosavePath()
+{
+    return FPaths::Combine(
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+        TEXT("EchoesAutoSave.bin"));
+}
+
+FString UEchoesSimulationSubsystem::GetActiveAutosavePath() const
+{
+#if !UE_BUILD_SHIPPING
+    FString AutosavePathOverride;
+    if (FParse::Value(
+            FCommandLine::Get(),
+            TEXT("EchoesAutosavePath="),
+            AutosavePathOverride) &&
+        !AutosavePathOverride.IsEmpty())
+    {
+        return FPaths::ConvertRelativePathToFull(AutosavePathOverride);
+    }
+#endif
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        FEchoesCampaignProgress PrerequisiteLedger;
+        FEchoesBrokenSunPlan Plan;
+        TArray<uint8> LedgerBytes;
+        FString ProjectionError;
+        if (BuildBrokenSunPrerequisiteProjection(
+                CampaignProgress,
+                PrerequisiteLedger,
+                Plan,
+                LedgerBytes,
+                ProjectionError))
+        {
+            const uint32 LedgerFingerprint = FCrc::MemCrc32(
+                LedgerBytes.GetData(),
+                LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
+            return FPaths::Combine(
+                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+                FString::Printf(
+                    TEXT("EchoesAutoSaveTheBrokenSun-%08X.bin"),
+                    LedgerFingerprint));
+        }
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTheBrokenSun-InvalidLedger.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveWhatTheLedgerKeeps.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveSevenAccountsOfRain.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveACityOnReserve.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTheUnburiedRoad.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignTermsOfContinuance)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTermsOfContinuance.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignNamesWithoutBirths)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveNamesWithoutBirths.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignShapeOfSilence)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTheShapeOfSilence.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignShapeBesideUs)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTheShapeBesideUs.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignReserveAuthority)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveReserveAuthority.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveChoirAtLumeReach.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveNoNeutralLedger.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveTheFutureThatWon.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveAssemblyOfTheMissing.bin"));
+    }
+    if (SelectedOperation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        return FPaths::Combine(
+            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            TEXT("EchoesAutoSaveSeveralVoicesOneCommand.bin"));
+    }
+    return GetAutosavePath();
+}
+
+bool UEchoesSimulationSubsystem::AutosaveScenario(EEchoesAutosaveReason Reason, FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!bScenarioReady || !Simulation.IsValid())
+    {
+        OutFeedback = TEXT("[AUTOSAVE_SIM_NOT_READY] No active scenario can be saved.");
+        return false;
+    }
+    if (bStressScenario)
+    {
+        OutFeedback = TEXT("[AUTOSAVE_STRESS_DISABLED] Stress fixtures cannot write autosaves.");
+        return false;
+    }
+    if (bNetworkHumanOpponent)
+    {
+        OutFeedback = TEXT("[AUTOSAVE_NETWORK_DISABLED] Online authority state cannot write local autosaves.");
+        return false;
+    }
+
+    const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
+    if (Snapshot.empty() || Snapshot.size() > MAX_int32)
+    {
+        OutFeedback = TEXT("[AUTOSAVE_SNAPSHOT_INVALID] The deterministic snapshot could not be created.");
+        return false;
+    }
+    TArray<uint8> SnapshotBytes;
+    SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
+    TArray<uint8> PersistedBytes = SnapshotBytes;
+
+    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        FString EnvelopeError;
+        if (!BuildBrokenSunQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PendingBrokenSunResolution,
+                SelectedBrokenSunResolution,
+                bBrokenSunResolutionHoldStarted,
+                bBrokenSunResolutionContractFailed,
+                BrokenSunResolutionStartTick,
+                BrokenSunApproachAnchorId,
+                BrokenSunResolutionConduitId,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        FString EnvelopeError;
+        if (!BuildChoirAtLumeReachQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        FString EnvelopeError;
+        if (!BuildSeveralVoicesOneCommandQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                bSeveralVoicesCrisisHoldStarted,
+                bSeveralVoicesCrisisContractFailed,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        FString EnvelopeError;
+        if (!BuildFutureThatWonQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        FString EnvelopeError;
+        if (!BuildAssemblyOfTheMissingQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+    else if (SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        FString EnvelopeError;
+        if (!BuildNoNeutralLedgerQuickSaveEnvelope(
+                CampaignProgress,
+                SnapshotBytes,
+                PersistedBytes,
+                EnvelopeError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return false;
+        }
+    }
+
+    if (UsesQuickSaveContainer(SelectedOperation))
+    {
+        uint64 CampaignBranchIdentity = 0;
+        FString BranchIdentityError;
+        if (!BuildQuickSaveBranchIdentity(
+                SelectedOperation,
+                CampaignProgress,
+                ActiveSkirmishSetup,
+                CampaignBranchIdentity,
+                BranchIdentityError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *BranchIdentityError);
+            return false;
+        }
+        TArray<uint8> ContainerBytes;
+        FString ContainerError;
+        if (!BuildQuickSaveContainer(
+                SelectedOperation,
+                LocalFaction,
+                CampaignBranchIdentity,
+                ActiveSkirmishSetup,
+                PersistedBytes,
+                ContainerBytes,
+                ContainerError))
+        {
+            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_CONTAINER_FAILED] %s"), *ContainerError);
+            return false;
+        }
+        PersistedBytes = MoveTemp(ContainerBytes);
+    }
+
+    const FString SavePath = GetActiveAutosavePath();
+    const FString SaveDirectory = FPaths::GetPath(SavePath);
+    const FString TemporaryPath = SavePath + TEXT(".tmp");
+    const FString BackupPath = SavePath + TEXT(".bak");
+    const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
+    IFileManager& Files = IFileManager::Get();
+    if (!Files.MakeDirectory(*SaveDirectory, true))
+    {
+        OutFeedback = TEXT("[AUTOSAVE_DIRECTORY_FAILED] The save directory could not be created.");
+        return false;
+    }
+    Files.Delete(*TemporaryPath, false, true, true);
+    if (!FFileHelper::SaveArrayToFile(PersistedBytes, *TemporaryPath))
+    {
+        OutFeedback = TEXT("[AUTOSAVE_WRITE_FAILED] The temporary autosave could not be written.");
+        return false;
+    }
+
+    uint64 ExpectedCampaignBranchIdentity = 0;
+    FString BranchIdentityError;
+    if (!BuildQuickSaveBranchIdentity(
+            SelectedOperation,
+            CampaignProgress,
+            ActiveSkirmishSetup,
+            ExpectedCampaignBranchIdentity,
+            BranchIdentityError))
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *BranchIdentityError);
+        return false;
+    }
+
+    FString ValidateError;
+    if (!ValidateCheckpointFileOnDisk(TemporaryPath, ExpectedCampaignBranchIdentity, ValidateError))
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = FString::Printf(TEXT("[AUTOSAVE_VALIDATION_FAILED] %s"), *ValidateError);
+        return false;
+    }
+
+    if (Files.FileExists(*SavePath))
+    {
+        Files.Delete(*BackupTemporaryPath, false, true, true);
+        TArray<uint8> ExistingBytes;
+        if (FFileHelper::LoadFileToArray(ExistingBytes, *SavePath))
+        {
+            FFileHelper::SaveArrayToFile(ExistingBytes, *BackupTemporaryPath);
+            Files.Delete(*BackupPath, false, true, true);
+            Files.Move(*BackupPath, *BackupTemporaryPath, true, true, false, true);
+        }
+    }
+
+    Files.Delete(*SavePath, false, true, true);
+    if (!Files.Move(*SavePath, *TemporaryPath, true, true, false, true))
+    {
+        Files.Delete(*TemporaryPath, false, true, true);
+        OutFeedback = TEXT("[AUTOSAVE_COMMIT_FAILED] The verified autosave could not be committed.");
+        return false;
+    }
+
+    LastAutosavedTick = Simulation->CurrentTick();
+    LastAutosavedReason = Reason;
+    LastAutosavedPhase = GetCurrentOperationPhase();
+
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_AUTOSAVE] reason=%u operation=%u tick=%llu phase=%u path=%s"),
+        static_cast<uint8>(Reason),
+        static_cast<uint8>(SelectedOperation),
+        static_cast<unsigned long long>(LastAutosavedTick),
+        LastAutosavedPhase,
+        *SavePath);
+
+    OutFeedback = TEXT("[AUTOSAVE_SUCCESS]");
+    return true;
+}
+
+uint8 UEchoesSimulationSubsystem::GetCurrentOperationPhase() const
+{
+    switch (SelectedOperation)
+    {
+    case EEchoesOperationMode::CampaignPrologue:
+        return static_cast<uint8>(GetProloguePhase());
+    case EEchoesOperationMode::CampaignSevenAccounts:
+        return static_cast<uint8>(GetSevenAccountsPhase());
+    case EEchoesOperationMode::CampaignCityReserve:
+        return static_cast<uint8>(GetCityReservePhase());
+    case EEchoesOperationMode::CampaignUnburiedRoad:
+        return static_cast<uint8>(GetUnburiedRoadPhase());
+    case EEchoesOperationMode::CampaignTermsOfContinuance:
+        return static_cast<uint8>(GetTermsOfContinuancePhase());
+    case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        return static_cast<uint8>(GetNamesWithoutBirthsPhase());
+    case EEchoesOperationMode::CampaignShapeOfSilence:
+        return static_cast<uint8>(GetShapeOfSilencePhase());
+    case EEchoesOperationMode::CampaignShapeBesideUs:
+        return static_cast<uint8>(GetShapeBesideUsPhase());
+    case EEchoesOperationMode::CampaignReserveAuthority:
+        return static_cast<uint8>(GetReserveAuthorityPhase());
+    case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        return static_cast<uint8>(GetChoirAtLumeReachPhase());
+    case EEchoesOperationMode::CampaignNoNeutralLedger:
+        return static_cast<uint8>(GetNoNeutralLedgerPhase());
+    case EEchoesOperationMode::CampaignFutureThatWon:
+        return static_cast<uint8>(GetFutureThatWonPhase());
+    case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        return static_cast<uint8>(GetAssemblyOfTheMissingPhase());
+    case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        return static_cast<uint8>(GetSeveralVoicesOneCommandPhase());
+    case EEchoesOperationMode::CampaignTheBrokenSun:
+        return static_cast<uint8>(GetBrokenSunPhase());
+    default:
+        return 0;
+    }
+}
+
+bool UEchoesSimulationSubsystem::IsOperationPhaseTerminal(EEchoesOperationMode Mode, uint8 Phase)
+{
+    switch (Mode)
+    {
+    case EEchoesOperationMode::CampaignPrologue:
+        return Phase == static_cast<uint8>(EEchoesProloguePhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesProloguePhase::Failed);
+    case EEchoesOperationMode::CampaignSevenAccounts:
+        return Phase == static_cast<uint8>(EEchoesSevenAccountsPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesSevenAccountsPhase::Failed);
+    case EEchoesOperationMode::CampaignCityReserve:
+        return Phase == static_cast<uint8>(EEchoesCityReservePhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesCityReservePhase::Failed);
+    case EEchoesOperationMode::CampaignUnburiedRoad:
+        return Phase == static_cast<uint8>(EEchoesUnburiedRoadPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesUnburiedRoadPhase::Failed);
+    case EEchoesOperationMode::CampaignTermsOfContinuance:
+        return Phase == static_cast<uint8>(EEchoesTermsOfContinuancePhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesTermsOfContinuancePhase::Failed);
+    case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        return Phase == static_cast<uint8>(EEchoesNamesWithoutBirthsPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesNamesWithoutBirthsPhase::Failed);
+    case EEchoesOperationMode::CampaignShapeOfSilence:
+        return Phase == static_cast<uint8>(EEchoesShapeOfSilencePhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesShapeOfSilencePhase::Failed);
+    case EEchoesOperationMode::CampaignShapeBesideUs:
+        return Phase == static_cast<uint8>(EEchoesShapeBesideUsPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesShapeBesideUsPhase::Failed);
+    case EEchoesOperationMode::CampaignReserveAuthority:
+        return Phase == static_cast<uint8>(EEchoesReserveAuthorityPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesReserveAuthorityPhase::Failed);
+    case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        return Phase == static_cast<uint8>(EEchoesChoirAtLumeReachPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesChoirAtLumeReachPhase::Failed);
+    case EEchoesOperationMode::CampaignNoNeutralLedger:
+        return Phase == static_cast<uint8>(EEchoesNoNeutralLedgerPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesNoNeutralLedgerPhase::Failed);
+    case EEchoesOperationMode::CampaignFutureThatWon:
+        return Phase == static_cast<uint8>(EEchoesFutureThatWonPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesFutureThatWonPhase::Failed);
+    case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        return Phase == static_cast<uint8>(EEchoesAssemblyOfTheMissingPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesAssemblyOfTheMissingPhase::Failed);
+    case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        return Phase == static_cast<uint8>(EEchoesSeveralVoicesOneCommandPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesSeveralVoicesOneCommandPhase::Failed);
+    case EEchoesOperationMode::CampaignTheBrokenSun:
+        return Phase == static_cast<uint8>(EEchoesBrokenSunPhase::Complete) ||
+               Phase == static_cast<uint8>(EEchoesBrokenSunPhase::Failed);
+    default:
+        return false;
+    }
+}
+
+FString UEchoesSimulationSubsystem::GetOperationDisplayName(EEchoesOperationMode Mode)
+{
+    switch (Mode)
+    {
+    case EEchoesOperationMode::CampaignPrologue:
+        return TEXT("What the Ledger Keeps");
+    case EEchoesOperationMode::CampaignSevenAccounts:
+        return TEXT("Seven Accounts of Rain");
+    case EEchoesOperationMode::CampaignCityReserve:
+        return TEXT("A City on Reserve");
+    case EEchoesOperationMode::CampaignUnburiedRoad:
+        return TEXT("The Unburied Road");
+    case EEchoesOperationMode::CampaignTermsOfContinuance:
+        return TEXT("Terms of Continuance");
+    case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        return TEXT("Names Without Births");
+    case EEchoesOperationMode::CampaignShapeOfSilence:
+        return TEXT("The Shape of Silence");
+    case EEchoesOperationMode::CampaignShapeBesideUs:
+        return TEXT("The Shape Beside Us");
+    case EEchoesOperationMode::CampaignReserveAuthority:
+        return TEXT("Reserve Authority");
+    case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        return TEXT("The Choir at Lume Reach");
+    case EEchoesOperationMode::CampaignNoNeutralLedger:
+        return TEXT("No Neutral Ledger");
+    case EEchoesOperationMode::CampaignFutureThatWon:
+        return TEXT("The Future That Won");
+    case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        return TEXT("Assembly of the Missing");
+    case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        return TEXT("Several Voices, One Command");
+    case EEchoesOperationMode::CampaignTheBrokenSun:
+        return TEXT("The Broken Sun");
+    case EEchoesOperationMode::Skirmish:
+        return TEXT("Skirmish");
+    default:
+        return TEXT("Unknown Operation");
+    }
+}
+
+FString UEchoesSimulationSubsystem::GetPhaseDisplayName(EEchoesOperationMode Mode, uint8 Phase)
+{
+    switch (Mode)
+    {
+    case EEchoesOperationMode::CampaignPrologue:
+        switch (static_cast<EEchoesProloguePhase>(Phase))
+        {
+        case EEchoesProloguePhase::RecoverArchive: return TEXT("Recover Archive");
+        case EEchoesProloguePhase::DecideFutureWell: return TEXT("Decide Future Well");
+        case EEchoesProloguePhase::Withdraw: return TEXT("Withdraw");
+        case EEchoesProloguePhase::Complete: return TEXT("Complete");
+        case EEchoesProloguePhase::Failed: return TEXT("Failed");
+        default: return TEXT("Initial");
+        }
+    case EEchoesOperationMode::CampaignTheBrokenSun:
+        switch (static_cast<EEchoesBrokenSunPhase>(Phase))
+        {
+        case EEchoesBrokenSunPhase::SecureCrownfallApproach: return TEXT("Secure Crownfall Approach");
+        case EEchoesBrokenSunPhase::AssembleAccord: return TEXT("Assemble Accord");
+        case EEchoesBrokenSunPhase::ChooseFinalResolution: return TEXT("Choose Final Resolution");
+        case EEchoesBrokenSunPhase::RaiseResolutionConduit: return TEXT("Raise Resolution Conduit");
+        case EEchoesBrokenSunPhase::HoldFinalResolution: return TEXT("Hold Final Resolution");
+        case EEchoesBrokenSunPhase::Complete: return TEXT("Complete");
+        case EEchoesBrokenSunPhase::Failed: return TEXT("Failed");
+        default: return TEXT("Initial");
+        }
+    default:
+        return FString::Printf(TEXT("Phase %u"), Phase);
+    }
+}
+
+bool UEchoesSimulationSubsystem::GetMissionIdForOperation(
+    EEchoesOperationMode Mode,
+    EEchoesCampaignMissionId& OutMissionId)
+{
+    switch (Mode)
+    {
+    case EEchoesOperationMode::CampaignPrologue:
+        OutMissionId = EEchoesCampaignMissionId::WhatTheLedgerKeeps; return true;
+    case EEchoesOperationMode::CampaignSevenAccounts:
+        OutMissionId = EEchoesCampaignMissionId::SevenAccountsOfRain; return true;
+    case EEchoesOperationMode::CampaignCityReserve:
+        OutMissionId = EEchoesCampaignMissionId::ACityOnReserve; return true;
+    case EEchoesOperationMode::CampaignUnburiedRoad:
+        OutMissionId = EEchoesCampaignMissionId::TheUnburiedRoad; return true;
+    case EEchoesOperationMode::CampaignTermsOfContinuance:
+        OutMissionId = EEchoesCampaignMissionId::TermsOfContinuance; return true;
+    case EEchoesOperationMode::CampaignNamesWithoutBirths:
+        OutMissionId = EEchoesCampaignMissionId::NamesWithoutBirths; return true;
+    case EEchoesOperationMode::CampaignShapeOfSilence:
+        OutMissionId = EEchoesCampaignMissionId::TheShapeOfSilence; return true;
+    case EEchoesOperationMode::CampaignShapeBesideUs:
+        OutMissionId = EEchoesCampaignMissionId::TheShapeBesideUs; return true;
+    case EEchoesOperationMode::CampaignReserveAuthority:
+        OutMissionId = EEchoesCampaignMissionId::ReserveAuthority; return true;
+    case EEchoesOperationMode::CampaignChoirAtLumeReach:
+        OutMissionId = EEchoesCampaignMissionId::ChoirAtLumeReach; return true;
+    case EEchoesOperationMode::CampaignNoNeutralLedger:
+        OutMissionId = EEchoesCampaignMissionId::NoNeutralLedger; return true;
+    case EEchoesOperationMode::CampaignFutureThatWon:
+        OutMissionId = EEchoesCampaignMissionId::TheFutureThatWon; return true;
+    case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+        OutMissionId = EEchoesCampaignMissionId::AssemblyOfTheMissing; return true;
+    case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+        OutMissionId = EEchoesCampaignMissionId::SeveralVoicesOneCommand; return true;
+    case EEchoesOperationMode::CampaignTheBrokenSun:
+        OutMissionId = EEchoesCampaignMissionId::TheBrokenSun; return true;
+    default:
+        return false;
+    }
+}
+
+void UEchoesSimulationSubsystem::CheckPhaseTransitionAutosave()
+{
+    if (bSuppressAutosave || !bScenarioReady || !Simulation.IsValid() || bStressScenario || bNetworkHumanOpponent || SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        return;
+    }
+    const uint8 CurrentPhase = GetCurrentOperationPhase();
+    if (CurrentPhase != 0 && CurrentPhase != 0xFF && !IsOperationPhaseTerminal(SelectedOperation, CurrentPhase))
+    {
+        if (LastAutosavedPhase != 0xFF && CurrentPhase != LastAutosavedPhase)
+        {
+            FString AutosaveFeedback;
+            AutosaveScenario(EEchoesAutosaveReason::PhaseTransition, AutosaveFeedback);
+        }
+        else if (LastAutosavedPhase == 0xFF)
+        {
+            LastAutosavedPhase = CurrentPhase;
+        }
+    }
+}
+
+bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
+    FEchoesRecoveryCandidate& OutCandidate,
+    FString& OutFeedback) const
+{
+    OutCandidate = FEchoesRecoveryCandidate();
+    OutFeedback.Reset();
+
+    const FString SaveDirectory = FEchoesCampaignProgressStore::GetSaveGameDirectory();
+    IFileManager& Files = IFileManager::Get();
+
+    TArray<FString> FoundFiles;
+    Files.FindFiles(FoundFiles, *SaveDirectory, TEXT("bin"));
+
+    FDateTime NewestTimestamp = FDateTime::MinValue();
+    bool bFoundCorruptPrimaryWithoutBackup = false;
+
+    for (const FString& FileName : FoundFiles)
+    {
+        if (FileName.EndsWith(TEXT(".bak")) || FileName.EndsWith(TEXT(".tmp")))
+        {
+            continue;
+        }
+        if (!FileName.StartsWith(TEXT("EchoesAutoSave")) && !FileName.StartsWith(TEXT("EchoesQuickSave")))
+        {
+            continue;
+        }
+
+        const FString FilePath = FPaths::Combine(SaveDirectory, FileName);
+        const FString BackupPath = FilePath + TEXT(".bak");
+
+        TArray<uint8> FileBytes;
+        bool bReadSuccess = FFileHelper::LoadFileToArray(FileBytes, *FilePath);
+        bool bUsedBackup = false;
+
+        uint8 Version = 0;
+        EEchoesOperationMode OpMode = EEchoesOperationMode::Skirmish;
+        echoes::sim::Faction LocalFac = echoes::sim::Faction::MeridianCompact;
+        uint64 BranchIdentity = 0;
+        uint32 Checksum = 0;
+        TArray<uint8> Payload;
+        FString ContainerErr;
+
+        bool bContainerValid = bReadSuccess && InspectSaveContainer(
+            FileBytes, Version, OpMode, LocalFac, BranchIdentity, Checksum, Payload, ContainerErr);
+
+        if (!bContainerValid)
+        {
+            if (Files.FileExists(*BackupPath))
+            {
+                TArray<uint8> BackupBytes;
+                if (FFileHelper::LoadFileToArray(BackupBytes, *BackupPath) &&
+                    InspectSaveContainer(BackupBytes, Version, OpMode, LocalFac, BranchIdentity, Checksum, Payload, ContainerErr))
+                {
+                    bContainerValid = true;
+                    bUsedBackup = true;
+                }
+            }
+            if (!bContainerValid)
+            {
+                bFoundCorruptPrimaryWithoutBackup = true;
+                continue;
+            }
+        }
+
+        if (OpMode == EEchoesOperationMode::Skirmish)
+        {
+            continue;
+        }
+
+        uint64 ExpectedBranchIdentity = 0;
+        FString BranchErr;
+        FEchoesSkirmishSetup DummySetup;
+        if (!BuildQuickSaveBranchIdentity(OpMode, CampaignProgress, DummySetup, ExpectedBranchIdentity, BranchErr))
+        {
+            continue;
+        }
+        if (BranchIdentity != ExpectedBranchIdentity)
+        {
+            continue;
+        }
+
+        EEchoesCampaignMissionId MissionId = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+        if (GetMissionIdForOperation(OpMode, MissionId) && CampaignProgress.FindDecision(MissionId) != nullptr)
+        {
+            continue;
+        }
+
+        TArray<uint8> SnapshotBytes;
+        const TArray<uint8>* SnapshotPayload = &Payload;
+
+        bool bUnpacked = true;
+        if (OpMode == EEchoesOperationMode::CampaignTheBrokenSun)
+        {
+            EEchoesFinalResolution PendingRes, SelRes;
+            bool bHoldStarted, bContractFailed;
+            uint64 StartTick;
+            EntityId AppId, ConId;
+            bUnpacked = ExtractBrokenSunQuickSaveSnapshot(
+                CampaignProgress, Payload, PendingRes, SelRes, bHoldStarted, bContractFailed, StartTick, AppId, ConId, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (OpMode == EEchoesOperationMode::CampaignChoirAtLumeReach)
+        {
+            bUnpacked = ExtractChoirAtLumeReachQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (OpMode == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        {
+            bool bCrisisHold, bCrisisFailed;
+            bUnpacked = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(CampaignProgress, Payload, bCrisisHold, bCrisisFailed, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (OpMode == EEchoesOperationMode::CampaignFutureThatWon)
+        {
+            bUnpacked = ExtractFutureThatWonQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (OpMode == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+        {
+            bUnpacked = ExtractAssemblyOfTheMissingQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+        else if (OpMode == EEchoesOperationMode::CampaignNoNeutralLedger)
+        {
+            bUnpacked = ExtractNoNeutralLedgerQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            SnapshotPayload = &SnapshotBytes;
+        }
+
+        if (!bUnpacked)
+        {
+            continue;
+        }
+
+        std::string SimErr;
+        std::optional<echoes::sim::Simulation> TempSim = echoes::sim::Simulation::LoadSnapshot(
+            std::span<const uint8>(SnapshotPayload->GetData(), static_cast<size_t>(SnapshotPayload->Num())), &SimErr);
+        if (!TempSim.has_value())
+        {
+            continue;
+        }
+
+        const FDateTime FileTimestamp = Files.GetTimeStamp(bUsedBackup ? *BackupPath : *FilePath);
+        if (FileTimestamp > NewestTimestamp)
+        {
+            NewestTimestamp = FileTimestamp;
+            OutCandidate.bAvailable = true;
+            OutCandidate.OperationMode = OpMode;
+            OutCandidate.MissionName = GetOperationDisplayName(OpMode);
+            OutCandidate.MissionId = MissionId;
+            OutCandidate.SimulationTick = TempSim->CurrentTick();
+            OutCandidate.StateChecksum = TempSim->StateChecksum();
+            OutCandidate.SaveTimestamp = FileTimestamp;
+            OutCandidate.SourcePath = bUsedBackup ? BackupPath : FilePath;
+            OutCandidate.bRecoveredFromBackup = bUsedBackup;
+            OutCandidate.ContainerCrc = Checksum;
+            OutCandidate.HonestLimitationNotice = TEXT("CRC confirms uncorrupted disk storage; it is not cryptographic authentication");
+            OutCandidate.RecoveryStatusText = FString::Printf(
+                TEXT("Interrupted session found: %s — %s (Tick %llu, %s%s). Container CRC-32 (%08X) verified; fail-closed container bound to active campaign branch. (Note: %s.)"),
+                *OutCandidate.MissionName,
+                *OutCandidate.PhaseName,
+                static_cast<unsigned long long>(OutCandidate.SimulationTick),
+                bUsedBackup ? TEXT("recovered from backup, ") : TEXT(""),
+                *FileTimestamp.ToString(TEXT("%Y-%m-%d %H:%M:%S")),
+                Checksum,
+                *OutCandidate.HonestLimitationNotice);
+        }
+    }
+
+    if (OutCandidate.bAvailable)
+    {
+        OutFeedback = TEXT("[RECOVERY_AVAILABLE]");
+        return true;
+    }
+    if (bFoundCorruptPrimaryWithoutBackup)
+    {
+        OutFeedback = TEXT("[RECOVERY_CONTAINER_CORRUPT] Corrupted checkpoint detected with no valid backup.");
+        return false;
+    }
+
+    OutFeedback = TEXT("[NO_RECOVERY_CANDIDATE] No uncommitted session checkpoint found.");
+    return false;
+}
+
+bool UEchoesSimulationSubsystem::RecoverInterruptedSession(FString& OutFeedback)
+{
+    FEchoesRecoveryCandidate Candidate;
+    if (!CheckInterruptedSessionRecovery(Candidate, OutFeedback))
+    {
+        return false;
+    }
+    return RecoverInterruptedSession(Candidate, OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::RecoverInterruptedSession(
+    const FEchoesRecoveryCandidate& Candidate,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!Candidate.bAvailable || Candidate.SourcePath.IsEmpty())
+    {
+        OutFeedback = TEXT("[RECOVERY_CANDIDATE_INVALID] No valid recovery candidate.");
+        return false;
+    }
+    if (!IFileManager::Get().FileExists(*Candidate.SourcePath))
+    {
+        OutFeedback = TEXT("[RECOVERY_FILE_NOT_FOUND] Candidate checkpoint file no longer exists.");
+        return false;
+    }
+
+    TGuardValue<bool> SuppressAutosaveGuard(bSuppressAutosave, true);
+
+    if (SelectedOperation != Candidate.OperationMode || !bScenarioReady)
+    {
+        SelectedOperation = Candidate.OperationMode;
+        if (!StartScenario(false))
+        {
+            OutFeedback = TEXT("[RECOVERY_INIT_FAILED] Failed to initialize scenario environment.");
+            return false;
+        }
+    }
+
+    const FString TargetPrimaryPath = Candidate.SourcePath.EndsWith(TEXT(".bak"))
+        ? Candidate.SourcePath.LeftChop(4)
+        : Candidate.SourcePath;
+
+    FString LoadFeedback;
+    if (!LoadScenarioFromPath(TargetPrimaryPath, LoadFeedback))
+    {
+        OutFeedback = LoadFeedback;
+        return false;
+    }
+
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_RECOVERY_SUCCESS] operation=%u tick=%llu crc=%08X"),
+        static_cast<uint8>(Candidate.OperationMode),
+        static_cast<unsigned long long>(Candidate.SimulationTick),
+        Candidate.ContainerCrc);
+
+    OutFeedback = FString::Printf(TEXT("[RECOVERY_SUCCESS] %s"), *LoadFeedback);
+    return true;
+}
+
+bool UEchoesSimulationSubsystem::DismissInterruptedSession(
+    const FEchoesRecoveryCandidate& Candidate,
+    FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (!Candidate.bAvailable || Candidate.SourcePath.IsEmpty())
+    {
+        OutFeedback = TEXT("[RECOVERY_DISMISS_FAILED] Invalid candidate.");
+        return false;
+    }
+    IFileManager& Files = IFileManager::Get();
+    Files.Delete(*Candidate.SourcePath, false, true, true);
+    Files.Delete(*(Candidate.SourcePath + TEXT(".bak")), false, true, true);
+    Files.Delete(*(Candidate.SourcePath + TEXT(".tmp")), false, true, true);
+    OutFeedback = TEXT("[RECOVERY_DISMISSED]");
     return true;
 }
 
@@ -13839,6 +14905,7 @@ bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
     ReclaimFinishedDestructionViews();
+    ReclaimFinishedCombatEffectViews();
     if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
@@ -13944,7 +15011,14 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
     const double TickInterval =
         1.0 / static_cast<double>(Simulation->Config().ticksPerSecond);
-    FixedTimeAccumulator += FMath::Min(static_cast<double>(DeltaTime), 0.25);
+    const double EffectiveSpeedMultiplier =
+        SelectedOperation == EEchoesOperationMode::Skirmish
+            ? static_cast<double>(FEchoesSkirmishSetupModel::GameSpeedMultiplier(
+                  ActiveSkirmishSetup.GameSpeed))
+            : 1.0;
+    FixedTimeAccumulator += FMath::Min(
+        static_cast<double>(DeltaTime) * EffectiveSpeedMultiplier,
+        0.25);
 
     int32 TicksThisFrame = 0;
     while (FixedTimeAccumulator >= TickInterval &&
@@ -14058,6 +15132,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
         }
         else
         {
+            CheckPhaseTransitionAutosave();
             const echoes::sim::MatchOutcome Outcome = Simulation->Outcome();
             const EEchoesProloguePhase ProloguePhase = GetProloguePhase();
             const bool bPrologueFinished =
@@ -14639,6 +15714,48 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                         CampaignFeedback.IsEmpty()
                             ? TEXT("not-applicable")
                             : *CampaignFeedback);
+                    {
+                        const FEchoesChoirAtLumeReachMissionFacts Facts =
+                            GatherChoirAtLumeReachFacts();
+                        const auto DescribeEntity =
+                            [this](echoes::sim::EntityId Id) -> FString
+                        {
+                            const echoes::sim::Entity* Entity =
+                                Simulation->FindEntity(Id);
+                            if (Entity == nullptr)
+                            {
+                                return FString::Printf(TEXT("%u:absent"), Id);
+                            }
+                            return FString::Printf(
+                                TEXT("%u:tile=(%d,%d):raw=(%d,%d):hp=%d:order=%u:waystone=%u"),
+                                Id,
+                                Entity->position.x.FloorToInt(),
+                                Entity->position.y.FloorToInt(),
+                                Entity->position.x.Raw(),
+                                Entity->position.y.Raw(),
+                                Entity->hitPoints,
+                                static_cast<uint32>(Entity->order.type),
+                                static_cast<uint32>(Entity->waystoneMode));
+                        };
+                        UE_LOG(
+                            LogEchoes,
+                            Display,
+                            TEXT("[ECHOES_CHOIR_AT_LUME_REACH_FACTS] core=%d oruun=%d waystone=%d well=%d ongoing=%d liabilityResolved=%d firstAnchor=%d secondAnchor=%d protocolChosen=%d reshapeExpired=%d branchResolved=%d oruunEntity=%s waystoneEntity=%s wellEntity=%s"),
+                            Facts.bLocalCoreIntact ? 1 : 0,
+                            Facts.bOruunIntact ? 1 : 0,
+                            Facts.bWaystoneIntact ? 1 : 0,
+                            Facts.bFutureWellIntact ? 1 : 0,
+                            Facts.bSkirmishStillOngoing ? 1 : 0,
+                            Facts.bDeferredLiabilityResolved ? 1 : 0,
+                            Facts.bFirstAnchorRaised ? 1 : 0,
+                            Facts.bSecondAnchorRaised ? 1 : 0,
+                            Facts.bFutureWellProtocolChosen ? 1 : 0,
+                            Facts.bReshapeWindowExpired ? 1 : 0,
+                            Facts.bBranchResolutionCompleted ? 1 : 0,
+                            *DescribeEntity(ChoirAtLumeReachOruunId),
+                            *DescribeEntity(ChoirAtLumeReachWaystoneId),
+                            *DescribeEntity(ChoirAtLumeReachWellId));
+                    }
                 }
             }
             else if (SelectedOperation ==
@@ -15175,8 +16292,18 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
     if (bStressScenario || bNetworkHumanOpponent ||
         bPointerCombatGuardPresentationScenario ||
-        !Simulation.IsValid() ||
-        Simulation->CurrentTick() % Simulation->Config().ticksPerSecond != 0)
+        !Simulation.IsValid())
+    {
+        return;
+    }
+
+    const bool bAssistedDifficulty =
+        SelectedOperation == EEchoesOperationMode::Skirmish &&
+        ActiveSkirmishSetup.Difficulty == EEchoesSkirmishDifficulty::Assisted;
+    const uint64 AiCadence = bAssistedDifficulty
+        ? static_cast<uint64>(Simulation->Config().ticksPerSecond * 3 / 2)
+        : static_cast<uint64>(Simulation->Config().ticksPerSecond);
+    if (Simulation->CurrentTick() % AiCadence != 0)
     {
         return;
     }
@@ -15218,11 +16345,27 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
         echoes::sim::Simulation::GenerateAiCommands(
             *PlayerView,
             AiPersonality);
+    int32 CommandsQueued = 0;
+    const int32 MaxCommandsAllowed = bAssistedDifficulty ? 1 : MAX_int32;
     for (const echoes::sim::Command& Command : Commands)
     {
+        if (CommandsQueued >= MaxCommandsAllowed)
+        {
+            break;
+        }
         std::string Rejection;
         if (Simulation->QueueCommand(Command, &Rejection))
         {
+            ++CommandsQueued;
+            if (bAssistedDifficulty && !bLoggedAssistedAiTelemetry)
+            {
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_AI_ASSISTED_ACTIVE] reactionCadenceTicks=%llu reactionDelaySeconds=1.5 apmCeiling=30 combatDamageMultiplier=0.80 fairInformation=true"),
+                    static_cast<unsigned long long>(AiCadence));
+                bLoggedAssistedAiTelemetry = true;
+            }
             if (!bLoggedAiExpansion &&
                 Command.type == echoes::sim::CommandType::Build)
             {
@@ -15648,6 +16791,24 @@ void UEchoesSimulationSubsystem::AuditBrokenSunContractAfterFixedStep()
     {
         bBrokenSunResolutionHoldStarted = true;
         BrokenSunResolutionStartTick = Simulation->CurrentTick();
+        if (Neme != nullptr)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_BROKEN_SUN_HOLD_NEME] tick=%llu tile=(%d,%d) raw=(%d,%d) hp=%d identity=%u order=%u target=%u dest=(%d,%d)"),
+                static_cast<unsigned long long>(Simulation->CurrentTick()),
+                Neme->position.x.FloorToInt(),
+                Neme->position.y.FloorToInt(),
+                Neme->position.x.Raw(),
+                Neme->position.y.Raw(),
+                Neme->hitPoints,
+                static_cast<uint32>(Neme->choirIdentityState),
+                static_cast<uint32>(Neme->order.type),
+                Neme->order.target,
+                Neme->order.destination.x.FloorToInt(),
+                Neme->order.destination.y.FloorToInt());
+        }
         UE_LOG(
             LogEchoes,
             Display,
@@ -15680,7 +16841,7 @@ void UEchoesSimulationSubsystem::AuditBrokenSunContractAfterFixedStep()
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_BROKEN_SUN_CONTRACT_FAILED] tick=%llu core=%s protected=%s approach=%s accord=%s resolution=%s conduit=%s holdStarted=%s outcome=%u irreversible=true"),
+            TEXT("[ECHOES_BROKEN_SUN_CONTRACT_FAILED] tick=%llu core=%s protected=%s approach=%s accord=%s resolution=%s conduit=%s holdStarted=%s outcome=%u worker=%s mara=%s oruun=%s talar=%s voice=%s heavy=%s neme=%s research=%s irreversible=true"),
             static_cast<unsigned long long>(Simulation->CurrentTick()),
             bLocalCoreIntact ? TEXT("true") : TEXT("false"),
             bAnyProtectedLoss ? TEXT("false") : TEXT("true"),
@@ -15689,7 +16850,46 @@ void UEchoesSimulationSubsystem::AuditBrokenSunContractAfterFixedStep()
             bResolutionValid ? TEXT("true") : TEXT("false"),
             bConduitValid ? TEXT("true") : TEXT("false"),
             bBrokenSunResolutionHoldStarted ? TEXT("true") : TEXT("false"),
-            static_cast<uint8>(Simulation->Outcome()));
+            static_cast<uint8>(Simulation->Outcome()),
+            bWorkerValid ? TEXT("true") : TEXT("false"),
+            bMaraValid ? TEXT("true") : TEXT("false"),
+            bOruunValid ? TEXT("true") : TEXT("false"),
+            bTalarValid ? TEXT("true") : TEXT("false"),
+            bVoiceValid ? TEXT("true") : TEXT("false"),
+            bHeavyValid ? TEXT("true") : TEXT("false"),
+            bNemeValid ? TEXT("true") : TEXT("false"),
+            bResearchValid ? TEXT("true") : TEXT("false"));
+        const auto DescribeAccordUnit =
+            [](const echoes::sim::Entity* Entity, const Vec2& Site) -> FString
+        {
+            if (Entity == nullptr)
+            {
+                return TEXT("absent");
+            }
+            return FString::Printf(
+                TEXT("tile=(%d,%d):raw=(%d,%d):site=(%d,%d):hp=%d:identity=%u:order=%u:target=%u:dest=(%d,%d):owner=%u"),
+                Entity->position.x.FloorToInt(),
+                Entity->position.y.FloorToInt(),
+                Entity->position.x.Raw(),
+                Entity->position.y.Raw(),
+                Site.x.FloorToInt(),
+                Site.y.FloorToInt(),
+                Entity->hitPoints,
+                static_cast<uint32>(Entity->choirIdentityState),
+                static_cast<uint32>(Entity->order.type),
+                Entity->order.target,
+                Entity->order.destination.x.FloorToInt(),
+                Entity->order.destination.y.FloorToInt(),
+                static_cast<uint32>(Entity->owner));
+        };
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_BROKEN_SUN_CONTRACT_DETAIL] tick=%llu voice=%s heavy=%s neme=%s"),
+            static_cast<unsigned long long>(Simulation->CurrentTick()),
+            *DescribeAccordUnit(Voice, Plan.MaraAccordSite),
+            *DescribeAccordUnit(Heavy, Plan.OruunAccordSite),
+            *DescribeAccordUnit(Neme, Plan.NemeAccordSite));
     }
 }
 
@@ -16284,8 +17484,59 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = TEXT("[WAYSTONE_TRANSITION_ACTIVE] The Waystone is already changing state.");
                     break;
                 case echoes::sim::WaystoneRootResult::RootingBlocked:
+                {
                     OutFeedback = TEXT("[WAYSTONE_ROOTING_BLOCKED] Move to a clear, passable footprint.");
+                    const auto HalfExtentOf = [this](Faction InFaction, EntityType InType) -> int32
+                    {
+                        return Simulation->Config().rules
+                            .archetypes[static_cast<std::size_t>(InFaction)][static_cast<std::size_t>(InType)]
+                            .footprintHalfExtentRaw;
+                    };
+                    const auto IsBuildingType = [](EntityType InType)
+                    {
+                        return InType == EntityType::CommandCore || InType == EntityType::Dropoff ||
+                               InType == EntityType::Barracks || InType == EntityType::UtilityStructure;
+                    };
+                    const int32 HalfExtent = HalfExtentOf(Actor.faction, Actor.type);
+                    FString Blockers;
+                    const int32 MinX = (Actor.position.x.Raw() - HalfExtent) / echoes::sim::kFixedScale;
+                    const int32 MaxX = (Actor.position.x.Raw() + HalfExtent) / echoes::sim::kFixedScale;
+                    const int32 MinY = (Actor.position.y.Raw() - HalfExtent) / echoes::sim::kFixedScale;
+                    const int32 MaxY = (Actor.position.y.Raw() + HalfExtent) / echoes::sim::kFixedScale;
+                    for (int32 TileY = MinY; TileY <= MaxY; ++TileY)
+                    {
+                        for (int32 TileX = MinX; TileX <= MaxX; ++TileX)
+                        {
+                            if (Simulation->TerrainAt(TileX, TileY) == Terrain::Blocked)
+                            {
+                                Blockers += FString::Printf(TEXT(" tile=(%d,%d)"), TileX, TileY);
+                            }
+                        }
+                    }
+                    for (const echoes::sim::Entity& Other : Simulation->Entities())
+                    {
+                        if (Other.id == Actor.id || Other.hitPoints <= 0 || !IsBuildingType(Other.type))
+                        {
+                            continue;
+                        }
+                        const int32 Combined = HalfExtent + HalfExtentOf(Other.faction, Other.type);
+                        if (FMath::Abs(static_cast<int64>(Actor.position.x.Raw()) - Other.position.x.Raw()) < Combined &&
+                            FMath::Abs(static_cast<int64>(Actor.position.y.Raw()) - Other.position.y.Raw()) < Combined)
+                        {
+                            Blockers += FString::Printf(TEXT(" entity=%u:type=%u:tile=(%d,%d)"), Other.id,
+                                static_cast<uint32>(Other.type), Other.position.x.FloorToInt(), Other.position.y.FloorToInt());
+                        }
+                    }
+                    UE_LOG(LogEchoes, Display,
+                        TEXT("[ECHOES_WAYSTONE_ROOTING_BLOCKED] tick=%llu waystone=%u raw=(%d,%d) tile=(%d,%d) order=%u dest=(%d,%d) halfExtent=%d blockers=%s"),
+                        static_cast<unsigned long long>(Simulation->CurrentTick()), Actor.id,
+                        Actor.position.x.Raw(), Actor.position.y.Raw(),
+                        Actor.position.x.FloorToInt(), Actor.position.y.FloorToInt(),
+                        static_cast<uint32>(Actor.order.type),
+                        Actor.order.destination.x.FloorToInt(), Actor.order.destination.y.FloorToInt(),
+                        HalfExtent, Blockers.IsEmpty() ? TEXT(" none") : *Blockers);
                     break;
+                }
             }
             return false;
         case CommandType::AdaptWarform:
@@ -16812,6 +18063,20 @@ int32 UEchoesSimulationSubsystem::GetDestructionPoolCapacityForEffectsQuality(
     return DestructionViewHighEffectsCapacity;
 }
 
+int32 UEchoesSimulationSubsystem::GetCombatEffectPoolCapacityForEffectsQuality(
+    int32 EffectsQuality)
+{
+    if (EffectsQuality <= 0)
+    {
+        return CombatEffectLowCapacity;
+    }
+    if (EffectsQuality == 1)
+    {
+        return CombatEffectMediumCapacity;
+    }
+    return CombatEffectHighCapacity;
+}
+
 FEchoesPresentationPoolStats
 UEchoesSimulationSubsystem::GetPresentationPoolStats() const
 {
@@ -16839,6 +18104,18 @@ UEchoesSimulationSubsystem::GetPresentationPoolStats() const
     Stats.DestructionCoalesced = DestructionViewCoalescedCount;
     Stats.EntityOwnedMIDCreated = EntityViewOwnedMIDCreationCount;
     Stats.DestructionOwnedMIDCreated = DestructionViewOwnedMIDCreationCount;
+    Stats.ActiveCombatEffectViews = ActiveCombatEffectViews.Num();
+    Stats.FreeCombatEffectViews = FreeCombatEffectViews.Num();
+    Stats.CombatEffectCapacity =
+        GetCombatEffectPoolCapacityForEffectsQuality(EffectsQuality);
+    Stats.LastCombatEffectOverflowSlot = LastCombatEffectOverflowSlot;
+    Stats.CombatEffectCreated = CombatEffectViewCreatedCount;
+    Stats.CombatEffectReused = CombatEffectViewReusedCount;
+    Stats.CombatEffectActivated = CombatEffectViewActivationCount;
+    Stats.CombatEffectReleased = CombatEffectViewReleasedCount;
+    Stats.CombatEffectOverflow = CombatEffectViewOverflowCount;
+    Stats.CombatEffectCoalesced = CombatEffectViewCoalescedCount;
+    Stats.CombatEffectOwnedMIDCreated = CombatEffectViewOwnedMIDCreationCount;
     return Stats;
 }
 
@@ -17045,6 +18322,16 @@ void UEchoesSimulationSubsystem::DestroyPooledPresentationActors()
         DestroyIfSafe(View);
     }
     FreeDestructionViews.Reset();
+    for (AEchoesCombatEffectView* View : ActiveCombatEffectViews)
+    {
+        DestroyIfSafe(View);
+    }
+    ActiveCombatEffectViews.Reset();
+    for (AEchoesCombatEffectView* View : FreeCombatEffectViews)
+    {
+        DestroyIfSafe(View);
+    }
+    FreeCombatEffectViews.Reset();
 }
 
 void UEchoesSimulationSubsystem::EmitDestructionPresentation(
@@ -17089,6 +18376,158 @@ void UEchoesSimulationSubsystem::EmitDestructionPresentation(
         {
             Audio->PlayDestruction(Faction, WorldLocation);
         }
+    }
+}
+
+AEchoesCombatEffectView* UEchoesSimulationSubsystem::AcquireCombatEffectView(
+    uint64 SimulationTick,
+    uint32 AttackerEntityId)
+{
+    const int32 Capacity = GetPresentationPoolStats().CombatEffectCapacity;
+    while (ActiveCombatEffectViews.Num() + FreeCombatEffectViews.Num() >
+               Capacity &&
+           !FreeCombatEffectViews.IsEmpty())
+    {
+        AEchoesCombatEffectView* Excess =
+            FreeCombatEffectViews.Pop(EAllowShrinking::No);
+        if (IsValid(Excess) && !Excess->IsActorBeingDestroyed())
+        {
+            Excess->Destroy();
+        }
+    }
+    while (!FreeCombatEffectViews.IsEmpty())
+    {
+        AEchoesCombatEffectView* View =
+            FreeCombatEffectViews.Pop(EAllowShrinking::No);
+        if (IsValid(View) && !View->IsActorBeingDestroyed())
+        {
+            ++CombatEffectViewReusedCount;
+            return View;
+        }
+    }
+
+    if (ActiveCombatEffectViews.Num() + FreeCombatEffectViews.Num() >= Capacity)
+    {
+        ++CombatEffectViewOverflowCount;
+        if (!ActiveCombatEffectViews.IsEmpty())
+        {
+            const uint64 Mixed =
+                SimulationTick * 0x9E3779B97F4A7C15ULL ^
+                static_cast<uint64>(AttackerEntityId) * 0xBF58476D1CE4E5B9ULL;
+            LastCombatEffectOverflowSlot = static_cast<int32>(
+                Mixed % static_cast<uint64>(ActiveCombatEffectViews.Num()));
+            if (AEchoesCombatEffectView* Coalesced =
+                    ActiveCombatEffectViews[LastCombatEffectOverflowSlot])
+            {
+                Coalesced->RegisterOverflowCoalesced();
+                ++CombatEffectViewCoalescedCount;
+            }
+        }
+        return nullptr;
+    }
+
+    if (GetWorld() == nullptr)
+    {
+        return nullptr;
+    }
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.ObjectFlags |= RF_Transient;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AEchoesCombatEffectView* View =
+        GetWorld()->SpawnActor<AEchoesCombatEffectView>(
+            AEchoesCombatEffectView::StaticClass(),
+            FTransform::Identity,
+            SpawnParameters);
+    if (View == nullptr)
+    {
+        UE_LOG(
+            LogEchoes,
+            Error,
+            TEXT("[ECHOES_COMBAT_EFFECT_POOL_SPAWN_FAILED] tick=%llu entity=%u"),
+            static_cast<unsigned long long>(SimulationTick),
+            AttackerEntityId);
+        return nullptr;
+    }
+    View->PrepareForPool();
+    ++CombatEffectViewCreatedCount;
+    return View;
+}
+
+void UEchoesSimulationSubsystem::ReleaseCombatEffectView(
+    AEchoesCombatEffectView* View)
+{
+    if (!IsValid(View) || View->IsActorBeingDestroyed())
+    {
+        return;
+    }
+    View->PrepareForPool();
+    ++CombatEffectViewReleasedCount;
+    const int32 Capacity = GetPresentationPoolStats().CombatEffectCapacity;
+    if (FreeCombatEffectViews.Num() + ActiveCombatEffectViews.Num() < Capacity)
+    {
+        FreeCombatEffectViews.Add(View);
+        return;
+    }
+    View->Destroy();
+}
+
+void UEchoesSimulationSubsystem::ReclaimFinishedCombatEffectViews()
+{
+    for (int32 Index = ActiveCombatEffectViews.Num() - 1; Index >= 0; --Index)
+    {
+        AEchoesCombatEffectView* View = ActiveCombatEffectViews[Index];
+        if (!IsValid(View) || View->IsActorBeingDestroyed())
+        {
+            ActiveCombatEffectViews.RemoveAt(Index, 1, EAllowShrinking::No);
+            continue;
+        }
+        if (!View->IsPresentationActive())
+        {
+            ActiveCombatEffectViews.RemoveAt(Index, 1, EAllowShrinking::No);
+            ReleaseCombatEffectView(View);
+        }
+    }
+}
+
+void UEchoesSimulationSubsystem::ResetCombatEffectViewsForScenario()
+{
+    while (!ActiveCombatEffectViews.IsEmpty())
+    {
+        AEchoesCombatEffectView* View =
+            ActiveCombatEffectViews.Pop(EAllowShrinking::No);
+        ReleaseCombatEffectView(View);
+    }
+}
+
+void UEchoesSimulationSubsystem::EmitCombatEffectPresentation(
+    echoes::sim::Faction Faction,
+    echoes::sim::EntityType EntityType,
+    const FVector& SourceLocation,
+    const FVector& TargetLocation)
+{
+    const uint64 Tick = Simulation.IsValid() ? Simulation->CurrentTick() : 0;
+    ++CombatEffectViewActivationCount;
+    if (AEchoesCombatEffectView* CombatEffect =
+            AcquireCombatEffectView(Tick, 0))
+    {
+        const UEchoesGameUserSettings* Settings =
+            UEchoesGameUserSettings::Get();
+        const bool bReducedMotion =
+            Settings != nullptr && Settings->IsReducedMotionEnabled();
+        const bool bReducedFlashing =
+            Settings != nullptr && Settings->IsReducedFlashingEnabled();
+        const uint64 MIDCountBefore = CombatEffect->GetOwnedMIDCreationCount();
+        CombatEffect->InitializeCombatEffect(
+            Faction,
+            EntityType,
+            SourceLocation,
+            TargetLocation,
+            bReducedMotion,
+            bReducedFlashing);
+        CombatEffectViewOwnedMIDCreationCount +=
+            CombatEffect->GetOwnedMIDCreationCount() - MIDCountBefore;
+        ActiveCombatEffectViews.Add(CombatEffect);
     }
 }
 
@@ -17251,7 +18690,7 @@ void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
 
         const FGameplayAudioSnapshot* Previous =
             GameplayAudioSnapshots.Find(Entity->id);
-        if (Previous != nullptr && Audio != nullptr && !bRebaseline)
+        if (Previous != nullptr && !bRebaseline)
         {
             const FVector Location = SimToWorld(Entity->position);
 
@@ -17259,10 +18698,41 @@ void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
             if (Snapshot.AttackCooldownTicks >
                 Previous->AttackCooldownTicks)
             {
-                Audio->PlayEvent(
-                    UEchoesGameplayAudioSubsystem::WeaponEventForType(
-                        Entity->type),
-                    Location);
+                if (Audio != nullptr)
+                {
+                    Audio->PlayEvent(
+                        UEchoesGameplayAudioSubsystem::WeaponEventForType(
+                            Entity->type),
+                        Location);
+                }
+
+                FVector TargetLocation = Location + FVector(250.0f, 0.0f, 0.0f);
+                if (Entity->order.target != 0 && Simulation.IsValid())
+                {
+                    if (const echoes::sim::Entity* TargetEntity =
+                            Simulation->FindEntity(Entity->order.target))
+                    {
+                        TargetLocation = SimToWorld(TargetEntity->position);
+                    }
+                }
+                else
+                {
+                    const float HeadingRad = FMath::DegreesToRadians(
+                        Entity->deploymentFacing != echoes::sim::Vec2{}
+                            ? FMath::RadiansToDegrees(FMath::Atan2(
+                                static_cast<float>(Entity->deploymentFacing.y.Raw()),
+                                static_cast<float>(Entity->deploymentFacing.x.Raw())))
+                            : 0.0f);
+                    TargetLocation = Location + FVector(
+                        FMath::Cos(HeadingRad) * 350.0f,
+                        FMath::Sin(HeadingRad) * 350.0f,
+                        0.0f);
+                }
+                EmitCombatEffectPresentation(
+                    Entity->faction,
+                    Entity->type,
+                    Location + FVector(0.0f, 0.0f, 40.0f),
+                    TargetLocation + FVector(0.0f, 0.0f, 30.0f));
             }
             // Authoritative damage landed. Temporary mineral cover absorbing
             // it is the shielded variant.
@@ -17270,11 +18740,14 @@ void UEchoesSimulationSubsystem::UpdateGameplayAudioPresentation(
             {
                 LastAuthoritativeDamageSeconds =
                     GetWorld()->GetRealTimeSeconds();
-                Audio->PlayEvent(
-                    Snapshot.bTemporaryMineralCover
-                        ? EEchoesGameplayAudioEvent::ImpactShielded
-                        : EEchoesGameplayAudioEvent::ImpactHit,
-                    Location);
+                if (Audio != nullptr)
+                {
+                    Audio->PlayEvent(
+                        Snapshot.bTemporaryMineralCover
+                            ? EEchoesGameplayAudioEvent::ImpactShielded
+                            : EEchoesGameplayAudioEvent::ImpactHit,
+                        Location);
+                }
             }
             // Worker cargo movement: up is a gather, down is a delivery.
             if (Entity->type == echoes::sim::EntityType::Worker)
@@ -17982,6 +19455,12 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
         UE_LOG(LogEchoes, Error, TEXT("[ECHOES_FOG_INIT_FAILED]"));
         return false;
     }
+    if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+    {
+        NewFogView->UpdateAccessibilitySettings(
+            Settings->IsReducedMotionEnabled(),
+            Settings->IsReducedFlashingEnabled());
+    }
     FogView = NewFogView;
     UE_LOG(
         LogEchoes,
@@ -18224,4 +19703,14 @@ int32 UEchoesSimulationSubsystem::GetMapHeightTiles() const
 {
     return Simulation.IsValid() ? Simulation->Config().mapHeightTiles
                                 : PrototypeMapHeightTiles;
+}
+
+float UEchoesSimulationSubsystem::GetEffectiveGameSpeedMultiplier() const
+{
+    if (SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        return FEchoesSkirmishSetupModel::GameSpeedMultiplier(
+            ActiveSkirmishSetup.GameSpeed);
+    }
+    return 1.0f;
 }

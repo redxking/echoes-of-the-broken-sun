@@ -11,6 +11,9 @@
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
 
+#include <algorithm>
+#include <cstdlib>
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesFullMatchTest,
     "Echoes.Runtime.Gameplay.CompleteSkirmish",
@@ -300,21 +303,84 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             return false;
         }
     }
-    const bool bStrikeForceRallied = TickUntil(
-        [Bridge, &StrikeForce, RallyPoint]()
+    // SPEC-MOV-008/011: eight units ordered to one point never share a tile;
+    // they stabilize within the group's arrival packing radius. A rally is
+    // every unit inside that radius with its order resolved, then holding
+    // still per SPEC-MOV-012 (no more than 0.05 tiles of drift across 20
+    // consecutive ticks). The exact-point form this replaces encoded the
+    // pre-SPEC-MOV-006 model in which units stacked on one coordinate.
+    constexpr std::int64_t RallyPackingRadiusRaw =
+        static_cast<std::int64_t>(echoes::sim::kFixedScale) * 2;
+    const auto WithinRally = [Bridge, &StrikeForce, RallyPoint]()
+    {
+        for (const echoes::sim::EntityId Soldier : StrikeForce)
         {
+            const echoes::sim::Entity* Entity = Bridge->FindEntity(Soldier);
+            if (Entity == nullptr ||
+                Entity->order.type != echoes::sim::OrderType::None)
+            {
+                return false;
+            }
+            const std::int64_t DeltaX =
+                static_cast<std::int64_t>(Entity->position.x.Raw()) -
+                RallyPoint.x.Raw();
+            const std::int64_t DeltaY =
+                static_cast<std::int64_t>(Entity->position.y.Raw()) -
+                RallyPoint.y.Raw();
+            if (DeltaX * DeltaX + DeltaY * DeltaY >
+                RallyPackingRadiusRaw * RallyPackingRadiusRaw)
+            {
+                return false;
+            }
+        }
+        return true;
+    };
+    bool bStrikeForceRallied = TickUntil(WithinRally, 800);
+    if (bStrikeForceRallied)
+    {
+        TMap<echoes::sim::EntityId, echoes::sim::Vec2> Settled;
+        for (const echoes::sim::EntityId Soldier : StrikeForce)
+        {
+            if (const echoes::sim::Entity* Entity = Bridge->FindEntity(Soldier))
+            {
+                Settled.Add(Soldier, Entity->position);
+            }
+        }
+        constexpr std::int64_t SettleToleranceRaw =
+            static_cast<std::int64_t>(echoes::sim::kFixedScale) / 20;
+        for (int32 SettleTick = 0; SettleTick < 20 && bStrikeForceRallied; ++SettleTick)
+        {
+            TickOnce();
             for (const echoes::sim::EntityId Soldier : StrikeForce)
             {
                 const echoes::sim::Entity* Entity = Bridge->FindEntity(Soldier);
-                if (Entity == nullptr ||
-                    Entity->position != RallyPoint)
+                const echoes::sim::Vec2* Origin = Settled.Find(Soldier);
+                if (Entity == nullptr || Origin == nullptr)
                 {
-                    return false;
+                    bStrikeForceRallied = false;
+                    break;
+                }
+                const std::int64_t DriftX =
+                    static_cast<std::int64_t>(Entity->position.x.Raw()) -
+                    Origin->x.Raw();
+                const std::int64_t DriftY =
+                    static_cast<std::int64_t>(Entity->position.y.Raw()) -
+                    Origin->y.Raw();
+                if (DriftX * DriftX + DriftY * DriftY >
+                    SettleToleranceRaw * SettleToleranceRaw)
+                {
+                    AddInfo(FString::Printf(
+                        TEXT("Rallied unit %u drifted %lld raw at settle tick %d"),
+                        Soldier,
+                        static_cast<long long>(
+                            std::max(std::abs(DriftX), std::abs(DriftY))),
+                        SettleTick));
+                    bStrikeForceRallied = false;
+                    break;
                 }
             }
-            return true;
-        },
-        800);
+        }
+    }
     if (!TestTrue(
             TEXT("The mixed nine-unit strike force rallies before entering hostile territory"),
             bStrikeForceRallied))

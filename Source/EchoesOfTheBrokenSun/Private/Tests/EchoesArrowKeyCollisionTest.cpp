@@ -613,7 +613,7 @@ bool FEchoesArrowKeyCollisionTest::RunTest(const FString& Parameters)
                     {
                         Expected.SkirmishFocusRow =
                             (Forward.Before.SkirmishFocusRow +
-                             Case.TitleRowDelta + 5) % 5;
+                             Case.TitleRowDelta + 9) % 9;
                     }
                     else
                     {
