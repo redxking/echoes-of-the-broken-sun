@@ -1670,6 +1670,12 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                     case echoes::sim::EntityType::ScoutUnit:
                         PresentationScale = 1.50f;
                         break;
+                    case echoes::sim::EntityType::ResourceNode:
+                        // Deposits go the other way: the authored cluster is
+                        // taller than a heavy unit, so it is drawn smaller than
+                        // its footprint to stay subordinate to the Well.
+                        PresentationScale = 0.62f;
+                        break;
                     default:
                         PresentationScale = 1.0f;
                         break;
@@ -2292,14 +2298,17 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
         if (bUsingAuthoredResourceMesh && BodyMaterials.Num() >= 4)
         {
+            // Gate 50: the spire slot was pale ceramic-cyan and read as white
+            // under the sun; the concept's deposits are deep cyan glass with an
+            // interior glow, subordinate to the Well in brightness.
             const FLinearColor SlotColors[] = {
                 FLinearColor(0.055f, 0.075f, 0.085f),
                 FLinearColor(0.012f, 0.020f, 0.027f),
-                FLinearColor(0.30f, 0.55f, 0.60f),
-                FLinearColor(0.56f, 0.94f, 1.0f)};
-            const float MetallicValues[] = {0.16f, 0.48f, 0.22f, 0.10f};
-            const float RoughnessValues[] = {0.72f, 0.18f, 0.30f, 0.12f};
-            const float EmissiveValues[] = {0.0f, 0.0f, 0.18f, 2.5f};
+                FLinearColor(0.04f, 0.30f, 0.42f),
+                FLinearColor(0.16f, 0.80f, 1.0f)};
+            const float MetallicValues[] = {0.16f, 0.48f, 0.30f, 0.10f};
+            const float RoughnessValues[] = {0.72f, 0.18f, 0.22f, 0.14f};
+            const float EmissiveValues[] = {0.0f, 0.0f, 0.35f, 1.6f};
             // A3: Matter deposit crystal on every slot; interior glow pools
             // in cyan-white through the family mask, held steady.
             const float MaskedEmissiveValues[] = {1.0f, 0.4f, 1.4f, 1.8f};
