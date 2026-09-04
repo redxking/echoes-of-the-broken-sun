@@ -90,36 +90,6 @@ Commander (`start_process`, `interact_with_process`). The Cowork Linux VM cannot
 `$HOME/mnt` mount of the Seagate volume is unreliable. Native simulation tests and Python content tests can
 run in either place.
 
-### The remote Windows GPU authoring workstation (Vagon)
-
-Angelis decided on 2026-09-04 to add a cloud Windows machine (app.vagon.io, Epic Launcher, Unreal Editor,
-discrete GPU) as a second workstation. It exists because the M1 Pro is slow to author on, not because the
-M1 Pro is the wrong target. The M1 Pro remains the baseline the game is judged on.
-
-**Use the remote machine for:** iterating materials, meshes, textures, lighting, VFX, animation, and
-Sequencer work in the editor; shader compiles and lighting builds; running generative models, text-to-speech,
-or other GPU-heavy asset tooling that a recorded exception permits; the second-toolchain (MSVC) compile and
-determinism cross-check of `Source/EchoesSimCore` that `Docs/Requirements.md` anticipates.
-
-**Never use the remote machine for:** performance, frame-time, memory, or stability evidence; packaging,
-signing, notarization, or any release artifact; rendered acceptance captures; physical-input or human
-acceptance evidence; changing what the shipped game may render. Nothing captured on it is more than
-editor-class (`EDT`) evidence. Any Windows result is subject to DEMO-PERF-014: no Windows claim, ever.
-
-**Rules while on it:**
-1. **Config parity.** Open the project as committed. Do not enable Nanite, Virtual Shadow Maps, Lumen,
-   hardware ray tracing, MegaLights, or any plugin for the Windows editor's benefit, and do not commit
-   `Config/` or `.uproject` changes made there. A look that only works with those on is over budget.
-2. **Author there, prove here.** Every asset family authored or generated remotely is regenerated or
-   imported through the registered pipeline, registered in `Docs/Archive/AssetRegister.md`, and then
-   rendered and profiled on the M1 Pro before it is called done. If Unreal-side generation on Windows is not
-   byte-identical to the Mac output, regenerate on the Mac and record the Windows origin in the register.
-3. **Provenance.** A generative model run on Vagon is the directive's "generative model" exception and must
-   be recorded per family before use, with the model, license, seed or prompt, and the note that it was
-   cloud-hosted.
-4. **Git from Windows.** `core.autocrlf=false`, the same `git-lfs` tracking, the same author identity rule,
-   explicit-path staging. `Tests/Content/test_package_manifest_verifier.py` does not run there.
-
 ### Visual proof the owner reviews
 
 Angelis reviews finished visuals by looking at them. For every visual family or animation that a session
@@ -127,9 +97,9 @@ calls final, deliver a review packet: still screenshots of each final asset in i
 short movie (10 to 30 seconds) of every animation or moving effect, captured **on the M1 Pro from the
 rendered build** at the accepted preset and resolution, with the source commit, preset, resolution, and
 capture date in the filename or a sidecar. Store it under `../WorkstreamControl/evidence/visual-review/`
-and link it from the ledger entry. Captures from the Vagon editor may be attached as **authoring previews**,
-labeled as such, and never substitute for the Mac capture. A packet shows what was rendered; it does not
-make anything `HUMAN ACCEPTED` until Angelis says so.
+and link it from the ledger entry. Editor viewport captures may be attached as **authoring previews**,
+labeled as such, and never substitute for the rendered-build capture. A packet shows what was rendered; it
+does not make anything `HUMAN ACCEPTED` until Angelis says so.
 
 ```sh
 cd "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project"

@@ -176,15 +176,12 @@ this one.
    not introduce the tool without a recorded decision.
 10. **Where the work runs:** builds, Unreal automation, packaging, profiling, and asset generation run on
     the Mac. Native simulation tests and Python content tests run anywhere. Heavy runs take a lease
-    through `echoes-heavy-run-coordination`. A remote Windows GPU editor (app.vagon.io) exists for
-    **authoring only**: use it to iterate materials, meshes, lighting, VFX, animation, Sequencer, and
-    GPU-heavy asset tooling faster than the M1 Pro allows. Never use it for performance, packaging,
-    acceptance captures, or any claim; keep its config identical to the committed project; prove every
-    result on the M1 Pro. Full rules: `CLAUDE.md` §3.
+    through `echoes-heavy-run-coordination`. There is no remote or cloud workstation; all authoring and evidence
+    work runs on the local M1 Pro.
 11. **Visual proof:** every final visual family or animation is delivered with an owner review packet:
     Mac-rendered screenshots in context and a 10 to 30 second movie of each animation or moving effect,
-    with commit, preset, and resolution recorded. Vagon captures are labeled authoring previews and do
-    not substitute.
+    with commit, preset, and resolution recorded. Editor viewport captures are labeled authoring previews
+    and do not substitute.
 12. **Git:** feature branches named for their track; stage explicit paths, never `git add -A`; never
     rewrite history on `main`; commit messages state what changed and what evidence backs it; no AI is
     credited as author.

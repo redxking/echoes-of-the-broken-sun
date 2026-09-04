@@ -719,9 +719,7 @@ when the gate's acceptance evidence exists; push from the Mac shell with LFS obj
 
 **Where work runs.** Builds, the automation suite, packaging, asset and voice generation: on the Mac
 through Desktop Commander, with the environment traps in `CLAUDE.md` section 3 respected (TMPDIR, the
-60-second bridge cap, the Seagate remount, the Linux-only test failures). Authoring iteration for
-Tracks A, B, C, and D may run on the remote Windows GPU workstation under open decision 9 and the rules in
-`CLAUDE.md` section 3; it produces editor-class evidence only, and every result is proven on the M1 Pro.
+60-second bridge cap, the Seagate remount, the Linux-only test failures).
 
 **Visual proof.** A Track A or D item is not offered for acceptance without the owner review packet
 defined in `CLAUDE.md` section 3: Mac-rendered screenshots of each final asset in context and a short
@@ -791,15 +789,10 @@ Add to this list rather than guessing. Each entry needs the question, the option
    **RESOLVED 2026-09-01 (Angelis):** option (a), limited to Mara Vey alone — canon continuity is
    extended so Mara Vey, as the Meridian treaty authority consistent with her Act I command arc,
    carries Mission 05's spoken lines. No new named characters.
-9. **Remote GPU authoring workstation.** Should a cloud Windows machine with a discrete GPU be used
-   to author visual, VFX, animation, cinematic, and audio work that the M1 Pro is too slow to iterate on?
-   Options: (a) Mac only, slow iteration, no new provenance or evidence questions; (b) a remote Windows
-   GPU editor for authoring only, with config parity, Mac-side proof, and recorded provenance;
-   (c) a remote machine as an evidence source, which DEMO-PERF-013/014 forbid. Cost of (b): a second
-   toolchain to keep in step, project content on a third-party cloud host, and the discipline of never
-   trusting a Windows look. **RESOLVED 2026-09-04 (Angelis):** option (b), app.vagon.io with Epic
-   Launcher and Unreal Editor 5.8. Rules recorded in `CLAUDE.md` section 3 and
-   `Docs/Archive/SetupAndBuild.md`. The M1 Pro remains the baseline; no graphics ceiling changes.
+9. **Remote GPU authoring workstation.** Proposed and resolved on 2026-09-04 as a cloud Windows GPU
+   editor for authoring only. **CANCELLED 2026-09-04 (Angelis):** no remote workstation. All authoring,
+   building, and evidence work runs on the local M1 Pro. The rules written for it were removed from
+   `CLAUDE.md` and `SetupAndBuild.md` the same day.
 10. **Demo versus full labeling.** This release contains the full fifteen-operation campaign and
    skirmish. **RESOLVED 2026-09-01 (Angelis):** the public label is **Version 1.0 — full release**.
    All store and site text is written against the 1.0 full-release claim set; nothing may be
