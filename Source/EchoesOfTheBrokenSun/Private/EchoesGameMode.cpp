@@ -1678,11 +1678,9 @@ void AEchoesGameMode::BeginPlay()
             }
             if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
             {
-                TerrainView->SetActorHiddenInGame(true);
-                if (TerrainView->GetRootComponent() != nullptr)
-                {
-                    TerrainView->GetRootComponent()->SetVisibility(false, true);
-                }
+                // The chasm layers are the ground of the composed frame; only
+                // the per-tile silhouettes and dressing step aside for review.
+                TerrainView->SetTileLayersVisible(false);
             }
 
             int32 PreviewEntityCount = 0;
@@ -2386,31 +2384,9 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         return true;
     };
 
-    struct FTerrainShelfSpec final
-    {
-        FVector Location;
-        float YawDegrees;
-    };
-    const FTerrainShelfSpec TerrainShelves[] = {
-        {FVector(-4550.0f, -4550.0f, 2.0f), 7.0f},
-        {FVector(4550.0f, -4550.0f, 2.0f), 83.0f},
-        {FVector(-4550.0f, 4550.0f, 2.0f), -83.0f},
-        {FVector(4550.0f, 4550.0f, 2.0f), 173.0f},
-    };
-    int32 SpawnedTerrainShelves = 0;
-    for (const FTerrainShelfSpec& Spec : TerrainShelves)
-    {
-        SpawnedTerrainShelves += SpawnScarAccent(
-                                     ShelfMesh,
-                                     Spec.Location,
-                                     FRotator(0.0f, Spec.YawDegrees, 0.0f),
-                                     FVector(4.2f, 4.2f, 0.72f),
-                                     FLinearColor(0.034f, 0.047f, 0.055f),
-                                     TEXT("EchoesTerrainShelf"),
-                                     false)
-                                     ? 1
-                                     : 0;
-    }
+    // The four corner shelves of glass_scar_v5 are retired: the terrain view's bank
+    // plates now carry the ground from rim to map edge.
+    constexpr int32 SpawnedTerrainShelves = 0;
 
     struct FRouteSpec final
     {
@@ -2425,7 +2401,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
          FLinearColor(0.040f, 0.032f, 0.030f),
          TEXT("EchoesRouteAshCut")},
         {BuriedCausewayMesh,
-         bVerticalSliceMode ? FVector(0.0f, 0.0f, -59.0f) : FVector(0.0f, 0.0f, 20.0f),
+         FVector(0.0f, 0.0f, -59.0f), // deck top at z 0: units on the span stand on it
          FLinearColor(0.13f, 0.12f, 0.10f),
          TEXT("EchoesRouteBuriedCauseway")},
         {FoldedVergeMesh,
@@ -2448,132 +2424,12 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                              : 0;
     }
 
-    if (bVerticalSliceMode)
-    {
-        // The chasm runs along X between the two banks; the Buried Causeway (spans along Y,
-        // abutments at |y| = 890) is the only crossing. Each bank is one contiguous row of
-        // shelves whose inner faces stand at |y| = 800 and drop to the chasm bed, so the frame
-        // reads as two cliffs with a bridge, not as loose plates. Preview-only, non-colliding.
-        constexpr float ChasmHalfWidth = 800.0f;
-        const FLinearColor ChasmFissureGlow(1.0f, 0.42f, 0.08f);
-        constexpr float BankShelfScaleXY = 2.05f;   // plate 750 * 2.05 ~= 1537 wide
-        constexpr float BankShelfScaleZ = 1.9f;     // foundation bottom ~ -796, below the bed at -750
-        constexpr float BankShelfHalfWidth = 780.0f * 0.5f * BankShelfScaleXY;
-        // Tiles overlap by ~60 so a plate buries its neighbour's darker foundation rim; alternate
-        // tiles sit 6 lower so the overlap does not z-fight. Without this the bank reads as a
-        // mosaic of separate slabs.
-        constexpr float BankTileSpacing = 1480.0f;
-        const float BankTileXs[] = {-4440.0f, -2960.0f, -1480.0f, 0.0f, 1480.0f, 2960.0f, 4440.0f};
-        int32 BankShelfIndex = 0;
-        for (const float BankSign : {-1.0f, 1.0f})
-        {
-            for (const int32 Row : {0, 1})
-            {
-            for (const float ShelfX : BankTileXs)
-            {
-                const float RowScaleZ = Row == 0 ? BankShelfScaleZ : 1.0f;
-                const float Stagger = FMath::IsNearlyZero(FMath::Fmod(ShelfX / BankTileSpacing, 2.0f)) ? 0.0f : -6.0f;
-                SpawnScarAccent(
-                    ShelfMesh,
-                    FVector(
-                        ShelfX,
-                        BankSign * (ChasmHalfWidth + BankShelfHalfWidth * (1.0f + 2.0f * Row) - 60.0f * Row),
-                        -39.0f * RowScaleZ + Stagger),
-                    FRotator::ZeroRotator,
-                    FVector(BankShelfScaleXY, BankShelfScaleXY, RowScaleZ),
-                    FLinearColor(0.034f, 0.047f, 0.055f),
-                    FName(*FString::Printf(TEXT("EchoesTerrainBank%s%d"), BankSign < 0.0f ? TEXT("West") : TEXT("East"), BankShelfIndex++)),
-                    true,
-                    ChasmFissureGlow);
-            }
-            }
-        }
+    // The chasm, banks, terrace, rim teeth, bed, and fissure light are composed by
+    // AEchoesTerrainView from the live terrain rows (gate 50), for play and review alike.
 
-        // Lower terrace tier: a second, narrower step halfway down each cliff so the inner face
-        // reads as strata with its own fissure glow instead of one flat wall.
-        constexpr float TerraceHalfWidth = 540.0f;
-        constexpr float TerraceScaleZ = 1.2f;
-        for (const float BankSign : {-1.0f, 1.0f})
-        {
-            for (const float ShelfX : BankTileXs)
-            {
-                SpawnScarAccent(
-                    ShelfMesh,
-                    FVector(
-                        ShelfX + 260.0f * BankSign,
-                        BankSign * (TerraceHalfWidth + BankShelfHalfWidth),
-                        -330.0f - 39.0f * TerraceScaleZ),
-                    FRotator(0.0f, 3.0f * BankSign, 0.0f),
-                    FVector(BankShelfScaleXY, BankShelfScaleXY, TerraceScaleZ),
-                    FLinearColor(0.028f, 0.036f, 0.042f),
-                    TEXT("EchoesChasmTerrace"),
-                    true,
-                    ChasmFissureGlow);
-            }
-        }
-
-        // Rim teeth along both cliff edges give the banks a broken silhouette against the drop.
-        // The causeway gap (|x| < 420) is left open so the bridge reads clean.
-        for (const float BankSign : {-1.0f, 1.0f})
-        {
-            for (int32 Tooth = -6; Tooth <= 6; ++Tooth)
-            {
-                const float ToothX = Tooth * 420.0f + (Tooth % 2 == 0 ? 60.0f : -80.0f) * BankSign;
-                if (FMath::Abs(ToothX) < 420.0f)
-                {
-                    continue;
-                }
-                const float ToothScale = 0.55f + 0.2f * static_cast<float>(FMath::Abs(Tooth) % 3);
-                SpawnScarAccent(
-                    RidgeMesh,
-                    FVector(ToothX, BankSign * (ChasmHalfWidth - 70.0f), -8.0f),
-                    FRotator(0.0f, 37.0f * static_cast<float>(Tooth) + (BankSign < 0.0f ? 0.0f : 180.0f), 0.0f),
-                    FVector(ToothScale, ToothScale, ToothScale),
-                    FLinearColor(0.030f, 0.040f, 0.048f),
-                    TEXT("EchoesChasmRimTooth"),
-                    true,
-                    ChasmFissureGlow);
-            }
-        }
-
-        // Deep chasm floor bed: dark fractured basalt canyon base deep below running along X
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(0.0f, 0.0f, -700.0f),
-            FRotator::ZeroRotator,
-            FVector(24.0f, 3.2f, 0.5f),
-            FLinearColor(0.045f, 0.040f, 0.038f),
-            TEXT("EchoesChasmFloorBed"),
-            false,
-            ChasmFissureGlow);
-
-        // Incandescent molten amber fissures deep in the chasm
-        const FVector ChasmGlowLocations[] = {
-            FVector(0.0f, -400.0f, -520.0f),
-            FVector(0.0f, 400.0f, -520.0f),
-            FVector(-1400.0f, 0.0f, -560.0f),
-            FVector(1400.0f, 0.0f, -560.0f),
-            FVector(0.0f, 0.0f, -620.0f),
-        };
-        for (const FVector& GlowPos : ChasmGlowLocations)
-        {
-            APointLight* ChasmLight = World->SpawnActor<APointLight>(
-                GlowPos,
-                FRotator::ZeroRotator,
-                SpawnParameters);
-            if (ChasmLight != nullptr && ChasmLight->PointLightComponent != nullptr)
-            {
-                ChasmLight->Tags.Add(TEXT("EchoesPlaceholder"));
-                UPointLightComponent* GlowComp = ChasmLight->PointLightComponent;
-                GlowComp->SetMobility(EComponentMobility::Movable);
-                GlowComp->SetLightColor(FLinearColor(1.0f, 0.38f, 0.05f));
-                GlowComp->SetIntensity(4800.0f);
-                GlowComp->SetAttenuationRadius(1850.0f);
-                GlowComp->SetSourceRadius(160.0f);
-                GlowComp->SetCastShadows(false);
-            }
-        }
-    }
+    // Scar accents authored at ground level now lie on the chasm bed the terrain
+    // view draws at -680: magenta fracture veins and glass along the bottom of the drop.
+    constexpr float ChasmBedAccentZ = -690.0f;
 
     struct FScarBandSpec final
     {
@@ -2603,7 +2459,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     {
         SpawnedScarBands += SpawnScarAccent(
                                 RidgeMesh,
-                                Spec.Location,
+                                Spec.Location + FVector(0.0f, 0.0f, ChasmBedAccentZ),
                                 FRotator(0.0f, Spec.YawDegrees, 0.0f),
                                 Spec.Scale,
                                 Spec.Color,
@@ -2654,7 +2510,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                                   FVector(
                                       Spec.Location.X,
                                       Spec.Location.Y,
-                                      10.0f),
+                                      10.0f + ChasmBedAccentZ),
                                   FRotator(0.0f, Spec.YawDegrees, 0.0f),
                                   FVector(
                                       Spec.Scale.X * 1.5f,
@@ -2689,7 +2545,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     for (const FScarGlowSpec& Spec : ScarGlows)
     {
         APointLight* Glow = World->SpawnActor<APointLight>(
-            Spec.Location,
+            Spec.Location + FVector(0.0f, 0.0f, ChasmBedAccentZ + 80.0f),
             FRotator::ZeroRotator,
             SpawnParameters);
         if (Glow == nullptr)
@@ -2717,8 +2573,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         GlowComponent->SetCastShadows(false);
         ++SpawnedScarGlows;
     }
-    if (SpawnedTerrainShelves != UE_ARRAY_COUNT(TerrainShelves) ||
-        SpawnedRoutes != UE_ARRAY_COUNT(Routes) ||
+    if (SpawnedRoutes != UE_ARRAY_COUNT(Routes) ||
         SpawnedScarBands != UE_ARRAY_COUNT(ScarBands) ||
         SpawnedGlassShards != UE_ARRAY_COUNT(GlassShards) ||
         SpawnedScarGlows != UE_ARRAY_COUNT(ScarGlows))
@@ -2726,9 +2581,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         UE_LOG(
             LogEchoes,
             Error,
-            TEXT("[ECHOES_SCAR_COMPOSITION_FAILED] shelves=%d/%d routes=%d/%d bands=%d/%d shards=%d/%d glows=%d/%d"),
+            TEXT("[ECHOES_SCAR_COMPOSITION_FAILED] shelves=%d/0 routes=%d/%d bands=%d/%d shards=%d/%d glows=%d/%d"),
             SpawnedTerrainShelves,
-            UE_ARRAY_COUNT(TerrainShelves),
             SpawnedRoutes,
             UE_ARRAY_COUNT(Routes),
             SpawnedScarBands,
@@ -2740,44 +2594,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         return false;
     }
 
-    struct FChasmDressingSpec final
-    {
-        FVector Location;
-        FRotator Rotation;
-        FVector Scale;
-        FLinearColor Color;
-    };
-    const FChasmDressingSpec ChasmRims[] = {
-        // North rim downward cliff faces
-        {FVector(-5100.0f, 440.0f, -25.0f), FRotator(-15.0f, 0.0f, 0.0f),
-         FVector(2.8f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
-        {FVector(-2200.0f, 460.0f, -25.0f), FRotator(-18.0f, 4.0f, 0.0f),
-         FVector(3.2f, 1.3f, 0.85f), FLinearColor(0.025f, 0.022f, 0.028f)},
-        {FVector(1800.0f, 450.0f, -25.0f), FRotator(-16.0f, -3.0f, 0.0f),
-         FVector(3.0f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
-        {FVector(4800.0f, 440.0f, -25.0f), FRotator(-14.0f, 2.0f, 0.0f),
-         FVector(2.6f, 1.1f, 0.85f), FLinearColor(0.024f, 0.021f, 0.026f)},
-        // South rim downward cliff faces
-        {FVector(-5100.0f, -440.0f, -25.0f), FRotator(15.0f, 0.0f, 0.0f),
-         FVector(2.8f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
-        {FVector(-2200.0f, -460.0f, -25.0f), FRotator(18.0f, -4.0f, 0.0f),
-         FVector(3.2f, 1.3f, 0.85f), FLinearColor(0.025f, 0.022f, 0.028f)},
-        {FVector(1800.0f, -450.0f, -25.0f), FRotator(16.0f, 3.0f, 0.0f),
-         FVector(3.0f, 1.2f, 0.85f), FLinearColor(0.022f, 0.020f, 0.025f)},
-        {FVector(4800.0f, -440.0f, -25.0f), FRotator(14.0f, -2.0f, 0.0f),
-         FVector(2.6f, 1.1f, 0.85f), FLinearColor(0.024f, 0.021f, 0.026f)},
-    };
-    for (const FChasmDressingSpec& Spec : ChasmRims)
-    {
-        SpawnScarAccent(
-            ShelfMesh,
-            Spec.Location,
-            Spec.Rotation,
-            Spec.Scale,
-            Spec.Color,
-            TEXT("EchoesChasmRim"),
-            false);
-    }
+    // The eight flat rim plates of glass_scar_v5 are retired: the terrain view's
+    // bank faces and terrace are the cliff now.
 
     AEchoesWeatherView* Weather = World->SpawnActor<AEchoesWeatherView>(
         FVector::ZeroVector,
@@ -3012,7 +2830,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v5 authoredAssets=7 shelves=4 routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+        TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v6 authoredAssets=7 shelves=0 chasm=terrain-view routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
     UE_LOG(
         LogEchoes,
         Display,

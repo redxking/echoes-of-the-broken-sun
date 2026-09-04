@@ -19510,6 +19510,17 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         return false;
     }
     TerrainView = NewTerrainView;
+    if (NewTerrainView->HasChasmComposition())
+    {
+        for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+        {
+            if (*It != nullptr &&
+                (*It)->ActorHasTag(EchoesBattlefieldPresentation::FloorTag()))
+            {
+                (*It)->SetActorHiddenInGame(true);
+            }
+        }
+    }
     UE_LOG(
         LogEchoes,
         Display,
@@ -19550,9 +19561,16 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
                 EchoesBattlefieldPresentation::ShouldShow(
                     Actor->Tags,
                     PresentationPreset);
-            Actor->SetActorHiddenInGame(!bShouldShow);
-            if (Actor->ActorHasTag(
-                    EchoesBattlefieldPresentation::FloorTag()))
+            const bool bFloorActor = Actor->ActorHasTag(
+                EchoesBattlefieldPresentation::FloorTag());
+            // The collision floor keeps carrying pointer traces, but it stops
+            // rendering where the terrain view draws the Glass Scar chasm:
+            // the banks are the visible ground there.
+            const bool bFloorSurfaceReplaced =
+                bFloorActor && TerrainView.IsValid() &&
+                TerrainView->HasChasmComposition();
+            Actor->SetActorHiddenInGame(!bShouldShow || bFloorSurfaceReplaced);
+            if (bFloorActor)
             {
                 Actor->SetActorEnableCollision(bShouldShow);
             }

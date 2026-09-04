@@ -305,13 +305,39 @@ void AEchoesRTSCameraPawn::BeginPlay()
     if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
     {
         bArtReviewMode = true;
-        SetActorLocation(FVector(-4400.0f, -4400.0f, 100.0f));
-        SpringArm->TargetArmLength = 1900.0f;
+        // Default: the local base. -EchoesArtReviewCenter=X,Y and
+        // -EchoesArtReviewZoom= frame any world position at the unchanged
+        // gameplay pitch and yaw, which is what a live-play capture must show.
+        FVector Center(-4400.0f, -4400.0f, 100.0f);
+        FString CenterText;
+        if (FParse::Value(FCommandLine::Get(), TEXT("EchoesArtReviewCenter="), CenterText, /*bShouldStopOnSeparator*/ false))
+        {
+            FString XText;
+            FString YText;
+            if (CenterText.Split(TEXT(","), &XText, &YText))
+            {
+                Center.X = FCString::Atof(*XText);
+                Center.Y = FCString::Atof(*YText);
+            }
+        }
+        float Zoom = 1900.0f;
+        FParse::Value(FCommandLine::Get(), TEXT("EchoesArtReviewZoom="), Zoom);
+        // -EchoesArtReviewDelay= holds the capture so a scripted scout
+        // (-EchoesArtReviewScout=X,Y, issued through the ordinary command
+        // path) can reach and reveal the framed area first.
+        FParse::Value(FCommandLine::Get(), TEXT("EchoesArtReviewDelay="), ArtReviewCaptureDelaySeconds);
+        ArtReviewCaptureDelaySeconds = FMath::Clamp(ArtReviewCaptureDelaySeconds, 2.0f, 600.0f);
+        SetActorLocation(Center);
+        SpringArm->TargetArmLength = FMath::Clamp(Zoom, 600.0f, 6000.0f);
         SpringArm->bEnableCameraLag = false;
         UE_LOG(
             LogEchoes,
             Display,
-            TEXT("[ECHOES_ART_REVIEW_CAMERA] localBaseCentered=true zoom=1900 editorOnly=true"));
+            TEXT("[ECHOES_ART_REVIEW_CAMERA] localBaseCentered=%s center=(%.0f,%.0f) zoom=%.0f editorOnly=true"),
+            CenterText.IsEmpty() ? TEXT("true") : TEXT("false"),
+            Center.X,
+            Center.Y,
+            SpringArm->TargetArmLength);
         return;
     }
 #endif
@@ -366,7 +392,67 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         {
             ArtReviewElapsedSeconds += DeltaSeconds;
         }
-        if (ArtReviewElapsedSeconds >= 2.0f)
+        if (!bArtReviewScoutIssued && ArtReviewElapsedSeconds >= 0.5f)
+        {
+            bArtReviewScoutIssued = true;
+            FString ScoutText;
+            if (FParse::Value(
+                    FCommandLine::Get(),
+                    TEXT("EchoesArtReviewScout="),
+                    ScoutText,
+                    /*bShouldStopOnSeparator*/ false))
+            {
+                FString XText;
+                FString YText;
+                UEchoesSimulationSubsystem* ScoutBridge =
+                    GetWorld() != nullptr
+                        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                        : nullptr;
+                const echoes::sim::Simulation* ScoutSimulation =
+                    ScoutBridge != nullptr ? ScoutBridge->GetSimulation() : nullptr;
+                if (ScoutText.Split(TEXT(","), &XText, &YText) && ScoutSimulation != nullptr)
+                {
+                    const FVector Target(FCString::Atof(*XText), FCString::Atof(*YText), 0.0f);
+                    // A review capture of explored ground must be earned the
+                    // way a player earns it: real move orders on the local
+                    // player's own mobile units, resolved by the simulation.
+                    ScoutBridge->SetScenarioPaused(false);
+                    int32 Ordered = 0;
+                    for (const echoes::sim::Entity& Entity : ScoutSimulation->Entities())
+                    {
+                        const bool bMobile =
+                            Entity.type == echoes::sim::EntityType::Worker ||
+                            Entity.type == echoes::sim::EntityType::Soldier ||
+                            Entity.type == echoes::sim::EntityType::HeavyUnit ||
+                            Entity.type == echoes::sim::EntityType::ScoutUnit;
+                        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId || !bMobile)
+                        {
+                            continue;
+                        }
+                        FString Feedback;
+                        if (ScoutBridge->IssueCommand(
+                                echoes::sim::CommandType::Move,
+                                Entity.id,
+                                0,
+                                Target,
+                                echoes::sim::FutureWellChoice::Dormant,
+                                Feedback))
+                        {
+                            ++Ordered;
+                        }
+                    }
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_ART_REVIEW_SCOUT] target=(%.0f,%.0f) ordered=%d captureDelay=%.1f editorOnly=true"),
+                        Target.X,
+                        Target.Y,
+                        Ordered,
+                        ArtReviewCaptureDelaySeconds);
+                }
+            }
+        }
+        if (ArtReviewElapsedSeconds >= ArtReviewCaptureDelaySeconds)
         {
             FAssetCompilingManager::Get().FinishAllCompilation();
 
@@ -421,8 +507,9 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=%s delay=2.0 output=%s"),
+                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=%s delay=%.1f output=%s"),
                 bShowUI ? TEXT("true") : TEXT("false"),
+                ArtReviewCaptureDelaySeconds,
                 OutputPath.IsEmpty() ? TEXT("default") : *OutputPath);
         }
     }

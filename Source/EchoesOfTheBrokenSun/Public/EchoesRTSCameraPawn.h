@@ -50,6 +50,8 @@ private:
     bool bArtReviewScreenshotRequested = false;
     float ArtReviewElapsedSeconds = 0.0f;
     float ArtReviewAssetWaitSeconds = 0.0f;
+    float ArtReviewCaptureDelaySeconds = 2.0f;
+    bool bArtReviewScoutIssued = false;
 
     UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
     float PanSpeed = 2400.0f;

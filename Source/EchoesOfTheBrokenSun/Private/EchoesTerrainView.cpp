@@ -1,6 +1,7 @@
 #include "EchoesTerrainView.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/SceneComponent.h"
 #include "EchoesBattlefieldPresentation.h"
 #include "EchoesGlassScarCompiledMapPack.h"
@@ -69,8 +70,22 @@ AEchoesTerrainView::AEchoesTerrainView()
         TEXT("DressingShards"));
     DressingShards->SetupAttachment(SceneRoot);
 
+    ChasmBanks = CreateDefaultSubobject<UInstancedStaticMeshComponent>(
+        TEXT("ChasmBanks"));
+    ChasmBanks->SetupAttachment(SceneRoot);
+    ChasmTerrace = CreateDefaultSubobject<UInstancedStaticMeshComponent>(
+        TEXT("ChasmTerrace"));
+    ChasmTerrace->SetupAttachment(SceneRoot);
+    ChasmTeeth = CreateDefaultSubobject<UInstancedStaticMeshComponent>(
+        TEXT("ChasmTeeth"));
+    ChasmTeeth->SetupAttachment(SceneRoot);
+    ChasmBed = CreateDefaultSubobject<UInstancedStaticMeshComponent>(
+        TEXT("ChasmBed"));
+    ChasmBed->SetupAttachment(SceneRoot);
+
     for (UInstancedStaticMeshComponent* Layer :
-         {BlockedTiles, ScarredTiles, DressingShelves, DressingShards})
+         {BlockedTiles, ScarredTiles, DressingShelves, DressingShards,
+          ChasmBanks, ChasmTerrace, ChasmTeeth, ChasmBed})
     {
         Layer->SetMobility(EComponentMobility::Movable);
         Layer->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -79,6 +94,10 @@ AEchoesTerrainView::AEchoesTerrainView()
         Layer->SetReceivesDecals(false);
         Layer->SetCanEverAffectNavigation(false);
     }
+    // The cliff layers cast so the drop reads under the sun; tiles never did.
+    ChasmBanks->SetCastShadow(true);
+    ChasmTerrace->SetCastShadow(true);
+    ChasmTeeth->SetCastShadow(true);
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> RidgeFinder(
         TEXT("/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge.SM_World_GlassScarRidge"));
@@ -146,9 +165,13 @@ void AEchoesTerrainView::ApplyTileState(
     // their remembered terrain, which the table explicitly permits.
     const bool bKnown = Visibility != echoes::sim::Visibility::Unexplored;
     const FTransform Hidden = HiddenTransform();
+    // On a composed chasm the band rows are read as the drop itself; a ridge
+    // tooth floating over the abyss would say the same thing worse.
+    const bool bInChasmBand =
+        bChasmComposed && TileY >= ChasmBandMinRow && TileY <= ChasmBandMaxRow;
     BlockedTiles->UpdateInstanceTransform(
         TileIndex,
-        bKnown && Terrain == echoes::sim::Terrain::Blocked
+        bKnown && Terrain == echoes::sim::Terrain::Blocked && !bInChasmBand
             ? TileTransform(TileX, TileY, Terrain)
             : Hidden,
         false,
@@ -202,6 +225,14 @@ bool AEchoesTerrainView::InitializeTerrain(
         return false;
     }
     ScopedPlayerId = ScopedPlayer;
+    if (MapPreset == EEchoesSkirmishMapPreset::GlassScar)
+    {
+        ComposeGlassScarChasm(
+            [&Simulation](int32 X, int32 Y)
+            {
+                return Simulation.TerrainAt(X, Y);
+            });
+    }
     return SyncTerrain(Simulation);
 }
 
@@ -230,6 +261,7 @@ bool AEchoesTerrainView::InitializeScopedTerrain(
     MapWidthTiles = InMapWidthTiles;
     MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
+    ClearChasmComposition();
     // The scoped-network path carries the player's information state in the
     // tile payload itself, so a rebuild starts unscoped and InitializeTerrain
     // re-applies a player only when its caller supplied one.
@@ -702,10 +734,14 @@ FTransform AEchoesTerrainView::DressingTransform(int32 RecordIndex) const
         0.0f,
         90.0f * static_cast<float>(Record.OrientationOrdinal % 4),
         0.0f);
+    // Records on the chasm band stand on the bed: they still mark the cell
+    // Blocked, now as floor debris at the bottom of the drop.
+    const bool bOnChasmBed =
+        bChasmComposed && Record.Y >= ChasmBandMinRow && Record.Y <= ChasmBandMaxRow;
     const FVector Location(
         (static_cast<float>(Record.X) - HalfWidth) * WorldUnitsPerTile,
         (static_cast<float>(Record.Y) - HalfHeight) * WorldUnitsPerTile,
-        Record.bIsShardLayer ? 10.0f : 4.0f);
+        (Record.bIsShardLayer ? 10.0f : 4.0f) + (bOnChasmBed ? ChasmBedTopZ : 0.0f));
     if (Record.bIsShardLayer)
     {
         return FTransform(
@@ -858,5 +894,380 @@ bool AEchoesTerrainView::AreDressingLayersPresentationOnly() const
             return false;
         }
     }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Glass Scar chasm composition (directive gate 50)
+// ---------------------------------------------------------------------------
+
+void AEchoesTerrainView::ConfigureChasmLayer(
+    UInstancedStaticMeshComponent* Layer,
+    UStaticMesh* Mesh,
+    const FLinearColor& BaseColor,
+    const FLinearColor& GlowColor,
+    TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials)
+{
+    Layer->ClearInstances();
+    Layer->SetStaticMesh(Mesh);
+    Materials.Reset();
+    // Same four-slot reading as the environment accents: plate, foundation,
+    // pale relief, emissive fissure. Slot 3 is the amber fissure, kept off
+    // every owner, faction, resource, and command identity hue.
+    const FLinearColor Palette[] = {
+        BaseColor,
+        FLinearColor(BaseColor.R * 0.22f, BaseColor.G * 0.22f, BaseColor.B * 0.25f),
+        FLinearColor(
+            FMath::Min(BaseColor.R * 1.75f + 0.04f, 1.0f),
+            FMath::Min(BaseColor.G * 1.75f + 0.04f, 1.0f),
+            FMath::Min(BaseColor.B * 1.75f + 0.04f, 1.0f)),
+        GlowColor};
+    for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+    {
+        UMaterialInstanceDynamic* Material =
+            UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+        if (Material == nullptr)
+        {
+            continue;
+        }
+        Material->SetVectorParameterValue(TerrainColorParameterName, Palette[MaterialIndex]);
+        // The walking plate is matte like the collision floor it replaces, so
+        // the gameplay camera's steep view does not catch a sun sheen across
+        // the whole basin; the foundation slot keeps the vitrified gloss for
+        // the cliff faces.
+        Material->SetScalarParameterValue(
+            TerrainMetallicParameterName, MaterialIndex == 1 ? 0.46f : 0.03f);
+        Material->SetScalarParameterValue(
+            TerrainRoughnessParameterName, MaterialIndex == 1 ? 0.18f : 0.94f);
+        Material->SetScalarParameterValue(
+            TerrainEmissiveParameterName, MaterialIndex == 3 ? 1.8f : 0.0f);
+        Materials.Add(Material);
+        Layer->SetMaterial(MaterialIndex, Material);
+    }
+}
+
+void AEchoesTerrainView::ClearChasmComposition()
+{
+    bChasmComposed = false;
+    ChasmBandMinRow = -1;
+    ChasmBandMaxRow = -1;
+    for (UInstancedStaticMeshComponent* Layer :
+         {ChasmBanks, ChasmTerrace, ChasmTeeth, ChasmBed})
+    {
+        if (Layer != nullptr)
+        {
+            Layer->ClearInstances();
+        }
+    }
+    for (UPointLightComponent* Light : ChasmFissureLights)
+    {
+        if (Light != nullptr)
+        {
+            Light->DestroyComponent();
+        }
+    }
+    ChasmFissureLights.Reset();
+}
+
+int32 AEchoesTerrainView::GetChasmInstanceCount() const
+{
+    int32 Count = 0;
+    for (const UInstancedStaticMeshComponent* Layer :
+         {ChasmBanks, ChasmTerrace, ChasmTeeth, ChasmBed})
+    {
+        Count += Layer != nullptr ? Layer->GetInstanceCount() : 0;
+    }
+    return Count;
+}
+
+void AEchoesTerrainView::SetTileLayersVisible(bool bVisible)
+{
+    for (UInstancedStaticMeshComponent* Layer :
+         {BlockedTiles, ScarredTiles, DressingShelves, DressingShards})
+    {
+        if (Layer != nullptr)
+        {
+            Layer->SetVisibility(bVisible, true);
+        }
+    }
+}
+
+bool AEchoesTerrainView::ComposeGlassScarChasm(
+    TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt)
+{
+    ClearChasmComposition();
+    if (ScarredMesh == nullptr || BlockedMesh == nullptr ||
+        AuthoredSurfaceMaterial == nullptr || MapWidthTiles < 16 ||
+        MapHeightTiles < 16)
+    {
+        return false;
+    }
+
+    // 1. Find the scar band: contiguous rows that are mostly Blocked while both
+    //    map edges stay passable (the edge corridors). Anything else - a
+    //    campaign layout, another preset's terrain - composes nothing.
+    const int32 MinBlockedPerRow = (MapWidthTiles * 35) / 100;
+    int32 MinRow = -1;
+    int32 MaxRow = -1;
+    for (int32 TileY = 0; TileY < MapHeightTiles; ++TileY)
+    {
+        int32 Blocked = 0;
+        for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
+        {
+            Blocked += TerrainAt(TileX, TileY) == echoes::sim::Terrain::Blocked ? 1 : 0;
+        }
+        const bool bBandRow =
+            Blocked >= MinBlockedPerRow &&
+            TerrainAt(0, TileY) != echoes::sim::Terrain::Blocked &&
+            TerrainAt(MapWidthTiles - 1, TileY) != echoes::sim::Terrain::Blocked;
+        if (!bBandRow)
+        {
+            if (MinRow >= 0)
+            {
+                break;
+            }
+            continue;
+        }
+        if (MinRow < 0)
+        {
+            MinRow = TileY;
+        }
+        MaxRow = TileY;
+    }
+    const int32 BandRows = MinRow >= 0 ? MaxRow - MinRow + 1 : 0;
+    if (BandRows < 3 || BandRows > 9)
+    {
+        return false;
+    }
+
+    // 2. Classify columns across the band: deep where every band row is
+    //    Blocked, open where a crossing or corridor passes.
+    TArray<bool> DeepColumn;
+    DeepColumn.Init(false, MapWidthTiles);
+    for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
+    {
+        bool bDeep = true;
+        for (int32 TileY = MinRow; TileY <= MaxRow && bDeep; ++TileY)
+        {
+            bDeep = TerrainAt(TileX, TileY) == echoes::sim::Terrain::Blocked;
+        }
+        DeepColumn[TileX] = bDeep;
+    }
+    struct FSpan
+    {
+        float MinX;
+        float MaxX;
+        bool bDeep;
+        bool bTouchesEdge;
+    };
+    TArray<FSpan> Spans;
+    const float HalfWidth = static_cast<float>(MapWidthTiles) * 0.5f;
+    const float HalfHeight = static_cast<float>(MapHeightTiles) * 0.5f;
+    const float T = WorldUnitsPerTile;
+    const auto ColumnMin = [&](int32 TileX) { return (static_cast<float>(TileX) - HalfWidth) * T - T * 0.5f; };
+    const auto ColumnMax = [&](int32 TileX) { return (static_cast<float>(TileX) - HalfWidth) * T + T * 0.5f; };
+    for (int32 TileX = 0; TileX < MapWidthTiles;)
+    {
+        int32 End = TileX;
+        while (End + 1 < MapWidthTiles && DeepColumn[End + 1] == DeepColumn[TileX])
+        {
+            ++End;
+        }
+        Spans.Add({ColumnMin(TileX), ColumnMax(End), DeepColumn[TileX],
+                   TileX == 0 || End == MapWidthTiles - 1});
+        TileX = End + 1;
+    }
+    int32 DeepSpans = 0;
+    for (const FSpan& Span : Spans)
+    {
+        DeepSpans += Span.bDeep ? 1 : 0;
+    }
+    if (DeepSpans == 0)
+    {
+        return false;
+    }
+
+    const float BandMinY = (static_cast<float>(MinRow) - HalfHeight) * T - T * 0.5f;
+    const float BandMaxY = (static_cast<float>(MaxRow) - HalfHeight) * T + T * 0.5f;
+    const float BandCenterY = 0.5f * (BandMinY + BandMaxY);
+    const float BandHalfWidth = 0.5f * (BandMaxY - BandMinY);
+    const float MapMinX = -HalfWidth * T;
+    const float MapMaxX = HalfWidth * T;
+    const float MapMinY = -HalfHeight * T;
+    const float MapMaxY = HalfHeight * T;
+
+    // The plate takes the retired collision floor's albedo exactly: under the
+    // A1 exposure rig that albedo is what gate 3 accepted as charcoal
+    // vitrified ground, and anything brighter reads as pale at gameplay pitch.
+    const FLinearColor BankColor(0.018f, 0.027f, 0.032f);
+    const FLinearColor TerraceColor(0.016f, 0.022f, 0.027f);
+    const FLinearColor BedColor(0.030f, 0.026f, 0.024f);
+    const FLinearColor FissureGlow(1.0f, 0.42f, 0.08f);
+    ConfigureChasmLayer(ChasmBanks, ScarredMesh, BankColor, FissureGlow, ChasmBankMaterials);
+    ConfigureChasmLayer(ChasmTerrace, ScarredMesh, TerraceColor, FissureGlow, ChasmBankMaterials);
+    ConfigureChasmLayer(ChasmTeeth, BlockedMesh, FLinearColor(0.030f, 0.040f, 0.048f), FissureGlow, ChasmTeethMaterials);
+    ConfigureChasmLayer(ChasmBed, ScarredMesh, BedColor, FissureGlow, ChasmBedMaterials);
+
+    // 3. Banks: overlapping shelf plates from each rim out to the map edge.
+    //    The shelf is 780 wide; plates overlap by ~60 and alternate 6 lower
+    //    so seams do not show. Row 0 is deep enough to reach the bed.
+    constexpr float ShelfSource = 780.0f;
+    constexpr float PlateScaleXY = 2.05f;
+    constexpr float PlateWidth = ShelfSource * PlateScaleXY;
+    constexpr float PlateSpacing = PlateWidth - 60.0f;
+    constexpr float PlateTopLocal = 39.0f;
+    constexpr float PlateTopZ = -6.0f; // just under the deck of a crossing
+    constexpr float RimRowScaleZ = 1.9f;
+    const int32 TilesAcross = FMath::CeilToInt((MapMaxX - MapMinX) / PlateSpacing) + 1;
+    const float FirstTileX = -0.5f * static_cast<float>(TilesAcross - 1) * PlateSpacing;
+    for (const float BankSign : {-1.0f, 1.0f})
+    {
+        const float RimY = BankSign < 0.0f ? BandMinY : BandMaxY;
+        const float BankExtent = BankSign < 0.0f ? RimY - MapMinY : MapMaxY - RimY;
+        const int32 Rows = FMath::CeilToInt(BankExtent / PlateSpacing) + 1;
+        for (int32 Row = 0; Row < Rows; ++Row)
+        {
+            const float ScaleZ = Row == 0 ? RimRowScaleZ : 1.0f;
+            const float CenterY =
+                RimY + BankSign * (PlateWidth * 0.5f + static_cast<float>(Row) * PlateSpacing);
+            for (int32 Column = 0; Column < TilesAcross; ++Column)
+            {
+                const float CenterX = FirstTileX + static_cast<float>(Column) * PlateSpacing;
+                const float Stagger = ((Row + Column) % 2 == 0) ? 0.0f : -6.0f;
+                ChasmBanks->AddInstance(FTransform(
+                    FRotator::ZeroRotator,
+                    FVector(CenterX, CenterY, PlateTopZ - PlateTopLocal * ScaleZ + Stagger),
+                    FVector(PlateScaleXY, PlateScaleXY, ScaleZ)));
+            }
+        }
+    }
+
+    // 4. Terrace: a narrower step halfway down each cliff so the inner face
+    //    reads as strata rather than one flat wall.
+    constexpr float TerraceInset = 240.0f;
+    constexpr float TerraceScaleZ = 1.2f;
+    constexpr float TerraceTopZ = -330.0f;
+    for (const float BankSign : {-1.0f, 1.0f})
+    {
+        const float CenterY =
+            BandCenterY + BankSign * (BandHalfWidth - TerraceInset + PlateWidth * 0.5f);
+        for (int32 Column = 0; Column < TilesAcross; ++Column)
+        {
+            const float CenterX =
+                FirstTileX + static_cast<float>(Column) * PlateSpacing + 260.0f * BankSign;
+            ChasmTerrace->AddInstance(FTransform(
+                FRotator(0.0f, 3.0f * BankSign, 0.0f),
+                FVector(CenterX, CenterY, TerraceTopZ - PlateTopLocal * TerraceScaleZ),
+                FVector(PlateScaleXY, PlateScaleXY, TerraceScaleZ)));
+        }
+    }
+
+    // 5. Bed under the deep spans; a ground-level plate under an edge
+    //    corridor, which the pack keeps passable and units cross at z = 0.
+    constexpr float BedScaleZ = 0.5f;
+    const float BedWidthY = 2.0f * (BandHalfWidth - TerraceInset) + 260.0f;
+    for (const FSpan& Span : Spans)
+    {
+        const float SpanWidth = Span.MaxX - Span.MinX;
+        const float CenterX = 0.5f * (Span.MinX + Span.MaxX);
+        if (Span.bDeep)
+        {
+            ChasmBed->AddInstance(FTransform(
+                FRotator::ZeroRotator,
+                FVector(CenterX, BandCenterY, ChasmBedTopZ - PlateTopLocal * BedScaleZ),
+                FVector((SpanWidth + 120.0f) / ShelfSource, BedWidthY / ShelfSource, BedScaleZ)));
+        }
+        else if (Span.bTouchesEdge)
+        {
+            ChasmBed->AddInstance(FTransform(
+                FRotator::ZeroRotator,
+                FVector(CenterX, BandCenterY, PlateTopZ - PlateTopLocal),
+                FVector((SpanWidth + 40.0f) / ShelfSource, (2.0f * BandHalfWidth) / ShelfSource, 1.0f)));
+        }
+    }
+
+    // 6. Rim teeth along both cliff edges, skipping the open spans so each
+    //    crossing reads clean.
+    constexpr float ToothSpacing = 420.0f;
+    int32 Tooth = 0;
+    for (const float BankSign : {-1.0f, 1.0f})
+    {
+        const float RimY = (BankSign < 0.0f ? BandMinY : BandMaxY) - BankSign * 70.0f;
+        for (float ToothX = MapMinX + 210.0f; ToothX < MapMaxX; ToothX += ToothSpacing, ++Tooth)
+        {
+            const float JitteredX = ToothX + ((Tooth % 2 == 0) ? 60.0f : -80.0f) * BankSign;
+            bool bOpen = false;
+            for (const FSpan& Span : Spans)
+            {
+                if (!Span.bDeep && JitteredX > Span.MinX - 120.0f && JitteredX < Span.MaxX + 120.0f)
+                {
+                    bOpen = true;
+                    break;
+                }
+            }
+            if (bOpen)
+            {
+                continue;
+            }
+            const float Scale = 0.55f + 0.2f * static_cast<float>(Tooth % 3);
+            ChasmTeeth->AddInstance(FTransform(
+                FRotator(0.0f, 37.0f * static_cast<float>(Tooth) + (BankSign < 0.0f ? 0.0f : 180.0f), 0.0f),
+                FVector(JitteredX, RimY, -8.0f),
+                FVector(Scale, Scale, Scale)));
+        }
+    }
+
+    // 7. Fissure light in the deep spans so the bed carries amber.
+    for (const FSpan& Span : Spans)
+    {
+        if (!Span.bDeep)
+        {
+            continue;
+        }
+        const float SpanWidth = Span.MaxX - Span.MinX;
+        const int32 Lights = FMath::Max(1, FMath::RoundToInt(SpanWidth / 1300.0f));
+        for (int32 Index = 0; Index < Lights; ++Index)
+        {
+            const float X = Span.MinX + SpanWidth * (static_cast<float>(Index) + 0.5f) / static_cast<float>(Lights);
+            UPointLightComponent* Light = NewObject<UPointLightComponent>(this);
+            if (Light == nullptr)
+            {
+                continue;
+            }
+            Light->SetupAttachment(SceneRoot);
+            Light->SetMobility(EComponentMobility::Movable);
+            Light->SetRelativeLocation(FVector(X, BandCenterY, ChasmBedTopZ + 130.0f));
+            Light->SetLightColor(FLinearColor(1.0f, 0.38f, 0.05f));
+            Light->SetIntensity(3800.0f);
+            Light->SetAttenuationRadius(1500.0f);
+            Light->SetSourceRadius(160.0f);
+            Light->SetCastShadows(false);
+            Light->RegisterComponent();
+            ChasmFissureLights.Add(Light);
+        }
+    }
+
+    for (UInstancedStaticMeshComponent* Layer :
+         {ChasmBanks, ChasmTerrace, ChasmTeeth, ChasmBed})
+    {
+        Layer->MarkRenderStateDirty();
+    }
+    ChasmBandMinRow = MinRow;
+    ChasmBandMaxRow = MaxRow;
+    bChasmComposed = true;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_GLASS_SCAR_CHASM_READY] bandRows=%d-%d deepSpans=%d openSpans=%d banks=%d terrace=%d teeth=%d bed=%d fissureLights=%d bedTopZ=%.0f collisionAuthority=false routeAuthority=false"),
+        MinRow,
+        MaxRow,
+        DeepSpans,
+        Spans.Num() - DeepSpans,
+        ChasmBanks->GetInstanceCount(),
+        ChasmTerrace->GetInstanceCount(),
+        ChasmTeeth->GetInstanceCount(),
+        ChasmBed->GetInstanceCount(),
+        ChasmFissureLights.Num(),
+        ChasmBedTopZ);
     return true;
 }

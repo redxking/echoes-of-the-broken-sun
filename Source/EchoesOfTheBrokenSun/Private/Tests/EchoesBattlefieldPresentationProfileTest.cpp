@@ -378,9 +378,19 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
                 PresentationProbes[Index]->IsHidden(),
                 Index != PresetIndex);
         }
-        bPassed &= TestFalse(
-            FString::Printf(TEXT("%s: shared floor remains visible"), Label),
-            SharedFloor->IsHidden());
+        // The collision floor stops rendering where the terrain view draws the
+        // Glass Scar chasm (gate 50); everywhere else it stays visible. Its
+        // collision is untouched either way.
+        const AEchoesTerrainView* ProfileTerrain =
+            Bridge != nullptr ? Bridge->GetTerrainView() : nullptr;
+        const bool bFloorSurfaceReplaced =
+            ProfileTerrain != nullptr && ProfileTerrain->HasChasmComposition();
+        bPassed &= TestEqual(
+            FString::Printf(
+                TEXT("%s: shared floor hides only where the terrain view draws the chasm"),
+                Label),
+            SharedFloor->IsHidden(),
+            bFloorSurfaceReplaced);
         bPassed &= TestTrue(
             FString::Printf(TEXT("%s: shared floor collision remains enabled"),
                             Label),

@@ -14,6 +14,7 @@
 class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
+class UPointLightComponent;
 class UStaticMesh;
 
 /**
@@ -89,6 +90,21 @@ public:
     {
         return *ActiveDressingSiteId;
     }
+    // Glass Scar chasm (directive gate 50). The impassable scar band that the
+    // compiled pack authors as rows of Blocked cells is drawn as an open drop
+    // between two banks, with the crossings and edge corridors left open. The
+    // band is derived from the live terrain at initialization, never from a
+    // hand-authored layout, so the drawn chasm cannot disagree with the pack.
+    // Presentation only: no collision, navigation, fog, or route authority.
+    [[nodiscard]] bool HasChasmComposition() const { return bChasmComposed; }
+    [[nodiscard]] int32 GetChasmBandMinRow() const { return ChasmBandMinRow; }
+    [[nodiscard]] int32 GetChasmBandMaxRow() const { return ChasmBandMaxRow; }
+    [[nodiscard]] int32 GetChasmInstanceCount() const;
+    // Art-review fixtures hide the per-tile silhouette and dressing layers
+    // while keeping the chasm, so a composed frame renders the same ground
+    // that play does.
+    void SetTileLayersVisible(bool bVisible);
+
     // The player whose information state gates this view, if any. Unset means
     // the legacy full-disclosure path, on which every authored tile is drawn.
     [[nodiscard]] std::optional<echoes::sim::PlayerId> GetScopedPlayer() const
@@ -155,8 +171,49 @@ private:
         TFunctionRef<bool(int32, int32)> ReshapedOpenAt);
     [[nodiscard]] FTransform DressingTransform(int32 RecordIndex) const;
 
+    // Chasm composer. Detects the scar band from the terrain rows and fills
+    // the bank, terrace, rim-tooth, and bed layers plus fissure lights.
+    bool ComposeGlassScarChasm(
+        TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt);
+    void ClearChasmComposition();
+    void ConfigureChasmLayer(
+        UInstancedStaticMeshComponent* Layer,
+        UStaticMesh* Mesh,
+        const FLinearColor& BaseColor,
+        const FLinearColor& GlowColor,
+        TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials);
+
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<USceneComponent> SceneRoot;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> ChasmBanks;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> ChasmTerrace;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> ChasmTeeth;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> ChasmBed;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UPointLightComponent>> ChasmFissureLights;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> ChasmBankMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> ChasmTeethMaterials;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInstanceDynamic>> ChasmBedMaterials;
+
+    bool bChasmComposed = false;
+    int32 ChasmBandMinRow = -1;
+    int32 ChasmBandMaxRow = -1;
+    float ChasmBedTopZ = -680.0f;
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UInstancedStaticMeshComponent> BlockedTiles;
