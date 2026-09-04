@@ -154,6 +154,18 @@ constexpr float EntityPickHeadroomCentimetres = 26.0f;
     return FVector(PlanarScale, PlanarScale, Thickness);
 }
 
+// Same radius on the halo ring mesh (68 cm extent at scale 1) when it is
+// available; falls back to the disc scale on the unit cylinder otherwise.
+[[nodiscard]] FVector AbilityRingScale(float RadiusCentimetres, float Thickness, bool bRingMesh)
+{
+    if (!bRingMesh)
+    {
+        return AbilityDiscScale(RadiusCentimetres, Thickness);
+    }
+    const float PlanarScale = RadiusCentimetres / SelectionHaloExtentCentimetres;
+    return FVector(PlanarScale, PlanarScale, 1.0f);
+}
+
 const TCHAR* AuthoredPresentationMeshPath(
     echoes::sim::Faction Faction,
     echoes::sim::EntityType Type)
@@ -555,7 +567,10 @@ AEchoesEntityView::AEchoesEntityView()
     HealthBarFill->SetStaticMesh(CubeMesh);
     DeploymentCover->SetStaticMesh(CubeMesh);
     DamageAcknowledgeMarker->SetStaticMesh(CubeMesh);
-    RelaySupplyField->SetStaticMesh(CylinderMesh);
+    // Ability fields are radius outlines on the selection-halo ring, not solid
+    // discs: a filled cylinder covered the ground under an entire base with a
+    // pale plate in the composed frame (gate 50 base captures).
+    RelaySupplyField->SetStaticMesh(SelectionHaloMesh != nullptr ? SelectionHaloMesh : CylinderMesh);
     RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     // Sized from the authored default rule, not from a literal. The live rule
     // set re-derives it in ConfigureAppearance once a simulation exists; this
@@ -570,7 +585,7 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     ChoirIdentityField->SetStaticMesh(CylinderMesh);
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
-    AegisPowerField->SetStaticMesh(CylinderMesh);
+    AegisPowerField->SetStaticMesh(SelectionHaloMesh != nullptr ? SelectionHaloMesh : CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeScale3D(AbilityDiscScale(
         AbilityDiscRadiusCentimetres(
@@ -1899,9 +1914,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             DefaultRules.poweredAegis.connectionRadiusRaw);
     }
     RelaySupplyField->SetRelativeScale3D(
-        AbilityDiscScale(RelaySupplyFieldRadiusCentimetres, 0.025f));
+        AbilityRingScale(RelaySupplyFieldRadiusCentimetres, 0.025f, SelectionHaloMesh != nullptr));
     AegisPowerField->SetRelativeScale3D(
-        AbilityDiscScale(AegisPowerFieldRadiusCentimetres, 0.045f));
+        AbilityRingScale(AegisPowerFieldRadiusCentimetres, 0.045f, SelectionHaloMesh != nullptr));
 
     RelaySupplyField->SetVisibility(
         State.relaySupplyActive &&

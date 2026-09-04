@@ -1,5 +1,7 @@
 #include "EchoesHUD.h"
 
+#include "EchoesTypeface.h"
+
 #include "EchoesNarrativeSubsystem.h"
 
 #include "EchoesContentSubsystem.h"
@@ -192,7 +194,7 @@ void AEchoesHUD::DrawPointerButton(
         DrawLine(Bounds.Min.X, Bounds.Max.Y, Bounds.Min.X, Bounds.Min.Y,
                  Theme.Accent, Theme.BorderThickness);
     }
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     DrawText(
         Label,
         bPrimary ? Theme.ActionText : Theme.TextPrimary,
@@ -439,7 +441,7 @@ void AEchoesHUD::DrawHUD()
             AccentColor,
             LobbyX + 32.0f,
             LobbyY + 32.0f,
-            GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
+            EchoesTypeface::ChromeLarge(),
             1.15f * HudScale,
             false);
         DrawText(
@@ -449,7 +451,7 @@ void AEchoesHUD::DrawHUD()
             FLinearColor::White,
             LobbyX + 32.0f,
             LobbyY + 94.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.95f * HudScale,
             false);
         DrawText(
@@ -457,7 +459,7 @@ void AEchoesHUD::DrawHUD()
             SecondaryColor,
             LobbyX + 32.0f,
             LobbyY + 128.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.92f * HudScale,
             false);
         const FEchoesLobbyOverlayLayout LobbyPointerLayout =
@@ -474,7 +476,7 @@ void AEchoesHUD::DrawHUD()
             FLinearColor::Black,
             LobbyX + 32.0f,
             LobbyY + 184.0f,
-            GEngine != nullptr ? GEngine->GetMediumFont() : nullptr,
+            EchoesTypeface::ChromeLarge(),
             1.0f * HudScale,
             false);
         DrawText(
@@ -482,7 +484,7 @@ void AEchoesHUD::DrawHUD()
             SecondaryColor,
             LobbyX + 32.0f,
             LobbyY + 226.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.88f * HudScale,
             false);
         return;
@@ -531,7 +533,7 @@ void AEchoesHUD::DrawHUD()
             AccentColor,
             CenterX + 20.0f,
             CenterY + 10.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.78f * HudScale,
             false);
     }
@@ -547,7 +549,7 @@ void AEchoesHUD::DrawHUD()
         AccentColor,
         TextX,
         HudY(13.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         1.08f * HudScale,
         false);
 
@@ -644,7 +646,7 @@ void AEchoesHUD::DrawHUD()
         FLinearColor::White,
         TextX,
         HudY(40.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Readout(),
         1.0f * HudScale,
         false);
 
@@ -939,7 +941,7 @@ void AEchoesHUD::DrawHUD()
         FLinearColor(0.76f, 0.92f, 1.0f),
         TextX,
         HudY(64.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         1.0f * HudScale,
         false);
 
@@ -955,7 +957,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(90.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
     const echoes::sim::Faction PresentedFaction =
@@ -982,7 +984,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(113.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
     const FString GroupControlLine = bNetworkRemoteView
@@ -999,7 +1001,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(136.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
     const FString FactionStatusLine = bNetworkRemoteView
@@ -1017,7 +1019,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(159.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
     DrawText(
@@ -1025,7 +1027,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(182.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
 
@@ -1041,7 +1043,7 @@ void AEchoesHUD::DrawHUD()
         AccentColor,
         TextX,
         HudY(205.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
 
@@ -1056,7 +1058,7 @@ void AEchoesHUD::DrawHUD()
         SecondaryColor,
         TextX,
         HudY(228.0f),
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
 
@@ -1086,7 +1088,7 @@ void AEchoesHUD::DrawHUD()
                     : FLinearColor(0.25f, 1.0f, 0.66f),
                 TextX,
                 FeedbackLayout.StatusPanel.Min.Y + 14.0f,
-                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                EchoesTypeface::Chrome(),
                 0.95f * HudScale,
                 false);
         }
@@ -1163,7 +1165,7 @@ void AEchoesHUD::DrawOnlineTitleEntry(
         TextColor,
         Button.Min.X + 16.0f * HudScale,
         Button.Min.Y + 12.0f * HudScale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.82f * HudScale,
         false);
 }
@@ -1196,7 +1198,7 @@ void AEchoesHUD::DrawOnlineFrontDoor(
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
     const FLinearColor ErrorColor = Theme.Danger;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const float Left = Layout.Origin.X;
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
@@ -1418,7 +1420,7 @@ void AEchoesHUD::DrawNetworkReconnectBanner(
         Accent,
         Left + 20.0f,
         Top + 17.0f * HudScale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * HudScale,
         false);
 }
@@ -1443,7 +1445,7 @@ void AEchoesHUD::DrawOnlineLocalMenu(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const float Left = Layout.Origin.X;
     const float Top = Layout.Origin.Y;
     const float Scale = Layout.ContentScale;
@@ -1527,7 +1529,7 @@ void AEchoesHUD::DrawCommandDeck(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     DrawVisualPanel(Layout.CommandDeckPanel, Theme, true);
     DrawRect(
         FLinearColor(Accent.R, Accent.G, Accent.B, 0.75f),
@@ -1698,7 +1700,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         AccentColor,
         TextX,
         Layout.Origin.Y + 25.0f * Scale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         1.12f * Scale,
         false);
     DrawText(
@@ -1706,7 +1708,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         MutedColor,
         TextX,
         Layout.Origin.Y + 58.0f * Scale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * Scale,
         false);
 
@@ -1718,7 +1720,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         TEXT("CLOSE"), AccentColor,
         Close.Min.X + 8.0f * Scale,
         Close.Min.Y + 8.0f * Scale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.76f * Scale,
         false);
 
@@ -1849,7 +1851,7 @@ void AEchoesHUD::DrawTechnologyPanel(
             Theme.TextPrimary,
             Row.Min.X + 20.0f * Scale,
             Row.Min.Y + 16.0f * Scale,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             1.0f * Scale,
             false);
         if (Rules != nullptr)
@@ -1864,7 +1866,7 @@ void AEchoesHUD::DrawTechnologyPanel(
                 MutedColor,
                 Row.Min.X + 20.0f * Scale,
                 Row.Min.Y + 47.0f * Scale,
-                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                EchoesTypeface::Readout(),
                 0.83f * Scale,
                 false);
             const FString Effect =
@@ -1880,7 +1882,7 @@ void AEchoesHUD::DrawTechnologyPanel(
                 MutedColor,
                 Row.Min.X + 20.0f * Scale,
                 Row.Min.Y + 72.0f * Scale,
-                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                EchoesTypeface::Chrome(),
                 0.83f * Scale,
                 false);
         }
@@ -1889,7 +1891,7 @@ void AEchoesHUD::DrawTechnologyPanel(
             StatusColor,
             Row.Max.X - 286.0f * Scale,
             Row.Min.Y + 18.0f * Scale,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.82f * Scale,
             false);
     }
@@ -1899,7 +1901,7 @@ void AEchoesHUD::DrawTechnologyPanel(
         AccentColor,
         TextX,
         Layout.Origin.Y + Layout.Size.Y - 38.0f * Scale,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.86f * Scale,
         false);
 }
@@ -1932,7 +1934,7 @@ void AEchoesHUD::DrawSkirmishSetup(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const FEchoesSkirmishSetup& Setup =
         EchoesController->GetPendingSkirmishSetup();
     const int32 FocusRow = EchoesController->GetSkirmishSetupFocusRow();
@@ -2142,7 +2144,7 @@ void AEchoesHUD::DrawSkirmishDeploymentSummary(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const FEchoesSkirmishSetup& Setup =
         EchoesController->GetPendingSkirmishSetup();
 
@@ -2290,7 +2292,7 @@ void AEchoesHUD::DrawTitleScreen(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const FString AccessLine = FString::Printf(
         TEXT("[U] UI %d%%    [I] HIGH CONTRAST %s    [O] REDUCED MOTION %s    [/] REDUCED FLASHING %s"),
         FMath::RoundToInt(HudScale * 100.0f),
@@ -2744,7 +2746,7 @@ void AEchoesHUD::DrawObjectiveTracker(
     const FLinearColor Active = Theme.TextPrimary;
     const FLinearColor Complete = Theme.Success;
     const FLinearColor Failed = Theme.Danger;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const float TextScale = FMath::Clamp(HudScale, 0.82f, 1.2f);
 
     if (Objective.OperationMode == EEchoesOperationMode::CampaignPrologue)
@@ -4289,7 +4291,7 @@ void AEchoesHUD::DrawNarrativeSubtitle(
     const FEchoesVisualTheme Theme =
         UEchoesVisualThemeSettings::Resolve(bHighContrast);
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
 
     const FString Composite =
         FString::Printf(TEXT("%s — %s"), *Speaker.ToUpper(), *Text);
@@ -4738,7 +4740,7 @@ void AEchoesHUD::DrawMatchResult(
         : bDraw ? Theme.Warning : Theme.Danger;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const uint64 FinalTick = bOnlineResult
         ? EchoesController->GetPresentedFinalTick()
         : Bridge != nullptr && Bridge->GetSimulation() != nullptr
@@ -4969,7 +4971,7 @@ void AEchoesHUD::DrawMatchResult(
                 Remaining.RightChopInline(Break + 1);
             }
             UFont* ResultFont =
-                GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+                EchoesTypeface::Chrome();
             const FEchoesVisualTheme ResultTheme =
                 UEchoesVisualThemeSettings::Resolve(
                     Settings != nullptr &&
@@ -5019,7 +5021,7 @@ void AEchoesHUD::DrawPauseMenu(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -5188,7 +5190,7 @@ void AEchoesHUD::DrawMissionBriefing(
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
-    UFont* SmallFont = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+    UFont* SmallFont = EchoesTypeface::Chrome();
     const FString LocalFaction = EchoesController->GetLocalFactionLabel();
     const FString OpponentFaction = EchoesController->GetOpponentFactionLabel();
     const UEchoesSimulationSubsystem* BriefingBridge =
@@ -6272,7 +6274,7 @@ void AEchoesHUD::DrawTacticalMinimap(
             DrawLine(X, Y + Radius, X - Radius, Y, Color, 2.0f);
             DrawLine(X - Radius, Y, X, Y - Radius, Color, 2.0f);
             DrawText(Label, Color, X + 9.0f, Y - 8.0f,
-                     GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+                     EchoesTypeface::Chrome(),
                      0.68f, false);
         };
         if (Bridge->GetOperationMode() ==
@@ -6967,7 +6969,7 @@ void AEchoesHUD::DrawTacticalMinimap(
         Border,
         Left,
         Top - 18.0f,
-        GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+        EchoesTypeface::Chrome(),
         0.72f * HudScale,
         false);
 
@@ -7035,7 +7037,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             SignatureColor,
             AlertLeft + 18.0f,
             AlertTop + 12.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.82f * HudScale,
             false);
         DrawText(
@@ -7043,7 +7045,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             Theme.TextPrimary,
             AlertLeft + 18.0f,
             AlertTop + 36.0f,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.72f * HudScale,
             false);
     }
@@ -7149,7 +7151,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             SignatureColor,
             Placement.LabelPosition.X,
             Placement.LabelPosition.Y,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.74f * HudScale,
             false);
         DrawText(
@@ -7157,7 +7159,7 @@ void AEchoesHUD::DrawVibrationSignatures(
             Theme.TextSecondary,
             Placement.LabelPosition.X,
             Placement.LabelPosition.Y + 17.0f * HudScale,
-            GEngine != nullptr ? GEngine->GetSmallFont() : nullptr,
+            EchoesTypeface::Chrome(),
             0.62f * HudScale,
             false);
     }

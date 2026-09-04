@@ -191,6 +191,14 @@ This is the single authoritative provenance register and is edited in place. An 
 - Asset SHA-256 `288a2a8ad32d0671cb030f44039313e2fcdf32f63397c61bb93271da01fcf1e5`.
 - Evidence: fixture and scouted live captures `fixture-skydome-*` / `live-well-skydome-*` under `BuildArtifacts/Evidence/release-gate50-composed-frame-20260904/` (editor build, local), exposure measured. Owner review still owed.
 
+## FONT-001 typeface embedding record
+
+- Decision: directive open decision 2, resolved by Angelis 2026-09-01 and executed 2026-09-04 under the standing lead-director mandate: **Space Grotesk** for interface chrome, **IBM Plex Mono** for tactical readouts.
+- Source: the Google Fonts repository (`github.com/google/fonts`, `ofl/spacegrotesk` and `ofl/ibmplexmono`), fetched 2026-09-04 as shipped there: `SpaceGrotesk[wght].ttf` (variable weight), `IBMPlexMono-Regular/Medium/SemiBold/Bold.ttf`. Vendored under `Content/UI/Fonts/<family>/` with each family's `OFL.txt` beside the files.
+- Licence: SIL Open Font License 1.1 for both (Space Grotesk © 2020 The Space Grotesk Project Authors; IBM Plex © 2017 IBM Corp., Reserved Font Name "Plex"). Free for commercial embedding in the game and the site; the OFL text ships with the files; no per-seat cost; attribution carried here.
+- Method: no editor Font asset. `EchoesTypeface` (`Source/EchoesOfTheBrokenSun/Public/EchoesTypeface.h`) builds runtime-cached `UFont` objects from the vendored files at first use (chrome 10, chrome-large 14, readout 10 legacy sizes), logs `[ECHOES_TYPEFACE_READY]` per face, and falls back to the engine font with `[ECHOES_TYPEFACE_FALLBACK]` if a file is missing so text never disappears. `AEchoesHUD` draws all chrome through `Chrome()`/`ChromeLarge()` and the resource ledger through `Readout()`. `Config/DefaultGame.ini` stages `UI/Fonts` as UFS so the files ship in a package.
+- Boundary: the site (`website/`) does not yet embed the faces; the Slate menus that use engine styles are not restyled by this record; A8's full interface art system remains open.
+
 ## AUDIO-001 generation and playback evidence record
 
 - Exact accepted source: version 0.71.0 commit `5368aec5d86a6bf5566c3445890323432f8cba1f`; generator and audit wrapper: `Scripts/generate_audio_assets.py` and `Scripts/generate_audio_assets.sh`; exact generation-log SHA-256 `08b29f29cd005084c5ccb1d5c2d25fec760a4180258e14920bf51cacafd669b0`.

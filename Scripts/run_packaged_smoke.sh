@@ -60,7 +60,7 @@ if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*32 entities, 14 visible views, 20 
   exit 6
 fi
 
-if ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 well=(32,32) local=MeridianCompact opponent=KharuunAssemblies ai=ADAPTIVE resources=STANDARD' "$log"; then
+if ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 well=(32,32) local=MeridianCompact opponent=KharuunAssemblies teams=1V1 // LOCAL VS OPPONENT ai=ADAPTIVE difficulty=STANDARD // 100% FAIR INFORMATION, NO CHEATS resources=STANDARD' "$log"; then
   print -u2 "The packaged Glass Scar skirmish front door did not report the accepted layout. Inspect: $log"
   exit 7
 fi
