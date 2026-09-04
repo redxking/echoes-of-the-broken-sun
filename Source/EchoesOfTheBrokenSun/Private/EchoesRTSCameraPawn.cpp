@@ -489,6 +489,20 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         }
         if (ArtReviewElapsedSeconds >= ArtReviewCaptureDelaySeconds)
         {
+            // -EchoesArtReviewPauseMenu opens the field menu through the
+            // ordinary toggle at capture time so the relocated key legend is
+            // photographed, not assumed.
+            if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewPauseMenu")))
+            {
+                if (AEchoesPlayerController* MenuController =
+                        Cast<AEchoesPlayerController>(GetController()))
+                {
+                    if (!MenuController->IsPauseMenuVisible())
+                    {
+                        MenuController->TogglePauseMenu();
+                    }
+                }
+            }
             FAssetCompilingManager::Get().FinishAllCompilation();
 
             for (TActorIterator<AEchoesEntityView> It(GetWorld()); It; ++It)

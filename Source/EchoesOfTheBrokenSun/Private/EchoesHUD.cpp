@@ -1173,8 +1173,6 @@ void AEchoesHUD::DrawHUD()
     FieldKeyLines.Add(FactionControlLine);
     FieldKeyLines.Add(GroupControlLine);
     FieldKeyLines.Add(FactionStatusLine);
-    FieldKeyLines.Add(SettingsLine);
-    FieldKeyLines.Add(CameraSettingsLine);
 
     DrawCommandDeck(EchoesController, Bridge, Settings);
 
@@ -5280,16 +5278,16 @@ void AEchoesHUD::DrawPauseMenu(
     DrawText(SettingsLineE, Body, Left + 42.0f, Top + 418.0f * ContentScale,
              SmallFont, 0.78f * TextScale, false);
     DrawText(TEXT("FIELD KEYS"), Accent, Left + 42.0f,
-             Top + 452.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+             Top + 440.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
     for (int32 KeyIndex = 0; KeyIndex < FieldKeyLines.Num(); ++KeyIndex)
     {
         DrawText(FieldKeyLines[KeyIndex], Muted, Left + 42.0f,
-                 Top + (476.0f + 20.0f * static_cast<float>(KeyIndex)) * ContentScale,
-                 SmallFont, 0.74f * TextScale, false);
+                 Top + (458.0f + 15.0f * static_cast<float>(KeyIndex)) * ContentScale,
+                 SmallFont, 0.68f * TextScale, false);
     }
     DrawText(
         TEXT("Only implemented, behavior-verified options are exposed in this build."),
-        Muted, Left + 42.0f, Top + 604.0f * ContentScale,
+        Muted, Left + 42.0f, Top + 521.0f * ContentScale,
         SmallFont, 0.78f * TextScale, false);
 
     DrawRect(Accent,
