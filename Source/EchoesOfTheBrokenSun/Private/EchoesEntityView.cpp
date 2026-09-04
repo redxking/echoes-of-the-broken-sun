@@ -45,6 +45,7 @@ enum class ESurfaceTextureFamily : uint8
     KharuunMineral,
     ChoirCoherent,
     MatterCrystal,
+    VitrifiedGlass,
 };
 
 [[nodiscard]] const TCHAR* SurfaceTextureFamilyName(
@@ -60,6 +61,8 @@ enum class ESurfaceTextureFamily : uint8
             return TEXT("ChoirCoherent");
         case ESurfaceTextureFamily::MatterCrystal:
             return TEXT("MatterCrystal");
+        case ESurfaceTextureFamily::VitrifiedGlass:
+            return TEXT("VitrifiedGlass");
         case ESurfaceTextureFamily::CeramicCivic:
         default:
             return TEXT("CeramicCivic");
@@ -2338,18 +2341,30 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
 
     const FLinearColor StoneColor(0.030f, 0.034f, 0.042f);
     const FLinearColor GlassColor(0.006f, 0.008f, 0.014f);
+    // A3 landmark families: the foundation, orbits, and ground glyphs are
+    // vitrified glass (charcoal body, magenta micro-fracture), the
+    // unrealized-future core is Matter crystal. The mask-driven glow takes
+    // the state colour so Dormant/Harvest/Preserve/Reshape stay readable
+    // through the family rather than despite it; it is held steady.
     auto ApplyPalette = [&StoneColor,
                          &GlassColor,
                          &SecondaryColor,
                          &GlowColor](
                             TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials,
                             float InSecondaryEmissive,
-                            float InGlowEmissive)
+                            float InGlowEmissive,
+                            ESurfaceTextureFamily Family,
+                            float InMaskedEmissive)
     {
         if (Materials.Num() < 4)
         {
             return;
         }
+        const float MaskedEmissive[] = {
+            InMaskedEmissive * 0.35f,
+            InMaskedEmissive * 0.20f,
+            InMaskedEmissive * 0.70f,
+            InMaskedEmissive};
         const FLinearColor Colors[] = {
             StoneColor,
             GlassColor,
@@ -2377,30 +2392,53 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
             Material->SetScalarParameterValue(
                 EmissiveStrengthParameterName,
                 Emissive[MaterialIndex]);
+            ApplySurfaceTextureFamily(Material, Family);
+            Material->SetVectorParameterValue(
+                EmissiveTintParameterName,
+                GlowColor);
+            Material->SetScalarParameterValue(
+                MaskedEmissiveStrengthParameterName,
+                MaskedEmissive[MaterialIndex]);
+            Material->SetScalarParameterValue(ViewShiftParameterName, 0.0f);
         }
     };
 
-    ApplyPalette(BodyMaterials, SecondaryEmissive * 0.08f, GlowEmissive * 0.72f);
+    ApplyPalette(
+        BodyMaterials,
+        SecondaryEmissive * 0.08f,
+        GlowEmissive * 0.72f,
+        ESurfaceTextureFamily::VitrifiedGlass,
+        GlowEmissive * 0.30f);
     ApplyPalette(
         FutureWellOrbitOuterMaterials,
         SecondaryEmissive * 0.30f,
-        GlowEmissive);
+        GlowEmissive,
+        ESurfaceTextureFamily::VitrifiedGlass,
+        GlowEmissive * 0.45f);
     ApplyPalette(
         FutureWellOrbitInnerMaterials,
         SecondaryEmissive * 0.38f,
-        GlowEmissive * 1.08f);
+        GlowEmissive * 1.08f,
+        ESurfaceTextureFamily::VitrifiedGlass,
+        GlowEmissive * 0.50f);
     ApplyPalette(
         FutureWellCoreMaterials,
         SecondaryEmissive * 0.85f,
-        GlowEmissive * 1.28f);
+        GlowEmissive * 1.28f,
+        ESurfaceTextureFamily::MatterCrystal,
+        GlowEmissive * 0.90f);
     ApplyPalette(
         FutureWellGroundGlyphAMaterials,
         SecondaryEmissive,
-        GlowEmissive * 0.90f);
+        GlowEmissive * 0.90f,
+        ESurfaceTextureFamily::VitrifiedGlass,
+        GlowEmissive * 0.40f);
     ApplyPalette(
         FutureWellGroundGlyphBMaterials,
         SecondaryEmissive,
-        GlowEmissive * 0.90f);
+        GlowEmissive * 0.90f,
+        ESurfaceTextureFamily::VitrifiedGlass,
+        GlowEmissive * 0.40f);
     BaseBodyColor = StoneColor;
     SetBodyColor(BaseBodyColor);
 }
