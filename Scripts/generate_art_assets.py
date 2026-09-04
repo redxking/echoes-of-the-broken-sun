@@ -52,6 +52,9 @@ FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v1"
 # Glass Scar bank shelf: vitrified plate with strata faces; replaces the v1 shelf whose edge
 # spires and strata slabs stood proud of the plate and read as a slab mosaic (gate 50).
 GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-vitrified-v2"
+# Broken Sun: a fractured stellar sphere (crust plates over a molten core, shards drifting in
+# three dimensions) replacing the v1 flattened disc with rings (gate 50).
+BROKEN_SUN_SKY_ASSET_REVISION = "broken-sun-sky-fractured-v3"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
@@ -1120,50 +1123,61 @@ def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_broken_sun_sky(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """The Broken Sun celestial sky object — shattered incandescent golden star with orbital shards."""
-    # 1. Central fractured stellar core
-    sphere(mesh, 1200.0, (0.0, 0.0, 0.0), GLOW, scale=(1.2, 1.2, 0.45), high_detail=high)
-    sphere(mesh, 1050.0, (-120.0, 80.0, 30.0), LIGHT, scale=(1.05, 0.95, 0.4), high_detail=high)
-    for angle, r, sz in (
-        (15.0, 680.0, (480.0, 360.0, 70.0)),
-        (105.0, 750.0, (520.0, 420.0, 80.0)),
-        (195.0, 620.0, (440.0, 310.0, 65.0)),
-        (285.0, 710.0, (550.0, 390.0, 75.0)),
-    ):
-        radial_box(mesh, angle, r, sz, 180.0, DARK, pitch=12.0)
-        radial_box(mesh, angle + 35.0, r * 1.1, (sz[0] * 0.7, sz[1] * 0.6, 60.0), -160.0, DARK, pitch=-10.0)
+    """The Broken Sun: a fractured stellar sphere. A molten core shows through the cracks of a
+    broken dark crust of tangent plates, and Dawnshards drift away from it in every direction.
 
-    # 2. Orbiting incandescent Dawnshards / solar fragments broken away from the core
-    for angle, dist, sz, pitch, yaw in (
-        (22.0, 1850.0, (280.0, 190.0, 380.0), 18.0, -12.0),
-        (58.0, 2200.0, (340.0, 240.0, 460.0), -14.0, 25.0),
-        (94.0, 1980.0, (260.0, 180.0, 340.0), 22.0, -18.0),
-        (142.0, 2350.0, (420.0, 310.0, 580.0), -10.0, 8.0),
-        (185.0, 2100.0, (310.0, 220.0, 410.0), 16.0, 32.0),
-        (230.0, 2480.0, (380.0, 270.0, 520.0), -24.0, -15.0),
-        (275.0, 2050.0, (290.0, 200.0, 390.0), 12.0, 19.0),
-        (325.0, 2300.0, (410.0, 290.0, 560.0), -18.0, -28.0),
-    ):
-        a = math.radians(angle)
-        x = math.cos(a) * dist
-        y = math.sin(a) * dist
-        cone(mesh, sz[0] * 0.5, sz[1] * 0.2, sz[2], (x, y, 60.0), DARK, (pitch, yaw, float(angle)), 6 if high else 5)
-        cone(mesh, sz[0] * 0.35, sz[1] * 0.1, sz[2] * 0.85, (x, y, 90.0), GLOW, (pitch, yaw, float(angle)), 5)
+    v2 replaces the flattened disc-and-rings of v1: the concept target reads the sun as a
+    cracked sphere with no ring, lit from within."""
+    core_radius = 1200.0
+    # 1. Molten core, seen only through the crust gaps
+    sphere(mesh, core_radius, (0.0, 0.0, 0.0), GLOW, high_detail=high)
 
+    # 2. Broken crust: tangent plates on a Fibonacci sphere with gaps between them.
+    #    Rotator order is (roll, pitch, yaw); yaw/pitch turn the plate's local X onto the
+    #    outward normal, so the plate's thin axis points along the normal.
+    plate_count = 76 if high else 48
+    golden = math.pi * (3.0 - math.sqrt(5.0))
+    for index in range(plate_count):
+        z = 1.0 - 2.0 * (index + 0.5) / plate_count
+        ring = math.sqrt(max(0.0, 1.0 - z * z))
+        theta = golden * index
+        normal = (ring * math.cos(theta), ring * math.sin(theta), z)
+        yaw = math.degrees(math.atan2(normal[1], normal[0]))
+        pitch = math.degrees(math.asin(normal[2]))
+        roll = float((index * 29) % 44) - 22.0
+        width = 250.0 + float((index * 37) % 210)
+        height = 210.0 + float((index * 53) % 200)
+        offset = core_radius * 1.02
+        at = (normal[0] * offset, normal[1] * offset, normal[2] * offset)
+        box(mesh, (70.0, width, height), at, DARK, (roll, pitch, yaw))
+        # A hot inner rim on every third plate: the crust is thinnest where it just broke
+        if index % 3 == 0:
+            box(mesh, (30.0, width * 0.6, height * 0.6), at, LIGHT, (roll, pitch, yaw))
+
+    # 3. Dawnshards drifting away from the sphere in three dimensions: a dark body with
+    #    an incandescent inner spike, larger and further out the longer they have drifted.
+    shard_count = 16 if high else 10
+    for index in range(shard_count):
+        z = 1.0 - 2.0 * (index + 0.5) / shard_count
+        ring = math.sqrt(max(0.0, 1.0 - z * z))
+        theta = golden * index + 1.7
+        direction = (ring * math.cos(theta), ring * math.sin(theta), z * 0.55)
+        dist = 1750.0 + float((index * 173) % 900)
+        at = (direction[0] * dist, direction[1] * dist, direction[2] * dist)
+        size = 260.0 + float((index * 61) % 180)
+        rotation = (float((index * 31) % 50) - 25.0, float((index * 47) % 40) - 20.0, math.degrees(theta))
+        cone(mesh, size * 0.5, size * 0.12, size * 1.5, at, DARK, rotation, 6 if high else 5)
+        cone(mesh, size * 0.32, size * 0.05, size * 1.25, (at[0], at[1], at[2] + 30.0), GLOW, rotation, 5)
+
+    # 4. Embers: small glowing fragments far out, high detail only
     if high:
-        for angle in range(10, 360, 30):
-            a = math.radians(angle)
-            dist = 2800.0 + (angle % 70) * 12.0
-            x = math.cos(a) * dist
-            y = math.sin(a) * dist
-            z = math.sin(a * 2.0) * 180.0
-            cone(mesh, 75.0, 15.0, 180.0, (x, y, z), GLOW, (float(angle % 45), float(angle), 0.0), 5)
-
-    # 3. Coronal solar filaments / plasma arc rings connecting the shards
-    torus(mesh, 1750.0, 32.0, (0.0, 0.0, 40.0), GLOW, (12.0, 0.0, 0.0), high_detail=high)
-    torus(mesh, 2300.0, 24.0, (0.0, 0.0, -20.0), GLOW, (-15.0, 25.0, 0.0), high_detail=high)
-    if high:
-        torus(mesh, 2950.0, 18.0, (0.0, 0.0, 20.0), LIGHT, (8.0, -35.0, 0.0), high_detail=False)
+        for index in range(18):
+            theta = golden * index * 1.3 + 0.4
+            z = math.sin(index * 0.9) * 0.6
+            ring = math.sqrt(max(0.0, 1.0 - z * z))
+            dist = 2900.0 + float((index * 97) % 500)
+            at = (ring * math.cos(theta) * dist, ring * math.sin(theta) * dist, z * dist)
+            cone(mesh, 70.0, 12.0, 170.0, at, GLOW, (float(index * 23 % 60), float(index * 41 % 90), 0.0), 5)
 
 
 def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -2882,6 +2896,7 @@ def create_static_mesh(
     is_production_route = route_revision is not None
     environment_revisions = {
         "GlassScarShelf": GLASS_SCAR_SHELF_ASSET_REVISION,
+        "BrokenSunSky": BROKEN_SUN_SKY_ASSET_REVISION,
     }
     environment_revision = environment_revisions.get(spec.name)
     roster_factions = ("Meridian", "Kharuun", "Choir")

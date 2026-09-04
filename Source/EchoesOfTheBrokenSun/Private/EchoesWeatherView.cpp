@@ -61,8 +61,9 @@ void AEchoesWeatherView::ApplyAtmosphere(float NormalizedDrift)
     const float Drift = FMath::Clamp(NormalizedDrift, 0.0f, 1.0f);
     float BaseDensity = 0.0007f;
     float DensityRange = 0.00035f;
-    FLinearColor LowColor(0.035f, 0.075f, 0.13f);
-    FLinearColor HighColor(0.15f, 0.055f, 0.19f);
+    // Glass Scar sky: deep indigo-blue haze (CONCEPT-004), drifting toward violet.
+    FLinearColor LowColor(0.030f, 0.060f, 0.150f);
+    FLinearColor HighColor(0.105f, 0.060f, 0.215f);
     float HeightFalloff = 0.22f;
     float StartDistance = 900.0f;
     if (ActiveMapPreset == EEchoesSkirmishMapPreset::CrownfallBasin)

@@ -156,6 +156,16 @@ This is the single authoritative provenance register and is edited in place. An 
 - Asset SHA-256 `9215d2225372f4443df65b54b23cd1f4ba47f75f584fc41d725f9823dde09a67`. Supersedes the ART-003 shelf identity (`33a269540156f3e83e98235da21813791597a12ac4fda138c3c8dcddcd7639d1`, 396/198 triangles), which is retained in historical evidence. Gate 3 themed captures accepted 2026-09-01 were rendered with the v1 shelf; the live Glass Scar ground therefore changes appearance and gate 3 evidence is not carried for the shelf until re-captured.
 - Evidence: authoring-preview fixture capture `BuildArtifacts/Evidence/VerticalSliceReview-shelf-v2-20260904.png` (editor build, 1920×1080, local). Owner review still owed.
 
+## ART-018 generation record
+
+- Generator: `Scripts/generate_art_assets.py`; wrapper: `Scripts/generate_art_assets.sh`; generation log `Saved/Logs/ArtAssetGeneration.log` dated 2026-09-04 reporting `[ECHOES_ART_COMPLETE] generated=48` with only the sky object rebuilt.
+- Output: revised `SM_World_BrokenSunSky` under `Content/Art/Generated/World/Environment` at revision `broken-sun-sky-fractured-v3` (stamped in `Echoes.AssetRevision`; `BrokenSunSky` joins the generator's environment-revision map). Revision v2 of the same day was an intermediate with oversized crust plates and is superseded without a retained asset.
+- Why: the ART-013 sky object was a flattened disc with coronal rings and read as a pale plate with a Saturn ring in the composed frame (directive gate 50). CONCEPT-004 reads the Broken Sun as a cracked sphere lit from within with shards drifting away and no ring. v3 is a molten core sphere wrapped in 76 tangent crust plates on a Fibonacci sphere (thin, with gaps, every third carrying a hot inner rim), 16 Dawnshards drifting in three dimensions with incandescent inner spikes, and 18 far embers; the rings are removed.
+- Two LODs (LOD0 4,130 vertices / 2,964 triangles; LOD1 2,762 vertices / 1,482 triangles), four material zones on the shared world-surface material, visibility-selection collision only; no runtime collision, navigation, or gameplay meaning. Generation uses only project-authored primitive composition; no imported geometry.
+- Runtime binding: the sky object's core emissive is held at 2.4 (was 4.2) with the core hue (1.0, 0.56, 0.11) so the sphere reads gold through its cracks under the A1 rig instead of clipping to white; the review fixture places it 16 km out on the review axis at scale 0.85 so the whole sphere sits in the sky band above the far bank.
+- Asset SHA-256 `60d4327b0faa3f946b199265811c3a59ef59ced3967557780085cea35132a0dc`. Supersedes the ART-013 identity (`9821aeeaa951bd4bcf7f8104b458498db3d8c2c4c37f4cfd5ac486dea48c12f8`, 1,784/892 triangles), retained in historical evidence.
+- Evidence: authoring-preview fixture capture `BuildArtifacts/Evidence/release-gate50-composed-frame-20260904/fixture-sun-v3-1920x1080.png` and its concept pairing sheet (editor build, local). Owner review still owed.
+
 ## AUDIO-001 generation and playback evidence record
 
 - Exact accepted source: version 0.71.0 commit `5368aec5d86a6bf5566c3445890323432f8cba1f`; generator and audit wrapper: `Scripts/generate_audio_assets.py` and `Scripts/generate_audio_assets.sh`; exact generation-log SHA-256 `08b29f29cd005084c5ccb1d5c2d25fec760a4180258e14920bf51cacafd669b0`.

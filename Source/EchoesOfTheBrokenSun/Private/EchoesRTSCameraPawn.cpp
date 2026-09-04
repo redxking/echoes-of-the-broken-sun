@@ -231,7 +231,7 @@ void AEchoesRTSCameraPawn::BeginPlay()
             // Gate 50 frame: both banks, the chasm floor, and the dais in one view. No
             // fixture-only exposure override: the frame renders under the A1 rig as play does.
             SpringArm->TargetArmLength = 3200.0f;
-            SpringArm->SetRelativeRotation(FRotator(-21.0f, 43.0f, 0.0f));
+            SpringArm->SetRelativeRotation(FRotator(-19.0f, 43.0f, 0.0f));
             Camera->SetFieldOfView(62.0f);
         }
         else if (bBrokenSun)

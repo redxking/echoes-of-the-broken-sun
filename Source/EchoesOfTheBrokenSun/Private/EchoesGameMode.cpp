@@ -2674,13 +2674,13 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         const FVector SunLocation = bVerticalSliceMode
-            ? FVector(7400.0f, 7800.0f, -110.0f)
+            ? FVector(11700.0f, 10900.0f, 215.0f) // 16 km out on the review axis: the sphere fills the sky band above the far bank
             : FVector(-14000.0f, 9800.0f, 24000.0f);
         const FRotator SunRotation = bVerticalSliceMode
             ? FRotator(-16.0f, -137.0f, 0.0f)
             : FRotator(-55.0f, -35.0f, 0.0f);
         const FVector SunScale = bVerticalSliceMode
-            ? FVector(1.25f, 1.25f, 1.25f)
+            ? FVector(0.85f, 0.85f, 0.85f) // a full sphere now; 0.85 keeps ~10 deg of frame
             : FVector(6.0f, 6.0f, 6.0f);
 
         AStaticMeshActor* BrokenSunSky = World->SpawnActor<AStaticMeshActor>(
@@ -2710,12 +2710,14 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             const FLinearColor SunColors[4] = {
                 FLinearColor(0.015f, 0.018f, 0.045f),
                 FLinearColor(0.060f, 0.048f, 0.052f),
-                FLinearColor(0.92f, 0.45f, 0.10f),
-                FLinearColor(1.0f, 0.65f, 0.15f)
+                FLinearColor(0.92f, 0.42f, 0.09f),
+                FLinearColor(1.0f, 0.56f, 0.11f)
             };
             const float SunMetallic[4] = {0.0f, 0.05f, 0.10f, 0.0f};
             const float SunRoughness[4] = {0.95f, 0.88f, 0.35f, 0.20f};
-            const float SunEmissive[4] = {0.0f, 0.0f, 1.8f, 4.2f};
+            // Core emissive held below the clip point so the sphere reads gold
+            // through its cracks instead of a white disc (A1: no clipped highlights).
+            const float SunEmissive[4] = {0.0f, 0.0f, 1.5f, 2.4f};
 
             for (int32 Slot = 0; Slot < 4; ++Slot)
             {
