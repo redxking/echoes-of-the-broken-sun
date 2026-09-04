@@ -54,6 +54,41 @@ public:
     bool SyncScopedTerrain(
         const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
+    // Glass Scar dressing (map_dressing_v1): digest-pinned shelf and shard
+    // records consumed as two more presentation-only instanced layers. A
+    // record is placed only where the live simulation still reports its cell
+    // Blocked, drawn only where the local information state is not
+    // Unexplored, and hidden while a Reshape Well holds that cell open, so
+    // dressing can never imply an affordance the simulation does not grant.
+    [[nodiscard]] bool IsDressingActive() const { return bDressingActive; }
+    [[nodiscard]] int32 GetDressingRecordCount() const
+    {
+        return DressingRecordCount;
+    }
+    // Records whose cell the live terrain reports Blocked (conformant).
+    [[nodiscard]] int32 GetDressingPlacedCount() const
+    {
+        return DressingPlacedCount;
+    }
+    // Records refused at runtime because their cell is no longer Blocked.
+    [[nodiscard]] int32 GetDressingRefusedCount() const
+    {
+        return DressingRefusedCount;
+    }
+    // Records currently drawn: conformant, explored, and not reshaped open.
+    [[nodiscard]] int32 GetDressingInstancedCount() const
+    {
+        return DressingInstancedCount;
+    }
+    [[nodiscard]] bool IsDressingRecordInstanced(int32 RecordIndex) const;
+    [[nodiscard]] bool AreDressingLayersPresentationOnly() const;
+    // The player whose information state gates this view, if any. Unset means
+    // the legacy full-disclosure path, on which every authored tile is drawn.
+    [[nodiscard]] std::optional<echoes::sim::PlayerId> GetScopedPlayer() const
+    {
+        return ScopedPlayerId;
+    }
+
     // Census of the terrain the view was handed, independent of what is drawn.
     // On the scoped-network path an unexplored tile arrives as the protocol's
     // Blocked sentinel, so this count there is (known blocked + unexplored) and
@@ -103,6 +138,16 @@ private:
         echoes::sim::Terrain Terrain,
         echoes::sim::Visibility Visibility);
 
+    // Dressing consumer. Initialize adds one hidden instance per record on
+    // the class's layer; Sync re-evaluates every record against the terrain,
+    // information-state, and reshape sources the caller supplies.
+    bool InitializeDressing();
+    void SyncDressingWith(
+        TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt,
+        TFunctionRef<echoes::sim::Visibility(int32, int32)> VisibilityAt,
+        TFunctionRef<bool(int32, int32)> ReshapedOpenAt);
+    [[nodiscard]] FTransform DressingTransform(int32 RecordIndex) const;
+
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<USceneComponent> SceneRoot;
 
@@ -111,6 +156,12 @@ private:
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UInstancedStaticMeshComponent> ScarredTiles;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> DressingShelves;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> DressingShards;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UMaterialInstanceDynamic>> BlockedMaterials;
@@ -123,6 +174,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UStaticMesh> ScarredMesh;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UStaticMesh> ShardMesh;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInterface> AuthoredSurfaceMaterial;
@@ -141,4 +195,18 @@ private:
     int32 ScarredTileCount = 0;
     int32 InstancedBlockedTileCount = 0;
     int32 InstancedScarredTileCount = 0;
+
+    bool bDressingActive = false;
+    // True between Initialize and the first Sync, which proves the live
+    // terrain is the bound compiled pack before anything draws.
+    bool bDressingAwaitingIdentity = false;
+    int32 DressingRecordCount = 0;
+    int32 DressingPlacedCount = 0;
+    int32 DressingRefusedCount = 0;
+    int32 DressingInstancedCount = 0;
+    // Per-record instance index on its class layer, and the last drawn state
+    // (255 never written; otherwise 0 hidden / 1 drawn).
+    TArray<int32> DressingInstanceIndex;
+    TArray<uint8> DressingDrawnState;
+    TArray<bool> DressingRefusalReported;
 };

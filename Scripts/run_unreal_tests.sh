@@ -184,12 +184,12 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "71" ||
+if [[ "$(read_report_value succeeded)" != "72" ||
       "$(read_report_value succeededWithWarnings)" != "0" ||
       "$(read_report_value failed)" != "0" ||
       "$(read_report_value notRun)" != "0" ||
       "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the expected 71/71 clean result."
+  print -u2 "Unreal automation totals did not match the expected 72/72 clean result."
   print -u2 "Inspect: $report"
   exit 4
 fi
@@ -249,6 +249,7 @@ expected_tests=(
   "Echoes.Runtime.Gameplay.ProductionPauseRestart"
   "Echoes.Runtime.Map.CompiledMapBinding"
   "Echoes.Runtime.Map.GlassScar"
+  "Echoes.Runtime.Map.GlassScarDressing"
   "Echoes.Runtime.Map.PresentationProfiles"
   "Echoes.Runtime.Network.ProtocolAdmission"
   "Echoes.Runtime.Network.OnlineFrontDoor"
