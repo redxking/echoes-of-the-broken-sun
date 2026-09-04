@@ -1825,7 +1825,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(360.0f, -900.0f, 12.0f),
+                    FVector(330.0f, -880.0f, 12.0f),
                     150.0f);
 
                 // Bulwark 2: Midground battle line anchor
@@ -1839,7 +1839,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(520.0f, -1040.0f, 12.0f),
+                    FVector(620.0f, -1120.0f, 12.0f),
                     155.0f);
 
                 // Bulwark 3: Outer flank defense
@@ -1853,7 +1853,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(680.0f, -960.0f, 12.0f),
+                    FVector(900.0f, -960.0f, 12.0f),
                     145.0f);
 
                 // Lancers in advancing tactical wedge formation along the bridge ramp and cliff rim
@@ -1868,7 +1868,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(120.0f, -860.0f, 12.0f),
+                    FVector(120.0f, -900.0f, 12.0f),
                     50.0f);
 
                 // Lancer 2: Advancing along bridge side
@@ -1882,7 +1882,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(160.0f, -720.0f, 12.0f),
+                    FVector(170.0f, -720.0f, 12.0f),
                     45.0f);
 
                 // Lancer 3: Second rank advancing
@@ -1896,7 +1896,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(40.0f, -640.0f, 12.0f),
+                    FVector(30.0f, -560.0f, 12.0f),
                     40.0f);
 
                 // Lancer 4: Point scout approaching the dais
@@ -1910,7 +1910,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(110.0f, -520.0f, 12.0f),
+                    FVector(120.0f, -400.0f, 12.0f),
                     35.0f);
 
                 // Lancer 5: Flank guard behind front ranks
@@ -1924,7 +1924,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(-60.0f, -780.0f, 12.0f),
+                    FVector(-80.0f, -840.0f, 12.0f),
                     45.0f);
 
                 // Surveyor engineering exoframe mechs in command positions behind the line
@@ -1939,7 +1939,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(480.0f, -1120.0f, 12.0f),
+                    FVector(420.0f, -1300.0f, 12.0f),
                     95.0f);
 
                 // Surveyor 2: On the upper shelf scanning the chasm
@@ -1953,7 +1953,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(760.0f, -1180.0f, 12.0f),
+                    FVector(820.0f, -1360.0f, 12.0f),
                     110.0f);
 
                 // Relay Skiff hovering above the strike force with its antenna halo and propulsion
@@ -2011,7 +2011,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-520.0f, 860.0f, 12.0f),
+                    FVector(-560.0f, 900.0f, 12.0f),
                     -45.0f);
 
                 // Riftstalkers predatory quadrupeds prowling the cliff edge
@@ -2026,7 +2026,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-360.0f, 850.0f, 12.0f),
+                    FVector(-380.0f, 880.0f, 12.0f),
                     -50.0f);
 
                 // Riftstalker 2: Flanking position beside Cairnback
@@ -2040,7 +2040,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-700.0f, 880.0f, 12.0f),
+                    FVector(-820.0f, 900.0f, 12.0f),
                     -40.0f);
 
                 // Resonant crystalline tripod scout standing proudly on the elevated rear shelf
@@ -2054,7 +2054,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-820.0f, 1040.0f, 12.0f),
+                    FVector(-1000.0f, 1100.0f, 12.0f),
                     -45.0f);
 
                 // Tender worker unit supporting the cluster
@@ -2068,7 +2068,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-680.0f, 1160.0f, 12.0f),
+                    FVector(-720.0f, 1240.0f, 12.0f),
                     -45.0f);
 
                 // Matter deposits on East cliff shelf
@@ -2456,23 +2456,29 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         // reads as two cliffs with a bridge, not as loose plates. Preview-only, non-colliding.
         constexpr float ChasmHalfWidth = 800.0f;
         const FLinearColor ChasmFissureGlow(1.0f, 0.42f, 0.08f);
-        constexpr float BankShelfScaleXY = 2.05f;   // 780 * 2.05 ~= 1600: contiguous at 1600 spacing
+        constexpr float BankShelfScaleXY = 2.05f;   // plate 750 * 2.05 ~= 1537 wide
         constexpr float BankShelfScaleZ = 1.9f;     // foundation bottom ~ -796, below the bed at -750
         constexpr float BankShelfHalfWidth = 780.0f * 0.5f * BankShelfScaleXY;
+        // Tiles overlap by ~60 so a plate buries its neighbour's darker foundation rim; alternate
+        // tiles sit 6 lower so the overlap does not z-fight. Without this the bank reads as a
+        // mosaic of separate slabs.
+        constexpr float BankTileSpacing = 1480.0f;
+        const float BankTileXs[] = {-4440.0f, -2960.0f, -1480.0f, 0.0f, 1480.0f, 2960.0f, 4440.0f};
         int32 BankShelfIndex = 0;
         for (const float BankSign : {-1.0f, 1.0f})
         {
             for (const int32 Row : {0, 1})
             {
-            for (const float ShelfX : {-4000.0f, -2400.0f, -800.0f, 800.0f, 2400.0f, 4000.0f})
+            for (const float ShelfX : BankTileXs)
             {
                 const float RowScaleZ = Row == 0 ? BankShelfScaleZ : 1.0f;
+                const float Stagger = FMath::IsNearlyZero(FMath::Fmod(ShelfX / BankTileSpacing, 2.0f)) ? 0.0f : -6.0f;
                 SpawnScarAccent(
                     ShelfMesh,
                     FVector(
                         ShelfX,
-                        BankSign * (ChasmHalfWidth + BankShelfHalfWidth * (1.0f + 2.0f * Row)),
-                        -39.0f * RowScaleZ),
+                        BankSign * (ChasmHalfWidth + BankShelfHalfWidth * (1.0f + 2.0f * Row) - 60.0f * Row),
+                        -39.0f * RowScaleZ + Stagger),
                     FRotator::ZeroRotator,
                     FVector(BankShelfScaleXY, BankShelfScaleXY, RowScaleZ),
                     FLinearColor(0.034f, 0.047f, 0.055f),
@@ -2489,7 +2495,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         constexpr float TerraceScaleZ = 1.2f;
         for (const float BankSign : {-1.0f, 1.0f})
         {
-            for (const float ShelfX : {-4000.0f, -2400.0f, -800.0f, 800.0f, 2400.0f, 4000.0f})
+            for (const float ShelfX : BankTileXs)
             {
                 SpawnScarAccent(
                     ShelfMesh,
