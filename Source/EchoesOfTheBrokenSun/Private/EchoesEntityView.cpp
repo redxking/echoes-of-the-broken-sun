@@ -286,8 +286,10 @@ AEchoesEntityView::AEchoesEntityView()
     SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
     SetRootComponent(SceneRoot);
 
+    BodyPivot = CreateDefaultSubobject<USceneComponent>(TEXT("BodyPivot"));
+    BodyPivot->SetupAttachment(SceneRoot);
     BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
-    BodyMesh->SetupAttachment(SceneRoot);
+    BodyMesh->SetupAttachment(BodyPivot);
     BodyMesh->SetCollisionObjectType(ECC_WorldDynamic);
     BodyMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -855,14 +857,15 @@ void AEchoesEntityView::ConfigureEntityPickProxy(float SelectionHaloScale)
     if (const UStaticMesh* CurrentBodyMesh = BodyMesh->GetStaticMesh())
     {
         const FBoxSphereBounds MeshBounds = CurrentBodyMesh->GetBounds();
-        const FVector BodyScale = BodyMesh->GetRelativeScale3D();
+        const FVector BodyScale =
+            BodyMesh->GetRelativeScale3D() * BodyPivot->GetRelativeScale3D();
         BodyHorizontalReach = static_cast<float>(FMath::Max(
             (FMath::Abs(MeshBounds.Origin.X) + MeshBounds.BoxExtent.X) *
                 FMath::Abs(BodyScale.X),
             (FMath::Abs(MeshBounds.Origin.Y) + MeshBounds.BoxExtent.Y) *
                 FMath::Abs(BodyScale.Y)));
         BodyTopReach = static_cast<float>(
-            BodyMesh->GetRelativeLocation().Z +
+            BodyMesh->GetRelativeLocation().Z * BodyPivot->GetRelativeScale3D().Z +
             (MeshBounds.Origin.Z + MeshBounds.BoxExtent.Z) *
                 FMath::Abs(BodyScale.Z));
     }
@@ -1020,6 +1023,8 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
     BodyMesh->SetRelativeLocation(FVector::ZeroVector);
     BodyMesh->SetRelativeRotation(FRotator::ZeroRotator);
     BodyMesh->SetRelativeScale3D(FVector::OneVector);
+    BodyPivot->SetRelativeScale3D(FVector::OneVector);
+    PresentationScale = 1.0f;
 
     SetOverlayUnpickableForPool(SilhouetteAccent);
     SilhouetteAccent->SetRenderCustomDepth(false);
@@ -1472,6 +1477,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     UStaticMesh* DesiredMesh = CylinderMesh;
     FVector BodyScale(0.48f, 0.48f, 0.70f);
     FVector BodyOffset(0.0f, 0.0f, 35.0f);
+    PresentationScale = 1.0f;
     float SelectionRadius = 0.74f;
     HealthBarWidthScale = 0.9f;
     HealthBarHeight = 92.0f;
@@ -1643,6 +1649,33 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                         HealthBarHeight = 322.0f;
                         break;
                 }
+
+                // Readability scale (gate 50): units are drawn larger than their
+                // authoritative footprint, as StarCraft-class RTS presentation does,
+                // so a heavy unit reads near one fifth of the Well dais at the
+                // gameplay camera. Structures, landmarks, and deposits keep 1.0.
+                // Collision, pathing, and tile occupancy are simulation-owned and
+                // never see this value.
+                switch (State.type)
+                {
+                    case echoes::sim::EntityType::Worker:
+                        PresentationScale = 1.50f;
+                        break;
+                    case echoes::sim::EntityType::Soldier:
+                        PresentationScale = 1.60f;
+                        break;
+                    case echoes::sim::EntityType::HeavyUnit:
+                        PresentationScale = 1.75f;
+                        break;
+                    case echoes::sim::EntityType::ScoutUnit:
+                        PresentationScale = 1.50f;
+                        break;
+                    default:
+                        PresentationScale = 1.0f;
+                        break;
+                }
+                HealthBarHeight *= PresentationScale;
+                SelectionRadius *= FMath::Lerp(1.0f, PresentationScale, 0.35f);
             }
         }
     }
@@ -1650,6 +1683,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     BodyMesh->SetStaticMesh(DesiredMesh);
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
+    BodyPivot->SetRelativeScale3D(FVector(PresentationScale));
     BodyMesh->SetVisibility(true, true);
     UStaticMesh* AccentMesh = CubeMesh;
     FVector AccentScale(0.18f, 0.54f, 0.12f);
@@ -1780,6 +1814,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     }
     SilhouetteAccent->SetStaticMesh(AccentMesh);
     SilhouetteAccent->SetRelativeScale3D(AccentScale);
+    AccentOffset.Z *= PresentationScale;
     SilhouetteAccent->SetRelativeLocation(AccentOffset);
     SilhouetteAccent->SetRelativeRotation(AccentRotation);
     BaseSilhouetteAccentRotation = AccentRotation;

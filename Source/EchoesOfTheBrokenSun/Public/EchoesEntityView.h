@@ -198,6 +198,8 @@ public:
     [[nodiscard]] FVector GetBodyMeshRelativeLocation() const;
     [[nodiscard]] FRotator GetBodyMeshRelativeRotation() const;
     [[nodiscard]] FVector GetBodyMeshRelativeScale() const;
+    /** Readability scale applied to unit presentation meshes only; the simulation footprint is untouched. */
+    [[nodiscard]] float GetPresentationScale() const { return PresentationScale; }
     [[nodiscard]] FVector GetSilhouetteAccentRelativeLocation() const;
     [[nodiscard]] bool IsMotionReducedMotionApplied() const
     {
@@ -273,6 +275,10 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<USceneComponent> SceneRoot;
+
+    /** Carries the readability scale so motion code can keep writing absolute BodyMesh scales. */
+    UPROPERTY()
+    TObjectPtr<USceneComponent> BodyPivot;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> BodyMesh;
@@ -469,6 +475,7 @@ private:
     float DisplayedHealthFraction = 1.0f;
     float HealthBarWidthScale = 0.9f;
     float HealthBarHeight = 92.0f;
+    float PresentationScale = 1.0f;
     float EntityPickProxyRadius = 0.0f;
     float EntityPickProxyTopHeight = 0.0f;
     FLinearColor BaseBodyColor = FLinearColor::White;
