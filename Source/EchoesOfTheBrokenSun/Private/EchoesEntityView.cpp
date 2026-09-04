@@ -2653,12 +2653,17 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
         GlowEmissive * 1.08f,
         ESurfaceTextureFamily::VitrifiedGlass,
         GlowEmissive * 0.50f);
+    // Dormant core (gate 50): the unrealized-future shard reads dark with the
+    // golden light on its rings and dais, not as a pale crystal; the three
+    // committed states keep their brighter core.
+    const bool bDormantCore =
+        FutureWellVisualChoice == echoes::sim::FutureWellChoice::Dormant;
     ApplyPalette(
         FutureWellCoreMaterials,
-        SecondaryEmissive * 0.85f,
-        GlowEmissive * 1.28f,
+        SecondaryEmissive * (bDormantCore ? 0.30f : 0.85f),
+        GlowEmissive * (bDormantCore ? 0.45f : 1.28f),
         ESurfaceTextureFamily::MatterCrystal,
-        GlowEmissive * 0.90f);
+        GlowEmissive * (bDormantCore ? 0.30f : 0.90f));
     ApplyPalette(
         FutureWellGroundGlyphAMaterials,
         SecondaryEmissive,

@@ -166,6 +166,22 @@ This is the single authoritative provenance register and is edited in place. An 
 - Asset SHA-256 `60d4327b0faa3f946b199265811c3a59ef59ced3967557780085cea35132a0dc`. Supersedes the ART-013 identity (`9821aeeaa951bd4bcf7f8104b458498db3d8c2c4c37f4cfd5ac486dea48c12f8`, 1,784/892 triangles), retained in historical evidence.
 - Evidence: authoring-preview fixture capture `BuildArtifacts/Evidence/release-gate50-composed-frame-20260904/fixture-sun-v3-1920x1080.png` and its concept pairing sheet (editor build, local). Owner review still owed.
 
+## ART-019 generation record
+
+- Generator: `Scripts/generate_art_assets.py`; wrapper: `Scripts/generate_art_assets.sh`; generation log `Saved/Logs/ArtAssetGeneration.log` dated 2026-09-04 (`[ECHOES_ART_COMPLETE] generated=48`).
+- Output: revised `SM_World_GlassScarAshCut` at revision `ash-cut-production-v2` with its four material instances re-stamped at the same revision (`MI_GlassScarAshCut_Basalt`, `_Ash`, `_Glass`, `_Vein`); the master `M_GlassScarAshCut` is byte-identical to ART-004 and was reused.
+- Why: with the scar band drawn as an open drop (ledger WORLD-A4-003), the Ash Cut trench floated over the chasm. v2 adds four basalt piers under the bed across the band (|y| < 500), each with flanking buttresses and, at LOD0, an amber fissure slab, reaching the chasm floor about 700 below. The trench bed, banks, slab divisions, and UV policy are unchanged.
+- Two LODs (LOD0 2,778 vertices / 1,648 triangles; LOD1 1,686 vertices / 824 triangles), two UV channels per LOD, four material zones, authored simple collision with runtime collision disabled. Mesh SHA-256 `84fde2440415f09e18c1925542cf467906094c63f92f1c9f00d9567b0f335468`; instances `1b6e3183…` (Ash), `ee4ea7d6…` (Basalt), `fd316d25…` (Glass), `30b4a72e…` (Vein). Supersedes the ART-004 mesh identity, retained in historical evidence.
+- Evidence: live-play capture `BuildArtifacts/Evidence/release-gate50-composed-frame-20260904/live-ashcut-piers-1920x1080.png` (scouted, gameplay camera, editor build, local). Owner review still owed.
+
+## ART-020 generation record
+
+- Generator and log as ART-019.
+- Output: revised `SM_World_GlassScarFoldedVerge` at revision `folded-verge-production-v2` with its four material instances re-stamped (`MI_GlassScarFoldedVerge_Obsidian`, `_Rift`, `_Ceramic`, `_Phase`); the master `M_GlassScarFoldedVerge` is byte-identical to ART-007 and was reused.
+- Why: as ART-019. Every displaced plate that stands over the scar band gets its own offset basalt pier to the chasm floor, following the plate's yaw and height, with an amber fissure slab at LOD0.
+- Two LODs (LOD0 2,356 vertices / 1,416 triangles; LOD1 1,470 vertices / 708 triangles), two UV channels per LOD, four material zones, runtime collision disabled. Mesh SHA-256 `80962927c61a878747293359f906ea830e593b0a390509cdd411b68c0636cc0e`; instances `1938197b…` (Ceramic), `176c5952…` (Obsidian), `22d25c60…` (Phase), `d8665097…` (Rift). Supersedes the ART-007 mesh identity, retained in historical evidence.
+- Evidence: fixture capture `fixture-piers-1920x1080.png` in the same evidence set; a Folded Verge live capture is still owed.
+
 ## AUDIO-001 generation and playback evidence record
 
 - Exact accepted source: version 0.71.0 commit `5368aec5d86a6bf5566c3445890323432f8cba1f`; generator and audit wrapper: `Scripts/generate_audio_assets.py` and `Scripts/generate_audio_assets.sh`; exact generation-log SHA-256 `08b29f29cd005084c5ccb1d5c2d25fec760a4180258e14920bf51cacafd669b0`.

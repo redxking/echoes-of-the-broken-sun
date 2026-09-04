@@ -32,7 +32,7 @@ ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Glass",
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Vein",
 )
-ASH_CUT_ASSET_REVISION = "ash-cut-production-v1"
+ASH_CUT_ASSET_REVISION = "ash-cut-production-v2"  # v2: chasm piers under the span (gate 50)
 BURIED_CAUSEWAY_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarBuriedCauseway"
 BURIED_CAUSEWAY_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Stone",
@@ -48,7 +48,7 @@ FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Ceramic",
     f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Phase",
 )
-FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v1"
+FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v2"  # v2: chasm piers under the plates (gate 50)
 # Glass Scar bank shelf: vitrified plate with strata faces; replaces the v1 shelf whose edge
 # spires and strata slabs stood proud of the plate and read as a slab mosaic (gate 50).
 GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-vitrified-v2"
@@ -1229,6 +1229,16 @@ def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
                 (0.0, yaw, 0.0),
             )
 
+    # Chasm piers (v2): the trench crosses an open drop between the banks, so the bed
+    # stands on basalt piers that reach the chasm floor (~700 below) across the scar band.
+    for pier_y in (-400.0, -160.0, 80.0, 320.0):
+        box(mesh, (200.0, 130.0, 720.0), (0.0, pier_y, -370.0), DARK)
+        box(mesh, (150.0, 96.0, 690.0), (0.0, pier_y, -378.0), PRIMARY, (0.0, 0.0, 6.0))
+        for side in (-1.0, 1.0):
+            box(mesh, (70.0, 150.0, 520.0), (side * 150.0, pier_y, -280.0), DARK, (0.0, 0.0, side * 5.0))
+            if high:
+                box(mesh, (14.0, 110.0, 380.0), (side * 118.0, pier_y, -300.0), GLOW, (0.0, 0.0, side * 5.0))
+
     bank_y = (-660.0, -440.0, -220.0, 0.0, 220.0, 440.0, 660.0)
     for side in (-1.0, 1.0):
         for index, y in enumerate(bank_y):
@@ -1388,6 +1398,16 @@ def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
                     GLOW,
                     (0.0, (yaw + plate_specs[index + 1][2]) * 0.5, 0.0),
                 )
+    # Chasm piers (v2): every displaced plate over the scar band stands on its own
+    # offset basalt pier down to the chasm floor, so the road reads as built over the drop.
+    for x, y, yaw, z in plate_specs:
+        if abs(y) > 500.0:
+            continue
+        box(mesh, (190.0, 120.0, 700.0 + z), (x, y, z - 350.0 - z * 0.5), DARK, (0.0, 0.0, yaw))
+        box(mesh, (140.0, 88.0, 660.0 + z), (x + 12.0, y, z - 360.0 - z * 0.5), PRIMARY, (0.0, 0.0, yaw + 4.0))
+        if high:
+            box(mesh, (16.0, 100.0, 360.0), (x + 92.0, y, z - 300.0), GLOW, (0.0, 0.0, yaw))
+
     for side in (-1.0, 1.0):
         for y, height, lean in (
             (-590.0, 176.0, 12.0),
