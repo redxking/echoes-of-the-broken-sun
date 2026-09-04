@@ -1649,7 +1649,8 @@ void AEchoesGameMode::BeginPlay()
             GlassScarReviewMode.Equals(TEXT("AshCut"), ESearchCase::IgnoreCase) ||
             GlassScarReviewMode.Equals(TEXT("BuriedCauseway"), ESearchCase::IgnoreCase) ||
             GlassScarReviewMode.Equals(TEXT("FoldedVerge"), ESearchCase::IgnoreCase) ||
-            GlassScarReviewMode.Equals(TEXT("BrokenSun"), ESearchCase::IgnoreCase);
+            GlassScarReviewMode.Equals(TEXT("BrokenSun"), ESearchCase::IgnoreCase) ||
+            GlassScarReviewMode.Equals(TEXT("VerticalSlice"), ESearchCase::IgnoreCase);
         if (!bKnownMode)
         {
             UE_LOG(
@@ -1678,6 +1679,10 @@ void AEchoesGameMode::BeginPlay()
             if (AEchoesTerrainView* TerrainView = Bridge->GetTerrainView())
             {
                 TerrainView->SetActorHiddenInGame(true);
+                if (TerrainView->GetRootComponent() != nullptr)
+                {
+                    TerrainView->GetRootComponent()->SetVisibility(false, true);
+                }
             }
 
             int32 PreviewEntityCount = 0;
@@ -1687,7 +1692,12 @@ void AEchoesGameMode::BeginPlay()
                                           echoes::sim::Faction Faction,
                                           uint8 Owner,
                                           int32 TileX,
-                                          int32 TileY)
+                                          int32 TileY,
+                                          bool bDeployed = false,
+                                          echoes::sim::Vec2 DeploymentFacing = echoes::sim::Vec2::FromTiles(1, 0),
+                                          float ZOffset = 12.0f,
+                                          TOptional<FVector> CustomWorldLocation = TOptional<FVector>(),
+                                          float HeadingYaw = 0.0f)
             {
                 AEchoesEntityView* Preview =
                     GetWorld()->SpawnActor<AEchoesEntityView>();
@@ -1703,7 +1713,36 @@ void AEchoesGameMode::BeginPlay()
                 State.position = echoes::sim::Vec2::FromTiles(TileX, TileY);
                 State.hitPoints = 1;
                 State.maxHitPoints = 1;
+                State.deployed = bDeployed;
+                State.deploymentFacing = DeploymentFacing;
+                if (Type == echoes::sim::EntityType::FutureWell)
+                {
+                    State.wellChoice = echoes::sim::FutureWellChoice::Preserve;
+                }
                 Preview->ApplyAuthoritativeState(State, true);
+                if (Type != echoes::sim::EntityType::FutureWell)
+                {
+                    if (CustomWorldLocation.IsSet())
+                    {
+                        Preview->SetAuthoritativeWorldLocation(CustomWorldLocation.GetValue());
+                    }
+                    else
+                    {
+                        const UEchoesSimulationSubsystem* Subsystem =
+                            GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>();
+                        if (Subsystem != nullptr)
+                        {
+                            const FVector SimPos = Subsystem->SimToWorld(State.position);
+                            Preview->SetAuthoritativeWorldLocation(SimPos + FVector(0.0f, 0.0f, ZOffset));
+                        }
+                    }
+                    Preview->SetAuthoritativeHeadingYaw(HeadingYaw);
+                }
+                if (Preview->GetBodyMesh() != nullptr)
+                {
+                    Preview->GetBodyMesh()->SetVisibility(true, true);
+                }
+                Preview->SetActorHiddenInGame(false);
                 ++PreviewEntityCount;
             };
 
@@ -1731,7 +1770,10 @@ void AEchoesGameMode::BeginPlay()
                     echoes::sim::Faction::MeridianCompact,
                     echoes::sim::kNeutralPlayer,
                     32,
-                    32);
+                    32,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f);
                 for (const FIntPoint Tile : {
                          FIntPoint(14, 16),
                          FIntPoint(48, 16),
@@ -1745,8 +1787,329 @@ void AEchoesGameMode::BeginPlay()
                         echoes::sim::Faction::MeridianCompact,
                         echoes::sim::kNeutralPlayer,
                         Tile.X,
-                        Tile.Y);
+                        Tile.Y,
+                        false,
+                        echoes::sim::Vec2::FromTiles(1, 0),
+                        0.0f);
                 }
+            }
+            else if (GlassScarReviewMode.Equals(
+                         TEXT("VerticalSlice"),
+                         ESearchCase::IgnoreCase))
+            {
+                // Central Future Well on Buried Causeway circular dais
+                SpawnPreview(
+                    920000,
+                    echoes::sim::EntityType::FutureWell,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    32,
+                    32,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f);
+
+                // West Cliff (Screen Left): Meridian Compact strike force
+                // Frontline Bulwarks deployed with hexagonal holographic energy shield barrier wings
+                // Bulwark 1: Holding the cliff rim overlooking the Future Well dais
+                SpawnPreview(
+                    920101,
+                    echoes::sim::EntityType::HeavyUnit,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    34,
+                    31,
+                    true,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    12.0f,
+                    FVector(360.0f, -180.0f, 12.0f),
+                    135.0f);
+
+                // Bulwark 2: Midground battle line anchor
+                SpawnPreview(
+                    920102,
+                    echoes::sim::EntityType::HeavyUnit,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    35,
+                    30,
+                    true,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    12.0f,
+                    FVector(520.0f, -340.0f, 12.0f),
+                    140.0f);
+
+                // Bulwark 3: Outer flank defense
+                SpawnPreview(
+                    920103,
+                    echoes::sim::EntityType::HeavyUnit,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    36,
+                    30,
+                    true,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    12.0f,
+                    FVector(680.0f, -220.0f, 12.0f),
+                    130.0f);
+
+                // Lancers in advancing tactical wedge formation along the bridge ramp and cliff rim
+                // Lancer 1: Foreground bridge approach
+                SpawnPreview(
+                    920105,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    33,
+                    29,
+                    false,
+                    echoes::sim::Vec2::FromTiles(0, 1),
+                    12.0f,
+                    FVector(180.0f, -600.0f, 12.0f),
+                    50.0f);
+
+                // Lancer 2: Advancing along bridge side
+                SpawnPreview(
+                    920106,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    34,
+                    30,
+                    false,
+                    echoes::sim::Vec2::FromTiles(0, 1),
+                    12.0f,
+                    FVector(230.0f, -460.0f, 12.0f),
+                    45.0f);
+
+                // Lancer 3: Second rank advancing
+                SpawnPreview(
+                    920107,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    33,
+                    30,
+                    false,
+                    echoes::sim::Vec2::FromTiles(0, 1),
+                    12.0f,
+                    FVector(140.0f, -380.0f, 12.0f),
+                    40.0f);
+
+                // Lancer 4: Point scout approaching the dais
+                SpawnPreview(
+                    920108,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    34,
+                    31,
+                    false,
+                    echoes::sim::Vec2::FromTiles(0, 1),
+                    12.0f,
+                    FVector(200.0f, -260.0f, 12.0f),
+                    35.0f);
+
+                // Lancer 5: Flank guard behind front ranks
+                SpawnPreview(
+                    920109,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    34,
+                    30,
+                    false,
+                    echoes::sim::Vec2::FromTiles(0, 1),
+                    12.0f,
+                    FVector(300.0f, -400.0f, 12.0f),
+                    45.0f);
+
+                // Surveyor engineering exoframe mechs in command positions behind the line
+                // Surveyor 1: Standing tall behind the front Bulwark observing the Well
+                SpawnPreview(
+                    920110,
+                    echoes::sim::EntityType::Worker,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    35,
+                    31,
+                    false,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    12.0f,
+                    FVector(480.0f, -60.0f, 12.0f),
+                    95.0f);
+
+                // Surveyor 2: On the upper shelf scanning the chasm
+                SpawnPreview(
+                    920111,
+                    echoes::sim::EntityType::Worker,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    36,
+                    31,
+                    false,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    12.0f,
+                    FVector(720.0f, -80.0f, 12.0f),
+                    110.0f);
+
+                // Relay Skiff hovering above the strike force with its antenna halo and propulsion
+                SpawnPreview(
+                    920112,
+                    echoes::sim::EntityType::ScoutUnit,
+                    echoes::sim::Faction::MeridianCompact,
+                    0,
+                    35,
+                    30,
+                    false,
+                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    150.0f,
+                    FVector(560.0f, -280.0f, 150.0f),
+                    120.0f);
+
+                // Radiant cyan Matter crystals on the West cliff
+                // Deposit 1: Foreground cliff outcrop framing the bridge entrance
+                SpawnPreview(
+                    920113,
+                    echoes::sim::EntityType::ResourceNode,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    33,
+                    28,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f,
+                    FVector(240.0f, -820.0f, 0.0f),
+                    25.0f);
+
+                // Deposit 2: Outer shelf rim
+                SpawnPreview(
+                    920114,
+                    echoes::sim::EntityType::ResourceNode,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    37,
+                    31,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f,
+                    FVector(940.0f, -260.0f, 0.0f),
+                    110.0f);
+
+                // East Cliff (Screen Right): Kharuun Assemblies assault cluster
+                // Cairnback heavy assault dreadnought holding the cliff rim facing the Future Well
+                SpawnPreview(
+                    920201,
+                    echoes::sim::EntityType::HeavyUnit,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    30,
+                    33,
+                    true,
+                    echoes::sim::Vec2::FromTiles(1, -1),
+                    12.0f,
+                    FVector(-420.0f, 240.0f, 12.0f),
+                    -45.0f);
+
+                // Riftstalkers predatory quadrupeds prowling the cliff edge
+                // Riftstalker 1: Advanced point at the cliff rim in front of Cairnback
+                SpawnPreview(
+                    920202,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    30,
+                    33,
+                    true,
+                    echoes::sim::Vec2::FromTiles(1, -1),
+                    12.0f,
+                    FVector(-320.0f, 100.0f, 12.0f),
+                    -50.0f);
+
+                // Riftstalker 2: Flanking position beside Cairnback
+                SpawnPreview(
+                    920203,
+                    echoes::sim::EntityType::Soldier,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    29,
+                    33,
+                    true,
+                    echoes::sim::Vec2::FromTiles(1, -1),
+                    12.0f,
+                    FVector(-520.0f, 160.0f, 12.0f),
+                    -40.0f);
+
+                // Resonant crystalline tripod scout standing proudly on the elevated rear shelf
+                SpawnPreview(
+                    920204,
+                    echoes::sim::EntityType::ScoutUnit,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    29,
+                    34,
+                    true,
+                    echoes::sim::Vec2::FromTiles(1, -1),
+                    12.0f,
+                    FVector(-650.0f, 380.0f, 12.0f),
+                    -45.0f);
+
+                // Tender worker unit supporting the cluster
+                SpawnPreview(
+                    920205,
+                    echoes::sim::EntityType::Worker,
+                    echoes::sim::Faction::KharuunAssemblies,
+                    1,
+                    29,
+                    35,
+                    true,
+                    echoes::sim::Vec2::FromTiles(1, -1),
+                    12.0f,
+                    FVector(-550.0f, 460.0f, 12.0f),
+                    -45.0f);
+
+                // Matter deposits on East cliff shelf
+                // Deposit 1: Midground shelf behind Cairnback
+                SpawnPreview(
+                    920206,
+                    echoes::sim::EntityType::ResourceNode,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    28,
+                    34,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f,
+                    FVector(-780.0f, 260.0f, 0.0f),
+                    45.0f);
+
+                // Deposit 2: Rear shelf near Resonant
+                SpawnPreview(
+                    920207,
+                    echoes::sim::EntityType::ResourceNode,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    28,
+                    35,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f,
+                    FVector(-740.0f, 520.0f, 0.0f),
+                    -60.0f);
+
+                // Foreground Right Cliff Shelf Matter deposit (matching bottom-right corner of concept target)
+                SpawnPreview(
+                    920208,
+                    echoes::sim::EntityType::ResourceNode,
+                    echoes::sim::Faction::MeridianCompact,
+                    echoes::sim::kNeutralPlayer,
+                    30,
+                    30,
+                    false,
+                    echoes::sim::Vec2::FromTiles(1, 0),
+                    0.0f,
+                    FVector(-620.0f, -520.0f, 0.0f),
+                    -15.0f);
             }
             UE_LOG(
                 LogEchoes,
@@ -1926,7 +2289,18 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         FloorMesh->SetMaterial(0, FloorMaterial);
     }
 
-    const auto SpawnScarAccent = [World, SurfaceMaterial](
+    FString ReviewModeCheck;
+    const bool bVerticalSliceMode =
+        FParse::Value(FCommandLine::Get(), TEXT("EchoesGlassScarReview="), ReviewModeCheck) &&
+        ReviewModeCheck.Equals(TEXT("VerticalSlice"), ESearchCase::IgnoreCase);
+    if (bVerticalSliceMode)
+    {
+        Floor->SetActorHiddenInGame(true);
+        FloorMesh->SetVisibility(false, true);
+        FloorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
+    const auto SpawnScarAccent = [World, SurfaceMaterial, bVerticalSliceMode](
                                      UStaticMesh* MeshAsset,
                                      const FVector& Location,
                                      const FRotator& Rotation,
@@ -1962,6 +2336,17 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         AccentMesh->SetCastShadow(bCastShadow);
         AccentMesh->SetReceivesDecals(false);
         Accent->SetActorScale3D(Scale);
+        if (bVerticalSliceMode && (DetailTag == TEXT("EchoesTerrainShelf") ||
+                                   DetailTag == TEXT("EchoesRouteAshCut") ||
+                                   DetailTag == TEXT("EchoesRouteFoldedVerge") ||
+                                   DetailTag == TEXT("EchoesChasmRim") ||
+                                   DetailTag == TEXT("EchoesScarBand") ||
+                                   DetailTag == TEXT("EchoesGlassShard") ||
+                                   DetailTag == TEXT("EchoesScarGlow")))
+        {
+            Accent->SetActorHiddenInGame(true);
+            AccentMesh->SetVisibility(false, true);
+        }
         if (DetailTag == TEXT("EchoesRouteAshCut") ||
             DetailTag == TEXT("EchoesRouteBuriedCauseway") ||
             DetailTag == TEXT("EchoesRouteFoldedVerge"))
@@ -2047,7 +2432,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
          FLinearColor(0.040f, 0.032f, 0.030f),
          TEXT("EchoesRouteAshCut")},
         {BuriedCausewayMesh,
-         FVector(0.0f, 0.0f, 20.0f),
+         bVerticalSliceMode ? FVector(0.0f, 0.0f, -59.0f) : FVector(0.0f, 0.0f, 20.0f),
          FLinearColor(0.13f, 0.12f, 0.10f),
          TEXT("EchoesRouteBuriedCauseway")},
         {FoldedVergeMesh,
@@ -2068,6 +2453,92 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                              true)
                              ? 1
                              : 0;
+    }
+
+    if (bVerticalSliceMode)
+    {
+        // West Cliff shelf plateaus flanking the chasm under Meridian forces (Screen Left)
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(700.0f, -700.0f, -39.0f),
+            FRotator(0.0f, 25.0f, 0.0f),
+            FVector(2.8f, 2.6f, 1.0f),
+            FLinearColor(0.034f, 0.047f, 0.055f),
+            TEXT("EchoesTerrainShelfWest1"),
+            true);
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(1050.0f, -1000.0f, -39.0f),
+            FRotator(0.0f, -12.0f, 0.0f),
+            FVector(2.5f, 2.5f, 1.0f),
+            FLinearColor(0.034f, 0.047f, 0.055f),
+            TEXT("EchoesTerrainShelfWest2"),
+            true);
+
+        // East Cliff shelf plateaus flanking the chasm under Kharuun forces (Screen Right)
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(-700.0f, 700.0f, -39.0f),
+            FRotator(0.0f, -155.0f, 0.0f),
+            FVector(2.8f, 2.6f, 1.0f),
+            FLinearColor(0.034f, 0.047f, 0.055f),
+            TEXT("EchoesTerrainShelfEast1"),
+            true);
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(-1050.0f, 1000.0f, -39.0f),
+            FRotator(0.0f, 168.0f, 0.0f),
+            FVector(2.5f, 2.5f, 1.0f),
+            FLinearColor(0.034f, 0.047f, 0.055f),
+            TEXT("EchoesTerrainShelfEast2"),
+            true);
+
+        // Foreground Right Cliff Shelf (matching bottom-right corner of concept target)
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(-750.0f, -620.0f, -39.0f),
+            FRotator(0.0f, -30.0f, 0.0f),
+            FVector(2.4f, 2.2f, 1.0f),
+            FLinearColor(0.034f, 0.047f, 0.055f),
+            TEXT("EchoesTerrainShelfForegroundEast"),
+            true);
+
+        // Deep chasm floor bed: dark fractured basalt canyon base deep below running along X
+        SpawnScarAccent(
+            ShelfMesh,
+            FVector(0.0f, 0.0f, -750.0f),
+            FRotator::ZeroRotator,
+            FVector(10.0f, 3.2f, 0.5f),
+            FLinearColor(0.012f, 0.015f, 0.020f),
+            TEXT("EchoesChasmFloorBed"),
+            false);
+
+        // Incandescent molten amber fissures deep in the chasm
+        const FVector ChasmGlowLocations[] = {
+            FVector(0.0f, -400.0f, -250.0f),
+            FVector(0.0f, 400.0f, -250.0f),
+            FVector(-600.0f, 0.0f, -320.0f),
+            FVector(600.0f, 0.0f, -320.0f),
+            FVector(0.0f, 0.0f, -450.0f),
+        };
+        for (const FVector& GlowPos : ChasmGlowLocations)
+        {
+            APointLight* ChasmLight = World->SpawnActor<APointLight>(
+                GlowPos,
+                FRotator::ZeroRotator,
+                SpawnParameters);
+            if (ChasmLight != nullptr && ChasmLight->PointLightComponent != nullptr)
+            {
+                ChasmLight->Tags.Add(TEXT("EchoesPlaceholder"));
+                UPointLightComponent* GlowComp = ChasmLight->PointLightComponent;
+                GlowComp->SetMobility(EComponentMobility::Movable);
+                GlowComp->SetLightColor(FLinearColor(1.0f, 0.38f, 0.05f));
+                GlowComp->SetIntensity(4800.0f);
+                GlowComp->SetAttenuationRadius(1850.0f);
+                GlowComp->SetSourceRadius(160.0f);
+                GlowComp->SetCastShadows(false);
+            }
+        }
     }
 
     struct FScarBandSpec final
@@ -2335,24 +2806,34 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     // Frame hierarchy: a gentler warm key keeps actor faces warm while the
     // stronger cool fill lets the dark terrain recede — layer separation by
     // temperature as well as value.
-    SunComponent->SetIntensity(10.0f);
-    SunComponent->SetLightColor(FLinearColor(1.0f, 0.82f, 0.62f));
-    Sky->GetLightComponent()->SetIntensity(1.6f);
-    Sky->GetLightComponent()->SetLightColor(FLinearColor(0.48f, 0.60f, 0.88f));
+    SunComponent->SetIntensity(bVerticalSliceMode ? 14.0f : 10.0f);
+    SunComponent->SetLightColor(bVerticalSliceMode ? FLinearColor(1.0f, 0.82f, 0.52f) : FLinearColor(1.0f, 0.95f, 0.86f));
+    if (bVerticalSliceMode)
+    {
+        Sun->SetActorRotation(FRotator(-24.0f, -137.0f, 0.0f));
+    }
+    Sky->GetLightComponent()->SetIntensity(bVerticalSliceMode ? 1.6f : 1.6f);
+    Sky->GetLightComponent()->SetLightColor(bVerticalSliceMode ? FLinearColor(0.12f, 0.22f, 0.52f) : FLinearColor(0.42f, 0.55f, 0.82f));
 
     if (BrokenSunSkyMesh != nullptr)
     {
         FActorSpawnParameters SkyActorSpawnParameters;
         SkyActorSpawnParameters.SpawnCollisionHandlingOverride =
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        // Directional light key shines along Rotator(-55, -35, 0).
-        // The celestial Broken Sun source is in the upper sky along the negative key vector:
-        // pitch +55 deg, yaw 145 deg (North-West sky dome).
-        // At RTS pitch, the Broken Sun enters the frame indirectly; in low-pitch
-        // cinematic framing, it dominates the upper sky (ArtDirection.md L73-75).
+
+        const FVector SunLocation = bVerticalSliceMode
+            ? FVector(6400.0f, 6800.0f, 1280.0f)
+            : FVector(-14000.0f, 9800.0f, 24000.0f);
+        const FRotator SunRotation = bVerticalSliceMode
+            ? FRotator(-16.0f, -137.0f, 0.0f)
+            : FRotator(-55.0f, -35.0f, 0.0f);
+        const FVector SunScale = bVerticalSliceMode
+            ? FVector(1.05f, 1.05f, 1.05f)
+            : FVector(6.0f, 6.0f, 6.0f);
+
         AStaticMeshActor* BrokenSunSky = World->SpawnActor<AStaticMeshActor>(
-            FVector(-14000.0f, 9800.0f, 24000.0f),
-            FRotator(-55.0f, -35.0f, 0.0f),
+            SunLocation,
+            SunRotation,
             SkyActorSpawnParameters);
         if (BrokenSunSky != nullptr)
         {
@@ -2372,17 +2853,17 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             BrokenSunSkyComp->SetGenerateOverlapEvents(false);
             BrokenSunSkyComp->SetCastShadow(false);
             BrokenSunSkyComp->SetReceivesDecals(false);
-            BrokenSunSky->SetActorScale3D(FVector(6.0f, 6.0f, 6.0f));
+            BrokenSunSky->SetActorScale3D(SunScale);
 
             const FLinearColor SunColors[4] = {
                 FLinearColor(0.015f, 0.018f, 0.045f),
                 FLinearColor(0.060f, 0.048f, 0.052f),
-                FLinearColor(0.88f, 0.42f, 0.12f),
-                FLinearColor(1.0f, 0.72f, 0.28f)
+                FLinearColor(0.92f, 0.45f, 0.10f),
+                FLinearColor(1.0f, 0.65f, 0.15f)
             };
             const float SunMetallic[4] = {0.0f, 0.05f, 0.10f, 0.0f};
             const float SunRoughness[4] = {0.95f, 0.88f, 0.35f, 0.20f};
-            const float SunEmissive[4] = {0.0f, 0.0f, 0.85f, 1.6f};
+            const float SunEmissive[4] = {0.0f, 0.0f, 1.8f, 4.2f};
 
             for (int32 Slot = 0; Slot < 4; ++Slot)
             {
@@ -2400,6 +2881,96 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                         EnvironmentEmissiveParameterName, SunEmissive[Slot]);
                     BrokenSunSkyComp->SetMaterial(Slot, SunMat);
                 }
+            }
+        }
+
+        if (bVerticalSliceMode)
+        {
+            // Upward warm golden aperture illumination inside the Future Well dais
+            APointLight* DaisLight = World->SpawnActor<APointLight>(
+                FVector(0.0f, 0.0f, 35.0f),
+                FRotator::ZeroRotator,
+                SkyActorSpawnParameters);
+            if (DaisLight != nullptr && DaisLight->PointLightComponent != nullptr)
+            {
+                DaisLight->Tags.Add(TEXT("EchoesPlaceholder"));
+                DaisLight->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                DaisLight->PointLightComponent->SetLightColor(FLinearColor(1.0f, 0.70f, 0.20f));
+                DaisLight->PointLightComponent->SetIntensity(1600.0f);
+                DaisLight->PointLightComponent->SetAttenuationRadius(750.0f);
+                DaisLight->PointLightComponent->SetSourceRadius(100.0f);
+                DaisLight->PointLightComponent->SetCastShadows(false);
+            }
+
+            // Molten amber fissure illumination ascending from the deep chasm abyss
+            const struct FChasmLightSpec { FVector Location; float Intensity; float Radius; } ChasmSpecs[] = {
+                { FVector(0.0f, -400.0f, -250.0f), 4800.0f, 1600.0f },
+                { FVector(0.0f, 400.0f, -250.0f), 4800.0f, 1600.0f },
+                { FVector(-600.0f, 0.0f, -320.0f), 3800.0f, 1500.0f },
+                { FVector(600.0f, 0.0f, -320.0f), 3800.0f, 1500.0f },
+                { FVector(0.0f, 0.0f, -450.0f), 5200.0f, 1800.0f },
+            };
+            for (const auto& Spec : ChasmSpecs)
+            {
+                APointLight* FissureLight = World->SpawnActor<APointLight>(
+                    Spec.Location,
+                    FRotator::ZeroRotator,
+                    SkyActorSpawnParameters);
+                if (FissureLight != nullptr && FissureLight->PointLightComponent != nullptr)
+                {
+                    FissureLight->Tags.Add(TEXT("EchoesPlaceholder"));
+                    FissureLight->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                    FissureLight->PointLightComponent->SetLightColor(FLinearColor(1.0f, 0.38f, 0.05f));
+                    FissureLight->PointLightComponent->SetIntensity(Spec.Intensity);
+                    FissureLight->PointLightComponent->SetAttenuationRadius(Spec.Radius);
+                    FissureLight->PointLightComponent->SetCastShadows(false);
+                }
+            }
+
+            // Strike force tactical accent lights highlighting unit silhouettes against deep indigo twilight
+            // 1. Meridian Strike Force (West Cliff / Screen Left): cool cyan fill & rim highlight
+            APointLight* MeridianAccent = World->SpawnActor<APointLight>(
+                FVector(550.0f, -400.0f, 220.0f),
+                FRotator::ZeroRotator,
+                SkyActorSpawnParameters);
+            if (MeridianAccent != nullptr && MeridianAccent->PointLightComponent != nullptr)
+            {
+                MeridianAccent->Tags.Add(TEXT("EchoesPlaceholder"));
+                MeridianAccent->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                MeridianAccent->PointLightComponent->SetLightColor(FLinearColor(0.25f, 0.65f, 1.0f));
+                MeridianAccent->PointLightComponent->SetIntensity(3500.0f);
+                MeridianAccent->PointLightComponent->SetAttenuationRadius(1400.0f);
+                MeridianAccent->PointLightComponent->SetCastShadows(false);
+            }
+
+            // 2. Kharuun Assault Cluster (East Cliff / Screen Right): warm bronze/amber fill & rim highlight
+            APointLight* KharuunAccent = World->SpawnActor<APointLight>(
+                FVector(-520.0f, 320.0f, 220.0f),
+                FRotator::ZeroRotator,
+                SkyActorSpawnParameters);
+            if (KharuunAccent != nullptr && KharuunAccent->PointLightComponent != nullptr)
+            {
+                KharuunAccent->Tags.Add(TEXT("EchoesPlaceholder"));
+                KharuunAccent->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                KharuunAccent->PointLightComponent->SetLightColor(FLinearColor(1.0f, 0.60f, 0.22f));
+                KharuunAccent->PointLightComponent->SetIntensity(3500.0f);
+                KharuunAccent->PointLightComponent->SetAttenuationRadius(1400.0f);
+                KharuunAccent->PointLightComponent->SetCastShadows(false);
+            }
+
+            // 3. Foreground Right Cliff Shelf: subtle cyan/amber edge accent
+            APointLight* ForegroundAccent = World->SpawnActor<APointLight>(
+                FVector(-520.0f, -420.0f, 120.0f),
+                FRotator::ZeroRotator,
+                SkyActorSpawnParameters);
+            if (ForegroundAccent != nullptr && ForegroundAccent->PointLightComponent != nullptr)
+            {
+                ForegroundAccent->Tags.Add(TEXT("EchoesPlaceholder"));
+                ForegroundAccent->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
+                ForegroundAccent->PointLightComponent->SetLightColor(FLinearColor(0.35f, 0.75f, 1.0f));
+                ForegroundAccent->PointLightComponent->SetIntensity(2200.0f);
+                ForegroundAccent->PointLightComponent->SetAttenuationRadius(850.0f);
+                ForegroundAccent->PointLightComponent->SetCastShadows(false);
             }
         }
     }

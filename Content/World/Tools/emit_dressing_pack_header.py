@@ -88,14 +88,36 @@ def require_str(value: Any, label: str) -> str:
     return value
 
 
-def blocked_cells(base_pack: dict[str, Any]) -> list[bool]:
+def blocked_cells(base_pack: dict[str, Any], site_id: str = EXPECTED_SITE_ID) -> list[bool]:
+    if base_pack.get("pack_format") == "echoes-overlay-map-pack":
+        variants = base_pack.get("variants", [])
+        matching = [
+            v for v in variants
+            if isinstance(v, dict) and (
+                v.get("family") == site_id
+                or v.get("id") == site_id
+                or v.get("id") == f"skirmish-{site_id}"
+                or str(v.get("id", "")).startswith(f"{site_id}-")
+            )
+        ]
+        if not matching:
+            raise EmitError(f"no overlay variants found for site {site_id!r}")
+        common = set.intersection(*(set(v["blocked_cell_indices"]) for v in matching))
+        return [index in common for index in range(EXPECTED_CELL_COUNT)]
     mask = base_pack.get("cells", {}).get("movement_mask")
     if not isinstance(mask, list) or len(mask) != EXPECTED_CELL_COUNT:
         raise EmitError("compiled map pack movement_mask is not a 4096-entry array")
     return [(require_int(value, f"movement_mask[{index}]") & 1) == 0 for index, value in enumerate(mask)]
 
 
-def validate(pack: dict[str, Any], base_pack: dict[str, Any], base_digest: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def validate(
+    pack: dict[str, Any],
+    base_pack: dict[str, Any],
+    base_digest: str,
+    base_pack_relative: Path = BASE_PACK_RELATIVE_PATH,
+    expected_site_id: str = EXPECTED_SITE_ID,
+    class_order: tuple[str, ...] = CLASS_ORDER,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if require_str(pack.get("pack_format"), "pack_format") != EXPECTED_PACK_FORMAT:
         raise EmitError("unexpected pack_format")
     if require_int(pack.get("pack_version"), "pack_version") != EXPECTED_PACK_VERSION:
@@ -112,7 +134,7 @@ def validate(pack: dict[str, Any], base_pack: dict[str, Any], base_digest: str) 
     base_contract = pack.get("base_contract")
     if not isinstance(base_contract, dict):
         raise EmitError("base_contract missing")
-    if require_str(base_contract.get("compiled_pack_path"), "base_contract.compiled_pack_path") != BASE_PACK_RELATIVE_PATH.as_posix():
+    if require_str(base_contract.get("compiled_pack_path"), "base_contract.compiled_pack_path") != base_pack_relative.as_posix():
         raise EmitError("base_contract names a different compiled pack path")
     if require_str(base_contract.get("compiled_pack_sha256"), "base_contract.compiled_pack_sha256") != base_digest:
         raise EmitError(
@@ -136,19 +158,19 @@ def validate(pack: dict[str, Any], base_pack: dict[str, Any], base_digest: str) 
             raise EmitError(f"class {class_id!r} must be an occluder to stand on blocked cells")
         require_str(entry.get("mesh_reference"), f"class.{class_id}.mesh_reference")
         class_by_id[class_id] = entry
-    if tuple(sorted(class_by_id)) != tuple(sorted(CLASS_ORDER)):
-        raise EmitError(f"dressing class vocabulary drifted: {sorted(class_by_id)} versus {sorted(CLASS_ORDER)}")
-    ordered_classes = [class_by_id[class_id] for class_id in CLASS_ORDER]
+    if tuple(sorted(class_by_id)) != tuple(sorted(class_order)):
+        raise EmitError(f"dressing class vocabulary drifted: {sorted(class_by_id)} versus {sorted(class_order)}")
+    ordered_classes = [class_by_id[class_id] for class_id in class_order]
 
     sites = pack.get("sites")
     if not isinstance(sites, list):
         raise EmitError("sites must be an array")
-    site = next((entry for entry in sites if isinstance(entry, dict) and entry.get("id") == EXPECTED_SITE_ID), None)
+    site = next((entry for entry in sites if isinstance(entry, dict) and entry.get("id") == expected_site_id), None)
     if site is None:
-        raise EmitError(f"site {EXPECTED_SITE_ID!r} missing")
+        raise EmitError(f"site {expected_site_id!r} missing")
     records = site.get("records")
     if not isinstance(records, list) or not records:
-        raise EmitError("glass-scar site has no records")
+        raise EmitError(f"{expected_site_id} site has no records")
     if require_int(site.get("record_count"), "site.record_count") != len(records):
         raise EmitError("site.record_count disagrees with the records array")
     if require_int(pack.get("total_record_count"), "total_record_count") != sum(
@@ -156,7 +178,7 @@ def validate(pack: dict[str, Any], base_pack: dict[str, Any], base_digest: str) 
     ):
         raise EmitError("total_record_count disagrees with the sites")
 
-    blocked = blocked_cells(base_pack)
+    blocked = blocked_cells(base_pack, expected_site_id)
     seen_ids: set[str] = set()
     seen_cells: set[int] = set()
     for record in records:
@@ -198,15 +220,33 @@ def cpp_string(value: str) -> str:
     return f'"{escaped}"'
 
 
-def render_header(pack: dict[str, Any], digest: str, base_pack: dict[str, Any], base_digest: str) -> str:
-    classes, records = validate(pack, base_pack, base_digest)
+def render_header(
+    pack: dict[str, Any],
+    digest: str,
+    base_pack: dict[str, Any],
+    base_digest: str,
+    pack_relative: Path = PACK_RELATIVE_PATH,
+    base_pack_relative: Path = BASE_PACK_RELATIVE_PATH,
+    header_relative: Path = HEADER_RELATIVE_PATH,
+    expected_site_id: str = EXPECTED_SITE_ID,
+    cpp_namespace: str = "glass_scar_dressing",
+    class_order: tuple[str, ...] = CLASS_ORDER,
+) -> str:
+    classes, records = validate(
+        pack,
+        base_pack,
+        base_digest,
+        base_pack_relative=base_pack_relative,
+        expected_site_id=expected_site_id,
+        class_order=class_order,
+    )
     lines: list[str] = []
     push = lines.append
-    push("// EchoesGlassScarDressingPack.h")
+    push(f"// {header_relative.name}")
     push("// GENERATED FILE - do not edit by hand.")
     push("// Generated by Content/World/Tools/emit_dressing_pack_header.py from the")
-    push(f"// frozen dressing pack {PACK_RELATIVE_PATH.as_posix()}")
-    push(f"// authored against {BASE_PACK_RELATIVE_PATH.as_posix()}.")
+    push(f"// frozen dressing pack {pack_relative.as_posix()}")
+    push(f"// authored against {base_pack_relative.as_posix()}.")
     push("// Verify:   python3 Content/World/Tools/emit_dressing_pack_header.py --check")
     push("// Rewrite:  python3 Content/World/Tools/emit_dressing_pack_header.py --write")
     push("// Every record below was re-verified at emission to stand on a cell the")
@@ -218,13 +258,13 @@ def render_header(pack: dict[str, Any], digest: str, base_pack: dict[str, Any], 
     push("")
     push("#include <cstdint>")
     push("")
-    push("namespace echoes::world::glass_scar_dressing")
+    push(f"namespace echoes::world::{cpp_namespace}")
     push("{")
     push("")
     push(f"inline constexpr std::int32_t kGridWidthTiles = {EXPECTED_GRID};")
     push(f"inline constexpr std::int32_t kGridHeightTiles = {EXPECTED_GRID};")
     push(f"inline constexpr char kPackFormat[] = {cpp_string(pack['pack_format'])};")
-    push(f"inline constexpr char kSiteId[] = {cpp_string(EXPECTED_SITE_ID)};")
+    push(f"inline constexpr char kSiteId[] = {cpp_string(expected_site_id)};")
     push(f"inline constexpr std::int32_t kPackVersion = {pack['pack_version']};")
     push(f"inline constexpr std::int32_t kSchemaVersion = {pack['schema_version']};")
     push(f"inline constexpr char kPackSha256[] = {cpp_string(digest)};")
@@ -234,7 +274,7 @@ def render_header(pack: dict[str, Any], digest: str, base_pack: dict[str, Any], 
     push("")
     push("enum class EDressingClass : std::uint8_t")
     push("{")
-    for index, class_id in enumerate(CLASS_ORDER):
+    for index, class_id in enumerate(class_order):
         push(f"    {to_enum(class_id)} = {index},")
     push("};")
     push("")
@@ -279,7 +319,7 @@ def render_header(pack: dict[str, Any], digest: str, base_pack: dict[str, Any], 
         )
     push("};")
     push("")
-    push("}  // namespace echoes::world::glass_scar_dressing")
+    push(f"}}  // namespace echoes::world::{cpp_namespace}")
     return "\n".join(lines) + "\n"
 
 
@@ -290,6 +330,12 @@ def to_enum(class_id: str) -> str:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path("."), help="Project root containing Content/ and Source/.")
+    parser.add_argument("--dressing-pack", type=Path, default=PACK_RELATIVE_PATH, help="Relative path to dressing pack JSON.")
+    parser.add_argument("--base-pack", type=Path, default=BASE_PACK_RELATIVE_PATH, help="Relative path to base compiled map pack JSON.")
+    parser.add_argument("--header", type=Path, default=HEADER_RELATIVE_PATH, help="Relative path to output C++ header.")
+    parser.add_argument("--site-id", type=str, default=EXPECTED_SITE_ID, help="Expected site ID.")
+    parser.add_argument("--namespace", type=str, default="glass_scar_dressing", help="C++ namespace inside echoes::world.")
+    parser.add_argument("--classes", type=str, default=",".join(CLASS_ORDER), help="Comma-separated class IDs in order.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="Verify the checked-in header matches the packs (default).")
     mode.add_argument("--write", action="store_true", help="Rewrite the generated header from the packs.")
@@ -297,15 +343,35 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
+    pack_rel = args.dressing_pack
+    sidecar_rel = pack_rel.with_suffix(".sha256")
+    base_rel = args.base_pack
+    base_sidecar_rel = base_rel.with_suffix(".sha256")
+    header_rel = args.header
+    site_id = args.site_id
+    cpp_namespace = args.namespace
+    class_order = tuple(c.strip() for c in args.classes.split(","))
+
     try:
-        base_pack, base_digest = load_digest_pinned(repo_root, BASE_PACK_RELATIVE_PATH, BASE_SIDECAR_RELATIVE_PATH, "compiled map pack")
-        pack, digest = load_digest_pinned(repo_root, PACK_RELATIVE_PATH, SIDECAR_RELATIVE_PATH, "dressing pack")
-        rendered = render_header(pack, digest, base_pack, base_digest)
+        base_pack, base_digest = load_digest_pinned(repo_root, base_rel, base_sidecar_rel, "compiled map pack")
+        pack, digest = load_digest_pinned(repo_root, pack_rel, sidecar_rel, "dressing pack")
+        rendered = render_header(
+            pack,
+            digest,
+            base_pack,
+            base_digest,
+            pack_relative=pack_rel,
+            base_pack_relative=base_rel,
+            header_relative=header_rel,
+            expected_site_id=site_id,
+            cpp_namespace=cpp_namespace,
+            class_order=class_order,
+        )
     except EmitError as error:
         print(f"REFUSED: {error}", file=sys.stderr)
         return 1
 
-    header_path = repo_root / HEADER_RELATIVE_PATH
+    header_path = repo_root / header_rel
     if args.stdout:
         sys.stdout.write(rendered)
         return 0

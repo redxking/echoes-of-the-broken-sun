@@ -47,6 +47,9 @@ public:
         return OwnedMIDCreationCount;
     }
     [[nodiscard]] bool HasBodySelectionCollisionEnabled() const;
+    [[nodiscard]] UStaticMeshComponent* GetBodyMesh() const { return BodyMesh; }
+    void SetAuthoritativeWorldLocation(const FVector& InLocation);
+    void SetAuthoritativeHeadingYaw(float InYaw);
     // The cursor must be able to reach every part of this entity the player
     // reads as the entity. These report whether a component currently blocks
     // ECC_EchoesEntityPick - the entity-resolution channel, never the

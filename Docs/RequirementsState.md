@@ -136,7 +136,7 @@ failure modes, and atomic leaf-level decomposition, entering active qualificatio
 | `REL-AI-*` | Skirmish & Opponent AI | 40 | `PKG-AUTO`, `SRC`, `PKG-REND` | 2 `AGENT VERIFIED` (`REL-AI-020`, `REL-AI-026`), 38 `OPEN` |
 | `REL-QOL-*` | Replays & Quality-of-Life | 16 | `PKG-PHYS`, `PKG-AUTO` | `OPEN` |
 | `REL-UI-*` | UMG/Slate Interface & HUD | 24 | `PKG-REND`, `PKG-PHYS` | `OPEN` |
-| `REL-ART-*` | World Art & VFX Readability | 27 | `PKG-REND` | `OPEN` |
+| `REL-ART-*` | World Art & VFX Readability | 27 | `PKG-REND` | 1 `AGENT VERIFIED` (`REL-ART-026`), 26 `OPEN` |
 | `REL-AUD-*` | Audio Mastering & Voices | 18 | `PKG-AUTO`, `HUM` | `OPEN` |
 | `REL-CIN-*` | In-Engine Cinematics | 8 | `PKG-REND`, `PKG-PHYS` | `OPEN` |
 | `REL-SAV-*` | Transactional Saves & Recovery | 14 | `SRC`, `PKG-AUTO` | `OPEN` |
@@ -1759,4 +1759,12 @@ record of owner rulings, defects, diagnostics, and acceptance. Nothing here is r
   * Advanced `REL-AI-020` and `REL-AI-026` from `OPEN` to `AGENT VERIFIED`:
     * `REL-AI-020` (Skirmish Mirror Matchup Support): Validated that all 9 matchup combinations across Meridian, Kharuun, and Hollow Choir (including mirror matchups MM, KK, CC) execute cleanly without assertion failure. Setup cycler steps legally into mirror states without skipping past identical factions. Covered by `SRC` + `PKG-AUTO` in `Echoes.Runtime.Gameplay.SkirmishSetup` inside clean 76/76 Unreal automation suite run.
     * `REL-AI-026` (Skirmish Contract): Skirmish setup exposes all 9 parameters in model and UI before deployment: Local Faction, Opponent Faction, Teams (1v1, FFA), Battlefield Map (Glass Scar, Crownfall Basin, Soryn Confluence), AI Profile (5 authored doctrines: Defensive, Raider, Economic, Expansionist, Adaptive), Difficulty (Assisted, Standard, Challenging, Sovereign), Starting Resources (250/400/700 Matter per `REL-ECO-002.AUTH`), Victory Conditions (Corefall, Well Control, Conquest), and Game Speed (0.75x, 1.0x, 1.5x). Unauthored `Balanced` AI doctrine is unreachable from selector. Disclosed Assisted handicap banner (`+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier`) rendered in dedicated non-overlapping geometry; Standard AI enforces 100% fair information model (`SPEC-AI-001/002`). Covered by `SRC`, `PKG-AUTO`, and `PKG-REND` (1920×1080 captures `skirmish-setup-standard.png` and `skirmish-setup-assisted.png` in `BuildArtifacts/Evidence/release-gate32-skirmish-setup/`).
+* 2026-09-04 — Gate 6 (Track A4: Environment Completion & Site Dressing Pass) completed and verified under ledger `WORLD-A4-002`:
+  * Advanced `REL-ART-026` (Landscape Passability Truth) from `OPEN` to `AGENT VERIFIED`:
+    * Passability Truth & Zero Simulation Touch (`SIM-002`, `REL-ART-026`): 100% of dressing records in `lume_reach_dressing_pack_v1.json` (39 records) and `glass_scar_dressing_pack_v1.json` (29 records) occupy cells strictly marked `Blocked` in underlying map contracts (`overlay_map_packs_v1.json`). Zero records placed on open or navigable paths.
+    * Presentation-Only Invariant: In-engine instancing in `AEchoesTerrainView` guarantees presentation-only behavior: layers enforce `ECollisionEnabled::NoCollision`, `bGenerateOverlapEvents = false`, `CastShadow = false`, and `CanEverAffectNavigation() == false`.
+    * Anti-Glint Specification (`REL-ART-003`): All civic dressing materials (Pale Ceramic plates `0.68, 0.66, 0.62`, Charcoal foundations) enforce a strict matte roughness floor of $\ge 0.85$ (measured 0.88 and 0.92) to eliminate specular glint noise. Broken-Sun Amber interior lighting (`0.92, 0.52, 0.06`) provides warm accent visibility without bloom leakage.
+    * Scoped Fog of War & Reshape Truth: Exploratory visibility gating and dynamic Reshape open/close deactivation verified across both Glass Scar and Lume Reach profiles. Refusal telemetry (`[ECHOES_DRESSING_REFUSED]`) verified on passability violations.
+    * Covered by `SRC` (`EchoesTerrainView.cpp`, `test_lume_reach_dressing.py`), `PKG-AUTO` (`Echoes.Runtime.Map.LumeReachDressing` and `Echoes.Runtime.Map.GlassScarDressing` passing cleanly in 77/77 Unreal automation suite), and `PKG-REND` (1920×1080 rendered review captures `LumeReachReview.png` and `LumeReachOverview.png` in `BuildArtifacts/ChoirAtLumeReach/` verifying zero bare collision floor).
+
 

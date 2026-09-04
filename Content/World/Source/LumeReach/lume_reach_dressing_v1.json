@@ -1,0 +1,369 @@
+{
+  "source_format": "echoes-map-dressing-source",
+  "source_version": 1,
+  "display_name": "Lume Reach map dressing",
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "authority_note": "Presentation-only dressing contract for Lume Reach (M01, M10) and Ark-City districts. Places NO gameplay meaning: every record is authored against the digest-pinned overlay map pack and must agree with that pack's cell state. Runtime spawning conforms strictly to Zero Simulation Touch (SIM-002).",
+  "base_contract": {
+    "compiled_pack_path": "Content/World/Generated/Overlays/overlay_map_packs_v1.json",
+    "compiled_pack_sha256": "95e187ec51bc0aa5e4998c7da9be025e3ba0c728736df160a20823df6ccf47d5"
+  },
+  "dressing_classes": [
+    {
+      "id": "civic_frame",
+      "permitted_cell_state": "blocked",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarShelf",
+      "reads_as": "pale-ceramic civic frame bastion",
+      "occluder": true
+    },
+    {
+      "id": "conduit_pylon",
+      "permitted_cell_state": "blocked",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarShard",
+      "reads_as": "interrupted civic conduit pylon",
+      "occluder": true
+    }
+  ],
+  "deferred_classes": [
+    {
+      "id": "elevation_causeway",
+      "mesh_reference": "/Game/Art/Generated/World/Environment/SM_World_GlassScarRidge",
+      "deferred_reason": "Elevation is not modelled: vision and movement cost ignore height, so causeway ramps imply tactical affordances the simulation does not provide. Left deferred until the elevation ruling lands."
+    }
+  ],
+  "sites": [
+    {
+      "id": "lume-reach",
+      "vocabulary_status": "populated",
+      "records": [
+        {
+          "id": "drs_lr_frame_01",
+          "class": "civic_frame",
+          "x": 9,
+          "y": 29,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_02",
+          "class": "civic_frame",
+          "x": 12,
+          "y": 29,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_03",
+          "class": "civic_frame",
+          "x": 14,
+          "y": 29,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_01",
+          "class": "conduit_pylon",
+          "x": 8,
+          "y": 28,
+          "orientation_ordinal": 1,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_lr_pylon_02",
+          "class": "conduit_pylon",
+          "x": 10,
+          "y": 30,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_03",
+          "class": "conduit_pylon",
+          "x": 13,
+          "y": 28,
+          "orientation_ordinal": 1,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_lr_pylon_04",
+          "class": "conduit_pylon",
+          "x": 15,
+          "y": 30,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_05",
+          "class": "conduit_pylon",
+          "x": 20,
+          "y": 28,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_06",
+          "class": "conduit_pylon",
+          "x": 20,
+          "y": 30,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_04",
+          "class": "civic_frame",
+          "x": 22,
+          "y": 29,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_05",
+          "class": "civic_frame",
+          "x": 25,
+          "y": 29,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_06",
+          "class": "civic_frame",
+          "x": 27,
+          "y": 29,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_07",
+          "class": "conduit_pylon",
+          "x": 29,
+          "y": 28,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_08",
+          "class": "conduit_pylon",
+          "x": 29,
+          "y": 30,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_09",
+          "class": "conduit_pylon",
+          "x": 35,
+          "y": 28,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_10",
+          "class": "conduit_pylon",
+          "x": 35,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_07",
+          "class": "civic_frame",
+          "x": 37,
+          "y": 29,
+          "orientation_ordinal": 3,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_08",
+          "class": "civic_frame",
+          "x": 40,
+          "y": 29,
+          "orientation_ordinal": 1,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_09",
+          "class": "civic_frame",
+          "x": 42,
+          "y": 29,
+          "orientation_ordinal": 3,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_11",
+          "class": "conduit_pylon",
+          "x": 44,
+          "y": 28,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_12",
+          "class": "conduit_pylon",
+          "x": 44,
+          "y": 30,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_13",
+          "class": "conduit_pylon",
+          "x": 49,
+          "y": 28,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_14",
+          "class": "conduit_pylon",
+          "x": 49,
+          "y": 30,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_10",
+          "class": "civic_frame",
+          "x": 51,
+          "y": 29,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_11",
+          "class": "civic_frame",
+          "x": 54,
+          "y": 29,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_15",
+          "class": "conduit_pylon",
+          "x": 52,
+          "y": 28,
+          "orientation_ordinal": 3,
+          "scale_band": 0
+        },
+        {
+          "id": "drs_lr_pylon_16",
+          "class": "conduit_pylon",
+          "x": 55,
+          "y": 30,
+          "orientation_ordinal": 1,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_12",
+          "class": "civic_frame",
+          "x": 21,
+          "y": 37,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_17",
+          "class": "conduit_pylon",
+          "x": 24,
+          "y": 37,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_13",
+          "class": "civic_frame",
+          "x": 23,
+          "y": 39,
+          "orientation_ordinal": 0,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_18",
+          "class": "conduit_pylon",
+          "x": 22,
+          "y": 41,
+          "orientation_ordinal": 2,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_14",
+          "class": "civic_frame",
+          "x": 21,
+          "y": 43,
+          "orientation_ordinal": 1,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_19",
+          "class": "conduit_pylon",
+          "x": 24,
+          "y": 43,
+          "orientation_ordinal": 3,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_pylon_20",
+          "class": "conduit_pylon",
+          "x": 40,
+          "y": 37,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_15",
+          "class": "civic_frame",
+          "x": 43,
+          "y": 37,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_16",
+          "class": "civic_frame",
+          "x": 41,
+          "y": 39,
+          "orientation_ordinal": 3,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_frame_17",
+          "class": "civic_frame",
+          "x": 42,
+          "y": 41,
+          "orientation_ordinal": 1,
+          "scale_band": 2
+        },
+        {
+          "id": "drs_lr_frame_18",
+          "class": "civic_frame",
+          "x": 40,
+          "y": 43,
+          "orientation_ordinal": 0,
+          "scale_band": 1
+        },
+        {
+          "id": "drs_lr_pylon_21",
+          "class": "conduit_pylon",
+          "x": 43,
+          "y": 43,
+          "orientation_ordinal": 2,
+          "scale_band": 2
+        }
+      ]
+    }
+  ],
+  "claim_boundary": {
+    "proposed_contract": true,
+    "not_evidence_for": [
+      "runtime consumption or spawning of this data",
+      "gameplay meaning of any placed record",
+      "final art, materials, or texture quality",
+      "composed framing, lighting design, or authored levels",
+      "package, performance, or release readiness"
+    ]
+  }
+}

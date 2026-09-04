@@ -101,7 +101,9 @@ def exact_keys(value: Any, allowed: set[str], label: str) -> dict[str, Any]:
     return value
 
 
-def load_blocked_cells(repo_root: Path, base: dict[str, Any]) -> frozenset[int]:
+def load_blocked_cells(
+    repo_root: Path, base: dict[str, Any], site_id: str | None = None
+) -> frozenset[int]:
     pack_path = repo_root / require_str(
         base["compiled_pack_path"], "base_contract.compiled_pack_path"
     )
@@ -121,16 +123,42 @@ def load_blocked_cells(repo_root: Path, base: dict[str, Any]) -> frozenset[int]:
         object_pairs_hook=reject_duplicate_keys,
         parse_constant=reject_nonfinite,
     )
-    mask = pack["cells"]["movement_mask"]
-    if not isinstance(mask, list) or len(mask) != CELL_COUNT:
-        raise CompileError("compiled map pack movement mask is not a 4096-entry array")
-    return frozenset(
-        index for index, value in enumerate(mask) if (value & 1) == 0
-    )
+    if "cells" in pack and "movement_mask" in pack.get("cells", {}):
+        mask = pack["cells"]["movement_mask"]
+        if not isinstance(mask, list) or len(mask) != CELL_COUNT:
+            raise CompileError("compiled map pack movement mask is not a 4096-entry array")
+        return frozenset(
+            index for index, value in enumerate(mask) if (value & 1) == 0
+        )
+    if pack.get("pack_format") == "echoes-overlay-map-pack":
+        variants = pack.get("variants", [])
+        matching: list[dict[str, Any]] = []
+        for v in variants:
+            if not isinstance(v, dict):
+                continue
+            if site_id is None:
+                matching.append(v)
+            elif (
+                v.get("family") == site_id
+                or v.get("id") == site_id
+                or v.get("id") == f"skirmish-{site_id}"
+                or str(v.get("id", "")).startswith(f"{site_id}-")
+            ):
+                matching.append(v)
+        if not matching:
+            raise CompileError(
+                f"no overlay variants found for site {site_id!r} in {pack_path}"
+            )
+        return frozenset.intersection(
+            *(frozenset(v["blocked_cell_indices"]) for v in matching)
+        )
+    raise CompileError(f"unrecognized compiled map pack format in {pack_path}")
 
 
-def compile_pack(repo_root: Path) -> dict[str, Any]:
-    source, source_digest = load_strict_json(repo_root / SOURCE_RELATIVE_PATH)
+def compile_pack(
+    repo_root: Path, source_relative: Path = SOURCE_RELATIVE_PATH
+) -> dict[str, Any]:
+    source, source_digest = load_strict_json(repo_root / source_relative)
     top = exact_keys(
         source,
         {
@@ -169,7 +197,6 @@ def compile_pack(repo_root: Path) -> dict[str, Any]:
         {"compiled_pack_path", "compiled_pack_sha256"},
         "source.base_contract",
     )
-    blocked = load_blocked_cells(repo_root, base)
 
     classes: dict[str, dict[str, Any]] = {}
     for index, item in enumerate(top["dressing_classes"]):
@@ -245,6 +272,7 @@ def compile_pack(repo_root: Path) -> dict[str, Any]:
                 {"id", "vocabulary_status", "records"},
                 f"source.sites[{index}]",
             )
+            blocked = load_blocked_cells(repo_root, base, site_id)
         elif status == "empty":
             record = exact_keys(
                 item,
@@ -258,6 +286,7 @@ def compile_pack(repo_root: Path) -> dict[str, Any]:
                 raise CompileError(
                     f"source.sites[{index}]: an empty vocabulary must carry no records"
                 )
+            blocked = frozenset()
         else:
             raise CompileError(
                 f"source.sites[{index}].vocabulary_status: expected populated or empty"
@@ -345,7 +374,7 @@ def compile_pack(repo_root: Path) -> dict[str, Any]:
             "compiled_pack_sha256": base["compiled_pack_sha256"],
         },
         "source_provenance": {
-            "path": SOURCE_RELATIVE_PATH.as_posix(),
+            "path": source_relative.as_posix(),
             "raw_sha256": source_digest,
         },
         "dressing_classes": [
@@ -374,20 +403,35 @@ def render_bytes(pack: dict[str, Any]) -> bytes:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
+    parser.add_argument(
+        "--source",
+        type=Path,
+        default=None,
+        help=f"Authoring source path relative to repo root (default: {SOURCE_RELATIVE_PATH}).",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=f"Output dressing pack path relative to repo root (default: {OUTPUT_PACK_RELATIVE_PATH}).",
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="Verify (default mode).")
     mode.add_argument("--write", action="store_true", help="Rewrite pack and sidecar.")
     args = parser.parse_args(argv)
     repo_root = args.repo_root.resolve()
+    source_rel = args.source if args.source is not None else SOURCE_RELATIVE_PATH
+    output_rel = args.output if args.output is not None else OUTPUT_PACK_RELATIVE_PATH
+    sidecar_rel = output_rel.with_suffix(".sha256")
     try:
-        pack = compile_pack(repo_root)
+        pack = compile_pack(repo_root, source_rel)
     except CompileError as error:
         print(f"REFUSED: {error}", file=sys.stderr)
         return 1
     rendered = render_bytes(pack)
     digest = hashlib.sha256(rendered).hexdigest()
-    pack_path = repo_root / OUTPUT_PACK_RELATIVE_PATH
-    sidecar_path = repo_root / OUTPUT_SIDECAR_RELATIVE_PATH
+    pack_path = repo_root / output_rel
+    sidecar_path = repo_root / sidecar_rel
     if args.write:
         pack_path.parent.mkdir(parents=True, exist_ok=True)
         pack_path.write_bytes(rendered)

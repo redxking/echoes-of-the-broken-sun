@@ -33,7 +33,7 @@ required_markers=(
   '\[ECHOES_OPERATION_REQUESTED\] operation=ChoirAtLumeReach accepted=true'
   '\[ECHOES_LUME_REACH_TERRAIN_READY\] blocked=223 publicGates=3 well=\(32,43\) inheritedBranch=2'
   '\[ECHOES_FACTION_SCENARIO_READY\] local=KharuunAssemblies opposition=MeridianCompact selectable=true'
-  '\[ECHOES_CHOIR_AT_LUME_REACH_READY\] approach=held_vault_approach priorBranch=2 deferredDistrict=2 oruun=[1-9][0-9]* waystone=[1-9][0-9]* well=[1-9][0-9]* contact=\(32,20\) liability=\(46,34\) anchors=\(28,39\):\(36,39\) wellSite=\(32,43\) localFaction=KharuunAssemblies maraPresence=liaisonOnly choirPresence=nonPlayablePublicContact opposition=meridianMechanicalQuarantineProxies maraInvolvementUnmodeled=true compactWideActionUnproven=true mixedFactionCommand=false hiddenAttribution=false inheritedRecords=9 blocked=223'
+  '\[ECHOES_CHOIR_AT_LUME_REACH_READY\] approach=held_vault_approach priorBranch=2 deferredDistrict=2 oruun=[1-9][0-9]* waystone=[1-9][0-9]* well=[1-9][0-9]* contact=\(32,20\) liability=\(46,34\) anchors=\(28,39\):\(36,39\) wellSite=\(32,43\) localFaction=KharuunAssemblies maraPresence=liaisonOnly choirPresence=(publicNonCommandableInMission10|nonPlayablePublicContact) opposition=meridianMechanicalQuarantineProxies maraInvolvementUnmodeled=true compactWideActionUnproven=true mixedFactionCommand=false hiddenAttribution=false inheritedRecords=9 blocked=223'
   '\[ECHOES_BOOT_READY\]'
   '\[ECHOES_SIM_FIRST_TICK\]'
 )

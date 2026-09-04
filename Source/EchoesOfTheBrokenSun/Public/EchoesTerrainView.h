@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesPrologueMissionModel.h"
 #include "EchoesSkirmishSetup.h"
 #include "GameFramework/Actor.h"
 #include "EchoesSimCore/NetworkProtocol.h"
@@ -43,14 +44,16 @@ public:
         float TileWorldSize,
         EEchoesSkirmishMapPreset MapPreset =
             EEchoesSkirmishMapPreset::GlassScar,
-        std::optional<echoes::sim::PlayerId> ScopedPlayer = std::nullopt);
+        std::optional<echoes::sim::PlayerId> ScopedPlayer = std::nullopt,
+        std::optional<EEchoesOperationMode> OperationMode = std::nullopt);
     bool SyncTerrain(const echoes::sim::Simulation& Simulation);
     bool InitializeScopedTerrain(
         int32 InMapWidthTiles,
         int32 InMapHeightTiles,
         float TileWorldSize,
         EEchoesSkirmishMapPreset MapPreset =
-            EEchoesSkirmishMapPreset::GlassScar);
+            EEchoesSkirmishMapPreset::GlassScar,
+        std::optional<EEchoesOperationMode> OperationMode = std::nullopt);
     bool SyncScopedTerrain(
         const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
@@ -82,6 +85,10 @@ public:
     }
     [[nodiscard]] bool IsDressingRecordInstanced(int32 RecordIndex) const;
     [[nodiscard]] bool AreDressingLayersPresentationOnly() const;
+    [[nodiscard]] const TCHAR* GetActiveDressingSiteId() const
+    {
+        return *ActiveDressingSiteId;
+    }
     // The player whose information state gates this view, if any. Unset means
     // the legacy full-disclosure path, on which every authored tile is drawn.
     [[nodiscard]] std::optional<echoes::sim::PlayerId> GetScopedPlayer() const
@@ -209,4 +216,29 @@ private:
     TArray<int32> DressingInstanceIndex;
     TArray<uint8> DressingDrawnState;
     TArray<bool> DressingRefusalReported;
+
+    struct FActiveDressingRecord
+    {
+        bool bIsShardLayer = false;
+        uint8 X = 0;
+        uint8 Y = 0;
+        uint8 OrientationOrdinal = 0;
+        uint8 ScaleBand = 0;
+        int32 CellIndex = 0;
+        const char* Id = nullptr;
+    };
+
+    enum class EDressingSiteProfile : uint8
+    {
+        None,
+        GlassScar,
+        LumeReach
+    };
+
+    EDressingSiteProfile ActiveDressingProfile = EDressingSiteProfile::None;
+    FString ActiveDressingSiteId;
+    FString ActiveDressingPackSha;
+    FString ActiveDressingBasePackSha;
+    TArray<FActiveDressingRecord> ActiveDressingRecords;
+    std::optional<EEchoesOperationMode> ActiveOperationMode;
 };

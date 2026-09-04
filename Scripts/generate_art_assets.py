@@ -353,7 +353,7 @@ def meridian_lancer(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def meridian_bulwark(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Meridian Bulwark: heavy two-operator mobile defensive screen platform."""
+    """Meridian Bulwark: heavy two-operator mobile defensive screen platform with hexagonal energy barrier."""
     # 1. Broad Heavy Undercarriage
     box(mesh, (78.0, 96.0, 30.0), (-12.0, 0.0, 58.0), DARK)
     box(mesh, (52.0, 72.0, 20.0), (-22.0, 0.0, 74.0), PRIMARY)
@@ -363,22 +363,40 @@ def meridian_bulwark(mesh: unreal.DynamicMesh, high: bool) -> None:
         box(mesh, (14.0, 20.0, 10.0), (18.0, side * 26.0, 104.0), GLOW)
         box(mesh, (20.0, 12.0, 28.0), (-5.0, side * 44.0, 88.0), PRIMARY)
 
-    # 2. Interlocking Forward Heavy Shield Mantle (5 Staggered Plates)
-    for index, y in enumerate((-62.0, -31.0, 0.0, 31.0, 62.0)):
-        z = 66.0 + (10.0 if index in (1, 3) else 0.0)
-        box(mesh, (14.0, 29.0, 62.0), (58.0, y, z), LIGHT, (0.0, 0.0, -8.0))
-        box(mesh, (16.0, 23.0, 50.0), (65.0, y, z), GLOW, (0.0, 0.0, -8.0))
-        box(mesh, (18.0, 16.0, 24.0), (59.0, y, z), PRIMARY, (0.0, 0.0, -8.0))
+    # 2. Central Heavy Shield Core Emitter & Articulated Pivot
+    cylinder(mesh, 24.0, 86.0, (26.0, 0.0, 72.0), DARK, (90.0, 0.0, 0.0), 10)
+    torus(mesh, 28.0, 5.0, (24.0, 0.0, 72.0), GLOW, (90.0, 0.0, 0.0), high)
+    cylinder(mesh, 14.0, 22.0, (46.0, 0.0, 72.0), LIGHT, (0.0, 90.0, 0.0), 8)
+    sphere(mesh, 10.0, (56.0, 0.0, 72.0), GLOW, high_detail=high)
 
-    # 3. Central Heavy Shield Core Emitter
-    cylinder(mesh, 22.0, 82.0, (26.0, 0.0, 72.0), DARK, (90.0, 0.0, 0.0), 10)
-    torus(mesh, 26.0, 4.0, (20.0, 0.0, 80.0), GLOW, (90.0, 0.0, 0.0), high)
+    # 3. Hexagonal Holographic Energy Shield Barrier Wings (Matching Concept Target)
+    # Left and Right curved wings, each hosting 3 interconnected hexagonal energy cells
+    for side in (-1.0, 1.0):
+        # Structural Outrigger Arms
+        box(mesh, (38.0, 12.0, 12.0), (32.0, side * 38.0, 72.0), DARK, (0.0, 0.0, side * 15.0))
+        box(mesh, (28.0, 8.0, 8.0), (38.0, side * 48.0, 72.0), LIGHT, (0.0, 0.0, side * 15.0))
 
-    # 4. Outrigger Projector Pylons
+        # 3 Hexagonal Barrier Cells per wing (Center, Upper, Outer)
+        cell_specs = (
+            (56.0, side * 34.0, 72.0, side * 8.0, 29.0),
+            (56.0, side * 34.0, 114.0, side * 8.0, 26.0),
+            (50.0, side * 64.0, 92.0, side * 20.0, 25.0),
+        )
+        for cx, cy, cz, cyaw, radius in cell_specs:
+            # Outer Beveled Frame (Dark & Ceramic)
+            cylinder(mesh, radius + 4.0, 7.0, (cx, cy, cz), DARK, (0.0, 90.0, cyaw), sides=6)
+            cylinder(mesh, radius + 1.0, 5.0, (cx + 1.0, cy, cz), LIGHT, (0.0, 90.0, cyaw), sides=6)
+            # Radiant Cyan Holographic Energy Cell
+            cylinder(mesh, radius - 2.0, 9.0, (cx + 2.0, cy, cz), GLOW, (0.0, 90.0, cyaw), sides=6)
+            # Inner Concentric Honeycomb Ring
+            if high:
+                cylinder(mesh, radius * 0.55, 11.0, (cx + 2.5, cy, cz), GLOW, (0.0, 90.0, cyaw), sides=6)
+
+    # 4. Outrigger Projector Pylons & Upper Sensors
     if high:
         for side in (-1.0, 1.0):
             box(mesh, (42.0, 8.0, 8.0), (35.0, side * 50.0, 44.0), GLOW)
-            cone(mesh, 9.0, 2.0, 32.0, (56.0, side * 52.0, 96.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+            cone(mesh, 9.0, 2.0, 32.0, (56.0, side * 52.0, 126.0), PRIMARY, (0.0, 90.0, 0.0), 6)
             cylinder(mesh, 8.0, 35.0, (-38.0, side * 40.0, 42.0), DARK, (25.0, 0.0, 0.0), 8)
 
 
@@ -852,93 +870,82 @@ def choir_phase_anchor(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_future_well_base(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Neutral foundation: neither Meridian-built nor Kharuun-grown."""
-    cylinder(mesh, 238.0, 24.0, (0.0, 0.0, 12.0), DARK, sides=16)
-    cylinder(mesh, 207.0, 14.0, (0.0, 0.0, 30.0), PRIMARY, sides=16)
-    cylinder(mesh, 76.0, 28.0, (0.0, 0.0, 39.0), DARK, sides=12)
-    torus(mesh, 78.0, 7.0, (0.0, 0.0, 54.0), GLOW, high_detail=high)
-    torus(mesh, 148.0, 5.0, (0.0, 0.0, 38.0), LIGHT, high_detail=high)
+    """Neutral stepped stone dais with sunken glowing aperture and low-profile gimbal mounts."""
+    # Stepped circular dais tiers rising from the causeway deck
+    cylinder(mesh, 280.0, 14.0, (0.0, 0.0, 7.0), DARK, sides=24 if high else 16)
+    cylinder(mesh, 235.0, 14.0, (0.0, 0.0, 21.0), PRIMARY, sides=24 if high else 16)
+    cylinder(mesh, 185.0, 10.0, (0.0, 0.0, 33.0), LIGHT, sides=20 if high else 14)
+    cylinder(mesh, 135.0, 8.0, (0.0, 0.0, 42.0), DARK, sides=18 if high else 12)
+
+    # Sunken glowing well aperture in the center
+    cylinder(mesh, 95.0, 26.0, (0.0, 0.0, 31.0), GLOW, sides=16 if high else 12)
+    cylinder(mesh, 60.0, 34.0, (0.0, 0.0, 24.0), DARK, sides=12)
+
+    # Radiant energy channels carved into the dais tiers
+    torus(mesh, 145.0, 4.5, (0.0, 0.0, 43.0), GLOW, high_detail=high)
+    torus(mesh, 205.0, 3.5, (0.0, 0.0, 29.0), GLOW, high_detail=high)
+
+    # Low-profile perimeter gimbal mount pedestals (unobstructed core view)
     for angle in range(0, 360, 60):
-        radial_box(mesh, angle, 151.0, (134.0, 18.0, 10.0), 39.0, LIGHT)
-        radial_box(mesh, angle, 178.0, (111.0, 6.0, 5.0), 47.0, GLOW)
-        radial_box(mesh, angle, 242.0, (58.0, 52.0, 18.0), 18.0, DARK)
-        a = math.radians(angle)
-        pylon_x = math.cos(a) * 188.0
-        pylon_y = math.sin(a) * 188.0
-        cone(
-            mesh,
-            38.0,
-            18.0,
-            172.0,
-            (pylon_x, pylon_y, 122.0),
-            PRIMARY,
-            (-10.0, angle + 180.0, 0.0),
-            6,
-        )
-        cone(
-            mesh,
-            20.0,
-            8.0,
-            132.0,
-            (pylon_x - math.cos(a) * 10.0,
-             pylon_y - math.sin(a) * 10.0,
-             132.0),
-            LIGHT,
-            (-10.0, angle + 180.0, 0.0),
-            6,
-        )
-        radial_box(mesh, angle, 178.0, (8.0, 13.0, 126.0), 126.0, GLOW, -10.0)
+        radial_box(mesh, float(angle), 210.0, (75.0, 28.0, 24.0), 30.0, DARK)
+        radial_box(mesh, float(angle), 215.0, (55.0, 14.0, 18.0), 42.0, PRIMARY)
+        radial_box(mesh, float(angle), 180.0, (65.0, 6.0, 6.0), 40.0, GLOW)
         if high:
-            radial_tangent_box(mesh, angle + 15.0, 218.0, (54.0, 18.0, 15.0), 45.0, PRIMARY)
-            radial_tangent_box(mesh, angle - 15.0, 218.0, (54.0, 12.0, 8.0), 52.0, LIGHT)
+            radial_tangent_box(mesh, angle + 14.0, 245.0, (48.0, 16.0, 14.0), 16.0, LIGHT)
+            radial_tangent_box(mesh, angle - 14.0, 245.0, (48.0, 16.0, 14.0), 16.0, LIGHT)
+            # Radiant runic conduits radiating outward to the bridge edges
+            radial_box(mesh, float(angle), 260.0, (60.0, 8.0, 5.0), 18.0, GLOW)
 
 
 def world_future_well_orbit(mesh: unreal.DynamicMesh, high: bool) -> None:
-    segment_step = 24 if high else 36
-    skipped = {72, 96, 252, 276} if high else {72, 252}
-    for angle in range(0, 360, segment_step):
-        if angle in skipped:
-            continue
-        segment_length = 65.0 if high else 90.0
-        radial_tangent_box(
-            mesh,
-            float(angle),
-            158.0,
-            (segment_length, 22.0, 16.0),
-            0.0,
-            LIGHT,
-        )
-        radial_tangent_box(
-            mesh,
-            float(angle),
-            158.0,
-            (segment_length * 0.78, 6.0, 5.0),
-            10.0,
-            GLOW,
-        )
-        if high and angle % 48 == 0:
-            radial_box(mesh, float(angle), 158.0, (28.0, 9.0, 34.0), 2.0, DARK)
+    """Concentric bronze/stone gimbal rings rotating around the suspended crystal core."""
+    # Outer gimbal ring
+    torus(mesh, 155.0, 6.5, (0.0, 0.0, 95.0), PRIMARY, (18.0, 24.0, 0.0), high_detail=high)
+    # Middle gimbal ring with opposing tilt
+    torus(mesh, 120.0, 5.5, (0.0, 0.0, 95.0), LIGHT, (-24.0, 65.0, 0.0), high_detail=high)
+    # Inner gimbal ring
+    torus(mesh, 88.0, 4.5, (0.0, 0.0, 95.0), PRIMARY, (38.0, -45.0, 0.0), high_detail=high)
+
+    # Radiant energy emitter nodes / alignment brackets along the rings
+    for angle in range(0, 360, 45 if high else 90):
+        a = math.radians(angle)
+        ox = math.cos(a) * 155.0
+        oy = math.sin(a) * 155.0
+        box(mesh, (14.0, 14.0, 14.0), (ox, oy * 0.91, 95.0 + oy * 0.31), GLOW, (18.0, 24.0, float(angle)))
+        if high:
+            mx = math.cos(a) * 120.0
+            my = math.sin(a) * 120.0
+            box(mesh, (10.0, 10.0, 10.0), (mx * 0.91, my, 95.0 - mx * 0.41), GLOW, (-24.0, 65.0, float(angle)))
 
 
 def world_future_well_core(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Suspended obsidian diamond monolith with glowing amber heart and orbiting satellite shards."""
     sides = 8 if high else 6
-    cone(mesh, 3.0, 34.0, 92.0, (0.0, 0.0, -46.0), GLOW, sides=sides)
-    cone(mesh, 34.0, 3.0, 92.0, (0.0, 0.0, 46.0), GLOW, sides=sides)
-    torus(mesh, 39.0, 4.0, (0.0, 0.0, 0.0), LIGHT, (90.0, 0.0, 0.0), high)
+    # Upper pyramid / facet
+    cone(mesh, 46.0, 2.0, 95.0, (0.0, 0.0, 142.0), DARK, sides=sides)
+    # Lower inverted pyramid / facet
+    cone(mesh, 2.0, 46.0, 95.0, (0.0, 0.0, 48.0), DARK, sides=sides)
+
+    # Radiant internal energy heart glowing through the crystal junction
+    sphere(mesh, 24.0, (0.0, 0.0, 95.0), GLOW, high_detail=high)
+    torus(mesh, 47.0, 4.0, (0.0, 0.0, 95.0), GLOW, (0.0, 0.0, 0.0), high_detail=high)
+    torus(mesh, 38.0, 3.0, (0.0, 0.0, 95.0), LIGHT, (90.0, 0.0, 0.0), high_detail=high)
+
+    # Orbiting satellite crystal shards suspended in the field
     shard_angles = range(0, 360, 45 if high else 90)
     for index, angle in enumerate(shard_angles):
         a = math.radians(angle)
-        radius = 50.0 + (index % 2) * 17.0
-        z = -30.0 + (index % 3) * 31.0
+        radius = 64.0 + (index % 3) * 16.0
+        z = 70.0 + (index % 4) * 14.0
         cone(
             mesh,
-            9.0,
+            11.0,
             2.0,
-            42.0,
+            48.0,
             (math.cos(a) * radius, math.sin(a) * radius, z),
-            DARK,
-            (12.0, angle, 18.0),
-            5,
+            DARK if index % 2 == 0 else GLOW,
+            (15.0, float(angle + 30.0), 20.0),
+            6 if high else 5,
         )
 
 
@@ -952,33 +959,49 @@ def world_future_well_glyph(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_shelf(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A broad, broken plate used to compose the two sides of the impact basin."""
-    box(mesh, (780.0, 780.0, 54.0), (0.0, 0.0, -27.0), PRIMARY)
-    box(mesh, (720.0, 700.0, 18.0), (6.0, -8.0, 9.0), DARK, (0.0, 2.5, 0.0))
-    for x, y, yaw, sx, sy in (
-        (-255.0, -222.0, 8.0, 250.0, 205.0),
-        (208.0, -232.0, -7.0, 292.0, 190.0),
-        (-230.0, 214.0, -5.0, 285.0, 218.0),
-        (224.0, 220.0, 6.0, 266.0, 205.0),
+    """A broad, fractured basalt cliff shelf with sheer vertical drop into the abyss and incandescent molten amber fissures."""
+    # Deep vertical foundation block extending down into the chasm
+    box(mesh, (780.0, 780.0, 400.0), (0.0, 0.0, -180.0), DARK)
+    # Upper walking plate / terrain rim
+    box(mesh, (750.0, 740.0, 38.0), (0.0, 0.0, 20.0), PRIMARY)
+
+    # Stepped basalt rock strata terraces descending the cliff face
+    for x, y, z, sx, sy, sz, yaw in (
+        (-180.0, -220.0, -60.0, 380.0, 320.0, 90.0, 6.0),
+        (210.0, -200.0, -90.0, 340.0, 340.0, 110.0, -8.0),
+        (-220.0, 200.0, -130.0, 320.0, 360.0, 120.0, -5.0),
+        (200.0, 220.0, -80.0, 360.0, 310.0, 100.0, 7.0),
+        (0.0, -320.0, -170.0, 520.0, 220.0, 140.0, 3.0),
+        (0.0, 320.0, -160.0, 510.0, 230.0, 130.0, -4.0),
     ):
-        box(mesh, (sx, sy, 12.0), (x, y, 22.0), LIGHT, (0.0, yaw, 0.0))
-    for x, y, yaw, length in (
-        (-170.0, -40.0, 24.0, 270.0),
-        (95.0, 120.0, -31.0, 230.0),
-        (205.0, -92.0, 14.0, 180.0),
+        box(mesh, (sx, sy, sz), (x, y, z), PRIMARY, (0.0, yaw, 0.0))
+        box(mesh, (sx * 0.88, sy * 0.88, sz * 0.35), (x + 8.0, y - 6.0, z + sz * 0.35), LIGHT, (0.0, yaw + 2.0, 0.0))
+
+    # Incandescent molten amber fissures cutting vertically and across the cliff face
+    for x, y, z, length, width, depth, pitch, yaw, roll in (
+        (-140.0, -60.0, -80.0, 320.0, 18.0, 24.0, 18.0, 24.0, 45.0),
+        (110.0, 130.0, -110.0, 290.0, 20.0, 22.0, -15.0, -32.0, 40.0),
+        (190.0, -110.0, -140.0, 260.0, 16.0, 20.0, 22.0, 14.0, -35.0),
+        (-180.0, 140.0, -70.0, 280.0, 19.0, 25.0, -12.0, 42.0, -40.0),
+        (0.0, -180.0, -160.0, 360.0, 22.0, 26.0, 8.0, 85.0, 15.0),
+        (0.0, 190.0, -150.0, 340.0, 20.0, 24.0, -10.0, -82.0, -18.0),
     ):
-        box(mesh, (length, 12.0, 6.0), (x, y, 30.0), GLOW, (0.0, yaw, 0.0))
+        box(mesh, (length, width, depth), (x, y, z), GLOW, (pitch, yaw, roll))
+
+    # Jagged basalt spires along the cliff edge
     if high:
-        for angle in range(0, 360, 45):
+        for angle in range(0, 360, 36):
             a = math.radians(angle)
+            h = 75.0 + (angle % 5) * 18.0
+            r = 30.0 + (angle % 3) * 6.0
             cone(
                 mesh,
-                22.0,
-                5.0,
-                58.0,
-                (math.cos(a) * 350.0, math.sin(a) * 350.0, 12.0),
-                DARK,
-                (12.0, float(angle), 5.0),
+                r,
+                4.0,
+                h,
+                (math.cos(a) * 360.0, math.sin(a) * 360.0, 20.0 + h * 0.4),
+                DARK if angle % 72 == 0 else PRIMARY,
+                (14.0, float(angle), 6.0),
                 6,
             )
 
@@ -1023,27 +1046,50 @@ def world_glass_scar_shard(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
-    cylinder(mesh, 128.0, 24.0, (0.0, 0.0, 12.0), PRIMARY, sides=12 if high else 8)
-    torus(mesh, 104.0, 9.0, (0.0, 0.0, 26.0), DARK, high_detail=high)
-    for index, (x, y, radius, height, pitch, yaw) in enumerate((
-        (0.0, 0.0, 42.0, 226.0, -5.0, 8.0),
-        (-52.0, 24.0, 30.0, 166.0, 12.0, -18.0),
-        (48.0, -31.0, 27.0, 148.0, -13.0, 24.0),
-        (42.0, 46.0, 21.0, 112.0, 7.0, 43.0),
-        (-46.0, -43.0, 19.0, 96.0, -9.0, -39.0),
-    )):
+    """Faceted radiant cyan Matter crystal cluster sprouting dynamically from mineralized host rock."""
+    # Mineral host rock base slabs
+    cylinder(mesh, 138.0, 26.0, (0.0, 0.0, 13.0), PRIMARY, sides=14 if high else 10)
+    cylinder(mesh, 115.0, 16.0, (12.0, -8.0, 24.0), DARK, sides=12 if high else 8)
+    torus(mesh, 120.0, 11.0, (0.0, 0.0, 20.0), DARK, high_detail=high)
+
+    # Dynamic multi-faceted crystal spires
+    spires = (
+        (0.0, 0.0, 48.0, 3.0, 275.0, -4.0, 8.0, 12.0, True),
+        (-58.0, 28.0, 34.0, 2.5, 205.0, 16.0, -22.0, -15.0, False),
+        (54.0, -35.0, 32.0, 2.5, 185.0, -18.0, 28.0, 20.0, False),
+        (46.0, 52.0, 26.0, 2.0, 145.0, 12.0, 48.0, -10.0, False),
+        (-52.0, -48.0, 24.0, 2.0, 130.0, -14.0, -44.0, 25.0, False),
+        (18.0, -68.0, 22.0, 2.0, 120.0, -22.0, 6.0, -18.0, False),
+        (-22.0, 65.0, 21.0, 2.0, 115.0, 20.0, -8.0, 16.0, False),
+    )
+    for x, y, radius, top_r, height, pitch, yaw, roll, is_core in spires:
         cone(
             mesh,
             radius,
-            3.0,
+            top_r,
             height,
-            (x, y, 25.0 + height * 0.5),
-            GLOW if index == 0 else LIGHT,
-            (pitch, yaw, 0.0),
-            7 if high else 5,
+            (x, y, 22.0 + height * 0.48),
+            GLOW if is_core else LIGHT,
+            (pitch, yaw, roll),
+            8 if high else 6,
         )
-    for angle in range(0, 360, 60 if high else 120):
-        radial_box(mesh, float(angle), 94.0, (88.0, 9.0, 7.0), 29.0, GLOW)
+        if is_core or high:
+            cone(
+                mesh,
+                radius * 0.55,
+                1.0,
+                height * 0.88,
+                (x, y, 24.0 + height * 0.44),
+                GLOW,
+                (pitch, yaw, roll),
+                6 if high else 5,
+            )
+
+    # Radiating basal crystal needle shards
+    for angle in range(15, 360, 45 if high else 90):
+        radial_box(mesh, float(angle), 105.0, (76.0, 11.0, 9.0), 24.0, GLOW, pitch=-18.0)
+        if high:
+            radial_box(mesh, float(angle + 22.5), 118.0, (52.0, 8.0, 7.0), 20.0, LIGHT, pitch=-24.0)
 
 
 def world_broken_sun_sky(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1185,69 +1231,52 @@ def world_glass_scar_ash_cut(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A buried transit spine with a continuous deck and repeated civic ribs."""
-    # The recessed foundation and paired shoulders preserve a single broad,
-    # straight silhouette even when detail falls away at distance.
-    box(mesh, (650.0, 1810.0, 52.0), (0.0, 0.0, -10.0), DARK)
-    box(mesh, (568.0, 1760.0, 28.0), (0.0, 0.0, 20.0), PRIMARY)
-    for side in (-1.0, 1.0):
-        box(mesh, (54.0, 1740.0, 62.0), (side * 295.0, 0.0, 34.0), DARK)
-        box(mesh, (28.0, 1680.0, 20.0), (side * 257.0, 0.0, 63.0), LIGHT)
+    """A monumental paved causeway bridge spanning the Glass Scar chasm with an expansive central circular dais, stone roadway deck, and deep vertical piers."""
+    # 1. Central Circular Foundation Dais (where Future Well sits)
+    cylinder(mesh, 620.0, 50.0, (0.0, 0.0, 25.0), DARK, sides=32 if high else 20)
+    cylinder(mesh, 560.0, 24.0, (0.0, 0.0, 42.0), PRIMARY, sides=32 if high else 20)
+    cylinder(mesh, 480.0, 14.0, (0.0, 0.0, 52.0), LIGHT, sides=32 if high else 20)
+    torus(mesh, 475.0, 5.5, (0.0, 0.0, 58.0), GLOW, high_detail=high)
+    torus(mesh, 555.0, 6.0, (0.0, 0.0, 48.0), GLOW, high_detail=high)
+    torus(mesh, 615.0, 8.0, (0.0, 0.0, 40.0), DARK, high_detail=high)
+    # Circular dais perimeter parapets
+    for angle in range(25, 155, 30):
+        for flip in (-1.0, 1.0):
+            radial_box(mesh, angle * flip + 90.0, 595.0, (55.0, 32.0, 46.0), 55.0, DARK)
+            radial_box(mesh, angle * flip + 90.0, 595.0, (35.0, 18.0, 16.0), 76.0, LIGHT)
 
-    segment_y = (-720.0, -480.0, -240.0, 0.0, 240.0, 480.0, 720.0)
-    for index, y in enumerate(segment_y):
-        # Pale ceramic deck plates sit inside darker structural coffers.
-        box(mesh, (520.0, 204.0, 22.0), (0.0, y, 43.0), LIGHT)
-        box(mesh, (424.0, 164.0, 9.0), (0.0, y, 59.0), PRIMARY)
-        box(mesh, (24.0, 188.0, 8.0), (0.0, y, 67.0), GLOW)
+    # 2. Linear Causeway Roadway Spans (North and South of the Dais)
+    for sign in (-1.0, 1.0):
+        # Base structural bed
+        box(mesh, (540.0, 450.0, 48.0), (0.0, sign * 680.0, 20.0), DARK)
+        # Paved roadway deck
+        box(mesh, (460.0, 440.0, 24.0), (0.0, sign * 680.0, 46.0), LIGHT)
+        box(mesh, (380.0, 420.0, 10.0), (0.0, sign * 680.0, 56.0), PRIMARY)
+        # Flanking stone parapets
         for side in (-1.0, 1.0):
-            box(
-                mesh,
-                (48.0, 104.0, 116.0),
-                (side * 302.0, y, 72.0),
-                DARK,
-                (0.0, 0.0, side * (7.0 if index % 2 == 0 else -5.0)),
-            )
-            box(
-                mesh,
-                (34.0, 132.0, 38.0),
-                (side * 246.0, y, 82.0),
-                LIGHT,
-                (0.0, 0.0, side * 3.0),
-            )
+            box(mesh, (48.0, 440.0, 64.0), (side * 245.0, sign * 680.0, 56.0), DARK)
+            box(mesh, (26.0, 440.0, 18.0), (side * 245.0, sign * 680.0, 88.0), LIGHT)
+            box(mesh, (10.0, 440.0, 8.0), (side * 215.0, sign * 680.0, 57.0), GLOW)
+        # Paved slab divisions
+        for y_offset in (-140.0, 0.0, 140.0):
+            box(mesh, (420.0, 12.0, 7.0), (0.0, sign * 680.0 + y_offset, 58.0), DARK)
+            box(mesh, (28.0, 120.0, 8.0), (0.0, sign * 680.0 + y_offset, 60.0), GLOW)
+
+    # 3. Massive Vertical Chasm Piers Descending into the Abyss
+    # Under central dais: massive circular foundation column
+    cylinder(mesh, 440.0, 700.0, (0.0, 0.0, -350.0), DARK, sides=24 if high else 16)
+    cylinder(mesh, 360.0, 650.0, (0.0, 0.0, -365.0), PRIMARY, sides=20 if high else 12)
+    # Buttress piers under north and south spans
+    for sign in (-1.0, 1.0):
+        box(mesh, (440.0, 200.0, 680.0), (0.0, sign * 680.0, -340.0), DARK)
+        box(mesh, (360.0, 160.0, 640.0), (0.0, sign * 680.0, -350.0), PRIMARY)
+        for side in (-1.0, 1.0):
+            box(mesh, (80.0, 220.0, 500.0), (side * 240.0, sign * 680.0, -260.0), DARK, (0.0, 0.0, side * 6.0))
             if high:
-                box(
-                    mesh,
-                    (86.0, 28.0, 22.0),
-                    (side * 205.0, y - 76.0, 69.0),
-                    PRIMARY,
-                    (0.0, side * 4.0, 0.0),
-                )
-
-        if high:
-            # Transverse seams and inset side conduits reinforce the engineered
-            # cadence without turning the route into a luminous runway.
-            box(mesh, (476.0, 10.0, 7.0), (0.0, y + 92.0, 65.0), DARK)
-            for side in (-1.0, 1.0):
-                box(mesh, (8.0, 148.0, 6.0), (side * 174.0, y, 68.0), GLOW)
-
-    # Broken parapet spans and buried approach slabs prevent sterile symmetry
-    # while retaining the causeway's uninterrupted north-south read.
-    for side in (-1.0, 1.0):
-        for y, length, yaw in (
-            (-620.0, 176.0, -3.0),
-            (-170.0, 238.0, 2.0),
-            (320.0, 192.0, -2.0),
-            (675.0, 138.0, 4.0),
-        ):
-            box(
-                mesh,
-                (42.0, length, 74.0),
-                (side * 329.0, y, 35.0),
-                PRIMARY,
-                (side * 2.0, yaw, side * 5.0),
-            )
-        box(mesh, (470.0, 132.0, 24.0), (0.0, side * 858.0, 8.0), DARK, (0.0, 0.0, 0.0))
+                box(mesh, (16.0, 180.0, 420.0), (side * 220.0, sign * 680.0, -260.0), GLOW, (0.0, 0.0, side * 6.0))
+    # Approach abutments at bridge ends
+    for sign in (-1.0, 1.0):
+        box(mesh, (500.0, 120.0, 36.0), (0.0, sign * 890.0, 16.0), DARK)
 
 
 def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:

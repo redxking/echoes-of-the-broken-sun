@@ -5,6 +5,7 @@
 #include "EchoesBattlefieldPresentation.h"
 #include "EchoesGlassScarCompiledMapPack.h"
 #include "EchoesGlassScarDressingPack.h"
+#include "EchoesLumeReachDressingPack.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -19,18 +20,26 @@ const FName TerrainMetallicParameterName(TEXT("Metallic"));
 const FName TerrainRoughnessParameterName(TEXT("Roughness"));
 const FName TerrainEmissiveParameterName(TEXT("EmissiveStrength"));
 
-namespace dressing = echoes::world::glass_scar_dressing;
-namespace map_pack = echoes::world::glass_scar_pack;
+namespace gs_dressing = echoes::world::glass_scar_dressing;
+namespace gs_map_pack = echoes::world::glass_scar_pack;
 // The dressing records were verified against one exact compiled map pack;
 // binding them to any other pack is refused at compile time.
 static_assert(
-    std::string_view(dressing::kBaseCompiledPackSha256) ==
-        std::string_view(map_pack::kCompiledPackSha256),
+    std::string_view(gs_dressing::kBaseCompiledPackSha256) ==
+        std::string_view(gs_map_pack::kCompiledPackSha256),
     "Glass Scar dressing records were verified against a different compiled map pack");
 static_assert(
-    dressing::kGridWidthTiles == map_pack::kGridWidthTiles &&
-        dressing::kGridHeightTiles == map_pack::kGridHeightTiles,
+    gs_dressing::kGridWidthTiles == gs_map_pack::kGridWidthTiles &&
+        gs_dressing::kGridHeightTiles == gs_map_pack::kGridHeightTiles,
     "Glass Scar dressing grid disagrees with the compiled map pack grid");
+
+namespace lr_dressing = echoes::world::lume_reach_dressing;
+static_assert(
+    lr_dressing::kGridWidthTiles == 64 && lr_dressing::kGridHeightTiles == 64,
+    "Lume Reach dressing grid disagrees with the 64x64 grid");
+static_assert(
+    lr_dressing::kRecordCount == 39,
+    "Lume Reach dressing record count must match authored contract");
 
 constexpr float DressingShelfSourceWidth = 780.0f;
 constexpr float DressingShelfPlanarBands[3] = {0.82f, 1.0f, 1.18f};
@@ -159,7 +168,8 @@ bool AEchoesTerrainView::InitializeTerrain(
     const echoes::sim::Simulation& Simulation,
     float TileWorldSize,
     EEchoesSkirmishMapPreset MapPreset,
-    std::optional<echoes::sim::PlayerId> ScopedPlayer)
+    std::optional<echoes::sim::PlayerId> ScopedPlayer,
+    std::optional<EEchoesOperationMode> OperationMode)
 {
     // A named player must exist, otherwise the caller believes it is scoping
     // the view when it is not.
@@ -168,11 +178,26 @@ bool AEchoesTerrainView::InitializeTerrain(
     {
         return false;
     }
+    // If OperationMode is not explicitly supplied, check if the live terrain
+    // matches the Lume Reach signature (four gated bastions along y=28):
+    if (!OperationMode.has_value())
+    {
+        if (Simulation.Config().mapWidthTiles == 64 &&
+            Simulation.Config().mapHeightTiles == 64 &&
+            Simulation.TerrainAt(20, 28) == echoes::sim::Terrain::Blocked &&
+            Simulation.TerrainAt(29, 28) == echoes::sim::Terrain::Blocked &&
+            Simulation.TerrainAt(35, 28) == echoes::sim::Terrain::Blocked &&
+            Simulation.TerrainAt(44, 28) == echoes::sim::Terrain::Blocked)
+        {
+            OperationMode = EEchoesOperationMode::CampaignChoirAtLumeReach;
+        }
+    }
     if (!InitializeScopedTerrain(
             Simulation.Config().mapWidthTiles,
             Simulation.Config().mapHeightTiles,
             TileWorldSize,
-            MapPreset))
+            MapPreset,
+            OperationMode))
     {
         return false;
     }
@@ -184,7 +209,8 @@ bool AEchoesTerrainView::InitializeScopedTerrain(
     int32 InMapWidthTiles,
     int32 InMapHeightTiles,
     float TileWorldSize,
-    EEchoesSkirmishMapPreset MapPreset)
+    EEchoesSkirmishMapPreset MapPreset,
+    std::optional<EEchoesOperationMode> OperationMode)
 {
     if (MapPreset != EEchoesSkirmishMapPreset::GlassScar &&
         MapPreset != EEchoesSkirmishMapPreset::CrownfallBasin &&
@@ -193,6 +219,7 @@ bool AEchoesTerrainView::InitializeScopedTerrain(
         return false;
     }
     ActiveMapPreset = MapPreset;
+    ActiveOperationMode = OperationMode;
     if (BlockedMesh == nullptr || ScarredMesh == nullptr ||
         AuthoredSurfaceMaterial == nullptr || InMapWidthTiles <= 0 ||
         InMapHeightTiles <= 0 || InMapWidthTiles > 256 ||
@@ -472,51 +499,182 @@ bool AEchoesTerrainView::InitializeDressing()
     DressingInstanceIndex.Reset();
     DressingDrawnState.Reset();
     DressingRefusalReported.Reset();
+    ActiveDressingRecords.Reset();
+    ActiveDressingSiteId.Empty();
+    ActiveDressingPackSha.Empty();
+    ActiveDressingBasePackSha.Empty();
     DressingShelves->ClearInstances();
     DressingShards->ClearInstances();
 
-    // Only the Glass Scar vocabulary is populated; the other presets record
-    // an empty vocabulary by contract, so an inactive layer is the correct
-    // state there rather than a failure.
-    if (ActiveMapPreset != EEchoesSkirmishMapPreset::GlassScar ||
-        MapWidthTiles != dressing::kGridWidthTiles ||
-        MapHeightTiles != dressing::kGridHeightTiles)
+    bool bIsLumeReach = false;
+    if (ActiveOperationMode.has_value())
     {
-        return true;
-    }
-    if (ShardMesh == nullptr || ScarredMesh == nullptr ||
-        BlockedMaterials.Num() != 4)
-    {
-        UE_LOG(
-            LogEchoes,
-            Error,
-            TEXT("[ECHOES_DRESSING_REFUSED] site=%s reason=assets shelf=%s shard=%s materials=%d"),
-            ANSI_TO_TCHAR(dressing::kSiteId),
-            ScarredMesh != nullptr ? TEXT("ready") : TEXT("missing"),
-            ShardMesh != nullptr ? TEXT("ready") : TEXT("missing"),
-            BlockedMaterials.Num());
-        return false;
+        switch (*ActiveOperationMode)
+        {
+            case EEchoesOperationMode::CampaignPrologue:
+            case EEchoesOperationMode::CampaignChoirAtLumeReach:
+            case EEchoesOperationMode::CampaignNoNeutralLedger:
+            case EEchoesOperationMode::CampaignFutureThatWon:
+            case EEchoesOperationMode::CampaignAssemblyOfTheMissing:
+            case EEchoesOperationMode::CampaignSeveralVoicesOneCommand:
+            case EEchoesOperationMode::CampaignTheBrokenSun:
+                bIsLumeReach = true;
+                break;
+            default:
+                bIsLumeReach = false;
+                break;
+        }
     }
 
-    DressingShelves->SetStaticMesh(ScarredMesh);
-    DressingShards->SetStaticMesh(ShardMesh);
-    for (int32 MaterialIndex = 0; MaterialIndex < BlockedMaterials.Num();
-         ++MaterialIndex)
+    if (bIsLumeReach)
     {
-        DressingShelves->SetMaterial(MaterialIndex, BlockedMaterials[MaterialIndex]);
-        DressingShards->SetMaterial(MaterialIndex, BlockedMaterials[MaterialIndex]);
+        ActiveDressingProfile = EDressingSiteProfile::LumeReach;
+    }
+    else if (ActiveMapPreset == EEchoesSkirmishMapPreset::GlassScar)
+    {
+        ActiveDressingProfile = EDressingSiteProfile::GlassScar;
+    }
+    else
+    {
+        ActiveDressingProfile = EDressingSiteProfile::None;
+        return true;
+    }
+
+    if (ActiveDressingProfile == EDressingSiteProfile::GlassScar)
+    {
+        if (MapWidthTiles != gs_dressing::kGridWidthTiles ||
+            MapHeightTiles != gs_dressing::kGridHeightTiles)
+        {
+            return true;
+        }
+        if (ShardMesh == nullptr || ScarredMesh == nullptr ||
+            BlockedMaterials.Num() != 4)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_DRESSING_REFUSED] site=%s reason=assets shelf=%s shard=%s materials=%d"),
+                ANSI_TO_TCHAR(gs_dressing::kSiteId),
+                ScarredMesh != nullptr ? TEXT("ready") : TEXT("missing"),
+                ShardMesh != nullptr ? TEXT("ready") : TEXT("missing"),
+                BlockedMaterials.Num());
+            return false;
+        }
+
+        ActiveDressingSiteId = ANSI_TO_TCHAR(gs_dressing::kSiteId);
+        ActiveDressingPackSha = ANSI_TO_TCHAR(gs_dressing::kPackSha256);
+        ActiveDressingBasePackSha = ANSI_TO_TCHAR(gs_dressing::kBaseCompiledPackSha256);
+        DressingRecordCount = gs_dressing::kRecordCount;
+
+        DressingShelves->SetStaticMesh(ScarredMesh);
+        DressingShards->SetStaticMesh(ShardMesh);
+        for (int32 MaterialIndex = 0; MaterialIndex < BlockedMaterials.Num();
+             ++MaterialIndex)
+        {
+            DressingShelves->SetMaterial(MaterialIndex, BlockedMaterials[MaterialIndex]);
+            DressingShards->SetMaterial(MaterialIndex, BlockedMaterials[MaterialIndex]);
+        }
+
+        ActiveDressingRecords.Reserve(DressingRecordCount);
+        for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
+        {
+            const gs_dressing::FDressingRecord& Record = gs_dressing::kRecords[RecordIndex];
+            FActiveDressingRecord ActiveRec;
+            ActiveRec.bIsShardLayer = (Record.Class == gs_dressing::EDressingClass::GlassShard);
+            ActiveRec.X = Record.X;
+            ActiveRec.Y = Record.Y;
+            ActiveRec.OrientationOrdinal = Record.OrientationOrdinal;
+            ActiveRec.ScaleBand = Record.ScaleBand;
+            ActiveRec.CellIndex = Record.CellIndex;
+            ActiveRec.Id = Record.Id;
+            ActiveDressingRecords.Add(ActiveRec);
+        }
+    }
+    else if (ActiveDressingProfile == EDressingSiteProfile::LumeReach)
+    {
+        if (MapWidthTiles != lr_dressing::kGridWidthTiles ||
+            MapHeightTiles != lr_dressing::kGridHeightTiles)
+        {
+            return true;
+        }
+        if (ShardMesh == nullptr || ScarredMesh == nullptr ||
+            AuthoredSurfaceMaterial == nullptr)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_DRESSING_REFUSED] site=%s reason=assets shelf=%s shard=%s material=%s"),
+                ANSI_TO_TCHAR(lr_dressing::kSiteId),
+                ScarredMesh != nullptr ? TEXT("ready") : TEXT("missing"),
+                ShardMesh != nullptr ? TEXT("ready") : TEXT("missing"),
+                AuthoredSurfaceMaterial != nullptr ? TEXT("ready") : TEXT("missing"));
+            return false;
+        }
+
+        ActiveDressingSiteId = ANSI_TO_TCHAR(lr_dressing::kSiteId);
+        ActiveDressingPackSha = ANSI_TO_TCHAR(lr_dressing::kPackSha256);
+        ActiveDressingBasePackSha = ANSI_TO_TCHAR(lr_dressing::kBaseCompiledPackSha256);
+        DressingRecordCount = lr_dressing::kRecordCount;
+
+        DressingShelves->SetStaticMesh(ScarredMesh);
+        DressingShards->SetStaticMesh(ShardMesh);
+
+        // Lume Reach Pale Ceramic civic plates and Broken-Sun Amber warm conduit light:
+        // Slot 0: Charcoal foundation
+        // Slot 1: Pale Ceramic civic plates
+        // Slot 2: Recess dark
+        // Slot 3: Broken-Sun Amber warm interior window light
+        // All roughness >= 0.85 floor strictly preserved.
+        const FLinearColor LumeColors[4] = {
+            FLinearColor(0.025f, 0.028f, 0.032f),
+            FLinearColor(0.68f, 0.66f, 0.62f),
+            FLinearColor(0.05f, 0.05f, 0.06f),
+            FLinearColor(0.92f, 0.52f, 0.06f)
+        };
+        const float RoughnessValues[4] = {0.88f, 0.85f, 0.90f, 0.85f};
+        const float MetallicValues[4] = {0.05f, 0.08f, 0.02f, 0.05f};
+        const float EmissiveValues[4] = {0.0f, 0.0f, 0.0f, 1.2f};
+
+        for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+        {
+            UMaterialInstanceDynamic* DynamicMat =
+                UMaterialInstanceDynamic::Create(AuthoredSurfaceMaterial, this);
+            if (DynamicMat != nullptr)
+            {
+                DynamicMat->SetVectorParameterValue(TerrainColorParameterName, LumeColors[MaterialIndex]);
+                DynamicMat->SetScalarParameterValue(TerrainMetallicParameterName, MetallicValues[MaterialIndex]);
+                DynamicMat->SetScalarParameterValue(TerrainRoughnessParameterName, RoughnessValues[MaterialIndex]);
+                DynamicMat->SetScalarParameterValue(TerrainEmissiveParameterName, EmissiveValues[MaterialIndex]);
+                DressingShelves->SetMaterial(MaterialIndex, DynamicMat);
+                DressingShards->SetMaterial(MaterialIndex, DynamicMat);
+            }
+        }
+
+        ActiveDressingRecords.Reserve(DressingRecordCount);
+        for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
+        {
+            const lr_dressing::FDressingRecord& Record = lr_dressing::kRecords[RecordIndex];
+            FActiveDressingRecord ActiveRec;
+            ActiveRec.bIsShardLayer = (Record.Class == lr_dressing::EDressingClass::ConduitPylon);
+            ActiveRec.X = Record.X;
+            ActiveRec.Y = Record.Y;
+            ActiveRec.OrientationOrdinal = Record.OrientationOrdinal;
+            ActiveRec.ScaleBand = Record.ScaleBand;
+            ActiveRec.CellIndex = Record.CellIndex;
+            ActiveRec.Id = Record.Id;
+            ActiveDressingRecords.Add(ActiveRec);
+        }
     }
 
     const FTransform Hidden = HiddenTransform();
-    DressingRecordCount = dressing::kRecordCount;
     DressingInstanceIndex.Init(INDEX_NONE, DressingRecordCount);
     DressingDrawnState.Init(DressingNeverDrawn, DressingRecordCount);
     DressingRefusalReported.Init(false, DressingRecordCount);
     for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
     {
-        const dressing::FDressingRecord& Record = dressing::kRecords[RecordIndex];
+        const FActiveDressingRecord& Record = ActiveDressingRecords[RecordIndex];
         UInstancedStaticMeshComponent* Layer =
-            Record.Class == dressing::EDressingClass::GlassShard
+            Record.bIsShardLayer
                 ? DressingShards.Get()
                 : DressingShelves.Get();
         DressingInstanceIndex[RecordIndex] = Layer->AddInstance(Hidden, false);
@@ -527,16 +685,16 @@ bool AEchoesTerrainView::InitializeDressing()
         LogEchoes,
         Display,
         TEXT("[ECHOES_DRESSING_READY] site=%s records=%d packSha256=%s baseCompiledPackSha256=%s collision=false shadows=false navigation=false authority=presentation"),
-        ANSI_TO_TCHAR(dressing::kSiteId),
+        *ActiveDressingSiteId,
         DressingRecordCount,
-        ANSI_TO_TCHAR(dressing::kPackSha256),
-        ANSI_TO_TCHAR(dressing::kBaseCompiledPackSha256));
+        *ActiveDressingPackSha,
+        *ActiveDressingBasePackSha);
     return true;
 }
 
 FTransform AEchoesTerrainView::DressingTransform(int32 RecordIndex) const
 {
-    const dressing::FDressingRecord& Record = dressing::kRecords[RecordIndex];
+    const FActiveDressingRecord& Record = ActiveDressingRecords[RecordIndex];
     const float HalfWidth = static_cast<float>(MapWidthTiles) * 0.5f;
     const float HalfHeight = static_cast<float>(MapHeightTiles) * 0.5f;
     const int32 Band = FMath::Clamp<int32>(Record.ScaleBand, 0, 2);
@@ -547,8 +705,8 @@ FTransform AEchoesTerrainView::DressingTransform(int32 RecordIndex) const
     const FVector Location(
         (static_cast<float>(Record.X) - HalfWidth) * WorldUnitsPerTile,
         (static_cast<float>(Record.Y) - HalfHeight) * WorldUnitsPerTile,
-        Record.Class == dressing::EDressingClass::GlassShard ? 10.0f : 4.0f);
-    if (Record.Class == dressing::EDressingClass::GlassShard)
+        Record.bIsShardLayer ? 10.0f : 4.0f);
+    if (Record.bIsShardLayer)
     {
         return FTransform(
             Rotation,
@@ -589,7 +747,7 @@ void AEchoesTerrainView::SyncDressingWith(
         int32 Mismatched = 0;
         for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
         {
-            const dressing::FDressingRecord& Record = dressing::kRecords[RecordIndex];
+            const FActiveDressingRecord& Record = ActiveDressingRecords[RecordIndex];
             if (TerrainAt(Record.X, Record.Y) != echoes::sim::Terrain::Blocked)
             {
                 ++Mismatched;
@@ -605,7 +763,7 @@ void AEchoesTerrainView::SyncDressingWith(
                 LogEchoes,
                 Display,
                 TEXT("[ECHOES_DRESSING_INACTIVE] site=%s records=%d offBlocked=%d reason=liveTerrainIsNotTheBoundCompiledPack"),
-                ANSI_TO_TCHAR(dressing::kSiteId),
+                *ActiveDressingSiteId,
                 DressingRecordCount,
                 Mismatched);
             return;
@@ -619,7 +777,7 @@ void AEchoesTerrainView::SyncDressingWith(
     const FTransform Hidden = HiddenTransform();
     for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
     {
-        const dressing::FDressingRecord& Record = dressing::kRecords[RecordIndex];
+        const FActiveDressingRecord& Record = ActiveDressingRecords[RecordIndex];
         const int32 X = Record.X;
         const int32 Y = Record.Y;
         // Conformance is re-checked against the live simulation, never
@@ -659,7 +817,7 @@ void AEchoesTerrainView::SyncDressingWith(
             continue;
         }
         DressingDrawnState[RecordIndex] = State;
-        const bool bShard = Record.Class == dressing::EDressingClass::GlassShard;
+        const bool bShard = Record.bIsShardLayer;
         UInstancedStaticMeshComponent* Layer =
             bShard ? DressingShards.Get() : DressingShelves.Get();
         Layer->UpdateInstanceTransform(

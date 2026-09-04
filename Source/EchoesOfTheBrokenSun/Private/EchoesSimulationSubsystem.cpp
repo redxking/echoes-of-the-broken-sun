@@ -19498,7 +19498,9 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         !NewTerrainView->InitializeTerrain(
             *Simulation,
             TileWorldSize,
-            PresentationPreset))
+            PresentationPreset,
+            std::nullopt,
+            SelectedOperation))
     {
         if (NewTerrainView != nullptr)
         {

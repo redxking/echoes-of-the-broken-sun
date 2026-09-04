@@ -1422,6 +1422,23 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     UpdateDamageAcknowledgeMarker();
 }
 
+void AEchoesEntityView::SetAuthoritativeWorldLocation(const FVector& InLocation)
+{
+    AuthoritativeWorldLocation = InLocation;
+    PreviousAuthoritativeLocation = InLocation;
+    SetActorLocation(InLocation, false, nullptr, ETeleportType::TeleportPhysics);
+}
+
+void AEchoesEntityView::SetAuthoritativeHeadingYaw(float InYaw)
+{
+    TargetHeadingYaw = InYaw;
+    CurrentHeadingYaw = InYaw;
+    if (BodyMesh != nullptr)
+    {
+        BodyMesh->SetRelativeRotation(FRotator(0.0f, InYaw, 0.0f));
+    }
+}
+
 void AEchoesEntityView::UpdateDamageAcknowledgeMarker()
 {
     if (DamageAcknowledgeMarker == nullptr)
@@ -1633,6 +1650,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     BodyMesh->SetStaticMesh(DesiredMesh);
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
+    BodyMesh->SetVisibility(true, true);
     UStaticMesh* AccentMesh = CubeMesh;
     FVector AccentScale(0.18f, 0.54f, 0.12f);
     FVector AccentOffset(0.0f, 0.0f, HealthBarHeight - 28.0f);
@@ -1803,9 +1821,11 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                 ? FVector(58.0f * Sign, 0.0f, 58.0f)
                 : FVector(0.0f, 58.0f * Sign, 58.0f));
         DeploymentCover->SetRelativeScale3D(
-            bFacesAlongX
-                ? FVector(0.10f, 1.45f, 0.58f)
-                : FVector(1.45f, 0.10f, 0.58f));
+            bUsingAuthoredRosterMesh
+                ? FVector(0.001f, 0.001f, 0.001f)
+                : (bFacesAlongX
+                       ? FVector(0.10f, 1.45f, 0.58f)
+                       : FVector(1.45f, 0.10f, 0.58f)));
     }
     DeploymentCover->SetVisibility(bShowDeploymentCover, true);
 
@@ -2286,6 +2306,15 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     }
 
     ConfigureFutureWellPresentation(State);
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewHideUI")))
+    {
+        if (OwnerMarker != nullptr) OwnerMarker->SetVisibility(false, true);
+        if (HealthBarBackground != nullptr) HealthBarBackground->SetVisibility(false, true);
+        if (HealthBarFill != nullptr) HealthBarFill->SetVisibility(false, true);
+        if (SilhouetteAccent != nullptr) SilhouetteAccent->SetVisibility(false, true);
+        if (SelectionRing != nullptr) SelectionRing->SetVisibility(false, true);
+        if (DamageAcknowledgeMarker != nullptr) DamageAcknowledgeMarker->SetVisibility(false, true);
+    }
 }
 
 void AEchoesEntityView::EnsureFutureWellMaterialSet(
@@ -2415,22 +2444,23 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
             GlowEmissive = 3.1f;
             break;
         case echoes::sim::FutureWellChoice::Preserve:
-            OuterLocation.Z = 224.0f;
-            InnerLocation.Z = 164.0f;
-            CoreLocation.Z = 160.0f;
-            OuterScale = FVector(1.0f);
-            InnerScale = FVector(0.78f);
-            CoreScale = FVector(0.90f, 0.90f, 1.10f);
-            GlyphAScale = FVector(1.0f, 1.0f, 0.40f);
-            GlyphBScale = FVector(0.68f, 0.68f, 0.42f);
-            InnerRotation = FRotator(0.0f, 28.0f, 0.0f);
+            OuterLocation.Z = 240.0f;
+            InnerLocation.Z = 185.0f;
+            CoreLocation.Z = 220.0f;
+            OuterScale = FVector(1.42f);
+            InnerScale = FVector(1.10f);
+            CoreScale = FVector(1.35f, 1.35f, 2.05f);
+            GlyphAScale = FVector(1.15f, 1.15f, 0.45f);
+            GlyphBScale = FVector(0.85f, 0.85f, 0.45f);
+            OuterRotation = FRotator(26.0f, -18.0f, 12.0f);
+            InnerRotation = FRotator(-24.0f, 35.0f, -14.0f);
             GlyphBRotation.Yaw = 22.5f;
             bShowGlyphA = true;
             bShowGlyphB = true;
             SecondaryColor = FLinearColor(0.04f, 0.62f, 0.78f);
-            GlowColor = FLinearColor(1.0f, 0.72f, 0.16f);
-            SecondaryEmissive = 0.85f;
-            GlowEmissive = 2.4f;
+            GlowColor = FLinearColor(1.0f, 0.75f, 0.18f);
+            SecondaryEmissive = 1.1f;
+            GlowEmissive = 3.2f;
             break;
         case echoes::sim::FutureWellChoice::Reshape:
             OuterLocation.Z = 188.0f;
@@ -3073,7 +3103,10 @@ void AEchoesEntityView::UpdateTacticalStateMotion(
     if (DeploymentCover != nullptr && DeploymentCover->IsVisible())
     {
         const FVector TargetCoverScale =
-            bDeployed ? FVector(1.0f, 1.0f, 1.0f) : FVector(0.01f, 0.01f, 0.01f);
+            bDeployed
+                ? (bUsingAuthoredRosterMesh ? FVector(0.001f, 0.001f, 0.001f)
+                                           : FVector(1.0f, 1.0f, 1.0f))
+                : FVector(0.01f, 0.01f, 0.01f);
         if (bReducedMotion)
         {
             DeploymentCover->SetRelativeScale3D(TargetCoverScale);

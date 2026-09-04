@@ -5,11 +5,13 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
+#include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EngineUtils.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -204,6 +206,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
         const bool bBuriedCauseway = GlassScarReviewMode.Equals(
             TEXT("BuriedCauseway"),
             ESearchCase::IgnoreCase);
+        const bool bVerticalSlice = GlassScarReviewMode.Equals(
+            TEXT("VerticalSlice"),
+            ESearchCase::IgnoreCase);
         const bool bFoldedVerge = GlassScarReviewMode.Equals(
             TEXT("FoldedVerge"),
             ESearchCase::IgnoreCase);
@@ -220,7 +225,16 @@ void AEchoesRTSCameraPawn::BeginPlay()
                 : 0.0f;
         bArtReviewMode = true;
         SetActorLocation(FVector(CenterX, 0.0f, 100.0f));
-        if (bBrokenSun)
+        if (bVerticalSlice)
+        {
+            SetActorLocation(FVector(0.0f, 0.0f, 100.0f));
+            SpringArm->TargetArmLength = 2650.0f;
+            SpringArm->SetRelativeRotation(FRotator(-18.0f, 43.0f, 0.0f));
+            Camera->SetFieldOfView(62.0f);
+            Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+            Camera->PostProcessSettings.AutoExposureBias = -0.1f;
+        }
+        else if (bBrokenSun)
         {
             SetActorLocation(FVector(2800.0f, -2000.0f, 650.0f));
             SpringArm->TargetArmLength = 0.0f;
@@ -339,14 +353,48 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     {
         // Editor sessions compile meshes, textures, and shaders
         // asynchronously; a capture before the queue drains photographs
-        // fallback materials. Hold the timer until everything is built.
-        if (FAssetCompilingManager::Get().GetNumRemainingAssets() > 0)
+        // fallback materials. Hold the timer until everything is built,
+        // but cap asset wait so background distance-field tasks do not
+        // permanently starve screenshot capture in fast benchmark runs.
+        const int32 RemainingAssets = FAssetCompilingManager::Get().GetNumRemainingAssets();
+        if (RemainingAssets > 0 && ArtReviewAssetWaitSeconds < 5.0f)
         {
+            ArtReviewAssetWaitSeconds += DeltaSeconds;
             ArtReviewElapsedSeconds = 0.0f;
         }
-        ArtReviewElapsedSeconds += DeltaSeconds;
-        if (ArtReviewElapsedSeconds >= 1.5f)
+        else
         {
+            ArtReviewElapsedSeconds += DeltaSeconds;
+        }
+        if (ArtReviewElapsedSeconds >= 2.0f)
+        {
+            FAssetCompilingManager::Get().FinishAllCompilation();
+
+            for (TActorIterator<AEchoesEntityView> It(GetWorld()); It; ++It)
+            {
+                AEchoesEntityView* View = *It;
+                const FVector Loc = View->GetActorLocation();
+                const bool bHidden = View->IsHidden();
+                UStaticMeshComponent* MeshComp = View->GetBodyMesh();
+                const bool bCompVis = MeshComp ? MeshComp->IsVisible() : false;
+                UStaticMesh* Mesh = MeshComp ? MeshComp->GetStaticMesh() : nullptr;
+                const FBoxSphereBounds Bounds = MeshComp ? MeshComp->Bounds : FBoxSphereBounds();
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ART_REVIEW_VIEW_AUDIT] id=%u type=%d faction=%d owner=%d loc=%s hidden=%d compVis=%d mesh=%s boundsOrigin=%s boundsBoxExt=%s"),
+                    View->GetEntityId(),
+                    static_cast<int32>(View->GetEntityType()),
+                    static_cast<int32>(View->GetEntityFaction()),
+                    View->GetOwnerPlayerId(),
+                    *Loc.ToString(),
+                    bHidden ? 1 : 0,
+                    bCompVis ? 1 : 0,
+                    Mesh ? *Mesh->GetName() : TEXT("None"),
+                    *Bounds.Origin.ToString(),
+                    *Bounds.BoxExtent.ToString());
+            }
+
             FString OutputPath;
             const bool bShowUI = !FParse::Param(
                 FCommandLine::Get(),
@@ -373,7 +421,7 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=%s delay=1.5 output=%s"),
+                TEXT("[ECHOES_ART_REVIEW_CAPTURE] requested=true showUI=%s delay=2.0 output=%s"),
                 bShowUI ? TEXT("true") : TEXT("false"),
                 OutputPath.IsEmpty() ? TEXT("default") : *OutputPath);
         }

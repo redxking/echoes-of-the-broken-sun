@@ -32,4 +32,5 @@ for path, expected_revision in STALE_MASTERS.items():
         f"[ECHOES_ART_PURGE] path={path} recorded={revision} "
         f"expected={expected_revision}"
     )
+
 unreal.log(f"[ECHOES_ART_PURGE_READY] purged={purged} kept={kept}")
