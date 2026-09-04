@@ -1812,8 +1812,8 @@ void AEchoesGameMode::BeginPlay()
                 // West Cliff (Screen Left): Meridian Compact strike force
                 // Frontline Bulwarks deployed with hexagonal holographic energy shield barrier wings.
                 // The shield wings sit on the mesh local +X; with the review camera at yaw 43 a
-                // heading near 135 puts the wings edge-on to the lens. Headings near 165 keep them
-                // bearing on the Well (bearing ~153 from the rim) while showing the cells three-quarter.
+                // heading near 135 puts the wings edge-on to the lens. From the south bank the Well bears
+                // ~112; headings near 150 split the difference and keep the cells three-quarter.
                 // Bulwark 1: Holding the cliff rim overlooking the Future Well dais
                 SpawnPreview(
                     920101,
@@ -1825,8 +1825,8 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(360.0f, -180.0f, 12.0f),
-                    168.0f);
+                    FVector(360.0f, -900.0f, 12.0f),
+                    150.0f);
 
                 // Bulwark 2: Midground battle line anchor
                 SpawnPreview(
@@ -1839,8 +1839,8 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(520.0f, -340.0f, 12.0f),
-                    172.0f);
+                    FVector(520.0f, -1040.0f, 12.0f),
+                    155.0f);
 
                 // Bulwark 3: Outer flank defense
                 SpawnPreview(
@@ -1853,8 +1853,8 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(680.0f, -220.0f, 12.0f),
-                    162.0f);
+                    FVector(680.0f, -960.0f, 12.0f),
+                    145.0f);
 
                 // Lancers in advancing tactical wedge formation along the bridge ramp and cliff rim
                 // Lancer 1: Foreground bridge approach
@@ -1868,7 +1868,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(180.0f, -600.0f, 12.0f),
+                    FVector(120.0f, -860.0f, 12.0f),
                     50.0f);
 
                 // Lancer 2: Advancing along bridge side
@@ -1882,7 +1882,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(230.0f, -460.0f, 12.0f),
+                    FVector(160.0f, -720.0f, 12.0f),
                     45.0f);
 
                 // Lancer 3: Second rank advancing
@@ -1896,7 +1896,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(140.0f, -380.0f, 12.0f),
+                    FVector(40.0f, -640.0f, 12.0f),
                     40.0f);
 
                 // Lancer 4: Point scout approaching the dais
@@ -1910,7 +1910,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(200.0f, -260.0f, 12.0f),
+                    FVector(110.0f, -520.0f, 12.0f),
                     35.0f);
 
                 // Lancer 5: Flank guard behind front ranks
@@ -1924,7 +1924,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(0, 1),
                     12.0f,
-                    FVector(300.0f, -400.0f, 12.0f),
+                    FVector(-60.0f, -780.0f, 12.0f),
                     45.0f);
 
                 // Surveyor engineering exoframe mechs in command positions behind the line
@@ -1939,7 +1939,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(480.0f, -60.0f, 12.0f),
+                    FVector(480.0f, -1120.0f, 12.0f),
                     95.0f);
 
                 // Surveyor 2: On the upper shelf scanning the chasm
@@ -1953,7 +1953,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     12.0f,
-                    FVector(720.0f, -80.0f, 12.0f),
+                    FVector(760.0f, -1180.0f, 12.0f),
                     110.0f);
 
                 // Relay Skiff hovering above the strike force with its antenna halo and propulsion
@@ -1967,7 +1967,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(-1, 1),
                     150.0f,
-                    FVector(560.0f, -280.0f, 150.0f),
+                    FVector(560.0f, -560.0f, 170.0f),
                     120.0f);
 
                 // Radiant cyan Matter crystals on the West cliff
@@ -1982,7 +1982,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(1, 0),
                     0.0f,
-                    FVector(240.0f, -820.0f, 0.0f),
+                    FVector(520.0f, -1380.0f, 0.0f),
                     25.0f);
 
                 // Deposit 2: Outer shelf rim
@@ -1996,7 +1996,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(1, 0),
                     0.0f,
-                    FVector(940.0f, -260.0f, 0.0f),
+                    FVector(1100.0f, -1000.0f, 0.0f),
                     110.0f);
 
                 // East Cliff (Screen Right): Kharuun Assemblies assault cluster
@@ -2011,7 +2011,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-420.0f, 240.0f, 12.0f),
+                    FVector(-520.0f, 860.0f, 12.0f),
                     -45.0f);
 
                 // Riftstalkers predatory quadrupeds prowling the cliff edge
@@ -2026,7 +2026,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-320.0f, 100.0f, 12.0f),
+                    FVector(-360.0f, 850.0f, 12.0f),
                     -50.0f);
 
                 // Riftstalker 2: Flanking position beside Cairnback
@@ -2040,7 +2040,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-520.0f, 160.0f, 12.0f),
+                    FVector(-700.0f, 880.0f, 12.0f),
                     -40.0f);
 
                 // Resonant crystalline tripod scout standing proudly on the elevated rear shelf
@@ -2054,7 +2054,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-650.0f, 380.0f, 12.0f),
+                    FVector(-820.0f, 1040.0f, 12.0f),
                     -45.0f);
 
                 // Tender worker unit supporting the cluster
@@ -2068,7 +2068,7 @@ void AEchoesGameMode::BeginPlay()
                     true,
                     echoes::sim::Vec2::FromTiles(1, -1),
                     12.0f,
-                    FVector(-550.0f, 460.0f, 12.0f),
+                    FVector(-680.0f, 1160.0f, 12.0f),
                     -45.0f);
 
                 // Matter deposits on East cliff shelf
@@ -2083,7 +2083,7 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(1, 0),
                     0.0f,
-                    FVector(-780.0f, 260.0f, 0.0f),
+                    FVector(-960.0f, 940.0f, 0.0f),
                     45.0f);
 
                 // Deposit 2: Rear shelf near Resonant
@@ -2097,22 +2097,9 @@ void AEchoesGameMode::BeginPlay()
                     false,
                     echoes::sim::Vec2::FromTiles(1, 0),
                     0.0f,
-                    FVector(-740.0f, 520.0f, 0.0f),
+                    FVector(-900.0f, 1240.0f, 0.0f),
                     -60.0f);
 
-                // Foreground Right Cliff Shelf Matter deposit (matching bottom-right corner of concept target)
-                SpawnPreview(
-                    920208,
-                    echoes::sim::EntityType::ResourceNode,
-                    echoes::sim::Faction::MeridianCompact,
-                    echoes::sim::kNeutralPlayer,
-                    30,
-                    30,
-                    false,
-                    echoes::sim::Vec2::FromTiles(1, 0),
-                    0.0f,
-                    FVector(-620.0f, -520.0f, 0.0f),
-                    -15.0f);
             }
             UE_LOG(
                 LogEchoes,
@@ -2310,7 +2297,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                                      const FVector& Scale,
                                      const FLinearColor& Color,
                                      const FName& DetailTag,
-                                     bool bCastShadow)
+                                     bool bCastShadow,
+                                     TOptional<FLinearColor> GlowOverride = TOptional<FLinearColor>())
     {
         FActorSpawnParameters AccentSpawnParameters;
         AccentSpawnParameters.SpawnCollisionHandlingOverride =
@@ -2366,10 +2354,12 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                 FMath::Min(Color.R * 1.75f + 0.04f, 1.0f),
                 FMath::Min(Color.G * 1.75f + 0.04f, 1.0f),
                 FMath::Min(Color.B * 1.75f + 0.04f, 1.0f)),
-            FLinearColor(
-                FMath::Min(Color.R * 3.2f + 0.08f, 1.0f),
-                FMath::Min(Color.G * 3.2f + 0.04f, 1.0f),
-                FMath::Min(Color.B * 3.2f + 0.10f, 1.0f))};
+            GlowOverride.IsSet()
+                ? GlowOverride.GetValue()
+                : FLinearColor(
+                      FMath::Min(Color.R * 3.2f + 0.08f, 1.0f),
+                      FMath::Min(Color.G * 3.2f + 0.04f, 1.0f),
+                      FMath::Min(Color.B * 3.2f + 0.10f, 1.0f))};
         for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
         {
             UMaterialInstanceDynamic* AccentMaterial =
@@ -2460,69 +2450,104 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
 
     if (bVerticalSliceMode)
     {
-        // West Cliff shelf plateaus flanking the chasm under Meridian forces (Screen Left)
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(700.0f, -700.0f, -39.0f),
-            FRotator(0.0f, 25.0f, 0.0f),
-            FVector(2.8f, 2.6f, 1.0f),
-            FLinearColor(0.034f, 0.047f, 0.055f),
-            TEXT("EchoesTerrainShelfWest1"),
-            true);
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(1050.0f, -1000.0f, -39.0f),
-            FRotator(0.0f, -12.0f, 0.0f),
-            FVector(2.5f, 2.5f, 1.0f),
-            FLinearColor(0.034f, 0.047f, 0.055f),
-            TEXT("EchoesTerrainShelfWest2"),
-            true);
+        // The chasm runs along X between the two banks; the Buried Causeway (spans along Y,
+        // abutments at |y| = 890) is the only crossing. Each bank is one contiguous row of
+        // shelves whose inner faces stand at |y| = 800 and drop to the chasm bed, so the frame
+        // reads as two cliffs with a bridge, not as loose plates. Preview-only, non-colliding.
+        constexpr float ChasmHalfWidth = 800.0f;
+        const FLinearColor ChasmFissureGlow(1.0f, 0.42f, 0.08f);
+        constexpr float BankShelfScaleXY = 2.05f;   // 780 * 2.05 ~= 1600: contiguous at 1600 spacing
+        constexpr float BankShelfScaleZ = 1.9f;     // foundation bottom ~ -796, below the bed at -750
+        constexpr float BankShelfHalfWidth = 780.0f * 0.5f * BankShelfScaleXY;
+        int32 BankShelfIndex = 0;
+        for (const float BankSign : {-1.0f, 1.0f})
+        {
+            for (const int32 Row : {0, 1})
+            {
+            for (const float ShelfX : {-4000.0f, -2400.0f, -800.0f, 800.0f, 2400.0f, 4000.0f})
+            {
+                const float RowScaleZ = Row == 0 ? BankShelfScaleZ : 1.0f;
+                SpawnScarAccent(
+                    ShelfMesh,
+                    FVector(
+                        ShelfX,
+                        BankSign * (ChasmHalfWidth + BankShelfHalfWidth * (1.0f + 2.0f * Row)),
+                        -39.0f * RowScaleZ),
+                    FRotator::ZeroRotator,
+                    FVector(BankShelfScaleXY, BankShelfScaleXY, RowScaleZ),
+                    FLinearColor(0.034f, 0.047f, 0.055f),
+                    FName(*FString::Printf(TEXT("EchoesTerrainBank%s%d"), BankSign < 0.0f ? TEXT("West") : TEXT("East"), BankShelfIndex++)),
+                    true,
+                    ChasmFissureGlow);
+            }
+            }
+        }
 
-        // East Cliff shelf plateaus flanking the chasm under Kharuun forces (Screen Right)
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(-700.0f, 700.0f, -39.0f),
-            FRotator(0.0f, -155.0f, 0.0f),
-            FVector(2.8f, 2.6f, 1.0f),
-            FLinearColor(0.034f, 0.047f, 0.055f),
-            TEXT("EchoesTerrainShelfEast1"),
-            true);
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(-1050.0f, 1000.0f, -39.0f),
-            FRotator(0.0f, 168.0f, 0.0f),
-            FVector(2.5f, 2.5f, 1.0f),
-            FLinearColor(0.034f, 0.047f, 0.055f),
-            TEXT("EchoesTerrainShelfEast2"),
-            true);
+        // Lower terrace tier: a second, narrower step halfway down each cliff so the inner face
+        // reads as strata with its own fissure glow instead of one flat wall.
+        constexpr float TerraceHalfWidth = 540.0f;
+        constexpr float TerraceScaleZ = 1.2f;
+        for (const float BankSign : {-1.0f, 1.0f})
+        {
+            for (const float ShelfX : {-4000.0f, -2400.0f, -800.0f, 800.0f, 2400.0f, 4000.0f})
+            {
+                SpawnScarAccent(
+                    ShelfMesh,
+                    FVector(
+                        ShelfX + 260.0f * BankSign,
+                        BankSign * (TerraceHalfWidth + BankShelfHalfWidth),
+                        -330.0f - 39.0f * TerraceScaleZ),
+                    FRotator(0.0f, 3.0f * BankSign, 0.0f),
+                    FVector(BankShelfScaleXY, BankShelfScaleXY, TerraceScaleZ),
+                    FLinearColor(0.028f, 0.036f, 0.042f),
+                    TEXT("EchoesChasmTerrace"),
+                    true,
+                    ChasmFissureGlow);
+            }
+        }
 
-        // Foreground Right Cliff Shelf (matching bottom-right corner of concept target)
-        SpawnScarAccent(
-            ShelfMesh,
-            FVector(-750.0f, -620.0f, -39.0f),
-            FRotator(0.0f, -30.0f, 0.0f),
-            FVector(2.4f, 2.2f, 1.0f),
-            FLinearColor(0.034f, 0.047f, 0.055f),
-            TEXT("EchoesTerrainShelfForegroundEast"),
-            true);
+        // Rim teeth along both cliff edges give the banks a broken silhouette against the drop.
+        // The causeway gap (|x| < 420) is left open so the bridge reads clean.
+        for (const float BankSign : {-1.0f, 1.0f})
+        {
+            for (int32 Tooth = -6; Tooth <= 6; ++Tooth)
+            {
+                const float ToothX = Tooth * 420.0f + (Tooth % 2 == 0 ? 60.0f : -80.0f) * BankSign;
+                if (FMath::Abs(ToothX) < 420.0f)
+                {
+                    continue;
+                }
+                const float ToothScale = 0.55f + 0.2f * static_cast<float>(FMath::Abs(Tooth) % 3);
+                SpawnScarAccent(
+                    RidgeMesh,
+                    FVector(ToothX, BankSign * (ChasmHalfWidth - 70.0f), -8.0f),
+                    FRotator(0.0f, 37.0f * static_cast<float>(Tooth) + (BankSign < 0.0f ? 0.0f : 180.0f), 0.0f),
+                    FVector(ToothScale, ToothScale, ToothScale),
+                    FLinearColor(0.030f, 0.040f, 0.048f),
+                    TEXT("EchoesChasmRimTooth"),
+                    true,
+                    ChasmFissureGlow);
+            }
+        }
 
         // Deep chasm floor bed: dark fractured basalt canyon base deep below running along X
         SpawnScarAccent(
             ShelfMesh,
-            FVector(0.0f, 0.0f, -750.0f),
+            FVector(0.0f, 0.0f, -700.0f),
             FRotator::ZeroRotator,
-            FVector(10.0f, 3.2f, 0.5f),
-            FLinearColor(0.012f, 0.015f, 0.020f),
+            FVector(24.0f, 3.2f, 0.5f),
+            FLinearColor(0.045f, 0.040f, 0.038f),
             TEXT("EchoesChasmFloorBed"),
-            false);
+            false,
+            ChasmFissureGlow);
 
         // Incandescent molten amber fissures deep in the chasm
         const FVector ChasmGlowLocations[] = {
-            FVector(0.0f, -400.0f, -250.0f),
-            FVector(0.0f, 400.0f, -250.0f),
-            FVector(-600.0f, 0.0f, -320.0f),
-            FVector(600.0f, 0.0f, -320.0f),
-            FVector(0.0f, 0.0f, -450.0f),
+            FVector(0.0f, -400.0f, -520.0f),
+            FVector(0.0f, 400.0f, -520.0f),
+            FVector(-1400.0f, 0.0f, -560.0f),
+            FVector(1400.0f, 0.0f, -560.0f),
+            FVector(0.0f, 0.0f, -620.0f),
         };
         for (const FVector& GlowPos : ChasmGlowLocations)
         {
@@ -2825,13 +2850,13 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         const FVector SunLocation = bVerticalSliceMode
-            ? FVector(6400.0f, 6800.0f, 1280.0f)
+            ? FVector(7400.0f, 7800.0f, -110.0f)
             : FVector(-14000.0f, 9800.0f, 24000.0f);
         const FRotator SunRotation = bVerticalSliceMode
             ? FRotator(-16.0f, -137.0f, 0.0f)
             : FRotator(-55.0f, -35.0f, 0.0f);
         const FVector SunScale = bVerticalSliceMode
-            ? FVector(1.05f, 1.05f, 1.05f)
+            ? FVector(1.25f, 1.25f, 1.25f)
             : FVector(6.0f, 6.0f, 6.0f);
 
         AStaticMeshActor* BrokenSunSky = World->SpawnActor<AStaticMeshActor>(
@@ -2933,7 +2958,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             // Strike force tactical accent lights highlighting unit silhouettes against deep indigo twilight
             // 1. Meridian Strike Force (West Cliff / Screen Left): cool cyan fill & rim highlight
             APointLight* MeridianAccent = World->SpawnActor<APointLight>(
-                FVector(550.0f, -400.0f, 220.0f),
+                FVector(550.0f, -1000.0f, 220.0f),
                 FRotator::ZeroRotator,
                 SkyActorSpawnParameters);
             if (MeridianAccent != nullptr && MeridianAccent->PointLightComponent != nullptr)
@@ -2948,7 +2973,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
 
             // 2. Kharuun Assault Cluster (East Cliff / Screen Right): warm bronze/amber fill & rim highlight
             APointLight* KharuunAccent = World->SpawnActor<APointLight>(
-                FVector(-520.0f, 320.0f, 220.0f),
+                FVector(-620.0f, 980.0f, 220.0f),
                 FRotator::ZeroRotator,
                 SkyActorSpawnParameters);
             if (KharuunAccent != nullptr && KharuunAccent->PointLightComponent != nullptr)
@@ -2963,7 +2988,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
 
             // 3. Foreground Right Cliff Shelf: subtle cyan/amber edge accent
             APointLight* ForegroundAccent = World->SpawnActor<APointLight>(
-                FVector(-520.0f, -420.0f, 120.0f),
+                FVector(-640.0f, -1000.0f, 120.0f),
                 FRotator::ZeroRotator,
                 SkyActorSpawnParameters);
             if (ForegroundAccent != nullptr && ForegroundAccent->PointLightComponent != nullptr)

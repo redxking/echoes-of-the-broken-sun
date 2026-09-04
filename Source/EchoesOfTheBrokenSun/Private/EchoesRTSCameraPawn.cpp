@@ -228,11 +228,11 @@ void AEchoesRTSCameraPawn::BeginPlay()
         if (bVerticalSlice)
         {
             SetActorLocation(FVector(0.0f, 0.0f, 100.0f));
-            SpringArm->TargetArmLength = 2650.0f;
-            SpringArm->SetRelativeRotation(FRotator(-18.0f, 43.0f, 0.0f));
+            // Gate 50 frame: both banks, the chasm floor, and the dais in one view. No
+            // fixture-only exposure override: the frame renders under the A1 rig as play does.
+            SpringArm->TargetArmLength = 3200.0f;
+            SpringArm->SetRelativeRotation(FRotator(-21.0f, 43.0f, 0.0f));
             Camera->SetFieldOfView(62.0f);
-            Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
-            Camera->PostProcessSettings.AutoExposureBias = -0.1f;
         }
         else if (bBrokenSun)
         {
