@@ -1055,3 +1055,99 @@
   .mission-number { font-size: 32px; }
   .update { grid-template-columns: 1fr; gap: 12px; }
 }
+
+/* Vision page: palette notes, faction form cards. */
+.palette-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 42px;
+}
+
+.palette-notes article {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper-card);
+}
+
+.palette-chip { height: 96px; border-bottom: 1px solid var(--line); }
+.palette-body { padding: 18px 20px 22px; }
+
+.palette-notes small {
+  display: block;
+  color: var(--teal);
+  font: 600 11px/1.5 'DM Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.palette-notes h3 { margin: 8px 0; font-size: 24px; }
+.palette-notes p { margin: 0; color: var(--body); font-size: 14px; }
+
+.palette-notes code {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  font: 500 11px/1.5 'DM Mono', monospace;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  margin-top: 42px;
+}
+
+.form-column { display: grid; gap: 14px; }
+
+.form-card {
+  padding: 24px 26px 26px;
+  border: 1px solid var(--line);
+  background: var(--paper-card);
+}
+
+.form-card small {
+  display: block;
+  color: var(--teal);
+  font: 600 11px/1.5 'DM Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.form-card h3 { margin: 10px 0 10px; font-size: 25px; }
+.form-card p { margin: 0; color: var(--body); font-size: 14px; }
+
+.form-card ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--body);
+  font-size: 14px;
+}
+
+.form-card li { margin: 5px 0; }
+
+.dark-band .form-card { border-color: var(--night-line); background: var(--night-card); }
+.dark-band .form-card small { color: var(--teal-bright); }
+.dark-band .form-card p, .dark-band .form-card ul { color: var(--night-body); }
+
+.form-card.no-art {
+  border: 1px solid #a8833f;
+  border-left: 5px solid #8a5a00;
+  background: #f0e8d5;
+}
+
+.form-card.no-art small { color: #654300; }
+.form-card.no-art p { color: #3d3425; }
+
+@media (max-width: 980px) {
+  .palette-notes, .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .palette-notes, .form-grid { grid-template-columns: 1fr; }
+}
+
+.evidence-figure.concept-proof,
+.evidence-figure.well-concept,
+.evidence-figure.scar-concept { border-top: 4px solid #8a5a00; }

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Glass Scar | Echoes of the Broken Sun</title>
   <meta name="description" content="Explore the Glass Scar battlefield, its Matter deposits, three campaign-shaped crossings, and current Unreal environment art for Echoes of the Broken Sun.">
-  <link rel="stylesheet" href="styles.css?v=20260829l">
-  <link rel="stylesheet" href="pages.css?v=20260829l">
-  <link rel="stylesheet" href="contrast.css?v=20260829l">
+  <link rel="stylesheet" href="styles.css?v=20260904a">
+  <link rel="stylesheet" href="pages.css?v=20260904a">
+  <link rel="stylesheet" href="contrast.css?v=20260904a">
 </head>
 <body class="detail-page">
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -15,6 +15,7 @@
     <a href="index.html" class="brand"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
     <div class="nav-links">
       <a href="story.html">Story</a>
+      <a href="vision.html">Vision</a>
       <a href="characters.html">Characters</a>
       <a href="factions.html">Factions</a>
       <a href="glass-scar.html" aria-current="page">World</a>
@@ -45,10 +46,11 @@
           <div><dt>Matter seams</dt><dd>Safer outer deposits support the opening economy. The richer center asks players to risk workers and supply routes.</dd></div>
         </dl>
       </div>
-      <figure class="scar-concept">
+      <figure class="scar-concept evidence-figure" data-evidence="concept-target" data-register="CONCEPT-003">
+        <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
         <picture>
           <source type="image/webp" srcset="assets/concepts/glass-scar-routes.webp?v=20260829i">
-          <img src="assets/concepts/glass-scar-routes.png?v=20260829i" width="1254" height="1254" loading="lazy" decoding="async" alt="Four-view Glass Scar concept sheet showing the full impact basin and distinct Ash Cut, Buried Causeway, and Folded Verge crossings.">
+          <img src="assets/concepts/glass-scar-routes.png?v=20260829i" width="1254" height="1254" loading="lazy" decoding="async" alt="Concept target, not gameplay: four-view Glass Scar sheet showing the full impact basin and distinct Ash Cut, Buried Causeway, and Folded Verge crossings.">
         </picture>
         <figcaption><b>Environment direction</b><span>Concept target · not gameplay</span></figcaption>
       </figure>
@@ -58,15 +60,26 @@
       <span class="section-kicker">02 / Current Unreal implementation</span>
       <div class="section-head">
         <h2>The map reads<br>before the fighting starts.</h2>
-        <p>The current overview uses authored silhouettes for the basin edges, fractured ridge, route markers, Matter deposits, and central Well. The terrain presentation does not control movement: the deterministic map remains the authority for blocked ground and each open crossing.</p>
+        <p>The current overview uses authored silhouettes for the basin edges, fractured ridge, route markers, Matter deposits, and central Well. The terrain presentation does not control movement: the deterministic map remains the authority for blocked ground and each open crossing. The concept target beside the capture shows the look this ground is being built toward; the capture is the accepted 29 August 2026 art-review capture; ground surfaces, lighting, and exposure have changed in source since, and no newer public capture has been accepted.</p>
       </div>
-      <figure class="scar-overview">
-        <picture>
-          <source type="image/webp" srcset="assets/engine/glass-scar-overview-in-engine.webp?v=20260829i">
-          <img src="assets/engine/glass-scar-overview-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current top-down Unreal view of the Glass Scar with three shape-distinct crossings, a central Future Well, two opposed base shelves, and pale Matter deposits.">
-        </picture>
-        <figcaption><b>Glass Scar overview</b><span>Current in-engine art-review capture · UI hidden</span></figcaption>
-      </figure>
+      <div class="frame-pair even">
+        <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-004">
+          <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
+          <picture>
+            <source type="image/webp" srcset="assets/concepts/target-render-vertical-slice.webp?v=20260904a">
+            <img src="assets/concepts/target-render-vertical-slice.jpg?v=20260904a" width="1376" height="768" loading="lazy" decoding="async" alt="Concept target, not gameplay: a three-quarter view of the Glass Scar at dusk. A Future Well of concentric stone rings around a dark suspended shard stands on a causeway over a black chasm veined with gold. Meridian Compact machines in ivory and graphite, rifle-armed Lancers alongside Bulwark Teams carrying hexagonal cyan shield walls, gather on the left below a hovering Relay Skiff. Kharuun Assemblies warforms in ivory and basalt, a heavy Cairnback, quadruped Riftstalkers, and a tall spindly Resonant, stand on the right among cyan Matter crystals. The shattered golden Broken Sun hangs in an indigo sky.">
+          </picture>
+          <figcaption><b>Glass Scar vertical-slice visual target</b><span>Concept target · not gameplay · no interface shown</span></figcaption>
+        </figure>
+        <figure class="evidence-figure" data-evidence="engine-capture" data-register="CAPTURE-003">
+          <picture>
+            <source type="image/webp" srcset="assets/engine/glass-scar-overview-in-engine.webp?v=20260829i">
+            <img src="assets/engine/glass-scar-overview-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current top-down Unreal view of the Glass Scar with three shape-distinct crossings, a central Future Well, two opposed base shelves, and pale Matter deposits.">
+          </picture>
+          <figcaption><b>Glass Scar overview</b><span>Current in-engine art-review capture · UI hidden</span></figcaption>
+        </figure>
+      </div>
+      <p class="frame-note">The concept target on the left shows the look this ground is being built toward: surfaces, light, and silhouettes. The shelves, ridge, three crossings, and the Well’s position come from the deterministic map in the capture on the right; the render is not the map layout. Neither is a screenshot of play.</p>
       <div class="scar-map-facts">
         <article><small>Read first</small><h3>The dividing scar</h3><p>Dark ridge forms announce blocked ground as one continuous wound rather than a row of anonymous tiles.</p></article>
         <article><small>Fight over</small><h3>The center</h3><p>The Future Well and contested Matter sit between the factions, making the shorter economy route the more dangerous one.</p></article>
@@ -85,7 +98,7 @@
 
       <div class="route-grid">
         <article class="route-card ash-route">
-          <figure><picture><source type="image/webp" srcset="assets/engine/glass-scar-ash-cut-in-engine.webp?v=20260829i"><img src="assets/engine/glass-scar-ash-cut-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal close view of Ash Cut, an irregular crossing made from six scalloped pale plates between black-glass shards."></picture></figure>
+          <figure><picture><source type="image/webp" srcset="assets/engine/glass-scar-ash-cut-in-engine.webp?v=20260829i"><img src="assets/engine/glass-scar-ash-cut-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current Unreal close view of Ash Cut, an irregular crossing made from five hexagonal pale plates between black-glass shards."></picture></figure>
           <div class="route-card-body">
             <span class="route-number">01</span>
             <small>Inherited from Harvest</small>
@@ -153,7 +166,7 @@
 
   <footer class="site-footer">
     <a class="brand" href="index.html"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
-    <span>World archive · Concept direction and current engine evidence clearly separated</span>
+    <div class="footer-meta"><span>World archive · Concept direction and current engine evidence clearly separated</span><span>Copyright © 2026 Angelis Pseftis. All rights reserved.</span></div>
   </footer>
 </body>
 </html>
