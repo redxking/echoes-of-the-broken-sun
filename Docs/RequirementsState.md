@@ -133,7 +133,7 @@ failure modes, and atomic leaf-level decomposition, entering active qualificatio
 | `REL-FAC-*` | Faction Asymmetry & Rosters | 25 | `SRC`, `PKG-AUTO` | `OPEN` |
 | `REL-WEL-*` | Future Wells Mechanics | 18 | `SRC`, `PKG-AUTO` | `OPEN` |
 | `REL-CAM-*` | 15-Operation Campaign & Conquest | 38 | `PKG-AUTO` | `OPEN` |
-| `REL-AI-*` | Skirmish & Opponent AI | 40 | `PKG-AUTO` | `OPEN` |
+| `REL-AI-*` | Skirmish & Opponent AI | 40 | `PKG-AUTO`, `SRC`, `PKG-REND` | 2 `AGENT VERIFIED` (`REL-AI-020`, `REL-AI-026`), 38 `OPEN` |
 | `REL-QOL-*` | Replays & Quality-of-Life | 16 | `PKG-PHYS`, `PKG-AUTO` | `OPEN` |
 | `REL-UI-*` | UMG/Slate Interface & HUD | 24 | `PKG-REND`, `PKG-PHYS` | `OPEN` |
 | `REL-ART-*` | World Art & VFX Readability | 27 | `PKG-REND` | `OPEN` |
@@ -1755,3 +1755,8 @@ record of owner rulings, defects, diagnostics, and acceptance. Nothing here is r
 * 2026-09-02 — Ledger installed by coordinator from the owner's order. All REL-* records OPEN.
   Open ledger tasks: REL-GOV-002 bidirectional gate mapping; incremental verbatim section
   transcription + QA fidelity audit; TBR packet preparation (background, demo priority intact).
+* 2026-09-04 — Gate 32 (Track F1: Skirmish Setup) completed and verified under ledger `SKIRMISH-F1-001`:
+  * Advanced `REL-AI-020` and `REL-AI-026` from `OPEN` to `AGENT VERIFIED`:
+    * `REL-AI-020` (Skirmish Mirror Matchup Support): Validated that all 9 matchup combinations across Meridian, Kharuun, and Hollow Choir (including mirror matchups MM, KK, CC) execute cleanly without assertion failure. Setup cycler steps legally into mirror states without skipping past identical factions. Covered by `SRC` + `PKG-AUTO` in `Echoes.Runtime.Gameplay.SkirmishSetup` inside clean 76/76 Unreal automation suite run.
+    * `REL-AI-026` (Skirmish Contract): Skirmish setup exposes all 9 parameters in model and UI before deployment: Local Faction, Opponent Faction, Teams (1v1, FFA), Battlefield Map (Glass Scar, Crownfall Basin, Soryn Confluence), AI Profile (5 authored doctrines: Defensive, Raider, Economic, Expansionist, Adaptive), Difficulty (Assisted, Standard, Challenging, Sovereign), Starting Resources (250/400/700 Matter per `REL-ECO-002.AUTH`), Victory Conditions (Corefall, Well Control, Conquest), and Game Speed (0.75x, 1.0x, 1.5x). Unauthored `Balanced` AI doctrine is unreachable from selector. Disclosed Assisted handicap banner (`+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier`) rendered in dedicated non-overlapping geometry; Standard AI enforces 100% fair information model (`SPEC-AI-001/002`). Covered by `SRC`, `PKG-AUTO`, and `PKG-REND` (1920×1080 captures `skirmish-setup-standard.png` and `skirmish-setup-assisted.png` in `BuildArtifacts/Evidence/release-gate32-skirmish-setup/`).
+
