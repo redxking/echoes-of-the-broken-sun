@@ -32,6 +32,29 @@ Primary references:
 - [Apple Xcode system requirements](https://developer.apple.com/xcode/system-requirements)
 - [Apple Xcode resources](https://developer.apple.com/xcode/resources/)
 
+## Remote Windows GPU authoring workstation
+
+Adopted 2026-09-04 under directive open decision 9. A cloud Windows machine at app.vagon.io with the Epic
+Games Launcher, Unreal Engine 5.8 (match the Mac's installed hotfix exactly), and a discrete GPU is a
+second workstation for authoring visual, VFX, animation, cinematic, and audio work and for the MSVC
+compile of `Source/EchoesSimCore`. It is not a build, packaging, profiling, or evidence host. The full
+use/never-use rules are in `CLAUDE.md` section 3; this section records the setup.
+
+- Install the same UE 5.8 hotfix as the Mac and record its version here on first use. Do not let the
+  launcher upgrade the engine independently of the Mac.
+- Clone from `origin` with `git config core.autocrlf false`, install `git-lfs` and run `git lfs install`,
+  and confirm `git lfs status` before any binary push. Use the same per-invocation author identity as the
+  Mac. Stage explicit paths only.
+- Open the project as committed. Do not commit `Config/`, `.uproject`, or `Saved/` changes made on
+  Windows. Nanite, Virtual Shadow Maps, Lumen, hardware ray tracing, and MegaLights stay off.
+- Editor viewport captures from this machine are `EDT` evidence at most and must be labeled
+  "authoring preview". The owner review packet (screenshots and short movies of final visuals) is
+  captured on the M1 Pro from the rendered build.
+- Any generative or text-to-speech model run here is a recorded per-family exception in
+  `AssetRegister.md`, noting that the model was cloud-hosted.
+- Not yet verified on this host as of 2026-09-04: project generation, editor build, the automation
+  suite, and byte-identical output of the Unreal-side generators. Record each on first run.
+
 ## Environment setup and residual gate
 
 ### 1. Create storage headroom

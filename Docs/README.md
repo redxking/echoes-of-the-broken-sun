@@ -49,7 +49,7 @@ Read in tier order. A lower tier never overrides a higher one.
 | [`Archive/TechnicalArchitecture.md`](Archive/TechnicalArchitecture.md) | Simulation, adapter, AI, net, save, replay structure. |
 | [`Archive/AssetRegister.md`](Archive/AssetRegister.md) | Every asset family, its generator, and its provenance. Register before use. |
 | [`Archive/SetupAndBuild.md`](Archive/SetupAndBuild.md) | Build, test, and package procedure. |
-| [`Prompts/`](Prompts) | Art and audio director session prompts. |
+| [`Prompts/`](Prompts) | Art and audio director session prompts, and [`Prompts/AgentProjectBrief.md`](Prompts/AgentProjectBrief.md), the derived project brief every assistant (Claude, Codex, ChatGPT, Gemini, or other) starts from. It creates no requirement; where it disagrees with a higher tier, the brief is wrong. |
 
 ## Tier 5 — Assessments and history (never a requirement source)
 
