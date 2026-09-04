@@ -49,6 +49,9 @@ FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Phase",
 )
 FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v1"
+# Glass Scar bank shelf: vitrified plate with strata faces; replaces the v1 shelf whose edge
+# spires and strata slabs stood proud of the plate and read as a slab mosaic (gate 50).
+GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-vitrified-v2"
 VFX_ROOT = f"{ART_ROOT}/VFX"
 VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
@@ -959,51 +962,75 @@ def world_future_well_glyph(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_shelf(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """A broad, fractured basalt cliff shelf with sheer vertical drop into the abyss and incandescent molten amber fissures."""
-    # Deep vertical foundation block extending down into the chasm
+    """Vitrified basalt bank: a flush charcoal plate with hairline fracture relief, sheer strata
+    faces on all four sides, and molten amber fissures in the faces and across the surface.
+
+    Nothing stands proud of the plate beyond low relief, so tiled instances read as one ground
+    rather than a mosaic of slabs; the silhouette work lives on the cliff faces."""
+    # Foundation block descending into the chasm, flush with the plate edges
     box(mesh, (780.0, 780.0, 400.0), (0.0, 0.0, -180.0), DARK)
-    # Upper walking plate / terrain rim
-    box(mesh, (750.0, 740.0, 38.0), (0.0, 0.0, 20.0), PRIMARY)
+    # Walking plate, same footprint as the foundation so no rim shows at tile seams
+    box(mesh, (780.0, 780.0, 38.0), (0.0, 0.0, 20.0), PRIMARY)
 
-    # Stepped basalt rock strata terraces descending the cliff face
-    for x, y, z, sx, sy, sz, yaw in (
-        (-180.0, -220.0, -60.0, 380.0, 320.0, 90.0, 6.0),
-        (210.0, -200.0, -90.0, 340.0, 340.0, 110.0, -8.0),
-        (-220.0, 200.0, -130.0, 320.0, 360.0, 120.0, -5.0),
-        (200.0, 220.0, -80.0, 360.0, 310.0, 100.0, 7.0),
-        (0.0, -320.0, -170.0, 520.0, 220.0, 140.0, 3.0),
-        (0.0, 320.0, -160.0, 510.0, 230.0, 130.0, -4.0),
+    # Low fracture relief: broad shards of the plate lifted 3 to 5 units, slightly tilted
+    for x, y, sx, sy, lift, tilt_roll, tilt_pitch, yaw in (
+        (-190.0, -150.0, 300.0, 240.0, 4.0, 0.6, -0.4, 11.0),
+        (170.0, 120.0, 260.0, 300.0, 3.0, -0.5, 0.5, -17.0),
+        (-40.0, 210.0, 220.0, 170.0, 5.0, 0.4, 0.7, 29.0),
+        (210.0, -210.0, 200.0, 180.0, 3.0, -0.6, -0.3, -33.0),
     ):
-        box(mesh, (sx, sy, sz), (x, y, z), PRIMARY, (0.0, yaw, 0.0))
-        box(mesh, (sx * 0.88, sy * 0.88, sz * 0.35), (x + 8.0, y - 6.0, z + sz * 0.35), LIGHT, (0.0, yaw + 2.0, 0.0))
+        box(mesh, (sx, sy, 8.0), (x, y, 36.0 + lift), PRIMARY, (tilt_roll, tilt_pitch, yaw))
 
-    # Incandescent molten amber fissures cutting vertically and across the cliff face
-    for x, y, z, length, width, depth, pitch, yaw, roll in (
-        (-140.0, -60.0, -80.0, 320.0, 18.0, 24.0, 18.0, 24.0, 45.0),
-        (110.0, 130.0, -110.0, 290.0, 20.0, 22.0, -15.0, -32.0, 40.0),
-        (190.0, -110.0, -140.0, 260.0, 16.0, 20.0, 22.0, 14.0, -35.0),
-        (-180.0, 140.0, -70.0, 280.0, 19.0, 25.0, -12.0, 42.0, -40.0),
-        (0.0, -180.0, -160.0, 360.0, 22.0, 26.0, 8.0, 85.0, 15.0),
-        (0.0, 190.0, -150.0, 340.0, 20.0, 24.0, -10.0, -82.0, -18.0),
+    # Surface fissures: amber hairlines set into the plate, a hand proud of it
+    for x, y, length, yaw in (
+        (-120.0, 40.0, 420.0, 24.0),
+        (150.0, -60.0, 360.0, -38.0),
+        (40.0, 230.0, 240.0, 71.0),
+        (-230.0, -230.0, 200.0, -62.0),
     ):
-        box(mesh, (length, width, depth), (x, y, z), GLOW, (pitch, yaw, roll))
-
-    # Jagged basalt spires along the cliff edge
+        box(mesh, (length, 5.0, 6.0), (x, y, 39.0), GLOW, (0.0, 0.0, yaw))
     if high:
-        for angle in range(0, 360, 36):
-            a = math.radians(angle)
-            h = 75.0 + (angle % 5) * 18.0
-            r = 30.0 + (angle % 3) * 6.0
-            cone(
-                mesh,
-                r,
-                4.0,
-                h,
-                (math.cos(a) * 360.0, math.sin(a) * 360.0, 20.0 + h * 0.4),
-                DARK if angle % 72 == 0 else PRIMARY,
-                (14.0, float(angle), 6.0),
-                6,
-            )
+        for x, y, length, yaw in (
+            (60.0, 110.0, 180.0, 8.0),
+            (-260.0, 150.0, 150.0, -80.0),
+            (240.0, 240.0, 120.0, 40.0),
+        ):
+            box(mesh, (length, 4.0, 5.0), (x, y, 39.0), GLOW, (0.0, 0.0, yaw))
+
+    # Strata bands: full-perimeter ledges at several depths so every face reads as layered rock
+    for z, thickness, proud, material in (
+        (-36.0, 26.0, 10.0, PRIMARY),
+        (-104.0, 42.0, 18.0, DARK),
+        (-176.0, 28.0, 8.0, PRIMARY),
+        (-256.0, 50.0, 22.0, DARK),
+        (-338.0, 24.0, 12.0, PRIMARY),
+    ):
+        box(mesh, (780.0 + 2.0 * proud, 780.0 + 2.0 * proud, thickness), (0.0, 0.0, z), material)
+
+    # Face fissures: molten amber slabs lying in each cliff face, tilted along the face
+    face = 390.0
+    for x, z, length, tilt in (
+        (-140.0, -70.0, 300.0, 22.0),
+        (120.0, -150.0, 260.0, -18.0),
+        (-60.0, -290.0, 340.0, 12.0),
+    ):
+        # +/-Y faces: thin in Y, tilted about Y (pitch)
+        for side in (-1.0, 1.0):
+            box(mesh, (length, 10.0, 16.0), (x, side * face, z), GLOW, (0.0, tilt, 0.0))
+        # +/-X faces: thin in X, tilted about X (roll)
+        for side in (-1.0, 1.0):
+            box(mesh, (10.0, length, 16.0), (side * face, x, z - 30.0), GLOW, (tilt, 0.0, 0.0))
+
+    # Face relief: broken buttresses standing out of the lower faces
+    if high:
+        for x, z, w, h, proud in (
+            (-250.0, -240.0, 120.0, 260.0, 26.0),
+            (90.0, -300.0, 160.0, 180.0, 30.0),
+            (260.0, -200.0, 100.0, 300.0, 22.0),
+        ):
+            for side in (-1.0, 1.0):
+                box(mesh, (w, proud, h), (x, side * (face + proud * 0.5), z), DARK)
+                box(mesh, (proud, w, h), (side * (face + proud * 0.5), -x, z - 20.0), DARK)
 
 
 def world_glass_scar_ridge(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -2853,11 +2880,17 @@ def create_static_mesh(
     }
     route_revision = route_revisions.get(spec.name)
     is_production_route = route_revision is not None
+    environment_revisions = {
+        "GlassScarShelf": GLASS_SCAR_SHELF_ASSET_REVISION,
+    }
+    environment_revision = environment_revisions.get(spec.name)
     roster_factions = ("Meridian", "Kharuun", "Choir")
     is_roster_unit = spec.faction in roster_factions
     expected_revision = (
         route_revision
         if is_production_route
+        else environment_revision
+        if environment_revision is not None
         else (ROSTER_ASSET_REVISION if is_roster_unit else None)
     )
     route_labels = {
@@ -2985,6 +3018,10 @@ def create_static_mesh(
         )
         unreal.EditorAssetLibrary.set_metadata_tag(
             asset, "Echoes.CollisionPolicy", "Authored simple box; runtime disabled"
+        )
+    elif environment_revision is not None:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.AssetRevision", environment_revision
         )
     elif is_roster_unit:
         unreal.EditorAssetLibrary.set_metadata_tag(

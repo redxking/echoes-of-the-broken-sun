@@ -147,6 +147,15 @@ This is the single authoritative provenance register and is edited in place. An 
 - The asset has two LODs (LOD0: 1,597 vertices / 1,784 triangles; LOD1: 982 vertices / 892 triangles), four material zones (zone 0: deep space indigo; zone 1: fractured basalt crust; zone 2: warm amber coronal mantle; zone 3: radiant golden core), and visibility-selection collision with no runtime collision or navigation impact.
 - Asset SHA-256 is `9821aeeaa951bd4bcf7f8104b458498db3d8c2c4c37f4cfd5ac486dea48c12f8`.
 
+## ART-017 generation record
+
+- Generator: `Scripts/generate_art_assets.py`; wrapper: `Scripts/generate_art_assets.sh`; generation log `Saved/Logs/ArtAssetGeneration.log` dated 2026-09-04 reporting `[ECHOES_ART_COMPLETE] generated=48` with only the shelf rebuilt and the other 47 assets reused.
+- Output: revised `SM_World_GlassScarShelf` under `Content/Art/Generated/World/Environment` at revision `glass-scar-shelf-vitrified-v2`, stamped in `Echoes.AssetRevision`. The generator now carries an environment-revision map alongside the route-kit map so a stale shelf is deleted and rebuilt rather than reused unconditionally.
+- Why: the v1 shelf's edge spires and strata slabs stood proud of the walking plate, so tiled instances read as a mosaic of separate slabs at the gameplay camera (directive gate 50). The v2 shelf is a flush vitrified charcoal plate with hairline fracture relief and amber surface fissures, strata bands on all four faces, face fissures, and buttresses on the lower faces, so the silhouette work lives on the cliff and the ground reads as one surface.
+- Two LODs (LOD0 1,008 vertices / 504 triangles; LOD1 528 vertices / 252 triangles), four material zones on the shared world-surface material, visibility-selection collision only; runtime collision, navigation, and route authority unchanged. Generation uses only project-authored primitive composition; no imported geometry.
+- Asset SHA-256 `9215d2225372f4443df65b54b23cd1f4ba47f75f584fc41d725f9823dde09a67`. Supersedes the ART-003 shelf identity (`33a269540156f3e83e98235da21813791597a12ac4fda138c3c8dcddcd7639d1`, 396/198 triangles), which is retained in historical evidence. Gate 3 themed captures accepted 2026-09-01 were rendered with the v1 shelf; the live Glass Scar ground therefore changes appearance and gate 3 evidence is not carried for the shelf until re-captured.
+- Evidence: authoring-preview fixture capture `BuildArtifacts/Evidence/VerticalSliceReview-shelf-v2-20260904.png` (editor build, 1920×1080, local). Owner review still owed.
+
 ## AUDIO-001 generation and playback evidence record
 
 - Exact accepted source: version 0.71.0 commit `5368aec5d86a6bf5566c3445890323432f8cba1f`; generator and audit wrapper: `Scripts/generate_audio_assets.py` and `Scripts/generate_audio_assets.sh`; exact generation-log SHA-256 `08b29f29cd005084c5ccb1d5c2d25fec760a4180258e14920bf51cacafd669b0`.
