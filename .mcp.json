@@ -3,6 +3,12 @@
     "unreal-mcp": {
       "type": "http",
       "url": "http://127.0.0.1:8000/mcp"
+    },
+    "echoes-vision": {
+      "command": "python3",
+      "args": [
+        "Scripts/echoes_vision_mcp_server.py"
+      ]
     }
   }
 }
