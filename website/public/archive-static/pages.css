@@ -267,44 +267,48 @@
 
 .character-mark {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  display: grid;
-  width: 52px;
-  height: 52px;
-  place-items: center;
-  border: 2px solid #657b7b;
-  color: #315f5a;
-  font: 600 16px 'DM Mono', monospace;
-  transform: rotate(45deg);
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  background: transparent;
+  transform: none;
 }
 
-.character-mark span { transform: rotate(-45deg); }
-
-.character-card.kharuun .character-mark {
-  border-radius: 50%;
-  border-color: #7b5c2b;
-  color: #71501a;
+.character-mark .crest-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  transition: transform 0.25s ease, filter 0.25s ease;
 }
 
-.character-card.choir .character-mark {
-  border-radius: 50%;
-  border-color: #755672;
-  box-shadow: 8px 0 0 -4px var(--paper-card), 8px 0 0 -2px #755672;
-  color: #714d6d;
+.character-card:hover .character-mark .crest-svg {
+  transform: scale(1.08);
 }
 
-.character-card.neutral .character-mark { border-style: dashed; }
-
-.dark-band .character-mark {
-  border-color: #9ab0b4;
-  color: #dce6e8;
+.character-card:hover .character-mark .meridian-crest {
+  filter: drop-shadow(0 0 12px rgba(0, 242, 255, 0.45));
 }
 
-.dark-band .character-card.choir .character-mark {
-  border-color: #d7b7d4;
-  box-shadow: 8px 0 0 -4px var(--night-card), 8px 0 0 -2px #d7b7d4;
-  color: #f0d7ed;
+.character-card.kharuun:hover .character-mark .kharuun-crest {
+  filter: drop-shadow(0 0 12px rgba(240, 180, 90, 0.45));
+}
+
+.character-card.neutral:hover .character-mark .archive-crest {
+  filter: drop-shadow(0 0 12px rgba(95, 216, 232, 0.45));
+}
+
+.dark-band .character-card:hover .character-mark .civic-crest {
+  filter: drop-shadow(0 0 14px rgba(255, 215, 0, 0.45));
+}
+
+.dark-band .character-card.choir:hover .character-mark .choir-crest {
+  filter: drop-shadow(0 0 14px rgba(220, 70, 160, 0.55));
 }
 
 .dark-band .character-facts { border-top-color: var(--night-line); }
