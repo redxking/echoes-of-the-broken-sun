@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"EngineAssociation": "5.8",
 	"Category": "Games",
-	"Description": "Echoes of the Broken Sun — an original science-fantasy real-time strategy game for macOS.",
+	"Description": "Echoes of the Broken Sun \u2014 an original science-fantasy real-time strategy game for macOS.",
 	"Modules": [
 		{
 			"Name": "EchoesSimCore",
@@ -66,6 +66,10 @@
 		},
 		{
 			"Name": "Terminal",
+			"Enabled": true
+		},
+		{
+			"Name": "ProceduralMeshComponent",
 			"Enabled": true
 		}
 	],
