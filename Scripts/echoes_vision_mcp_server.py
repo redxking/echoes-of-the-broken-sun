@@ -220,6 +220,7 @@ class StdioMcpServer:
                 capture_mode=capture_mode,
             )
 
+            analysis_text = step_res.get('analysis') or step_res.get('message') or "(No analysis text generated)"
             output = (
                 f"=== SEE LOOP VISUAL FEEDBACK ===\n"
                 f"Verdict: {step_res.get('verdict')}\n"
@@ -228,7 +229,7 @@ class StdioMcpServer:
                 f"Frame Saved: {step_res.get('frame_path')}\n"
                 f"Live Frame: {step_res.get('live_frame_path')}\n\n"
                 f"--- GEMINI VISION DIAGNOSIS ---\n"
-                f"{step_res.get('analysis')}\n\n"
+                f"{analysis_text}\n\n"
                 f"--- RECENT ENGINE LOGS CORRELATED ---\n"
                 + "\n".join(step_res.get("recent_logs", []))
             )
@@ -254,6 +255,7 @@ class StdioMcpServer:
                 capture_mode=capture_mode,
             )
 
+            analysis_text = step_res.get('analysis') or step_res.get('message') or "(No analysis text generated)"
             output = (
                 f"=== SEE LOOP STEP RESULT ===\n"
                 f"Action: {action_desc}\n"
@@ -261,7 +263,7 @@ class StdioMcpServer:
                 f"Verdict: {step_res.get('verdict')}\n"
                 f"Frame Saved: {step_res.get('frame_path')}\n\n"
                 f"--- GEMINI VISION VERIFICATION ---\n"
-                f"{step_res.get('analysis')}\n"
+                f"{analysis_text}\n"
             )
             return output
 

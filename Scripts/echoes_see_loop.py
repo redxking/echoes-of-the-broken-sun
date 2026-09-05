@@ -23,6 +23,7 @@ import json
 import os
 from pathlib import Path
 import re
+import ssl
 import subprocess
 import sys
 import time
@@ -30,6 +31,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
+
+try:
+    import certifi
+    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    SSL_CONTEXT = ssl.create_default_context()
 
 # Project root resolution
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -330,7 +337,7 @@ class GeminiVisionAnalyzer:
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=30, context=SSL_CONTEXT) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 text_response = ""
                 candidates = data.get("candidates", [])
@@ -354,15 +361,19 @@ class GeminiVisionAnalyzer:
                 }
         except urllib.error.HTTPError as ex:
             err_msg = ex.read().decode("utf-8", errors="replace")
+            full_msg = f"Gemini API HTTP Error {ex.code}: {err_msg}"
             return {
                 "verdict": "ERROR",
-                "message": f"Gemini API HTTP Error {ex.code}: {err_msg}",
+                "message": full_msg,
+                "analysis": f"ERROR: {full_msg}",
                 "bugs": [f"API Error {ex.code}"],
             }
         except Exception as ex:
+            full_msg = f"Gemini API Request failed: {ex}"
             return {
                 "verdict": "ERROR",
-                "message": f"Gemini API Request failed: {ex}",
+                "message": full_msg,
+                "analysis": f"ERROR: {full_msg}",
                 "bugs": [str(ex)],
             }
 
@@ -453,7 +464,7 @@ class SeeLoopSession:
             "action_description": action_description,
             "prompt": step_prompt,
             "verdict": analysis_result.get("verdict", "UNKNOWN"),
-            "analysis": analysis_result.get("analysis", ""),
+            "analysis": analysis_result.get("analysis") or analysis_result.get("message") or "No analysis or error details returned.",
             "recent_logs": logs[-10:],
             "frame_path": str(frame_path),
             "live_frame_path": str(live_frame_path),
