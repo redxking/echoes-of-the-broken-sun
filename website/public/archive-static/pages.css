@@ -434,12 +434,24 @@
 }
 
 .mission-card.current {
-  border-left: 5px solid #8a5a00;
-  background: #f0e8d5;
+  border: 1px solid rgba(0, 242, 255, 0.25);
+  border-left: 4px solid var(--teal-bright);
+  background: rgba(18, 28, 44, 0.95);
+  color: var(--night-text);
 }
 
-.mission-card.current small,
-.mission-card.current .mission-number { color: #654300; }
+.mission-card.current small {
+  color: var(--teal-bright);
+}
+
+.mission-card.current .mission-number {
+  color: var(--gold);
+}
+
+.mission-card.current .mission-purpose {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
 
 .ending-list {
   display: grid;
@@ -1346,33 +1358,56 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-height: 480px;
-  background: #070a0d;
-  border: 1px solid #202c35;
-  box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+  max-height: 520px;
+  background: #060b11;
+  border: 1px solid rgba(0, 242, 255, 0.35);
+  box-shadow: 0 0 30px rgba(0, 242, 255, 0.1), inset 0 0 50px rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
 }
 
 .radar-screen canvas {
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
+  display: block;
 }
 
+.radar-hud-overlay {
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+}
+
+.hud-tag {
+  position: absolute;
+  font: 600 10px/1 'DM Mono', monospace;
+  letter-spacing: 0.08em;
+  color: #5fd8e8;
+  text-shadow: 0 0 6px rgba(0, 242, 255, 0.6);
+}
+
+.hud-tag.top-left { top: 0; left: 0; }
+.hud-tag.top-right { top: 0; right: 0; color: #ffd700; text-shadow: 0 0 6px rgba(255, 215, 0, 0.5); }
+.hud-tag.bottom-left { bottom: 0; left: 0; color: #94a3b8; }
+.hud-tag.bottom-right { bottom: 0; right: 0; color: #94a3b8; }
+
 .radar-meta {
-  padding: 14px 18px;
-  border: 1px solid #1f2c37;
-  background: #10161b;
-  font: 12px/1.5 'DM Mono', monospace;
-  color: #c9d3d1;
+  padding: 16px 20px;
+  border: 1px solid rgba(0, 242, 255, 0.2);
+  background: #0c141d;
+  font: 13px/1.6 'DM Mono', monospace;
+  color: #cbd5e1;
+  border-radius: 4px;
 }
 
 .radar-meta h4 {
   margin: 0 0 6px;
-  color: #ffffff;
-  font: 600 16px 'Space Grotesk', sans-serif;
+  color: #f8fafc;
+  font: 600 18px 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 @media (max-width: 980px) {

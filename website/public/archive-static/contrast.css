@@ -1,14 +1,198 @@
-/* Accessibility safety layer: explicit text colors avoid inherited opacity. */
+/* Accessibility safety & high-contrast layer: WCAG AAA compliant typography on obsidian backgrounds */
+:root {
+  --text-high-contrast: #f8fafc;
+  --text-readable-body: #e2e8f0;
+  --text-readable-muted: #94a3b8;
+  --accent-cyan: #00f2ff;
+  --accent-amber: #f0b45a;
+}
+
+/* Section kickers & eyebrows */
+.section-kicker,
+.eyebrow,
 .light .section-kicker,
 .content-band .section-kicker,
 .tint-band .section-kicker,
-.page-hero .section-kicker { color: #286b61; }
-
+.page-hero .section-kicker,
 .dark .section-kicker,
 .dark-band .section-kicker,
-.story-feature .section-kicker { color: #9ce9dd; }
+.story-feature .section-kicker {
+  color: var(--accent-cyan) !important;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
 
-.light p, .content-band p, .tint-band p, .page-hero p { color: #344349; }
-.dark p, .dark-band p, .story-feature p { color: #cbd5d7; }
-.content-band .route-card p { color: #cbd5d7; }
-.site-footer span { color: #bac6c9; }
+/* Headings */
+h1, h2, h3, h4,
+.page-hero h1,
+.section-head h2 {
+  color: var(--text-high-contrast) !important;
+}
+
+/* Paragraphs & general body copy */
+p,
+.light p,
+.content-band p,
+.tint-band p,
+.dark p,
+.dark-band p,
+.story-feature p,
+.page-hero p,
+.cols > p,
+.cols > div > p,
+.prose p {
+  color: var(--text-readable-body) !important;
+}
+
+.lead,
+.hero-lede,
+.page-hero .lead {
+  color: #f1f5f9 !important;
+  font-size: 19px;
+  line-height: 1.7;
+}
+
+.section-head p {
+  color: #cbd5e1 !important;
+}
+
+/* Cards & modules */
+.detail-card p,
+.codex-card p,
+.character-card p,
+.mission-card p,
+.atlas-card p,
+.route-card p {
+  color: #e2e8f0 !important;
+  line-height: 1.65;
+}
+
+.detail-card small,
+.codex-card small,
+.character-card small,
+.mission-card small,
+.atlas-card small {
+  color: #5fd8e8 !important;
+  font-weight: 600;
+}
+
+/* Metadata, sensor specs & facts */
+.character-facts div,
+.unit-facts div,
+.sensor-specs div,
+.fact-label {
+  color: #cbd5e1 !important;
+}
+
+.character-facts b,
+.unit-facts b,
+.sensor-specs strong {
+  color: #f8fafc !important;
+}
+
+/* Links & interactive */
+.quiet-link,
+.archive-link,
+.text-link,
+.frame-note a,
+.light .frame-note a,
+.content-band .frame-note a,
+.tint-band .frame-note a,
+.dark-band .frame-note a {
+  color: var(--accent-cyan) !important;
+  text-decoration-color: rgba(0, 242, 255, 0.4);
+}
+
+.quiet-link:hover,
+.archive-link:hover,
+.text-link:hover,
+.frame-note a:hover {
+  color: #7bf7ff !important;
+  text-decoration-color: #7bf7ff;
+}
+
+/* Notes & callouts */
+.status-note,
+.hero-note,
+.frame-note {
+  background: rgba(12, 20, 32, 0.92) !important;
+  border-color: rgba(0, 242, 255, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+.status-note strong,
+.hero-note strong,
+.frame-note b {
+  color: #00f2ff !important;
+}
+
+/* Footer */
+.site-footer span,
+.site-footer p {
+  color: #94a3b8 !important;
+}
+
+/* Status pills & tags */
+.status-pill {
+  border: 1px solid rgba(240, 180, 90, 0.4) !important;
+  background: rgba(240, 180, 90, 0.1) !important;
+  color: #ffd56b !important;
+}
+
+/* Back links */
+.back {
+  color: var(--accent-cyan) !important;
+}
+.back:hover {
+  color: #7bf7ff !important;
+}
+
+/* Character visual profiles */
+.character-visual {
+  color: #cbd5e1 !important;
+  border-top-color: rgba(255, 255, 255, 0.15) !important;
+}
+.character-visual strong {
+  color: #5fd8e8 !important;
+}
+
+/* Form cards */
+.form-card,
+.form-card.no-art {
+  background: rgba(18, 28, 44, 0.95) !important;
+  border-color: rgba(0, 242, 255, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+.form-card small,
+.form-card.no-art small {
+  color: #5fd8e8 !important;
+}
+.form-card p,
+.form-card.no-art p {
+  color: #cbd5e1 !important;
+}
+
+/* Radar inspect button */
+.radar-inspect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: rgba(0, 242, 255, 0.08);
+  border: 1px solid rgba(0, 242, 255, 0.35);
+  border-radius: 3px;
+  color: #00f2ff !important;
+  font: 600 11px/1 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.radar-inspect-btn:hover {
+  background: rgba(0, 242, 255, 0.22);
+  border-color: #00f2ff;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(0, 242, 255, 0.35);
+}
+

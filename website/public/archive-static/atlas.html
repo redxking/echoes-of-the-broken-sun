@@ -87,7 +87,7 @@
 
       <div class="atlas-overview-grid">
         <!-- Biome 1: Shivergrass Steppes -->
-        <article class="atlas-card">
+        <article class="atlas-card" id="shivergrass-spotlight">
           <figure>
             <picture>
               <source type="image/webp" srcset="assets/concepts/shivergrass-basin.webp?v=20260904a">
@@ -109,7 +109,7 @@
         </article>
 
         <!-- Biome 2: Subterranean Caverns -->
-        <article class="atlas-card">
+        <article class="atlas-card" id="cavern-spotlight">
           <figure>
             <picture>
               <source type="image/webp" srcset="assets/concepts/unburied-road-caverns.webp?v=20260904a">
@@ -131,7 +131,7 @@
         </article>
 
         <!-- Biome 3: Sheared Urban Foundries -->
-        <article class="atlas-card">
+        <article class="atlas-card" id="arkcity-spotlight">
           <figure>
             <picture>
               <source type="image/webp" srcset="assets/concepts/arkcity-census-void.webp?v=20260904a">
@@ -153,7 +153,7 @@
         </article>
 
         <!-- Biome 4: The Solar Fall Dais -->
-        <article class="atlas-card">
+        <article class="atlas-card" id="dais-spotlight">
           <figure>
             <picture>
               <source type="image/webp" srcset="assets/concepts/broken-sun-solar-dais.webp?v=20260904a">
@@ -209,14 +209,26 @@
 
         <div class="radar-display-wrap">
           <div class="radar-screen">
-            <canvas id="radarCanvas" width="384" height="384"></canvas>
+            <canvas id="radarCanvas" width="768" height="768"></canvas>
+            <div class="radar-hud-overlay">
+              <span class="hud-tag top-left">TAC-NET // SORYN SURFACE SCAN</span>
+              <span class="hud-tag top-right" id="hudSectorCode">SECTOR 01 / LIVE</span>
+              <span class="hud-tag bottom-left" id="hudCoords">GRID: 64×64 AUTHENTIC</span>
+              <span class="hud-tag bottom-right">SCALE: 31.25M/CELL · RANGE: 2KM</span>
+            </div>
           </div>
           <div class="radar-meta" id="radarMeta">
-            <h4 id="radarTitle">Sector 01: The Glass Scar</h4>
-            <div id="radarDesc">Fractured vitrified impact basin beneath Lume Reach. Two opposing base shelves separated by a continuous black-glass ridge crossed by three distinct pathways. Contested Future Well at [32, 32].</div>
-            <div class="sensor-specs" style="margin-top: 10px; border-top: 1px solid #202c35;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h4 id="radarTitle" style="margin: 0;">Sector 01: The Glass Scar</h4>
+              <span id="radarBiomeBadge" class="biome-badge" style="background: rgba(0,242,255,0.15); color: #00f2ff; border: 1px solid rgba(0,242,255,0.3); padding: 3px 8px; font-size: 11px; text-transform: uppercase;">Vitrified Basin</span>
+            </div>
+            <div id="radarDesc" style="color: #cbd5e1; font-size: 13px; line-height: 1.6;">Fractured vitrified impact basin beneath Lume Reach. Opposing base shelves separated by a continuous black-glass ridge with three distinct crossings: Ash Cut (north), Buried Causeway (center), and Folded Verge (south).</div>
+            <div class="sensor-specs" style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
               <div><span>Grid Coordinates</span><strong id="radarCoords">64×64 [X:0-63, Y:0-63]</strong></div>
               <div><span>Key Landmark</span><strong id="radarWell">Well Center [32, 32]</strong></div>
+              <div><span>Elevation Profile</span><strong id="radarElev">Ridge: +180m · Basin: -40m</strong></div>
+              <div><span>Tactical Chokepoints</span><strong id="radarChoke">3 Authored Crossings</strong></div>
+              <div style="grid-column: 1 / -1;"><span>Tactical Hazard</span><strong id="radarHazard" style="color: #f0b45a;">Vitrified glass fractures · Low ground ambush zones</strong></div>
             </div>
           </div>
         </div>
@@ -240,26 +252,41 @@
         <article class="mission-card">
           <div class="mission-number">01</div>
           <div>
-            <small>Vitrified Basin · Mara Vey</small>
-            <h3>The Glass Scar</h3>
-            <p>64×64 basin bisected by a fractured ridge with three crossings (Ash Cut, Buried Causeway, Folded Verge). The contested central Well forces the campaign's foundational dilemma between power, preservation, or altered geometry.</p>
+            <small>Vitrified Basin · Mara Vey · Glass Scar</small>
+            <h3>M01: What the Ledger Keeps</h3>
+            <p>64×64 vitrified impact basin bisected by a continuous black-glass ridge with three authored crossings (Ash Cut, Buried Causeway, Folded Verge). Commander Mara Vey secures the evacuation convoy while the central Future Well forces the foundational choice of Soryn's future.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Central Well [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Ash Cut, Causeway, Folded Verge</strong></div>
+              <div><span>Elevation</span><strong>Ridge: +180m · Basin: -40m</strong></div>
               <div><span>Lighting</span><strong>3,000K Dusk / 18,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Basalt wind, glass resonance, distant sirens</strong></div>
             </div>
-            <a class="quiet-link" href="glass-scar.html" style="margin-top: 12px; display: inline-block;">Explore the Glass Scar in-engine vertical slice →</a>
+            <div style="margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(0)">📡 Inspect on Live Radar ↗</button>
+              <a class="quiet-link" href="glass-scar.html">Explore Glass Scar vertical slice →</a>
+            </div>
           </div>
         </article>
 
         <article class="mission-card">
           <div class="mission-number">02</div>
           <div>
-            <small>Shivergrass Steppe · Oruun</small>
-            <h3>Shivergrass Basin</h3>
-            <p>Rolling resonance prairie with migratory Vaultbacks. The inherited road from Mission 01 dictates the single surviving migration crossing. Waystone relocation and vibration scouting are paramount.</p>
+            <small>Shivergrass Steppe · Oruun · Shivergrass Basin</small>
+            <h3>M02: Seven Accounts of Rain</h3>
+            <p>Vast rolling resonance prairie populated by migrating Vaultbacks whose massive carapaces provide moving heavy cover. Oruun navigates conflicting historical accounts while establishing Waystone relays across expansive open fields.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>North Well [48, 48]</strong></div>
+              <div><span>Chokepoints</span><strong>Steppe berms & migratory trails</strong></div>
+              <div><span>Elevation</span><strong>Prairie: +60m · Swales: +15m</strong></div>
               <div><span>Lighting</span><strong>3,400K Amber / 16,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Prairie wind, whispering grass, Vaultback low thrum</strong></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(1)">📡 Inspect on Live Radar ↗</button>
+              <a class="quiet-link" href="#shivergrass-spotlight">View biome concept art →</a>
             </div>
           </div>
         </article>
@@ -267,12 +294,19 @@
         <article class="mission-card">
           <div class="mission-number">03</div>
           <div>
-            <small>Ark-City Perimeter · Mara Vey</small>
-            <h3>Lume Reach Outskirts</h3>
-            <p>Sprawling suburban logistics network facing power collapse. Mara must construct and protect an unbroken chain of Power Links to energize the Life Support, Transit, and Archive continuity Aegis posts.</p>
+            <small>Ark-City Perimeter · Mara Vey · Lume Reach</small>
+            <h3>M03: A City on Reserve</h3>
+            <p>Sprawling industrial suburban logistics network facing total power grid blackout. Mara must establish and protect an unbroken chain of Power Links to energize the Life Support, Transit, and Archive continuity Aegis posts before catastrophic failure.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Power Station Well [24, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Logistics highways & gatehouses</strong></div>
+              <div><span>Elevation</span><strong>Transit Deck: +120m · Trench: +20m</strong></div>
               <div><span>Lighting</span><strong>4,500K Cool Fog / 8,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Humming sub-stations, urban sirens, wind over girders</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(2)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -280,12 +314,20 @@
         <article class="mission-card">
           <div class="mission-number">04</div>
           <div>
-            <small>Subterranean Artery · Oruun</small>
-            <h3>The Unburied Road</h3>
-            <p>Deep bioluminescent cavern highway littered with ancient ruins and rich Matter seams. Forces must establish a Waystone roadhead and raise Listening Spines to locate a missing Dawnshard.</p>
+            <small>Subterranean Artery · Oruun · The Unburied Road</small>
+            <h3>M04: The Unburied Road</h3>
+            <p>Deep bioluminescent cavern highway littered with ancient ruins and rich Matter seams. Forces must advance through vaulted chambers, secure crystal causeways across bottomless abyssal drop-offs, and locate a missing Dawnshard.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Geode Vault [32, 40]</strong></div>
+              <div><span>Chokepoints</span><strong>Subterranean natural arch bridges</strong></div>
+              <div><span>Elevation</span><strong>Cavern Road: -850m · Abyss: Bottomless</strong></div>
               <div><span>Lighting</span><strong>7,200K Cyan Geode / 1,200 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Echoing subterranean drops, distant rumble, crystal hum</strong></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(3)">📡 Inspect on Live Radar ↗</button>
+              <a class="quiet-link" href="#cavern-spotlight">View biome concept art →</a>
             </div>
           </div>
         </article>
@@ -293,12 +335,19 @@
         <article class="mission-card">
           <div class="mission-number">05</div>
           <div>
-            <small>Neutral Glacis · Joint Proxies</small>
-            <h3>The Line of Parity</h3>
-            <p>Demarcated treaty zone where Meridian and Kharuun forces establish an uneasy ceasefire under threat from uncatalogued apparitions. Synchronize Power Links and witness proxies before extraction.</p>
+            <small>Neutral Glacis · Joint Proxies · Line of Parity</small>
+            <h3>M05: Terms of Continuance</h3>
+            <p>Demarcated ceasefire glacis where Meridian and Kharuun forces establish an uneasy treaty under observation by uncatalogued temporal apparitions. Maintain Power Links and witness proxies while preparing for sudden incursions.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Treaty Pylon [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Central treaty glacis corridor</strong></div>
+              <div><span>Elevation</span><strong>Glacis Plateau: +110m</strong></div>
               <div><span>Lighting</span><strong>3,800K Pale Twilight / 10,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Stark wind, tension strings, static crackle</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(4)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -313,12 +362,20 @@
         <article class="mission-card">
           <div class="mission-number">06</div>
           <div>
-            <small>Sheared City · Talar Venn</small>
-            <h3>Ark-City Sector 9</h3>
-            <p>Brutalist foundation complex severed over the abyss. Talar must extract civilian witnesses and recover the census roll from deep archive silos before the void swallows the district.</p>
+            <small>Sheared City · Talar Venn · Sector 9</small>
+            <h3>M06: Names Without Births</h3>
+            <p>Brutalist foundation tiers sheared over an infinite chasm during the Crownfall. Talar Venn must extract civilian witnesses and recover unredacted census rolls from deep archive silos before the structural edge collapses into the void.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Census Archive [30, 45]</strong></div>
+              <div><span>Chokepoints</span><strong>Gantry ramps & cargo lift shafts</strong></div>
+              <div><span>Elevation</span><strong>Upper Silos: +320m · Lower: +80m</strong></div>
               <div><span>Lighting</span><strong>4,800K Sodium White / 12,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Industrial machinery hum, shear stress metal groans</strong></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(5)">📡 Inspect on Live Radar ↗</button>
+              <a class="quiet-link" href="#arkcity-spotlight">View biome concept art →</a>
             </div>
           </div>
         </article>
@@ -326,12 +383,19 @@
         <article class="mission-card">
           <div class="mission-number">07</div>
           <div>
-            <small>Burnt Flats · Oruun</small>
-            <h3>Cinder Hollow</h3>
-            <p>An impact flat where a Future Well was catastrophically burned out centuries ago. Dead crystalline ash stifles sound and sight. Listening Spines must be tuned to detect hollow resonances in memory.</p>
+            <small>Burnt Flats · Oruun · Cinder Hollow</small>
+            <h3>M07: The Shape of Silence</h3>
+            <p>An impact crater where a Future Well was catastrophically burned out centuries ago. Dead crystalline ash deadens sound and radar. Oruun tunes Listening Spines to detect hollow acoustic harmonics in ancestral memory.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Burnt Well Core [32, 28]</strong></div>
+              <div><span>Chokepoints</span><strong>Crater rim ramps & concentric basalt terraces</strong></div>
+              <div><span>Elevation</span><strong>Crater Rim: +210m · Floor: -15m</strong></div>
               <div><span>Lighting</span><strong>2,600K Smoldering Ember / 6,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Dead silence, muffled ash crunch, low bass resonance</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(6)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -339,12 +403,19 @@
         <article class="mission-card">
           <div class="mission-number">08</div>
           <div>
-            <small>Temporal Fault · Talar Venn</small>
-            <h3>The Mirrored Rift</h3>
-            <p>A bifurcated chasm where temporal refraction causes entities to cast two distinct shadows. Echo Relays must be established across the rift to establish non-hostile reciprocal contact with Choir witnesses.</p>
+            <small>Temporal Fault · Talar Venn · Mirrored Rift</small>
+            <h3>M08: The Shape Beside Us</h3>
+            <p>A bifurcated chasm where temporal refraction causes entities to cast two distinct shadows. Deploying Echo Relays across the rift allows the player to open reciprocal, non-hostile contact with the Hollow Choir.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Convergence Core [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Offset reality-refraction bridges</strong></div>
+              <div><span>Elevation</span><strong>Plateau Shelves: +95m · Fault: Unbound</strong></div>
               <div><span>Lighting</span><strong>6,500K Prismatic Shimmer / 14,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Phased electronic oscillations, crystalline harmonic ring</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(7)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -352,12 +423,19 @@
         <article class="mission-card">
           <div class="mission-number">09</div>
           <div>
-            <small>Acoustic Scarp · Joint Vanguard</small>
-            <h3>Hollow Resonator Ridge</h3>
-            <p>Sharp basalt spine crowned with towering acoustic monoliths. Sound-based Choir incursions can disrupt command links unless Resonators are harmonized with defensive energy fields.</p>
+            <small>Acoustic Scarp · Mara Vey · Allocation Exchange</small>
+            <h3>M09: Reserve Authority</h3>
+            <p>Central authority exchange with three separated branch interfaces. Mara must choose which two districts receive power reserves, leaving one deferred. Defend active transfer relays against aggressive incursions across switchback spine passes.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Allocation Hub [32, 36]</strong></div>
+              <div><span>Chokepoints</span><strong>Switchback mountain passes</strong></div>
+              <div><span>Elevation</span><strong>Spine Peak: +440m · Valley: +70m</strong></div>
               <div><span>Lighting</span><strong>3,200K Crimson Dusk / 11,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Choir drone chords, harmonic feedback, wailing wind</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(8)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -365,12 +443,19 @@
         <article class="mission-card">
           <div class="mission-number">10</div>
           <div>
-            <small>Inverted Monolith · Talar Venn</small>
-            <h3>The Census Vault</h3>
-            <p>Deep underground repository built beneath an inverted stone pyramid. Contains the unredacted truth of the Crownfall and proves that the erased timelines did not simply vanish—they were forcibly severed.</p>
+            <small>Inverted Monolith · Oruun · Lume Contact</small>
+            <h3>M10: The Choir at Lume Reach</h3>
+            <p>Oruun brings Kharuun presence to Lume's civic boundary, where new Choir infrastructure alters the urban landscape. Protect the contact precinct and address inherited liabilities from earlier power decisions.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Lume Well Court [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Blast gates & civic courtyard choke</strong></div>
+              <div><span>Elevation</span><strong>Civic Threshold: +130m · Vault: -410m</strong></div>
               <div><span>Lighting</span><strong>5,000K Phosphor Blue / 2,400 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Hollow chamber reverb, electronic data hum, whispered chants</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(9)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -385,12 +470,19 @@
         <article class="mission-card">
           <div class="mission-number">11</div>
           <div>
-            <small>Dissolving Scarp · Joint Forces</small>
-            <h3>The Verge of Erasure</h3>
-            <p>A battlefield that is actively unmaking itself as probability fields destabilize. Ground tiles de-crystallize into the void over time, forcing rapid tactical redeployment and aggressive advance.</p>
+            <small>Dissolving Scarp · Joint Forces · Public Interface</small>
+            <h3>M11: No Neutral Ledger</h3>
+            <p>Public coalition interface where probability destabilization slowly erodes peripheral terrain. Coordinate joint forces across shrinking ground corridors to assemble historical records into open, public evidence.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Protocol Rally Node [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Central stable land bridge</strong></div>
+              <div><span>Elevation</span><strong>Central Mass: +80m · Dissolution Horizon: 0m</strong></div>
               <div><span>Lighting</span><strong>8,000K Cold White / 20,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Dissolution static, crumbling stone, reverse temporal echoes</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(10)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -398,12 +490,19 @@
         <article class="mission-card">
           <div class="mission-number">12</div>
           <div>
-            <small>Sacred Under-realm · Oruun</small>
-            <h3>Kharuun Sovereign Caverns</h3>
-            <p>The ancestral birthing caverns and Memory Shrines of the Assemblies. Protect the core Waystones from both Choir desperation and rogue Meridian extraction squads.</p>
+            <small>Sacred Under-realm · Oruun · Readback Demonstrator</small>
+            <h3>M12: The Future That Won</h3>
+            <p>Ancestral caverns housing the Memory Shrines. Oruun tests Chancellor Rhyse's restoration claims through independent public readback apparatus while defending the sacred Waystone network against incursions.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Readback Spine [36, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Pillar labyrinths & ceremonial causeways</strong></div>
+              <div><span>Elevation</span><strong>Cavern Floor: -620m</strong></div>
               <div><span>Lighting</span><strong>3,600K Bioluminescent Amber / 4,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Ancestral communal chant, dripping water, crystal chime</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(11)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -411,12 +510,19 @@
         <article class="mission-card">
           <div class="mission-number">13</div>
           <div>
-            <small>Citadel Ramparts · Mara Vey</small>
-            <h3>Meridian High Bastion</h3>
-            <p>Multi-tiered defensive fortress overlooking the sunward approach. Kinetic artillery batteries and interlocking Aegis fields must hold against overwhelming frontal assaults.</p>
+            <small>Crownfall Public Index · Coalition · High Bastion</small>
+            <h3>M13: Assembly of the Missing</h3>
+            <p>Tiered monumental index precinct framing the Crownfall approach. Forces consolidate the readback trail from both Meridian and Kharuun archives to expose the excised timelines before the final offensive.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Public Index Linkage [48, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Triple-tier ramparts & funnel lanes</strong></div>
+              <div><span>Elevation</span><strong>Apex: +510m · Approaches: +140m</strong></div>
               <div><span>Lighting</span><strong>4,000K Steel Gray / 25,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Heavy generator hum, artillery discharge, martial brass</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(12)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -424,12 +530,19 @@
         <article class="mission-card">
           <div class="mission-number">14</div>
           <div>
-            <small>Abyssal Rift · Coalition Forces</small>
-            <h3>The Resonant Chasm</h3>
-            <p>The profound planetary rift directly below the celestial focal point. Suspended bridge spans connect jagged spires over an infinite golden void as all three factions converge.</p>
+            <small>Abyssal Rift · Neme · Command Crisis</small>
+            <h3>M14: Several Voices, One Command</h3>
+            <p>Deep planetary rift beneath the shattered star where Neme commands the Choir amidst profound internal conflict. Hold the crisis anchor across suspended magnetic spans while deciding which timeline voice prevails.</p>
             <div class="sensor-specs">
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Crisis Anchor [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Suspended magnetic transit rails</strong></div>
+              <div><span>Elevation</span><strong>Spire Spans: +180m · Void: Bottomless</strong></div>
               <div><span>Lighting</span><strong>2,800K Solar Flare / 45,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Deep gravitational groan, rushing void wind, layered choir</strong></div>
+            </div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(13)">📡 Inspect on Live Radar ↗</button>
             </div>
           </div>
         </article>
@@ -437,12 +550,20 @@
         <article class="mission-card">
           <div class="mission-number">15</div>
           <div>
-            <small>Sub-Solar Dais · Final Convergence</small>
-            <h3>The Solar Fall Dais</h3>
-            <p>Floating obsidian dais suspended directly beneath the shattered star. The ultimate battlefield where the player commits the final protocol: Controlled Stabilization, Open Horizon, Memory Preserved, or Reciprocal Accord.</p>
+            <small>Crownfall Dais · Final Convergence · The Broken Sun</small>
+            <h3>M15: The Broken Sun</h3>
+            <p>Floating obsidian dais suspended directly beneath the blinding corona of the Broken Sun. The climactic battle where all three faction doctrines collide and the player commits the definitive protocol for Soryn.</p>
             <div class="sensor-specs">
-              <div><span>Lighting</span><strong>2,200K Blinding Sun Corona / 95,000 Lux</strong></div>
+              <div><span>Grid Coordinates</span><strong>64×64 [X:0-63, Y:0-63]</strong></div>
+              <div><span>Tactical Landmark</span><strong>Resolution Conduit [32, 32]</strong></div>
+              <div><span>Chokepoints</span><strong>Concentric dais terraces</strong></div>
+              <div><span>Elevation</span><strong>Orbital Dais: +1,200m · Star: Overhead</strong></div>
+              <div><span>Lighting</span><strong>2,200K Blinding Corona / 95,000 Lux</strong></div>
               <div><span>Sound Bed</span><strong>Coronal tempest, full orchestral tension, cosmic silence</strong></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="radar-inspect-btn" onclick="inspectSector(14)">📡 Inspect on Live Radar ↗</button>
+              <a class="quiet-link" href="#dais-spotlight">View biome concept art →</a>
             </div>
           </div>
         </article>
@@ -454,44 +575,68 @@
       <span class="section-kicker">05 / Skirmish Theaters</span>
       <div class="section-head">
         <h2>Symmetric proving grounds.<br><em>Competitive battlefield setups.</em></h2>
-        <p>In addition to the campaign operations, six standalone skirmish theaters provide balanced, highly competitive arenas for custom player-versus-AI and multiplayer engagements.</p>
+        <p>In addition to the campaign operations, six standalone skirmish theaters provide balanced, competitive arenas for custom skirmish and multiplayer combat.</p>
       </div>
 
       <div class="detail-grid">
         <article class="detail-card">
-          <small>Skirmish 01 · 1v1</small>
+          <small>Skirmish 01 · 1v1 Arena</small>
           <h3>Twin Wells</h3>
           <p>Two contested Future Wells occupy mirrored high-ground plateaus separated by a deep central ravine. Players must divide forces between defending their primary Well and denying the enemy’s second expansion.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Mirrored dual-plateau</strong></div>
+            <div><span>Primary Choke</span><strong>Central ravine bridge</strong></div>
+          </div>
         </article>
 
         <article class="detail-card">
-          <small>Skirmish 02 · 1v1 / 2v2</small>
+          <small>Skirmish 02 · 1v1 / 2v2 Tactical</small>
           <h3>Crucible Ridge</h3>
           <p>A broad central mesa flanked by narrow flanking defiles. Rich Matter deposits sit exposed on the low ground, tempting early harvesters into vulnerable crossfire pockets.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Central mesa plateau</strong></div>
+            <div><span>Primary Choke</span><strong>Flanking low-ground defiles</strong></div>
+          </div>
         </article>
 
         <article class="detail-card">
           <small>Skirmish 03 · 2v2 / 4-Player FFA</small>
           <h3>Sunken Foundry</h3>
           <p>A vast semi-subterranean industrial complex with four corner spawn zones. Low-lying fog of war obscures movement through the central slag canals, enabling surprise ambushes.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Four-corner quadrilateral</strong></div>
+            <div><span>Primary Choke</span><strong>Slag canal intersections</strong></div>
+          </div>
         </article>
 
         <article class="detail-card">
-          <small>Skirmish 04 · 1v1</small>
+          <small>Skirmish 04 · 1v1 Fast-Paced</small>
           <h3>Frostshard Expanse</h3>
           <p>A high-altitude glacial steppe where brittle Dawnshard drifts create destructible path blockers. Breaking shard walls can open sudden attack lanes directly into enemy expansions.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Glacial steppe with destructibles</strong></div>
+            <div><span>Primary Choke</span><strong>Destructible crystal walls</strong></div>
+          </div>
         </article>
 
         <article class="detail-card">
           <small>Skirmish 05 · 3v3 / 6-Player</small>
           <h3>Shattered Causeway</h3>
           <p>Three massive parallel transit causeways spanning an abyssal canyon. Forces must coordinate across all three spans simultaneously, as losing any bridge allows a devastating flanking encirclement.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Triple parallel bridge span</strong></div>
+            <div><span>Primary Choke</span><strong>Three independent bridgeheads</strong></div>
+          </div>
         </article>
 
         <article class="detail-card">
           <small>Skirmish 06 · 1v1 Tournament</small>
           <h3>Choir Sanctum</h3>
           <p>A strictly symmetrical geometric arena centered around a high-yield neutral Well. Acoustic pillars allow units with stealth or vibration tracking to maneuver unseen by standard line-of-sight.</p>
+          <div class="sensor-specs" style="margin-top: 12px;">
+            <div><span>Layout</span><strong>Rotational 180° tournament arena</strong></div>
+            <div><span>Primary Choke</span><strong>Neutral Well perimeter circle</strong></div>
+          </div>
         </article>
       </div>
     </section>
@@ -506,178 +651,628 @@
   </footer>
 
   <script>
-    // Embedded deterministic tactical minimap generator
+    // Embedded authentic tactical holographic radar console
     const sectors = [
-      { name: "Sector 01: The Glass Scar", biome: "Vitrified Basin", coords: "64×64 [X:0-63, Y:0-63]", well: "Contested Center [32, 32]", desc: "Fractured vitrified impact basin beneath Lume Reach. Opposing base shelves separated by a continuous black-glass ridge with three distinct crossings.", p1: [10, 10], p2: [54, 54], wellPos: [32, 32], type: "chasm" },
-      { name: "Sector 02: Shivergrass Basin", biome: "Shivergrass Steppe", coords: "64×64 [X:0-63, Y:0-63]", well: "North Plains [48, 48]", desc: "Rolling resonance prairie with rippling vegetation. Migrating Vaultbacks provide mobile cover across expansive open fields.", p1: [12, 14], p2: [52, 50], wellPos: [48, 48], type: "plain" },
-      { name: "Sector 03: Lume Reach Outskirts", biome: "Ark-City Perimeter", coords: "64×64 [X:0-63, Y:0-63]", well: "Power Station [24, 32]", desc: "Sub-urban industrial logistics grid. Defense of three vital Aegis power posts against incursions along paved transport lanes.", p1: [8, 32], p2: [56, 32], wellPos: [24, 32], type: "city" },
-      { name: "Sector 04: The Unburied Road", biome: "Subterranean Artery", coords: "64×64 [X:0-63, Y:0-63]", well: "Geode Vault [32, 40]", desc: "Deep bioluminescent cavern highway. Ancient stone bridges cross deep bottomless chasms surrounded by rich Matter veins.", p1: [14, 10], p2: [50, 54], wellPos: [32, 40], type: "cavern" },
-      { name: "Sector 05: The Line of Parity", biome: "Neutral Glacis", coords: "64×64 [X:0-63, Y:0-63]", well: "Treaty Pylon [32, 32]", desc: "Demarcated ceasefire zone. Open glacis flanked by listening outposts, demanding simultaneous witness synchronization.", p1: [10, 32], p2: [54, 32], wellPos: [32, 32], type: "plain" },
-      { name: "Sector 06: Ark-City Sector 9", biome: "Sheared City", coords: "64×64 [X:0-63, Y:0-63]", well: "Census Archive [30, 45]", desc: "Industrial lower tier hanging over a void chasm. Narrow elevated causeways and multi-level foundation ramps.", p1: [8, 12], p2: [56, 52], wellPos: [30, 45], type: "city" },
-      { name: "Sector 07: Cinder Hollow", biome: "Burnt Flats", coords: "64×64 [X:0-63, Y:0-63]", well: "Burnt Well [32, 28]", desc: "Dead crystalline ash flats where sound does not carry. Stepped crater walls surround a spent, quiescent Future Well.", p1: [12, 12], p2: [52, 52], wellPos: [32, 28], type: "plain" },
-      { name: "Sector 08: The Mirrored Rift", biome: "Temporal Fault", coords: "64×64 [X:0-63, Y:0-63]", well: "Convergence Core [32, 32]", desc: "Bifurcated temporal fault line splitting the map vertically. Offset bridges connect parallel reality shelves.", p1: [16, 20], p2: [48, 44], wellPos: [32, 32], type: "chasm" },
-      { name: "Sector 09: Resonator Ridge", biome: "Acoustic Scarp", coords: "64×64 [X:0-63, Y:0-63]", well: "Monolith Node [32, 36]", desc: "Narrow ascending ridgeline crowned with ancient acoustic monoliths. High-ground control offers sweeping sightlines.", p1: [10, 10], p2: [54, 54], wellPos: [32, 36], type: "ridge" },
-      { name: "Sector 10: The Census Vault", biome: "Inverted Monolith", coords: "64×64 [X:0-63, Y:0-63]", well: "Deep Vault [32, 32]", desc: "Underground pyramidal complex with concentric chamber tiers. Deep corridors create deadly choke-point engagements.", p1: [14, 14], p2: [50, 50], wellPos: [32, 32], type: "cavern" },
-      { name: "Sector 11: The Verge of Erasure", biome: "Dissolving Scarp", coords: "64×64 [X:0-63, Y:0-63]", well: "Unstable Shard [32, 32]", desc: "Collapsing basalt shelf whose outer tiles dissolve into the void. Forces must secure the stable central plateau rapidly.", p1: [12, 32], p2: [52, 32], wellPos: [32, 32], type: "chasm" },
-      { name: "Sector 12: Sovereign Caverns", biome: "Sacred Under-realm", coords: "64×64 [X:0-63, Y:0-63]", well: "Ancestral Geode [36, 32]", desc: "Vast natural geode cavern with spiraling mineral pillars and deep water pools surrounding the Kharuun birthing shrines.", p1: [12, 16], p2: [52, 48], wellPos: [36, 32], type: "cavern" },
-      { name: "Sector 13: Meridian High Bastion", biome: "Fortified Citadel", coords: "64×64 [X:0-63, Y:0-63]", well: "Citadel Core [48, 32]", desc: "Tiered military citadel with engineered killzones, heavy kinetic emplacements, and reinforced gatehouses.", p1: [16, 32], p2: [48, 32], wellPos: [48, 32], type: "city" },
-      { name: "Sector 14: The Resonant Chasm", biome: "Abyssal Rift", coords: "64×64 [X:0-63, Y:0-63]", well: "Void Shard [32, 32]", desc: "Profound vertical abyss spanned by narrow suspension spans directly beneath the stellar fracture.", p1: [12, 12], p2: [52, 52], wellPos: [32, 32], type: "chasm" },
-      { name: "Sector 15: The Solar Fall Dais", biome: "Sub-Solar Dais", coords: "64×64 [X:0-63, Y:0-63]", well: "Crownfall Dais [32, 32]", desc: "Floating geometric platform hovering in the sub-solar void. Zero natural cover; survival depends entirely on deployed defenses.", p1: [14, 32], p2: [50, 32], wellPos: [32, 32], type: "dais" }
+      {
+        id: "M01",
+        name: "Sector 01: The Glass Scar",
+        biome: "Vitrified Basin",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Contested Center [32, 32]",
+        desc: "Fractured vitrified impact basin beneath Lume Reach. Opposing base shelves separated by a continuous black-glass ridge with three distinct crossings: Ash Cut (north), Buried Causeway (center), and Folded Verge (south).",
+        p1: [10, 10], p1Faction: "Meridian",
+        p2: [54, 54], p2Faction: "Kharuun",
+        wellPos: [32, 32],
+        type: "chasm",
+        hazards: "Vitrified glass fractures · Low ground ambush zones",
+        chokepoints: "3 Authored Crossings (Ash Cut, Causeway, Folded Verge)",
+        elevation: "Ridge: +180m · Basin Floor: -40m"
+      },
+      {
+        id: "M02",
+        name: "Sector 02: Shivergrass Basin",
+        biome: "Shivergrass Steppe",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "North Plains [48, 48]",
+        desc: "Rolling resonance prairie with probability-sensitive vegetation. Migrating native Vaultbacks graze on mineral strata, serving as moving heavy cover across expansive open fields.",
+        p1: [12, 14], p1Faction: "Kharuun",
+        p2: [52, 50], p2Faction: "Meridian",
+        wellPos: [48, 48],
+        type: "plain",
+        hazards: "Rippling resonance flora betrays stealth · Mobile Vaultbacks",
+        chokepoints: "Natural earthen berms & winding migratory corridors",
+        elevation: "Prairie: +60m · Low Swales: +15m"
+      },
+      {
+        id: "M03",
+        name: "Sector 03: Lume Reach Outskirts",
+        biome: "Ark-City Perimeter",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Power Station [24, 32]",
+        desc: "Sub-urban industrial logistics grid facing total blackout. Commander Mara Vey must establish and protect power conduits to energize Life Support, Transit, and Archive continuity Aegis posts.",
+        p1: [8, 32], p1Faction: "Meridian",
+        p2: [56, 32], p2Faction: "Kharuun",
+        wellPos: [24, 32],
+        type: "city",
+        hazards: "Power grid blackout zones · Exposed service conduits",
+        chokepoints: "Paved logistics highways & perimeter gatehouses",
+        elevation: "Transit Deck: +120m · Low Service Trench: +20m"
+      },
+      {
+        id: "M04",
+        name: "Sector 04: The Unburied Road",
+        biome: "Subterranean Artery",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Geode Vault [32, 40]",
+        desc: "Immense vaulted geode highway miles beneath the surface. Stone causeways cross abyssal chasms surrounded by rich Matter veins and raw cyan Dawnshard deposits.",
+        p1: [14, 10], p1Faction: "Kharuun",
+        p2: [50, 54], p2Faction: "Meridian",
+        wellPos: [32, 40],
+        type: "cavern",
+        hazards: "Bottomless cavern chasms · Unstable stalactite ceilings",
+        chokepoints: "Narrow natural stone arch bridges",
+        elevation: "Subterranean Road: -850m · Abyss: Bottomless"
+      },
+      {
+        id: "M05",
+        name: "Sector 05: The Line of Parity",
+        biome: "Neutral Glacis",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Treaty Pylon [32, 32]",
+        desc: "Demarcated ceasefire zone outside Lume Reach. Meridian and Kharuun forces establish fragile witness posts while unidentified temporal apparitions begin probe incursions.",
+        p1: [10, 32], p1Faction: "Meridian",
+        p2: [54, 32], p2Faction: "Kharuun",
+        wellPos: [32, 32],
+        type: "plain",
+        hazards: "Uncatalogued temporal incursions · Mutual killzones",
+        chokepoints: "Central treaty glacis corridor",
+        elevation: "Glacis Plateau: +110m"
+      },
+      {
+        id: "M06",
+        name: "Sector 06: Ark-City Sector 9",
+        biome: "Sheared City",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Census Archive [30, 45]",
+        desc: "Brutalist foundation tiers sheared over an infinite chasm during the Crownfall. Talar Venn must extract census records and protect civilian evacuation convoys before structural collapse.",
+        p1: [8, 12], p1Faction: "Meridian",
+        p2: [56, 52], p2Faction: "Choir",
+        wellPos: [30, 45],
+        type: "city",
+        hazards: "Sheared edge drop-offs · Industrial structural decay",
+        chokepoints: "Connecting gantry ramps & cargo lift shafts",
+        elevation: "Upper Silos: +320m · Lower Foundry: +80m"
+      },
+      {
+        id: "M07",
+        name: "Sector 07: Cinder Hollow",
+        biome: "Burnt Flats",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Burnt Well [32, 28]",
+        desc: "Impact crater where a prehistoric Future Well burned out, leaving dead vitrified ash that dampens radar and sound. Oruun tunes Listening Spines to detect erased historical echoes.",
+        p1: [12, 12], p1Faction: "Kharuun",
+        p2: [52, 52], p2Faction: "Meridian",
+        wellPos: [32, 28],
+        type: "plain",
+        hazards: "Acoustic dead zones · Radar-absorbing ash dust",
+        chokepoints: "Crater rim ramps & concentric basalt terraces",
+        elevation: "Crater Rim: +210m · Crater Floor: -15m"
+      },
+      {
+        id: "M08",
+        name: "Sector 08: The Mirrored Rift",
+        biome: "Temporal Fault",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Convergence Core [32, 32]",
+        desc: "A bifurcated chasm where temporal refraction causes entities to cast two valid shadows. Establishing Echo Relays across the rift opens reciprocal communication with the Hollow Choir.",
+        p1: [16, 20], p1Faction: "Meridian",
+        p2: [48, 44], p2Faction: "Choir",
+        wellPos: [32, 32],
+        type: "chasm",
+        hazards: "Temporal phase interference · Probability duplicate phantoms",
+        chokepoints: "Three offset reality-refraction bridges",
+        elevation: "Plateau Shelves: +95m · Temporal Fault: Unbound"
+      },
+      {
+        id: "M09",
+        name: "Sector 09: Resonator Ridge",
+        biome: "Acoustic Scarp",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Monolith Node [32, 36]",
+        desc: "Ascending mountain spine crowned with ancient acoustic monoliths. Factions fight for high-ground observation and sound-bed shielding against Choir harmonic disruption.",
+        p1: [10, 10], p1Faction: "Meridian",
+        p2: [54, 54], p2Faction: "Kharuun",
+        wellPos: [32, 36],
+        type: "ridge",
+        hazards: "Harmonic feedback blasts · Gale-force scarp winds",
+        chokepoints: "Winding switchback passes along the narrow spine",
+        elevation: "Spine Peak: +440m · Valley Approach: +70m"
+      },
+      {
+        id: "M10",
+        name: "Sector 10: The Census Vault",
+        biome: "Inverted Monolith",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Deep Vault [32, 32]",
+        desc: "Subterranean repository built beneath an inverted stone pyramid. Houses unredacted Crownfall records confirming that erased timelines were deliberately purged rather than accidentally lost.",
+        p1: [14, 14], p1Faction: "Meridian",
+        p2: [50, 50], p2Faction: "Kharuun",
+        wellPos: [32, 32],
+        type: "cavern",
+        hazards: "Claustrophobic vault corridors · Automated security locks",
+        chokepoints: "Reinforced blast gates & central archive courtyard",
+        elevation: "Underground Vault: -410m"
+      },
+      {
+        id: "M11",
+        name: "Sector 11: The Verge of Erasure",
+        biome: "Dissolving Scarp",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Unstable Shard [32, 32]",
+        desc: "A crumbling battlefield actively unmaking itself as probability fields collapse. Outer perimeter terrain de-crystallizes into the void over time, forcing rapid forward momentum.",
+        p1: [12, 32], p1Faction: "Kharuun",
+        p2: [52, 32], p2Faction: "Meridian",
+        wellPos: [32, 32],
+        type: "chasm",
+        hazards: "Shrinking combat boundary · Dissolving perimeter tiles",
+        chokepoints: "Central stable land bridge",
+        elevation: "Central Mass: +80m · Dissolution Horizon: Zero"
+      },
+      {
+        id: "M12",
+        name: "Sector 12: Sovereign Caverns",
+        biome: "Sacred Under-realm",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Ancestral Geode [36, 32]",
+        desc: "Ancestral birthing caverns of the Kharuun Assemblies. Vast crystalline pillars surround sacred mineral pools where centuries of memory-bearing lineages are safeguarded.",
+        p1: [12, 16], p1Faction: "Kharuun",
+        p2: [52, 48], p2Faction: "Meridian",
+        wellPos: [36, 32],
+        type: "cavern",
+        hazards: "Deep subterranean brine pools · Sacred shrine zones",
+        chokepoints: "Pillar labyrinths & ceremonial causeways",
+        elevation: "Underground Cavern: -620m"
+      },
+      {
+        id: "M13",
+        name: "Sector 13: Meridian High Bastion",
+        biome: "Fortified Citadel",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Citadel Core [48, 32]",
+        desc: "The monumental military headquarters of the Meridian Compact. Tiered concrete bastions with kinetic battery emplacements guard the direct overland approach to the Broken Sun.",
+        p1: [16, 32], p1Faction: "Meridian",
+        p2: [48, 32], p2Faction: "Choir",
+        wellPos: [48, 32],
+        type: "city",
+        hazards: "Heavy kinetic killzones · Multi-layered defensive Aegis shields",
+        chokepoints: "Triple-gate ramparts & engineered funnel lanes",
+        elevation: "Bastion Apex: +510m · Outer Approaches: +140m"
+      },
+      {
+        id: "M14",
+        name: "Sector 14: The Resonant Chasm",
+        biome: "Abyssal Rift",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Void Shard [32, 32]",
+        desc: "Profound vertical rift plunging toward the world's shattered core. Floating suspension bridges span an endless golden abyss where all three factions converge in an all-out battle.",
+        p1: [12, 12], p1Faction: "Choir",
+        p2: [52, 52], p2Faction: "Meridian",
+        wellPos: [32, 32],
+        type: "chasm",
+        hazards: "Bottomless stellar chasm · Severe gravitational shear",
+        chokepoints: "Suspended magnetic transit rails",
+        elevation: "Spire Spans: +180m · Core Chasm: Infinite"
+      },
+      {
+        id: "M15",
+        name: "Sector 15: The Solar Fall Dais",
+        biome: "Sub-Solar Dais",
+        coords: "64×64 [X:0-63, Y:0-63]",
+        well: "Crownfall Dais [32, 32]",
+        desc: "Monumental geometric platform of black vitrified glass suspended directly beneath the blinding corona of the Broken Sun. Zero natural cover; the ultimate battle for Soryn's fate.",
+        p1: [14, 32], p1Faction: "Choir",
+        p2: [50, 32], p2Faction: "Meridian",
+        wellPos: [32, 32],
+        type: "dais",
+        hazards: "Periodic solar coronal flares · Reality de-synchronization",
+        chokepoints: "Concentric platform terraces & central dais ring",
+        elevation: "Orbital Dais: +1,200m · Solar Corona: Overhead"
+      }
     ];
 
-    function drawRadar(sec) {
+    let currentSectorIndex = 0;
+    let sweepAngle = 0;
+
+    function drawRadar(sec, angle) {
       const canvas = document.getElementById('radarCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.width;
       const h = canvas.height;
-      const cellSize = w / 64;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = w / 64;
 
       // Clear dark background
-      ctx.fillStyle = '#070a0d';
+      ctx.fillStyle = '#060b11';
       ctx.fillRect(0, 0, w, h);
 
-      // Draw 64x64 grid lines
-      ctx.strokeStyle = '#121a22';
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i <= 64; i += 8) {
+      // Radar Range Rings (500M, 1000M, 1500M, 2000M)
+      const maxR = w * 0.44;
+      ctx.lineWidth = 1;
+      [0.25, 0.5, 0.75, 1.0].forEach((ratio, idx) => {
+        const r = maxR * ratio;
+        ctx.strokeStyle = idx === 3 ? 'rgba(0, 242, 255, 0.4)' : 'rgba(0, 242, 255, 0.12)';
+        ctx.setLineDash(idx === 3 ? [] : [4, 4]);
         ctx.beginPath();
-        ctx.moveTo(i * cellSize, 0);
-        ctx.lineTo(i * cellSize, h);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Range labels
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(95, 216, 232, 0.5)';
+        ctx.font = '10px "DM Mono", monospace';
+        ctx.fillText(`${(ratio * 2).toFixed(1)}KM`, cx + r + 4, cy - 4);
+      });
+      ctx.setLineDash([]);
+
+      // 64x64 Grid Lines (Tactical Subdivisions)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 64; i += 4) {
+        ctx.beginPath();
+        ctx.moveTo(i * scale, 0);
+        ctx.lineTo(i * scale, h);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, i * cellSize);
-        ctx.lineTo(w, i * cellSize);
+        ctx.moveTo(0, i * scale);
+        ctx.lineTo(w, i * scale);
         ctx.stroke();
       }
 
-      // Draw terrain features based on type
+      // Compass Crosshairs & Center Lines
+      ctx.strokeStyle = 'rgba(0, 242, 255, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - maxR - 16);
+      ctx.lineTo(cx, cy + maxR + 16);
+      ctx.moveTo(cx - maxR - 16, cy);
+      ctx.lineTo(cx + maxR + 16, cy);
+      ctx.stroke();
+
+      // Cardinal Bearing Marks
+      ctx.fillStyle = '#00f2ff';
+      ctx.font = '600 11px "DM Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('000° [N]', cx, cy - maxR - 22);
+      ctx.fillText('180° [S]', cx, cy + maxR + 22);
+      ctx.fillText('090° [E]', cx + maxR + 28, cy);
+      ctx.fillText('270° [W]', cx - maxR - 28, cy);
+
+      // Render Distinct Topographical Terrain by Sector Type
       if (sec.type === 'chasm') {
-        // Draw dividing chasm across center
-        ctx.fillStyle = '#040608';
-        ctx.fillRect(0, 28 * cellSize, w, 8 * cellSize);
-        // Golden fracture veins
-        ctx.strokeStyle = '#966710';
-        ctx.lineWidth = 1.5;
+        // Fracture Abyss
+        ctx.fillStyle = '#030609';
         ctx.beginPath();
-        ctx.moveTo(0, 32 * cellSize);
-        ctx.lineTo(w * 0.3, 30 * cellSize);
-        ctx.lineTo(w * 0.7, 34 * cellSize);
-        ctx.lineTo(w, 31 * cellSize);
-        ctx.stroke();
-        // Crossings
-        ctx.fillStyle = '#3f5262';
-        ctx.fillRect(14 * cellSize, 27 * cellSize, 6 * cellSize, 10 * cellSize);
-        ctx.fillRect(29 * cellSize, 27 * cellSize, 6 * cellSize, 10 * cellSize);
-        ctx.fillRect(44 * cellSize, 27 * cellSize, 6 * cellSize, 10 * cellSize);
-      } else if (sec.type === 'plain') {
-        // Shivergrass ripples
-        ctx.fillStyle = '#111e1c';
-        ctx.beginPath();
-        ctx.arc(32 * cellSize, 32 * cellSize, 22 * cellSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#1a3e38';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(32 * cellSize, 32 * cellSize, 16 * cellSize, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (sec.type === 'cavern') {
-        // Cavern walls
-        ctx.fillStyle = '#06090e';
-        ctx.fillRect(0, 0, 10 * cellSize, h);
-        ctx.fillRect(54 * cellSize, 0, 10 * cellSize, h);
-        // Crystal clusters
-        ctx.fillStyle = '#38ada3';
-        ctx.fillRect(20 * cellSize, 15 * cellSize, 3 * cellSize, 3 * cellSize);
-        ctx.fillRect(42 * cellSize, 45 * cellSize, 3 * cellSize, 3 * cellSize);
-      } else if (sec.type === 'city') {
-        // Urban grid foundation blocks
-        ctx.fillStyle = '#141d24';
-        for (let bx = 16; bx <= 48; bx += 12) {
-          for (let by = 16; by <= 48; by += 12) {
-            ctx.fillRect(bx * cellSize, by * cellSize, 8 * cellSize, 8 * cellSize);
-          }
-        }
-      } else if (sec.type === 'ridge') {
-        // Diagonal ridge
-        ctx.fillStyle = '#1c242c';
-        ctx.beginPath();
-        ctx.moveTo(0, h);
-        ctx.lineTo(w, 0);
-        ctx.lineTo(w - 12 * cellSize, 0);
-        ctx.lineTo(0, h - 12 * cellSize);
+        ctx.moveTo(0, 26 * scale);
+        ctx.lineTo(w, 28 * scale);
+        ctx.lineTo(w, 36 * scale);
+        ctx.lineTo(0, 38 * scale);
         ctx.closePath();
         ctx.fill();
-      } else if (sec.type === 'dais') {
-        // Concentric geometric platform
-        ctx.fillStyle = '#121b22';
-        ctx.fillRect(16 * cellSize, 16 * cellSize, 32 * cellSize, 32 * cellSize);
-        ctx.strokeStyle = '#e5a93b';
+
+        // Glowing molten gold fracture arteries
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(0, 31 * scale);
+        ctx.quadraticCurveTo(w * 0.25, 34 * scale, w * 0.5, 31 * scale);
+        ctx.quadraticCurveTo(w * 0.75, 29 * scale, w, 33 * scale);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Crossing Bridges / Causeways
+        const crossings = [14, 30, 46];
+        crossings.forEach(col => {
+          ctx.fillStyle = '#1e323e';
+          ctx.fillRect((col - 3) * scale, 24 * scale, 6 * scale, 16 * scale);
+          ctx.strokeStyle = '#5fd8e8';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect((col - 3) * scale, 24 * scale, 6 * scale, 16 * scale);
+          // Directional chevron
+          ctx.strokeStyle = '#00f2ff';
+          ctx.beginPath();
+          ctx.moveTo((col - 2) * scale, 30 * scale);
+          ctx.lineTo(col * scale, 33 * scale);
+          ctx.lineTo((col + 2) * scale, 30 * scale);
+          ctx.stroke();
+        });
+      } else if (sec.type === 'plain') {
+        // Steppe Topographical Elevation Rings
+        ctx.strokeStyle = 'rgba(240, 180, 90, 0.25)';
+        ctx.lineWidth = 1.2;
+        [28, 20, 12].forEach((radius, i) => {
+          ctx.fillStyle = `rgba(32, 24, 15, ${0.15 + i * 0.1})`;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+        // Resonance Wave ripples
+        ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.arc(cx + 8 * scale, cy - 6 * scale, 22 * scale, 0.4, 2.8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx - 8 * scale, cy + 6 * scale, 24 * scale, 3.5, 5.8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (sec.type === 'city') {
+        // Monumental Urban Foundation Grid
+        ctx.fillStyle = '#0e1720';
+        ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
+        ctx.lineWidth = 1;
+        for (let bx = 12; bx <= 52; bx += 10) {
+          for (let by = 12; by <= 52; by += 10) {
+            if ((bx === 32 || bx === 22) && by === 32) continue;
+            ctx.fillRect(bx * scale, by * scale, 7 * scale, 7 * scale);
+            ctx.strokeRect(bx * scale, by * scale, 7 * scale, 7 * scale);
+          }
+        }
+        // Glowing Power Link Highway
+        ctx.strokeStyle = '#00f2ff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(20 * cellSize, 20 * cellSize, 24 * cellSize, 24 * cellSize);
+        ctx.shadowColor = '#00f2ff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(8 * scale, 32 * scale);
+        ctx.lineTo(56 * scale, 32 * scale);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else if (sec.type === 'cavern') {
+        // Subterranean Geode Cavern Walls
+        ctx.fillStyle = '#04080c';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(16 * scale, 0);
+        ctx.quadraticCurveTo(8 * scale, h * 0.5, 14 * scale, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(w, 0);
+        ctx.lineTo(w - 16 * scale, 0);
+        ctx.quadraticCurveTo(w - 8 * scale, h * 0.5, w - 14 * scale, h);
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glowing Bioluminescent Cyan Matter Seams
+        ctx.fillStyle = '#00f2ff';
+        ctx.shadowColor = '#00f2ff';
+        ctx.shadowBlur = 10;
+        [[18, 16], [46, 20], [20, 48], [44, 46], [32, 22]].forEach(pt => {
+          ctx.beginPath();
+          ctx.arc(pt[0] * scale, pt[1] * scale, 3 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+      } else if (sec.type === 'ridge') {
+        // High Mountain Spine Plateau
+        ctx.fillStyle = '#141d24';
+        ctx.beginPath();
+        ctx.moveTo(4 * scale, h - 4 * scale);
+        ctx.lineTo(w - 4 * scale, 4 * scale);
+        ctx.lineTo(w - 16 * scale, 4 * scale);
+        ctx.lineTo(4 * scale, h - 16 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#f0b45a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Acoustic Monolith Tower Pips
+        [[18, 46], [28, 36], [38, 26], [48, 16]].forEach(pt => {
+          ctx.fillStyle = '#ffd700';
+          ctx.beginPath();
+          ctx.arc(pt[0] * scale, pt[1] * scale, 2.5 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (sec.type === 'dais') {
+        // Suspended Sub-Solar Geometric Dais Platform
+        ctx.fillStyle = '#0d1620';
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.moveTo(32 * scale, 12 * scale);
+        ctx.lineTo(52 * scale, 32 * scale);
+        ctx.lineTo(32 * scale, 52 * scale);
+        ctx.lineTo(12 * scale, 32 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner platform terraces
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(22 * scale, 22 * scale, 20 * scale, 20 * scale);
       }
 
-      // Draw Player 1 Base (Blue/Teal)
-      ctx.fillStyle = '#38ada3';
+      // Draw Player 1 Deployment Base (Cyan Meridian Node)
+      const p1x = sec.p1[0] * scale;
+      const p1y = sec.p1[1] * scale;
+      ctx.fillStyle = '#00f2ff';
+      ctx.shadowColor = '#00f2ff';
+      ctx.shadowBlur = 14;
       ctx.beginPath();
-      ctx.arc(sec.p1[0] * cellSize, sec.p1[1] * cellSize, 4 * cellSize, 0, Math.PI * 2);
+      ctx.moveTo(p1x, p1y - 7 * scale);
+      ctx.lineTo(p1x + 7 * scale, p1y);
+      ctx.lineTo(p1x, p1y + 7 * scale);
+      ctx.lineTo(p1x - 7 * scale, p1y);
+      ctx.closePath();
       ctx.fill();
+      ctx.shadowBlur = 0;
+
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '600 9px "DM Mono", monospace';
+      ctx.fillText('P1 // ' + sec.p1Faction.toUpperCase(), p1x, p1y + 12 * scale);
+
+      // Draw Player 2 Deployment Base (Amber Kharuun / Choir Node)
+      const p2x = sec.p2[0] * scale;
+      const p2y = sec.p2[1] * scale;
+      const p2Color = sec.p2Faction === 'Choir' ? '#ff69b4' : '#f59e0b';
+      ctx.fillStyle = p2Color;
+      ctx.shadowColor = p2Color;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const rad = (i * 60 * Math.PI) / 180;
+        const hx = p2x + 7 * scale * Math.cos(rad);
+        const hy = p2y + 7 * scale * Math.sin(rad);
+        if (i === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '600 9px "DM Mono", monospace';
+      ctx.fillText('P2 // ' + sec.p2Faction.toUpperCase(), p2x, p2y + 12 * scale);
+
+      // Draw Central Future Well Landmark
+      const wx = sec.wellPos[0] * scale;
+      const wy = sec.wellPos[1] * scale;
+
+      // Pulsing Outer Gyro Rings
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.8;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(wx, wy, 8 * scale, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw Player 2 Base (Amber/Red)
-      ctx.fillStyle = '#e5a93b';
+      ctx.strokeStyle = '#00f2ff';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(sec.p2[0] * cellSize, sec.p2[1] * cellSize, 4 * cellSize, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
+      ctx.arc(wx, wy, 12 * scale, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw Contested Future Well (White/Gold Shard)
+      // Shard Core Star
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(sec.wellPos[0] * cellSize, sec.wellPos[1] * cellSize, 3 * cellSize, 0, Math.PI * 2);
+      ctx.arc(wx, wy, 3.5 * scale, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#e5a93b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(sec.wellPos[0] * cellSize, sec.wellPos[1] * cellSize, 6 * cellSize, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Corner coordinate legend
-      ctx.fillStyle = '#566a74';
-      ctx.font = '9px "DM Mono", monospace';
-      ctx.fillText('[0, 0]', 4, h - 4);
-      ctx.fillText('[63, 63]', w - 44, 12);
+      // Well Label
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '600 10px "DM Mono", monospace';
+      ctx.fillText('✦ FUTURE WELL', wx, wy - 16 * scale);
+
+      // Radar Sweep Beam with Phosphor Fade Tail
+      const sweepLength = maxR + 24;
+      ctx.save();
+      ctx.translate(cx, cy);
+      const sweepGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sweepLength);
+      sweepGrad.addColorStop(0, 'rgba(0, 242, 255, 0.4)');
+      sweepGrad.addColorStop(1, 'rgba(0, 242, 255, 0.0)');
+
+      // Sweep Cone Trail
+      const trailAngle = 0.45; // ~26 degrees trail
+      const coneGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, sweepLength);
+      coneGrad.addColorStop(0, 'rgba(0, 242, 255, 0.25)');
+      coneGrad.addColorStop(0.8, 'rgba(0, 242, 255, 0.05)');
+      coneGrad.addColorStop(1, 'rgba(0, 242, 255, 0)');
+
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, sweepLength, angle - trailAngle, angle);
+      ctx.closePath();
+      ctx.fill();
+
+      // Sharp Leading Scanline
+      ctx.strokeStyle = '#00f2ff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#00f2ff';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(sweepLength * Math.cos(angle), sweepLength * Math.sin(angle));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function animateRadar() {
+      sweepAngle = (sweepAngle + 0.012) % (Math.PI * 2);
+      const sec = sectors[currentSectorIndex] || sectors[0];
+      drawRadar(sec, sweepAngle);
+      requestAnimationFrame(animateRadar);
     }
 
     function loadSector(index) {
+      currentSectorIndex = index;
       const sec = sectors[index];
       if (!sec) return;
 
-      // Update buttons
+      // Update button active state
       const buttons = document.querySelectorAll('.radar-btn');
       buttons.forEach((btn, idx) => {
         if (idx === index) btn.classList.add('active');
         else btn.classList.remove('active');
       });
 
-      // Update metadata
+      // Update metadata card
       document.getElementById('radarTitle').textContent = sec.name;
+      document.getElementById('radarBiomeBadge').textContent = sec.biome;
       document.getElementById('radarDesc').textContent = sec.desc;
       document.getElementById('radarCoords').textContent = sec.coords;
       document.getElementById('radarWell').textContent = sec.well;
-
-      // Render radar
-      drawRadar(sec);
+      document.getElementById('radarElev').textContent = sec.elevation;
+      document.getElementById('radarChoke').textContent = sec.chokepoints;
+      document.getElementById('radarHazard').textContent = sec.hazards;
+      document.getElementById('hudSectorCode').textContent = `${sec.id} // LIVE`;
     }
 
-    // Initial render
+    // Scroll to radar and load sector from mission catalog
+    function inspectSector(index) {
+      loadSector(index);
+      const nav = document.getElementById('radar-nav');
+      if (nav) {
+        nav.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // Start live radar console on DOM ready
     window.addEventListener('DOMContentLoaded', () => {
-      loadSector(0);
+      const urlParams = new URLSearchParams(window.location.search);
+      const secParam = urlParams.get('sec');
+      if (secParam !== null && !isNaN(parseInt(secParam))) {
+        loadSector(Math.max(0, Math.min(14, parseInt(secParam))));
+      } else {
+        loadSector(0);
+      }
+      requestAnimationFrame(animateRadar);
     });
+
   </script>
 </body>
 </html>
