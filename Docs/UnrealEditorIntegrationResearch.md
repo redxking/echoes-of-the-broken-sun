@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Research access date:** 2026-09-05
-**Status:** Codex server registration and external-cache launcher installed; editor build passed. Live tool verification is in progress. No performance experiment executed.
+**Status:** Codex server registration and external-cache launcher installed; editor build and live MCP protocol checks passed. Refreshing MCP tools in the already-running desktop client remains a user step. No performance experiment executed.
 **Authority:** research note under [AGENTS.md](../AGENTS.md) and the [document authority map](README.md). Game requirements and acceptance remain in the master/state records.
 
 ## Decision
@@ -64,6 +64,10 @@ Keep the archive drive mounted at its existing path for the full editor/build se
 The missing game editor module required two narrow repairs before launch: synchronize the network build identity and test fixture with the existing snapshot schema 27, and qualify the non-static collapsed-Well check through the current simulation instance. The existing content preflight and `Scripts/build_editor.sh` then passed. A read-only internal review independently checked the identity digest and null-safe selection repair. No simulation rules were changed by this setup task; other active game-development work remains separately owned.
 
 The shared [MCP inspection skill](../.opencode/skills/echoes-unreal-mcp-editor-inspection/SKILL.md) now routes routine editor work through live tool discovery and existing typed tools before creating scripts. It requires readback, source-generator consistency, and explicit recovery for permitted mutations. Programmatic batching is not evidence of atomicity or automatic undo.
+
+Live protocol verification completed on 2026-09-05 against editor PID 94857, with the listener bound to `127.0.0.1:8000`. Initialization negotiated MCP `2025-11-25`; discovery exposed the three meta tools and 55 toolsets. Native calls returned `/Engine/Maps/Entry`, an empty actor selection, the viewport camera transform, and `true` for the existing external project asset `/Game/Audio/Generated/AMB_FutureWell`. Viewport and whole-editor PNG captures were decoded and visually inspected. The Entry scene is mostly empty; these images prove capture operation, not game visual quality. Camera readback remained unchanged. No gameplay, asset, or source mutation was performed by these tool checks.
+
+**Observed capture compatibility issue.** In this installed UE 5.8.2 build, calling `CaptureViewport` with only `bShowUI` failed because omitted optional parameters needed defaults. A schema-conforming retry succeeded with the current `GetCameraTransform` result passed as `captureTransform`, and explicit `annotations` values: `gridSpacing=0`, `gridExtent=0`, `gridHeight=0`, `maxLabelDistance=0`, `classFilter={"refPath":"/Script/Engine.Actor"}`, `maxLabels=0`. `CaptureEditorImage` succeeded with empty arguments. Retain live discovery and this observed workaround until an engine update is checked; do not patch the installed engine or assume every optional field works identically.
 
 Setup evidence is retained under `BuildArtifacts/Evidence/unreal-mcp-setup-20260905T144942Z`. These results concern local configuration, compilation, storage routing, and editor connectivity. They do not establish gameplay acceptance, packaged-release readiness, or measured productivity gains.
 
