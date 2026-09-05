@@ -1,0 +1,44 @@
+{
+  "source_format": "echoes_spatial_calibration",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "runtime_binding": "none",
+  "purpose": "Editor-only spatial calibration; reference geometry, not a playable campaign map",
+  "reference_document": "Docs/SC2SpatialMetricsReference.md",
+  "reference_snapshot": "SC2 5.0.16.97364 / 7be894538d6eac77a9583acfeb5f721e273beee4",
+  "cell_cm": 200,
+  "cliff_step_cells": 2,
+  "footprints": [
+    {"id": "small", "label": "2x2 reference", "cells": 2},
+    {"id": "medium", "label": "3x3 reference", "cells": 3},
+    {"id": "echoes_production", "label": "4x4 Echoes production", "cells": 4},
+    {"id": "large", "label": "5x5 reference", "cells": 5}
+  ],
+  "units": [
+    {"id": "marine", "label": "Marine", "radius_cells": 0.375, "inner_radius_cells": 0.375},
+    {"id": "zergling", "label": "Zergling", "radius_cells": 0.375, "inner_radius_cells": null},
+    {"id": "marauder", "label": "Marauder", "radius_cells": 0.5625, "inner_radius_cells": 0.375},
+    {"id": "roach", "label": "Roach", "radius_cells": 0.5, "inner_radius_cells": 0.625},
+    {"id": "thor", "label": "Thor", "radius_cells": 1, "inner_radius_cells": 1},
+    {"id": "ultralisk", "label": "Ultralisk", "radius_cells": 1, "inner_radius_cells": 0.75}
+  ],
+  "ramp_run_cells": 5,
+  "ramp_width_cells": [3, 6, 10],
+  "clearance_width_cells": [2, 3, 5],
+  "clearance_agent_radius_cells": 1,
+  "camera": {
+    "sc2_catalog_fov_degrees": 27.8,
+    "fov_axis_verified": false,
+    "unreal_horizontal_fov_hypothesis": 47.4947187214,
+    "aspect_ratio": 1.7777777777777777,
+    "yaw_degrees": -90,
+    "zoom_stops": [
+      {"distance_cells": 34, "pitch_degrees": -56},
+      {"distance_cells": 30, "pitch_degrees": -52},
+      {"distance_cells": 26, "pitch_degrees": -48},
+      {"distance_cells": 22, "pitch_degrees": -44},
+      {"distance_cells": 18, "pitch_degrees": -40}
+    ]
+  },
+  "claim_boundary": "No SC2 runtime parity, campaign passability, unit movement, packaged performance, or owner acceptance is established. Ramp and clearance widths and FOV mapping are blockout proposals."
+}

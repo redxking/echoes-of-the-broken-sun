@@ -259,6 +259,73 @@ def _nearest_two(px: float, py: float, points: list[tuple[float, float]]) -> tup
     return best_index, best, second
 
 
+def _periodic_value_noise(x: float, y: float, seed: int, period_x: int, period_y: int) -> float:
+    """Value noise whose lattice repeats at the supplied integer periods."""
+    ix, iy = int(math.floor(x)), int(math.floor(y))
+    fx, fy = x - ix, y - iy
+    sx = fx * fx * (3.0 - 2.0 * fx)
+    sy = fy * fy * (3.0 - 2.0 * fy)
+    a = _hash2(ix % period_x, iy % period_y, seed)
+    b = _hash2((ix + 1) % period_x, iy % period_y, seed)
+    c = _hash2(ix % period_x, (iy + 1) % period_y, seed)
+    d = _hash2((ix + 1) % period_x, (iy + 1) % period_y, seed)
+    return (a * (1 - sx) + b * sx) * (1 - sy) + (c * (1 - sx) + d * sx) * sy
+
+
+def _periodic_fbm(x: float, y: float, seed: int, period_x: int, period_y: int, octaves: int = 4) -> float:
+    """Tileable fractal noise; each octave preserves the base repeat."""
+    total, amplitude, frequency, norm = 0.0, 1.0, 1, 0.0
+    for octave in range(octaves):
+        total += amplitude * _periodic_value_noise(
+            x * frequency,
+            y * frequency,
+            seed + octave,
+            period_x * frequency,
+            period_y * frequency,
+        )
+        norm += amplitude
+        amplitude *= 0.5
+        frequency *= 2
+    return total / norm
+
+
+def ceramic_service() -> dict[str, list[tuple[int, int, int]]]:
+    """Muted service ceramic: one continuous maintained surface with
+    fine aggregate, shallow pits, and traffic-rubbed directional wear.
+
+    This deliberately carries no construction grid or marked panels: the
+    loading-apron mesh supplies its own seams and physical detail.
+    """
+    seed = 1001
+    pits = _scatter(seed + 7, 24)
+    base, height, mre = [], [], []
+    for y in range(SIZE):
+        for x in range(SIZE):
+            u, v = x / SIZE, y / SIZE
+            aggregate = _periodic_fbm(u * 7, v * 7, seed, 7, 7, 4) - 0.5
+            fine_aggregate = _periodic_fbm(u * 42, v * 42, seed + 5, 42, 42, 3) - 0.5
+            # Fine aligned rubbing left by repeated wheeled service traffic.
+            # It is irregular and deliberately low contrast, never a stripe grid.
+            rub = _periodic_fbm(u * 5, v * 96, seed + 11, 5, 96, 3) - 0.5
+            rub_gate = _periodic_fbm(u * 3, v * 3, seed + 17, 3, 3, 3)
+            rub *= 0.55 + rub_gate * 0.45
+            _index, distance, _second = _nearest_two(x, y, pits)
+            pit = max(0.0, 1.0 - distance / 5.5)
+            pit = pit * pit * (3.0 - 2.0 * pit)
+
+            body = 0.625 + aggregate * 0.050 + fine_aggregate * 0.022 + rub * 0.018
+            body -= pit * 0.040
+            base.append((
+                _clamp8(body + 0.010),
+                _clamp8(body + 0.002),
+                _clamp8(body - 0.012),
+            ))
+            height.append(aggregate * 0.050 + fine_aggregate * 0.018 + rub * 0.010 - pit * 0.075)
+            roughness = 0.775 + aggregate * 0.045 + fine_aggregate * 0.025 - rub * 0.050 + pit * 0.045
+            mre.append((_clamp8(0.0), _clamp8(max(0.70, min(0.85, roughness))), 0))
+    return {"BaseColor": base, "MRE": mre, "Normal": height_to_normal(height, 0.65)}
+
+
 def compact_metal() -> dict[str, list[tuple[int, int, int]]]:
     """Compact machined metal: brushed grain, milled panel seams, and a
     painted status band whose edges have chipped back to bare metal.
@@ -429,6 +496,7 @@ def verge_scored() -> dict[str, list[tuple[int, int, int]]]:
 
 FAMILIES = {
     "T_EchoesCeramicCivic": ceramic_civic,
+    "T_EchoesServiceCeramic": ceramic_service,
     "T_EchoesVitrifiedGlass": vitrified_glass,
     "T_EchoesCausewayAsh": causeway_ash,
     "T_EchoesGlassScarGround": glass_scar_ground,

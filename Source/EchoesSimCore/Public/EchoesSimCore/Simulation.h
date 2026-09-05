@@ -34,11 +34,10 @@ inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
 inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
 inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
-// Schema 25 adds per-player remembered terrain and remembered permanent
-// objects. The replay envelope shape is unchanged, so kReplayVersion does not
-// move with it: a schema-24 replay still carries a loadable schema-24
-// baseline snapshot.
-inline constexpr std::uint32_t kSnapshotVersion = 25;
+// Schema 27 appends Future Well capture and protocol lifecycle state after
+// schema 26's work and projectile records. The replay envelope shape is
+// unchanged, so kReplayVersion does not move with it.
+inline constexpr std::uint32_t kSnapshotVersion = 27;
 inline constexpr std::uint32_t kReplayVersion = 24;
 
 // Remembered permanent objects are bounded so a long match cannot grow an
@@ -407,13 +406,13 @@ struct EntityArchetypeRules final {
 
 /** Deterministic Future Well economy and active-duration rules. */
 struct FutureWellRules final {
-    std::int32_t harvestImmediateDawn = 300;
-    std::int32_t preserveDawnPerInterval = 3;
-    Tick preserveIntervalTicks = 10;
-    std::int32_t preserveVisionTiles = 8;
-    std::int32_t reshapeDawnCost = 100;
-    Tick reshapeDurationMinimumTicks = 40;
-    Tick reshapeDurationMaximumTicks = 60;
+    std::int32_t harvestImmediateDawn = 500;
+    std::int32_t preserveDawnPerInterval = 15;
+    Tick preserveIntervalTicks = 300;
+    std::int32_t preserveVisionTiles = 14;
+    std::int32_t reshapeDawnCost = 120;
+    Tick reshapeDurationMinimumTicks = 1800;
+    Tick reshapeDurationMaximumTicks = 1800;
 
     friend bool operator==(const FutureWellRules&,
                            const FutureWellRules&) = default;
@@ -589,6 +588,14 @@ struct Order final {
     friend bool operator==(const Order&, const Order&) = default;
 };
 
+enum class HarvestState : std::uint8_t {
+    Idle = 0,
+    MovingToResource = 1,
+    Harvesting = 2,
+    ReturningHome = 3,
+    Delivering = 4,
+};
+
 struct Entity final {
     EntityId id = 0;
     PlayerId owner = kNeutralPlayer;
@@ -613,6 +620,11 @@ struct Entity final {
     std::int32_t constructionSubProgress = 0;
     Tick harvestTicks = 0;
     EntityId assignedResourceNode = 0;
+    HarvestState harvestState = HarvestState::Idle;
+    // Harvesting with no slot is the visible waiting substate. Arrival tick
+    // plus one, then entity ID, orders the queue without a wall-clock source.
+    Tick harvestQueueTicket = 0;
+    bool harvestSlotHeld = false;
     Order order{};
     static constexpr std::size_t kMaxQueuedOrders = 16;
     std::vector<Order> orderQueue{};
@@ -621,6 +633,14 @@ struct Entity final {
     // and lets downstream scenarios measure an intact activation interval
     // without relying on presentation or subsystem-only timers.
     Tick wellActivationTick = 0;
+    // Future Well lifecycle authority. A neutral capture player means that
+    // there is no active capture meter. Harvest becomes terminal only when
+    // its protocol timer reaches zero; the entity remains as campaign-history
+    // evidence but no longer has collision, vision, combat, or interaction.
+    PlayerId wellCapturePlayer = kNeutralPlayer;
+    std::uint16_t wellCaptureProgress = 0;
+    FutureWellChoice wellPendingChoice = FutureWellChoice::Dormant;
+    Tick wellProtocolTicks = 0;
     Tick reshapeUntilTick = 0;
     std::uint8_t reshapeVariant = 0;
     EntityType productionType = EntityType::Worker;
@@ -650,6 +670,16 @@ struct Entity final {
     Tick choirCoherenceNextChargeTick = 0;
 
     friend bool operator==(const Entity&, const Entity&) = default;
+};
+
+/** Public-only Harvest telegraph authority for HUD and map-ping presentation. */
+struct FutureWellTelegraph final {
+    EntityId wellId = 0;
+    Vec2 position{};
+    Tick remainingTicks = 0;
+
+    friend bool operator==(const FutureWellTelegraph&,
+                           const FutureWellTelegraph&) = default;
 };
 
 struct Command final {
@@ -846,6 +876,11 @@ public:
     EntityId SpawnResourceNode(Vec2 position, std::int32_t amount);
     EntityId SpawnFutureWell(Vec2 position);
     [[nodiscard]] const Entity* FindEntity(EntityId id) const;
+    [[nodiscard]] bool IsCollapsedFutureWell(const Entity& entity) const;
+    [[nodiscard]] bool IsOperationalFutureWell(const Entity& entity) const;
+    [[nodiscard]] bool IsFutureWellContested(const Entity& entity) const;
+    [[nodiscard]] std::vector<FutureWellTelegraph>
+    PublicFutureWellTelegraphs() const;
 
     bool SetTerrainTile(std::int32_t tileX, std::int32_t tileY, Terrain terrain);
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
@@ -1101,6 +1136,13 @@ private:
         CommandResolutionOutcome outcome);
     void PruneCommandResolutionReceipts();
     void ProcessEntityOrders();
+    [[nodiscard]] bool HasLineOfFire(const Entity& attacker, const Entity& target) const;
+    void TryFireAt(Entity& attacker, const Entity& target,
+                   std::vector<PendingDamage>& pendingDamage);
+    void BeginGather(Entity& worker, EntityId node);
+    void ClearHarvestState(Entity& worker);
+    void ReconcileHarvestReservations();
+    void ReturnHarvestCargo(Entity& worker);
     void ProcessGather(Entity& worker);
     void ProcessDeliver(Entity& worker);
     void ProcessBuild(Entity& worker);
@@ -1122,6 +1164,11 @@ private:
         Entity& aegis,
         std::vector<PendingDamage>& pendingDamage);
     void ProcessFutureWell(Entity& worker);
+    void ProcessFutureWellLifecycles();
+    void CompleteFutureWellCapture(Entity& well);
+    void CollapseFutureWell(Entity& well);
+    [[nodiscard]] bool IsFutureWellZoneMember(const Entity& well,
+                                              const Entity& entity) const;
     void ProcessProduction();
     void ProcessResearch();
     void ApplyPreserveIncome();

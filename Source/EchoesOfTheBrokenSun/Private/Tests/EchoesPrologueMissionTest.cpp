@@ -7,6 +7,8 @@
 #include "EchoesPlayerController.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesNarrativeSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -202,6 +204,43 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
         ReshapeDawnCost > 0 &&
             StartingDawn == FMath::Max(30, ReshapeDawnCost));
 
+    // Snapshot projection only: mutate the documented test seam without
+    // ticking, and restore before the existing ordinary-command journey.
+    auto* SnapshotWell = Simulation ? Simulation->MutableEntityForTesting(WellId) : nullptr;
+    if (!TestNotNull(TEXT("objective projection Well fixture"), SnapshotWell)) return false;
+    const auto SavedWellOwner = SnapshotWell->owner;
+    const auto SavedWellChoice = SnapshotWell->wellChoice;
+    const auto SavedWellUntil = SnapshotWell->reshapeUntilTick;
+    const auto SnapshotTick = Simulation->CurrentTick();
+    TestFalse(TEXT("initial Well is outside local visibility"),
+        Simulation->IsEntityVisibleTo(UEchoesSimulationSubsystem::LocalPlayerId, WellId));
+    SnapshotWell->owner = UEchoesSimulationSubsystem::OpponentPlayerId;
+    SnapshotWell->wellChoice = echoes::sim::FutureWellChoice::Reshape;
+    SnapshotWell->reshapeUntilTick = SnapshotTick + 200;
+    const FEchoesObjectiveSnapshot HiddenWell = Bridge->GetLocalObjectiveSnapshot();
+    TestTrue(TEXT("hidden enemy Well does not disclose protocol, control or deadline"),
+        !HiddenWell.bFutureWellVisible && !HiddenWell.bPrologueWellEnemyControlled &&
+        !HiddenWell.bPrologueReshapeExpired && HiddenWell.PrologueReshapeRemainingTicks == 0 &&
+        HiddenWell.PrologueWellChoice == echoes::sim::FutureWellChoice::Dormant);
+    SnapshotWell->owner = UEchoesSimulationSubsystem::LocalPlayerId;
+    SnapshotWell->reshapeUntilTick = SnapshotTick + 201;
+    const FEchoesObjectiveSnapshot ActiveWell = Bridge->GetLocalObjectiveSnapshot();
+    TestTrue(TEXT("owned active Reshape publishes exact remaining interval"),
+        ActiveWell.PrologueWellChoice == echoes::sim::FutureWellChoice::Reshape &&
+        !ActiveWell.bPrologueWellEnemyControlled && !ActiveWell.bPrologueReshapeExpired &&
+        ActiveWell.PrologueReshapeRemainingTicks == 201);
+    SnapshotWell->reshapeUntilTick = SnapshotTick + 200;
+    TestEqual(TEXT("ten-second warning boundary is200 authoritative ticks"),
+        Bridge->GetLocalObjectiveSnapshot().PrologueReshapeRemainingTicks, static_cast<uint64>(200));
+    SnapshotWell->reshapeUntilTick = 0;
+    const FEchoesObjectiveSnapshot ExpiredWell = Bridge->GetLocalObjectiveSnapshot();
+    TestTrue(TEXT("expired Reshape retains identity without a live countdown"),
+        ExpiredWell.PrologueWellChoice == echoes::sim::FutureWellChoice::Reshape &&
+        ExpiredWell.bPrologueReshapeExpired && ExpiredWell.PrologueReshapeRemainingTicks == 0);
+    SnapshotWell->owner = SavedWellOwner;
+    SnapshotWell->wellChoice = SavedWellChoice;
+    SnapshotWell->reshapeUntilTick = SavedWellUntil;
+
     FString Feedback;
     const echoes::sim::Entity* Well = Bridge->FindEntity(WellId);
     TestFalse(
@@ -275,6 +314,22 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
                         WellId);
             },
             900));
+    {
+        auto* VisibleWell = Simulation->MutableEntityForTesting(WellId);
+        const auto PriorOwner = VisibleWell->owner;
+        const auto PriorChoice = VisibleWell->wellChoice;
+        const auto PriorUntil = VisibleWell->reshapeUntilTick;
+        VisibleWell->owner = UEchoesSimulationSubsystem::OpponentPlayerId;
+        VisibleWell->wellChoice = echoes::sim::FutureWellChoice::Reshape;
+        VisibleWell->reshapeUntilTick = Simulation->CurrentTick() + 200;
+        const FEchoesObjectiveSnapshot VisibleEnemy = Bridge->GetLocalObjectiveSnapshot();
+        TestTrue(TEXT("legitimate visibility admits enemy Well control and deadline"),
+            VisibleEnemy.bFutureWellVisible && VisibleEnemy.bPrologueWellEnemyControlled &&
+            !VisibleEnemy.bPrologueReshapeExpired && VisibleEnemy.PrologueReshapeRemainingTicks == 200);
+        VisibleWell->owner = PriorOwner;
+        VisibleWell->wellChoice = PriorChoice;
+        VisibleWell->reshapeUntilTick = PriorUntil;
+    }
     Feedback.Reset();
     TestTrue(
         TEXT("Ordinary Soldier production queues before the Well decision"),
@@ -345,6 +400,10 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
             RejectedWell->wellChoice ==
                 echoes::sim::FutureWellChoice::Dormant &&
             RejectedWell->wellActivationTick == 0);
+    UEchoesNarrativeSubsystem* Narrative = World->GetGameInstance()
+        ? World->GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr;
+    if (!TestNotNull(TEXT("Live mission owns its narrative subsystem"), Narrative)) return false;
+    Narrative->ClearSubtitleQueue();
     Feedback.Reset();
     TestTrue(
         TEXT("The free Preserve protocol remains available after rejection"),
@@ -366,6 +425,25 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
             900));
     const echoes::sim::Entity* PreservedWell =
         Bridge->FindEntity(WellId);
+    TestEqual(TEXT("Real Preserve commit dispatches only its trio and common withdrawal"),
+        Narrative->GetQueuedLineCountForTest(), 6);
+    TArray<FEchoesNarrativeLine> ExpectedLines = Narrative->GetLinesForSignal(
+        EEchoesOperationMode::CampaignPrologue, TEXT("phase_entered:Withdraw:Preserve"));
+    ExpectedLines.Append(Narrative->GetLinesForSignal(
+        EEchoesOperationMode::CampaignPrologue, TEXT("phase_entered:Withdraw")));
+    double SubtitleTime = World->GetRealTimeSeconds();
+    for (const FEchoesNarrativeLine& Expected : ExpectedLines)
+    {
+        FString Speaker, Text;
+        TestTrue(TEXT("Committed branch line reaches the live subtitle lane"),
+            Narrative->GetActiveSubtitle(SubtitleTime, Speaker, Text));
+        TestEqual(TEXT("Actual dispatch preserves chosen branch text order"), Text, Expected.Text);
+        TestEqual(TEXT("Actual dispatch preserves the authored speaker"), Speaker, Expected.Speaker);
+        SubtitleTime += UEchoesNarrativeSubsystem::SubtitleDurationSeconds(Expected.Text) + 0.01;
+    }
+    FString FinishedSpeaker, FinishedText;
+    TestFalse(TEXT("No unchosen branch follows common withdrawal"),
+        Narrative->GetActiveSubtitle(SubtitleTime, FinishedSpeaker, FinishedText));
     const echoes::sim::Simulation* PostPreserveSimulation =
         Bridge->GetSimulation();
     TestTrue(

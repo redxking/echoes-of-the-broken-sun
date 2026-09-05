@@ -3,8 +3,10 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesCampaignLedgerProbe.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignTerrainBinding.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -534,10 +536,17 @@ bool FEchoesChoirAtLumeReachMissionTest::RunTest(const FString& Parameters)
             }
         }
     }
-    TestEqual(
-        TEXT("The dedicated Preserve Lume Reach topology is exact"),
-        BlockedTiles,
-        223);
+    const auto* TerrainFounding = Bridge->GetCampaignProgress().FindDecision(
+        EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    if (!TestNotNull(TEXT("Terrain binding has the founding record"), TerrainFounding)) return false;
+    const auto TerrainContract = echoes::world::CheckCampaignTerrain(10, TerrainFounding->WellChoice);
+    TestTrue(TEXT("Dedicated mission terrain contract validates"), TerrainContract.ok);
+    TestEqual(TEXT("Dedicated mission census matches its source"), BlockedTiles, TerrainContract.blocked_cells);
+    for (int32 Y = 0; Y < 64; ++Y)
+        for (int32 X = 0; X < 64; ++X)
+            TestEqual(TEXT("Mission terrain matches every source cell"),
+                Bridge->GetSimulation()->TerrainAt(X,Y) != echoes::sim::Terrain::Blocked,
+                echoes::world::IsCampaignTerrainPassable(10, TerrainFounding->WellChoice, X,Y));
     TestTrue(
         TEXT("Mission ten begins at public contact"),
         Bridge->GetChoirAtLumeReachPhase() ==
@@ -594,6 +603,12 @@ bool FEchoesChoirAtLumeReachMissionTest::RunTest(const FString& Parameters)
         TestFalse(
             TEXT("A renamed Preserve checkpoint cannot load into a Harvest ledger"),
             AlternateBridge->QuickLoadScenario(Feedback));
+        TestTrue(TEXT("The foreign founding doctrine is refused by the map envelope"),
+                 Feedback.Contains(TEXT("CAMPAIGN_MAP_STALE")));
+        if (!TestTrue(TEXT("A current-map envelope can carry the deliberate foreign-ledger probe"),
+                      EchoesCampaignTest::BindForeignLedgerToCurrentMap(*AlternateBridge))) return false;
+        TestFalse(TEXT("The inner ledger binding independently refuses the foreign payload"),
+                  AlternateBridge->QuickLoadScenario(Feedback));
         TestTrue(
             TEXT("Cross-ledger loading reports the exact ledger-binding rejection"),
             Feedback.Contains(TEXT("ledger binding does not match")));

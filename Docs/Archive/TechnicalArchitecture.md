@@ -2,15 +2,23 @@
 title: Echoes of the Broken Sun Technical Architecture
 author: Angelis Pseftis
 creator: Angelis Pseftis
-status: Authoritative
+status: Architecture reference subordinate to master requirements
 created: 2026-08-28
-updated: 2026-08-30
+updated: 2026-09-04
 workflow: Edited in place as the single authoritative technical architecture document.
 ---
 
 # Technical Architecture
 
-This document defines the implementation architecture for *Echoes of the Broken Sun*. It is the single authoritative technical-architecture file and is edited in place. The [Development Bible](DevelopmentBible.md) owns game and creative requirements; the [Project Ledger](ProjectLedger.md) owns milestone status, measured results, risks, budgets, and acceptance evidence. A requirement in this document is not evidence that the capability exists.
+This is the single architecture reference, edited in place under the [authority map](../README.md).
+[Requirements.md](../Requirements.md) owns normative behavior and budgets;
+[RequirementsState.md](../RequirementsState.md) owns lifecycle, decisions, and owner acceptance.
+The [Development Bible](DevelopmentBible.md) owns creative canon. [ProjectLedger.md](ProjectLedger.md)
+retains historical run evidence, not current completion authority.
+
+Versioned implementation and evidence passages below are dated snapshots. Verify current source, schema,
+configuration, and retained evidence before using them as an implementation plan or capability claim.
+Follow [AGENTS.md](../../AGENTS.md); this reference cannot authorize dormant multiplayer or new scope.
 
 ## Architectural outcome
 

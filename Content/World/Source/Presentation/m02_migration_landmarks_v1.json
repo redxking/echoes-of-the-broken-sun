@@ -1,0 +1,424 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M02",
+  "map_id": "shivergrass-migration-basin",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-002",
+    "map_concepts_reference": "MapConcepts#M02"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m02_shivergrass-migration-basin_v1.json",
+  "terrain_source_sha256": "5024db41cd825e2e948a84860b9f58f2a71690a650929cafa80a24fef6458f6c",
+  "records": [
+    {
+      "id": "rootingshoulder-24-10",
+      "kind": "RootingShoulder",
+      "x": 24,
+      "y": 10,
+      "yaw": 90
+    },
+    {
+      "id": "rootingshoulder-29-09",
+      "kind": "RootingShoulder",
+      "x": 29,
+      "y": 9,
+      "yaw": 270
+    },
+    {
+      "id": "rootingshoulder-02-29",
+      "kind": "RootingShoulder",
+      "x": 2,
+      "y": 29,
+      "yaw": 270
+    },
+    {
+      "id": "rootingshoulder-56-31",
+      "kind": "RootingShoulder",
+      "x": 56,
+      "y": 31,
+      "yaw": 90
+    },
+    {
+      "id": "rootingshoulder-36-31",
+      "kind": "RootingShoulder",
+      "x": 36,
+      "y": 31,
+      "yaw": 180
+    },
+    {
+      "id": "rootingshoulder-37-33",
+      "kind": "RootingShoulder",
+      "x": 37,
+      "y": 33,
+      "yaw": 0
+    },
+    {
+      "id": "rootingshoulder-40-51",
+      "kind": "RootingShoulder",
+      "x": 40,
+      "y": 51,
+      "yaw": 180
+    },
+    {
+      "id": "passagepaving-16-18",
+      "kind": "PassagePaving",
+      "x": 16,
+      "y": 18,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-17-21",
+      "kind": "PassagePaving",
+      "x": 17,
+      "y": 21,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-18-24",
+      "kind": "PassagePaving",
+      "x": 18,
+      "y": 24,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-19-27",
+      "kind": "PassagePaving",
+      "x": 19,
+      "y": 27,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-20-29",
+      "kind": "PassagePaving",
+      "x": 20,
+      "y": 29,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-20-34",
+      "kind": "PassagePaving",
+      "x": 20,
+      "y": 34,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-20-37",
+      "kind": "PassagePaving",
+      "x": 20,
+      "y": 37,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-20-39",
+      "kind": "PassagePaving",
+      "x": 20,
+      "y": 39,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-20-41",
+      "kind": "PassagePaving",
+      "x": 20,
+      "y": 41,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-21-42",
+      "kind": "PassagePaving",
+      "x": 21,
+      "y": 42,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-22-43",
+      "kind": "PassagePaving",
+      "x": 22,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-23-43",
+      "kind": "PassagePaving",
+      "x": 23,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-23-44",
+      "kind": "PassagePaving",
+      "x": 23,
+      "y": 44,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-24-44",
+      "kind": "PassagePaving",
+      "x": 24,
+      "y": 44,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-31-35",
+      "kind": "PassagePaving",
+      "x": 31,
+      "y": 35,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-33-37",
+      "kind": "PassagePaving",
+      "x": 33,
+      "y": 37,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-35-39",
+      "kind": "PassagePaving",
+      "x": 35,
+      "y": 39,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-35-40",
+      "kind": "PassagePaving",
+      "x": 35,
+      "y": 40,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-36-40",
+      "kind": "PassagePaving",
+      "x": 36,
+      "y": 40,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-37-42",
+      "kind": "PassagePaving",
+      "x": 37,
+      "y": 42,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-38-42",
+      "kind": "PassagePaving",
+      "x": 38,
+      "y": 42,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-38-43",
+      "kind": "PassagePaving",
+      "x": 38,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-39-43",
+      "kind": "PassagePaving",
+      "x": 39,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-39-35",
+      "kind": "PassagePaving",
+      "x": 39,
+      "y": 35,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-40-37",
+      "kind": "PassagePaving",
+      "x": 40,
+      "y": 37,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-40-40",
+      "kind": "PassagePaving",
+      "x": 40,
+      "y": 40,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-40-42",
+      "kind": "PassagePaving",
+      "x": 40,
+      "y": 42,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-41-42",
+      "kind": "PassagePaving",
+      "x": 41,
+      "y": 42,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-42-43",
+      "kind": "PassagePaving",
+      "x": 42,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-43-43",
+      "kind": "PassagePaving",
+      "x": 43,
+      "y": 43,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-43-44",
+      "kind": "PassagePaving",
+      "x": 43,
+      "y": 44,
+      "yaw": 0
+    },
+    {
+      "id": "passagepaving-44-44",
+      "kind": "PassagePaving",
+      "x": 44,
+      "y": 44,
+      "yaw": 0
+    },
+    {
+      "id": "observationsill-26-14",
+      "kind": "ObservationSill",
+      "x": 26,
+      "y": 14,
+      "yaw": 0,
+      "footprint": {
+        "x0": 25,
+        "x1": 27,
+        "y0": 14,
+        "y1": 14
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-27-10",
+      "kind": "ObservationSill",
+      "x": 27,
+      "y": 10,
+      "yaw": 0,
+      "footprint": {
+        "x0": 26,
+        "x1": 28,
+        "y0": 10,
+        "y1": 10
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-02-23",
+      "kind": "ObservationSill",
+      "x": 2,
+      "y": 23,
+      "yaw": 90,
+      "footprint": {
+        "x0": 2,
+        "x1": 2,
+        "y0": 22,
+        "y1": 24
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-02-40",
+      "kind": "ObservationSill",
+      "x": 2,
+      "y": 40,
+      "yaw": 90,
+      "footprint": {
+        "x0": 2,
+        "x1": 2,
+        "y0": 39,
+        "y1": 41
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-56-23",
+      "kind": "ObservationSill",
+      "x": 56,
+      "y": 23,
+      "yaw": 270,
+      "footprint": {
+        "x0": 56,
+        "x1": 56,
+        "y0": 22,
+        "y1": 24
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-56-40",
+      "kind": "ObservationSill",
+      "x": 56,
+      "y": 40,
+      "yaw": 270,
+      "footprint": {
+        "x0": 56,
+        "x1": 56,
+        "y0": 39,
+        "y1": 41
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-38-49",
+      "kind": "ObservationSill",
+      "x": 38,
+      "y": 49,
+      "yaw": 180,
+      "footprint": {
+        "x0": 37,
+        "x1": 39,
+        "y0": 49,
+        "y1": 49
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    },
+    {
+      "id": "observationsill-40-54",
+      "kind": "ObservationSill",
+      "x": 40,
+      "y": 54,
+      "yaw": 180,
+      "footprint": {
+        "x0": 39,
+        "x1": 41,
+        "y0": 54,
+        "y1": 54
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    }
+  ]
+}

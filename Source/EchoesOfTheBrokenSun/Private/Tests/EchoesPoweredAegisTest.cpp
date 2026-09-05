@@ -8,6 +8,9 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Tests/AutomationCommon.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -97,6 +100,31 @@ bool FEchoesPoweredAegisTest::RunTest(const FString& Parameters)
             TestTrue(
                 TEXT("Powered Aegis state has a non-color geometric field"),
                 View->IsAegisPowerFieldVisible());
+            TArray<UStaticMeshComponent*> Components;
+            View->GetComponents(Components);
+            bool bFoundBoundary = false;
+            for (auto* Component : Components)
+            {
+                if (Component->GetName() != TEXT("AegisPowerField")) continue;
+                bFoundBoundary = true;
+                const UStaticMesh* Mesh = Component->GetStaticMesh();
+                if (!TestNotNull(TEXT("power boundary has its authored mesh"), Mesh)) continue;
+                TestEqual(TEXT("power boundary uses a dedicated range ring"), Mesh->GetName(), FString(TEXT("SM_VFX_AbilityRangeRing")));
+                const float ExpectedRadius = static_cast<float>(Simulation->Config().rules.poweredAegis.connectionRadiusRaw) /
+                    echoes::sim::kFixedScale * UEchoesSimulationSubsystem::TileWorldSize;
+                const float DrawnRadius = Mesh->GetBoundingBox().Max.X * Component->GetRelativeScale3D().X;
+                TestTrue(TEXT("drawn boundary matches authoritative radius within one centimetre"), FMath::Abs(DrawnRadius - ExpectedRadius) < 1.0f);
+                TestTrue(TEXT("boundary has no collision"), Component->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
+                TestFalse(TEXT("boundary does not affect navigation"), Component->CanEverAffectNavigation());
+                auto* Material = Cast<UMaterialInstanceDynamic>(Component->GetMaterial(0));
+                TestTrue(TEXT("range boundary cannot acquire distracting specular lighting"),
+                    Material && Material->GetShadingModels().HasShadingModel(MSM_Unlit));
+                float Emission = -1;
+                TestTrue(TEXT("boundary has explicit restrained steady emission"), Material &&
+                    Material->GetScalarParameterValue(FMaterialParameterInfo(TEXT("EmissiveStrength")), Emission) &&
+                    Emission >= 0 && Emission <= .35f);
+            }
+            TestTrue(TEXT("power boundary component inspected"), bFoundBoundary);
             echoes::sim::Entity Unpowered = *ScenarioAegis;
             Unpowered.aegisPowered = false;
             View->ApplyAuthoritativeState(Unpowered, true);

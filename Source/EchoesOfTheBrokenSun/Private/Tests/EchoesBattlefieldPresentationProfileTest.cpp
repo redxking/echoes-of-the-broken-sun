@@ -378,16 +378,15 @@ bool FEchoesBattlefieldPresentationProfileTest::RunTest(
                 PresentationProbes[Index]->IsHidden(),
                 Index != PresetIndex);
         }
-        // The collision floor stops rendering where the terrain view draws the
-        // Glass Scar chasm (gate 50); everywhere else it stays visible. Its
-        // collision is untouched either way.
+        // Every site now has authored ground. The Engine cube remains hidden
+        // while its pointer-trace collision stays unchanged.
         const AEchoesTerrainView* ProfileTerrain =
             Bridge != nullptr ? Bridge->GetTerrainView() : nullptr;
         const bool bFloorSurfaceReplaced =
-            ProfileTerrain != nullptr && ProfileTerrain->HasChasmComposition();
+            ProfileTerrain != nullptr;
         bPassed &= TestEqual(
             FString::Printf(
-                TEXT("%s: shared floor hides only where the terrain view draws the chasm"),
+                TEXT("%s: shared Engine floor hides under authored site ground"),
                 Label),
             SharedFloor->IsHidden(),
             bFloorSurfaceReplaced);

@@ -58,6 +58,18 @@ bool FEchoesCommandDeckModelTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Mixed production selection exposes worker"), Combined.Contains(TEXT("[Q] WORKER")));
     TestTrue(TEXT("Mixed production selection exposes technology"), Combined.Contains(TEXT("[F2] TECHNOLOGY")));
 
+    Profile.bUseM01RoleNames = true;
+    const auto M01Entries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
+    TestEqual(TEXT("M01 retains five compatible production/technology actions"), M01Entries.Num(), 5);
+    TestEqual(TEXT("M01 names produced worker by role"), FString(M01Entries[0].Label), FString(TEXT("SURVEYOR")));
+    TestEqual(TEXT("M01 retains worker production command"), M01Entries[0].Action, EEchoesCommandDeckAction::ProduceWorker);
+    TestEqual(TEXT("M01 retains worker hotkey"), FString(M01Entries[0].Hotkey), FString(TEXT("Q")));
+    TestTrue(TEXT("M01 summary names the Bulwark Team"), FEchoesCommandDeckModel::BuildPrimaryActions(Profile).Contains(TEXT("BULWARK TEAM")));
+    TestEqual(TEXT("Production progress uses same Surveyor identity"), FString(FEchoesCommandDeckModel::GetM01RoleName(echoes::sim::EntityType::Worker)), FString(TEXT("Surveyor")));
+    Profile.WorkerCount = 1;
+    TestTrue(TEXT("M01 worker advertises Array Foundry construction"), FEchoesCommandDeckModel::BuildPrimaryActions(Profile).Contains(TEXT("[B] ARRAY FOUNDRY")));
+    Profile.bUseM01RoleNames = false;
+
     Profile.WorkerCount = 1;
     TestTrue(
         TEXT("Mobile worker context takes precedence over selected structures"),

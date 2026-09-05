@@ -23,6 +23,8 @@
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSkirmishOverlayLayout.h"
 #include "EchoesTitleOverlayLayout.h"
+#include "EchoesCampaignMapLayout.h"
+#include "EchoesCampaignRewards.h"
 #include "EchoesTechnologyPanelLayout.h"
 #include "EchoesTerrainView.h"
 #include "Components/StaticMeshComponent.h"
@@ -735,6 +737,54 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
     if (HandleOnlineEndpointKey(Params))
     {
         return true;
+    }
+    if (Params.Key == EKeys::M && Params.Event == IE_Pressed)
+    {
+        if (bCampaignOperationsMapVisible)
+        {
+            CloseCampaignOperationsMap();
+            return true;
+        }
+        else if (bTitleScreenVisible || (!IsModalOverlayVisible() && !bMatchResultVisible))
+        {
+            OpenCampaignOperationsMap();
+            return true;
+        }
+    }
+    if (bCampaignOperationsMapVisible &&
+        (Params.Event == IE_Pressed || Params.Event == IE_Repeat))
+    {
+        if (Params.Key == EKeys::Escape)
+        {
+            CloseCampaignOperationsMap();
+            return true;
+        }
+        if (Params.Key == EKeys::Enter || Params.Key == EKeys::SpaceBar)
+        {
+            DeploySelectedCampaignOperation();
+            return true;
+        }
+        if (Params.Key == EKeys::Left || Params.Key == EKeys::Up)
+        {
+            SelectPreviousCampaignMapNode();
+            return true;
+        }
+        if (Params.Key == EKeys::Right || Params.Key == EKeys::Down)
+        {
+            SelectNextCampaignMapNode();
+            return true;
+        }
+        static const FKey DirectSelectKeys[] = {
+            EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five,
+            EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
+        for (int32 Index = 0; Index < 10; ++Index)
+        {
+            if (Params.Key == DirectSelectKeys[Index])
+            {
+                SetSelectedCampaignMapNodeIndex(Index);
+                return true;
+            }
+        }
     }
     return Super::InputKey(Params);
 }
@@ -4594,8 +4644,12 @@ void AEchoesPlayerController::FinishNetworkClientSmoke()
 void AEchoesPlayerController::NotifyRuntimeReady()
 {
     bRuntimeStateKnown = true;
+    const UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
     SetStatusMessage(
-        FString::Printf(
+        Bridge != nullptr && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+            ? FString(TEXT("Select a unit, then right-click a destination or target."))
+            : FString::Printf(
             TEXT("Runtime prototype ready. Select owned %s units, then right-click a destination or target."),
             *GetLocalFactionLabel()),
         7.0f);
@@ -5490,7 +5544,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
         EEchoesOperationMode::CampaignTheBrokenSun;
     SetStatusMessage(
         bPrologue
-            ? TEXT("WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys Mara Vey.")
+            ? NSLOCTEXT("EchoesM01", "BriefStatus", "WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys the Meridian force.").ToString()
         : bSevenAccounts
             ? TEXT("SEVEN ACCOUNTS OF RAIN — migrate the Waystone, then bring Oruun to the inherited account. Enter deploys.")
         : bCityReserve
@@ -5615,7 +5669,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     SetIgnoreLookInput(false);
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
     {
-        SetStatusMessage(TEXT("DEPLOYED — select Mara Vey's scout carrier and recover the archive at tile 22,18."), 8.0f);
+        SetStatusMessage(NSLOCTEXT("EchoesM01", "DeploymentStatus", "DEPLOYED — select the archive carrier and recover the archive at tile 22,18.").ToString(), 8.0f);
     }
     else if (Bridge->GetOperationMode() ==
              EEchoesOperationMode::CampaignSevenAccounts)
@@ -6210,6 +6264,7 @@ void AEchoesPlayerController::ContinueCampaign()
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
     CampaignRestoreConfirmationExpiresAt = 0.0;
+
     const FEchoesCampaignJourney Journey = Bridge->GetCampaignJourney();
     if (Journey.State == EEchoesCampaignJourneyState::Complete)
     {
@@ -6272,6 +6327,181 @@ void AEchoesPlayerController::ContinueCampaign()
         FEchoesCampaignJourneyModel::OperationDisplayName(
             Journey.NextOperation),
         bContinuingFromResult ? TEXT("result") : TEXT("title"));
+}
+
+void AEchoesPlayerController::OpenCampaignOperationsMap()
+{
+    bNewCampaignConfirmationArmed = false;
+    NewCampaignConfirmationExpiresAt = 0.0;
+    bCampaignRestoreConfirmationArmed = false;
+    CampaignRestoreConfirmationExpiresAt = 0.0;
+    bTitleScreenVisible = false;
+    bMissionBriefingVisible = false;
+    bCampaignOperationsMapVisible = true;
+
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge != nullptr)
+    {
+        const int32 Completed = Bridge->GetCampaignProgress().Decisions.Num();
+        SelectedCampaignMapNodeIndex = FMath::Clamp(Completed, 0, 14);
+    }
+    PresentTitleAudio();
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_MAP] open=true selected=%d"),
+        SelectedCampaignMapNodeIndex);
+}
+
+void AEchoesPlayerController::CloseCampaignOperationsMap()
+{
+    bCampaignOperationsMapVisible = false;
+    bTitleScreenVisible = true;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_MAP] close=true return_to_title=true"));
+}
+
+void AEchoesPlayerController::ToggleCampaignOperationsMap()
+{
+    if (bCampaignOperationsMapVisible)
+    {
+        CloseCampaignOperationsMap();
+    }
+    else
+    {
+        OpenCampaignOperationsMap();
+    }
+}
+
+void AEchoesPlayerController::SetSelectedCampaignMapNodeIndex(int32 Index)
+{
+    SelectedCampaignMapNodeIndex = FMath::Clamp(Index, 0, 14);
+}
+
+void AEchoesPlayerController::SelectNextCampaignMapNode()
+{
+    SetSelectedCampaignMapNodeIndex(SelectedCampaignMapNodeIndex + 1);
+}
+
+void AEchoesPlayerController::SelectPreviousCampaignMapNode()
+{
+    SetSelectedCampaignMapNodeIndex(SelectedCampaignMapNodeIndex - 1);
+}
+
+void AEchoesPlayerController::DeploySelectedCampaignOperation()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !Bridge->IsScenarioReady())
+    {
+        SetStatusMessage(
+            TEXT("[CAMPAIGN_DEPLOY_SIM_NOT_READY] Simulation subsystem is not ready."),
+            10.0f);
+        return;
+    }
+
+    const FEchoesCampaignMapLayout Layout = FEchoesCampaignMapLayout::Build(
+        FVector2D(1920.0f, 1080.0f),
+        1.0f,
+        Bridge->GetCampaignProgress(),
+        SelectedCampaignMapNodeIndex);
+
+    if (!Layout.Nodes.IsValidIndex(SelectedCampaignMapNodeIndex))
+    {
+        return;
+    }
+
+    const FEchoesCampaignMapNode& TargetNode =
+        Layout.Nodes[SelectedCampaignMapNodeIndex];
+    if (TargetNode.State == EEchoesCampaignNodeState::Locked)
+    {
+        SetStatusMessage(
+            TEXT("[OPERATION_LOCKED] This operational sector is locked. Complete preceding sectors first."),
+            10.0f);
+        return;
+    }
+
+    FString Feedback;
+    if (!Bridge->SelectOperationMode(TargetNode.Operation, Feedback))
+    {
+        SetStatusMessage(Feedback, 15.0f);
+        return;
+    }
+
+    bCampaignOperationsMapVisible = false;
+    bTitleScreenVisible = false;
+    SynchronizeBoundCampaignProtocol();
+    ClearSelection();
+    ClearControlGroups();
+    bSelectionButtonDown = false;
+    bControlGroupAssignmentArmed = false;
+    PresentMissionBriefing();
+
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CAMPAIGN_MAP] deploy=true operation=%s node=%d code=%s"),
+        FEchoesCampaignJourneyModel::OperationDisplayName(TargetNode.Operation),
+        SelectedCampaignMapNodeIndex,
+        *TargetNode.MissionCode);
+}
+
+bool AEchoesPlayerController::HandleCampaignOperationsMapPointer(
+    const FVector2D& ScreenPosition,
+    const FVector2D& ViewportSize,
+    float HudScale)
+{
+    if (!bCampaignOperationsMapVisible)
+    {
+        return false;
+    }
+
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const FEchoesCampaignProgress Progress = Bridge != nullptr
+        ? Bridge->GetCampaignProgress()
+        : FEchoesCampaignProgress{};
+
+    const FEchoesCampaignMapLayout Layout = FEchoesCampaignMapLayout::Build(
+        ViewportSize,
+        HudScale,
+        Progress,
+        SelectedCampaignMapNodeIndex);
+
+    const int32 ClickedNode = Layout.HitTestNode(ScreenPosition);
+    if (ClickedNode >= 0)
+    {
+        SetSelectedCampaignMapNodeIndex(ClickedNode);
+        return true;
+    }
+
+    if (Layout.HitTestDeploy(ScreenPosition))
+    {
+        DeploySelectedCampaignOperation();
+        return true;
+    }
+
+    if (Layout.HitTestBack(ScreenPosition))
+    {
+        CloseCampaignOperationsMap();
+        return true;
+    }
+
+    if (Layout.FullBounds.IsInsideOrOn(ScreenPosition))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 bool AEchoesPlayerController::IsNewCampaignConfirmationArmed() const
@@ -6793,6 +7023,10 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     if (IsOnlineFrontDoorVisible())
     {
         ConfirmOnlineFrontDoorAction();
+    }
+    else if (bCampaignOperationsMapVisible)
+    {
+        DeploySelectedCampaignOperation();
     }
     else if (GetNetMode() == NM_Client && bNetworkCompatibilityAccepted &&
         !bNetworkMatchStarted)
@@ -8850,6 +9084,33 @@ void AEchoesPlayerController::SelectionPressed()
     FVector2D ViewportSize = FVector2D::ZeroVector;
     const bool bPointerAvailable =
         ResolvePointerScreenPosition(PointerPosition, &ViewportSize);
+#if WITH_EDITOR
+    // Retained EDT pointer-path diagnostics: distinguishes a native mouse event
+    // from a direct controller fixture and records the actual resolved hit point.
+    if (const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+        Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    {
+        FVector2D SlatePosition = FVector2D::ZeroVector;
+        FVector2D GeometryOrigin = FVector2D::ZeroVector;
+        FVector2D GeometrySize = FVector2D::ZeroVector;
+        float CachedX = 0.0f, CachedY = 0.0f;
+        const bool bCached = GetMousePosition(CachedX, CachedY);
+        if (FSlateApplication::IsInitialized())
+            SlatePosition = FSlateApplication::Get().GetCursorPos();
+        if (const auto* GameViewport = GetWorld()->GetGameViewport())
+            if (const auto Widget = GameViewport->GetGameViewportWidget(); Widget.IsValid())
+            {
+                GeometryOrigin = FVector2D(Widget->GetCachedGeometry().GetAbsolutePosition());
+                GeometrySize = FVector2D(Widget->GetCachedGeometry().GetLocalSize());
+            }
+        UE_LOG(LogEchoes, Display,
+            TEXT("[ECHOES_M01_POINTER_PRESS] resolved=%d point=%.1f,%.1f viewport=%.0f,%.0f title=%d brief=%d pause=%d slate=%.1f,%.1f origin=%.1f,%.1f local=%.1f,%.1f cached=%d:%.1f,%.1f"),
+            bPointerAvailable, PointerPosition.X, PointerPosition.Y, ViewportSize.X, ViewportSize.Y,
+            bTitleScreenVisible, bMissionBriefingVisible, bPauseMenuVisible,
+            SlatePosition.X, SlatePosition.Y, GeometryOrigin.X, GeometryOrigin.Y,
+            GeometrySize.X, GeometrySize.Y, bCached, CachedX, CachedY);
+    }
+#endif
     if (bTechnologyPanelVisible)
     {
         if (bPointerAvailable)
@@ -9337,7 +9598,10 @@ void AEchoesPlayerController::IssueContextOrder(
                 CommandType == echoes::sim::CommandType::Move
                     ? FormationDestinations[Index]
                     : Destination);
-            Intent.wellChoice = FutureWellChoice;
+            Intent.wellChoice = TargetEntity != nullptr &&
+                    TargetEntity->type == echoes::sim::EntityType::FutureWell &&
+                    TargetEntity->wellChoice == echoes::sim::FutureWellChoice::Preserve
+                ? echoes::sim::FutureWellChoice::Preserve : FutureWellChoice;
             Intents.Add(Intent);
         }
         const FString OrderLabel =
@@ -9451,7 +9715,10 @@ void AEchoesPlayerController::IssueContextOrder(
                 ActorId,
                 ActorTargetId,
                 UnitDestination,
-                FutureWellChoice,
+                TargetEntity != nullptr &&
+                    TargetEntity->type == echoes::sim::EntityType::FutureWell &&
+                    TargetEntity->wellChoice == echoes::sim::FutureWellChoice::Preserve
+                        ? echoes::sim::FutureWellChoice::Preserve : FutureWellChoice,
                 Feedback))
         {
             if (bCannotCarry)
@@ -9765,6 +10032,8 @@ void AEchoesPlayerController::PruneSelection()
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    const echoes::sim::Simulation* Simulation =
+        Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
     for (int32 Index = SelectedEntityIds.Num() - 1; Index >= 0; --Index)
     {
         const echoes::sim::net::ScopedEntityState* NetworkEntity =
@@ -9777,8 +10046,9 @@ void AEchoesPlayerController::PruneSelection()
                 : nullptr;
         const bool bValid = GetNetMode() == NM_Client
             ? NetworkEntity != nullptr && NetworkEntity->owner == NetworkSeat
-            : Entity != nullptr &&
-                  Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId;
+            : Entity != nullptr && Simulation != nullptr &&
+                  Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                  !Simulation->IsCollapsedFutureWell(*Entity);
         if (!bValid)
         {
             SelectedEntityIds.RemoveAtSwap(Index, 1, EAllowShrinking::No);
@@ -11521,12 +11791,15 @@ void AEchoesPlayerController::CycleHudScale()
         SetStatusMessage(TEXT("[SETTINGS_UNAVAILABLE] UI scale could not be changed."));
         return;
     }
+    const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    const bool bM01 = Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
     const float CurrentScale = Settings->GetHudScale();
     const float NewScale =
         CurrentScale < 0.99f ? 1.0f
         : CurrentScale < 1.14f ? 1.15f
         : CurrentScale < 1.34f ? 1.35f
-                               : 0.85f;
+        : bM01 && CurrentScale < 1.49f ? 1.50f
+        : bM01 ? 0.80f : 0.85f;
     Settings->SetHudScale(NewScale);
     Settings->SaveSettings();
     SetStatusMessage(FString::Printf(
@@ -11768,6 +12041,9 @@ void AEchoesPlayerController::BuildAtCursor(
             Feedback))
     {
         SetStatusMessage(
+            Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+                ? FString::Printf(TEXT("%s: construction order queued."),
+                    *FString(FEchoesCommandDeckModel::GetM01RoleName(BuildingType)).ToUpper()) :
             BuildingType == echoes::sim::EntityType::Barracks
                 ? TEXT("PRODUCTION STRUCTURE: construction order queued.")
                 : BuildingType == echoes::sim::EntityType::UtilityStructure
@@ -11946,6 +12222,8 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
         SetStatusMessage(
             FString::Printf(
                 TEXT("%s: %d production order%s queued."),
+                Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue
+                    ? *FString(FEchoesCommandDeckModel::GetM01RoleName(UnitType)).ToUpper() :
                 UnitType == echoes::sim::EntityType::Worker
                     ? TEXT("WORKER")
                     : UnitType == echoes::sim::EntityType::HeavyUnit
@@ -12188,7 +12466,9 @@ AEchoesPlayerController::BuildTitleOverlayFacts() const
     }
     Facts.bContinueAvailable =
         Bridge->GetCampaignJourney().State ==
-        EEchoesCampaignJourneyState::Ready;
+            EEchoesCampaignJourneyState::Ready ||
+        Bridge->GetCampaignJourney().State ==
+            EEchoesCampaignJourneyState::Complete;
     Facts.bNewCampaignAvailable =
         !Bridge->GetCampaignProgress().Decisions.IsEmpty();
     Facts.bRestoreAvailable = Bridge->HasRestorableCampaignBackup();
@@ -12207,6 +12487,8 @@ AEchoesPlayerController::BuildCommandDeckProfile() const
     {
         return Profile;
     }
+    Profile.bUseM01RoleNames =
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
     for (const uint32 EntityId : SelectedEntityIds)
     {
         const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
@@ -12361,6 +12643,12 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
             LeaveOnlineMatch();
         }
         return true;
+    }
+
+    if (bCampaignOperationsMapVisible)
+    {
+        return HandleCampaignOperationsMapPointer(
+            ScreenPosition, ViewportSize, HudScale);
     }
 
     if (IsOnlineFrontDoorVisible())

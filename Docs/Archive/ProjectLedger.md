@@ -2,16 +2,23 @@
 title: Echoes of the Broken Sun Project Ledger
 author: Angelis Pseftis
 creator: Angelis Pseftis
-status: Authoritative
+status: Historical evidence register; not current lifecycle authority
 created: 2026-08-28
-updated: 2026-08-31
+updated: 2026-09-04
 ---
 
 # Project Ledger
 
-This is the single authoritative production roadmap, decision log, risk register, acceptance register, performance budget, test record, and known-limitations report. It is edited in place. Evidence entries describe only observed results at the named boundary.
+This file preserves historical run evidence and decisions at their named source/package boundaries.
+[Requirements.md](../Requirements.md) owns criteria and budgets;
+[RequirementsState.md](../RequirementsState.md) is the sole lifecycle, decision, and owner-acceptance record.
+Use [AGENTS.md](../../AGENTS.md) for current session rules and [Docs/README.md](../README.md) for navigation.
 
-## Status at a glance
+Preserve the entries below as history. Their words “current”, “next”, “accepted”, and test counts apply
+to the dated version in that entry. They do not assign the current task or establish current human acceptance.
+Record new requirement outcomes in the state record with retained evidence; do not maintain two status tables.
+
+## Historical status snapshot — 0.93 / August 2026
 
 The 47/47 journey and save-isolation reports cited below are prior evidence from before the sustained case was added. The current local implementation-suite count is the later 48/48 result; its retained report verifies counts and messages but does not itself embed a Git commit, so clean pushed-source package and soak evidence remain separate gates.
 
@@ -652,7 +659,7 @@ A 60 FPS editor view is not equivalent to a packaged native result.
 - A self-contained local Mac Development package exists and has a verified ad-hoc signature seal plus bounded rendered keyboard feedback; no Developer ID signature, notarization, installer, clean-machine build/install/launch, or packaged pointer-driven match test exists.
 - The PKG-014 0.23.1 normal and active-combat scale fixtures clear the local 60 FPS frame-time threshold in exclusive fullscreen. Version 0.90.0 has current-source editor/runtime plus Mission 13 automation, startup, and bounded Metal presentation evidence while retaining earlier networking, campaign, terrain, route, roster, Future-Well, pointer, research, restoration, VFX, destruction, audio, and HUD evidence at their recorded limits. The Mission 13 Metal log has no project warning/error, fatal, assertion, or failed-boot marker, but it retains 23 nonblocking editor/material warnings; this is not final-material qualification or a warning-free rendered run. Version 0.90.0 has no current package or packaged-performance result. Free storage is about 70 GiB, above the 60 GiB packaging floor but below the safer 100 GiB sustained-production target. None of these results establishes broad combat-load readability or mixing, final art/audio, physical-human usability, internet-ready multiplayer, or completion.
 
-## Current known limitations
+## Historical known limitations — 0.93 checkpoint
 
 - Fifteen campaign missions and fifteen ordered consequence records are implemented. Existing focused coverage retains the Harvest-founding, Life-Support-plus-Transit, Preserve-at-Lume-Reach, plan-07 Controlled Stabilization route. The isolated `FreshJourney` acceptance additionally completes Preserve/Preserve to Restoration and Harvest/Harvest to Extinguishment from empty ledgers through Mission 15. Version 0.93 can continue a valid campaign to the exact next operation, retry a failed operation, and stop at the completed journey boundary, but this remains headless controller/simulation automation rather than rendered UI, physical input, or an ordinary-human full-campaign traversal. The other plan combinations and two remaining endings have plan, eligibility, reducer, and record coverage rather than complete end-to-end route evidence. Broad branching, final dialogue, cinematics, and downstream relationship/civilian consequences remain open.
 - Sixteen feature-gated single-player title operations are implemented: the Glass Scar skirmish plus fifteen campaign missions through **The Broken Sun**. Meridian, Kharuun, and Hollow Choir are source-reachable local skirmish selections with complete source-defined slice rosters and two technologies each. This does not establish broad three-faction balance, every matchup, unaided-human usability, or final faction presentation.
@@ -671,6 +678,6 @@ Version 0.90.0 accepts Mission 13's exact ordered twelve-record admission, 27-pl
 
 Version 0.91.0 accepts Mission 14's exact thirteen-record admission, 27-plan projection, Hollow Choir-only command authority, phase-gated incompatible voice resolution, Neme placement, ordinary Phase Anchor construction, irreversible 160-fixed-tick crisis hold, strict record-14 validity, native schema-22 primary/backup recovery, complete-envelope CRC integrity, one-bit latch-tamper refusal, adversarial replay refusal, null-RHI startup, and bounded Metal start-state presentation. The next campaign gate is Mission 15, **The Broken Sun**. It must consume the exact fourteen-record ledger, resolve the Crownfall through the authored ending directions without collapsing them into a hidden moral score, and preserve the evidence boundary between modeled consequences and unmodeled narrative claims. The next networking gate remains operating-system traffic conditioning followed by separate-process or separate-machine evidence. Named/multiple campaign slots, alternate complete Missions 09–14, broader map progression, unaided-human pointer usability, live resize coverage, final art/audio, current packaging/performance, and an uncontended current-workload soak remain separate gates.
 
-## Immediate next task
+## Historical next-task assessment — 0.93 checkpoint
 
 Version 0.93.0 accepts exact-next-mission journey resolution, failure retry, the completed title/archive boundary, transactional New Campaign and Restore behavior with one prior generation, replay-conflict return without ledger mutation, exact prerequisite-ledger-bound Mission 02–09 checkpoint containers, a 48/48 local Unreal automation report, two isolated headless empty-ledger routes through Mission 15, and a clean-source Mac-arm64 Development package whose specific world-surface instancing fallback is closed under packaged Metal. The next campaign qualification gate is an ordinary-player fresh-campaign traversal through all fifteen operations, followed by the remaining routes and endings. Named or multiple slots, recovery UX, deliberate multiprocess and power-loss durability testing, final dialogue/cinematics/audio/art, accessibility, broad balance, and human usability remain separate work. The distinct sustained 400-owned-entity, all-three-faction workload and fail-closed wrapper are implemented with active-time accounting, auditable heartbeats, exact population/view/faction invariants, isolated runtime state, clean-pushed-source and package-integrity checks, bounded command growth, replay exclusion, terminal/idle/cadence rejection, and failure-atomic evidence publication. The active acceptance gate is a valid 600-active-second preflight followed by one uninterrupted 60-minute run of the same package. The current GPU/render profile also remains over budget, and the captured overexposure/debug-overlay debt remains open. Developer ID signing, notarization, installer, and clean-machine qualification follow later. The next networking gate remains operating-system traffic conditioning followed by separate-process and separate-machine evidence; authenticated identity, protected credentials, encryption, private invitations, spectators, matchmaking, hostile-traffic and abuse qualification remain mandatory before internet-ready claims.

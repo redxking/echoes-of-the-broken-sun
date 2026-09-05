@@ -1,0 +1,441 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M06",
+  "map_id": "names-without-births-district",
+  "operation_mode": "CampaignNamesWithoutBirths",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-006",
+    "map_concepts_reference": "MapConcepts#M06"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "absence-core",
+      "op": "block",
+      "x0": 26,
+      "x1": 37,
+      "y0": 25,
+      "y1": 40
+    },
+    {
+      "id": "west-civic-block",
+      "op": "block",
+      "x0": 5,
+      "x1": 11,
+      "y0": 28,
+      "y1": 41
+    },
+    {
+      "id": "east-civic-block",
+      "op": "block",
+      "x0": 51,
+      "x1": 57,
+      "y0": 28,
+      "y1": 41
+    },
+    {
+      "id": "north-record-stack",
+      "op": "block",
+      "x0": 38,
+      "x1": 45,
+      "y0": 5,
+      "y1": 13
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "future-well-foundation-clearance",
+      "op": "open",
+      "x0": 31,
+      "x1": 32,
+      "y0": 31,
+      "y1": 32
+    },
+    {
+      "id": "future-well-foundation-access",
+      "op": "open",
+      "x0": 31,
+      "x1": 32,
+      "y0": 24,
+      "y1": 32
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 551
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        },
+        {
+          "id": "preserve-archive-to-shelter-service-spine",
+          "op": "open",
+          "x0": 31,
+          "x1": 32,
+          "y0": 33,
+          "y1": 44
+        }
+      ],
+      "expected_blocked_cell_count": 527
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 55,
+          "x1": 58,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 555
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-census",
+      "x": 16,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-power",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-shelter",
+      "x": 14,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-extract",
+      "x": 22,
+      "y": 44,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-census",
+      "x": 32,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-power",
+      "x": 28,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-shelter",
+      "x": 32,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-extract",
+      "x": 32,
+      "y": 44,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-census",
+      "x": 48,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-power",
+      "x": 45,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-shelter",
+      "x": 39,
+      "y": 37,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-extract",
+      "x": 46,
+      "y": 37,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "talar-spawn",
+      "x": 18,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "civilian-witness-a",
+      "x": 20,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "civilian-witness-b",
+      "x": 23,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "archive-link-west",
+      "x": 18,
+      "y": 10,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "archive-link-east",
+      "x": 24,
+      "y": 15,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-archive-link-west",
+      "x": 31,
+      "y": 17,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-archive-link-east",
+      "x": 38,
+      "y": 19,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-a",
+      "x": 46,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-b",
+      "x": 49,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-c",
+      "x": 52,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 32,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well-spawn",
+      "x": 32,
+      "y": 32,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "harvest-census",
+      "x": 16,
+      "y": 22
+    },
+    {
+      "id": "harvest-power",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "harvest-shelter",
+      "x": 14,
+      "y": 48
+    },
+    {
+      "id": "harvest-extract",
+      "x": 22,
+      "y": 44
+    },
+    {
+      "id": "preserve-census",
+      "x": 32,
+      "y": 22
+    },
+    {
+      "id": "preserve-power",
+      "x": 28,
+      "y": 16
+    },
+    {
+      "id": "preserve-shelter",
+      "x": 32,
+      "y": 48
+    },
+    {
+      "id": "preserve-extract",
+      "x": 32,
+      "y": 44
+    },
+    {
+      "id": "reshape-census",
+      "x": 48,
+      "y": 22
+    },
+    {
+      "id": "reshape-power",
+      "x": 45,
+      "y": 16
+    },
+    {
+      "id": "reshape-shelter",
+      "x": 39,
+      "y": 37
+    },
+    {
+      "id": "reshape-extract",
+      "x": 46,
+      "y": 37
+    }
+  ]
+}

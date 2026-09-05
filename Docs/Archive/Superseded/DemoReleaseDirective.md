@@ -1,9 +1,14 @@
 # Demo Release Directive
 
+> **Historical record only.** All instructions, roles, status labels, paths, and claims below describe
+> the retired baseline. They are not current agent instructions. Use [AGENTS.md](../../../AGENTS.md),
+> [Requirements.md](../../Requirements.md), [RequirementsState.md](../../RequirementsState.md), and
+> the [authority map](../../README.md). Preserve this record; edit current authorities instead.
+
 **Author and control owner:** Angelis Pseftis
 **Created:** 2026-09-01
-**Status:** SUPERSEDED 2026-09-01 by [`GameCompletionDirective.md`](GameCompletionDirective.md) — scope and session guidance live there; this file remains the record of the gate evidence (gates 1–4 and 14) that the new directive carries forward
-**Companion file:** [`CLAUDE.md`](../CLAUDE.md) — the standing session contract, build commands, and environment traps
+**Status:** SUPERSEDED 2026-09-01 by [`GameCompletionDirective.md`](../../GameCompletionDirective.md) — scope and session guidance live there; this file remains the record of the gate evidence (gates 1–4 and 14) that the new directive carries forward
+**Companion file:** [`CLAUDE.md`](../../../CLAUDE.md) — the standing session contract, build commands, and environment traps
 
 This directive defines the work required to take *Echoes of the Broken Sun* from a verified playable-systems
 prototype to an initial public demo release: a single-player, player-versus-AI macOS build containing the

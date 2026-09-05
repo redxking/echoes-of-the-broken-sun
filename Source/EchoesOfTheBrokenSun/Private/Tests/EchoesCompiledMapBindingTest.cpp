@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCompiledMapBinding.h"
+#include "EchoesCampaignTerrainBinding.h"
 #include "EchoesGlassScarCompiledMapPack.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSimCore/Simulation.h"
@@ -130,8 +131,8 @@ bool FEchoesCompiledMapBindingTest::RunTest(const FString& Parameters)
     // ConfigureGlassScar: SelectedOperation defaults to Skirmish and neither
     // the stress nor a controlled-presentation flag is set here, so the
     // subsystem takes its bConfiguredSkirmish branch. The preset geometry is
-    // identical to the campaign author's, which is why this block agrees with
-    // the compiled mask; section 4b covers the campaign author itself.
+    // bound to the frozen skirmish descriptor; section 4b covers the distinct
+    // campaign contract.
     {
         FTestWorldWrapper WorldWrapper;
         if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
@@ -168,13 +169,8 @@ bool FEchoesCompiledMapBindingTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
     }
 
-    // 4b. Parity against the live campaign author. CampaignPrologue is neither
-    // Skirmish nor one of the six LumeReach-family operations, so the subsystem
-    // dispatches to ConfigureGlassScar; and it appears in neither
-    // ApplyUnburiedRoadTerrain's nor ApplySevenAccountsTerrain's operation
-    // list, so no overlay modifies its base terrain. Its terrain is therefore
-    // exactly the campaign author's output, which is the case section 4 does
-    // not reach.
+    // 4b. Campaign M01 now has its own authored evacuation-margin contract.
+    // Skirmish parity above still uses the frozen Glass Scar descriptor.
     {
         FTestWorldWrapper WorldWrapper;
         if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
@@ -203,14 +199,18 @@ bool FEchoesCompiledMapBindingTest::RunTest(const FString& Parameters)
         const sim::Simulation* Simulation = Bridge->GetSimulation();
         if (TestNotNull(TEXT("Authoritative campaign simulation exists"), Simulation))
         {
-            int32 BlockedTiles = 0;
-            const int32 Mismatches =
-                CountParityMismatches(*Simulation, BlockedTiles);
-            TestEqual(
-                TEXT("Live ConfigureGlassScar terrain matches the compiled mask on every tile"),
-                Mismatches, 0);
-            TestEqual(TEXT("Live campaign blocked census matches the contract"),
-                      BlockedTiles, pack::kExpectedBlockedCellCount);
+            const auto Contract = world::CheckCampaignTerrain(1, sim::FutureWellChoice::Preserve);
+            TestTrue(TEXT("M01 source contract validates"), Contract.ok);
+            int32 BlockedTiles = 0, Mismatches = 0;
+            for (int32 Y = 0; Y < 64; ++Y)
+                for (int32 X = 0; X < 64; ++X)
+                {
+                    const bool bOpen = Simulation->TerrainAt(X,Y) != sim::Terrain::Blocked;
+                    BlockedTiles += !bOpen;
+                    Mismatches += bOpen != world::IsCampaignTerrainPassable(1, sim::FutureWellChoice::Preserve, X,Y);
+                }
+            TestEqual(TEXT("Live M01 terrain matches its own compiled map"), Mismatches, 0);
+            TestEqual(TEXT("Live M01 census matches its contract"), BlockedTiles, Contract.blocked_cells);
         }
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);

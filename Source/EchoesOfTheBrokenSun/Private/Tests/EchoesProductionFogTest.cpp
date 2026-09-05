@@ -9,6 +9,8 @@
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSimCore/Simulation.h"
 #include "Engine/World.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "HAL/PlatformTime.h"
 #include "Tests/AutomationCommon.h"
 
@@ -103,6 +105,29 @@ bool FEchoesProductionFogTest::RunTest(const FString& Parameters)
         TestFalse(TEXT("Reduced flashing reset"),
                   FogView->IsReducedFlashingApplied());
 
+        const FTransform LegacyUnknown = FogView->TileTransform(10, 10, true);
+        TestEqual(TEXT("Other maps retain the original shroud bottom"),
+            LegacyUnknown.GetLocation().Z - 50.0f * LegacyUnknown.GetScale3D().Z, -16.0);
+        TestTrue(TEXT("Other maps retain the tall opaque shroud"),
+            LegacyUnknown.GetLocation().Z + 50.0f * LegacyUnknown.GetScale3D().Z >= 184.0f);
+        TestTrue(TEXT("M01 knowledge surface initializes through its explicit profile"),
+            FogView->InitializeScopedFog(64, 64, 200.0f, true));
+        const FTransform M01Unknown = FogView->TileTransform(10, 10, true);
+        TestEqual(TEXT("M01 shroud preserves the exact tile XY footprint"),
+            FVector2D(M01Unknown.GetLocation()), FVector2D(LegacyUnknown.GetLocation()));
+        TestEqual(TEXT("M01 retains the required full occlusion height"),
+            M01Unknown.GetLocation().Z + 50.0f * M01Unknown.GetScale3D().Z, 184.0);
+        TestEqual(TEXT("M01 conceals unknown ravines down to the authored bed"),
+            M01Unknown.GetLocation().Z - 50.0f * M01Unknown.GetScale3D().Z, -1766.0);
+        TestTrue(TEXT("M01 unknown material has no scene-lighting response"),
+            FogView->UnexploredMaterial != nullptr &&
+            FogView->UnexploredMaterial->GetMaterial()->GetShadingModels().HasShadingModel(MSM_Unlit));
+        TestTrue(TEXT("M01 unknown remains opaque"),
+            FogView->UnexploredMaterial != nullptr &&
+            FogView->UnexploredMaterial->GetBlendMode() == BLEND_Opaque);
+        TestTrue(TEXT("M01 remembered terrain uses a translucent tint"),
+            FogView->ExploredMaterial != nullptr &&
+            FogView->ExploredMaterial->GetBlendMode() == BLEND_Translucent);
         FogView->Destroy();
     }
 

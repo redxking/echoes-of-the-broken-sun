@@ -30,8 +30,8 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     // Per-player terrain and object memory is now serialized into snapshots,
     // so the native snapshot schema moved 24 -> 25. The replay envelope shape
     // did not change, so the replay schema deliberately stays at 24.
-    TestEqual(TEXT("Research interruption uses snapshot schema 25"),
-              echoes::sim::kSnapshotVersion, 25U);
+    TestEqual(TEXT("Research interruption uses snapshot schema 26"),
+              echoes::sim::kSnapshotVersion, 26U);
     TestEqual(TEXT("Research interruption uses replay schema 24"),
               echoes::sim::kReplayVersion, 24U);
     FTestWorldWrapper WorldWrapper;

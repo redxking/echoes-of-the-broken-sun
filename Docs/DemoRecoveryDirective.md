@@ -1,18 +1,20 @@
-# Echoes of the Broken Sun — Human Feedback, Demo-Recovery Directive, Requirements Baseline, and Definition of Done
+# Echoes of the Broken Sun — Demo-recovery feedback and sequencing
 
 Human Owner and final acceptance authority: Angelis Pseftis
 Applies to: Claude Code, ChatGPT Codex, and any delegated development agents
 Project: The authoritative Echoes of the Broken Sun Unreal project
-Current human verdict: REJECTED — NOT DEMO-READY
+Recorded human verdict (2026-09-02 candidate): REJECTED — NOT DEMO-READY
 Received: 2026-09-02, verbatim from the owner via the coordinator session. This file is the
-authoritative on-disk copy for all lanes. Write owner: the Claude Code lane fleet (coordinator
-session). ChatGPT Codex, when active, is a read-only reviewer (owner may re-designate).
+authoritative on-disk copy of that feedback. Current task ownership and all agent rules come from
+[AGENTS.md](../AGENTS.md); the old model-specific lane assignment is retired.
 Related: `Docs/GameCompletionDirective.md` (professional-release backlog — unchanged);
 `Docs/Requirements.md` (sole normative requirements authority) and
 `Docs/RequirementsState.md` (sole lifecycle and evidence-state authority). References below to the former
 `DemoReadinessRequirements.md` are historical only and have been superseded by these two records.
 
-Read this entire directive before continuing development. Treat it as binding human feedback and a corrective development order.
+Read this feedback for demo-recovery work. It preserves the owner's rejection and required player outcomes.
+The master requirements/state pair controls current bodies and lifecycle; current owner instructions
+control sequencing and authority. Original feedback below is not a new live status assessment.
 
 ## 1. Direct human assessment
 
@@ -74,9 +76,11 @@ acceptance state in `Docs/RequirementsState.md`. These are the sole current auth
 revised, final, or numbered copies. Link them to `GameCompletionDirective.md`, but do not duplicate
 requirement bodies across multiple files.
 
-Each requirement record must contain: Requirement ID; exact "shall" statement; player or product outcome; dependencies; planned verification method; required evidence; responsible implementation owner; engineering state; exact commit and packaged-build identity; evidence locations; known limitations; human acceptance state; human acceptance date and notes.
+Use the master's record schema for requirement bodies and the state file for outcomes, evidence identity,
+ownership, limitations, and acceptance. Keep these roles separate; do not put state into a requirement body.
 
-Permitted states — agents may assign: `OPEN`, `IN PROGRESS`, `IMPLEMENTED — NOT YET VERIFIED`, `AGENT VERIFIED`, `EVIDENCE READY`, `AWAITING HUMAN ACCEPTANCE`, `BLOCKED`.
+Use the state vocabulary in [RequirementsState.md](RequirementsState.md#state-vocabulary). The original
+label `IMPLEMENTED — NOT YET VERIFIED` is an alias of `IMPLEMENTED`, never a verification claim.
 
 Only Angelis Pseftis may assign: `HUMAN ACCEPTED`, `HUMAN REJECTED — CHANGES REQUIRED`.
 

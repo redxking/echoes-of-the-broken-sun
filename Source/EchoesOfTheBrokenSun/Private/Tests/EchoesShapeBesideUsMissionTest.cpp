@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesShapeBesideUsMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -344,9 +345,13 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
     constexpr int32 TopologyRevisionOffset = 11;
     constexpr int32 ChecksumSize = 4;
     TArray<uint8> CurrentTopologyBytes;
+    TArray<uint8> CurrentMapEnvelope;
+    FEchoesCampaignMapCheckpointIdentity MapIdentity;
+    EEchoesCampaignMapCheckpointFailure MapFailure{};
     if (!TestTrue(
             TEXT("The current Mission 08 checkpoint carries topology revision one"),
-            FFileHelper::LoadFileToArray(CurrentTopologyBytes, *QuickSavePath) &&
+            FFileHelper::LoadFileToArray(CurrentMapEnvelope, *QuickSavePath) &&
+                FEchoesCampaignMapCheckpoint::Inspect(CurrentMapEnvelope, MapIdentity, CurrentTopologyBytes, MapFailure) &&
                 CurrentTopologyBytes.Num() > 16 &&
                 CurrentTopologyBytes[TopologyRevisionOffset] == 1))
     {
@@ -366,7 +371,7 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
     }
     if (!TestTrue(
             TEXT("The revision-zero Mission 08 fixture retains a valid checksum"),
-            FFileHelper::SaveArrayToFile(LegacyTopologyBytes, *QuickSavePath)))
+            [&]() { TArray<uint8> Envelope; return FEchoesCampaignMapCheckpoint::Wrap(MapIdentity, LegacyTopologyBytes, Envelope, MapFailure) && FFileHelper::SaveArrayToFile(Envelope, *QuickSavePath); }()))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -378,7 +383,7 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
              Feedback.Contains(TEXT("LOAD_SHAPE_BESIDE_US_TOPOLOGY_MISMATCH")));
     if (!TestTrue(
             TEXT("The current Mission 08 checkpoint is restored after the legacy probe"),
-            FFileHelper::SaveArrayToFile(CurrentTopologyBytes, *QuickSavePath)))
+            FFileHelper::SaveArrayToFile(CurrentMapEnvelope, *QuickSavePath)))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);

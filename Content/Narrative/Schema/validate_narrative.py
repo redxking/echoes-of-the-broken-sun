@@ -294,6 +294,9 @@ EXPECTED_M01_CANON_PROSE_SHA256 = (
 EXPECTED_TRIGGER_SIGNALS = {
     "nar_m01_evt_operation_started": "operation_ready:CampaignPrologue:RecoverArchive",
     "nar_m01_evt_archive_recovered": "phase_entered:DecideFutureWell",
+    "nar_m01_evt_well_harvest_committed": "phase_entered:Withdraw:Harvest",
+    "nar_m01_evt_well_preserve_committed": "phase_entered:Withdraw:Preserve",
+    "nar_m01_evt_well_reshape_committed": "phase_entered:Withdraw:Reshape",
     "nar_m01_evt_well_decision_committed": "phase_entered:Withdraw",
     "nar_m01_evt_withdrawal_complete": "phase_entered:Complete",
     "nar_m01_evt_mission_failed": "phase_entered:Failed",
@@ -303,6 +306,9 @@ EXPECTED_TRIGGER_SIGNALS = {
 EXPECTED_TRIGGER_PREREQUISITES = {
     "nar_m01_evt_operation_started": [],
     "nar_m01_evt_archive_recovered": ["nar_m01_evt_operation_started"],
+    "nar_m01_evt_well_harvest_committed": ["nar_m01_evt_archive_recovered"],
+    "nar_m01_evt_well_preserve_committed": ["nar_m01_evt_archive_recovered"],
+    "nar_m01_evt_well_reshape_committed": ["nar_m01_evt_archive_recovered"],
     "nar_m01_evt_well_decision_committed": ["nar_m01_evt_archive_recovered"],
     "nar_m01_evt_withdrawal_complete": ["nar_m01_evt_well_decision_committed"],
     "nar_m01_evt_mission_failed": ["nar_m01_evt_operation_started"],
@@ -1233,7 +1239,7 @@ def validate_mission_contract(value: dict[str, Any], canon: dict[str, Any]) -> d
             reviewed_branch["design_target_tradeoff"],
             f"{path}.reviewed_branch_projection.design_target_tradeoff",
         )
-        _expect_exact(branch["trigger_id"], "nar_m01_evt_well_decision_committed", f"{path}.trigger_id")
+        _expect_exact(branch["trigger_id"], f"nar_m01_evt_well_{choice.lower()}_committed", f"{path}.trigger_id")
         refs = _expect_unique_strings(branch["dialogue_line_ids"], f"{path}.dialogue_line_ids", minimum=1)
         if len(refs) != 3 or not set(refs).issubset(line_ids):
             raise NarrativeValidationError(f"{path}.dialogue_line_ids: exact three-line resolved branch required")

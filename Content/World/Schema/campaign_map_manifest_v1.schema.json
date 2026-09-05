@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echoes.invalid/schema/world/campaign-map-manifest-v1",
+  "title": "Echoes campaign map manifest v1",
+  "description": "The schema describes only the envelope. compile_campaign_map_pack.py enforces ordered M01-M15 coverage, source confinement, digest identity, operation matching, and layout uniqueness.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest_format", "manifest_version", "author", "mission_maps"],
+  "properties": {
+    "manifest_format": {"const": "echoes-campaign-map-manifest"},
+    "manifest_version": {"const": 1},
+    "author": {"const": "Angelis Pseftis"},
+    "mission_maps": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {"$ref": "#/$defs/mission_map"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stable_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "mission_map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mission_code", "map_id", "operation_mode", "source_path", "source_sha256"],
+      "properties": {
+        "mission_code": {"type": "string", "pattern": "^M(?:0[1-9]|1[0-5])$"},
+        "map_id": {"$ref": "#/$defs/stable_id"},
+        "operation_mode": {
+          "enum": ["CampaignPrologue", "CampaignSevenAccounts", "CampaignCityReserve", "CampaignUnburiedRoad", "CampaignTermsOfContinuance", "CampaignNamesWithoutBirths", "CampaignShapeOfSilence", "CampaignShapeBesideUs", "CampaignReserveAuthority", "CampaignChoirAtLumeReach", "CampaignNoNeutralLedger", "CampaignFutureThatWon", "CampaignAssemblyOfTheMissing", "CampaignSeveralVoicesOneCommand", "CampaignTheBrokenSun"]
+        },
+        "source_path": {"type": "string", "pattern": "^Content/World/Source/Campaign/[A-Za-z0-9._/-]+\\.json$"},
+        "source_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

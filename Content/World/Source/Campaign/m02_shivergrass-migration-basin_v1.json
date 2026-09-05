@@ -1,0 +1,309 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M02",
+  "map_id": "shivergrass-migration-basin",
+  "operation_mode": "CampaignSevenAccounts",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-002",
+    "map_concepts_reference": "MapConcepts#M02"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "west-scarp",
+      "op": "block",
+      "x0": 0,
+      "x1": 2,
+      "y0": 6,
+      "y1": 55
+    },
+    {
+      "id": "east-scarp",
+      "op": "block",
+      "x0": 56,
+      "x1": 60,
+      "y0": 8,
+      "y1": 54
+    },
+    {
+      "id": "north-observation-sill",
+      "op": "block",
+      "x0": 24,
+      "x1": 29,
+      "y0": 4,
+      "y1": 15
+    },
+    {
+      "id": "southern-basal-step",
+      "op": "block",
+      "x0": 36,
+      "x1": 42,
+      "y0": 49,
+      "y1": 57
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "inherited-route-divider",
+      "op": "block",
+      "x0": 24,
+      "x1": 37,
+      "y0": 31,
+      "y1": 33
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-southern-exit",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 637
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-central-crossing",
+          "op": "open",
+          "x0": 29,
+          "x1": 35,
+          "y0": 31,
+          "y1": 33
+        },
+        {
+          "id": "preserve-southern-exit",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 608
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-flank-crossing",
+          "op": "open",
+          "x0": 24,
+          "x1": 35,
+          "y0": 31,
+          "y1": 33
+        },
+        {
+          "id": "reshape-southern-exit",
+          "op": "open",
+          "x0": 55,
+          "x1": 58,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 605
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-waystone",
+      "x": 20,
+      "y": 42,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-account",
+      "x": 23,
+      "y": 44,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-waystone",
+      "x": 35,
+      "y": 40,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-account",
+      "x": 38,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-waystone",
+      "x": 40,
+      "y": 42,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-account",
+      "x": 43,
+      "y": 44,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 29,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "harvest-waystone",
+      "x": 20,
+      "y": 42
+    },
+    {
+      "id": "harvest-account",
+      "x": 23,
+      "y": 44
+    },
+    {
+      "id": "preserve-waystone",
+      "x": 35,
+      "y": 40
+    },
+    {
+      "id": "preserve-account",
+      "x": 38,
+      "y": 43
+    },
+    {
+      "id": "reshape-waystone",
+      "x": 40,
+      "y": 42
+    },
+    {
+      "id": "reshape-account",
+      "x": 43,
+      "y": 44
+    }
+  ]
+}

@@ -242,7 +242,7 @@ bool FEchoesCombatEffectsTest::RunTest(const FString& Parameters)
         WorkerEntity.hitPoints = 80;
         WorkerEntity.maxHitPoints = 80;
         WorkerEntity.cargo = 5;
-        WorkerEntity.harvestTicks = 4;
+        WorkerEntity.harvestTicks = 4; WorkerEntity.harvestSlotHeld = true; WorkerEntity.harvestState = echoes::sim::HarvestState::Harvesting;
         WorkerEntity.completed = true;
 
         EntityView->ActivateForEntity(WorkerEntity, true);

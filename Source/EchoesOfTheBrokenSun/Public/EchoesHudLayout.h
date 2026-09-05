@@ -35,7 +35,7 @@ struct FEchoesHudLayout final
         FEchoesHudLayout Layout;
         const float Width = FMath::Max(1.0f, ViewportSize.X);
         const float Height = FMath::Max(1.0f, ViewportSize.Y);
-        const float Scale = FMath::Clamp(HudScale, 0.85f, 1.35f);
+        const float Scale = FMath::Clamp(HudScale, 0.8f, 1.5f);
         constexpr float Edge = 18.0f;
         constexpr float Gap = 14.0f;
 
@@ -85,11 +85,14 @@ struct FEchoesHudLayout final
             FVector2D(Edge + MainWidth, Edge + 96.0f * Scale));
 
         // Top-right resource ledger
-        const float ResourceWidth = FMath::Clamp(720.0f * Scale, 620.0f, 860.0f);
+        const float ResourceWidth = FMath::Min(
+            FMath::Clamp(720.0f * Scale, 620.0f, 860.0f),
+            Width - Edge - Layout.MainPanel.Max.X - Gap);
         Layout.ResourcePanel = FBox2D(
             FVector2D(Width - Edge - ResourceWidth, Edge),
-            FVector2D(Width - Edge, Edge + 60.0f * Scale));
+            FVector2D(Width - Edge, Edge + 62.0f * FMath::Clamp(HudScale, 0.8f, 1.5f)));
         Layout.bResourceVisible =
+            ResourceWidth >= 400.0f &&
             Layout.ResourcePanel.Min.X >= Layout.MainPanel.Max.X + Gap;
 
         // Objectives under the command strip

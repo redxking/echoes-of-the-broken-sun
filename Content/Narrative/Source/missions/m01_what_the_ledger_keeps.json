@@ -125,6 +125,36 @@
    "binding_status": "authored_unbound"
   },
   {
+   "id": "nar_m01_evt_well_harvest_committed",
+   "runtime_signal": "phase_entered:Withdraw:Harvest",
+   "prerequisite_ids": [
+    "nar_m01_evt_archive_recovered"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m01_evt_well_preserve_committed",
+   "runtime_signal": "phase_entered:Withdraw:Preserve",
+   "prerequisite_ids": [
+    "nar_m01_evt_archive_recovered"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
+   "id": "nar_m01_evt_well_reshape_committed",
+   "runtime_signal": "phase_entered:Withdraw:Reshape",
+   "prerequisite_ids": [
+    "nar_m01_evt_archive_recovered"
+   ],
+   "occurrence": "once_per_attempt",
+   "reset_behavior": "reset_on_mission_retry",
+   "binding_status": "authored_unbound"
+  },
+  {
    "id": "nar_m01_evt_well_decision_committed",
    "runtime_signal": "phase_entered:Withdraw",
    "prerequisite_ids": [
@@ -435,7 +465,7 @@
    "id": "nar_m01_line_mara_harvest_001",
    "loc_key": "nar_m01_line_mara_harvest_001",
    "speaker_id": "spk_mara_vey",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_harvest_committed",
    "delivery_channel": "command_radio",
    "source_text": "Harvest. Take the Dawn. The reserve gets time; the Well does not.",
    "placeholders": {},
@@ -458,7 +488,7 @@
    "id": "nar_m01_line_oruun_harvest_001",
    "loc_key": "nar_m01_line_oruun_harvest_001",
    "speaker_id": "spk_oruun_seven_stones",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_harvest_committed",
    "delivery_channel": "cross_faction_radio",
    "source_text": "The city gains time. The cavern loses a possibility. Record both.",
    "placeholders": {},
@@ -481,7 +511,7 @@
    "id": "nar_m01_line_talar_harvest_001",
    "loc_key": "nar_m01_line_talar_harvest_001",
    "speaker_id": "spk_talar_venn",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_harvest_committed",
    "delivery_channel": "operations_radio",
    "source_text": "Both are in the ledger.",
    "placeholders": {},
@@ -504,7 +534,7 @@
    "id": "nar_m01_line_mara_preserve_001",
    "loc_key": "nar_m01_line_mara_preserve_001",
    "speaker_id": "spk_mara_vey",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_preserve_committed",
    "delivery_channel": "command_radio",
    "source_text": "Preserve. Keep the Well intact. We hold this ground without immediate reserve relief.",
    "placeholders": {},
@@ -527,7 +557,7 @@
    "id": "nar_m01_line_oruun_preserve_001",
    "loc_key": "nar_m01_line_oruun_preserve_001",
    "speaker_id": "spk_oruun_seven_stones",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_preserve_committed",
    "delivery_channel": "cross_faction_radio",
    "source_text": "Possibility survives, and every force here has reason to keep fighting.",
    "placeholders": {},
@@ -550,7 +580,7 @@
    "id": "nar_m01_line_talar_preserve_001",
    "loc_key": "nar_m01_line_talar_preserve_001",
    "speaker_id": "spk_talar_venn",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_preserve_committed",
    "delivery_channel": "operations_radio",
    "source_text": "The delay and the open Well are recorded.",
    "placeholders": {},
@@ -573,7 +603,7 @@
    "id": "nar_m01_line_mara_reshape_001",
    "loc_key": "nar_m01_line_mara_reshape_001",
    "speaker_id": "spk_mara_vey",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_reshape_committed",
    "delivery_channel": "command_radio",
    "source_text": "Reshape. We spend Dawn for a temporary option. Publish the expiry.",
    "placeholders": {},
@@ -596,7 +626,7 @@
    "id": "nar_m01_line_oruun_reshape_001",
    "loc_key": "nar_m01_line_oruun_reshape_001",
    "speaker_id": "spk_oruun_seven_stones",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_reshape_committed",
    "delivery_channel": "cross_faction_radio",
    "source_text": "Then no one mistakes a borrowed path for a permanent one.",
    "placeholders": {},
@@ -619,7 +649,7 @@
    "id": "nar_m01_line_talar_reshape_001",
    "loc_key": "nar_m01_line_talar_reshape_001",
    "speaker_id": "spk_talar_venn",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_reshape_committed",
    "delivery_channel": "operations_radio",
    "source_text": "Cost and expiry recorded. The carrier is ready.",
    "placeholders": {},
@@ -923,7 +953,7 @@
    "current_runtime_behavior": "Current source applies Harvest immediately, grants 500 Dawn, collapses the Well permanently, and scars nearby open terrain.",
    "design_target_tradeoff": "Target behavior adds a public 180-tick commitment before the same irreversible collapse.",
    "runtime_alignment": "requires_telegraph_before_binding",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_harvest_committed",
    "dialogue_line_ids": [
     "nar_m01_line_mara_harvest_001",
     "nar_m01_line_oruun_harvest_001",
@@ -947,7 +977,7 @@
    "current_runtime_behavior": "Current source keeps the Well intact and, while controlled, grants 15 Dawn every 300 ticks plus faction-dependent intelligence within 1,400 cm.",
    "design_target_tradeoff": "Target behavior retains the implemented cadence and makes continued control, delayed value, and changing ownership explicit to the player.",
    "runtime_alignment": "bounded_values_aligned_runtime_consumption_unimplemented",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_preserve_committed",
    "dialogue_line_ids": [
     "nar_m01_line_mara_preserve_001",
     "nar_m01_line_oruun_preserve_001",
@@ -971,7 +1001,7 @@
    "current_runtime_behavior": "Current source spends 120 Dawn immediately, manifests the authored terrain possibility for 1,800 ticks, and uses deterministic fallback displacement at expiry.",
    "design_target_tradeoff": "Target behavior adds a public 180-tick commitment and a pre-expiry warning before the implemented deterministic fallback displacement.",
    "runtime_alignment": "requires_telegraph_and_expiry_warning_before_binding",
-   "trigger_id": "nar_m01_evt_well_decision_committed",
+   "trigger_id": "nar_m01_evt_well_reshape_committed",
    "dialogue_line_ids": [
     "nar_m01_line_mara_reshape_001",
     "nar_m01_line_oruun_reshape_001",
@@ -1061,7 +1091,7 @@
    {
     "id": "nar_m01_fail_local_core_lost",
     "reason_code": "local_core_lost",
-    "source_condition": "The local Command Core is absent or has no hit points.",
+    "source_condition": "Your Command Core was destroyed.",
     "binding_status": "reason_code_requested",
     "dialogue_line_ids": [
      "nar_m01_line_mara_fail_core"
@@ -1070,7 +1100,7 @@
    {
     "id": "nar_m01_fail_archive_carrier_lost",
     "reason_code": "archive_carrier_lost",
-    "source_condition": "The archive carrier is absent or has no hit points.",
+    "source_condition": "The archive carrier was lost.",
     "binding_status": "reason_code_requested",
     "dialogue_line_ids": [
      "nar_m01_line_talar_fail_carrier"
@@ -1079,7 +1109,7 @@
    {
     "id": "nar_m01_fail_future_well_lost",
     "reason_code": "future_well_lost",
-    "source_condition": "A committed Future Well is controlled by a nonlocal player.",
+    "source_condition": "The opposing force controls the Future Well.",
     "binding_status": "reason_code_requested",
     "dialogue_line_ids": [
      "nar_m01_line_mara_fail_well"
@@ -1088,7 +1118,7 @@
    {
     "id": "nar_m01_fail_terminal_match_outcome",
     "reason_code": "terminal_match_outcome",
-    "source_condition": "The skirmish outcome is no longer ongoing before mission completion.",
+    "source_condition": "The evacuation can no longer be completed.",
     "binding_status": "reason_code_requested",
     "dialogue_line_ids": [
      "nar_m01_line_mara_fail_terminal"
@@ -1097,7 +1127,7 @@
    {
     "id": "nar_m01_fail_generic",
     "reason_code": "generic",
-    "source_condition": "The mission entered Failed without a presentation-safe reason code.",
+    "source_condition": "The evacuation failed.",
     "binding_status": "fallback_available",
     "dialogue_line_ids": [
      "nar_m01_line_mara_fail_generic"
@@ -1107,7 +1137,7 @@
   "retry_copy": {
    "id": "nar_m01_ui_retry",
    "loc_key": "nar_m01_ui_retry",
-   "source_text": "Retry Mission 01 from its deterministic initial state. A failed attempt does not add or alter a campaign record.",
+   "source_text": "Retry Mission 01. This failed attempt does not change your campaign record.",
    "placeholders": {},
    "text_budget": {
     "max_characters": 160,

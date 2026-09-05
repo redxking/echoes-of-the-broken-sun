@@ -6234,7 +6234,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Record->AvailableFinalResolutions ==
                         Spec.ExpectedFinalResolutionMask &&
                     Record->FinalPlanKey == Spec.ExpectedFinalPlanKey &&
-                    Record->SimulationSnapshotVersion == 25 &&
+                    Record->SimulationSnapshotVersion == 26 &&
                     Record->CompletionTick > 0 &&
                     Record->FinalStateChecksum != 0,
                 TEXT("Mission 15 retains full native ending provenance")) ||

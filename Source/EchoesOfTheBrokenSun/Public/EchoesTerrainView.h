@@ -15,6 +15,7 @@ class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UPointLightComponent;
+class UProceduralMeshComponent;
 class UStaticMesh;
 
 /**
@@ -100,6 +101,7 @@ public:
     [[nodiscard]] int32 GetChasmBandMinRow() const { return ChasmBandMinRow; }
     [[nodiscard]] int32 GetChasmBandMaxRow() const { return ChasmBandMaxRow; }
     [[nodiscard]] int32 GetChasmInstanceCount() const;
+    [[nodiscard]] bool IsWorldBoundsKnown(const FBox& Bounds) const;
     // Art-review fixtures hide the per-tile silhouette and dressing layers
     // while keeping the chasm, so a composed frame renders the same ground
     // that play does.
@@ -165,6 +167,11 @@ private:
     // the class's layer; Sync re-evaluates every record against the terrain,
     // information-state, and reshape sources the caller supplies.
     bool InitializeDressing();
+    bool ConfigureWorldKit();
+    bool InitializeMissionLandmarks();
+    void SyncMissionLandmarks(
+        TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt,
+        TFunctionRef<echoes::sim::Visibility(int32, int32)> VisibilityAt);
     void SyncDressingWith(
         TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt,
         TFunctionRef<echoes::sim::Visibility(int32, int32)> VisibilityAt,
@@ -176,6 +183,16 @@ private:
     bool ComposeGlassScarChasm(
         TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt);
     void ClearChasmComposition();
+    void SyncChasmVisibility();
+    struct FChasmInstance
+    {
+        UInstancedStaticMeshComponent* Layer = nullptr;
+        int32 Index = 0;
+        FTransform Transform;
+        bool bVisible = true;
+    };
+    TArray<FChasmInstance> ChasmInstances;
+    TArray<TWeakObjectPtr<AActor>> M01RouteActors;
     void ConfigureChasmLayer(
         UInstancedStaticMeshComponent* Layer,
         UStaticMesh* Mesh,
@@ -213,13 +230,52 @@ private:
     bool bChasmComposed = false;
     int32 ChasmBandMinRow = -1;
     int32 ChasmBandMaxRow = -1;
-    float ChasmBedTopZ = -680.0f;
+    float ChasmBedTopZ = -1750.0f;
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UInstancedStaticMeshComponent> BlockedTiles;
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UInstancedStaticMeshComponent> ScarredTiles;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> BiomeGround;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> BiomeSurface;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> BiomeHorizon;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UInstancedStaticMeshComponent> M01ExteriorSkirt;
+
+    UPROPERTY(VisibleAnywhere)
+    TArray<TObjectPtr<UInstancedStaticMeshComponent>> MissionLandmarkLayers;
+
+    TArray<int32> MissionLandmarkInstanceIndices;
+    TArray<uint8> MissionLandmarkDrawn;
+    TSet<int32> MissionLandmarkSolidCells;
+    TSet<int32> MissionLandmarkPavingCells;
+    bool bMissionLandmarksActive = false;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UProceduralMeshComponent> ContinuousCliffs;
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UProceduralMeshComponent> M01ExteriorBanks;
+
+    TArray<uint8> CliffDrawMask;
+    void SyncContinuousCliffs(
+        TFunctionRef<echoes::sim::Terrain(int32, int32)> TerrainAt,
+        TFunctionRef<echoes::sim::Visibility(int32, int32)> VisibilityAt,
+        TFunctionRef<bool(int32, int32)> IsPassable);
+
+
+    UPROPERTY(Transient)
+    TObjectPtr<UStaticMesh> BiomeFormationMesh;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UStaticMesh> BiomeGroundMesh;
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UInstancedStaticMeshComponent> DressingShelves;

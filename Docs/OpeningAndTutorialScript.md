@@ -8,6 +8,11 @@ updated: 2026-09-02
 
 # Opening & Tutorial Script
 
+Follow [AGENTS.md](../AGENTS.md) and the [authority map](README.md). This is the named creative/production
+reference; [Requirements.md](Requirements.md) owns behavior and [RequirementsState.md](RequirementsState.md)
+owns lifecycle and recorded owner decisions. Approval of text or character direction does not establish
+generated asset quality, runtime integration, or player acceptance.
+
 **Scope**: the M2 critical-path line-authoring against the accepted Character & Voice Identity
 Bible (DEMO-NAR-010) and the ruled framings (tutorial inside the prologue fiction as a
 readiness check, ruling #8; demo match as a real engagement, ruling #13; Annunciator voices

@@ -10,7 +10,7 @@ import unreal
 
 STALE_MASTERS = {
     "/Game/Art/Generated/Materials/M_EchoesSurface": "surface-textured-v7",
-    "/Game/Art/Generated/Materials/M_EchoesWorldSurface": "world-surface-textured-v6",
+    "/Game/Art/Generated/Materials/M_EchoesWorldSurface": "world-surface-textured-v7",
 }
 
 purged = 0

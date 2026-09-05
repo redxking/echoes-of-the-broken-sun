@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesTestBootstrap.h"
 #include "HAL/CriticalSection.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -35,6 +36,12 @@ public:
             EEchoesTestSaveOverrideMode::Directory)
         : Test(InTest)
     {
+        if (!EchoesTestBootstrap::IsDedicatedTestSandboxValidated())
+        {
+            Test.AddError(
+                TEXT("[ECHOES_TEST_STORAGE_UNSANDBOXED_PROCESS] Save-I/O automation requires the validated process-level test sandbox launch."));
+            return;
+        }
         {
             FScopeLock Lock(&ActiveScopeMutex);
             if (bScopeActive)

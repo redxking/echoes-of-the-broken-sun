@@ -91,17 +91,14 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
 
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
-    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-3:snapshot-25:view-2").
-    // snapshot-24 -> snapshot-25 because per-player terrain and object memory
-    // is now serialized into snapshots, so the native schema moved. The replay
-    // envelope shape did not change, so kReplayVersion stays 24; only the
-    // snapshot schema, and therefore the build identity, moves.
+    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-3:snapshot-27:view-2").
+    // Keep the compatibility identity aligned with the current native snapshot schema.
     constexpr Digest256 ExpectedBuildId{
-        0xd3, 0x1e, 0x1f, 0xb5, 0x15, 0x50, 0x5d, 0xbf,
-        0xf3, 0x49, 0xc4, 0xc1, 0xba, 0x40, 0x65, 0x0e,
-        0x6b, 0xa5, 0x90, 0x72, 0xde, 0x62, 0x69, 0xc1,
-        0xde, 0xf6, 0x07, 0x27, 0xf0, 0xf7, 0x39, 0xa9};
-    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 25"),
+        0x56, 0x33, 0xc6, 0xd1, 0x1a, 0x56, 0x00, 0x0c,
+        0xd5, 0xfb, 0x29, 0x85, 0x12, 0x7a, 0x51, 0x91,
+        0xc4, 0x58, 0x56, 0xdb, 0x67, 0xe7, 0x4a, 0xcf,
+        0x84, 0x29, 0x64, 0x70, 0xfb, 0x46, 0x7e, 0x1e};
+    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 27"),
              ClientManifest.buildIdSha256 == ExpectedBuildId);
     SimulationConfig RuntimeConfig{16, 16, 20, 77};
     RuntimeConfig.rules.contentSha256 = ClientManifest.rulesPackSha256;

@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesCampaignLedgerProbe.h"
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerController.h"
@@ -222,14 +223,18 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
         UEchoesSimulationSubsystem* BranchBridge =
             BranchWorld.GetTestWorld()->GetSubsystem<
                 UEchoesSimulationSubsystem>();
-        TestTrue(TEXT("The branch operation initializes"),
+        const bool bBranchReady = TestTrue(TEXT("The branch operation initializes"),
                  BranchBridge != nullptr &&
                      BranchBridge->SelectOperationMode(
                          EEchoesOperationMode::CampaignSevenAccounts,
                          BranchFeedback) &&
                      BranchBridge->StartPrototypeScenario());
-        if (BranchBridge != nullptr &&
-            Branch == echoes::sim::FutureWellChoice::Harvest)
+        if (!bBranchReady || !BranchBridge->GetSimulation())
+        {
+            BranchWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        if (Branch == echoes::sim::FutureWellChoice::Harvest)
         {
             const std::vector<uint8> RawSnapshot =
                 BranchBridge->GetSimulation()->SaveSnapshot();
@@ -249,7 +254,7 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
             TestTrue(
                 TEXT("Raw Mission 02 rejection names the unbound compatibility boundary"),
                 BranchFeedback.Contains(
-                    TEXT("LOAD_LEDGER_BRANCH_UNBOUND")));
+                    TEXT("CAMPAIGN_MAP_UNBOUND")));
             const TArray<uint8> VersionOneCheckpoint =
                 BuildUnboundVersionOneCheckpoint(
                     EEchoesOperationMode::CampaignSevenAccounts,
@@ -266,7 +271,7 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
             TestTrue(
                 TEXT("Version-one Mission 02 rejection names the unbound compatibility boundary"),
                 BranchFeedback.Contains(
-                    TEXT("LOAD_LEDGER_BRANCH_UNBOUND")));
+                    TEXT("CAMPAIGN_MAP_UNBOUND")));
             TestTrue(
                 TEXT("The Harvest campaign branch writes a branch-bound checkpoint fixture"),
                 BranchBridge->QuickSaveScenario(BranchFeedback));
@@ -361,6 +366,12 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
     TestFalse(
         TEXT("Mission two rejects a same-operation checkpoint from a different campaign branch"),
         Bridge->QuickLoadScenario(Feedback));
+    TestTrue(TEXT("The foreign founding doctrine is refused by the map envelope"),
+             Feedback.Contains(TEXT("CAMPAIGN_MAP_STALE")));
+    if (!TestTrue(TEXT("A current-map envelope can carry the deliberate foreign-ledger probe"),
+                  EchoesCampaignTest::BindForeignLedgerToCurrentMap(*Bridge))) return false;
+    TestFalse(TEXT("The inner ledger binding independently refuses the foreign payload"),
+              Bridge->QuickLoadScenario(Feedback));
     TestTrue(
         TEXT("Cross-branch rejection identifies the campaign ledger mismatch"),
         Feedback.Contains(TEXT("LOAD_LEDGER_BRANCH_MISMATCH")));

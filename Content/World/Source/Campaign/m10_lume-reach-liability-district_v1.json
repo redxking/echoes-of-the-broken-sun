@@ -1,0 +1,353 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M10",
+  "map_id": "lume-reach-liability-district",
+  "operation_mode": "CampaignChoirAtLumeReach",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-010",
+    "map_concepts_reference": "MapConcepts#M10"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "civic-west-frame",
+      "op": "block",
+      "x0": 3,
+      "x1": 9,
+      "y0": 25,
+      "y1": 43
+    },
+    {
+      "id": "civic-east-frame",
+      "op": "block",
+      "x0": 55,
+      "x1": 61,
+      "y0": 25,
+      "y1": 43
+    },
+    {
+      "id": "liability-spur",
+      "op": "block",
+      "x0": 22,
+      "x1": 26,
+      "y0": 27,
+      "y1": 31
+    },
+    {
+      "id": "well-court-edge",
+      "op": "block",
+      "x0": 28,
+      "x1": 30,
+      "y0": 45,
+      "y1": 52
+    },
+    {
+      "id": "well-court-edge-east",
+      "op": "block",
+      "x0": 34,
+      "x1": 36,
+      "y0": 45,
+      "y1": 52
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 446
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 438
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 55,
+          "x1": 58,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 450
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-contact",
+      "x": 18,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-contact",
+      "x": 32,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-contact",
+      "x": 46,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "life-liability",
+      "x": 18,
+      "y": 34,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "transit-liability",
+      "x": 32,
+      "y": 33,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "archive-liability",
+      "x": 46,
+      "y": 34,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "first-spine",
+      "x": 28,
+      "y": 39,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "second-spine",
+      "x": 36,
+      "y": 39,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "lume-well",
+      "x": 32,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-resolution",
+      "x": 18,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-resolution",
+      "x": 32,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-resolution",
+      "x": 46,
+      "y": 50,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "harvest-contact",
+      "x": 18,
+      "y": 20
+    },
+    {
+      "id": "preserve-contact",
+      "x": 32,
+      "y": 20
+    },
+    {
+      "id": "reshape-contact",
+      "x": 46,
+      "y": 20
+    },
+    {
+      "id": "life-liability",
+      "x": 18,
+      "y": 34
+    },
+    {
+      "id": "transit-liability",
+      "x": 32,
+      "y": 33
+    },
+    {
+      "id": "archive-liability",
+      "x": 46,
+      "y": 34
+    },
+    {
+      "id": "first-spine",
+      "x": 28,
+      "y": 39
+    },
+    {
+      "id": "second-spine",
+      "x": 36,
+      "y": 39
+    },
+    {
+      "id": "lume-well",
+      "x": 32,
+      "y": 43
+    },
+    {
+      "id": "harvest-resolution",
+      "x": 18,
+      "y": 50
+    },
+    {
+      "id": "preserve-resolution",
+      "x": 32,
+      "y": 50
+    },
+    {
+      "id": "reshape-resolution",
+      "x": 46,
+      "y": 50
+    }
+  ]
+}

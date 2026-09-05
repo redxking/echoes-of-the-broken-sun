@@ -471,7 +471,7 @@ class GlassScarMapPackTests(unittest.TestCase):
             match = re.search(
                 re.escape("FEchoesSkirmishSetupModel::" + function_name)
                 + r"\s*\(.*?case\s+EEchoesSkirmishMapPreset::GlassScar:\s*"
-                + r"return\s*\{(?P<body>.*?)\};",
+                + r"(?://[^\n]*\n\s*)*return\s*\{(?P<body>.*?)\};",
                 setup_source,
                 re.DOTALL,
             )
@@ -493,18 +493,41 @@ class GlassScarMapPackTests(unittest.TestCase):
             self.descriptor["objectives"]["future_well"],
             [int(well.group(1)), int(well.group(2))],
         )
-        self.assertEqual(
-            self.descriptor["deployment"]["local_spawns"],
-            extract_glass_scar_points("LocalSpawnTiles"),
-        )
-        self.assertEqual(
-            self.descriptor["deployment"]["opponent_spawns"],
-            extract_glass_scar_points("OpponentSpawnTiles"),
-        )
-        self.assertEqual(
-            self.descriptor["resources"]["matter_deposits"],
-            extract_glass_scar_points("ResourceNodeTiles"),
-        )
+        # The descriptor pins the historical 7e95f50 snapshot. Commit 2b3024f
+        # deliberately moved the two Dropoff spawns for MAP-001 haul-time
+        # fairness. Preserve the frozen descriptor; qualify exactly those two
+        # recorded relocations and reject every other deployment drift.
+        expected_local = deepcopy(self.descriptor["deployment"]["local_spawns"])
+        expected_opponent = deepcopy(self.descriptor["deployment"]["opponent_spawns"])
+        self.assertEqual(expected_local[2], [6, 17])
+        self.assertEqual(expected_opponent[2], [58, 48])
+        expected_local[2] = [6, 14]
+        expected_opponent[2] = [58, 50]
+        current_local = extract_glass_scar_points("LocalSpawnTiles")
+        current_opponent = extract_glass_scar_points("OpponentSpawnTiles")
+        self.assertEqual(expected_local, current_local)
+        self.assertEqual(expected_opponent, current_opponent)
+        for points in (current_local, current_opponent):
+            self.assertEqual(len(points), len({tuple(point) for point in points}))
+            for point in points:
+                self.assertTrue(self.is_passable(tuple(point)))
+                self.assertGreaterEqual(self.distance(tuple(points[0]), tuple(point)), 0)
+        self.assertNotIn([6, 17], current_local)  # M01 evacuation site stays free.
+        # The same recorded fairness correction relocated four deposits. Keep
+        # exact-coordinate drift detection and additionally recompute its actual
+        # purpose: equal sorted distance ladders from Cores and haul anchors.
+        expected_resources = deepcopy(self.descriptor["resources"]["matter_deposits"])
+        self.assertEqual(expected_resources[4:], [[31, 43], [43, 36], [47, 50], [52, 45]])
+        expected_resources[4:] = [[30, 43], [39, 36], [46, 50], [49, 45]]
+        current_resources = extract_glass_scar_points("ResourceNodeTiles")
+        self.assertEqual(expected_resources, current_resources)
+        self.assertEqual(len(current_resources), len({tuple(point) for point in current_resources}))
+        for anchors in ((0,), (0, 2)):
+            ladders = []
+            for force in (current_local, current_opponent):
+                ladders.append(sorted(min(self.distance(tuple(force[index]), tuple(point))
+                    for index in anchors) for point in current_resources))
+            self.assertEqual(ladders[0], ladders[1], "current MAP-001 resource travel parity")
 
         legacy_terrain = simulation_source[
             simulation_source.index("bool IsGlassScarCrossing"):

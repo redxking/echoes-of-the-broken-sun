@@ -28,6 +28,9 @@ constexpr float BasicCubeSize = 100.0f;
 // is ever instanced by the terrain view.
 constexpr float UnexploredShroudBottom = -16.0f;
 constexpr float UnexploredShroudTop = 184.0f;
+// M01 has an authored bed at -1750. Conceal unknown space all the way to
+// that substrate so an oblique camera cannot look under the shroud into sky.
+constexpr float M01UnexploredShroudBottom = -1766.0f;
 
 // Explored tiles must keep showing remembered terrain, so that layer stays the
 // thin dimming slab it has always been and deliberately does not occlude.
@@ -75,11 +78,12 @@ FTransform AEchoesFogView::TileTransform(
 {
     const float HalfWidth = static_cast<float>(MapWidthTiles) * 0.5f;
     const float HalfHeight = static_cast<float>(MapHeightTiles) * 0.5f;
+    const float Bottom = bUseM01Material ? M01UnexploredShroudBottom : UnexploredShroudBottom;
     const float Height =
-        bUnexplored ? UnexploredShroudTop - UnexploredShroudBottom
+        bUnexplored ? UnexploredShroudTop - Bottom
                     : ExploredShroudHeight;
     const float Centre = bUnexplored
-        ? UnexploredShroudBottom + Height * 0.5f
+        ? Bottom + Height * 0.5f
         : ExploredShroudCentre;
     return FTransform(
         FRotator::ZeroRotator,
@@ -174,13 +178,14 @@ bool AEchoesFogView::HasOverlapsDisabled() const
 bool AEchoesFogView::InitializeFog(
     const echoes::sim::Simulation& Simulation,
     echoes::sim::PlayerId Player,
-    float TileWorldSize)
+    float TileWorldSize,
+    bool bM01Material)
 {
     if (Simulation.FindPlayer(Player) == nullptr ||
         !InitializeScopedFog(
             Simulation.Config().mapWidthTiles,
             Simulation.Config().mapHeightTiles,
-            TileWorldSize))
+            TileWorldSize, bM01Material))
     {
         return false;
     }
@@ -192,7 +197,8 @@ bool AEchoesFogView::InitializeFog(
 bool AEchoesFogView::InitializeScopedFog(
     int32 InMapWidthTiles,
     int32 InMapHeightTiles,
-    float TileWorldSize)
+    float TileWorldSize,
+    bool bM01Material)
 {
     if (CubeMesh == nullptr || BasicMaterial == nullptr ||
         InMapWidthTiles <= 0 || InMapHeightTiles <= 0 ||
@@ -201,6 +207,7 @@ bool AEchoesFogView::InitializeScopedFog(
     {
         return false;
     }
+    bUseM01Material = bM01Material;
     MapWidthTiles = InMapWidthTiles;
     MapHeightTiles = InMapHeightTiles;
     WorldUnitsPerTile = TileWorldSize;
@@ -210,8 +217,18 @@ bool AEchoesFogView::InitializeScopedFog(
         TileCount);
     UnexploredTiles->SetStaticMesh(CubeMesh);
     ExploredTiles->SetStaticMesh(CubeMesh);
-    UnexploredMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
-    ExploredMaterial = UMaterialInstanceDynamic::Create(BasicMaterial, this);
+    UMaterialInterface* UnexploredParent = bUseM01Material
+        ? LoadObject<UMaterialInterface>(nullptr,
+            TEXT("/Game/Art/Generated/Materials/M_EchoesM01Shroud"))
+        : BasicMaterial.Get();
+    if (UnexploredParent == nullptr) return false;
+    UnexploredMaterial = UMaterialInstanceDynamic::Create(UnexploredParent, this);
+    UMaterialInterface* ExploredParent = bUseM01Material
+        ? LoadObject<UMaterialInterface>(nullptr,
+            TEXT("/Game/Art/Generated/Materials/M_EchoesM01Explored"))
+        : BasicMaterial.Get();
+    if (ExploredParent == nullptr) return false;
+    ExploredMaterial = UMaterialInstanceDynamic::Create(ExploredParent, this);
     if (UnexploredMaterial == nullptr || ExploredMaterial == nullptr)
     {
         return false;

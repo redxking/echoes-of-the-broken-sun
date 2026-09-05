@@ -1,6 +1,8 @@
 #include "EchoesSimulationSubsystem.h"
 
 #include "EchoesBattlefieldPresentation.h"
+#include "EchoesCampaignTerrainBinding.h"
+#include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesCombatEffectView.h"
 #include "EchoesContentSubsystem.h"
 #include "EchoesDestructionView.h"
@@ -36,12 +38,36 @@
 #include "UObject/UObjectArray.h"
 #include "UObject/UObjectGlobals.h"
 
+#if WITH_EDITOR
+#include "HAL/IConsoleManager.h"
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
 namespace
 {
+#if WITH_EDITOR
+TAutoConsoleVariable<int32> CVarEchoesEditorPrologueCompletionChoice(
+    TEXT("Echoes.EditorPrologueCompletionChoice"), 0,
+    TEXT("PIE only. Start the controlled M01 ordinary-command review on the next scenario start: 0 off, 1 Harvest, 2 Preserve, 3 Reshape. Command-line fixture defaults to Preserve."),
+    ECVF_Default);
+TAutoConsoleVariable<int32> CVarEchoesEditorPrologueHoldAfterWell(
+    TEXT("Echoes.EditorPrologueHoldAfterWell"), 0,
+    TEXT("PIE controlled review only: pause the fixture's withdrawal order so the real Well window can expire; simulation continues."), ECVF_Default);
+#endif
+
+const TCHAR* PrologueReviewChoiceName(echoes::sim::FutureWellChoice Choice)
+{
+    switch (Choice)
+    {
+        case echoes::sim::FutureWellChoice::Harvest: return TEXT("Harvest");
+        case echoes::sim::FutureWellChoice::Reshape: return TEXT("Reshape");
+        default: return TEXT("Preserve");
+    }
+}
+
 constexpr int32 PrototypeMapWidthTiles = 64;
 constexpr int32 PrototypeMapHeightTiles = 64;
 constexpr uint32 PrototypeTicksPerSecond = 20;
@@ -267,6 +293,48 @@ enum class EQuickSaveContainerRead : uint8
     EEchoesOperationMode Operation)
 {
     return CampaignCheckpointPrerequisiteRecordCount(Operation) > 0;
+}
+
+// The outer map binding applies to every campaign operation, including those
+// with older mission-specific inner envelopes. Skirmish format stays independent.
+[[nodiscard]] bool TransformCampaignMapCheckpoint(bool bWriting,
+    EEchoesOperationMode Operation, const FEchoesCampaignProgress& Progress,
+    TArray<uint8>& Bytes, FString& OutError)
+{
+    EEchoesCampaignMissionId Mission{};
+    if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(Operation, Mission)) return true;
+    const auto* Founding = Progress.FindDecision(EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    const auto Doctrine = Mission == EEchoesCampaignMissionId::WhatTheLedgerKeeps
+        ? FutureWellChoice::Preserve : Founding ? Founding->WellChoice : FutureWellChoice::Dormant;
+    const auto Map = echoes::world::CheckCampaignTerrain(static_cast<uint8>(Mission), Doctrine);
+    if (!Map.ok)
+    {
+        OutError = TEXT("[CAMPAIGN_MAP_UNBOUND] The operation has no valid campaign map binding.");
+        return false;
+    }
+    FEchoesCampaignMapCheckpointIdentity Identity;
+    Identity.MissionOrdinal = static_cast<uint8>(Mission);
+    Identity.Doctrine = Doctrine == FutureWellChoice::Harvest ? TEXT("Harvest")
+        : Doctrine == FutureWellChoice::Preserve ? TEXT("Preserve") : TEXT("Reshape");
+    Identity.MapId = UTF8_TO_TCHAR(Map.map_id);
+    Identity.SourceSha256 = UTF8_TO_TCHAR(Map.source_sha256);
+    Identity.TerrainIdentitySha256 = UTF8_TO_TCHAR(Map.terrain_identity_sha256);
+    TArray<uint8> Transformed;
+    EEchoesCampaignMapCheckpointFailure Failure{};
+    const bool bValid = bWriting
+        ? FEchoesCampaignMapCheckpoint::Wrap(Identity, Bytes, Transformed, Failure)
+        : FEchoesCampaignMapCheckpoint::Extract(Bytes, Identity, Transformed, Failure);
+    if (!bValid)
+    {
+        const TCHAR* Code = Failure == EEchoesCampaignMapCheckpointFailure::Unbound ? TEXT("CAMPAIGN_MAP_UNBOUND")
+            : Failure == EEchoesCampaignMapCheckpointFailure::Unsupported ? TEXT("CAMPAIGN_MAP_UNSUPPORTED")
+            : Failure == EEchoesCampaignMapCheckpointFailure::Stale ? TEXT("CAMPAIGN_MAP_STALE")
+            : TEXT("CAMPAIGN_MAP_INTEGRITY");
+        OutError = FString::Printf(TEXT("[%s] This checkpoint does not match the current mission map; the active scenario is unchanged."), Code);
+        return false;
+    }
+    Bytes = MoveTemp(Transformed);
+    return true;
 }
 
 [[nodiscard]] bool BuildQuickSaveBranchIdentity(
@@ -2327,6 +2395,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
     bPrologueCompletionPresentationScenario = false;
+    PrologueCompletionPresentationChoice = echoes::sim::FutureWellChoice::Preserve;
     bPointerCombatGuardPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
@@ -2787,6 +2856,29 @@ bool UEchoesSimulationSubsystem::StartScenario(
         return false;
     }
 
+    const UWorld* World = GetWorld();
+    echoes::sim::FutureWellChoice RequestedProloguePresentationChoice = echoes::sim::FutureWellChoice::Preserve;
+    bool bEditorProloguePresentation = false;
+#if WITH_EDITOR
+    if (World && World->WorldType == EWorldType::PIE)
+    {
+        const int32 Choice = CVarEchoesEditorPrologueCompletionChoice.GetValueOnGameThread();
+        if (Choice < 0 || Choice > 3)
+        {
+            UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_PROLOGUE_REVIEW_REJECTED] choice=%d reason=choiceOutOfRange"), Choice);
+            return false;
+        }
+        bEditorProloguePresentation = Choice != 0;
+        if (bEditorProloguePresentation)
+            RequestedProloguePresentationChoice = static_cast<echoes::sim::FutureWellChoice>(Choice);
+        if (bEditorProloguePresentation && (bUseStressScenario ||
+            FParse::Param(FCommandLine::Get(), TEXT("EchoesNetworkMatchSmoke"))))
+        {
+            UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_PROLOGUE_REVIEW_REJECTED] reason=incompatibleControlledMode"));
+            return false;
+        }
+    }
+#endif
 #if UE_BUILD_SHIPPING
     const bool bUseResearchPresentation = false;
     const bool bUseResearchInterruptionPresentation = false;
@@ -2809,10 +2901,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
             FCommandLine::Get(),
             TEXT("EchoesKharuunSystemsPresentation"));
     const bool bUsePrologueCompletionPresentation =
-        !bUseStressScenario &&
-        FParse::Param(
-            FCommandLine::Get(),
-            TEXT("EchoesPrologueCompletionPresentation"));
+        bEditorProloguePresentation || (!bUseStressScenario &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesPrologueCompletionPresentation")));
     const bool bUsePointerCombatGuardPresentation =
         !bUseStressScenario &&
         FParse::Param(
@@ -2886,7 +2976,6 @@ bool UEchoesSimulationSubsystem::StartScenario(
         }
     }
 
-    const UWorld* World = GetWorld();
     const UGameInstance* GameInstance = World != nullptr
                                             ? World->GetGameInstance()
                                             : nullptr;
@@ -2963,13 +3052,16 @@ bool UEchoesSimulationSubsystem::StartScenario(
         SelectedOperation ==
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun;
-    const int32 BaseGlassScarBlockedTiles = bLumeReach
+    EEchoesCampaignMissionId TerrainMissionId{};
+    const bool bCampaignTerrain = !bUseStressScenario &&
+        GetMissionIdForOperation(SelectedOperation, TerrainMissionId);
+    const int32 BaseGlassScarBlockedTiles = bCampaignTerrain ? 0 : bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : bConfiguredSkirmish
             ? ConfigureSkirmishTerrain(
                   *Simulation, ActiveSkirmishSetup.MapPreset)
             : ConfigureGlassScar(*Simulation);
-    const int32 ExpectedBaseBlockedTiles = bLumeReach
+    const int32 ExpectedBaseBlockedTiles = bCampaignTerrain ? 0 : bLumeReach
         ? 223
         : bConfiguredSkirmish
             ? FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(
@@ -2988,11 +3080,11 @@ bool UEchoesSimulationSubsystem::StartScenario(
         return false;
     }
     const int32 SevenAccountsTerrainDelta =
-        SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
+        !bCampaignTerrain && SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
             ? ApplySevenAccountsTerrain(*Simulation, SevenAccountsBranch)
             : 0;
     const int32 UnburiedRoadTerrainDelta =
-        (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad ||
+        !bCampaignTerrain && (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad ||
          SelectedOperation ==
              EEchoesOperationMode::CampaignTermsOfContinuance ||
          SelectedOperation ==
@@ -3005,9 +3097,30 @@ bool UEchoesSimulationSubsystem::StartScenario(
              EEchoesOperationMode::CampaignReserveAuthority)
             ? ApplyUnburiedRoadTerrain(*Simulation, SevenAccountsBranch)
             : 0;
-    const int32 GlassScarBlockedTiles =
+    int32 GlassScarBlockedTiles =
         BaseGlassScarBlockedTiles + SevenAccountsTerrainDelta +
         UnburiedRoadTerrainDelta;
+    if (bCampaignTerrain)
+    {
+        // M01 precedes any founding choice; its three source variants share the
+        // same opening terrain. Later missions require the recorded doctrine.
+        const FutureWellChoice TerrainDoctrine = TerrainMissionId == EEchoesCampaignMissionId::WhatTheLedgerKeeps
+            ? FutureWellChoice::Preserve : SevenAccountsBranch;
+        const auto TerrainResult = echoes::world::ApplyCampaignTerrain(*Simulation,
+            static_cast<uint8>(TerrainMissionId), TerrainDoctrine);
+        if (!TerrainResult.ok)
+        {
+            UE_LOG(LogEchoes, Error, TEXT("[ECHOES_CAMPAIGN_MAP_REFUSED] mission=%u detail=%s"),
+                static_cast<uint8>(TerrainMissionId), UTF8_TO_TCHAR(TerrainResult.detail));
+            Simulation.Reset();
+            return false;
+        }
+        GlassScarBlockedTiles = TerrainResult.blocked_cells;
+        UE_LOG(LogEchoes, Display,
+            TEXT("[ECHOES_CAMPAIGN_MAP_BOUND] mission=M%02u map=%s sourceSha256=%s blocked=%d doctrine=%u"),
+            static_cast<uint8>(TerrainMissionId), UTF8_TO_TCHAR(TerrainResult.map_id),
+            UTF8_TO_TCHAR(TerrainResult.source_sha256), TerrainResult.blocked_cells, static_cast<uint8>(TerrainDoctrine));
+    }
     const Faction ScenarioLocalFaction =
         bUseStressScenario ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignPrologue
@@ -4199,10 +4312,18 @@ bool UEchoesSimulationSubsystem::StartScenario(
         }
         else
         {
-            const FIntPoint WellTile = bConfiguredSkirmish
+            FIntPoint WellTile = bConfiguredSkirmish
                 ? FEchoesSkirmishSetupModel::FutureWellTile(
                       ActiveSkirmishSetup.MapPreset)
                 : FIntPoint{32, 32};
+            if (bCampaignTerrain && !echoes::world::FindCampaignMapAnchor(
+                    static_cast<uint8>(TerrainMissionId), "future-well", WellTile.X, WellTile.Y))
+            {
+                UE_LOG(LogEchoes, Error, TEXT("[ECHOES_CAMPAIGN_MAP_REFUSED] reason=missingFutureWellAnchor mission=%u"),
+                    static_cast<uint8>(TerrainMissionId));
+                Simulation.Reset();
+                return false;
+            }
             bSpawnSucceeded &=
                 Simulation->SpawnFutureWell(
                     Vec2::FromTiles(WellTile.X, WellTile.Y)) != 0;
@@ -4558,6 +4679,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
         bUseKharuunSystemsPresentation;
     bPrologueCompletionPresentationScenario =
         bUsePrologueCompletionPresentation;
+    PrologueCompletionPresentationChoice = RequestedProloguePresentationChoice;
     bPointerCombatGuardPresentationScenario =
         bUsePointerCombatGuardPresentation;
     bLoggedResearchPresentationActive = false;
@@ -4817,6 +4939,37 @@ bool UEchoesSimulationSubsystem::StartScenario(
             SeveralVoicesResearchLoomId);
         Simulation.Reset();
         return false;
+    }
+    if (bCampaignTerrain)
+    {
+        for (const auto& Entity : Simulation->Entities())
+        {
+            // Match the simulation's half-open footprint cell convention. Public
+            // resource/Well footprints are fixed; roster footprints come from rules.
+            const int32 HalfExtent = Entity.type == EntityType::FutureWell ? echoes::sim::kFixedScale / 2
+                : Entity.type == EntityType::ResourceNode ? echoes::sim::kFixedScale / 3
+                : Simulation->Config().rules.archetypes[static_cast<size_t>(Entity.faction)]
+                    [static_cast<size_t>(Entity.type)].footprintHalfExtentRaw;
+            const int32 MinX = Entity.position.x.Raw() - HalfExtent;
+            const int32 MinY = Entity.position.y.Raw() - HalfExtent;
+            const int32 MaxX = Entity.position.x.Raw() + HalfExtent - 1;
+            const int32 MaxY = Entity.position.y.Raw() + HalfExtent - 1;
+            bool bClear = MinX >= 0 && MinY >= 0 &&
+                MaxX < Config.mapWidthTiles * echoes::sim::kFixedScale &&
+                MaxY < Config.mapHeightTiles * echoes::sim::kFixedScale;
+            for (int32 Y = MinY / echoes::sim::kFixedScale; bClear && Y <= MaxY / echoes::sim::kFixedScale; ++Y)
+                for (int32 X = MinX / echoes::sim::kFixedScale; bClear && X <= MaxX / echoes::sim::kFixedScale; ++X)
+                    bClear = Simulation->TerrainAt(X,Y) != Terrain::Blocked;
+            if (!bClear)
+            {
+                UE_LOG(LogEchoes, Error,
+                    TEXT("[ECHOES_CAMPAIGN_MAP_REFUSED] mission=%u entity=%u tile=(%d,%d) detail=initial entity footprint intersects blocked terrain"),
+                    static_cast<uint8>(TerrainMissionId), Entity.id,
+                    Entity.position.x.FloorToInt(), Entity.position.y.FloorToInt());
+                Simulation.Reset();
+                return false;
+            }
+        }
     }
     if (!SpawnTerrainView() || !SpawnFogView() || !SyncEntityViews(true))
     {
@@ -5420,10 +5573,12 @@ bool UEchoesSimulationSubsystem::StartScenario(
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_READY] carrier=%u worker=%u well=%u protocol=Preserve controlled=true release=false ledgerPath=%s"),
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_READY] carrier=%u worker=%u well=%u protocol=%s controlled=true release=false activation=%s ledgerPath=%s"),
                 ArchiveCarrierId,
                 ProloguePresentationWorkerId,
                 ProloguePresentationWellId,
+                PrologueReviewChoiceName(PrologueCompletionPresentationChoice),
+                bEditorProloguePresentation ? TEXT("editorPIE") : TEXT("commandLine"),
                 *CampaignProgressPath);
         }
         if (bPointerCombatGuardPresentationScenario)
@@ -5490,6 +5645,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bResearchInterruptionPresentationScenario = false;
     bKharuunSystemsPresentationScenario = false;
     bPrologueCompletionPresentationScenario = false;
+    PrologueCompletionPresentationChoice = echoes::sim::FutureWellChoice::Preserve;
     bPointerCombatGuardPresentationScenario = false;
     bLoggedResearchPresentationActive = false;
     bLoggedResearchPresentationComplete = false;
@@ -7807,7 +7963,8 @@ void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=decide_well command=ordinary_move protocol=Preserve"));
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=decide_well command=ordinary_move protocol=%s"),
+                PrologueReviewChoiceName(PrologueCompletionPresentationChoice));
             return;
 
         case 2:
@@ -7825,19 +7982,20 @@ void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
                     ProloguePresentationWorkerId,
                     ProloguePresentationWellId,
                     SimToWorld(Well->position),
-                    echoes::sim::FutureWellChoice::Preserve,
+                    PrologueCompletionPresentationChoice,
                     Feedback);
             }
             if (!bCommandAccepted)
             {
-                FailFixture(TEXT("commit_preserve"));
+                FailFixture(TEXT("commit_protocol"));
                 return;
             }
             PrologueCompletionPresentationStage = 3;
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=preserve command=ordinary_future_well"));
+                TEXT("[ECHOES_PROLOGUE_COMPLETION_PRESENTATION_STAGE] stage=%s command=ordinary_future_well"),
+                *FString(PrologueReviewChoiceName(PrologueCompletionPresentationChoice)).ToLower());
             return;
 
         case 3:
@@ -7845,6 +8003,11 @@ void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
             {
                 return;
             }
+#if WITH_EDITOR
+            if (GetWorld() && GetWorld()->WorldType == EWorldType::PIE &&
+                CVarEchoesEditorPrologueHoldAfterWell.GetValueOnGameThread() != 0)
+                return;
+#endif
             bCommandAccepted = IssueCommand(
                 echoes::sim::CommandType::Move,
                 ArchiveCarrierId,
@@ -7883,7 +8046,7 @@ void UEchoesSimulationSubsystem::AdvancePrologueCompletionPresentation()
 }
 
 bool UEchoesSimulationSubsystem::InspectSaveContainer(
-    const TArray<uint8>& Bytes,
+    const TArray<uint8>& InputBytes,
     uint8& OutVersion,
     EEchoesOperationMode& OutOperation,
     echoes::sim::Faction& OutFaction,
@@ -7895,6 +8058,17 @@ bool UEchoesSimulationSubsystem::InspectSaveContainer(
     OutPayload.Reset();
     OutError.Reset();
 
+    FEchoesCampaignMapCheckpointIdentity ClaimedMap;
+    TArray<uint8> InnerBytes;
+    EEchoesCampaignMapCheckpointFailure MapFailure{};
+    const bool bMapEnvelope = FEchoesCampaignMapCheckpoint::Inspect(InputBytes, ClaimedMap, InnerBytes, MapFailure);
+    if (!bMapEnvelope && MapFailure != EEchoesCampaignMapCheckpointFailure::Unbound)
+    {
+        OutError = TEXT("campaign map envelope is malformed");
+        return false;
+    }
+
+    const TArray<uint8>& Bytes = bMapEnvelope ? InnerBytes : InputBytes;
     constexpr int32 MagicSize = 8;
     constexpr int32 VersionOneHeaderSize = MagicSize + 4 + 4;
     constexpr int32 VersionTwoHeaderSize = MagicSize + 4 + 8 + 4;
@@ -8002,6 +8176,8 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
         OutFailure = TEXT("file unavailable");
         return false;
     }
+
+    if (!TransformCampaignMapCheckpoint(false, SelectedOperation, CampaignProgress, CandidateBytes, OutFailure)) return false;
 
     TArray<uint8> ContainerPayload;
     const TArray<uint8>* OperationPayload = &CandidateBytes;
@@ -8336,6 +8512,8 @@ bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
         PersistedBytes = MoveTemp(ContainerBytes);
     }
 
+    if (!TransformCampaignMapCheckpoint(true, SelectedOperation, CampaignProgress, PersistedBytes, OutFeedback)) return false;
+
     const FString SavePath = GetActiveQuickSavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
     const FString TemporaryPath = SavePath + TEXT(".tmp");
@@ -8655,6 +8833,8 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
             OutFailure = TEXT("file unavailable");
             return false;
         }
+        if (!TransformCampaignMapCheckpoint(false, SelectedOperation, CampaignProgress, Bytes, OutFailure)) return false;
+
         TArray<uint8> ContainerPayload;
         const TArray<uint8>* OperationPayload = &Bytes;
         bool bCandidateSkirmishSetupRecovered = false;
@@ -9944,6 +10124,8 @@ bool UEchoesSimulationSubsystem::AutosaveScenario(EEchoesAutosaveReason Reason, 
         }
         PersistedBytes = MoveTemp(ContainerBytes);
     }
+
+    if (!TransformCampaignMapCheckpoint(true, SelectedOperation, CampaignProgress, PersistedBytes, OutFeedback)) return false;
 
     const FString SavePath = GetActiveAutosavePath();
     const FString SaveDirectory = FPaths::GetPath(SavePath);
@@ -13772,6 +13954,17 @@ UEchoesSimulationSubsystem::GetLocalObjectiveSnapshot() const
 
         const bool bVisible =
             Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id);
+        if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+            Entity.type == echoes::sim::EntityType::FutureWell &&
+            (bVisible || Entity.owner == LocalPlayerId))
+        {
+            Snapshot.bPrologueWellEnemyControlled =
+                Entity.owner != LocalPlayerId && Entity.owner != echoes::sim::kNeutralPlayer;
+            Snapshot.bPrologueReshapeExpired = Entity.wellChoice == FutureWellChoice::Reshape &&
+                Entity.reshapeUntilTick == 0;
+            Snapshot.PrologueReshapeRemainingTicks = Entity.reshapeUntilTick > Simulation->CurrentTick()
+                ? Entity.reshapeUntilTick - Simulation->CurrentTick() : 0;
+        }
         if (!bVisible)
         {
             continue;
@@ -17732,10 +17925,13 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
-                Target->wellChoice != FutureWellChoice::Dormant ||
+                (Target->wellChoice != FutureWellChoice::Dormant &&
+                 !(Target->wellChoice == FutureWellChoice::Preserve &&
+                   WellChoice == FutureWellChoice::Preserve &&
+                   Target->owner != Actor.owner)) ||
                 WellChoice == FutureWellChoice::Dormant)
             {
-                OutFeedback = TEXT("[WELL_INVALID] A worker must target a dormant Future Well with a chosen protocol.");
+                OutFeedback = TEXT("[WELL_INVALID] Choose a protocol at a dormant Well, or Preserve to capture an opposing preserved Well. Collapsed Wells cannot be reused.");
                 return false;
             }
             if (WellChoice == FutureWellChoice::Reshape)
@@ -19115,6 +19311,39 @@ void UEchoesSimulationSubsystem::UpdateNarrativeDispatch()
     {
         return;
     }
+    if (GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+        PhaseName == TEXT("Withdraw"))
+    {
+        // The choice belongs to this attempt's live Well. The campaign ledger
+        // is written only after evacuation and may describe an earlier replay.
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.type != echoes::sim::EntityType::FutureWell ||
+                Entity.owner != LocalPlayerId)
+            {
+                continue;
+            }
+            const TCHAR* ChoiceName = nullptr;
+            switch (Entity.wellChoice)
+            {
+                case echoes::sim::FutureWellChoice::Harvest: ChoiceName = TEXT("Harvest"); break;
+                case echoes::sim::FutureWellChoice::Preserve: ChoiceName = TEXT("Preserve"); break;
+                case echoes::sim::FutureWellChoice::Reshape: ChoiceName = TEXT("Reshape"); break;
+                default: break;
+            }
+            if (ChoiceName != nullptr)
+            {
+                Narrative->EnqueueSignal(GetOperationMode(),
+                    FString::Printf(TEXT("phase_entered:Withdraw:%s"), ChoiceName),
+                    GetWorld()->GetRealTimeSeconds());
+                UE_LOG(LogEchoes, Display,
+                    TEXT("[ECHOES_M01_NARRATIVE_BRANCH] choice=%s well=%u tick=%llu"),
+                    ChoiceName, Entity.id,
+                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+                break;
+            }
+        }
+    }
     Narrative->EnqueueSignal(
         GetOperationMode(),
         FString::Printf(TEXT("phase_entered:%s"), *PhaseName),
@@ -19446,7 +19675,8 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
         !NewFogView->InitializeFog(
             *Simulation,
             LocalPlayerId,
-            TileWorldSize))
+            TileWorldSize,
+            SelectedOperation == EEchoesOperationMode::CampaignPrologue))
     {
         if (NewFogView != nullptr)
         {
@@ -19494,12 +19724,22 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         SelectedOperation == EEchoesOperationMode::Skirmish
             ? ActiveSkirmishSetup.MapPreset
             : EEchoesSkirmishMapPreset::GlassScar;
+    std::optional<echoes::sim::PlayerId> TerrainPlayer = LocalPlayerId;
+#if !UE_BUILD_SHIPPING
+    FString TerrainReviewMode;
+    if (FParse::Value(FCommandLine::Get(), TEXT("EchoesGlassScarReview="), TerrainReviewMode) ||
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesGlassScarArtReview")))
+    {
+        // Explicit art-only fixture; ordinary gameplay always uses local visibility.
+        TerrainPlayer.reset();
+    }
+#endif
     if (NewTerrainView == nullptr ||
         !NewTerrainView->InitializeTerrain(
             *Simulation,
             TileWorldSize,
             PresentationPreset,
-            std::nullopt,
+            TerrainPlayer,
             SelectedOperation))
     {
         if (NewTerrainView != nullptr)
@@ -19510,7 +19750,7 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         return false;
     }
     TerrainView = NewTerrainView;
-    if (NewTerrainView->HasChasmComposition())
+    // Every site now supplies an authored, visibility-scoped substrate.
     {
         for (TActorIterator<AActor> It(GetWorld()); It; ++It)
         {
@@ -19557,18 +19797,44 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
         {
             const bool bSharedActor =
                 EchoesBattlefieldPresentation::IsShared(Actor->Tags);
-            const bool bShouldShow =
+            bool bShouldShow =
                 EchoesBattlefieldPresentation::ShouldShow(
                     Actor->Tags,
                     PresentationPreset);
+            // A campaign biome is not a Glass Scar skirmish merely because
+            // its simulation bootstrap uses that preset as a topology seed.
+            if (TerrainView.IsValid() && !bSharedActor && Actor != TerrainView.Get() &&
+                Actor->ActorHasTag(EchoesBattlefieldPresentation::GlassScarTag()) &&
+                FCString::Strcmp(TerrainView->GetActiveDressingSiteId(), TEXT("glass-scar")) != 0)
+            {
+                bShouldShow = false;
+            }
+            // M01's terrain compositor owns grounded, knowledge-scoped fracture
+            // masses. Retire the bright legacy ridge trays and unscopeable shards
+            // in this mission; other scenarios keep their existing presentation.
+            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+                (Actor->ActorHasTag(TEXT("EchoesScarBand")) ||
+                 Actor->ActorHasTag(TEXT("EchoesGlassShard")) ||
+                 Actor->ActorHasTag(TEXT("EchoesScarGlow"))))
+            {
+                bShouldShow = false;
+            }
+            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue && TerrainView.IsValid() &&
+                EchoesBattlefieldPresentation::IsGlassScarRoute(Actor->Tags))
+            {
+                bShouldShow &= TerrainView->IsWorldBoundsKnown(Actor->GetComponentsBoundingBox(true));
+            }
             const bool bFloorActor = Actor->ActorHasTag(
                 EchoesBattlefieldPresentation::FloorTag());
+            if (Actor->ActorHasTag(TEXT("EchoesCelestialBackdrop")) && TerrainView.IsValid() &&
+                FCString::Strcmp(TerrainView->GetActiveDressingSiteId(),TEXT("subterranean-caverns")) == 0)
+            {
+                bShouldShow = false;
+            }
             // The collision floor keeps carrying pointer traces, but it stops
-            // rendering where the terrain view draws the Glass Scar chasm:
-            // the banks are the visible ground there.
+            // rendering where the terrain view supplies authored site ground.
             const bool bFloorSurfaceReplaced =
-                bFloorActor && TerrainView.IsValid() &&
-                TerrainView->HasChasmComposition();
+                bFloorActor && TerrainView.IsValid();
             Actor->SetActorHiddenInGame(!bShouldShow || bFloorSurfaceReplaced);
             if (bFloorActor)
             {

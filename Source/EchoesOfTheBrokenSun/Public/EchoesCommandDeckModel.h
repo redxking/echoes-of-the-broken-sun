@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesSimCore/Simulation.h"
 
 /** Selection facts consumed by the presentation-only tactical command deck. */
 struct FEchoesCommandDeckProfile final
@@ -11,6 +12,7 @@ struct FEchoesCommandDeckProfile final
     int32 OtherCount = 0;
     bool bHasCommandCore = false;
     bool bHasBarracks = false;
+    bool bUseM01RoleNames = false;
 };
 
 /** Command-deck actions that a pointer may activate. */
@@ -50,6 +52,9 @@ struct FEchoesCommandDeckActionEntry final
 /** Pure command-label model shared by the HUD and automation. */
 struct FEchoesCommandDeckModel final
 {
+    /** Authored M01 Meridian roles; does not change command types or availability. */
+    [[nodiscard]] static const TCHAR* GetM01RoleName(echoes::sim::EntityType Type);
+
     [[nodiscard]] static FString BuildPrimaryActions(
         const FEchoesCommandDeckProfile& Profile);
 
@@ -90,27 +95,27 @@ struct FEchoesCommandDeckModel final
         if (Profile.WorkerCount > 0)
         {
             Add(EEchoesCommandDeckAction::BuildBarracks,
-                TEXT("BARRACKS"), TEXT("B"), true);
+                Profile.bUseM01RoleNames ? TEXT("ARRAY FOUNDRY") : TEXT("BARRACKS"), TEXT("B"), true);
             Add(EEchoesCommandDeckAction::BuildDropoff,
-                TEXT("DROPOFF"), TEXT("N"), true);
+                Profile.bUseM01RoleNames ? TEXT("POWER LINK") : TEXT("DROPOFF"), TEXT("N"), true);
             Add(EEchoesCommandDeckAction::BuildUtility,
-                TEXT("UTILITY"), TEXT("M"), true);
+                Profile.bUseM01RoleNames ? TEXT("AEGIS POST") : TEXT("UTILITY"), TEXT("M"), true);
             Add(EEchoesCommandDeckAction::Stop, TEXT("STOP"), TEXT("X"), false);
             return Entries;
         }
         if (Profile.bHasCommandCore)
         {
             Add(EEchoesCommandDeckAction::ProduceWorker,
-                TEXT("WORKER"), TEXT("Q"), false);
+                Profile.bUseM01RoleNames ? TEXT("SURVEYOR") : TEXT("WORKER"), TEXT("Q"), false);
         }
         if (Profile.bHasBarracks)
         {
             Add(EEchoesCommandDeckAction::ProduceSoldier,
-                TEXT("LINE UNIT"), TEXT("E"), false);
+                Profile.bUseM01RoleNames ? TEXT("LANCER") : TEXT("LINE UNIT"), TEXT("E"), false);
             Add(EEchoesCommandDeckAction::ProduceHeavy,
-                TEXT("HEAVY"), TEXT(";"), false);
+                Profile.bUseM01RoleNames ? TEXT("BULWARK TEAM") : TEXT("HEAVY"), TEXT(";"), false);
             Add(EEchoesCommandDeckAction::ProduceScout,
-                TEXT("SCOUT"), TEXT("'"), false);
+                Profile.bUseM01RoleNames ? TEXT("RELAY SKIFF") : TEXT("SCOUT"), TEXT("'"), false);
         }
         if (Profile.bHasBarracks)
         {

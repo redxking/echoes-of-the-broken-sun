@@ -279,7 +279,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     // pins the native snapshot schema only.
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(25));
+              static_cast<uint32>(26));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(
@@ -695,7 +695,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
             MissionRecord->AvailableWellChoices ==
                 AssemblyChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 25 &&
+            MissionRecord->SimulationSnapshotVersion == 26 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

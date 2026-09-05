@@ -1,307 +1,158 @@
-# Map Technical Blueprint & Implementation Specification — Echoes of the Broken Sun
+# Map technical blueprint — Echoes of the Broken Sun
 
-**Author and owner:** Angelis Pseftis  
-**Standing:** Tier 4 Operational Technical Reference (`Docs/README.md`). Directly binds to `Docs/Requirements.md` (§15, §16, §24), `Docs/MapConcepts.md`, `Docs/ArtDirection.md` (A4 Environment Completion), and `Docs/AudioDirection.md` (B3 Ambience Site Families).  
-**Purpose:** Defines the exact, deterministic engineering specifications for all 15 campaign mission battlefields and 6 skirmish theaters. Any AI agent or developer implementing map source JSONs (`Content/World/Source/`), procedural mesh generators (`Scripts/generate_art_assets.py`), audio synthesizers (`Scripts/echoes_audio_synth.py`), or C++ presentation views (`Source/EchoesOfTheBrokenSun/Private/EchoesTerrainView.cpp`) must follow these exact parameters.
+**Author and owner:** Angelis Pseftis
+**Maintained:** 2026-09-04
+**Standing:** implementation reference under [AGENTS.md](../AGENTS.md) and the [authority map](README.md).
 
----
+[Requirements.md](Requirements.md) owns behavior and numeric criteria. [MapConcepts.md](MapConcepts.md)
+owns the subordinate production brief; [DevelopmentBible.md](Archive/DevelopmentBible.md) supplies creative
+canon. [RequirementsState.md](RequirementsState.md) owns evidence, open defects and acceptance. This file
+explains how to carry that design into source and qualification; it is not another requirements ledger.
 
-## 1. Global Simulation Grid Invariants
+The earlier blueprint's invented mission coordinates, blocked-cell totals, uniform grids, unregistered
+profile/asset names, lighting values and six-skirmish-map list are retired. Do not recover those values as
+implementation instructions from Git history. Preserve existing authoritative mission sites and outcomes
+unless an explicit contract migration changes them.
 
-Every map in *Echoes of the Broken Sun* strictly adheres to the following engine and simulation constraints:
+## Campaign map contracts
 
-1. **Grid Dimensions:** 64 × 64 cells (`width_tiles = 64`, `height_tiles = 64`, total cells = 4,096).
-2. **Coordinate Origin:** Southwest origin `[0, 0]` at lower-left; Northeast coordinate `[63, 63]` at upper-right.
-3. **Array Layout:** Row-major index formula: `index = y * 64 + x`.
-4. **Scale Authority:** 
-   - Simulation tile size: `100 cm` (1.0 meter).
-   - Unreal presentation tile world size: `200 uu` (2.0 meters).
-   - World origin offset: `(TileWorldUnits * 0.5f)` centering.
-5. **Movement Bits & Semantics:**
-   - Bit 0 (`0x01`): `ground` movement class.
-   - Entry cost: Default passable = `10`. Blocked cells = `0`. Difficult terrain (ash, deep shivergrass) = `12`–`16`.
-6. **Zero Simulation Touch (SIM-002):**
-   - Presentation meshes, terrain visualizers, VFX, lighting, and audio NEVER affect navigation, collision, line-of-sight, saves, replays, or simulation checksums.
-   - All visual actors must configure `ECollisionEnabled::NoCollision`, `CanEverAffectNavigation() == false`, `CastShadow = false`, and `bGenerateOverlapEvents = false`.
+Deliver fifteen unique campaign maps under `SPEC-MAP-004`, separately from the three offline skirmish maps in
+`SPEC-SKM-003` and `SPEC-SKM-011..013`. The owner-approved Conquest and team/FFA expansion adds its own
+sector/seed and map-format/spawn contracts under `REL-CAM-033..038` and `SPEC-SKM-014..018`; two-spawn
+map parity is not multiplayer qualification. Available art/biome families supply reusable materials and forms; they are not a count of maps.
+A mission title, a palette change or a different objective overlay on an unchanged route graph does not
+establish the distinct authored battlefield required by the master.
 
----
+Each mission binding must identify its mission ID, registered map/source ID, schema/compiler revision,
+source digest, compiled output/digest, runtime selection and mission sites. Store executable bindings in
+registered source/compiled contracts, not in this prose. The map contract includes grid/scale, starts,
+terrain, passability, resources, Well(s), objective and branch sites, camera bounds, Reshape/fallback data
+and deterministic identity required by `SPEC-MAP-002` and `SPEC-MAP-004`. Reuse of a kit or compiler is fine;
+reuse must not erase the distinct layout or falsely imply a shared campaign/skirmish contract.
 
-## 2. Master Biome Architecture & Dressing Registry
+| Mission | Command and spatial obligation | Controlling plan / mission contract |
+|---|---|---|
+| M01 — What the Ledger Keeps | Mara/Meridian; distinct recovery, Well commitment and withdrawal route; surviving scout is archive carrier. | `SPEC-PLAN-001` / `SPEC-MSN-001` |
+| M02 — Seven Accounts of Rain | Oruun/Kharuun; migration, account observation and Waystone sites with legible independent purposes. | `SPEC-PLAN-002` / `SPEC-MSN-002` |
+| M03 — A City on Reserve | Mara/Meridian; three distributed reserve-grid sites and the connecting defense/economy routes. | `SPEC-PLAN-003` / `SPEC-MSN-003` |
+| M04 — The Unburied Road | Oruun/Kharuun; moving infrastructure, roadhead and memory-shard recovery through a distinct transit route. | `SPEC-PLAN-004` / `SPEC-MSN-004` |
+| M05 — Terms of Continuance | Meridian command with separately represented Kharuun presence; treaty relay and protected witness sites. No mixed-faction command inferred from allied presence. | `SPEC-PLAN-005` / `SPEC-MSN-005` |
+| M06 — Names Without Births | Talar/Meridian; census evidence, archive power, two bounded civilian proxies and extraction in a civic district whose omissions remain unexplained. | `SPEC-PLAN-006` / `SPEC-MSN-006` |
+| M07 — The Shape of Silence | Oruun/Kharuun and distinct witness; separated observations, Waystone, Listening-Spine and confluence. | `SPEC-PLAN-007` / `SPEC-MSN-007` |
+| M08 — The Shape Beside Us | Talar/Meridian proxies; Neme-guided reciprocal contact through the selected overlap geometry, with no Choir command or base. | `SPEC-PLAN-008` / `SPEC-MSN-008` |
+| M09 — Reserve Authority | Mara/Meridian; three district interfaces, exactly two powered and one explicitly deferred intact. | `SPEC-PLAN-009` / `SPEC-MSN-009` |
+| M10 — The Choir at Lume Reach | Oruun/Kharuun; inherited approach and liability, two sequential Spines, new Lume Well choice and matching resolution site. Mara is an off-map liaison; Choir is nonplayable here. | `SPEC-PLAN-010` / `SPEC-MSN-010` |
+| M11 — No Neutral Ledger | Oruun and distinct Kharuun witness; exact inherited route and powered pair, two public interfaces and protocol rally. | `SPEC-PLAN-011` / `SPEC-MSN-011` |
+| M12 — The Future That Won | Oruun and verifier; independent readback, inherited district-link pair, Well and exact contracted activation hold. Rhyse is attributable neutral apparatus. | `SPEC-PLAN-012` / `SPEC-MSN-012` |
+| M13 — Assembly of the Missing | Oruun and verifier; two record interfaces, index linkage and independent witness sites. | `SPEC-PLAN-013` / `SPEC-MSN-013` |
+| M14 — Several Voices, One Command | Neme/Hollow Choir; distinct Possible/Manifest sites, command position and crisis anchor with irreversible failure semantics. | `SPEC-PLAN-014` / `SPEC-MSN-014` |
+| M15 — The Broken Sun | Neme/Hollow Choir; approach anchor, three protected neutral witnesses and their accord sites, selected earned conduit and hold. | `SPEC-PLAN-015` / `SPEC-MSN-015` |
 
-The 21 battlefields of Soryn span six distinct regional biomes. Each biome requires a dedicated procedural dressing pack and lighting rig:
+The exact coordinate sets, branch alternatives, initial roster and failure causes live in the detailed
+mission contracts and corresponding registered source. Validate **every branch**, not just the currently
+selected route. A layout must support initial-entity placement, worker/build footprints, protected witnesses,
+objective access, Well telegraphs and Reshape fallback without silently moving a mission anchor.
 
-| Biome ID | Biome Name | `EDressingSiteProfile` | Master Meshes (`ART-*`) | Audio Bed (`AUDIO-*`) | Lighting Kelvin / Lux |
-|---|---|---|---|---|---|
-| `biome-vitrified` | Vitrified Impact Basin | `GlassScar` | `SM_World_GlassScarShelf`, `SM_World_GlassScarShard`, `SM_World_GlassScarRidge` | `AMB_GlassScar` (`AUDIO-005`) | 3,000K / 18,000 Lux |
-| `biome-shivergrass` | Shivergrass Resonance Steppe | `ShivergrassBasin` | `SM_World_ShivergrassClump_01..03`, `SM_World_VaultbackShell_Prop` | `AMB_ShivergrassSteppe` (`AUDIO-007`) | 3,400K / 16,000 Lux |
-| `biome-subterranean` | Subterranean Crystal Cavern | `SubterraneanCaverns` | `SM_World_GeodePillar_01..02`, `SM_World_CrystalSpan_Bridge`, `SM_World_StalactiteCluster` | `AMB_CavernArtery` (`AUDIO-007`) | 7,200K / 1,200 Lux |
-| `biome-foundry` | Sheared Ark-City Foundry | `ArkCityFoundry` | `SM_World_ConcreteButtress_01`, `SM_World_IndustrialSilo_Prop`, `SM_World_CensusGrate` | `AMB_FoundryVoid` (`AUDIO-007`) | 4,800K / 12,000 Lux |
-| `biome-void` | Crownfall Void Horizon | `CrownfallVoid` | `SM_World_AcousticMonolith_01..02`, `SM_World_VoidFractureSpur`, `SM_World_TemporalRefractor` | `AMB_Crownfall` (`AUDIO-005`) | 6,500K / 14,000 Lux |
-| `biome-solardais` | Sub-Solar Floating Dais | `SolarFallDais` | `SM_World_ObsidianDaisTile_01..02`, `SM_World_CoronalPylon_Prop`, `SM_World_SolarRiftGlyph` | `AMB_SolarFallDais` (`AUDIO-007`) | 2,200K / 95,000 Lux |
+Campaign layouts may be intentionally asymmetric to serve their mission. The mirrored-start fairness
+criterion in `SPEC-MAP-001` applies to the standard competitive skirmish maps; it does not turn all fifteen
+campaign missions into mirrored skirmish arenas. Campaign access, validity and difficulty remain governed
+by their own contracts. Neither visual scale nor tile count alone proves suitable battle scale: qualify
+travel and readability at the actual camera, movement rules and encounter pacing.
 
----
+## Source, runtime and presentation boundaries
 
-## 3. Detailed Campaign Operational Sector Specifications
+Read the selected schema and compiler before editing. Existing entry points include
+`Content/World/Tools/compile_map_pack.py`, `compile_overlay_pack.py`, `compile_dressing_pack.py`, and
+`emit_compiled_map_pack_header.py`; obtain supported arguments with `--help`. The existing base schema is
+`Content/World/Schema/glass_scar_map_source_v2.schema.json`. A new registered map family may require a
+schema/compiler extension with explicit compatibility and invalid-data checks. Never hand-edit generated
+packs/headers to manufacture a binding, bypass validation or substitute a generic map on a failed lookup.
 
-### M01: The Glass Scar (`What the Ledger Keeps`)
-* **Sector Code:** `SEC-01-GS`
-* **Biome:** `biome-vitrified` (`EDressingSiteProfile::GlassScar`)
-* **Player 1 (Meridian) Base:** `[10, 10]` | **Player 2 (Kharuun) Base:** `[54, 54]`
-* **Contested Landmark:** Future Well at `[32, 32]` (Dormant state).
-* **Archive Evacuation Objective:** Convoy spawn `[18, 12]`, extraction site `[6, 8]`.
-* **Topography:**
-  - South Basin: Passable plain `[0..63, 0..29]`.
-  - North Basin: Passable plain `[0..63, 35..63]`.
-  - Dividing Chasm: Impassable black glass ridge `[0..63, 30..34]`.
-  - Crossing 1 (Ash Cut): Passable `[12..15, 30..34]`, entry cost 12.
-  - Crossing 2 (Buried Causeway): Passable `[29..35, 30..34]`, entry cost 10.
-  - Crossing 3 (Folded Verge): Passable `[48..51, 30..34]`, entry cost 10.
-* **Blocked Cell Count:** 165 cells (`kExpectedBlockedCellCount = 165`).
-* **Resource Seams:**
-  - Player 1 Natural: Matter `[6, 14]`, `[14, 10]`.
-  - Player 2 Natural: Matter `[58, 50]`, `[50, 54]`.
-  - Contested High-Yield: Matter `[30, 26]`, `[34, 38]`.
-* **Audio & Lighting:** `AMB_GlassScar` (`-16 LUFS`) | 3,000K, 18,000 Lux, Sun pitch -35°, roll 15°.
+Simulation owns terrain, movement, placement, line of sight, objective state, save and replay identity.
+Presentation consumes that state. Cosmetic geometry has no collision, overlap, navigation influence,
+input interception or gameplay authority. Follow the existing rendering contract for shadows and fog;
+a decoration must not disclose hidden forces or cover a public protocol warning. Gameplay geometry must
+be represented in authoritative data and qualified as such, not smuggled in as dressing.
 
----
+Grid dimensions, origin, array layout, tile scale and render scale are read from their actual contracts
+and named runtime constants. Inspect conversion in both directions and map-edge behavior. Lighting,
+materials and audio use the applicable master gates and art/audio direction; this blueprint creates no
+independent lux, loudness, movement-cost or performance thresholds.
 
-### M02: Shivergrass Basin (`Seven Accounts of Rain`)
-* **Sector Code:** `SEC-02-SB`
-* **Biome:** `biome-shivergrass` (`EDressingSiteProfile::ShivergrassBasin`)
-* **Player 1 (Oruun / Kharuun) Base:** `[12, 14]` | **Opponent AI Base:** `[52, 50]`
-* **Migration Objective:** 
-  - Mobile Waystone starting anchor: `[12, 14]`.
-  - Target Migration Re-root site: `[36, 42]`.
-  - Memory Bearer witness account site: `[48, 48]`.
-* **Topography:**
-  - Rolling resonance steppe with 3 stepped elevation contours.
-  - Northwest Ridge (impassable basalt cliffs): `[0..20, 48..63]`.
-  - Southeast Bog (high movement cost = 14): `[40..63, 0..18]`.
-  - Central Prairie: Expansive open ground `[15..45, 15..45]` rippling with probability-sensitive shivergrass.
-* **Environmental Feature:** 3 wandering Vaultback megafauna (neutral dynamic terrain obstacles, radius 2 tiles).
-* **Blocked Cell Count:** 210 cells.
-* **Resource Seams:** Matter seams at `[8, 16]`, `[16, 8]`, `[46, 54]`, `[54, 46]`. Raw Dawnshard clusters at `[32, 30]`.
-* **Audio & Lighting:** `AMB_ShivergrassSteppe` | 3,400K, 16,000 Lux, slight amber atmospheric haze (fog density 0.015).
+Before comparing maps visually, compare source layouts and mission bindings. The comparison must show
+meaningful differences in routes, starts, objective staging, landmarks, sightlines and strategic choices,
+then establish those differences in packaged gameplay views. Verify legitimate shared regional vocabulary
+without copying the battlefield. Invalid IDs, mismatched source/compiled identities or missing mission
+bindings must follow `SPEC-MAP-004.REFUSAL`; no success receipt may conceal a fallback.
 
----
+## M01 end-to-end qualification
 
-### M03: Lume Reach Outskirts (`A City on Reserve`)
-* **Sector Code:** `SEC-03-LR`
-* **Biome:** `biome-foundry` (`EDressingSiteProfile::LumeReach`)
-* **Player 1 (Mara Vey / Meridian) Base:** `[8, 32]` | **Hostile Incursion Spawns:** `[58, 16]`, `[58, 48]`
-* **Grid Objectives:** Three vital district Aegis posts requiring unbroken Power Links:
-  - Life Support Post: `[24, 18]`
-  - Transit Nexus Post: `[24, 46]`
-  - Archive Continuity Post: `[40, 32]`
-* **Topography:**
-  - Urban paved highways (movement cost 8): Central avenues connecting `[8, 32]` to `[40, 32]`.
-  - Collapsed Foundation Blocks (impassable building rubble): Rectangles at `[16..20, 24..40]`, `[32..36, 8..24]`, `[32..36, 40..56]`.
-* **Blocked Cell Count:** 288 cells.
-* **Resource Seams:** Power Link transformer nodes at `[14, 32]`, `[24, 32]`, `[34, 32]`. Matter stockpiles at `[10, 26]`, `[10, 38]`.
-* **Audio & Lighting:** `AMB_LumeReach` | 4,500K Cool White, 8,000 Lux, heavy overcast industrial fog (density 0.035).
+M01 is the representative slice because it combines story orientation, normal RTS controls/economy/combat,
+a protected carrier, three irreversible-choice paths, evacuation, results and persistence. Qualifying it
+establishes a repeatable production method; it cannot qualify M02–M15 or the full campaign by extrapolation.
+Use the detailed [M01 production brief](MapConcepts.md#m01-representative-production-brief).
+The owner's sequential production direction is implemented by the
+[bounded M01 build packets](MapConcepts.md#bounded-m01-build-packets-and-stop-conditions).
+Finish the current map's plan and packets before activating another map. This document owns the
+qualification sequence; MapConcepts owns the single detailed production plan.
 
----
+The source trace inspected on 2026-09-04 is:
 
-### M04: The Unburied Road (`The Unburied Road`)
-* **Sector Code:** `SEC-04-UR`
-* **Biome:** `biome-subterranean` (`EDressingSiteProfile::SubterraneanCaverns`)
-* **Player 1 (Oruun) Base:** `[14, 10]` | **Opponent Core:** `[50, 54]`
-* **Objective:** Establish Waystone roadhead at `[28, 28]`; escort Memory Bearer across the ancient transit bridge to missing shard at `[32, 40]`.
-* **Topography:**
-  - Deep cavern walls (blocked outer perimeter): `[0..8, 0..63]`, `[56..63, 0..63]`.
-  - Subterranean Abyssal Chasm: `[8..56, 28..34]` with only two bridge crossings:
-    - Primary Transit Span: `[30..34, 28..34]` (passable stone arch).
-    - Flanking Service Siphon: `[14..16, 28..34]` (narrow pedestrian catwalk).
-* **Blocked Cell Count:** 412 cells.
-* **Resource Seams:** Rich bioluminescent Matter veins along cavern walls `[12, 18]`, `[18, 12]`, `[46, 50]`, `[50, 44]`.
-* **Audio & Lighting:** `AMB_CavernArtery` | 7,200K Cyan Bioluminescence, 1,200 Lux (directional sun disabled; lit via ambient cavern radiance and local point lights).
+- Narrative: `Content/Narrative/Source/missions/m01_what_the_ledger_keeps.json`, content
+  `nar_m01_what_the_ledger_keeps`, mission `WhatTheLedgerKeeps`, operation `CampaignPrologue`.
+- World input (refreshed 2026-09-05): `Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json`
+  supplies the dedicated campaign terrain through `EchoesCampaignTerrainBinding` and the generated
+  campaign pack. `Content/World/Source/Presentation/m01_evacuation_landmarks_v1.json` supplies the
+  source-hash-bound M01 presentation. The GlassScar source/compiled pack remains a separate shared/skirmish
+  reference; it is not the dedicated M01 map authority.
+- Mission/runtime: `EchoesPrologueMissionModel`, `EchoesSimulationSubsystem` scenario dispatch,
+  `GetArchiveRecoverySite` (22,18), `GetEvacuationSite` (6,17), and the actual Well/terrain binding.
+- Continuation: `EchoesCampaignProgress` atomic store, result handling in `EchoesPlayerController`,
+  campaign-map presentation and the M01-to-M02 transition.
 
----
+Those are source observations, not proof of a dedicated M01 map or complete narrative delivery. Recheck
+at execution because the runtime/map registry is under active development. The narrative source inspected
+here explicitly marks runtime consumption false and several deliveries unbound. Authored text, a working
+mechanical objective, or an art-review capture does not establish voice/subtitle/cinematic delivery.
 
-### M05: The Line of Parity (`Terms of Continuance`)
-* **Sector Code:** `SEC-05-LP`
-* **Biome:** `biome-void` (`EDressingSiteProfile::CrownfallVoid`)
-* **Joint Allied Command (Meridian / Kharuun):** Local proxies at `[10, 32]` and `[54, 32]`.
-* **Objective:** Synchronize twin treaty proxy pylons at `[26, 32]` and `[38, 32]`; maintain link from tick 300 to 900 while fending off unresolved apparitions.
-* **Topography:**
-  - Symmetric demarcation glacis. Open flat no-man's-land in the center.
-  - Defensive earthwork revetments: `[20..22, 16..48]`, `[42..44, 16..48]`.
-  - Northern and Southern Chasm Faults: `[24..40, 0..8]`, `[24..40, 56..63]`.
-* **Blocked Cell Count:** 240 cells.
-* **Resource Seams:** Symmetrical Matter deposits at `[14, 20]`, `[14, 44]`, `[50, 20]`, `[50, 44]`.
-* **Audio & Lighting:** `AMB_Crownfall` | 3,800K Pale Twilight, 10,000 Lux, stark low-angle illumination.
+| Stage | Required execution and retained result | Evidence boundary |
+|---|---|---|
+| Design and binding | Review M01 story/place/unit/building briefs; bind mission to its unique registered source/compiled map; verify every fixed/branch site and initial entity against source and runtime. Record source hashes and generated identities. | `SRC`; planning and executable-source checks only. |
+| Focused regression | Run applicable narrative, map/compiler/overlay and native mission tests, then the coordinated Unreal mission, compiled-binding, narrative delivery, dressing, fog and save/progress cases. Include absent/mismatched-map refusal and illegal/unreachable sites. | Native/editor evidence stays native/editor; `PKG-AUTO` requires the identified package. |
+| Ordinary entry | Start the identified package from title/new campaign with an isolated fresh player ledger; observe opening, teaching, briefing, loading and deployment. No hidden startup shortcut can stand in for this path. | `PKG-PHYS` for actual mouse/keyboard journey; capture input/state trail and rendered/audio context. |
+| Three Well branches | Separately recover carrier at22,18; keep it alive/on site while a worker commits each of Harvest, Preserve and Reshape; observe choice warnings and consequences; evacuate surviving carrier to6,17 after commitment. Compare branch presentation and exact ledger receipt. | `PKG-AUTO` for deterministic cases; separately `PKG-PHYS`/`PKG-REND` for interaction, visibility, animation and sound. |
+| Failure and recovery | Exercise carrier/Core loss, interrupted or invalid commitment, ownership/terminal-outcome failure, retry/checkpoint and restart. No failure writes a campaign consequence. Verify Added, AlreadyRecorded, ReplayConflict and StorageFailure behavior through the appropriate executable fault cases, with truthful visible results. | Fault injection/automation stays `PKG-AUTO`; normal player retry/restart needs `PKG-PHYS`. Never inject a save and call it a fresh journey. |
+| Continuation and durability | Commit success, continue to M02, exit/relaunch/continue and replay M01. Preserve the established ledger, inherited record and any earned optional reward, and show the connected campaign transition without revealing unearned story. | `PKG-AUTO` state assertions and separately `PKG-PHYS`/`PKG-REND` ordinary flow. |
+| Integrated craft | Review tactical/close gameplay views, roles, collision truth, all Well states, fog, accessibility, motion, dialogue/alerts over combat, and material sound. Use real gameplay with units and fog active. Art-review modes that hide them cannot substitute. | `PKG-REND` including listening and synchronization; measurements use the master's hardware/workload/preset gates. |
+| Experience and acceptance | Have the required uncoached participants explain the stakes, roles and next action, then play; record observed comprehension, difficulty and emotional/story continuity. Submit exact build/evidence and unresolved defects to Angelis. | `HUM` then `OWNER`; model-operated play is neither. |
 
----
+Run the lightweight source checks from the checkout, retaining command, exit code and complete output:
 
-### M06: Ark-City Sector 9 (`Names Without Births`)
-* **Sector Code:** `SEC-06-AS`
-* **Biome:** `biome-foundry` (`EDressingSiteProfile::ArkCityFoundry`)
-* **Player 1 (Talar Venn) Base:** `[8, 12]` | **Hostile Encroachment Spawns:** `[56, 52]`, `[12, 56]`
-* **Objectives:** Locate the Census Trace at `[30, 45]`; escort civilian transport proxies to hardened blast shelters at `[12, 16]`.
-* **Topography:**
-  - Sheared concrete foundations overlooking a bottomless void.
-  - Void cleave: Diagonal chasm running from `[0, 36]` to `[36, 63]` where district structures plummeted into the earth.
-  - Connecting steel industrial ramps: `[18..20, 42..46]`, `[28..30, 52..56]`.
-* **Blocked Cell Count:** 345 cells.
-* **Resource Seams:** Industrial salvage scrap Matter at `[14, 10]`, `[10, 22]`, `[42, 38]`.
-* **Audio & Lighting:** `AMB_FoundryVoid` | 4,800K Sodium Vapor, 12,000 Lux, steam emissions and heavy drop shadows.
+```sh
+python3 Tests/Narrative/test_m01_narrative_contract.py
+python3 Tests/World/test_glass_scar_map_pack.py
+python3 Tests/World/test_glass_scar_compiled_map.py
+python3 Tests/World/test_overlay_map_packs.py
+```
 
----
+Before Unreal/build/package/capture work, read the applicable heavy-run and package-provenance skills and
+coordinate exclusive resources. The existing Unreal harness is `Scripts/run_unreal_tests.sh`; inspect its
+current supported selection and isolated-save behavior. Useful existing tests include
+`EchoesPrologueMissionTest`, `EchoesFreshCampaignJourneyTest`, `EchoesCompiledMapBindingTest`,
+`EchoesCampaignOperationsMapTest` and save/progress cases. Their names here are discovery pointers, not
+claims of coverage or a frozen test count.
 
-### M07: Cinder Hollow (`The Shape of Silence`)
-* **Sector Code:** `SEC-07-CH`
-* **Biome:** `biome-shivergrass` (`EDressingSiteProfile::ShivergrassBasin`)
-* **Player 1 (Oruun) Base:** `[12, 12]` | **AI Adversary Base:** `[52, 52]`
-* **Objective:** Deploy Listening Spine at `[28, 28]`; position twin witness scouts at paired acoustic resonance nodes `[20, 40]` and `[40, 20]`.
-* **Topography:**
-  - Smoldering crater basin filled with calcified ash dunes (movement cost 13).
-  - Dead Future Well at `[32, 28]` (dormant, un-harvestable landmark).
-  - Stepped basalt scarp edges blocking direct approach: `[16..48, 16..18]`, `[16..48, 46..48]`.
-* **Blocked Cell Count:** 198 cells.
-* **Resource Seams:** Carbonized ash Matter clusters at `[16, 24]`, `[24, 16]`, `[48, 40]`, `[40, 48]`.
-* **Audio & Lighting:** `AMB_ShivergrassSteppe` (muffled filter) | 2,600K Smoldering Ember Red, 6,000 Lux, zero wind audio bed.
+An editor `-EchoesCampaignPrologue` launch is useful diagnostic evidence but bypasses normal campaign entry.
+A packaged run needs its own verified source/build/save identity. Record commit plus dirty-source hashes,
+compiler/schema version, package hash, configuration, command/input sequence, logs/video/audio and every
+failure at the existing evidence location. Update only the exact evidence classes in RequirementsState.md.
+Do not promote an old screenshot or an editor PASS to packaged qualification.
 
----
+## Extend after the representative review
 
-### M08: The Mirrored Rift (`The Shape Beside Us`)
-* **Sector Code:** `SEC-08-MR`
-* **Biome:** `biome-void` (`EDressingSiteProfile::CrownfallVoid`)
-* **Player 1 (Talar Venn) Base:** `[16, 20]` | **Choir Emergence Vector:** `[48, 44]`
-* **Objective:** Construct Echo Relay at `[32, 32]`; cross paired state sites without triggering defensive resonance collapse.
-* **Topography:**
-  - Vertical bifurcated chasm splitting the map from `[30..34, 0..63]`.
-  - Offset quantum bridge spans (bridges shift visibility phase every 45 seconds):
-    - Span Alpha: `[30..34, 16..18]`
-    - Span Beta: `[30..34, 46..48]`
-* **Blocked Cell Count:** 290 cells.
-* **Resource Seams:** Shimmering crystal Matter nodes at `[12, 32]`, `[22, 12]`, `[52, 32]`, `[42, 52]`.
-* **Audio & Lighting:** `AMB_Crownfall` | 6,500K Prismatic Shimmer, 14,000 Lux, double-shadow projection active.
-
----
-
-### M09: Hollow Resonator Ridge (`Reserve Authority`)
-* **Sector Code:** `SEC-09-RR`
-* **Biome:** `biome-void` (`EDressingSiteProfile::CrownfallVoid`)
-* **Player 1 (Mara Vey / Joint) Base:** `[10, 10]` | **Choir Vanguard Spawns:** `[54, 54]`
-* **Objective:** Capture and harmonize three acoustic monolith resonators at `[20, 36]`, `[32, 32]`, and `[44, 28]`.
-* **Topography:**
-  - High-altitude ridge running diagonally from Southwest to Northeast `[8..56, 8..56]`.
-  - Steep drop-offs on both sides force fights onto the elevated spine.
-* **Blocked Cell Count:** 254 cells.
-* **Resource Seams:** Matter seams situated at low-ground base approaches `[8, 20]`, `[20, 8]`, `[56, 44]`, `[44, 56]`.
-* **Audio & Lighting:** `AMB_Crownfall` | 3,200K Crimson Dusk, 11,000 Lux, high wind shearing audio bed.
-
----
-
-### M10: The Census Vault (`The Choir at Lume Reach`)
-* **Sector Code:** `SEC-10-CV`
-* **Biome:** `biome-foundry` (`EDressingSiteProfile::LumeReach`)
-* **Player 1 Base:** `[14, 14]` | **Choir Assault Wave Vector:** `[50, 50]`
-* **Objective:** Secure the subterranean inverted pyramid at `[32, 32]`; hold data conduit until download reaches 100%.
-* **Topography:**
-  - Concentric chamber walls forming a subterranean fortress maze.
-  - Choke corridors at `[24, 32]`, `[40, 32]`, `[32, 24]`, `[32, 40]`.
-* **Blocked Cell Count:** 380 cells.
-* **Resource Seams:** Internal vault generator cores at `[18, 28]`, `[28, 18]`, `[46, 36]`, `[36, 46]`.
-* **Audio & Lighting:** `AMB_FoundryVoid` | 5,000K Phosphor Blue, 2,400 Lux, echoing metallic reverberation.
-
----
-
-### M11: The Verge of Erasure (`No Neutral Ledger`)
-* **Sector Code:** `SEC-11-VE`
-* **Biome:** `biome-void` (`EDressingSiteProfile::CrownfallVoid`)
-* **Allied Coalition Base:** `[12, 32]` | **Choir Incursion Front:** `[52, 32]`
-* **Objective:** Secure stable central dais before outer perimeter dissolves into the void.
-* **Topography:**
-  - Disintegrating basalt shelf. Outer 4-tile perimeter converts to blocked cells every 180 seconds.
-  - Central refuge plateau: `[24..40, 20..44]`.
-* **Blocked Cell Count:** Starts at 180 cells; expands dynamically to 512 cells.
-* **Resource Seams:** Rapidly depleting high-yield Matter caches at `[20, 24]`, `[20, 40]`, `[44, 24]`, `[44, 40]`.
-* **Audio & Lighting:** `AMB_Crownfall` | 8,000K Harsh Cold White, 20,000 Lux, reverse temporal audio echoes.
-
----
-
-### M12: Kharuun Sovereign Caverns (`The Future That Won`)
-* **Sector Code:** `SEC-12-SC`
-* **Biome:** `biome-subterranean` (`EDressingSiteProfile::SubterraneanCaverns`)
-* **Player 1 (Oruun) Base:** `[12, 16]` | **Intruding Extraction Strike Force:** `[52, 48]`
-* **Objective:** Defend the Ancestral Geode and core birthing shrines at `[36, 32]`.
-* **Topography:**
-  - Immense geode cavern with spiraling mineral pillars and deep subterranean water pools (water movement cost 18).
-  - Living crystalline spires provide natural defensive bastions.
-* **Blocked Cell Count:** 320 cells.
-* **Resource Seams:** Pure virgin Matter crystals at `[10, 28]`, `[22, 10]`, `[42, 54]`, `[54, 36]`.
-* **Audio & Lighting:** `AMB_CavernArtery` | 3,600K Bioluminescent Amber, 4,000 Lux, rhythmic communal singing resonance.
-
----
-
-### M13: Meridian High Bastion (`Assembly of the Missing`)
-* **Sector Code:** `SEC-13-HB`
-* **Biome:** `biome-solardais` (`EDressingSiteProfile::SolarFallDais`)
-* **Player 1 (Mara Vey) Base:** `[16, 32]` | **Choir Siege Armada:** `[48, 32]`
-* **Objective:** Hold the three citadel gatehouses against overwhelming frontal assault.
-* **Topography:**
-  - 3-tier terraced military fortress climbing toward the celestial ascent.
-  - Ramparts and engineered killzones: `[28..30, 12..52]`.
-* **Blocked Cell Count:** 310 cells.
-* **Resource Seams:** Fortified internal supply depots at `[12, 20]`, `[12, 44]`, `[22, 32]`.
-* **Audio & Lighting:** `AMB_SolarFallDais` | 4,000K Steel Gray, 25,000 Lux, heavy artillery thuds and siren blasts.
-
----
-
-### M14: The Resonant Chasm (`Several Voices, One Command`)
-* **Sector Code:** `SEC-14-RC`
-* **Biome:** `biome-solardais` (`EDressingSiteProfile::SolarFallDais`)
-* **Coalition Bases:** Meridian at `[12, 12]`, Kharuun at `[12, 52]` | **Choir Nexus:** `[52, 32]`
-* **Objective:** Cross the abyssal chasm via dual suspended anchors; link minds at the celestial focus.
-* **Topography:**
-  - Titanic planetary rift splitting the ground horizontally. Bottomless void beneath.
-  - Suspended bridge anchors at `[28..36, 20..24]` and `[28..36, 40..44]`.
-* **Blocked Cell Count:** 440 cells.
-* **Resource Seams:** Raw Dawnshard clusters on cliff edges `[18, 22]`, `[18, 42]`, `[46, 26]`, `[46, 38]`.
-* **Audio & Lighting:** `AMB_SolarFallDais` | 2,800K Blazing Solar Flare, 45,000 Lux, deep gravitational bass groan.
-
----
-
-### M15: The Solar Fall Dais (`The Broken Sun`)
-* **Sector Code:** `SEC-15-SD`
-* **Biome:** `biome-solardais` (`EDressingSiteProfile::SolarFallDais`)
-* **Allied Convergence Base:** `[14, 32]` | **Choir Transcendence Core:** `[50, 32]`
-* **Contested Epicenter:** The Broken Sun Dais at `[32, 32]`.
-* **Objective:** Execute final campaign protocol (Controlled Stabilization, Open Horizon, Memory Preserved, or Reciprocal Accord).
-* **Topography:**
-  - Floating geometric obsidian platform suspended in void space directly beneath the shattered star.
-  - Zero natural cover; all fortifications must be player-built.
-  - Outer void drop-offs: all cells outside `[10..54, 10..54]` are blocked void.
-* **Blocked Cell Count:** 620 cells.
-* **Resource Seams:** Pure condensed Dawn energy nodes at `[20, 20]`, `[20, 44]`, `[44, 20]`, `[44, 44]`.
-* **Audio & Lighting:** `AMB_SolarFallDais` | 2,200K Blinding Golden Corona, 95,000 Lux, full cosmic choir wail.
-
----
-
-## 4. Competitive Skirmish Theaters (S01–S06)
-
-| Preset ID | Map Name | Format | Biome | Key Mechanical Affordance |
-|---|---|---|---|---|
-| `SK_01` | Twin Wells | 1v1 | `GlassScar` | Two mirrored high-ground Future Wells; split-force economy. |
-| `SK_02` | Crucible Ridge | 1v1 / 2v2 | `ShivergrassBasin` | High-ground center mesa overlooking vulnerable low-ground Matter seams. |
-| `SK_03` | Sunken Foundry | 2v2 / 4-FFA | `SubterraneanCaverns` | Four corner spawns; low fog obscuring movement through slag canals. |
-| `SK_04` | Frostshard Expanse | 1v1 | `CrownfallVoid` | Brittle Dawnshard drifts act as destructible barriers opening sudden flanks. |
-| `SK_05` | Shattered Causeway | 3v3 / 6-Player | `ArkCityFoundry` | Three parallel transit spans; coordination across all bridges required. |
-| `SK_06` | Choir Sanctum | 1v1 Tournament | `SolarFallDais` | Perfectly symmetrical tournament arena with acoustic line-of-sight blockers. |
-
----
-
-## 5. Architectural Verification & Acceptance Criteria
-
-Before any map build is merged to `main`:
-1. **Validation Tool Execution:**
-   - Source JSON must validate against `Content/World/Schema/map_source_v2.schema.json`.
-   - Python compilation via `Content/World/Tools/compile_map_pack.py` must succeed with zero errors.
-   - SHA-256 sidecars must match compiled output bytes exactly.
-2. **C++ Header Generation:**
-   - Static headers emitted via `emit_compiled_map_pack_header.py` must compile cleanly in Unreal Engine 5.8.2.
-3. **Simulation Authority Verification:**
-   - Native sim tests (`./Scripts/test_sim.sh`) must pass 96/96 tests asserting zero simulation impact from dressing actors.
-4. **Performance Gate:**
-   - Must sustain ≥ 60 FPS on Apple Silicon M1 Pro under Metal SM5 with full dressing instances drawn.
+Fix the M01 defects exposed by each stage before treating its asset and interaction patterns as the
+production standard. Reuse the reviewed construction, motion, audio and evidence method across the fifteen
+briefs; build each map's own routes, objective composition, landmarks and narrative connections. Re-run
+branch/persistence/fog/refusal checks for each map and compare the complete set. M09–M15 require their
+inherited-record and ending combinations; a successful M01 run cannot waive them. Whole-campaign, skirmish,
+performance, soak, distribution and human acceptance remain their separate master gates.

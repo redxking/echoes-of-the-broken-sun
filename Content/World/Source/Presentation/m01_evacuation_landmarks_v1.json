@@ -1,0 +1,231 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M01",
+  "map_id": "glass-scar-evacuation-margin",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-001",
+    "map_concepts_reference": "MapConcepts#M01"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json",
+  "terrain_source_sha256": "8ae50fa5adf740f0f7f0508c151e82c4e86b7f3a1e70cf323717ee536418669b",
+  "records": [
+    {
+      "id": "outpost-cradle-west",
+      "kind": "ArchiveCradle",
+      "x": 0,
+      "y": 11,
+      "yaw": 90
+    },
+    {
+      "id": "outpost-frame-east",
+      "kind": "ArchiveFrame",
+      "x": 20,
+      "y": 10,
+      "yaw": 270
+    },
+    {
+      "id": "archive-frame-north",
+      "kind": "ArchiveFrame",
+      "x": 26,
+      "y": 18,
+      "yaw": 180
+    },
+    {
+      "id": "withdrawal-paving-06",
+      "kind": "RoutePaving",
+      "x": 6,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-07",
+      "kind": "RoutePaving",
+      "x": 7,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-08",
+      "kind": "RoutePaving",
+      "x": 8,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-09",
+      "kind": "RoutePaving",
+      "x": 9,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-10",
+      "kind": "RoutePaving",
+      "x": 10,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-11",
+      "kind": "RoutePaving",
+      "x": 11,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-12",
+      "kind": "RoutePaving",
+      "x": 12,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-13",
+      "kind": "RoutePaving",
+      "x": 13,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-14",
+      "kind": "RoutePaving",
+      "x": 14,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-15",
+      "kind": "RoutePaving",
+      "x": 15,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "withdrawal-paving-16",
+      "kind": "RoutePaving",
+      "x": 16,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "archive-paving-17",
+      "kind": "RoutePaving",
+      "x": 17,
+      "y": 17,
+      "yaw": 0
+    },
+    {
+      "id": "causeway-south-paving",
+      "kind": "RoutePaving",
+      "x": 32,
+      "y": 29,
+      "yaw": 90
+    },
+    {
+      "id": "causeway-deck-paving",
+      "kind": "RoutePaving",
+      "x": 32,
+      "y": 32,
+      "yaw": 90
+    },
+    {
+      "id": "causeway-north-paving",
+      "kind": "RoutePaving",
+      "x": 32,
+      "y": 35,
+      "yaw": 90
+    },
+    {
+      "id": "outpost-conduit",
+      "kind": "ServiceConduit",
+      "x": 1,
+      "y": 11,
+      "yaw": 90
+    },
+    {
+      "id": "east-outpost-conduit",
+      "kind": "ServiceConduit",
+      "x": 19,
+      "y": 10,
+      "yaw": 270
+    },
+    {
+      "id": "archive-return-conduit",
+      "kind": "ServiceConduit",
+      "x": 28,
+      "y": 18,
+      "yaw": 270
+    },
+    {
+      "id": "withdrawal-frame-west",
+      "kind": "ArchiveFrame",
+      "x": 3,
+      "y": 20,
+      "yaw": 90
+    },
+    {
+      "id": "withdrawal-conduit-return",
+      "kind": "ServiceConduit",
+      "x": 9,
+      "y": 20,
+      "yaw": 180
+    },
+    {
+      "id": "archive-lip-frame-a",
+      "kind": "ArchiveFrame",
+      "x": 24,
+      "y": 14,
+      "yaw": 0
+    },
+    {
+      "id": "archive-lip-frame-b",
+      "kind": "ArchiveFrame",
+      "x": 26,
+      "y": 14,
+      "yaw": 0
+    },
+    {
+      "id": "causeway-service-conduit",
+      "kind": "ServiceConduit",
+      "x": 27,
+      "y": 26,
+      "yaw": 90
+    },
+    {
+      "id": "archive-loading-apron",
+      "kind": "ArchiveApron",
+      "x": 20,
+      "y": 18,
+      "yaw": 0,
+      "footprint": {
+        "x0": 18,
+        "x1": 22,
+        "y0": 16,
+        "y1": 19
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": -1
+      }
+    },
+    {
+      "id": "archive-loading-face",
+      "kind": "ArchiveLoadingFace",
+      "x": 25,
+      "y": 19,
+      "yaw": 0,
+      "footprint": {
+        "x0": 23,
+        "x1": 27,
+        "y0": 19,
+        "y1": 19
+      },
+      "pivot": {
+        "x_half_tiles": 0,
+        "y_half_tiles": 0
+      }
+    }
+  ]
+}

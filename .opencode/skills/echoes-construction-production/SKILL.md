@@ -7,7 +7,13 @@ metadata:
 
 # Echoes construction and production
 
-Read `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; confirm lease/worktree/branch/SHA and data-source ownership before mutation.
+## Project authority
+
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
+
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+
+Read [Project/AGENTS.md](../../../AGENTS.md), `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Requirements.md`, and [echoes-session-control](../echoes-session-control/SKILL.md); confirm task ownership, worktree, branch, and SHA and data-source ownership before mutation.
 
 Specify valid placement, footprint, collision, navigation authority, resources, prerequisites, queue/order, cancellation, spawn, blocked conditions, destruction, save/replay behavior, game-feel feedback, and stable player reason for every rejection. Simulation owns placement and production; terrain/nav and presentation cannot silently substitute rules. Compile tunables from authoritative source, never hand-edit generated output.
 

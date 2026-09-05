@@ -1,5 +1,10 @@
 # Demo Readiness Requirements — Sole Requirements and Acceptance Ledger
 
+> **Historical record only.** All instructions, roles, status labels, paths, and claims below describe
+> the retired baseline. They are not current agent instructions. Use [AGENTS.md](../../../AGENTS.md),
+> [Requirements.md](../../Requirements.md), [RequirementsState.md](../../RequirementsState.md), and
+> the [authority map](../../README.md). Preserve this record; edit current authorities instead.
+
 **Author and owner:** Angelis Pseftis
 **Status:** SUPERSEDED 2026-09-03 by [`Requirements.md`](../../Requirements.md) and [`RequirementsState.md`](../../RequirementsState.md). All 152 `DEMO-*` bodies migrated to Part II of the master; global verdicts, record defaults, per-requirement state, and the complete 1,516-line append-only change log migrated to the state file, verbatim. Two owner-added requirements (`DEMO-NAR-010`, `DEMO-NAR-011`) that existed only inside change-log entries were recovered and seated in Part II section C. Retained as the record of the ledger as it stood; it defines nothing and accepts nothing.
 

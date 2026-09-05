@@ -1,0 +1,307 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M01",
+  "map_id": "glass-scar-evacuation-margin",
+  "operation_mode": "CampaignPrologue",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-001",
+    "map_concepts_reference": "MapConcepts#M01"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "outpost-west-outcrop",
+      "op": "block",
+      "x0": 0,
+      "x1": 2,
+      "y0": 10,
+      "y1": 13
+    },
+    {
+      "id": "outpost-east-outcrop",
+      "op": "block",
+      "x0": 18,
+      "x1": 20,
+      "y0": 9,
+      "y1": 12
+    },
+    {
+      "id": "archive-shoulder",
+      "op": "block",
+      "x0": 11,
+      "x1": 13,
+      "y0": 20,
+      "y1": 22
+    },
+    {
+      "id": "archive-loading-bay-north",
+      "op": "block",
+      "x0": 23,
+      "x1": 27,
+      "y0": 18,
+      "y1": 22
+    },
+    {
+      "id": "archive-loading-bay-east-return",
+      "op": "block",
+      "x0": 28,
+      "x1": 29,
+      "y0": 14,
+      "y1": 22
+    },
+    {
+      "id": "scar-west-shoulder",
+      "op": "block",
+      "x0": 8,
+      "x1": 11,
+      "y0": 30,
+      "y1": 34
+    },
+    {
+      "id": "scar-west-span",
+      "op": "block",
+      "x0": 16,
+      "x1": 28,
+      "y0": 30,
+      "y1": 34
+    },
+    {
+      "id": "scar-east-span",
+      "op": "block",
+      "x0": 36,
+      "x1": 47,
+      "y0": 30,
+      "y1": 34
+    },
+    {
+      "id": "scar-east-shoulder",
+      "op": "block",
+      "x0": 52,
+      "x1": 55,
+      "y0": 30,
+      "y1": 34
+    },
+    {
+      "id": "withdrawal-west-retaining-bank",
+      "op": "block",
+      "x0": 2,
+      "x1": 4,
+      "y0": 18,
+      "y1": 22
+    },
+    {
+      "id": "withdrawal-west-edge",
+      "op": "block",
+      "x0": 1,
+      "x1": 3,
+      "y0": 13,
+      "y1": 17
+    },
+    {
+      "id": "withdrawal-north-retaining-bank",
+      "op": "block",
+      "x0": 8,
+      "x1": 12,
+      "y0": 20,
+      "y1": 21
+    },
+    {
+      "id": "archive-south-loading-lip",
+      "op": "block",
+      "x0": 23,
+      "x1": 26,
+      "y0": 14,
+      "y1": 15
+    },
+    {
+      "id": "well-approach-west-shoulder",
+      "op": "block",
+      "x0": 26,
+      "x1": 28,
+      "y0": 24,
+      "y1": 27
+    },
+    {
+      "id": "well-approach-east-shoulder",
+      "op": "block",
+      "x0": 36,
+      "x1": 38,
+      "y0": 26,
+      "y1": 29
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "resource-2-footprint-clearance",
+      "op": "open",
+      "x0": 20,
+      "x1": 20,
+      "y0": 12,
+      "y1": 12
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [],
+      "expected_blocked_cell_count": 306
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [],
+      "expected_blocked_cell_count": 306
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [],
+      "expected_blocked_cell_count": 306
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "archive-recovery",
+      "x": 22,
+      "y": 18,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "lume-withdrawal",
+      "x": 6,
+      "y": 17,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 32,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "archive-recovery",
+      "x": 22,
+      "y": 18
+    },
+    {
+      "id": "lume-withdrawal",
+      "x": 6,
+      "y": 17
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 32
+    }
+  ]
+}

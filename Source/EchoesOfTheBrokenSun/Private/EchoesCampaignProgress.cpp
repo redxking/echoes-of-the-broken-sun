@@ -248,6 +248,95 @@ uint8 ChoiceMask(echoes::sim::FutureWellChoice Choice)
     }
 }
 
+constexpr TCHAR SlotEscapeCharacter = TEXT('~');
+
+FString EncodeSlotName(const FString& SlotName)
+{
+    FString Encoded;
+    Encoded.Reserve(SlotName.Len() * 2);
+    for (const TCHAR Character : SlotName)
+    {
+        if (Character == TEXT(' '))
+        {
+            Encoded.Append(TEXT("~s"));
+        }
+        else if (Character == TEXT('_'))
+        {
+            Encoded.Append(TEXT("~u"));
+        }
+        else
+        {
+            Encoded.AppendChar(Character);
+        }
+    }
+    return Encoded;
+}
+
+bool DecodeSlotName(const FString& Encoded, FString& OutSlotName)
+{
+    OutSlotName.Reset();
+    OutSlotName.Reserve(Encoded.Len());
+    for (int32 Index = 0; Index < Encoded.Len(); ++Index)
+    {
+        const TCHAR Character = Encoded[Index];
+        if (Character != SlotEscapeCharacter)
+        {
+            OutSlotName.AppendChar(Character);
+            continue;
+        }
+        if (++Index >= Encoded.Len())
+        {
+            return false;
+        }
+        switch (Encoded[Index])
+        {
+            case TEXT('s'):
+                OutSlotName.AppendChar(TEXT(' '));
+                break;
+            case TEXT('u'):
+                OutSlotName.AppendChar(TEXT('_'));
+                break;
+            default:
+                return false;
+        }
+    }
+    return FEchoesCampaignProgressStore::IsValidSlotName(OutSlotName);
+}
+
+bool HasLegacySlotAlias(const FString& SlotName)
+{
+    return SlotName.Contains(TEXT(" ")) || SlotName.Contains(TEXT("_"));
+}
+
+FString GetLegacySlotPath(const FString& SlotName)
+{
+    FString LegacyEncoded = SlotName;
+    LegacyEncoded.ReplaceInline(TEXT(" "), TEXT("_"));
+    return FPaths::Combine(
+        FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+        FString::Printf(TEXT("EchoesCampaignSlot_%s.bin"), *LegacyEncoded));
+}
+
+bool HasLegacySlotGeneration(const FString& SlotName)
+{
+    if (!HasLegacySlotAlias(SlotName))
+    {
+        return false;
+    }
+    const FString LegacyPath = GetLegacySlotPath(SlotName);
+    return IFileManager::Get().FileExists(*LegacyPath) ||
+        IFileManager::Get().FileExists(*(LegacyPath + TEXT(".bak")));
+}
+
+void SetLegacySlotCollisionFeedback(
+    const FString& SlotName,
+    FString& OutFeedback)
+{
+    OutFeedback = FString::Printf(
+        TEXT("[CAMPAIGN_SLOT_LEGACY_ALIAS] The legacy slot filename for %s is ambiguous between spaces and underscores; it was preserved without loading, deletion, or attribution."),
+        *SlotName);
+}
+
 bool ValidateRecord(
     const FEchoesCampaignDecisionRecord& Record,
     FString& OutError)
@@ -1072,11 +1161,11 @@ bool FEchoesCampaignProgressStore::IsValidSlotName(const FString& SlotName)
 
 FString FEchoesCampaignProgressStore::GetSlotPath(const FString& SlotName)
 {
-    FString Encoded = SlotName;
-    Encoded.ReplaceInline(TEXT(" "), TEXT("_"));
     return FPaths::Combine(
         GetSaveGameDirectory(),
-        FString::Printf(TEXT("EchoesCampaignSlot_%s.bin"), *Encoded));
+        FString::Printf(
+            TEXT("EchoesCampaignSlot_%s.bin"),
+            *EncodeSlotName(SlotName)));
 }
 
 bool FEchoesCampaignProgressStore::SaveSlot(
@@ -1106,6 +1195,11 @@ bool FEchoesCampaignProgressStore::LoadSlot(
     if (!IFileManager::Get().FileExists(*Path) &&
         !IFileManager::Get().FileExists(*(Path + TEXT(".bak"))))
     {
+        if (HasLegacySlotGeneration(SlotName))
+        {
+            SetLegacySlotCollisionFeedback(SlotName, OutFeedback);
+            return false;
+        }
         OutFeedback = FString::Printf(
             TEXT("[CAMPAIGN_SLOT_ABSENT] No slot named %s exists."),
             *SlotName);
@@ -1129,6 +1223,11 @@ bool FEchoesCampaignProgressStore::DeleteSlot(
     const bool bBackupExists = IFileManager::Get().FileExists(*BackupPath);
     if (!bPrimaryExists && !bBackupExists)
     {
+        if (HasLegacySlotGeneration(SlotName))
+        {
+            SetLegacySlotCollisionFeedback(SlotName, OutFeedback);
+            return false;
+        }
         OutFeedback = FString::Printf(
             TEXT("[CAMPAIGN_SLOT_ABSENT] No slot named %s exists."),
             *SlotName);
@@ -1172,9 +1271,21 @@ FEchoesCampaignProgressStore::ListSlots()
         FString Encoded = File;
         Encoded.RemoveFromStart(TEXT("EchoesCampaignSlot_"));
         Encoded.RemoveFromEnd(TEXT(".bin"));
-        FString SlotName = Encoded.Replace(TEXT("_"), TEXT(" "));
-        // Names that used underscores directly decode identically; both
-        // forms address the same file, so the listed name stays loadable.
+        FString SlotName;
+        if (!Encoded.Contains(TEXT("~")))
+        {
+            // The legacy encoder conflated spaces and underscores. Never
+            // assign one of those preserved files to a guessed journey.
+            if (Encoded.Contains(TEXT("_")))
+            {
+                continue;
+            }
+            SlotName = Encoded;
+        }
+        else if (!DecodeSlotName(Encoded, SlotName))
+        {
+            continue;
+        }
         FEchoesCampaignProgress Progress;
         FString Feedback;
         if (!LoadWithBackup(

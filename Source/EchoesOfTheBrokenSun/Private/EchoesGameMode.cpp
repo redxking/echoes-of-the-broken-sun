@@ -1,6 +1,8 @@
 #include "EchoesGameMode.h"
 
 #include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Engine/ExponentialHeightFog.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -31,6 +33,9 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/HUD.h"
+#if WITH_EDITOR
+#include "HAL/IConsoleManager.h"
+#endif
 #include "HAL/PlatformTime.h"
 #include "IPAddress.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -53,6 +58,14 @@ const FName EnvironmentColorParameterName(TEXT("Color"));
 const FName EnvironmentMetallicParameterName(TEXT("Metallic"));
 const FName EnvironmentRoughnessParameterName(TEXT("Roughness"));
 const FName EnvironmentEmissiveParameterName(TEXT("EmissiveStrength"));
+
+#if WITH_EDITOR
+TAutoConsoleVariable<int32> CVarEchoesEditorPreviewMission(
+    TEXT("Echoes.EditorPreviewMission"),
+    0,
+    TEXT("Editor PIE only. Select campaign mission ordinal 1-15 through the normal campaign admission path; 0 leaves the requested operation unchanged."),
+    ECVF_Default);
+#endif
 
 [[nodiscard]] bool IsBoundedServerResumeCredential(
     const FString& Credential)
@@ -993,6 +1006,76 @@ void AEchoesGameMode::BeginPlay()
         (bCampaignAssemblyOfTheMissing ? 1 : 0) +
         (bCampaignSeveralVoicesOneCommand ? 1 : 0) +
         (bCampaignTheBrokenSun ? 1 : 0);
+    bool bEditorPreviewSelected = false;
+#if WITH_EDITOR
+    // This is deliberately read only in an editor process and routes through
+    // SelectOperationMode. It therefore neither writes a campaign decision nor
+    // turns a locked operation into an admissible one; configure an isolated
+    // save directory at launch when a distinct preview ledger is required.
+    const int32 EditorPreviewOrdinal = GIsEditor
+        ? CVarEchoesEditorPreviewMission.GetValueOnGameThread()
+        : 0;
+    if (EditorPreviewOrdinal != 0)
+    {
+        if (bStressScenario || CampaignOperationCount > 1 ||
+            EditorPreviewOrdinal < 1 || EditorPreviewOrdinal > 15)
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_EDITOR_PREVIEW_REJECTED] ordinal=%d reason=%s"),
+                EditorPreviewOrdinal,
+                bStressScenario ? TEXT("stressOrConflictingOperation")
+                : EditorPreviewOrdinal < 1 || EditorPreviewOrdinal > 15
+                    ? TEXT("ordinalOutOfRange")
+                    : TEXT("conflictingCommandLineOperation"));
+            CleanupPrototypeEnvironment();
+            return;
+        }
+        // Mission ordinals are persistent campaign identities, not operation
+        // enum values. Keep this explicit even while their current values
+        // happen to align, so enum reordering cannot select another mission.
+        static constexpr EEchoesOperationMode PreviewOperations[] = {
+            EEchoesOperationMode::CampaignPrologue,
+            EEchoesOperationMode::CampaignSevenAccounts,
+            EEchoesOperationMode::CampaignCityReserve,
+            EEchoesOperationMode::CampaignUnburiedRoad,
+            EEchoesOperationMode::CampaignTermsOfContinuance,
+            EEchoesOperationMode::CampaignNamesWithoutBirths,
+            EEchoesOperationMode::CampaignShapeOfSilence,
+            EEchoesOperationMode::CampaignShapeBesideUs,
+            EEchoesOperationMode::CampaignReserveAuthority,
+            EEchoesOperationMode::CampaignChoirAtLumeReach,
+            EEchoesOperationMode::CampaignNoNeutralLedger,
+            EEchoesOperationMode::CampaignFutureThatWon,
+            EEchoesOperationMode::CampaignAssemblyOfTheMissing,
+            EEchoesOperationMode::CampaignSeveralVoicesOneCommand,
+            EEchoesOperationMode::CampaignTheBrokenSun};
+        static_assert(UE_ARRAY_COUNT(PreviewOperations) == 15,
+            "Editor preview must map every persisted campaign mission ordinal");
+        const EEchoesOperationMode RequestedOperation =
+            PreviewOperations[EditorPreviewOrdinal - 1];
+        FString OperationFeedback;
+        if (!Bridge->SelectOperationMode(RequestedOperation, OperationFeedback))
+        {
+            UE_LOG(
+                LogEchoes,
+                Error,
+                TEXT("[ECHOES_EDITOR_PREVIEW_REJECTED] ordinal=%d reason=operationNotAdmitted detail=%s"),
+                EditorPreviewOrdinal,
+                *OperationFeedback);
+            CleanupPrototypeEnvironment();
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_EDITOR_PREVIEW_SELECTED] ordinal=%d operation=%u admission=normal saveWrites=unchanged"),
+            EditorPreviewOrdinal,
+            static_cast<uint8>(RequestedOperation));
+        bEditorPreviewSelected = true;
+    }
+#endif
     if (CampaignOperationCount > 1)
     {
         UE_LOG(
@@ -1002,7 +1085,7 @@ void AEchoesGameMode::BeginPlay()
         CleanupPrototypeEnvironment();
         return;
     }
-    if (CampaignOperationCount == 1)
+    if (CampaignOperationCount == 1 && !bEditorPreviewSelected)
     {
         const EEchoesOperationMode RequestedOperation =
             bCampaignTheBrokenSun
@@ -1809,9 +1892,8 @@ void AEchoesGameMode::BeginPlay()
 
                 // West Cliff (Screen Left): Meridian Compact strike force
                 // Frontline Bulwarks deployed with hexagonal holographic energy shield barrier wings.
-                // The shield wings sit on the mesh local +X; with the review camera at yaw 43 a
-                // heading near 135 puts the wings edge-on to the lens. From the south bank the Well bears
-                // ~112; headings near 150 split the difference and keep the cells three-quarter.
+                // Corrected shield faces point along mesh +X. Pose each platform
+                // toward the dais and keep its preview deployment facing coherent.
                 // Bulwark 1: Holding the cliff rim overlooking the Future Well dais
                 SpawnPreview(
                     920101,
@@ -1821,10 +1903,10 @@ void AEchoesGameMode::BeginPlay()
                     34,
                     31,
                     true,
-                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    echoes::sim::Vec2::FromTiles(-33, 88),
                     12.0f,
                     FVector(330.0f, -880.0f, 12.0f),
-                    150.0f);
+                    FMath::RadiansToDegrees(FMath::Atan2(880.0f, -330.0f)));
 
                 // Bulwark 2: Midground battle line anchor
                 SpawnPreview(
@@ -1835,10 +1917,10 @@ void AEchoesGameMode::BeginPlay()
                     35,
                     30,
                     true,
-                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    echoes::sim::Vec2::FromTiles(-31, 56),
                     12.0f,
                     FVector(620.0f, -1120.0f, 12.0f),
-                    155.0f);
+                    FMath::RadiansToDegrees(FMath::Atan2(1120.0f, -620.0f)));
 
                 // Bulwark 3: Outer flank defense
                 SpawnPreview(
@@ -1849,10 +1931,10 @@ void AEchoesGameMode::BeginPlay()
                     36,
                     30,
                     true,
-                    echoes::sim::Vec2::FromTiles(-1, 1),
+                    echoes::sim::Vec2::FromTiles(-15, 16),
                     12.0f,
                     FVector(900.0f, -960.0f, 12.0f),
-                    145.0f);
+                    FMath::RadiansToDegrees(FMath::Atan2(960.0f, -900.0f)));
 
                 // Lancers in advancing tactical wedge formation along the bridge ramp and cliff rim
                 // Lancer 1: Foreground bridge approach
@@ -2613,9 +2695,14 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         Weather->Tags,
         EchoesBattlefieldPresentation::WeatherTag());
 
-    ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(
+    const FRotator AuthoredSunRotation = bVerticalSliceMode
+        ? FRotator(-24.0f, -137.0f, 0.0f)
+        : FRotator(-55.0f, -35.0f, 0.0f);
+    // The directional-light CDO carries a -46 degree root rotation. Absolute
+    // spawning applies the authored world angle before stationary registration.
+    ADirectionalLight* Sun = World->SpawnActorAbsolute<ADirectionalLight>(
         FVector(0.0f, 0.0f, 1800.0f),
-        FRotator(-55.0f, -35.0f, 0.0f),
+        AuthoredSunRotation,
         SpawnParameters);
     ASkyLight* Sky = World->SpawnActor<ASkyLight>(
         FVector::ZeroVector,
@@ -2661,14 +2748,29 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
     // Frame hierarchy: a gentler warm key keeps actor faces warm while the
     // stronger cool fill lets the dark terrain recede — layer separation by
     // temperature as well as value.
-    SunComponent->SetIntensity(bVerticalSliceMode ? 14.0f : 10.0f);
-    SunComponent->SetLightColor(bVerticalSliceMode ? FLinearColor(1.0f, 0.82f, 0.52f) : FLinearColor(1.0f, 0.95f, 0.86f));
-    if (bVerticalSliceMode)
-    {
-        Sun->SetActorRotation(FRotator(-24.0f, -137.0f, 0.0f));
-    }
-    Sky->GetLightComponent()->SetIntensity(bVerticalSliceMode ? 1.6f : 1.6f);
-    Sky->GetLightComponent()->SetLightColor(bVerticalSliceMode ? FLinearColor(0.12f, 0.22f, 0.52f) : FLinearColor(0.42f, 0.55f, 0.82f));
+    SunComponent->SetIntensity(10.0f);
+    SunComponent->SetLightColor(FLinearColor(1.0f, 0.82f, 0.62f));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_SUN_AUTHORED] requested=%s actual=%s mobility=%d revision=sun-angle-v1"),
+        *AuthoredSunRotation.ToCompactString(),
+        *Sun->GetActorRotation().ToCompactString(),
+        static_cast<int32>(SunComponent->Mobility));
+    USkyLightComponent* SkyComponent = Sky->GetLightComponent();
+    SkyComponent->SetMobility(EComponentMobility::Movable);
+    // The public sky shell is 33–42k cm from the origin. The engine's default
+    // 150k threshold excluded it, leaving unlit faces without ambient fill.
+    // Keep the threshold beyond all playable terrain and public perimeter
+    // geometry: the capture must describe the sky, not hidden battlefield state.
+    SkyComponent->SkyDistanceThreshold = 30000.0f;
+    SkyComponent->bCaptureEmissiveOnly = true;
+    SkyComponent->SetIntensity(8.0f);
+    // Authored ground bounce, independent of fog or scene contents. Keep the
+    // lower hemisphere solid so a capture never derives fill from hidden units.
+    SkyComponent->bLowerHemisphereIsBlack = true;
+    SkyComponent->SetLowerHemisphereColor(FLinearColor(0.035f, 0.045f, 0.065f));
+    SkyComponent->SetLightColor(FLinearColor(0.70f, 0.79f, 1.0f));
 
     if (BrokenSunSkyMesh != nullptr)
     {
@@ -2683,7 +2785,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             ? FRotator(-16.0f, -137.0f, 0.0f)
             : FRotator(-55.0f, -35.0f, 0.0f);
         const FVector SunScale = bVerticalSliceMode
-            ? FVector(0.85f, 0.85f, 0.85f) // a full sphere now; 0.85 keeps ~10 deg of frame
+            ? FVector(2.0f, 2.0f, 2.0f) // broad fractured silhouette for the low-pitch concept framing
             : FVector(6.0f, 6.0f, 6.0f);
 
         AStaticMeshActor* BrokenSunSky = World->SpawnActor<AStaticMeshActor>(
@@ -2693,11 +2795,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         if (BrokenSunSky != nullptr)
         {
             BrokenSunSky->Tags.Add(TEXT("EchoesPlaceholder"));
-            BrokenSunSky->Tags.Add(
-                EchoesBattlefieldPresentation::LegacyGlassScarTag());
-            EchoesBattlefieldPresentation::RegisterPresetActorTags(
-                BrokenSunSky->Tags,
-                EEchoesSkirmishMapPreset::GlassScar);
+            EchoesBattlefieldPresentation::RegisterSharedActorTags(
+                BrokenSunSky->Tags, FName(TEXT("EchoesCelestialBackdrop")));
             BrokenSunSky->Tags.Add(TEXT("EchoesBrokenSunSky"));
             UStaticMeshComponent* BrokenSunSkyComp =
                 BrokenSunSky->GetStaticMeshComponent();
@@ -2712,7 +2811,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
 
             const FLinearColor SunColors[4] = {
                 FLinearColor(0.015f, 0.018f, 0.045f),
-                FLinearColor(0.060f, 0.048f, 0.052f),
+                FLinearColor(0.15f, 0.075f, 0.030f),
                 FLinearColor(0.92f, 0.42f, 0.09f),
                 FLinearColor(1.0f, 0.56f, 0.11f)
             };
@@ -2720,7 +2819,7 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             const float SunRoughness[4] = {0.95f, 0.88f, 0.35f, 0.20f};
             // Core emissive held below the clip point so the sphere reads gold
             // through its cracks instead of a white disc (A1: no clipped highlights).
-            const float SunEmissive[4] = {0.0f, 0.0f, 1.5f, 2.4f};
+            const float SunEmissive[4] = {0.0f, 0.08f, 1.0f, 1.4f};
 
             for (int32 Slot = 0; Slot < 4; ++Slot)
             {
@@ -2753,10 +2852,8 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
             if (SkyDome != nullptr)
             {
                 SkyDome->Tags.Add(TEXT("EchoesPlaceholder"));
-                SkyDome->Tags.Add(EchoesBattlefieldPresentation::LegacyGlassScarTag());
-                EchoesBattlefieldPresentation::RegisterPresetActorTags(
-                    SkyDome->Tags,
-                    EEchoesSkirmishMapPreset::GlassScar);
+                EchoesBattlefieldPresentation::RegisterSharedActorTags(
+                    SkyDome->Tags, FName(TEXT("EchoesSkyBackdrop")));
                 SkyDome->Tags.Add(TEXT("EchoesSkyDome"));
                 UStaticMeshComponent* DomeComp = SkyDome->GetStaticMeshComponent();
                 DomeComp->SetMobility(EComponentMobility::Movable);
@@ -2775,14 +2872,22 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
                     FLinearColor(0.012f, 0.012f, 0.055f)};
                 // Kept low so the frame's mean luma stays inside the A1 window
                 // (50-70): the first pass at 0.9 pushed the fixture to 72.
-                const float DomeEmissive[4] = {0.55f, 0.45f, 0.35f, 0.30f};
+                const float DomeEmissive[4] = {0.40f, 0.40f, 0.40f, 0.40f};
+                const float BaseHeights[4] = {-4500,3500,12500,24500};
+                const float HeightRanges[4] = {8000,9000,12000,14000};
+                UMaterialInterface* SkyMaterial = LoadObject<UMaterialInterface>(nullptr,
+                    TEXT("/Game/Art/Generated/Materials/M_EchoesSky.M_EchoesSky"));
+                if (!SkyMaterial) { return false; }
                 for (int32 Slot = 0; Slot < 4; ++Slot)
                 {
                     UMaterialInstanceDynamic* DomeMat =
-                        UMaterialInstanceDynamic::Create(SurfaceMaterial, SkyDome);
+                        UMaterialInstanceDynamic::Create(SkyMaterial, SkyDome);
                     if (DomeMat != nullptr)
                     {
                         DomeMat->SetVectorParameterValue(EnvironmentColorParameterName, DomeColors[Slot]);
+                        DomeMat->SetVectorParameterValue(TEXT("TopColor"), DomeColors[FMath::Min(Slot+1,3)]);
+                        DomeMat->SetScalarParameterValue(TEXT("BaseHeight"), BaseHeights[Slot]);
+                        DomeMat->SetScalarParameterValue(TEXT("HeightRange"), HeightRanges[Slot]);
                         DomeMat->SetScalarParameterValue(EnvironmentMetallicParameterName, 0.0f);
                         DomeMat->SetScalarParameterValue(EnvironmentRoughnessParameterName, 1.0f);
                         DomeMat->SetScalarParameterValue(EnvironmentEmissiveParameterName, DomeEmissive[Slot]);
@@ -2887,6 +2992,30 @@ bool AEchoesGameMode::SpawnPrototypeEnvironment()
         LogEchoes,
         Display,
         TEXT("[ECHOES_ENV_READY] terrainComposition=glass_scar_v6 authoredAssets=8 skyDome=banded shelves=0 chasm=terrain-view routes=3 ashCutRouteKit=production_v1 ashCutUVs=2 ashCutMaterials=4 ashCutRuntimeCollision=false buriedCausewayRouteKit=production_v1 buriedCausewayUVs=2 buriedCausewayMaterials=4 buriedCausewayRuntimeCollision=false foldedVergeRouteKit=production_v1 foldedVergeUVs=2 foldedVergeMaterials=4 foldedVergeRuntimeCollision=false bands=7 shards=12 glows=5 collisionAuthority=false routeAuthority=false finalArt=false"));
+    // Low atmospheric depth separates distant landforms from the readable
+    // tactical foreground. This is public atmosphere, independent of war fog.
+    AExponentialHeightFog* Atmosphere = World->SpawnActor<AExponentialHeightFog>(
+        FVector(0.0f, 0.0f, -600.0f), FRotator::ZeroRotator, SpawnParameters);
+    if (Atmosphere != nullptr)
+    {
+        Atmosphere->Tags.Add(TEXT("EchoesPlaceholder"));
+        EchoesBattlefieldPresentation::RegisterSharedActorTags(
+            Atmosphere->Tags, FName(TEXT("EchoesDistantAtmosphere")));
+        Atmosphere->SetActorEnableCollision(false);
+        UExponentialHeightFogComponent* Fog = Atmosphere->GetComponent();
+        Fog->SetFogDensity(0.008f);
+        Fog->SetFogHeightFalloff(0.15f);
+        Fog->SetFogInscatteringColor(FLinearColor(0.080f, 0.090f, 0.160f));
+        Fog->SetStartDistance(1800.0f);
+        Fog->SetFogMaxOpacity(0.55f);
+        Fog->SetVolumetricFog(false);
+    }
+
+    // Queue one capture after the emissive dome exists. No per-frame capture
+    // or local point-light workaround is required for the shared ambient rig.
+    SkyComponent->RecaptureSky();
+    UE_LOG(LogEchoes, Display,
+        TEXT("[ECHOES_SKY_FILL_READY] source=publicEmissiveSky thresholdCm=30000 capture=once"));
     UE_LOG(
         LogEchoes,
         Display,

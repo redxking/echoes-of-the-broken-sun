@@ -10,10 +10,13 @@ Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are neve
 
 Agent-assignable: `OPEN` → `IN PROGRESS` → `IMPLEMENTED` → `AGENT VERIFIED` → `EVIDENCE READY` →
 `AWAITING HUMAN ACCEPTANCE`, plus `BLOCKED`. Owner-only: `HUMAN ACCEPTED`,
-`HUMAN REJECTED — CHANGES REQUIRED`, `COMPLETE`. A parent stays open until every mandatory child is
-accepted.
+`HUMAN REJECTED — CHANGES REQUIRED`, `COMPLETE`. A parent stays open until every mandatory child is accepted. `IMPLEMENTED — NOT YET VERIFIED` is a
+legacy alias of `IMPLEMENTED`, not a separate state. Test-output PASS means only that the named test
+passed; an unconditional requirement PASS/COMPLETE needs recorded owner acceptance.
 
-## Global verdicts and identities
+Read state at the exact requirement/build/evidence boundary. Dated entries override creation defaults
+only for the IDs and scope they name. A family summary is a navigation aid, not proof that every child
+has its required evidence. Preserve historical claims while recording any missing or conflicting support.
 
 ## Global verdicts and identities
 
@@ -21,18 +24,17 @@ accepted.
   candidate identity: package `BuildArtifacts/Packages/Mac-Development-20260902T011241Z-f0cf042b/`
   from clean `f0cf042bea800c474b1c3e08c557d0aae49ff744` (origin/main), macOS Apple Silicon.
 * Authoritative source state at ledger creation: `origin/main = f0cf042`, tree clean.
-* Write owner: Claude Code lane fleet (coordinator). Read-only reviewer: ChatGPT Codex when
-  active. Ledger author: coordinator. Baseline auditor (separate, read-only): QA lane.
+* The original model-specific lane assignment is retired. Current task ownership follows `AGENTS.md`;
+  this state record does not permanently assign a model to writing or review.
 
-
-## Record defaults
 
 ## Record defaults (apply to every requirement below unless its row states otherwise)
 
 * Engineering state: `OPEN`. Human acceptance state: none (not yet offered). Acceptance
   date/notes: none. Commit/package identity: none yet (recorded when work starts).
 * Dependencies: the milestone ordering in the directive §6; per-ID exceptions recorded inline.
-* Evidence locations: `WorkstreamControl/evidence/demo-recovery/<req-id>/` once produced.
+* New evidence locations: `BuildArtifacts/Evidence/<gate>-<UTC>/` or the designated evidence root.
+  Historical external paths below remain original receipts and must be located before reuse.
 * Known limitations: none recorded yet.
 * Verification-method classes (referenced per row): **PKG-PHYS** = packaged build, physical
   mouse/keyboard input; **PKG-REND** = packaged build, rendered/audible inspection; **PKG-AUTO**
@@ -44,11 +46,119 @@ accepted.
   PERF=Performance+Build; AI=Opponent-AI; ACC=Player; VAL=QA+Build+Coordinator.
 
 
-## `SPEC-*` state
+## Current registry coverage — 2026-09-04 reconciliation
 
-All 393 `SPEC-*` records are `OPEN` as of 2026-09-03 (including 20 newly integrated movement, control, and balance requirements: `SPEC-MOV-006..013`, `SPEC-CTL-016..019`, `SPEC-BAL-001..008`).
-Accepted work is recorded against `DEMO-*` and `REL-*`; the crosswalk in `Requirements.md` binds the
-families, and per-record binding is written here as each is verified.
+The master currently registers **1,125 parent identities** (433 SPEC, 152 DEMO, 540 REL), including retained
+retired identifiers, and 1,892 subordinate definitions. These are structural counts, not accepted behaviors.
+`Scripts/check_requirement_registry.py` checks exact identity/index coverage. The historical family summaries
+below are preserved as receipts; they are not the current inventory or blanket verification status.
+New/restored/rebound records use the exact current entries at the end of this file. Session multiplayer is
+now approved release scope, not dormant release scope; offline isolation remains mandatory.
+
+| Family | Registered parents | Current evidence interpretation |
+|---|---|---|
+| `DEMO-ACC-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-AI-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-AUD-*` | 13 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-GOV-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-INP-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-JRN-*` | 7 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-NAR-*` | 11 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-PERF-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-TUT-*` | 22 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-UI-*` | 13 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-VAL-*` | 17 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `DEMO-VIS-*` | 13 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-ACC-*` | 22 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-AI-*` | 42 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-ART-*` | 33 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-AUD-*` | 23 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-BLD-*` | 20 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-CAM-*` | 38 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-CIN-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-CMB-*` | 32 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-DIST-*` | 17 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-ECO-*` | 17 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-EDT-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-FAC-*` | 29 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-FTU-*` | 12 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-GOV-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-LOC-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-MP-*` | 19 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-PERF-*` | 25 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-PORT-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-PUB-*` | 20 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-QA-*` | 36 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-QOL-*` | 16 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-SAV-*` | 14 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-SEC-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-SIM-*` | 19 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-STAB-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-UI-*` | 28 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `REL-WEL-*` | 18 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-ACC-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AI-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AIST-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-ARC-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-ART-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AUD-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AUDF-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AUT-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-AUTH-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-BAL-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-BLD-*` | 13 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-BUD-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CAM-*` | 11 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CAN-*` | 2 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CANON-*` | 16 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CIN-*` | 2 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CMB-*` | 12 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CMD-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-CTL-*` | 19 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-DIF-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-DOC-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-ECO-*` | 7 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-END-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-EVID-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-FACID-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-FOG-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-HUD-*` | 7 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-INFO-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-LOC-*` | 2 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-LSN-*` | 11 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-MAP-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-MOD-*` | 7 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-MOV-*` | 13 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-MSN-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-OUT-*` | 7 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-PIL-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-PLAN-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-PLAT-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-PRD-*` | 10 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-RES-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-SAV-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-SCT-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-SIM-*` | 15 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-SKM-*` | 18 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-STANCE-*` | 5 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-STR-*` | 12 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-TEC-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-TECH-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-TER-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-TUT-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-UI-*` | 6 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-UNIT-*` | 12 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-VAL-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-VISD-*` | 8 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-WEL-*` | 4 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+| `SPEC-WELLP-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
+
+## Historical `SPEC-*` family snapshot
+
+The family table below retains previously recorded engineering summaries. The former blanket “all OPEN”
+statement contradicted these rows and has been removed. Use exact dated per-ID entries and artifacts;
+`AGENT VERIFIED` is bounded by the cited check and does not supply missing packaged or human evidence.
+Identifier and family-count reconciliation remains open in the audit decision below.
 
 | Prefix | Records | State |
 |---|---|---|
@@ -118,9 +228,9 @@ evidence locations, limitations, and acceptance records are appended below this 
 entries — never by rewriting the requirement bodies above.
 
 
-`REL-*`: All 531 records are `OPEN` as of 2026-09-03 (including 46 newly derived 20-year longevity requirements across §11, §14–§19, §21, §24, and §27). All 369 previously declared empty
-records across §6–§26 have been fully authored with normative *shall* statements, bounded metrics,
-failure modes, and atomic leaf-level decomposition, entering active qualification readiness.
+The release family table retains prior summaries; the blanket all-OPEN label and aggregate count were
+stale. Later entries record changes for individual IDs. Do not infer completion or a complete inventory
+from these counts; reconcile against exact master definitions and the dated evidence.
 
 | Prefix | Domain | Records | Verification Class | State |
 |---|---|---|---|---|
@@ -156,8 +266,9 @@ failure modes, and atomic leaf-level decomposition, entering active qualificatio
 
 # Change log
 
-Append-only. Migrated verbatim on 2026-09-03 from the two retired ledgers; entries are the project's
-record of owner rulings, defects, diagnostics, and acceptance. Nothing here is rewritten.
+Append-only. The original entries migrated from retired ledgers are preserved, followed by later records.
+Historical roles, paths, and “current” claims apply only at their recorded boundary; use `AGENTS.md` for
+current operations. Preserve original evidence and owner wording; append corrections and supersessions.
 
 ## From `DemoReadinessRequirements.md`
 
@@ -1768,3 +1879,635 @@ record of owner rulings, defects, diagnostics, and acceptance. Nothing here is r
     * Covered by `SRC` (`EchoesTerrainView.cpp`, `test_lume_reach_dressing.py`), `PKG-AUTO` (`Echoes.Runtime.Map.LumeReachDressing` and `Echoes.Runtime.Map.GlassScarDressing` passing cleanly in 77/77 Unreal automation suite), and `PKG-REND` (1920×1080 rendered review captures `LumeReachReview.png` and `LumeReachOverview.png` in `BuildArtifacts/ChoirAtLumeReach/` verifying zero bare collision floor).
 
 
+
+
+## 2026-09-04 — Agent guidance synchronization and explicit campaign direction
+
+**Author and owner:** Angelis Pseftis
+**Evidence boundary:** documentation/source inspection on `release/world-map-concept-pass`, base `fc05cdf`,
+with pre-existing dirty code/assets. This entry records documentation changes and owner direction; no
+runtime, package, physical-play, performance, or human-acceptance result is claimed.
+
+Owner direction: “Each Mission 1-15 should have a unique map that plays into the game story.” The owner
+also requires a strong storyline, strong characters/backstories, and a massive connected-world feeling
+across related battlegrounds. The MMO comparison supplies the intended sense of adventure and place within
+the RTS; no MMO/networked/shared-world scope was requested. The existing skirmish map set remains separate.
+
+`SPEC-PRD-006` and `SPEC-CAM-001` are clarified in place. Added:
+
+| ID | Engineering state | Implementation/evidence binding | Human acceptance |
+|---|---|---|---|
+| `SPEC-MAP-004` | OPEN | No result claimed; fifteen distinct story-driven campaign map contracts and presentation require qualification. | None |
+| `SPEC-CAM-041` | OPEN | No result claimed; connected geography, campaign-map/transition delivery, and experience require qualification. | None |
+| `SPEC-CAM-042` | OPEN | No result claimed; mission-to-character/backstory/place trace and in-game delivery require qualification. | None |
+
+All new child records inherit OPEN. Authoring the requirements proves no map or story implementation.
+Existing evidence for amended parents remains bounded by its original scope and does not discharge these
+new obligations. Owner review is required for final acceptance; current authorized implementation may proceed.
+
+**DOC-SYNC-001 — Shared operating rules.** `AGENTS.md` is the common agent contract. Client entry files and
+all canonical skills refer to it. Current task/path ownership and resource coordination replace missing
+external lane files and old model-specific assignments. `Requirements.md` owns bodies; this file owns
+lifecycle, defects, evidence state, and owner decisions. `ProjectLedger.md` and the directive's gate matrix
+retain historical evidence. Document maintenance does not require a game-release acceptance gate.
+
+**TBR-DOC-001 — Map and story-reference reconciliation — OPEN.** The map references propose six skirmish
+maps/additional formats against the master's three-map baseline; some M09–M12 descriptions conflict with
+creative mission authority. The new direction resolves campaign quantity at fifteen unique maps. It does
+not accept the conflicting skirmish formats or rewrite mission roles/objectives. Continue authorized
+presentation work within its boundaries; before changing gameplay/canon, reconcile each site against its
+master mission and creative source. Record any material alternatives and seek only the decision still missing.
+
+**DOC-SYNC-002 — Identifier and state-index reconciliation — OPEN.** Source inspection found stale totals,
+index/body mismatches, and reused IDs. Before this entry's three additions, the index contained 1,066 unique
+base IDs (393 SPEC, 152 DEMO, 521 REL), which is an index count, not proof of complete definitions. Examples:
+`SPEC-CANON-015/016`, `SPEC-RES-004..007`, and `SPEC-TEC-003..008` have bodies absent from the index;
+`REL-AI-016` is reused for strategy-controller weights and the competitive-balance band; `REL-AUD-002`
+is reused for dynamic vocal ducking and integrated loudness. Cite exact body titles while reconciling IDs. Family summaries
+also contain stale totals and broad verification labels. Preserve every ID/body and historical result;
+reconcile definitions and evidence before implementing or closing an affected requirement. Where two
+bodies differ, neither “last one wins” nor a family PASS is an acceptable resolution. The next requirements
+maintenance pass must enumerate the discrepancies, preserve intended obligations, and obtain an owner
+ruling for semantic conflicts. This documentation audit does not certify the entire requirements corpus.
+
+
+## 2026-09-04 — Contextual detail, functional readability, and coherent action
+
+Owner direction: details throughout the maps, units, and buildings must fit their place in the story and
+communicate what belongs there, what an object does, and how it is used. Both large and small details need
+deliberate planning; visuals, movement, actions, and sound must feel smooth, purposeful, and coherent.
+
+Added `SPEC-VISD-008` (contextual brief before production) and `SPEC-ART-004` (integrated craftsmanship and
+role readability). Their parents and children are **OPEN** with no implementation/evidence binding or human
+acceptance. Clarified `SPEC-VISD-006`, `SPEC-ART-002`, and `SPEC-AUDF-004` in place to connect world detail,
+action transitions, and material sound. Prior evidence for those records does not automatically cover the
+clarification. This is owner-directed design/quality scope, not proof that current assets meet it.
+
+Planning uses the existing map/art/audio/character records in place. Internal preparation and qualification
+may continue under current owner authorization; final player/owner experience review remains separate.
+
+
+## 2026-09-04 — World production brief and canyon visibility correction
+
+**Scope:** active world-map work on `release/world-map-concept-pass`, base `fc05cdf`, dirty checkout.
+The current production section in `MapConcepts.md` now contains fifteen mission-to-place rows and shared
+craftsmanship decisions. Internal source review checked all rows against the detailed mission contracts;
+M01 character attribution, M02 ecology/objective boundaries and M07's singular Spine site were corrected.
+This establishes a planning artifact, not fifteen implemented maps or stronger narrative delivery.
+
+- `SPEC-CAM-042.TRACE`: **IN PROGRESS**. Fifteen-row story/character/place trace authored; runtime delivery,
+  compiled mission-map identity and complete branch continuity qualification remain outstanding.
+- `SPEC-VISD-008`: **IN PROGRESS**. Mission context, meaningful detail, applicable action/sound and exclusions
+  are specified at planning level. Per-asset briefs and map source/binding work remain.
+- `SPEC-MAP-004`: remains **OPEN** for completed unique map bindings/layouts and packaged comparison.
+  Six reusable biome families and the present screenshots do not satisfy fifteen distinct battlefields.
+- `SPEC-ART-004`: remains **OPEN** for integrated production quality and the prescribed rendered evidence.
+
+Canyon visibility regression evidence: `BuildArtifacts/Evidence/world-map-concept-pass/build-fog-camera.log`
+reports a successful editor build (with one existing font API deprecation warning); the retained Unreal
+report `automation-before-perimeter.json` reports 80 successful tests, zero test warnings/failures/not-run
+at `2026.09.04-19.52.56`. `unreal-fog-regression.log` records the wrapper result. Chasm meshes and lights were
+checked through unexplored, visible, explored and reset states. This is editor automation, not packaged
+fog qualification or a visual completion claim. Later perimeter/grass edits require fresh verification.
+No owner acceptance or requirement completion is assigned.
+
+
+## 2026-09-04 — Requirement identity, mission design and release-scope reconciliation
+
+**Author and owner:** Angelis Pseftis. **Authority:** owner's “Proceed with that” authorizes the proposed
+ID/index and mission-design reconciliation followed by representative qualification. The separate scope
+answer below expands the release. Work is in the existing dirty `release/world-map-concept-pass` checkout
+at base `fc05cdf`; concurrent production retains runtime/source/assets and heavy-run ownership.
+
+**DOC-SYNC-002 — Registry structure corrected; semantic decisions remain separately tracked.** The
+master now has one definition/index row per parent and unique subordinate identifiers. Nine historically
+ambiguous base IDs are retained as tombstones with eighteen titled successor bindings. Repeated identical
+authority, outcome and technology copies now point to a single canonical body. Scenario/card fields,
+the M13 AUTH typo and movement VERIF/LANE typo are corrected with a retained crosswalk. Index titles derive
+from the actual current body; a retired ID never displays one old meaning as if it won the collision.
+The registry guard detects duplicate definitions, missing parents, index/body mismatch and truncated bodies.
+It does not establish all semantic consistency or a full requirement-to-test acceptance matrix.
+
+| Retired ambiguous ID | Current titled successors | Evidence disposition |
+|---|---|---|
+| `REL-AI-016` | `REL-AI-041` strategy/fair-fog; `REL-AI-042` Standard matchup balance | Old ID alone maps to neither; inspect title/clause/test/revision. |
+| `REL-ART-024` | `REL-ART-028` Meridian forms; `REL-ART-031` cosmetic ragdolls | No automatic acceptance transfer. |
+| `REL-ART-025` | `REL-ART-029` Kharuun forms; `REL-ART-032` scorch/vitrification | No automatic acceptance transfer. |
+| `REL-ART-026` | `REL-ART-030` passability truth; `REL-ART-033` shield ripples | WORLD-A4-002 explicitly concerns passability, not shields; preserve the receipt and recheck its retained evidence before assigning current successor verification. |
+| `REL-AUD-001` | `REL-AUD-019` combined loudness; `REL-AUD-020` submix routing | Loudness session clauses also carry the second former loudness body. |
+| `REL-AUD-002` | `REL-AUD-019.SESSION` loudness session; `REL-AUD-022` critical-dialogue ducking | Ducking policy remains TBR-DOC-003 until owner selects it. |
+| `REL-AUD-003` | `REL-AUD-021` spatial attenuation; `REL-AUD-023` general-dialogue ducking | Spatial attenuation is separate from ducking. |
+| `REL-UI-017` | `REL-UI-025` command deck; `REL-UI-026` selection identity | No automatic acceptance transfer. |
+| `REL-UI-018` | `REL-UI-027` UI atlas; `REL-UI-028` selection state | No automatic acceptance transfer. |
+
+Successor parents start **OPEN** unless a later exact evidence entry establishes otherwise. Tombstone
+retirement records identity repair; it is not game-requirement completion. `SPEC-CANON-015/016` are duplicate
+aliases to restored `SPEC-CAN-001/002`. Full title/source crosswalk remains in the master. Existing `.SIG`,
+`.ASSET` and `.SHEET` artifacts are supporting clauses, not a new evidence class or proof of completion.
+
+**Fifty lost bodies restored.** The prior index referred to records whose bodies had disappeared. Exact
+normative text was recovered from committed masters: `2ca9e059ce1cc138740077dcc4a7d3ffe8b59faf` for
+`SPEC-CTL-016..019`; `67a44c3cc16d01a291ee55f150a9d2d11aa9ebac` for `SPEC-CMB-011/012`, `SPEC-AUT-005`,
+`SPEC-CAN-001/002`, `SPEC-ECO-001..006`, `SPEC-OUT-001..007`, `SPEC-PIL-001..010`, `SPEC-STR-001..012`, and
+`SPEC-TECH-001..006`. Original source line ranges and exact recovered text are retained in the audit evidence
+receipt. This is recovery of previous master content, not a claim that each threshold was personally
+approved or tested. Current restored-record engineering state is **OPEN pending evidence reconciliation**;
+past state/log entries remain unchanged. Network acknowledgement now also includes the retained owner's
+negotiated-delay instruction, bound to REL-MP-005. Steering and whole-tick budgets retain their separate
+measurement scopes. Twelve structure tables and six technology rows preserve their stable IDs; newer
+role/action descriptions do not erase their interaction, failure or numerical clauses.
+
+**TBR-DOC-001 — Map-reference conflict resolved at design-document level.** The current fifteen-row
+story/place brief is retained. Obsolete conflicting mission studies, invented causal geography, objective
+coordinates, unmodeled casualties and six-map skirmish proposals are removed from active map references.
+M06 is Talar/Meridian; M08 is Talar's Meridian proxies guided by Neme, with no playable Choir there. The
+M08 plan is corrected to the detailed `SPEC-MSN-008` and creative canon. M09 is Mara's exactly-two-district
+allocation; M10–M12 retain Oruun's contact/liability/public-readback contracts. Fifteen distinct campaign maps
+and three named offline skirmish maps remain separate. New multiplayer formats follow the explicit scope
+answer below, not the retired six-map lists. This resolves those conflicting reference instructions; it
+does not qualify their game implementation.
+
+**M01 representative slice — IN PROGRESS (planning/source boundary only).** Existing map documents now
+specify M01's scene, character stakes, carrier recovery22,18/extraction6,17, distinct campaign layout,
+unit/building role details, contextual materials, motion/audio and review views. The technical blueprint
+defines source binding, all three Well paths, failure/retry, ledger receipts, persistence, ordinary M02
+continuation, integrated craft and human/owner evidence. Optional rewards are conditional. M01 requires its
+own map binding; sharing a palette, source fixture or Glass Scar route graph is insufficient. None of the
+new five world/craft parents is accepted or complete. Map/narrative runtime binding, authored voice/subtitle/
+cinematic delivery, real gameplay captures/listening, package/physical paths and owner review remain.
+
+**TBR-SCP-001 / expanded release scope — RESOLVED by owner.** The owner answered:
+“Include those expansions in this release and reconcile the larger scope.” The question explicitly named
+the separate 25-sector Conquest/roguelite, team battles and free-for-all alongside fifteen story missions
+and three offline 1v1 maps. This activates `REL-CAM-033..038`, `REL-AI-037..040`, and applicable `REL-MP-*`
+as release obligations. Their engineering state is **OPEN** except for separately supported exact evidence;
+release-wide multiplayer dormancy is superseded. `SPEC-PRD-003/007`, replay/privacy/scope/portability/lobby
+references and the delivery/public direction are aligned. New `SPEC-SKM-014..018` and `REL-MP-018/019`
+(and children) start **OPEN** with no evidence or human acceptance.
+
+The six-participant ceiling derives from the already required 3v3 mode; FFA retains its four-player
+ceiling. It does not add six-player FFA, an MMO, a shared persistent world, a cooperative rewrite of the
+fifteen operations, another platform, an account service, or monetized progression. Conquest's seed/run/
+territory persistence is separate from the authored campaign ledger. Corefall remains the skirmish win
+condition; Conquest is a separate mode, not a new skirmish victory selector. Historical claims of Well
+Control/Conquest skirmish selectors are not a scope decision. Every format needs its actual spawn/map,
+fairness, full-load performance/soak, session recovery, security, package and human evidence.
+
+**TBR-DOC-003 — Dialogue ducking — OPEN, owner choice pending.** `REL-AUD-022` lowers Music/SFX by6dB
+with300ms attack/500ms release for critical dialogue; `REL-AUD-023` lowers Music6dB/Ambience4dB within150ms,
+keeps combat/interface cues and restores over500ms. Triggers overlap, so neither policy is implicitly
+selected by position, title or an old AudioDirection recipe. A choice is pending from the owner. Both
+policy records are **BLOCKED** for dependent mix implementation/qualification; other audio work may proceed.
+
+**TBR-DOC-004 — Economy alternatives — OPEN, owner choice pending.** Restored `SPEC-ECO-002/004/005`
+specify three workers, assigned/round-trip delivery and a200-tick exhausted marker. `SPEC-RES-003/005/006`
+specify two workers, closest reachable automatic fallback and immediate exhausted-marker transition.
+The owner is choosing the baseline; preserve both bodies and prevent dependent tuning/closure until then.
+`SPEC-ECO-006` versus `SPEC-RES-007` also needs the reservation boundary explicit: whether previously
+reserved production can finish during supply deficit. No throughput or reservation behavior was silently changed.
+
+**TBR-NET-001 — Network design/service decisions — OPEN.** Before REL-MP-019 can be verified, define
+participant authentication/key lifecycle, peer trust/hidden-state exposure, and the authenticated packet
+envelope (tag/session/issuer/freshness fields and whether REL-MP-003’s32-byte limit includes them); exact team/FFA disconnect
+outcome and remaining-unit disposition; reconnect versus host-election ordering; and rating identity/
+persistence/trust. Choose the required relay deployment/availability, data retention, recurring cost and
+failure/support contract before acquiring or deploying a service. The general mode approval supplies no
+provider purchase, credential, service subscription or deployment authorization. Preserve existing timeout/
+security targets. These choices block their dependent network implementation, not the M01/source-map work.
+
+**Verification receipt.** Python M01 narrative63/63, compiled Glass Scar13/13 and overlay1/1 passed. The
+initial Glass Scar source test failed1/10 on stale source matching and traced spawn relocations. The active
+runtime owner repaired the test while retaining the frozen source snapshot and actual spawn/fairness
+invariants; the focused recheck passes10/10. The failure and recheck logs are both retained under
+`BuildArtifacts/Evidence/doc-reconciliation-20260904T201127Z/`, with command/exit/source identities. These
+are source tests only. No Unreal, packaged, physical-play, sound, performance, or human result is inferred.
+Document/registry checks and internal review are recorded in DocumentationAudit.md. No commit or push is
+claimed by this task; concurrent production evidence remains separately bounded.
+
+
+## 2026-09-04 — Hosting deferral and worker-economy assessment
+
+**Owner direction:** “put multi play hosting to the back. that will be in the next game version after
+this version is fully completed.” Hosting services, hosted relay deployment and service-spending decisions
+are deferred until the next version. REL-MP-013/018/019 and the delivery references now express that
+applicability. TBR-NET-001 hosting/provider/cost choices are deferred; current session authentication,
+packet format, peer trust and failure/recovery choices remain applicable to shipped direct/LAN modes.
+No purchase, service deployment or game implementation occurred. The targeted hosting deferral does not
+silently withdraw the prior Conquest/team/FFA scope decision.
+
+**TBR-DOC-004 — refined recommendation, not an approved rule or implementation.** The owner asked which
+worker behavior fits the game's concept, strategy and factions. Recommend two simultaneous extraction
+positions per standard deposit as a test baseline, not a hard cap of two assigned workers: additional
+haulers can use freed positions while others deliver cargo. Useful assigned-worker saturation therefore
+depends on harvest time, cargo, travel, delivery and route congestion. Compare two versus three extraction
+positions before treating either as balanced. Keep the same extraction rules for all factions; differentiate
+their economy through Meridian's networked drop-offs, Kharuun's relocatable rooted Waystones, and Choir's
+Dawn-funded coherence upkeep. Give the player stable automatic delivery to an efficient known reachable
+drop-off plus explicit assignment override; reroute on failure without hidden-information use or constant
+route switching. Exhausted sites stop production immediately but remain visibly exhausted when observed
+and remembered only under fog rules. Existing reserved production should finish during supply loss while
+new starts wait. These are proposed resolutions of the old alternatives, with no thresholds, worker code,
+map data or acceptance changed by this assessment. Delivery and saturation need full-cycle income,
+expansion/harassment, route-failure and faction matchup checks, followed by player testing.
+
+## Accepted worker economy resolution
+
+**Owner direction:** “go with your recomment\dationw”, accepting the preceding worker recommendation.
+**TBR-DOC-004 — RESOLVED as a design decision.** SPEC-RES-003..007 now govern two simultaneous
+extraction positions, unlimited assignments subject to visible queueing, stable efficient known delivery
+with explicit override and failure fallback, immediate depletion with persistent observed/remembered
+terrain, and completion of previously reserved production during supply loss. SPEC-ECO-002..006 retain
+their stable IDs as references to those bodies. REL-ECO-004/005/007/012/013 are aligned. Automatic deposit
+retargeting and the 200-tick exhausted-marker alternative are superseded. Existing cargo is delivered
+before the depleted assignment becomes idle. Faction infrastructure differences remain binding.
+
+Affected implementation and qualification remain **OPEN**. No runtime change, balance result, packaged
+verification, human acceptance or owner gameplay acceptance is claimed. Test extraction versus hauling
+occupancy, queue order, full-cycle delivered income, explicit locks/fallback, route failure, retained cargo,
+fog memory and production reservations. Compare two versus three positions under expansion, harassment
+and faction matchup/player tests. Hosting remains deferred to the next version under the prior decision.
+
+**TBR-ECO-001 — OPEN, inherited numeric consistency.** SPEC-UNIT-001/005/009 author different work/cargo
+values (Surveyor 10/10, Tender 9/10, Threadkeeper 9/12), while REL-ECO-003 prescribes universal 10 Matter
+over 20 ticks. The accepted shared extraction-position and logistics policy does not authorize silently
+flattening faction stats or selecting a new throughput formula. Preserve source values pending a focused
+rate/cargo reconciliation; harvesting-rate implementation and balance acceptance remain blocked on that
+resolution. The 20-tick cadence is common; neither unequal rates nor universal throughput is claimed
+validated by this document decision. TBR-DOC-003 dialogue-mix alternatives remain unresolved.
+
+## 2026-09-04 — M01 editor-rendered surface evidence
+
+For `SPEC-VISD-008`, `SPEC-ART-004` and the M01 representative production brief, the bounded
+surface pass is recorded at `BuildArtifacts/Evidence/editor-visual-pass-20260904T235321Z/`.
+It corrects missing instanced-material usage, introduces continuous service ceramic, exposes
+apron markings and removes distracting basalt contour patterns. Six regenerated meshes retain
+two LODs and zero simple collision; three existing source geometry checks passed. The current
+PIE frame shows the owned carrier recovered/intact at the archive after an ordinary movement
+command through the project's existing visual-preview path. Source and asset identities are
+in `surface-pass-manifest.json`; provenance is in the AssetRegister's live editor entry.
+
+This adds source-check and editor-rendered evidence only. No requirement is promoted to
+`COMPLETE`, and no packaged journey, audio, sustained performance, physical-input verification
+or owner acceptance is claimed. M01 composition and the wider map-delivery obligations remain
+open. The owner requested that the editor stay open; live material iteration followed that
+direction after the earlier relaunches.
+
+## 2026-09-05 — M01 visual inventory and B1 correction state
+
+`SPEC-ART-004`, `SPEC-VISD-008`, `REL-ART-030`, `SPEC-FOG-001` and `REL-ART-017`
+remain **IN PROGRESS** for M01. The current evidence root is
+`BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z/` on dirty
+`fc05cdf08191649363fb774ec88ad19d96c37a37`. The WorldMapWorkLog records the unchanged
+M01 terrain binding, source revisions and retained render classifications. Its
+`visual-inventory.json` and `defects.json` distinguish inspected portions from open
+construction, material, placement, state and package work. No parent is complete.
+
+Bounded EDT reinspection shows a less machined retaining profile, an unlit unknown
+shroud, remembered ground visible through the tint, removal of the v2 tint's false
+grid and concealment of unobserved crossing details. The partially revealed ravine
+bed and sealed backing were built and reinspected in8831; the basalt surface correction
+loaded6484 still needs a matched wide-bank reinspection. Native tests, full object/state
+coverage, packaged rendering, performance and human review remain open. Editor scripting failures and shader-warmup/tick mismatch are retained, not
+counted as successful matched execution. Only Angelis may accept or assign COMPLETE.
+
+**M01 capability dependencies — OPEN:** the actual Harvest/Reshape core implementation
+activates immediately; the required180-tick public commitment/interrupt interval has
+no authoritative state to render. Reshape has real1800-tick expiry/fallback logic. The
+3138/0495 presentation now projects the authoritative countdown, final10-second warning
+and expired state; the real-time0495 EDT clip shows these transitions and subsequent
+evacuation. Occupied-cell fallback and all changed terrain cells remain uninspected.
+The existing Well keyboard choices have no required
+three-card comparison/confirmation presentation. Visual production must not fabricate
+those missing states. Current M01 narrative consumers bind sequence/text IDs, while
+authored voice delivery, cinematic timing, listening and audiovisual synchronization
+remain unverified. Record these gaps through B3/B4 and keep their requirements open.
+
+**TBR-M01-ROSTER-001 — OPEN:** `SPEC-PLAN-001` describes6 Surveyors/2 Lancers, while the
+current M01 source and approved spatial brief preserve3 workers/3 line units. This
+visual pass preserves the current deployment and does not silently rebalance the
+mission. Resolve the authoritative starting-force discrepancy separately.
+
+**B5 package qualification — OPEN:** the registered packager requires a clean detached
+linked worktree at the exact pushed canonical main commit. The active source contains
+substantial prior and current dirty work. No such integration, push, package execution
+or provenance qualification is claimed by editor builds. Prepare the concrete M01
+review state and retain the unresolved package boundary without weakening that gate.
+
+**B2–B4 bounded progress — IN PROGRESS:** 6484/3138 reuse registered 3D basalt on
+M01 backing and reduce basin-body glare. Retained Preserve and Harvest route clips
+show archive approach, Well interaction, withdrawal and results from controlled
+ordinary-command fixtures. They do not cover every actor/action. The0495 Reshape clip
+is120.04seconds at an exact1280×720 raster;2880 frames decoded, selected warning/expiry
+frames inspected. HUD150% resources, selection summary/integrity and result text now
+fit in the inspected views. The follow-up shared layout correction removes the old
+1.35 geometry cap and adds native endpoint/input assertions; its native run and new
+rendered sweep remain pending. No audio, physical-input, performance or package result
+is inferred from these movies. Failed startup/capture attempts remain retained.
+
+**TBR-M01-ANCHOR-002 — OPEN:** `SPEC-MSN-001` and the current mission/map source bind
+extraction to6,17; legacy `REL-CAM-006.AUTH` still names42,18. This visual pass preserves
+the controlling6,17 mission geometry and records the requirement conflict for Angelis.
+
+**TBR-M01-RESHAPE-003 — OPEN:** current SimCore Reshape affects passability only in
+the3×3 around the Well (31–33,31–33). All nine M01 source cells are already open.
+Consequently this mission has no actual Reshape terrain opening, closing or occupied
+blocked-cell fallback to render. Preserve the current causeway and mission geometry;
+resolving the missing tactical terrain effect requires an authoritative map/rules
+decision. The timed Well/HUD presentation can be corrected independently. The first
+0495 expiry render retained active purple core/orbit motion; its M01-only inactive
+presentation correction is under native build and needs reinspection.
+
+
+M01 follow-up evidence (2026-09-05): the5140 region movie covers all four ordinary
+camera edges and HUD80/100/120/150 at1280×720. Coverage exposed actual defects V022
+(wrong-branch withdrawal narration), V023(exposed boundary/constant-width rock row),
+and V024(80% objective overflow); their source corrections await matched reinspection.
+The3019 actual-expiry clip and fresh native M01WellExpiry check verify the inactive
+Well presentation within their evidence classes. The fresh23-check report has22PASS;
+its one stale landmark expectation is corrected and passes a separate focused native
+run. Save guards pass. This does not advance owner acceptance or any requirement to
+COMPLETE. All-instance, all-action,1080p, packaged and performance gates remain open.
+
+
+**2026-09-05 M01 follow-up — IN PROGRESS:** native focused contact5 and failure/pointer4 checks passed in isolated environments with unchanged real player saves. Module4065 ordinary reveal/freeze at tick364 exposed all28 registered landmark instances; E1/E2 retain inspected static views. V030 obstructed causeway manifold and V031 Well ornament-shadow spots remain pending correction reinspection. M01 Surveyor four-part derivatives generated under existing original provenance; articulated motion, other deployed walkers, Bulwark deployed form and supported work/production feedback remain open. No packaged, full interaction/performance or owner acceptance is established. Existing TBR anchor/roster/Reshape decisions remain open.
+
+
+**2026-09-05 M01 B2/B4 reinspection — IN PROGRESS:** module2947 and native7PASS support the M01 Surveyor derivative rig, contact and geometry source checks. F2 closesV030/V031 in the matched dormant/static views. Ordinary gather F1 retains sharp-reversal uncertaintyV036; no universal locomotion acceptance is assigned. Actual1080p F3 exposes briefing/title/pause defectsV035/V037/V038; M01 source corrections require current-editor and ordinary-input reinspection. Four capture qualification receipts retain hashes, observed frames and temporal module association. All applicable PKG, performance, audio, human and owner gates remain open; no requirement is COMPLETE.
+
+
+**2026-09-05 M01 interface and motion follow-up — IN PROGRESS:** hot3712 native1280×720/HUD150 high-contrast, reduced-motion and reduced-flashing views correct the sampled briefing and pause button overlaps (V035/V038). Bounded CUA keyboard U/Return/P observations are retained separately from editor setup. Mouse activation remains unresolved as V039; no production pointer change is justified yet. Surveyor native runs073434Z,075404Z and081339Z retain failed reversal checks; the fourth correction is under focused test and has no pass claim here. The Bulwark baseline confirms V032 and its M01-only derivative sources are prepared; generation and runtime state inspection remain open. No requirement is COMPLETE. Packaged, performance, audio, broader accessibility, human and owner acceptance remain outstanding.
+
+### 2026-09-05 — M01 Bulwark state evidence and diagonal Surveyor regression
+
+**Author and owner:** Angelis Pseftis. Applicable `SPEC-ART-004`, `SPEC-VISD-008`, `REL-ART-009..014`, `REL-ART-031/033`, `SPEC-UI-005` and accessibility records remain **IN PROGRESS**; this entry grants no COMPLETE or owner acceptance.
+
+The retained M01 visual evidence root is `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z`. Native084912Z passes three exact Bulwark derivative/pooling/deployment tests with zero warnings/errors and unchanged real player saves. Loaded8594 I1 sampled frames1–8 show attached folding wings, distinct packed/deployed silhouettes and consistent facing. This is SRC/GEN/native/EDT coverage; undercarriage motion and other actor states remain open.
+
+Native084249Z Surveyor rig PASS is bounded by a later actual-route failure: I1 logs three emergency foot replants on diagonal gathering/delivery. V036 remains OPEN and the corrected initial-departure fixture awaits repeated native/render evidence. The earlier failed runs remain retained. I1 also substantiates V040 generic M01 producer labels. Return/Tab/Q works in that controlled editor journey; pointer clicks still resolve to unchanged cursor coordinates (V039). Neither is packaged or physical-player acceptance.
+
+The inventory is being expanded in place to distinguish uninspected states from missing authoritative capabilities and the existing anchor, roster and Reshape decisions. Source checks and sampled corrections cannot close the full M01 inventory, packaged fog/persistence/interaction/performance gates, audiovisual bindings or Angelis's final review.
+
+**2026-09-05 M01 camera and native follow-up — IN PROGRESS:** J2/K1 supported-camera attribution is withdrawn after actual rotation readback exposed unintended roll. K4 explicitly asserts the normal rotation, and all ten unobstructed6200-corner/edge and1400/6200-arrival samples show continuous current exterior backing. V042 bank material/depth refinement is source prepared and passes the native world-kit bounds/material/fog checks; rendered reinspection remains pending. Native101237Z has seven passes and five Surveyor assertions, with unchanged real player saves. The derived fixture's inherited initial position, duplicate target-edge sample and omitted0.5841second segment are corrected separately; V036 remains open pending test and actual motion. The build gate actually refused the dirty release checkout; no integrated package, performance, physical-input, audio or owner acceptance is claimed. Requirements remain IN PROGRESS.
+
+## 2026-09-05 — Harvesting FSM guidance intake
+
+**Author and owner:** Angelis Pseftis.
+**Owner source:** “Here is some information to think about when this code gets worked on,” followed
+by a proposed Worker / ResourceNode / TownHall harvesting FSM. The key constraints are “only ONE
+worker can harvest at a single node” and “the physical travel distance and pathing must dictate the
+income rate.” This entry retains that proposal for future implementation. It does not amend the
+requirements master, adopt the example balance values, or claim implementation or gameplay acceptance.
+StarCraft 2 is the owner's behavioral reference; exact equivalence has not been established.
+
+**Proposed state contract from the owner input:**
+
+| State | Requested behavior |
+|---|---|
+| Idle | Wait for a player command. |
+| MovingToResource | Physically path to the assigned node. Workers assigned to that node must not block each other in transit. Recheck a depleted or removed target before extraction. |
+| Harvesting | On arrival, wait immediately beside an occupied node in a visible micro-queue. Only the worker holding the node's exclusive extraction ownership may advance its harvest duration. On completion, remove the extracted amount from the node, attach a visible carried-resource flag, and release the node for the next waiting worker. |
+| ReturningHome | Physically path to the nearest valid TownHall/drop-off while retaining the node assignment and extracted cargo. No resource income is credited during travel. |
+| Delivering | On actual arrival, credit the owning player's resource pool once, clear cargo and its visual flag, and return to MovingToResource for the exact same node without another player command. |
+
+The owner permits either idle or nearest-node fallback on depletion. The idle option is compatible
+with SPEC-RES-006: deliver existing cargo first, then enter the idle registry and alert; a new player
+order is needed to select another node. Empty workers whose target depletes while travelling or waiting
+stop that assignment. No hidden node discovery is authorized by this input.
+
+**TBR-ECO-002 — OPEN, reconciliation before changing the affected harvesting rules.**
+The input refines the existing loop but also proposes changes to previously accepted behavior:
+
+* **Extraction occupancy:** one exclusive extractor conflicts with the two-position baseline in
+  SPEC-RES-003 and REL-ECO-004. A future decision must select one or retain two, then align both master
+  records and the economy skill's baseline. Queue capacity and assigned hauler count are separate
+  from active extraction capacity. Changing this limit changes saturation and delivered income;
+  the earlier two-versus-three comparison does not qualify a one-position design.
+* **Transit behavior:** the non-blocking intent aligns with SPEC-MOV-008's non-imprisonment rule.
+  Literal worker phasing would need an explicit bounded exception to its clearance rule and
+  SPEC-MOV-009's sequential chokepoint behavior. Preserve terrain passability and unit targetability;
+  do not silently disable authoritative collision for every worker or unit.
+* **Drop-off choice:** nearest TownHall differs from SPEC-RES-005 / REL-ECO-007's valid explicit
+  assignment, stable destination and lowest predicted round-trip travel time. For Echoes, the
+  candidate interpretation is nearest known, reachable, operational, faction-valid friendly drop-off
+  by navigable travel cost, with deterministic ties. Decide whether explicit assignments still take
+  precedence; keep faction infrastructure semantics instead of restricting delivery to Command Cores.
+* **Timing and amount:** 2.0 seconds and 5 units are explicitly examples, not adopted constants.
+  TBR-ECO-001 remains open for the inherited faction work/cargo versus universal-throughput conflict.
+  The existing 20-tick cadence remains unchanged. Resolve completion-time extraction versus
+  REL-ECO-003.AUTH's per-tick accumulation, including interruption and final partial loads, before
+  changing the accounting model. Use authoritative simulation time for work duration and actual
+  movement for both legs of the cycle; no periodic passive-income substitute is supported.
+
+**Implementation considerations derived from the proposed loop, pending reconciliation:**
+Use the existing Unreal/C++ architecture: Worker maps to the worker entity, ResourceNode to the
+Matter deposit, and TownHall to the faction-valid delivery role. EchoesSimCore owns FSM state,
+arrival validation, exclusive ownership, queue ordering, cargo and balance transactions; Unreal
+presentation consumes those fields. The object-oriented entity roles must not introduce a second
+gameplay authority in actor Tick functions or independent wall-clock timers.
+
+Represent waiting as a Harvesting substate, distinguishable from active extraction. Order waiters
+by arrival with a stable entity-ID tie-break for simultaneous arrivals, avoiding starvation. The
+exclusive-ownership invariant holds throughout each simulation transition, including same-tick
+handoffs; “any given millisecond” does not require changing the project's simulation frequency.
+Release ownership and remove stale queue entries on cancellation, reassignment, death or node
+removal. Preserve only legitimately extracted cargo across interruption and drop-off failure;
+worker death follows REL-ECO-008. Revalidate the destination on arrival and retain cargo with the
+existing failure feedback when no valid delivery route exists.
+
+At extraction completion, take no more than the configured amount, remaining node stock and free
+cargo capacity. Credit that actual carried amount at delivery, not an unconditional HarvestAmount;
+a final 3-unit load must deliver 3, even if the configured example load is 5. No extraction while
+queued, negative stock, duplicated delivery or cargo loss from a depleted assignment is valid.
+Save/load and replay must retain or deterministically reconstruct assignment, progress, extraction
+ownership and queue order without duplicate harvest or delivery.
+
+**Read-only source findings and future verification boundary:**
+The current Simulation.cpp ProcessGather / ProcessDeliver implementation already uses physical
+MoveTowards pathing and retains an assignedResourceNode. State is implicit in orders, range,
+cargo and harvestTicks rather than an explicit five-state FSM. In-range extraction arbitration
+currently admits two workers by entity order; it is not the proposed exclusive node lock and
+arrival-ordered micro-queue. Presentation receives cargo amounts, but the scan did not establish
+a dedicated visible carried-resource marker. The source also still automatically retargets depleted
+assignments in gather/delivery recovery, contrary to the accepted SPEC-RES-006 idle policy. This is
+a source-inspection finding, not an executed regression result; retain it for the next economy fix.
+
+Qualification should cover simultaneous arrivals, queue fairness and cancellation, partial final
+loads, depletion during approach/wait/work/return, worker and drop-off loss, blocked terrain,
+same-node continuity, actual cargo marker transitions and save/replay continuity. Compare otherwise
+identical short and long navigable delivery routes and an impassable route: Matter credits must
+follow real arrivals, and blocked travel must produce no delivered income. Use source/native tests
+for accounting and determinism, followed by the required packaged interaction and rendered evidence
+for movement, queue and cargo readability. These are future checks, not pass claims.
+
+Affected SPEC-RES-003..006, REL-ECO-003..008 and SPEC-MOV-008..009 retain their existing lifecycle
+records; this intake grants no IMPLEMENTED, AGENT VERIFIED or COMPLETE status. No runtime, balance,
+asset or engine changes were made by this task. Source identity, dirty-state capture and document
+checks are retained in BuildArtifacts/Evidence/harvesting-guidance-20260905T105254Z/.
+
+
+### 2026-09-05 — M01 ordinary-route gait reinspection
+
+**Author and owner:** Angelis Pseftis. SPEC-ART-004, REL-ART-009 and SPEC-MOV-010 remain **IN PROGRESS**.
+
+Native run 104801Z passed nine focused checks; final native run 105653Z passed four after the M01 authored 720°/s
+facing correction. The latter verifies exact angular progress, ninety authoritative seconds of repeated
+gathering/delivery, planted support within 1 cm and no emergency/discontinuity reset. Real player save
+guards passed. Loaded 3467 M1 retains 110.04 seconds of 1280×720 video and112 seconds of presentation telemetry:
+zero emergency replants, zero discontinuity resets and no unexpected pose resets outside accessibility
+transitions. Twelve sampled views were reviewed across normal, reduced and restored motion. This
+corrects V036 only for the retained route and V043 within source/native evidence; weak lower-leg
+contrast remains V044. The build, native reports, module identity and movie qualification are linked
+from [WorldMapWorkLog.md](WorldMapWorkLog.md) and retained under BuildArtifacts/Evidence/m01-continuation-20260905T104625Z/.
+
+This evidence does not qualify every route/action, full-map composition, audiovisual delivery,
+packaged performance, physical-player interaction or owner acceptance. Existing roster, anchor,
+Reshape and harvesting decisions remain unchanged. No requirement is marked COMPLETE.
+
+
+## 2026-09-05 — RTS regression implementation and harvesting instruction adoption
+
+**Author and owner:** Angelis Pseftis.
+**Status:** IN PROGRESS; native and build gates passed, isolated Unreal automation underway. No packaged, rendered,
+performance, balance or owner acceptance is established by this entry.
+
+The owner authorized the architecture plan with “Proceed” and repeated the strict single-extractor
+FSM in the active M01 task. That explicit instruction supersedes the older two-position baseline.
+SPEC-RES-003, REL-ECO-004, REL-ECO-003.AUTH and the bounded worker-clearance exception in
+SPEC-MOV-008.AUTH are reconciled in the master. The earlier intake above remains historical;
+TBR-ECO-002 occupancy, transit and completion-time accounting are resolved by this instruction.
+The example 2 seconds/5 units are not adopted numerical constants. TBR-ECO-001 remains open.
+
+The implementation uses five authoritative HarvestState values, stable arrival tickets, one held
+position, physical queue parking and pathing, completion-time cargo extraction, actual-cargo deposit,
+same-node return and idle after the final depleted-node load. An explicit Return Cargo/Deliver
+command retains the existing assignment for resumption; Stop, Move and a new Gather replace it.
+Nearest fallback uses live operational friendly depots and the player's known navigable grid with
+stable ties; exact weighted round-trip optimization and persistent depot-lock UI remain unqualified.
+No failed route may credit income. The configured 10-load requires20 ticks; other existing capacities
+use their existing work rates to derive completion duration without changing those source values.
+
+Snapshot schema26 extends the prior layout with work state, assignment, arrival ticket, held slot,
+queued orders, fractional construction progress, ballistic-mode configuration and projectiles in
+flight. Legacy schemas20–25 cannot recover fields they never wrote: known Gather restarts its work
+phase; a returning legacy load with unknown source delivers then idles. This is an explicit migration
+limit, not reconstructed evidence of the former assignment. Historical replay checksums must not
+be treated as current rules equivalence.
+
+Save tests now use a launcher-created temporary root and a macOS deny policy for the normal project
+save root and real home. The launcher does not inspect those protected paths. It validates deny
+clauses and exercises access denial only on synthetic fixtures. The game module checks dedicated
+routing before GameInstance creation; scoped save fixtures refuse ordinary editor launches.
+`-UserDir` does not redirect every Unreal user path; whole-home denial remains enforced. Attempt3
+reached engine initialization but blocked before automation in the Home Screen installation browser;
+an early sandbox-owned startup setting now disables that UI for the next attempt. Campaign slot names encode spaces and
+underscores distinctly; ambiguous legacy underscore filenames remain untouched and require explicit
+migration rather than guessed ownership.
+
+Contact scope adds a common pre-fire terrain gate and projectile flight/checkpoint corrections.
+Explored-terrain movement admission now consumes remembered terrain instead of live hidden changes.
+Terrain-occluded fog, transparent void classification and elevation mechanics remain the joint
+Core/World/AI gate specified by owner ruling25; no arbitrary height threshold or damage bonus is
+introduced here. Existing event-driven mission models remain the sole reducers; campaign regression
+coverage is reused and the slot collision is fixed without creating another progression authority.
+
+Evidence is retained in `BuildArtifacts/Evidence/rts-regression-implementation-20260905T112003Z/`.
+The initial optimized suite reached94/98; the next reached96/98. The final native gate passed100/100
+in optimized, debug and ASan/UBSan configurations. The controlled editor build passed; ten synthetic
+launcher tests passed. These are separate from the Unreal automation result, which remains pending
+after retained startup failures. See the architecture document and per-attempt evidence receipts.
+No unrelated editor was closed by this task; unrelated map/lighting work remains preserved.
+
+## 2026-09-05 — Owner-directed canon expansion: story causality, backstories, places, and visual description
+
+**Author and owner:** Angelis Pseftis
+**Evidence boundary:** documentation/source inspection on `main` at `b7adbb4` with pre-existing dirty paths preserved.
+This entry records creative-canon authoring and its scope. No runtime, package, rendered, physical-play, or
+human-acceptance result is claimed. `Scripts/check_agent_docs.py` passed after the edit (structural/link check only).
+
+**Owner direction (2026-09-05):** polish and complete the storyline so lore, backstories, heroes/characters,
+buildings, environments, maps, world, missions, and campaign align and the reader understands what caused what;
+describe everything visual precisely enough that later production can build from it.
+
+**What changed.** `Docs/Archive/DevelopmentBible.md` gained an appended part, *Expanded canon — world, history,
+people, places, and the fifteen operations*, edited in place (frontmatter `updated` 2026-09-05). It adds: a
+two-layer rule (authorial truth in design documents; only `SPEC-MSN` witnessed facts in player text); the sky,
+Dawnshard, Well, and leakage physics; the five eras as one causal chain (Ledger Peace Harvests closed futures →
+struck census entries and curated Kharuun memory → the Choir as the erased branches → Rhyse's single-future
+program); faction cultures and construction languages; production descriptions for all twelve units and twelve
+structures across three factions, including the previously unciteable Hollow Choir roster; Well state visuals;
+institutions (ledger, doctrine, public interfaces, quarantine posture, accord/conduit); backstories, motivations,
+arcs, appearance, and knowledge-by-mission for Mara, Talar, Oruun, Neme, Rhyse, and the Annunciator; fifteen place
+descriptions plus the three skirmish maps; the doctrine-echo naming table (Ash/Held/Folded) for branch variants; the
+campaign told as one story with the reason for every change of commander; and the four endings' conduits, light,
+and sound. `Docs/MapConcepts.md` gained a pointer from the story-to-place trace to those sections.
+
+**Decisions adopted under the 2026-09-05 direction (recorded for the owner's review packet):**
+
+| Item | Decision | Source of prior status |
+|---|---|---|
+| Future Well choice colours (NarrativeCoherenceReview V3, open item 1) | Adopted as canon design: Harvest broken-sun amber, Preserve cyan-held, Reshape magenta-fracture, Dormant unlit charcoal; consistent with the ArtDirection master palette. | Awaited owner adoption |
+| Hollow Choir roster in the Bible (NarrativeCoherenceReview open item 3) | Threadkeeper, Intervalist, Lacuna Warden, Afterimage, Concordance, Interval Loom, Chorus Loom, Phase Anchor authored into the Bible with the data-registered names and `SPEC-UNIT-009..012` / `SPEC-BLD-017` roles. | Existed only in data |
+| New canon names | Solar Fall (highlands) and Solar Fall Dais; Understone (the birthing cavern under the Glass Scar — never shown or located); Line of Parity and Sector 9 (already registered world-source display names); Authority Exchange (M09), Lume Well court (M10), Census Forecourt (M11), Demonstrator Spine at Reserve Gate (M12); Ash/Held/Folded doctrine names; the Cisterns for Life Support. Ration/Census/Reserve Gate names were already owner-adopted 2026-09-02. | New |
+| Character backstory events | Mara's Transit-block span failure; Talar's grandmother's struck register entry; Oruun's seven accounts of the Understone evacuation; Rhyse's Reserve Gate famine-winter Harvest; Neme's naming at the Confluence. These are authorial-layer facts; no mission asserts them. | New |
+
+**Requirement effect.** `SPEC-CAM-041.CONNECTIONS` and `SPEC-CAM-042.TRACE` now have authored source support for
+region/site, story stake, character/backstory link, and preceding/next relationship for all fifteen operations;
+their states remain **OPEN** because in-game delivery (`.MAP`, `.DELIVERY`, `.RESULT_PATHS`), human experience
+(`.EXPERIENCE`), and owner review (`.OWNER`) are unqualified. `SPEC-CANON-001..014`, `SPEC-CAN-001..002`,
+`SPEC-MSN-001..015`, `SPEC-PLAN-*`, and `SPEC-END-*` bodies are unchanged; nothing here alters an objective,
+coordinate, threshold, or consequence. `Content/Narrative/Source/campaign_canon_continuity.json` remains a
+structured projection and was not edited; its next regeneration/validation should be checked against the expanded
+part. Mission narrative JSON was not edited; no line was re-authored.
+
+**OWNER-QUESTION (non-blocking, batch with the next review):**
+1. Oruun's pronoun: `SPEC-MSN-007` canonical facts say "Oruun himself"; the Character & Voice Identity Bible says
+   "who they are". The expanded canon avoids pronouns for Oruun. Which form should all text use?
+2. NarrativeCoherenceReview open item 4 (Bible command set names `repair` and `rally`, absent from `CommandType`)
+   remains open; the expanded canon describes Surveyor repair only as "when authorized". Redesign or rejustify?
+
+## 2026-09-05 — Adaptive execution policy and P0 native baseline repair
+
+**Author and owner:** Angelis Pseftis
+**Source identity:** `release/world-map-concept-pass` at `b7adbb4b00add12980812decdb72a44ab4a8e544`,
+with pre-existing staged and unstaged work preserved. The receipt binds the tested dirty inputs by hash.
+
+The owner directed automatic task-appropriate model/effort selection and complete prompts for delegated
+work. The shared contract now routes every package through the selection and handoff procedure in
+[GameDevelopmentWorkflow.md](Prompts/GameDevelopmentWorkflow.md#select-model-effort-and-work-ownership).
+Local model/role configuration was checked; no global setting or active parent model was changed.
+For this P0 slice, a `gpt-5.6-sol`/`high` worker owned the three native test files, the integration owner
+owned `Simulation.cpp`, and an `expert_reviewer` (`gpt-5.6-sol`/`high`) reviewed the scoped repair.
+These routes are recorded choices, not evidence that one model is universally optimal.
+
+**Implemented and native-verified scope:** corrected the schema 27-to-26-to-20 fixture chain, with
+bounds-checked traversal and explicit legacy-state limits. Corrected snapshot validation so valid
+Harvest countdowns and contested capture at zero progress can restore while malformed lifecycle states
+remain rejected. Corrected abandoned capture to retain its claimant while progress decays one point
+per tick; it clears at zero, resumes for the same claimant and restarts for a different claimant.
+No snapshot schema or serialization layout changed in this repair.
+
+The first run compiled and passed 95/100 optimized tests, exposing the decay defect and remaining
+outdated timing/checksum fixtures. After repair, `bash Scripts/test_sim.sh` passed **100/100 optimized,
+100/100 debug and 100/100 address/undefined-behavior sanitizer tests** on 2026-09-05,
+15:02:35–15:03:25 UTC, exit 0. Inputs remained unchanged during that run. Coverage includes schema
+migration, capture/Harvest boundaries, cancellation, abandonment and reacquisition, save/replay/checksum
+equivalence, and malformed lifecycle fields. The scoped review reported no material defect.
+
+**Requirement effect:** this adds `SRC` evidence for the bounded lifecycle and persistence behavior in
+`SPEC-WEL-003`, `SPEC-WEL-004`, `SPEC-SAV-003`, `REL-SAV-005` and `REL-SAV-010`. These parent contracts
+remain **IN PROGRESS**; this entry does not establish their broader UI, visibility, compatibility or
+player-journey acceptance. P0 remains in progress pending current integrated editor/Unreal and generated
+source checks. No current package, physical play, rendered/audio qualification or human acceptance was
+produced by this slice, and no commit or push was performed.
+
+**Open defect:** `REL-WEL-010` / `SPEC-WELLP-003` still lack Reshape's required 180-tick public telegraph.
+`CompleteFutureWellCapture` currently charges and activates Reshape at capture completion. This repair's
+test setup accounts for capture time but explicitly leaves the telegraph unqualified. Complete the
+protocol state, cancellation/expiry/save/replay cases and public feedback under P0/P3; the separate M01
+authored-route geometry decision remains open. Do not promote immediate activation into an accepted rule.
+
+**Retained evidence:**
+`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/adaptive-routing-p0-20260905T144613Z/`.
+`session.json` and `dispatch.json` identify ownership and routing; `p0-scoped.patch` separates this repair
+from the pre-existing native changes; `native-attempt-1*` preserves the failure; `native-attempt-2-result.json`
+and its log bind the successful run to input hashes. These local artifacts are not a backed-up release.

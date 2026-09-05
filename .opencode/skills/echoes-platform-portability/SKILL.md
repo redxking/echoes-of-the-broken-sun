@@ -7,7 +7,13 @@ metadata:
 
 # Echoes platform portability
 
-Read `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; verify exact lane lease/worktree/branch/SHA before mutation.
+## Project authority
+
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
+
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+
+Read [Project/AGENTS.md](../../../AGENTS.md), `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, and [echoes-session-control](../echoes-session-control/SKILL.md); verify task ownership, worktree, branch, and SHA before mutation.
 
 macOS Apple Silicon is the release target. Linux/SteamOS and Windows are future compatibility constraints, not evidence of builds, support, signing, or release. Identify platform-bound code/assets/input/render/audio/file paths, target hardware/device matrices, and thermal/sustained-load checks, then establish a named compile, package, runtime, or clean-machine check before changing them. Generated platform artifacts follow official source/build pipelines; never hand-edit package output.
 

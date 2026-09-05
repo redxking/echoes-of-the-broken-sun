@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echoes.invalid/schema/world/campaign-map-source-v1",
+  "title": "Echoes terrain-only campaign map source v1",
+  "description": "Terrain-only source contract. Semantic checks, exact key checks, connectivity, census, founding-doctrine coverage, and production-reference matching are enforced by compile_campaign_map_pack.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_format", "source_version", "author", "mission_code", "map_id", "operation_mode", "production_brief", "grid", "base_terrain", "terrain_region_ops", "founding_doctrine_variants", "required_clearance"],
+  "properties": {
+    "source_format": {"const": "echoes-campaign-map-source"},
+    "source_version": {"const": 1},
+    "author": {"const": "Angelis Pseftis"},
+    "mission_code": {"type": "string", "pattern": "^M(?:0[1-9]|1[0-5])$"},
+    "map_id": {"$ref": "#/$defs/stable_id"},
+    "operation_mode": {"type": "string", "minLength": 1},
+    "production_brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mission_requirement", "map_concepts_reference"],
+      "properties": {
+        "mission_requirement": {"type": "string", "pattern": "^SPEC-MSN-(?:00[1-9]|01[0-5])$"},
+        "map_concepts_reference": {"type": "string", "pattern": "^MapConcepts#M(?:0[1-9]|1[0-5])$"}
+      }
+    },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_tiles", "height_tiles", "index_formula", "coordinate_origin"],
+      "properties": {
+        "width_tiles": {"const": 64},
+        "height_tiles": {"const": 64},
+        "index_formula": {"const": "y*width+x"},
+        "coordinate_origin": {"const": "southwest"}
+      }
+    },
+    "base_terrain": {"enum": ["open", "blocked"]},
+    "terrain_region_ops": {"type": "array", "items": {"$ref": "#/$defs/rectangle_op"}},
+    "founding_doctrine_variants": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["doctrine", "terrain_region_ops", "expected_blocked_cell_count"],
+        "properties": {
+          "doctrine": {"enum": ["Harvest", "Preserve", "Reshape"]},
+          "terrain_region_ops": {"type": "array", "items": {"$ref": "#/$defs/rectangle_op"}},
+          "expected_blocked_cell_count": {"type": "integer", "minimum": 0, "maximum": 4095}
+        }
+      }
+    },
+    "required_passable": {"type": "array", "items": {"$ref": "#/$defs/passable_assertion"}},
+    "required_clearance": {"type": "array", "items": {"$ref": "#/$defs/clearance_assertion"}}
+  },
+  "$defs": {
+    "stable_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "rectangle_op": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "op", "x0", "x1", "y0", "y1"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "op": {"enum": ["block", "open"]},
+        "x0": {"type": "integer", "minimum": 0, "maximum": 63},
+        "x1": {"type": "integer", "minimum": 0, "maximum": 63},
+        "y0": {"type": "integer", "minimum": 0, "maximum": 63},
+        "y1": {"type": "integer", "minimum": 0, "maximum": 63}
+      }
+    },
+    "passable_assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "x", "y"],
+      "properties": {"id": {"$ref": "#/$defs/stable_id"}, "x": {"type": "integer", "minimum": 0, "maximum": 63}, "y": {"type": "integer", "minimum": 0, "maximum": 63}}
+    },
+    "clearance_assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "x", "y", "half_extent_raw"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stable_id"},
+        "x": {"type": "integer", "minimum": 0, "maximum": 63},
+        "y": {"type": "integer", "minimum": 0, "maximum": 63},
+        "half_extent_raw": {"type": "integer", "minimum": 1, "maximum": 1024}
+      }
+    }
+  }
+}

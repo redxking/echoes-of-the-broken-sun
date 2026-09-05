@@ -15,6 +15,12 @@ constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 constexpr std::uint32_t kMaximumMapTiles = 4U * 1024U * 1024U;
 constexpr std::uint32_t kMaximumSerializedEntities = 64U * 1024U;
+constexpr std::uint32_t kMaximumSerializedProjectiles =
+    kMaximumSerializedEntities;
+constexpr std::size_t kSerializedProjectileBytes = 41;
+// A ballistic record advances no farther than one map tile per simulation
+// tick. The current weapon implementation uses 60 cm/tick (614 raw units).
+constexpr std::int32_t kMaximumBallisticProjectileSpeedRaw = kFixedScale;
 constexpr std::uint32_t kMaximumSerializedCommands =
     static_cast<std::uint32_t>(kMaximumCommandLogEntries);
 constexpr std::size_t kMaximumCachedPathFields = 128;
@@ -31,6 +37,8 @@ constexpr std::uint32_t kChoirSnapshotVersion = 22;
 constexpr std::uint32_t kProtectedCommandCoreSnapshotVersion = 23;
 constexpr std::uint32_t kCommandResolutionReceiptSnapshotVersion = 24;
 constexpr std::uint32_t kMemorySnapshotVersion = 25;
+constexpr std::uint32_t kWorkStateSnapshotVersion = 26;
+constexpr std::uint32_t kFutureWellLifecycleSnapshotVersion = 27;
 constexpr std::size_t kSerializedRememberedObjectBytes = 24;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
@@ -39,7 +47,12 @@ constexpr std::size_t kPriorSerializedEntityBytes = 210;
 constexpr std::size_t kSerializedEntityBytes = 235;
 constexpr std::size_t kSerializedCommandBytes = 38;
 constexpr std::size_t kSerializedCommandResolutionReceiptBytes = 19;
+constexpr std::size_t kSerializedFutureWellLifecycleBytes = 16;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
+constexpr std::int32_t kFutureWellCaptureRadiusRaw = 21 * kFixedScale / 5;
+constexpr std::int32_t kFutureWellScarRadiusRaw = 6 * kFixedScale;
+constexpr std::uint16_t kFutureWellCaptureRequiredTicks = 300;
+constexpr Tick kHarvestTelegraphTicks = 180;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 constexpr std::uint8_t kValidCommandCoreProtectionMask =
@@ -61,6 +74,15 @@ constexpr std::uint8_t kValidCommandCoreProtectionMask =
 
 [[nodiscard]] bool HasMemorySnapshotSchema(std::uint32_t version) {
     return version >= kMemorySnapshotVersion;
+}
+
+[[nodiscard]] bool HasWorkStateSnapshotSchema(std::uint32_t version) {
+    return version >= kWorkStateSnapshotVersion;
+}
+
+[[nodiscard]] bool HasFutureWellLifecycleSnapshotSchema(
+    std::uint32_t version) {
+    return version >= kFutureWellLifecycleSnapshotVersion;
 }
 
 [[nodiscard]] std::int64_t Abs64(std::int64_t value) {
@@ -696,6 +718,10 @@ class BinaryWriter final {
 public:
     void Reserve(std::size_t byteCount) { bytes_.reserve(byteCount); }
     void U8(std::uint8_t value) { bytes_.push_back(value); }
+    void U16(std::uint16_t value) {
+        U8(static_cast<std::uint8_t>(value & 0xffU));
+        U8(static_cast<std::uint8_t>((value >> 8U) & 0xffU));
+    }
     void U32(std::uint32_t value) {
         for (std::uint32_t shift = 0; shift < 32; shift += 8) {
             U8(static_cast<std::uint8_t>((value >> shift) & 0xffU));
@@ -720,6 +746,7 @@ private:
 class HashWriter final {
 public:
     void U8(std::uint8_t value) { Mix(0x0100000000000000ULL | value); }
+    void U16(std::uint16_t value) { Mix(0x0200000000000000ULL | value); }
     void U32(std::uint32_t value) { Mix(0x0400000000000000ULL | value); }
     void U64(std::uint64_t value) {
         Mix(0x0800000000000000ULL ^ value);
@@ -760,6 +787,16 @@ public:
             return false;
         }
         value = bytes_[position_++];
+        return true;
+    }
+    [[nodiscard]] bool U16(std::uint16_t& value) {
+        std::uint8_t low = 0;
+        std::uint8_t high = 0;
+        if (!U8(low) || !U8(high)) {
+            return false;
+        }
+        value = static_cast<std::uint16_t>(low) |
+                (static_cast<std::uint16_t>(high) << 8U);
         return true;
     }
     [[nodiscard]] bool U32(std::uint32_t& value) {
@@ -1473,7 +1510,7 @@ bool Simulation::IsSpawnPositionAvailable(Faction faction,
         }
     }
     for (const Entity& entity : entities_) {
-        if (entity.hitPoints <= 0) {
+        if (entity.hitPoints <= 0 || IsCollapsedFutureWell(entity)) {
             continue;
         }
         const std::int32_t combinedExtent =
@@ -2223,6 +2260,9 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
         }
     }
     for (const Entity& entity : entities_) {
+        if (IsCollapsedFutureWell(entity)) {
+            continue;
+        }
         const std::int32_t combinedExtent =
             halfExtent + FootprintHalfExtentRaw(entity.faction, entity.type);
         if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
@@ -2327,21 +2367,10 @@ bool Simulation::IsTileKnownPassableTo(PlayerId player,
     if (visibility == Visibility::Visible) {
         return IsPositionPassable(position);
     }
-    // Remembered ground. This mirrors CreatePlayerView: a remembered temporary
-    // mineral cover reverts to the terrain it masked, because the player holds
-    // no live evidence that the cover still stands.
-    Terrain remembered = TerrainAt(tileX, tileY);
-    if (remembered == Terrain::Blocked) {
-        for (const Entity& entity : entities_) {
-            if (entity.temporaryMineralCover && entity.hitPoints > 0 &&
-                entity.position.x.FloorToInt() == tileX &&
-                entity.position.y.FloorToInt() == tileY) {
-                remembered = entity.mineralCoverUnderlyingTerrain;
-                break;
-            }
-        }
-    }
-    return remembered != Terrain::Blocked;
+    // Movement admission consumes the same last-observed ground as the
+    // player view. Live terrain changes behind fog cannot alter a receipt.
+    return rememberedTerrain_[player][static_cast<std::size_t>(
+        tileY * config_.mapWidthTiles + tileX)] != Terrain::Blocked;
 }
 
 bool Simulation::IsTileReachableInPlayerKnowledge(
@@ -2949,6 +2978,13 @@ void Simulation::ApplySoftSeparation(
             if (mobile[i].owner != mobile[j].owner) {
                 continue;
             }
+            const Entity& first = entities_[mobile[i].index];
+            const Entity& second = entities_[mobile[j].index];
+            if (first.type == EntityType::Worker && second.type == EntityType::Worker &&
+                first.assignedResourceNode != 0 &&
+                first.assignedResourceNode == second.assignedResourceNode) {
+                continue;
+            }
             const std::int32_t minClearance = mobile[i].halfExtent + mobile[j].halfExtent;
             const std::int64_t deltaX = static_cast<std::int64_t>(mobile[j].x) - mobile[i].x;
             const std::int64_t deltaY = static_cast<std::int64_t>(mobile[j].y) - mobile[i].y;
@@ -3199,21 +3235,59 @@ std::int32_t Simulation::DamageAfterDirectionalCover(
 }
 
 EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
-    EntityId nearest = 0;
-    std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+    std::vector<const Entity*> candidates;
     for (const Entity& entity : entities_) {
-        if (entity.owner != player || !entity.completed ||
-            !IsOperationalDropoff(entity)) {
-            continue;
-        }
-        const std::uint64_t distance = DistanceSquaredRaw(from, entity.position);
-        if (distance < nearestDistance ||
-            (distance == nearestDistance && entity.id < nearest)) {
-            nearest = entity.id;
-            nearestDistance = distance;
+        if (entity.owner == player && entity.hitPoints > 0 && entity.completed &&
+            IsOperationalDropoff(entity)) {
+            candidates.push_back(&entity);
         }
     }
-    return nearest;
+    if (candidates.empty() || !IsInsideMap(from)) {
+        return 0;
+    }
+    const std::size_t width = static_cast<std::size_t>(config_.mapWidthTiles);
+    const auto indexOf = [width](Vec2 position) {
+        return static_cast<std::size_t>(position.y.FloorToInt()) * width +
+               static_cast<std::size_t>(position.x.FloorToInt());
+    };
+    constexpr std::size_t unreachable = std::numeric_limits<std::size_t>::max();
+    std::vector<std::size_t> distance(terrain_.size(), unreachable);
+    std::vector<std::size_t> frontier{indexOf(from)};
+    distance[frontier.front()] = 0;
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
+    }};
+    for (std::size_t head = 0; head < frontier.size(); ++head) {
+        const auto current = frontier[head];
+        const auto x = static_cast<std::int32_t>(current % width);
+        const auto y = static_cast<std::int32_t>(current / width);
+        for (const auto& direction : directions) {
+            const auto nx = x + direction[0], ny = y + direction[1];
+            if (!IsTileKnownPassableTo(player, nx, ny)) {
+                continue;
+            }
+            const auto next = static_cast<std::size_t>(ny) * width + static_cast<std::size_t>(nx);
+            if (distance[next] == unreachable) {
+                distance[next] = distance[current] + 1;
+                frontier.push_back(next);
+            }
+        }
+    }
+    const Entity* nearest = nullptr;
+    std::size_t bestCost = unreachable;
+    std::uint64_t bestStraightDistance = std::numeric_limits<std::uint64_t>::max();
+    for (const Entity* depot : candidates) {
+        const auto cost = distance[indexOf(depot->position)];
+        const auto straight = DistanceSquaredRaw(from, depot->position);
+        if (cost != unreachable &&
+            (nearest == nullptr || std::tie(cost, straight, depot->id) <
+             std::tie(bestCost, bestStraightDistance, nearest->id))) {
+            nearest = depot;
+            bestCost = cost;
+            bestStraightDistance = straight;
+        }
+    }
+    return nearest != nullptr ? nearest->id : 0;
 }
 
 bool Simulation::IsProtectedCommandCore(const Entity& entity) const {
@@ -3258,7 +3332,8 @@ EntityId Simulation::FindNearestVisibleEnemyInRange(
         if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
             entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(attacker.owner, entity.id) ||
-            !InInteractionRange(attacker, entity, attacker.attackRangeRaw)) {
+            !InInteractionRange(attacker, entity, attacker.attackRangeRaw) ||
+            !HasLineOfFire(attacker, entity)) {
             continue;
         }
         const std::uint64_t distance =
@@ -3346,7 +3421,8 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
                 }
                 bool blockedByBuilding = false;
                 for (const Entity& entity : entities_) {
-                    if (entity.hitPoints <= 0 || !IsBuilding(entity.type)) {
+                    if (entity.hitPoints <= 0 || IsCollapsedFutureWell(entity) ||
+                        !IsBuilding(entity.type)) {
                         continue;
                     }
                     const std::int32_t combinedExtent =
@@ -3429,6 +3505,8 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         command.type != CommandType::AdaptWarform) {
         return CommandResolutionOutcome::NoEffect;
     }
+    const Order previousOrder = actor->order;
+    const EntityId previousNode = actor->assignedResourceNode;
     CommandResolutionOutcome outcome = CommandResolutionOutcome::NoEffect;
     const auto apply = [&]() {
         switch (command.type) {
@@ -3611,8 +3689,10 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         case CommandType::FutureWell: {
             const Entity* target = FindEntity(command.target);
             if (actor->type == EntityType::Worker && target != nullptr &&
-                target->type == EntityType::FutureWell &&
-                target->wellChoice == FutureWellChoice::Dormant &&
+                IsOperationalFutureWell(*target) &&
+                (target->wellChoice == FutureWellChoice::Dormant ||
+                 (target->wellChoice == FutureWellChoice::Preserve &&
+                  target->owner != command.player)) &&
                 command.wellChoice != FutureWellChoice::Dormant &&
                 IsEntityVisibleTo(command.player, target->id)) {
                 if (command.queue && actor->order.type != OrderType::None) {
@@ -3943,164 +4023,238 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         }
     };
     apply();
+    // Some commands append entities and invalidate actor pointers.
+    actor = MutableEntity(command.actor);
+    if (outcome == CommandResolutionOutcome::Applied && actor != nullptr &&
+        actor->type == EntityType::Worker &&
+        !(command.queue && previousOrder.type != OrderType::None) &&
+        (actor->order != previousOrder || command.type == CommandType::Stop ||
+         command.type == CommandType::Gather || command.type == CommandType::Deliver)) {
+        actor->orderQueue.clear();
+        if (actor->order.type == OrderType::Gather) {
+            BeginGather(*actor, actor->order.target);
+        } else {
+            ClearHarvestState(*actor);
+            if (actor->order.type == OrderType::Deliver) {
+                actor->assignedResourceNode = previousNode;
+                actor->harvestState = HarvestState::ReturningHome;
+            }
+        }
+    }
     return outcome;
+}
+
+void Simulation::ClearHarvestState(Entity& worker) {
+    worker.harvestState = HarvestState::Idle;
+    worker.harvestQueueTicket = 0;
+    worker.harvestSlotHeld = false;
+    worker.harvestTicks = 0;
+    worker.assignedResourceNode = 0;
+}
+
+void Simulation::BeginGather(Entity& worker, EntityId node) {
+    ClearHarvestState(worker);
+    worker.assignedResourceNode = node;
+    worker.harvestState = HarvestState::MovingToResource;
+    worker.order.type = OrderType::Gather;
+    worker.order.target = node;
+    if (const Entity* resource = FindEntity(node)) {
+        worker.order.destination = resource->position;
+    }
+}
+
+void Simulation::ReconcileHarvestReservations() {
+    // Owner harvesting directive: one non-preemptive extraction position. Queue admission is based on
+    // arrival, with entity ID resolving arrivals on the same simulation tick.
+    std::map<EntityId, std::vector<Entity*>> queues;
+    for (Entity& worker : entities_) {
+        if (worker.type != EntityType::Worker) {
+            continue;
+        }
+        if (worker.hitPoints <= 0 || !worker.completed ||
+            (worker.order.type != OrderType::Gather &&
+             worker.order.type != OrderType::Deliver)) {
+            ClearHarvestState(worker);
+            continue;
+        }
+        if (worker.order.type == OrderType::Deliver) {
+            worker.harvestSlotHeld = false;
+            worker.harvestQueueTicket = 0;
+            continue;
+        }
+        if (worker.assignedResourceNode != worker.order.target ||
+            worker.harvestState == HarvestState::Idle) {
+            BeginGather(worker, worker.order.target);
+        }
+        const Entity* resource = FindEntity(worker.order.target);
+        if (resource == nullptr || resource->hitPoints <= 0 ||
+            resource->type != EntityType::ResourceNode ||
+            resource->resourceRemaining <= 0 ||
+            (worker.harvestQueueTicket == 0 &&
+             (!InInteractionRange(worker, *resource, kFixedScale / 2) ||
+              !HasLineOfSight(worker.position, resource->position)))) {
+            worker.harvestSlotHeld = false;
+            worker.harvestQueueTicket = 0;
+            worker.harvestTicks = 0;
+            worker.harvestState = HarvestState::MovingToResource;
+            continue;
+        }
+        worker.harvestState = HarvestState::Harvesting;
+        if (worker.harvestQueueTicket == 0) {
+            worker.harvestQueueTicket = currentTick_ + 1;
+        }
+        queues[resource->id].push_back(&worker);
+    }
+    for (auto& [node, workers] : queues) {
+        (void)node;
+        std::sort(workers.begin(), workers.end(), [](const Entity* a, const Entity* b) {
+            return std::tie(a->harvestQueueTicket, a->id) <
+                   std::tie(b->harvestQueueTicket, b->id);
+        });
+        std::size_t occupied = std::count_if(workers.begin(), workers.end(),
+            [](const Entity* worker) { return worker->harvestSlotHeld; });
+        std::size_t waitingIndex = 0;
+        const Entity* resource = FindEntity(node);
+        constexpr std::array<std::array<std::int32_t, 2>, 8> directions{{
+            {{-1, 0}}, {{-1, -1}}, {{0, -1}}, {{1, -1}},
+            {{1, 0}}, {{1, 1}}, {{0, 1}}, {{-1, 1}},
+        }};
+        for (Entity* worker : workers) {
+            if (!worker->harvestSlotHeld && occupied < 1) {
+                worker->harvestSlotHeld = true;
+                ++occupied;
+            }
+            worker->order.destination = resource->position;
+            if (!worker->harvestSlotHeld) {
+                // Deterministic parking rings beside the deposit. Navigation
+                // moves to the anchor; no teleport or renderer-only queue.
+                const std::size_t slot = waitingIndex++;
+                const std::int32_t radius =
+                    FootprintHalfExtentRaw(resource->faction, resource->type) +
+                    (2 + static_cast<std::int32_t>(slot / directions.size())) * kFixedScale;
+                for (std::size_t attempt = 0; attempt < directions.size(); ++attempt) {
+                    const auto& direction = directions[(slot + attempt) % directions.size()];
+                    const Vec2 point = Vec2::FromRaw(
+                        resource->position.x.Raw() + direction[0] * radius,
+                        resource->position.y.Raw() + direction[1] * radius);
+                    if (HasLineOfSight(point, point,
+                        FootprintHalfExtentRaw(worker->faction, worker->type))) {
+                        worker->order.destination = point;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Simulation::ReturnHarvestCargo(Entity& worker) {
+    worker.harvestSlotHeld = false;
+    worker.harvestQueueTicket = 0;
+    worker.harvestTicks = 0;
+    if (worker.cargo <= 0) {
+        ClearHarvestState(worker);
+        worker.order = {};
+        return;
+    }
+    worker.harvestState = HarvestState::ReturningHome;
+    worker.order.type = OrderType::Deliver;
+    worker.order.target = FindNearestOwnedDropoff(worker.owner, worker.position);
+    if (const Entity* depot = FindEntity(worker.order.target)) {
+        worker.order.destination = depot->position;
+    }
+    // No operational depot: retain cargo and the return order. A subsequent
+    // tick can route it when a depot is restored; no resources are fabricated.
 }
 
 void Simulation::ProcessGather(Entity& worker) {
     Entity* resource = MutableEntity(worker.order.target);
-    if (resource == nullptr || resource->type != EntityType::ResourceNode ||
-        resource->resourceRemaining <= 0) {
-        // REL-ECO-005: Deposit Depletion Lifecycle - retarget unexhausted node within 2000 cm
-        EntityId nextNode = 0;
-        std::uint64_t bestDist = std::numeric_limits<std::uint64_t>::max();
-        constexpr std::uint64_t kMaxRetargetDistRaw = 20 * kFixedScale; // 2000 cm
-        constexpr std::uint64_t kMaxRetargetDistSq = kMaxRetargetDistRaw * kMaxRetargetDistRaw;
-        for (const Entity& other : entities_) {
-            if (other.type == EntityType::ResourceNode && other.resourceRemaining > 0) {
-                const std::uint64_t d = DistanceSquaredRaw(worker.position, other.position);
-                if (d <= kMaxRetargetDistSq && d < bestDist) {
-                    bestDist = d;
-                    nextNode = other.id;
-                }
-            }
-        }
-        if (nextNode != 0) {
-            worker.order.target = nextNode;
-            worker.order.destination = FindEntity(nextNode)->position;
-            worker.assignedResourceNode = nextNode;
-            worker.harvestTicks = 0;
-            return;
-        }
-        if (worker.cargo > 0) {
-            const EntityId dropoff = FindNearestOwnedDropoff(worker.owner, worker.position);
-            if (dropoff != 0) {
-                worker.order.type = OrderType::Deliver;
-                worker.order.target = dropoff;
-                worker.order.destination = FindEntity(dropoff)->position;
-                worker.harvestTicks = 0;
-                return;
-            }
-        }
-        worker.assignedResourceNode = 0;
+    if (resource == nullptr || resource->hitPoints <= 0 ||
+        resource->type != EntityType::ResourceNode || resource->resourceRemaining <= 0) {
+        ReturnHarvestCargo(worker);
+        return;
+    }
+    if (worker.cargoCapacity <= 0 || worker.workRate <= 0) {
+        ClearHarvestState(worker);
         worker.order = {};
         return;
     }
-    if (!InInteractionRange(worker, *resource, kFixedScale / 2)) {
-        worker.harvestTicks = 0;
+    if (worker.cargo >= worker.cargoCapacity) {
+        ReturnHarvestCargo(worker);
+        return;
+    }
+    if (worker.harvestQueueTicket != 0 && !worker.harvestSlotHeld) {
+        worker.harvestState = HarvestState::Harvesting;
+        (void)MoveTowards(worker, worker.order.destination);
+        return;
+    }
+    if (!InInteractionRange(worker, *resource, kFixedScale / 2) ||
+        !HasLineOfSight(worker.position, resource->position)) {
+        // A promoted waiter keeps ownership while approaching the contact.
+        worker.harvestState = worker.harvestQueueTicket != 0
+            ? HarvestState::Harvesting : HarvestState::MovingToResource;
         (void)MoveTowards(worker, resource->position);
         return;
     }
-
-    // REL-ECO-004: Deposit Saturation (cap at 2 workers per node; additional wait in queue)
-    std::int32_t activeHarvesters = 0;
-    for (const Entity& other : entities_) {
-        if (other.id != worker.id && other.type == EntityType::Worker &&
-            other.order.type == OrderType::Gather && other.order.target == resource->id &&
-            InInteractionRange(other, *resource, kFixedScale / 2)) {
-            if (other.id < worker.id) {
-                activeHarvesters++;
-            }
-        }
-    }
-    if (activeHarvesters >= 2) {
+    worker.harvestState = HarvestState::Harvesting;
+    if (!worker.harvestSlotHeld) {
         return;
     }
-
-    worker.harvestTicks++;
-    // REL-ECO-003: Calibrated 20-tick harvest extraction cadence
-    if (worker.cargoCapacity == 10) {
-        if (worker.harvestTicks % 2 == 0) {
-            if (resource->resourceRemaining > 0) {
-                worker.cargo += 1;
-                resource->resourceRemaining -= 1;
-            }
-        }
-    } else {
-        const std::int32_t capacity = worker.cargoCapacity - worker.cargo;
-        const std::int32_t gathered =
-            std::min({worker.workRate, capacity, resource->resourceRemaining});
-        if (gathered > 0) {
-            worker.cargo += gathered;
-            resource->resourceRemaining -= gathered;
-        }
+    ++worker.harvestTicks;
+    // Completion-time extraction. Retain existing capacities and derive the
+    // duration from their existing rates; the calibrated 10-load takes20 ticks.
+    const Tick duration = worker.cargoCapacity == 10 ? 20 :
+        static_cast<Tick>((static_cast<std::int64_t>(worker.cargoCapacity) +
+                          worker.workRate - 1) / worker.workRate);
+    if (worker.harvestTicks < duration) {
+        return;
     }
-
-    if (worker.cargo >= worker.cargoCapacity || resource->resourceRemaining <= 0) {
-        if (worker.cargoCapacity <= 12) {
-            // REL-ECO-006: Continuous Automated Worker Harvesting Loop - route to nearest dropoff
-            const EntityId dropoff = FindNearestOwnedDropoff(worker.owner, worker.position);
-            if (dropoff != 0) {
-                worker.order.type = OrderType::Deliver;
-                worker.order.target = dropoff;
-                worker.order.destination = FindEntity(dropoff)->position;
-                worker.harvestTicks = 0;
-                return;
-            }
-        }
-        worker.order = {};
-    }
+    const std::int32_t gathered = std::min(
+        worker.cargoCapacity - worker.cargo, resource->resourceRemaining);
+    worker.cargo += gathered;
+    resource->resourceRemaining -= gathered;
+    ReturnHarvestCargo(worker);
 }
 
 void Simulation::ProcessDeliver(Entity& worker) {
+    worker.harvestState = HarvestState::ReturningHome;
     Entity* dropoff = MutableEntity(worker.order.target);
-    if (dropoff == nullptr || dropoff->owner != worker.owner || !dropoff->completed ||
+    if (dropoff == nullptr || dropoff->hitPoints <= 0 ||
+        dropoff->owner != worker.owner || !dropoff->completed ||
         !IsOperationalDropoff(*dropoff)) {
-        // REL-ECO-007: Drop-off dynamic retargeting if destroyed en route
-        const EntityId alt = FindNearestOwnedDropoff(worker.owner, worker.position);
-        if (alt != 0) {
-            worker.order.target = alt;
-            worker.order.destination = FindEntity(alt)->position;
+        ReturnHarvestCargo(worker);
+        return;
+    }
+    if (!InInteractionRange(worker, *dropoff, kFixedScale / 2) ||
+        !HasLineOfSight(worker.position, dropoff->position)) {
+        const Vec2 before = worker.position;
+        (void)MoveTowards(worker, dropoff->position);
+        if (worker.position == before) {
+            ReturnHarvestCargo(worker);
             return;
         }
-        worker.order = {};
+        if (InInteractionRange(worker, *dropoff, kFixedScale / 2) &&
+            HasLineOfSight(worker.position, dropoff->position)) {
+            worker.harvestState = HarvestState::Delivering;
+        }
         return;
     }
-    if (!InInteractionRange(worker, *dropoff, kFixedScale / 2)) {
-        (void)MoveTowards(worker, dropoff->position);
-        return;
-    }
+    worker.harvestState = HarvestState::Delivering;
     PlayerState* player = MutablePlayer(worker.owner);
     if (player != nullptr && worker.cargo > 0) {
-        player->resources.material =
-            SaturatingAdd(player->resources.material, worker.cargo);
+        player->resources.material = SaturatingAdd(player->resources.material, worker.cargo);
         worker.cargo = 0;
     }
-
-    // REL-ECO-006: Return to assigned resource node without repeated manual clicks
-    if (worker.cargoCapacity <= 12 && worker.assignedResourceNode != 0) {
-        const Entity* node = FindEntity(worker.assignedResourceNode);
-        if (node != nullptr && node->type == EntityType::ResourceNode &&
-            node->resourceRemaining > 0) {
-            worker.order.type = OrderType::Gather;
-            worker.order.target = node->id;
-            worker.order.destination = node->position;
-            worker.harvestTicks = 0;
-            return;
-        }
-        // If assigned node exhausted, retarget nearest within 2,000 cm (REL-ECO-005)
-        EntityId nextNode = 0;
-        std::uint64_t bestDist = std::numeric_limits<std::uint64_t>::max();
-        constexpr std::uint64_t kMaxRetargetDistRaw = 20 * kFixedScale; // 2000 cm
-        constexpr std::uint64_t kMaxRetargetDistSq = kMaxRetargetDistRaw * kMaxRetargetDistRaw;
-        for (const Entity& other : entities_) {
-            if (other.type == EntityType::ResourceNode && other.resourceRemaining > 0) {
-                const std::uint64_t d = DistanceSquaredRaw(worker.position, other.position);
-                if (d <= kMaxRetargetDistSq && d < bestDist) {
-                    bestDist = d;
-                    nextNode = other.id;
-                }
-            }
-        }
-        if (nextNode != 0) {
-            worker.assignedResourceNode = nextNode;
-            worker.order.type = OrderType::Gather;
-            worker.order.target = nextNode;
-            worker.order.destination = FindEntity(nextNode)->position;
-            worker.harvestTicks = 0;
-            return;
-        }
+    const Entity* node = FindEntity(worker.assignedResourceNode);
+    if (node != nullptr && node->hitPoints > 0 &&
+        node->type == EntityType::ResourceNode && node->resourceRemaining > 0) {
+        BeginGather(worker, node->id);
+    } else {
+        // SPEC-RES-006: finish the last load, then idle. Never discover or
+        // silently assign a different deposit after exhaustion.
+        ClearHarvestState(worker);
+        worker.order = {};
     }
-    worker.order = {};
 }
 
 void Simulation::ProcessBuild(Entity& worker) {
@@ -4175,6 +4329,48 @@ void Simulation::ProcessBuild(Entity& worker) {
     }
 }
 
+bool Simulation::HasLineOfFire(const Entity& attacker, const Entity& target) const {
+    if (!HasLineOfSight(attacker.position, target.position)) {
+        // Destructible mineral cover may receive the shot. A permanent wall
+        // before that cover still blocks it; do not spend a cooldown on it.
+        const Entity* cover = target.temporaryMineralCover ? &target :
+            FindEntity(InterceptingMineralCover(attacker, target));
+        if (cover == nullptr) {
+            return false;
+        }
+        const std::int64_t dx = static_cast<std::int64_t>(cover->position.x.Raw()) - attacker.position.x.Raw();
+        const std::int64_t dy = static_cast<std::int64_t>(cover->position.y.Raw()) - attacker.position.y.Raw();
+        const std::int64_t steps = std::max<std::int64_t>(1, std::max(Abs64(dx), Abs64(dy)) / (kFixedScale / 4) + 1);
+        for (std::int64_t step = 0; step < steps; ++step) {
+            const Vec2 point = Vec2::FromRaw(
+                static_cast<std::int32_t>(attacker.position.x.Raw() + dx * step / steps),
+                static_cast<std::int32_t>(attacker.position.y.Raw() + dy * step / steps));
+            if (point.x.FloorToInt() == cover->position.x.FloorToInt() &&
+                point.y.FloorToInt() == cover->position.y.FloorToInt()) {
+                break;
+            }
+            if (!IsPositionPassable(point)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void Simulation::TryFireAt(Entity& attacker, const Entity& target,
+                           std::vector<PendingDamage>& pendingDamage) {
+    if (attacker.attackCooldownTicks != 0 || target.hitPoints <= 0 ||
+        !HasLineOfFire(attacker, target)) {
+        return;
+    }
+    if (config_.enableBallisticProjectiles) {
+        SpawnBallisticProjectile(attacker, target, attacker.attackDamage);
+    } else {
+        pendingDamage.push_back({target.id, attacker.id, attacker.attackDamage});
+    }
+    attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+}
+
 void Simulation::ProcessAttack(
     Entity& attacker,
     std::vector<PendingDamage>& pendingDamage) {
@@ -4186,7 +4382,8 @@ void Simulation::ProcessAttack(
         attacker.order = {};
         return;
     }
-    if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+    if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw) ||
+        !HasLineOfFire(attacker, *target)) {
         // SPEC-CMD-015: Focus-Fire Target Preservation on Range Loss with bounded 400 cm chase radius
         if (attacker.order.anchor == Vec2{}) {
             attacker.order.anchor = attacker.position;
@@ -4213,14 +4410,7 @@ void Simulation::ProcessAttack(
         return;
     }
     attacker.order.anchor = attacker.position;
-    if (attacker.attackCooldownTicks == 0) {
-        if (config_.enableBallisticProjectiles) {
-            SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
-        } else {
-            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
-        }
-        attacker.attackCooldownTicks = attacker.attackPeriodTicks;
-    }
+    TryFireAt(attacker, *target, pendingDamage);
 }
 
 void Simulation::ProcessAttackMove(
@@ -4285,18 +4475,12 @@ void Simulation::ProcessAttackMove(
                      : nullptr;
     }
     if (target != nullptr) {
-        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw) ||
+            !HasLineOfFire(attacker, *target)) {
             (void)MoveTowards(attacker, target->position);
             return;
         }
-        if (attacker.attackCooldownTicks == 0) {
-            if (config_.enableBallisticProjectiles) {
-                SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
-            } else {
-                pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
-            }
-            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
-        }
+        TryFireAt(attacker, *target, pendingDamage);
         return;
     }
     if (MoveTowards(attacker, attacker.order.destination)) {
@@ -4319,7 +4503,8 @@ void Simulation::ProcessHold(
         target->owner == attacker.owner ||
         (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id) ||
-        !InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+        !InInteractionRange(attacker, *target, attacker.attackRangeRaw) ||
+        !HasLineOfFire(attacker, *target)) {
         attacker.order.target = 0;
         target = nullptr;
     }
@@ -4329,13 +4514,8 @@ void Simulation::ProcessHold(
                      ? MutableEntity(attacker.order.target)
                      : nullptr;
     }
-    if (target != nullptr && attacker.attackCooldownTicks == 0) {
-        if (config_.enableBallisticProjectiles) {
-            SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
-        } else {
-            pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
-        }
-        attacker.attackCooldownTicks = attacker.attackPeriodTicks;
+    if (target != nullptr) {
+        TryFireAt(attacker, *target, pendingDamage);
     }
 }
 
@@ -4364,18 +4544,12 @@ void Simulation::ProcessGuard(
         kGuardLeashRaw);
     Entity* enemy = enemyId != 0 ? MutableEntity(enemyId) : nullptr;
     if (enemy != nullptr) {
-        if (!InInteractionRange(attacker, *enemy, attacker.attackRangeRaw)) {
+        if (!InInteractionRange(attacker, *enemy, attacker.attackRangeRaw) ||
+            !HasLineOfFire(attacker, *enemy)) {
             (void)MoveTowards(attacker, enemy->position);
             return;
         }
-        if (attacker.attackCooldownTicks == 0) {
-            if (config_.enableBallisticProjectiles) {
-                SpawnBallisticProjectile(attacker, *enemy, attacker.attackDamage);
-            } else {
-                pendingDamage.push_back({enemy->id, attacker.id, attacker.attackDamage});
-            }
-            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
-        }
+        TryFireAt(attacker, *enemy, pendingDamage);
         return;
     }
 
@@ -4413,18 +4587,12 @@ void Simulation::ProcessPatrol(
                      : nullptr;
     }
     if (target != nullptr) {
-        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw)) {
+        if (!InInteractionRange(attacker, *target, attacker.attackRangeRaw) ||
+            !HasLineOfFire(attacker, *target)) {
             (void)MoveTowards(attacker, target->position);
             return;
         }
-        if (attacker.attackCooldownTicks == 0) {
-            if (config_.enableBallisticProjectiles) {
-                SpawnBallisticProjectile(attacker, *target, attacker.attackDamage);
-            } else {
-                pendingDamage.push_back({target->id, attacker.id, attacker.attackDamage});
-            }
-            attacker.attackCooldownTicks = attacker.attackPeriodTicks;
-        }
+        TryFireAt(attacker, *target, pendingDamage);
         return;
     }
 
@@ -4441,94 +4609,239 @@ void Simulation::ProcessAegisDefense(
         return;
     }
     const EntityId targetId = FindNearestVisibleEnemyInRange(aegis);
-    if (targetId != 0 && aegis.attackCooldownTicks == 0) {
-        const Entity* target = FindEntity(targetId);
-        if (target != nullptr) {
-            if (config_.enableBallisticProjectiles) {
-                SpawnBallisticProjectile(aegis, *target, aegis.attackDamage);
-            } else {
-                pendingDamage.push_back({targetId, aegis.id, aegis.attackDamage});
-            }
-        }
-        aegis.attackCooldownTicks = aegis.attackPeriodTicks;
+    if (const Entity* target = FindEntity(targetId)) {
+        TryFireAt(aegis, *target, pendingDamage);
     }
 }
 
 void Simulation::ProcessFutureWell(Entity& worker) {
     Entity* well = MutableEntity(worker.order.target);
-    if (well == nullptr || well->type != EntityType::FutureWell ||
-        well->wellChoice != FutureWellChoice::Dormant) {
+    if (well == nullptr || !IsOperationalFutureWell(*well) ||
+        (well->wellChoice != FutureWellChoice::Dormant &&
+         (well->wellChoice != FutureWellChoice::Preserve ||
+          well->owner == worker.owner))) {
         worker.order = {};
         return;
     }
-    if (!InInteractionRange(worker, *well, kFixedScale / 2)) {
+    if (!IsFutureWellZoneMember(*well, worker)) {
         (void)MoveTowards(worker, well->position);
         return;
     }
-    PlayerState* player = MutablePlayer(worker.owner);
-    if (player == nullptr) {
-        worker.order = {};
+}
+
+bool Simulation::IsCollapsedFutureWell(const Entity& entity) const {
+    return entity.type == EntityType::FutureWell &&
+           entity.wellChoice == FutureWellChoice::Harvest &&
+           entity.wellProtocolTicks == 0;
+}
+
+bool Simulation::IsOperationalFutureWell(const Entity& entity) const {
+    return entity.type == EntityType::FutureWell && entity.hitPoints > 0 &&
+           !IsCollapsedFutureWell(entity);
+}
+
+bool Simulation::IsFutureWellZoneMember(const Entity& well,
+                                         const Entity& entity) const {
+    if (well.type != EntityType::FutureWell || entity.hitPoints <= 0 ||
+        entity.owner == kNeutralPlayer || !IsInsideMap(entity.position)) {
+        return false;
+    }
+    const std::int64_t radius = kFutureWellCaptureRadiusRaw;
+    return DistanceSquaredRaw(well.position, entity.position) <=
+           static_cast<std::uint64_t>(radius * radius);
+}
+
+bool Simulation::IsFutureWellContested(const Entity& well) const {
+    if (!IsOperationalFutureWell(well) || well.owner == kNeutralPlayer) {
+        return false;
+    }
+    for (const Entity& entity : entities_) {
+        if (entity.id != well.id && entity.owner != well.owner &&
+            IsFutureWellZoneMember(well, entity)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<FutureWellTelegraph> Simulation::PublicFutureWellTelegraphs() const {
+    std::vector<FutureWellTelegraph> telegraphs{};
+    for (const Entity& entity : entities_) {
+        if (entity.type == EntityType::FutureWell &&
+            entity.wellChoice == FutureWellChoice::Harvest &&
+            entity.wellProtocolTicks > 0) {
+            telegraphs.push_back(
+                {entity.id, entity.position, entity.wellProtocolTicks});
+        }
+    }
+    return telegraphs;
+}
+
+void Simulation::CompleteFutureWellCapture(Entity& well) {
+    const PlayerState* player = FindPlayer(well.wellCapturePlayer);
+    if (player == nullptr || well.wellPendingChoice == FutureWellChoice::Dormant) {
+        well.wellCapturePlayer = kNeutralPlayer;
+        well.wellCaptureProgress = 0;
+        well.wellPendingChoice = FutureWellChoice::Dormant;
         return;
     }
-    switch (worker.order.wellChoice) {
-        case FutureWellChoice::Harvest: {
-            player->resources.dawnshards =
-                SaturatingAdd(player->resources.dawnshards,
-                              config_.rules.futureWell.harvestImmediateDawn);
-            well->owner = worker.owner;
-            well->faction = worker.faction;
-            well->wellChoice = FutureWellChoice::Harvest;
-            const std::int32_t centerX = well->position.x.FloorToInt();
-            const std::int32_t centerY = well->position.y.FloorToInt();
-            for (std::int32_t offsetY = -1; offsetY <= 1; ++offsetY) {
-                for (std::int32_t offsetX = -1; offsetX <= 1; ++offsetX) {
-                    const std::int32_t tileX = centerX + offsetX;
-                    const std::int32_t tileY = centerY + offsetY;
-                    if (TerrainAt(tileX, tileY) == Terrain::Open) {
-                        (void)SetTerrainTile(tileX, tileY, Terrain::Scarred);
-                    }
+    well.owner = player->id;
+    well.faction = player->faction;
+    well.wellChoice = well.wellPendingChoice;
+    well.wellActivationTick = currentTick_ + 1;
+    well.wellCapturePlayer = kNeutralPlayer;
+    well.wellCaptureProgress = 0;
+    well.wellPendingChoice = FutureWellChoice::Dormant;
+    well.wellProtocolTicks = 0;
+
+    if (well.wellChoice == FutureWellChoice::Harvest) {
+        well.wellProtocolTicks = kHarvestTelegraphTicks;
+    } else if (well.wellChoice == FutureWellChoice::Reshape) {
+        PlayerState* mutablePlayer = MutablePlayer(well.owner);
+        if (mutablePlayer == nullptr || mutablePlayer->resources.dawnshards <
+                                         config_.rules.futureWell.reshapeDawnCost) {
+            well.owner = kNeutralPlayer;
+            well.faction = Faction::MeridianCompact;
+            well.wellChoice = FutureWellChoice::Dormant;
+            well.wellActivationTick = 0;
+            return;
+        }
+        mutablePlayer->resources.dawnshards -=
+            config_.rules.futureWell.reshapeDawnCost;
+        well.reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
+        const Tick minimum = config_.rules.futureWell.reshapeDurationMinimumTicks;
+        const Tick maximum = config_.rules.futureWell.reshapeDurationMaximumTicks;
+        const Tick span = maximum - minimum + 1;
+        well.reshapeUntilTick = currentTick_ + minimum + rng_.Uniform(
+            static_cast<std::uint32_t>(span));
+        pathFieldCache_.clear();
+    }
+    for (Entity& entity : entities_) {
+        if (entity.order.type == OrderType::FutureWell &&
+            entity.order.target == well.id) {
+            entity.order = {};
+        }
+    }
+}
+
+void Simulation::CollapseFutureWell(Entity& well) {
+    if (PlayerState* player = MutablePlayer(well.owner); player != nullptr) {
+        player->resources.dawnshards = SaturatingAdd(
+            player->resources.dawnshards,
+            config_.rules.futureWell.harvestImmediateDawn);
+    }
+    const std::int32_t centerX = well.position.x.FloorToInt();
+    const std::int32_t centerY = well.position.y.FloorToInt();
+    for (std::int32_t tileY = centerY - 6; tileY <= centerY + 6; ++tileY) {
+        for (std::int32_t tileX = centerX - 6; tileX <= centerX + 6; ++tileX) {
+            const Vec2 tileCenter = Vec2::FromRaw(
+                tileX * kFixedScale + kFixedScale / 2,
+                tileY * kFixedScale + kFixedScale / 2);
+            if (DistanceSquaredRaw(well.position, tileCenter) <=
+                    static_cast<std::uint64_t>(kFutureWellScarRadiusRaw) *
+                        kFutureWellScarRadiusRaw &&
+                TerrainAt(tileX, tileY) == Terrain::Open) {
+                (void)SetTerrainTile(tileX, tileY, Terrain::Scarred);
+            }
+        }
+    }
+    well.wellProtocolTicks = 0;
+    well.wellCapturePlayer = kNeutralPlayer;
+    well.wellCaptureProgress = 0;
+    well.wellPendingChoice = FutureWellChoice::Dormant;
+}
+
+void Simulation::ProcessFutureWellLifecycles() {
+    for (Entity& well : entities_) {
+        if (well.type != EntityType::FutureWell || IsCollapsedFutureWell(well)) {
+            continue;
+        }
+        if (well.wellChoice == FutureWellChoice::Harvest) {
+            if (IsFutureWellContested(well)) {
+                // A hostile breach interrupts the public telegraph before the
+                // payout and leaves a neutral Well for a new capture attempt.
+                well.owner = kNeutralPlayer;
+                well.faction = Faction::MeridianCompact;
+                well.wellChoice = FutureWellChoice::Dormant;
+                well.wellActivationTick = 0;
+                well.wellProtocolTicks = 0;
+                continue;
+            }
+            if (well.wellProtocolTicks > 0 && --well.wellProtocolTicks == 0) {
+                CollapseFutureWell(well);
+            }
+            continue;
+        }
+        if (well.wellChoice == FutureWellChoice::Reshape) {
+            continue;
+        }
+
+        std::array<bool, kMaximumPlayers> capturePlayers{};
+        std::array<FutureWellChoice, kMaximumPlayers> captureChoices{};
+        std::array<bool, kMaximumPlayers> hostilePresence{};
+        for (const Entity& entity : entities_) {
+            if (entity.id == well.id || !IsFutureWellZoneMember(well, entity)) {
+                continue;
+            }
+            for (PlayerId player = 0; player < players_.size(); ++player) {
+                if (player != entity.owner) {
+                    hostilePresence[player] = true;
                 }
             }
-            break;
+            if (entity.type == EntityType::Worker &&
+                entity.order.type == OrderType::FutureWell &&
+                entity.order.target == well.id && entity.owner < players_.size() &&
+                players_[entity.owner].active &&
+                entity.order.wellChoice != FutureWellChoice::Dormant &&
+                (well.wellChoice == FutureWellChoice::Dormant ||
+                 entity.owner != well.owner)) {
+                capturePlayers[entity.owner] = true;
+                if (captureChoices[entity.owner] == FutureWellChoice::Dormant) {
+                    captureChoices[entity.owner] = entity.order.wellChoice;
+                }
+            }
         }
-        case FutureWellChoice::Preserve:
-            well->owner = worker.owner;
-            well->faction = worker.faction;
-            well->wellChoice = FutureWellChoice::Preserve;
-            break;
-        case FutureWellChoice::Reshape:
-            if (player->resources.dawnshards <
-                config_.rules.futureWell.reshapeDawnCost) {
-                worker.order = {};
-                return;
+
+        PlayerId contender = well.wellCapturePlayer;
+        if (contender == kNeutralPlayer || contender >= players_.size() ||
+            !capturePlayers[contender]) {
+            contender = kNeutralPlayer;
+            for (PlayerId player = 0; player < players_.size(); ++player) {
+                if (capturePlayers[player]) {
+                    contender = player;
+                    break;
+                }
             }
-            player->resources.dawnshards -=
-                config_.rules.futureWell.reshapeDawnCost;
-            well->owner = worker.owner;
-            well->faction = worker.faction;
-            well->wellChoice = FutureWellChoice::Reshape;
-            well->reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
-            {
-                const Tick minimum =
-                    config_.rules.futureWell.reshapeDurationMinimumTicks;
-                const Tick maximum =
-                    config_.rules.futureWell.reshapeDurationMaximumTicks;
-                const Tick span = maximum - minimum + 1;
-                well->reshapeUntilTick =
-                    currentTick_ + minimum + rng_.Uniform(
-                        static_cast<std::uint32_t>(span));
+            if (contender != kNeutralPlayer &&
+                contender != well.wellCapturePlayer) {
+                well.wellCapturePlayer = contender;
+                well.wellCaptureProgress = 0;
+                well.wellPendingChoice = captureChoices[contender];
             }
-            pathFieldCache_.clear();
-            break;
-        case FutureWellChoice::Dormant:
-            worker.order = {};
-            return;
+        }
+        if (contender == kNeutralPlayer) {
+            // Retain the claimant while its abandoned meter decays. A new
+            // contender starts its own capture rather than inheriting progress.
+            if (well.wellCaptureProgress > 0) {
+                --well.wellCaptureProgress;
+            }
+            if (well.wellCaptureProgress == 0) {
+                well.wellCapturePlayer = kNeutralPlayer;
+                well.wellPendingChoice = FutureWellChoice::Dormant;
+            }
+            continue;
+        }
+        if (hostilePresence[contender]) {
+            continue;
+        }
+        well.wellPendingChoice = captureChoices[contender];
+        if (well.wellCaptureProgress < kFutureWellCaptureRequiredTicks) {
+            ++well.wellCaptureProgress;
+        }
+        if (well.wellCaptureProgress == kFutureWellCaptureRequiredTicks) {
+            CompleteFutureWellCapture(well);
+        }
     }
-    // Commands execute at currentTick_ and Step advances immediately after
-    // processing. Record the completed activation boundary, not the command's
-    // pre-step tick, so a saved state always satisfies activation <= current.
-    well->wellActivationTick = currentTick_ + 1;
-    worker.order = {};
 }
 
 void Simulation::ProcessProduction() {
@@ -4632,6 +4945,7 @@ void Simulation::ProcessResearch() {
 }
 
 void Simulation::ProcessEntityOrders() {
+    ReconcileHarvestReservations();
     std::vector<PendingDamage> pendingDamage{};
     std::vector<Vec2> positionsBeforeOrders{};
     positionsBeforeOrders.reserve(entities_.size());
@@ -4691,6 +5005,14 @@ void Simulation::ProcessEntityOrders() {
             entity.order = entity.orderQueue.front();
             entity.order.anchor = entity.position;
             entity.orderQueue.erase(entity.orderQueue.begin());
+            if (entity.order.type == OrderType::Gather) {
+                BeginGather(entity, entity.order.target);
+            } else {
+                ClearHarvestState(entity);
+                if (entity.order.type == OrderType::Deliver) {
+                    entity.harvestState = HarvestState::ReturningHome;
+                }
+            }
         }
     }
     ApplySoftSeparation(positionsBeforeOrders);
@@ -4763,14 +5085,13 @@ void Simulation::ProcessEntityOrders() {
 }
 
 void Simulation::ApplyPreserveIncome() {
-    if ((currentTick_ + 1) %
-            config_.rules.futureWell.preserveIntervalTicks !=
-        0) {
-        return;
-    }
     for (const Entity& entity : entities_) {
         if (entity.type == EntityType::FutureWell &&
-            entity.wellChoice == FutureWellChoice::Preserve) {
+            entity.wellChoice == FutureWellChoice::Preserve &&
+            !IsFutureWellContested(entity) &&
+            entity.wellActivationTick != 0 && currentTick_ + 1 > entity.wellActivationTick &&
+            (currentTick_ + 1 - entity.wellActivationTick) %
+                    config_.rules.futureWell.preserveIntervalTicks == 0) {
             if (PlayerState* player = MutablePlayer(entity.owner); player != nullptr) {
                 player->resources.dawnshards =
                     SaturatingAdd(
@@ -4794,9 +5115,8 @@ void Simulation::RemoveDestroyedEntities() {
         }
     }
     std::erase_if(entities_, [](const Entity& entity) {
-        return entity.hitPoints <= 0 ||
-               (entity.type == EntityType::ResourceNode &&
-                entity.resourceRemaining <= 0);
+        // Exhausted deposits remain as non-interactable terrain landmarks.
+        return entity.hitPoints <= 0;
     });
 }
 
@@ -4804,12 +5124,21 @@ void Simulation::ClearInvalidOrders() {
     for (Entity& entity : entities_) {
         switch (entity.order.type) {
             case OrderType::Gather:
+                if (const Entity* node = FindEntity(entity.order.target);
+                    node == nullptr || node->resourceRemaining <= 0) {
+                    ReturnHarvestCargo(entity);
+                }
+                break;
             case OrderType::Deliver:
+                // Delivery owns missing-depot recovery and retained cargo.
+                break;
             case OrderType::Build:
             case OrderType::Attack:
             case OrderType::FutureWell:
                 if (const Entity* target = FindEntity(entity.order.target);
                     target == nullptr ||
+                    (entity.order.type == OrderType::FutureWell &&
+                     !IsOperationalFutureWell(*target)) ||
                     (entity.order.type == OrderType::Attack &&
                      IsProtectedCommandCore(*target))) {
                     entity.order = {};
@@ -4852,6 +5181,14 @@ void Simulation::ClearInvalidOrders() {
             entity.order = entity.orderQueue.front();
             entity.order.anchor = entity.position;
             entity.orderQueue.erase(entity.orderQueue.begin());
+            if (entity.order.type == OrderType::Gather) {
+                BeginGather(entity, entity.order.target);
+            } else {
+                ClearHarvestState(entity);
+                if (entity.order.type == OrderType::Deliver) {
+                    entity.harvestState = HarvestState::ReturningHome;
+                }
+            }
         }
     }
 }
@@ -5146,83 +5483,64 @@ void Simulation::SpawnBallisticProjectile(
 }
 
 void Simulation::UpdateProjectiles() {
-    if (projectiles_.empty()) {
-        return;
-    }
-    std::vector<Projectile> activeProjectiles{};
+    std::vector<Projectile> activeProjectiles;
     activeProjectiles.reserve(projectiles_.size());
-
-    for (Projectile& proj : projectiles_) {
-        // If projectile has reached target
-        if (proj.travelDistanceRemainingRaw <= proj.speedRaw) {
-            // Check line-of-sight terrain occlusion (REL-CMB-004)
-            if (!HasLineOfSight(proj.position, proj.destination)) {
-                // Obstructed by impassable cliff terrain, destroyed with zero damage
+    for (Projectile& projectile : projectiles_) {
+        Entity* target = MutableEntity(projectile.target);
+        const Entity* attacker = FindEntity(projectile.source);
+        if (target == nullptr || target->hitPoints <= 0 ||
+            target->owner == projectile.owner || IsProtectedCommandCore(*target)) {
+            continue;
+        }
+        // Tracking is authoritative: a moving target cannot be damaged at its
+        // old position. Re-evaluate the current flight segment every tick.
+        projectile.destination = target->position;
+        const std::int64_t dx = static_cast<std::int64_t>(target->position.x.Raw()) - projectile.position.x.Raw();
+        const std::int64_t dy = static_cast<std::int64_t>(target->position.y.Raw()) - projectile.position.y.Raw();
+        const std::int64_t distance = IntegerSqrt64(dx * dx + dy * dy);
+        const bool arriving = distance <= projectile.speedRaw;
+        const Vec2 next = arriving ? target->position : Vec2::FromRaw(
+            static_cast<std::int32_t>(projectile.position.x.Raw() + dx * projectile.speedRaw / distance),
+            static_cast<std::int32_t>(projectile.position.y.Raw() + dy * projectile.speedRaw / distance));
+        const std::int64_t segmentX = static_cast<std::int64_t>(next.x.Raw()) - projectile.position.x.Raw();
+        const std::int64_t segmentY = static_cast<std::int64_t>(next.y.Raw()) - projectile.position.y.Raw();
+        const std::int64_t steps = std::max<std::int64_t>(1,
+            std::max(Abs64(segmentX), Abs64(segmentY)) / (kFixedScale / 4) + 1);
+        bool consumed = false;
+        for (std::int64_t step = 0; step <= steps; ++step) {
+            const Vec2 point = Vec2::FromRaw(
+                static_cast<std::int32_t>(projectile.position.x.Raw() + segmentX * step / steps),
+                static_cast<std::int32_t>(projectile.position.y.Raw() + segmentY * step / steps));
+            if (IsPositionPassable(point)) {
                 continue;
             }
-            const Entity* attacker = FindEntity(proj.source);
-            Entity* target = MutableEntity(proj.target);
-            if (target != nullptr && target->hitPoints > 0 && !IsProtectedCommandCore(*target)) {
-                if (attacker != nullptr) {
-                    const EntityId cover = InterceptingMineralCover(*attacker, *target);
-                    if (cover != 0) {
-                        Entity* coverEntity = MutableEntity(cover);
-                        if (coverEntity != nullptr && coverEntity->hitPoints > 0) {
-                            ApplyResolvedDamage(*coverEntity, proj.damage, attacker);
-                            continue;
-                        }
-                    }
-                }
-                ApplyResolvedDamage(*target, proj.damage, attacker);
-            }
-            continue;
-        }
-
-        // Advance along vector towards destination
-        const std::int64_t dx = static_cast<std::int64_t>(proj.destination.x.Raw()) - proj.position.x.Raw();
-        const std::int64_t dy = static_cast<std::int64_t>(proj.destination.y.Raw()) - proj.position.y.Raw();
-        const std::int64_t dist = IntegerSqrt64(dx * dx + dy * dy);
-        if (dist <= 0) {
-            continue;
-        }
-        const std::int64_t stepX = (dx * proj.speedRaw) / dist;
-        const std::int64_t stepY = (dy * proj.speedRaw) / dist;
-        const Vec2 nextPos = Vec2::FromRaw(
-            static_cast<std::int32_t>(proj.position.x.Raw() + stepX),
-            static_cast<std::int32_t>(proj.position.y.Raw() + stepY));
-
-        // Terrain occlusion check along step
-        if (!HasLineOfSight(proj.position, nextPos)) {
-            // Blocked by cliff/terrain obstruction
-            continue;
-        }
-
-        // Check if mineral cover intercepts during flight
-        const Entity* attacker = FindEntity(proj.source);
-        const Entity* target = FindEntity(proj.target);
-        if (attacker != nullptr && target != nullptr) {
-            const EntityId cover = InterceptingMineralCover(*attacker, *target);
-            if (cover != 0) {
-                const Entity* coverEntity = FindEntity(cover);
-                if (coverEntity != nullptr) {
-                    const std::int32_t coverExtent =
-                        FootprintHalfExtentRaw(coverEntity->faction, coverEntity->type);
-                    if (DistanceSquaredRaw(nextPos, coverEntity->position) <=
-                        static_cast<std::uint64_t>(coverExtent + proj.speedRaw) *
-                        (coverExtent + proj.speedRaw)) {
-                        Entity* mutableCover = MutableEntity(cover);
-                        if (mutableCover != nullptr && mutableCover->hitPoints > 0) {
-                            ApplyResolvedDamage(*mutableCover, proj.damage, attacker);
-                            continue;
-                        }
-                    }
+            // Resolve the first encountered blocker. Destructible cover takes
+            // the hit before the generic blocked-terrain rejection consumes it.
+            for (Entity& cover : entities_) {
+                if (cover.temporaryMineralCover && cover.hitPoints > 0 &&
+                    cover.owner != projectile.owner &&
+                    cover.position.x.FloorToInt() == point.x.FloorToInt() &&
+                    cover.position.y.FloorToInt() == point.y.FloorToInt()) {
+                    ApplyResolvedDamage(cover, projectile.damage, attacker);
+                    break;
                 }
             }
+            consumed = true;
+            break;
         }
-
-        proj.position = nextPos;
-        proj.travelDistanceRemainingRaw -= proj.speedRaw;
-        activeProjectiles.push_back(proj);
+        if (consumed) {
+            continue;
+        }
+        if (arriving) {
+            ApplyResolvedDamage(*target, projectile.damage, attacker);
+            continue;
+        }
+        projectile.position = next;
+        const std::int64_t remainingX = static_cast<std::int64_t>(target->position.x.Raw()) - next.x.Raw();
+        const std::int64_t remainingY = static_cast<std::int64_t>(target->position.y.Raw()) - next.y.Raw();
+        projectile.travelDistanceRemainingRaw = static_cast<std::int32_t>(
+            IntegerSqrt64(remainingX * remainingX + remainingY * remainingY));
+        activeProjectiles.push_back(projectile);
     }
     projectiles_ = std::move(activeProjectiles);
 }
@@ -5241,6 +5559,7 @@ void Simulation::Step() {
     UpdateVisibility();
     ProcessCommandsForCurrentTick();
     ProcessEntityOrders();
+    ProcessFutureWellLifecycles();
     UpdateProjectiles();
     ProcessProduction();
     ProcessResearch();
@@ -5337,7 +5656,8 @@ void Simulation::UpdateVisibility() {
         if (entity.owner < players_.size() && players_[entity.owner].active) {
             markVisible(entity.owner, entity.position, entity.visionTiles);
             if (entity.type == EntityType::FutureWell &&
-                entity.wellChoice == FutureWellChoice::Preserve) {
+                entity.wellChoice == FutureWellChoice::Preserve &&
+                !IsFutureWellContested(entity)) {
                 markVisible(entity.owner, entity.position,
                             config_.rules.futureWell.preserveVisionTiles);
             }
@@ -5552,11 +5872,22 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                             entity.resourceRemaining > 0
                         ? 1
                         : 0;
+                observed.harvestState = HarvestState::Idle;
+                observed.harvestSlotHeld = false;
+                observed.harvestTicks = 0;
+                observed.harvestQueueTicket = 0;
+                observed.assignedResourceNode = 0;
+                observed.orderQueue.clear();
+                observed.constructionSubProgress = 0;
                 observed.constructionProgress = 0;
                 observed.constructionRequired = 0;
                 observed.order = {};
                 observed.reshapeUntilTick = 0;
                 observed.reshapeVariant = 0;
+                observed.wellCapturePlayer = kNeutralPlayer;
+                observed.wellCaptureProgress = 0;
+                observed.wellPendingChoice = FutureWellChoice::Dormant;
+                observed.wellProtocolTicks = 0;
                 observed.productionType = EntityType::Worker;
                 observed.productionProgress = 0;
                 observed.productionRequired = 0;
@@ -6613,6 +6944,58 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U64(stored.receipt.assignedExecutionTick);
         writer.U8(static_cast<std::uint8_t>(stored.receipt.outcome));
     }
+    // Schema 26 appends transient-but-authoritative work/order state. Keep the
+    // earlier entity records intact so legacy migrations retain their layout.
+    writer.U32(static_cast<std::uint32_t>(entities_.size()));
+    for (const Entity& entity : entities_) {
+        writer.U32(entity.id);
+        writer.U8(static_cast<std::uint8_t>(entity.harvestState));
+        writer.U8(entity.harvestSlotHeld ? 1 : 0);
+        writer.U64(entity.harvestTicks);
+        writer.U32(entity.assignedResourceNode);
+        writer.U64(entity.harvestQueueTicket);
+        writer.I32(entity.constructionSubProgress);
+        writer.U8(static_cast<std::uint8_t>(entity.orderQueue.size()));
+        for (const Order& order : entity.orderQueue) {
+            writer.U8(static_cast<std::uint8_t>(order.type));
+            writer.U32(order.target);
+            writer.I32(order.anchor.x.Raw());
+            writer.I32(order.anchor.y.Raw());
+            writer.I32(order.destination.x.Raw());
+            writer.I32(order.destination.y.Raw());
+            writer.U8(static_cast<std::uint8_t>(order.buildType));
+            writer.U8(static_cast<std::uint8_t>(order.wellChoice));
+        }
+    }
+    // Schema 26 also retains in-flight ballistic state. These records are
+    // ordered by their monotonic projectile IDs so loading cannot change
+    // impact order or reissue an already consumed identifier.
+    writer.U8(config_.enableBallisticProjectiles ? 1 : 0);
+    writer.U32(nextProjectileId_);
+    writer.U32(static_cast<std::uint32_t>(projectiles_.size()));
+    for (const Projectile& projectile : projectiles_) {
+        writer.U32(projectile.id);
+        writer.U8(projectile.owner);
+        writer.U32(projectile.source);
+        writer.U32(projectile.target);
+        writer.I32(projectile.position.x.Raw());
+        writer.I32(projectile.position.y.Raw());
+        writer.I32(projectile.destination.x.Raw());
+        writer.I32(projectile.destination.y.Raw());
+        writer.I32(projectile.damage);
+        writer.I32(projectile.speedRaw);
+        writer.I32(projectile.travelDistanceRemainingRaw);
+    }
+    // Schema 27 appends Well lifecycle state after every schema-26 record so
+    // older migration helpers retain their byte layout unchanged.
+    writer.U32(static_cast<std::uint32_t>(entities_.size()));
+    for (const Entity& entity : entities_) {
+        writer.U32(entity.id);
+        writer.U8(entity.wellCapturePlayer);
+        writer.U16(entity.wellCaptureProgress);
+        writer.U8(static_cast<std::uint8_t>(entity.wellPendingChoice));
+        writer.U64(entity.wellProtocolTicks);
+    }
 }
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
@@ -6678,6 +7061,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kWorkStateSnapshotVersion &&
         version != kMemorySnapshotVersion &&
         version != kCommandResolutionReceiptSnapshotVersion &&
         version != kProtectedCommandCoreSnapshotVersion &&
@@ -7624,6 +8008,220 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         // Schemas 20 through 23 predate authoritative resolution receipts.
         // Their empty ledger means unavailable evidence, never success.
         simulation.commandResolutionReceipts_.clear();
+    }
+    if (HasWorkStateSnapshotSchema(version)) {
+        std::uint32_t workCount = 0;
+        if (!reader.U32(workCount) || workCount != simulation.entities_.size()) {
+            SetError(error, "snapshot work-state count is invalid");
+            return std::nullopt;
+        }
+        std::map<EntityId, std::size_t> heldSlots;
+        for (Entity& entity : simulation.entities_) {
+            EntityId id = 0;
+            std::uint8_t state = 0, held = 0, queueCount = 0;
+            if (!reader.U32(id) || !reader.U8(state) || !reader.U8(held) ||
+                !reader.U64(entity.harvestTicks) || !reader.U32(entity.assignedResourceNode) ||
+                !reader.U64(entity.harvestQueueTicket) ||
+                !reader.I32(entity.constructionSubProgress) || !reader.U8(queueCount)) {
+                SetError(error, "snapshot work state is truncated");
+                return std::nullopt;
+            }
+            entity.harvestState = static_cast<HarvestState>(state);
+            entity.harvestSlotHeld = held != 0;
+            const bool gathering = entity.order.type == OrderType::Gather;
+            const bool delivering = entity.order.type == OrderType::Deliver;
+            if (id != entity.id || state > static_cast<std::uint8_t>(HarvestState::Delivering) ||
+                held > 1 || entity.harvestTicks > simulation.currentTick_ ||
+                entity.harvestQueueTicket > simulation.currentTick_ + 1 ||
+                entity.constructionSubProgress < 0 || entity.constructionSubProgress >= 100 ||
+                queueCount > Entity::kMaxQueuedOrders ||
+                (state != 0 && (entity.type != EntityType::Worker || (!gathering && !delivering))) ||
+                (gathering && entity.assignedResourceNode != entity.order.target) ||
+                (entity.harvestQueueTicket != 0 &&
+                 (!gathering || entity.harvestState != HarvestState::Harvesting)) ||
+                (held != 0 && (entity.harvestQueueTicket == 0 ||
+                              ++heldSlots[entity.assignedResourceNode] > 1)) ||
+                (state == 0 && (held != 0 || entity.harvestTicks != 0 ||
+                              entity.harvestQueueTicket != 0 || entity.assignedResourceNode != 0))) {
+                SetError(error, "snapshot work state is invalid");
+                return std::nullopt;
+            }
+            for (std::uint8_t i = 0; i < queueCount; ++i) {
+                Order order{};
+                std::uint8_t type = 0, build = 0, well = 0;
+                std::int32_t ax = 0, ay = 0, dx = 0, dy = 0;
+                if (!reader.U8(type) || !reader.U32(order.target) ||
+                    !reader.I32(ax) || !reader.I32(ay) || !reader.I32(dx) || !reader.I32(dy) ||
+                    !reader.U8(build) || !reader.U8(well)) {
+                    SetError(error, "snapshot queued order is truncated");
+                    return std::nullopt;
+                }
+                order.type = static_cast<OrderType>(type);
+                order.buildType = static_cast<EntityType>(build);
+                order.wellChoice = static_cast<FutureWellChoice>(well);
+                order.anchor = Vec2::FromRaw(ax, ay);
+                order.destination = Vec2::FromRaw(dx, dy);
+                if (type == 0 || type > static_cast<std::uint8_t>(OrderType::Patrol) ||
+                    !IsValidEntityType(order.buildType) ||
+                    well > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
+                    !simulation.IsInsideMap(order.anchor) || !simulation.IsInsideMap(order.destination)) {
+                    SetError(error, "snapshot queued order is invalid");
+                    return std::nullopt;
+                }
+                entity.orderQueue.push_back(order);
+            }
+        }
+
+        std::uint8_t ballisticProjectiles = 0;
+        std::uint32_t projectileCount = 0;
+        if (!reader.U8(ballisticProjectiles) ||
+            !reader.U32(simulation.nextProjectileId_) ||
+            !reader.U32(projectileCount) || ballisticProjectiles > 1 ||
+            simulation.nextProjectileId_ == 0 ||
+            (ballisticProjectiles == 0 && projectileCount != 0) ||
+            projectileCount > kMaximumSerializedProjectiles ||
+            static_cast<std::size_t>(projectileCount) >
+                reader.Remaining() / kSerializedProjectileBytes) {
+            SetError(error, "snapshot projectile header is invalid");
+            return std::nullopt;
+        }
+        simulation.config_.enableBallisticProjectiles =
+            ballisticProjectiles != 0;
+        simulation.projectiles_.clear();
+        simulation.projectiles_.reserve(projectileCount);
+        EntityId priorProjectileId = 0;
+        for (std::uint32_t index = 0; index < projectileCount; ++index) {
+            Projectile projectile{};
+            std::int32_t positionX = 0;
+            std::int32_t positionY = 0;
+            std::int32_t destinationX = 0;
+            std::int32_t destinationY = 0;
+            if (!reader.U32(projectile.id) || !reader.U8(projectile.owner) ||
+                !reader.U32(projectile.source) || !reader.U32(projectile.target) ||
+                !reader.I32(positionX) || !reader.I32(positionY) ||
+                !reader.I32(destinationX) || !reader.I32(destinationY) ||
+                !reader.I32(projectile.damage) || !reader.I32(projectile.speedRaw) ||
+                !reader.I32(projectile.travelDistanceRemainingRaw)) {
+                SetError(error, "snapshot projectile data is truncated");
+                return std::nullopt;
+            }
+            projectile.position = Vec2::FromRaw(positionX, positionY);
+            projectile.destination = Vec2::FromRaw(destinationX, destinationY);
+            std::int64_t maximumTravelRaw =
+                std::numeric_limits<std::int32_t>::max();
+            if (simulation.config_.mapWidthTiles <=
+                    std::numeric_limits<std::int32_t>::max() / kFixedScale &&
+                simulation.config_.mapHeightTiles <=
+                    std::numeric_limits<std::int32_t>::max() / kFixedScale) {
+                const std::int64_t mapWidthRaw =
+                    static_cast<std::int64_t>(simulation.config_.mapWidthTiles) *
+                    kFixedScale;
+                const std::int64_t mapHeightRaw =
+                    static_cast<std::int64_t>(simulation.config_.mapHeightTiles) *
+                    kFixedScale;
+                maximumTravelRaw = IntegerSqrt64(
+                    mapWidthRaw * mapWidthRaw + mapHeightRaw * mapHeightRaw);
+            }
+            if (projectile.id == 0 || projectile.id <= priorProjectileId ||
+                projectile.id >= simulation.nextProjectileId_ ||
+                projectile.owner == kNeutralPlayer ||
+                projectile.owner >= simulation.players_.size() ||
+                !simulation.players_[projectile.owner].active ||
+                projectile.source == 0 || projectile.target == 0 ||
+                projectile.source >= simulation.nextEntityId_ ||
+                projectile.target >= simulation.nextEntityId_ ||
+                !simulation.IsInsideMap(projectile.position) ||
+                !simulation.IsInsideMap(projectile.destination) ||
+                projectile.damage <= 0 || projectile.speedRaw <= 0 ||
+                projectile.speedRaw > kMaximumBallisticProjectileSpeedRaw ||
+                projectile.travelDistanceRemainingRaw < 0 ||
+                static_cast<std::int64_t>(
+                    projectile.travelDistanceRemainingRaw) > maximumTravelRaw) {
+                SetError(error, "snapshot projectile state is invalid");
+                return std::nullopt;
+            }
+            priorProjectileId = projectile.id;
+            simulation.projectiles_.push_back(projectile);
+        }
+        if (HasFutureWellLifecycleSnapshotSchema(version)) {
+            std::uint32_t lifecycleCount = 0;
+            if (!reader.U32(lifecycleCount) ||
+                lifecycleCount != simulation.entities_.size() ||
+                static_cast<std::size_t>(lifecycleCount) >
+                    reader.Remaining() / kSerializedFutureWellLifecycleBytes) {
+                SetError(error, "snapshot Future Well lifecycle count is invalid");
+                return std::nullopt;
+            }
+            for (Entity& entity : simulation.entities_) {
+                EntityId id = 0;
+                std::uint8_t capturePlayer = kNeutralPlayer;
+                std::uint8_t pendingChoice = 0;
+                std::uint16_t progress = 0;
+                Tick protocolTicks = 0;
+                if (!reader.U32(id) || !reader.U8(capturePlayer) ||
+                    !reader.U16(progress) || !reader.U8(pendingChoice) ||
+                    !reader.U64(protocolTicks)) {
+                    SetError(error, "snapshot Future Well lifecycle is truncated");
+                    return std::nullopt;
+                }
+                const bool capturePlayerValid =
+                    capturePlayer == kNeutralPlayer ||
+                    (capturePlayer < simulation.players_.size() &&
+                     simulation.players_[capturePlayer].active);
+                const bool futureWell = entity.type == EntityType::FutureWell;
+                const bool inactiveCapture = capturePlayer == kNeutralPlayer &&
+                    progress == 0 &&
+                    pendingChoice == static_cast<std::uint8_t>(FutureWellChoice::Dormant);
+                const bool inactiveLifecycle = inactiveCapture && protocolTicks == 0;
+                // A newly assigned capture may still have zero progress when
+                // hostile presence prevents its first uncontested tick.
+                const bool activeCaptureValid =
+                    capturePlayer != kNeutralPlayer &&
+                    pendingChoice > static_cast<std::uint8_t>(FutureWellChoice::Dormant) &&
+                    pendingChoice <= static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
+                    progress < kFutureWellCaptureRequiredTicks &&
+                    (entity.wellChoice == FutureWellChoice::Dormant ||
+                     (entity.wellChoice == FutureWellChoice::Preserve &&
+                      entity.owner != capturePlayer)) && protocolTicks == 0;
+                const bool harvestStateValid =
+                    entity.wellChoice != FutureWellChoice::Harvest ||
+                    (entity.owner != kNeutralPlayer &&
+                     (protocolTicks == 0 || protocolTicks <= kHarvestTelegraphTicks));
+                const bool nonHarvestProtocolValid =
+                    entity.wellChoice == FutureWellChoice::Harvest ||
+                    protocolTicks == 0;
+                // Committing Harvest clears capture state while retaining its
+                // public countdown. Save/load must preserve that valid phase.
+                const bool activeHarvestProtocolValid = inactiveCapture &&
+                    entity.wellChoice == FutureWellChoice::Harvest &&
+                    protocolTicks > 0 && protocolTicks <= kHarvestTelegraphTicks;
+                if (id != entity.id || !capturePlayerValid ||
+                    pendingChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
+                    (!futureWell && !inactiveLifecycle) ||
+                    (futureWell && !(inactiveLifecycle || activeCaptureValid ||
+                                     activeHarvestProtocolValid)) ||
+                    !harvestStateValid || !nonHarvestProtocolValid) {
+                    SetError(error, "snapshot Future Well lifecycle is invalid");
+                    return std::nullopt;
+                }
+                entity.wellCapturePlayer = capturePlayer;
+                entity.wellCaptureProgress = progress;
+                entity.wellPendingChoice =
+                    static_cast<FutureWellChoice>(pendingChoice);
+                entity.wellProtocolTicks = protocolTicks;
+            }
+        }
+    } else {
+        // Schemas 20-25 omitted progress, assignment on return, and queued
+        // orders. Restart a known Gather; deliver legacy cargo then idle when
+        // its source cannot be recovered. Never guess an original deposit.
+        for (Entity& entity : simulation.entities_) {
+            if (entity.type == EntityType::Worker && entity.order.type == OrderType::Gather) {
+                simulation.BeginGather(entity, entity.order.target);
+            } else if (entity.type == EntityType::Worker && entity.order.type == OrderType::Deliver) {
+                entity.harvestState = HarvestState::ReturningHome;
+            }
+        }
     }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");

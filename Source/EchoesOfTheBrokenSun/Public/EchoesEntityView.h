@@ -178,6 +178,11 @@ public:
         return bUsingAuthoredResourceMesh;
     }
     [[nodiscard]] bool IsFutureWellPresentationVisible() const;
+    [[nodiscard]] bool IsFutureWellCollapsedRemnantVisible() const;
+    [[nodiscard]] bool IsFutureWellTerminallyCollapsed() const
+    {
+        return bFutureWellTerminallyCollapsed;
+    }
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellVisualChoice() const
     {
         return FutureWellVisualChoice;
@@ -215,6 +220,42 @@ public:
     {
         return AuthoritativeVelocity;
     }
+    /** M01-only presentation diagnostics. These expose visual state only and
+        never change deterministic movement, fog, collision, or navigation. */
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    float GetM01SurveyorGaitPhase() const { return M01GaitPhase; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    bool IsM01SurveyorFootSwinging(int32 Side) const
+    {
+        return Side >= 0 && Side < UE_ARRAY_COUNT(M01Feet) && M01Feet[Side].bSwing;
+    }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    FVector GetM01SurveyorFootWorld(int32 Side) const
+    {
+        return Side >= 0 && Side < UE_ARRAY_COUNT(M01Feet) ? M01Feet[Side].World : FVector::ZeroVector;
+    }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    FVector GetM01SurveyorFootSwingStartWorld(int32 Side) const
+    {
+        return Side >= 0 && Side < UE_ARRAY_COUNT(M01Feet) ? M01Feet[Side].SwingStart : FVector::ZeroVector;
+    }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    FVector GetM01SurveyorFootSwingEndWorld(int32 Side) const
+    {
+        return Side >= 0 && Side < UE_ARRAY_COUNT(M01Feet) ? M01Feet[Side].SwingEnd : FVector::ZeroVector;
+    }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    float GetM01SurveyorTargetHeadingYaw() const { return TargetHeadingYaw; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    int32 GetM01SurveyorEmergencyReplantCount() const { return M01EmergencyReplantCount; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    int32 GetM01SurveyorPoseResetCount() const { return M01PoseResetCount; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    int32 GetM01SurveyorDiscontinuityPoseResetCount() const { return M01DiscontinuityPoseResetCount; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    int32 GetM01SurveyorPlannedSwingStartCount() const { return M01PlannedSwingStartCount; }
+    UFUNCTION(BlueprintPure, Category = "Echoes|M01|Presentation")
+    int32 GetM01SurveyorPlannedLandingCount() const { return M01PlannedLandingCount; }
     [[nodiscard]] bool IsGatherBeamActive() const { return bGatherBeamActive; }
     [[nodiscard]] bool IsConstructionFieldActive() const
     {
@@ -239,6 +280,7 @@ private:
 
     void ConfigureAppearance(const echoes::sim::Entity& State);
     void ConfigureFutureWellPresentation(const echoes::sim::Entity& State);
+    void ConfigureFutureWellCollapseRemnant(bool bVisible);
     void EnsureFutureWellMaterialSet(
         UStaticMeshComponent* Component,
         TArray<TObjectPtr<UMaterialInstanceDynamic>>& Materials);
@@ -272,6 +314,19 @@ private:
     void UpdateTacticalStateMotion(float DeltaSeconds, bool bReducedMotion);
     void UpdateWorkerResourceMotion(float DeltaSeconds, bool bReducedMotion);
     void UpdateCombatVFX(float DeltaSeconds, bool bReducedMotion, bool bReducedFlashing);
+    void ConfigureM01SurveyorRig();
+    void ResetM01SurveyorRig();
+    void UpdateM01SurveyorRig(float DeltaSeconds, bool bReducedMotion);
+    void ConfigureM01BulwarkParts();
+    void ResetM01BulwarkParts();
+    void UpdateM01BulwarkParts(float DeltaSeconds, bool bReducedMotion);
+
+    bool bUsingM01BulwarkParts = false;
+    float M01BulwarkFoldDegrees = 85.0f;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UStaticMeshComponent>> M01BulwarkWings;
+
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<USceneComponent> SceneRoot;
@@ -282,6 +337,13 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> BodyMesh;
+
+    // Allocated only for an authored M01 Surveyor; never part of picking or simulation.
+    UPROPERTY(Transient)
+    TObjectPtr<USceneComponent> M01SurveyorRigRoot;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UStaticMeshComponent>> M01SurveyorParts;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> SilhouetteAccent;
@@ -346,6 +408,20 @@ private:
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
     TObjectPtr<UStaticMeshComponent> FutureWellGroundGlyphB;
 
+    // Terminal Harvest record: a low fractured rim and a dark inverted cavity
+    // occupy the former Well site without restoring a selectable landmark.
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellCollapseRim;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellCollapseCavity;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellCollapseFractureA;
+
+    UPROPERTY(VisibleAnywhere, Category = "Echoes|View|FutureWell")
+    TObjectPtr<UStaticMeshComponent> FutureWellCollapseFractureB;
+
     UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
 
@@ -369,6 +445,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> SelectionHaloMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> AbilityRangeRingMesh;
 
     UPROPERTY()
     TObjectPtr<UMaterialInterface> BasicMaterial;
@@ -470,6 +549,8 @@ private:
         echoes::sim::FutureWellChoice::Dormant;
     echoes::sim::FutureWellChoice FutureWellVisualChoice =
         echoes::sim::FutureWellChoice::Dormant;
+    echoes::sim::FutureWellChoice WellPendingChoice =
+        echoes::sim::FutureWellChoice::Dormant;
     int32 HitPoints = 1;
     int32 MaxHitPoints = 1;
     float DisplayedHealthFraction = 1.0f;
@@ -503,6 +584,8 @@ private:
     bool bUsingAuthoredRosterMesh = false;
     bool bUsingAuthoredFutureWellMesh = false;
     bool bUsingAuthoredResourceMesh = false;
+    bool bWellProtocolActive = false;
+    bool bFutureWellTerminallyCollapsed = false;
     float FutureWellVisualTimeSeconds = 0.0f;
     FVector FutureWellCoreBaseScale = FVector::OneVector;
     FVector SelectionVFXBaseScale = FVector::OneVector;
@@ -534,8 +617,52 @@ private:
 
     // Combat and presentation effects (Track A6 / Gate 8)
     bool bGatherBeamActive = false;
+    bool bM01GatherTargetBound = false;
+    FVector GatherTargetWorld = FVector::ZeroVector;
+    struct FM01FootPose
+    {
+        FVector World = FVector::ZeroVector;
+        FVector SwingStart = FVector::ZeroVector;
+        FVector SwingEnd = FVector::ZeroVector;
+        FVector SettleStart = FVector::ZeroVector;
+        FQuat Rotation = FQuat::Identity;
+        FQuat SwingRotation = FQuat::Identity;
+        // The phase at which this particular airborne arc began. This lets a
+        // restart enter late in swing with a C0 world-space foot pose.
+        float SwingStartPhase = .60f;
+        bool bSwing = false;
+    };
+    FM01FootPose M01Feet[2];
+    FVector M01PreviousRoot = FVector::ZeroVector;
+    float M01GaitPhase = 0.0f;
+    float M01SettleTime = .28f;
+    FVector M01LastDisplayedTravelForward = FVector::ForwardVector;
+    int32 M01EmergencyReplantCount = 0;
+    int32 M01PoseResetCount = 0;
+    int32 M01DiscontinuityPoseResetCount = 0;
+    int32 M01PlannedSwingStartCount = 0;
+    int32 M01PlannedLandingCount = 0;
+    // Alternates an exact target-heading reach tie so repeated restart tests
+    // do not always lift the same visual leg.
+    int32 M01NextRestartRephaseSide = 0;
+    bool bM01HasLastTravelDirection = false;
+    bool bM01TargetTurnRephaseLatched = false;
+    float M01SurveyorPelvisYaw = 0.0f;
+    bool bM01SurveyorPelvisYawInitialized = false;
+    bool bUsingM01SurveyorRig = false;
+    bool bM01RigInitialized = false;
+    bool bM01RigMoving = false;
+    // Retains the authoritative locomotion edge across render interpolation
+    // gaps, so a stopped worker settles while an active zero-distance frame
+    // preserves an already airborne foot.
+    bool bM01RigLocomotionActive = false;
+    // A stop arms the next displayed motion for the bounded restart planner.
+    // Do not consume it until the root visibly advances.
+    bool bM01RestartPending = false;
+    bool bM01RigReduced = false;
     bool bConstructionFieldActive = false;
     bool bReshapeTelegraphActive = false;
+    bool bM01ReshapeExpired = false;
     float ConstructionFraction = 0.0f;
     float GatherBeamPulsePhase = 0.0f;
     float ReshapeTelegraphPulsePhase = 0.0f;

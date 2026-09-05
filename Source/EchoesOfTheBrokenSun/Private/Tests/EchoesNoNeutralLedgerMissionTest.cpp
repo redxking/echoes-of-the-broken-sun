@@ -3,8 +3,10 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesCampaignLedgerProbe.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignTerrainBinding.h"
 #include "EchoesNoNeutralLedgerMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -341,9 +343,9 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
     // The replay envelope shape did not change and stays at 24; this
     // assertion pins the snapshot schema only.
     TestEqual(
-        TEXT("Simulation snapshot schema advances to twenty-five"),
+        TEXT("Simulation snapshot schema advances to twenty-six"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(25));
+        static_cast<uint32>(26));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -654,10 +656,17 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
             }
         }
     }
-    TestEqual(
-        TEXT("Mission 11 retains the exact 223-tile Lume topology"),
-        BlockedTiles,
-        223);
+    const auto* TerrainFounding = Bridge->GetCampaignProgress().FindDecision(
+        EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    if (!TestNotNull(TEXT("Terrain binding has the founding record"), TerrainFounding)) return false;
+    const auto TerrainContract = echoes::world::CheckCampaignTerrain(11, TerrainFounding->WellChoice);
+    TestTrue(TEXT("Dedicated mission terrain contract validates"), TerrainContract.ok);
+    TestEqual(TEXT("Dedicated mission census matches its source"), BlockedTiles, TerrainContract.blocked_cells);
+    for (int32 Y = 0; Y < 64; ++Y)
+        for (int32 X = 0; X < 64; ++X)
+            TestEqual(TEXT("Mission terrain matches every source cell"),
+                Bridge->GetSimulation()->TerrainAt(X,Y) != echoes::sim::Terrain::Blocked,
+                echoes::world::IsCampaignTerrainPassable(11, TerrainFounding->WellChoice, X,Y));
     TestTrue(
         TEXT("Mission 11 begins at inherited-route security"),
         Bridge->GetNoNeutralLedgerPhase() ==
@@ -714,6 +723,12 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         TestFalse(
             TEXT("A renamed checkpoint cannot cross ten-record chains"),
             AlternateBridge->QuickLoadScenario(Feedback));
+        TestTrue(TEXT("The foreign founding doctrine is refused by the map envelope"),
+                 Feedback.Contains(TEXT("CAMPAIGN_MAP_STALE")));
+        if (!TestTrue(TEXT("A current-map envelope can carry the deliberate foreign-ledger probe"),
+                      EchoesCampaignTest::BindForeignLedgerToCurrentMap(*AlternateBridge))) return false;
+        TestFalse(TEXT("The inner ledger binding independently refuses the foreign payload"),
+                  AlternateBridge->QuickLoadScenario(Feedback));
         TestTrue(
             TEXT("Cross-ledger loading reports exact binding rejection"),
             Feedback.Contains(TEXT("ledger binding does not match")));

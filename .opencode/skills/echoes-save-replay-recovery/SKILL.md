@@ -7,14 +7,14 @@ metadata:
 
 # Echoes save, replay, and recovery
 
-Use for persistence containers, campaign progression, replay/checksum, corruption handling, migration, or recovery UX.
+## Project authority
 
-1. Read live `CLAUDE.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify exact lease/worktree/branch/dirty paths before mutation.
-2. Preserve simulation authority: saves and replays bind deterministic state, commands, content/catalog identity, and checksums as the architecture requires. Presentation objects, audio, and camera state do not become authoritative persistence.
-3. Define valid save/load, interrupted write, stale/mismatched content, corrupted container, missing asset, disk failure, incompatible version, replay divergence, and player recovery behavior before coding.
-4. Test clean and adversarial paths using isolated temporary evidence data. Verify fail-closed behavior and the player-visible reason/recovery route; never convert corruption into silent fallback.
-5. Stop if migration semantics, retention policy, user-data handling, owner-held progress code, or lease scope is unresolved.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-## Acceptance checks
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
 
-Record content/build identity, state/checksum equivalence, replay determinism where applicable, failure fixtures, recovery observations, and paths of retained evidence. Route the focused work to `echoes-save-progression-recovery` or `echoes-replay-qol`, physical recovery to `echoes-gui-control-readiness`, then `echoes-evidence-gate-review` and `echoes-human-acceptance-session`.
+Use this compatibility router only to choose the narrow work skill.
+
+Save and campaign progression: [echoes-save-progression-recovery](../echoes-save-progression-recovery/SKILL.md). Replay behavior and player quality of life: [echoes-replay-qol](../echoes-replay-qol/SKILL.md).
+
+This router does not authorize cross-domain changes or replace the selected skill's required evidence.

@@ -1,14 +1,20 @@
 ---
 name: echoes-heavy-run-coordination
-description: "Coordinate a single leased Echoes heavy run with explicit acquisition, isolation, evidence retention, and release—not concurrent execution."
+description: "Coordinate a single exclusive Echoes heavy run with explicit acquisition, isolation, evidence retention, and release—not concurrent execution."
 metadata:
   author: Angelis Pseftis
 ---
 
 # Echoes heavy-run coordination
 
-Read live `CLAUDE.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`.
+## Project authority
 
-Before acquiring or running, require the lock's request fields exactly: lane/task, worktree, branch/SHA, operation, expected outputs, ports/GPU use, start time, timeout, and cleanup/rollback. Confirm `State: FREE`; do not infer availability from an absent process. A holder must preserve failed artifacts, verify scoped storage and residual processes, and explicitly release by recording outcome, evidence location, cleanup/rollback, and release time in the lock. Process disappearance is not release.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-Use this only for defined heavy classes in the lock policy. Capture target hardware, resolution/device route, thermal or sustained-load observation when the requirement calls for it. Never edit source/generated content as part of coordination; source authority and simulation authority remain with the implementation lane. Route build/runtime execution to its domain skill, GUI/player observation to `echoes-gui-control-readiness`, evidence to `echoes-evidence-gate-review`, and owner acceptance to `echoes-human-acceptance-session`. Stop for HELD state, incomplete request fields, conflicting editor/ports, storage risk, or missing owner authorization.
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+
+Use before a build, cook, package, editor/runtime launch, profiling, soak, GPU-intensive capture, port-bound automation, or GUI run. It coordinates exclusive resource use; it does not authorize source changes or acceptance.
+
+Before launch, identify the task owner, worktree and commit, dirty state, operation, resources (ports, editor, GPU, storage, save location), expected evidence, timeout, and cleanup/recovery plan. Confirm with current live coordination that those resources are available. Do not infer availability from a retired lock file or the absence of a process.
+
+During and after the run, preserve failed artifacts, record command/configuration, environment, output, and hashes where applicable in `BuildArtifacts/Evidence/<gate>-<UTC>/`. Check for residual processes and scoped storage, then record the outcome and release the reservation. A run ending does not prove the requirement or owner acceptance.

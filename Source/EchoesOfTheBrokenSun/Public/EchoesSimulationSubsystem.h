@@ -81,6 +81,9 @@ struct FEchoesObjectiveSnapshot final
     echoes::sim::EntityId ArchiveCarrierId = 0;
     echoes::sim::FutureWellChoice PrologueWellChoice =
         echoes::sim::FutureWellChoice::Dormant;
+    bool bPrologueWellEnemyControlled = false;
+    bool bPrologueReshapeExpired = false;
+    uint64 PrologueReshapeRemainingTicks = 0;
     EEchoesSevenAccountsPhase SevenAccountsPhase =
         EEchoesSevenAccountsPhase::Inactive;
     echoes::sim::FutureWellChoice SevenAccountsBranch =
@@ -367,6 +370,9 @@ public:
     static constexpr float TileWorldSize = 200.0f;
     static constexpr uint8 LocalPlayerId = 0;
     static constexpr uint8 OpponentPlayerId = 1;
+
+    /** Stable campaign identity shared by terrain and checkpoint bindings. */
+    [[nodiscard]] static bool GetMissionIdForOperation(EEchoesOperationMode Mode, EEchoesCampaignMissionId& OutMissionId);
 
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
@@ -736,7 +742,6 @@ private:
     [[nodiscard]] static bool IsOperationPhaseTerminal(EEchoesOperationMode Mode, uint8 Phase);
     [[nodiscard]] static FString GetOperationDisplayName(EEchoesOperationMode Mode);
     [[nodiscard]] static FString GetPhaseDisplayName(EEchoesOperationMode Mode, uint8 Phase);
-    [[nodiscard]] static bool GetMissionIdForOperation(EEchoesOperationMode Mode, EEchoesCampaignMissionId& OutMissionId);
     static bool InspectSaveContainer(
         const TArray<uint8>& Bytes,
         uint8& OutVersion,
@@ -912,6 +917,8 @@ private:
     uint64 AlertLastObservedTick = 0;
     uint32 AlertKnownResearchMask = 0;
     TSet<uint32> AlertKnownOwnedUnitIds;
+    TSet<uint32> AlertKnownOwnedPreservedWells;
+    TSet<uint32> AlertKnownHarvestTelegraphs;
     bool bAlertCapacityLowLatched = false;
 
     /** Last observed authoritative state per visible entity, for the
@@ -983,6 +990,7 @@ private:
     bool bLoggedResearchPresentationInterrupted = false;
     bool bLoggedKharuunSystemsPresentation = false;
     int32 PrologueCompletionPresentationStage = 0;
+    echoes::sim::FutureWellChoice PrologueCompletionPresentationChoice = echoes::sim::FutureWellChoice::Preserve;
     echoes::sim::EntityId ProloguePresentationWorkerId = 0;
     echoes::sim::EntityId ProloguePresentationWellId = 0;
     [[nodiscard]] FEchoesPrologueMissionFacts GatherPrologueFacts() const;

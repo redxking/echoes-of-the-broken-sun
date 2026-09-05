@@ -1,0 +1,390 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M04",
+  "map_id": "unburied-road-vaults",
+  "operation_mode": "CampaignUnburiedRoad",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-004",
+    "map_concepts_reference": "MapConcepts#M04"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "upper-vault-rib-west",
+      "op": "block",
+      "x0": 0,
+      "x1": 5,
+      "y0": 11,
+      "y1": 13
+    },
+    {
+      "id": "upper-vault-rib-west-return",
+      "op": "block",
+      "x0": 17,
+      "x1": 18,
+      "y0": 11,
+      "y1": 13
+    },
+    {
+      "id": "upper-vault-rib-center",
+      "op": "block",
+      "x0": 24,
+      "x1": 25,
+      "y0": 11,
+      "y1": 13
+    },
+    {
+      "id": "upper-vault-rib-east",
+      "op": "block",
+      "x0": 34,
+      "x1": 63,
+      "y0": 11,
+      "y1": 13
+    },
+    {
+      "id": "lower-vault-rib",
+      "op": "block",
+      "x0": 0,
+      "x1": 18,
+      "y0": 33,
+      "y1": 35
+    },
+    {
+      "id": "lower-vault-rib-east-west",
+      "op": "block",
+      "x0": 27,
+      "x1": 47,
+      "y0": 33,
+      "y1": 35
+    },
+    {
+      "id": "lower-vault-rib-east-east",
+      "op": "block",
+      "x0": 51,
+      "x1": 63,
+      "y0": 33,
+      "y1": 35
+    },
+    {
+      "id": "terminal-chamber-wall",
+      "op": "block",
+      "x0": 45,
+      "x1": 57,
+      "y0": 52,
+      "y1": 54
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "inherited-route-divider",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 31,
+      "y1": 32
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "resource-6-footprint-clearance",
+      "op": "open",
+      "x0": 42,
+      "x1": 43,
+      "y0": 35,
+      "y1": 35
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-ash-cut",
+          "op": "open",
+          "x0": 12,
+          "x1": 16,
+          "y0": 31,
+          "y1": 35
+        },
+        {
+          "id": "harvest-southern-exit",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 490
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-buried-causeway",
+          "op": "open",
+          "x0": 29,
+          "x1": 35,
+          "y0": 31,
+          "y1": 35
+        },
+        {
+          "id": "preserve-southern-exit",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 472
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-folded-verge",
+          "op": "open",
+          "x0": 48,
+          "x1": 52,
+          "y0": 31,
+          "y1": 35
+        },
+        {
+          "id": "reshape-southern-exit",
+          "op": "open",
+          "x0": 48,
+          "x1": 52,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 502
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-roadhead",
+      "x": 14,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-spine",
+      "x": 14,
+      "y": 37,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-shard",
+      "x": 20,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-roadhead",
+      "x": 32,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-spine",
+      "x": 32,
+      "y": 37,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-shard",
+      "x": 38,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-roadhead",
+      "x": 50,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-spine",
+      "x": 49,
+      "y": 35,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-shard",
+      "x": 44,
+      "y": 40,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 29,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "harvest-roadhead",
+      "x": 14,
+      "y": 28
+    },
+    {
+      "id": "harvest-spine",
+      "x": 14,
+      "y": 37
+    },
+    {
+      "id": "harvest-shard",
+      "x": 20,
+      "y": 43
+    },
+    {
+      "id": "preserve-roadhead",
+      "x": 32,
+      "y": 28
+    },
+    {
+      "id": "preserve-spine",
+      "x": 32,
+      "y": 37
+    },
+    {
+      "id": "preserve-shard",
+      "x": 38,
+      "y": 43
+    },
+    {
+      "id": "reshape-roadhead",
+      "x": 50,
+      "y": 28
+    },
+    {
+      "id": "reshape-spine",
+      "x": 49,
+      "y": 35
+    },
+    {
+      "id": "reshape-shard",
+      "x": 44,
+      "y": 40
+    }
+  ]
+}

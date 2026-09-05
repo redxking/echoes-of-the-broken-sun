@@ -32,12 +32,14 @@ public:
     bool InitializeFog(
         const echoes::sim::Simulation& Simulation,
         echoes::sim::PlayerId Player,
-        float TileWorldSize);
+        float TileWorldSize,
+        bool bM01Material = false);
     bool SyncVisibility(const echoes::sim::Simulation& Simulation);
     bool InitializeScopedFog(
         int32 InMapWidthTiles,
         int32 InMapHeightTiles,
-        float TileWorldSize);
+        float TileWorldSize,
+        bool bM01Material = false);
     bool SyncScopedVisibility(
         const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
 
@@ -118,6 +120,7 @@ private:
     int32 ExploredTileCount = 0;
     int32 VisibleTileCount = 0;
 
+    bool bUseM01Material = false;
     bool bReducedMotion = false;
     bool bReducedFlashing = false;
     FLinearColor UnexploredBaseColor = FLinearColor(0.004f, 0.003f, 0.005f, 1.0f);

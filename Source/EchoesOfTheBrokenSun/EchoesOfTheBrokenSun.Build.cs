@@ -11,7 +11,13 @@ public class EchoesOfTheBrokenSun : ModuleRules
             "Core", "CoreUObject", "Engine", "InputCore", "ApplicationCore", "PhysicsCore",
             "AIModule", "NavigationSystem", "GameplayTasks", "UMG", "Slate",
             "SlateCore", "Json", "JsonUtilities", "Sockets", "EchoesSimCore",
-            "LevelSequence", "MovieScene", "MovieSceneTracks", "CinematicCamera"
+            "LevelSequence", "MovieScene", "MovieSceneTracks", "CinematicCamera",
+            "ProceduralMeshComponent"
         });
+        if (Target.bBuildEditor)
+        {
+            // VideoCaptureProtocol's public header includes AVIWriter.h.
+            PrivateDependencyModuleNames.AddRange(new[] { "MovieSceneCapture", "AVIWriter", "UnrealEd" });
+        }
     }
 }

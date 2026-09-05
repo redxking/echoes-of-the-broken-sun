@@ -77,6 +77,8 @@ struct FEmbeddedSnapshotLayout final
     int32 MemoryLedgerSize = 0;
     uint32 RememberedTileCount = 0;
     uint32 RememberedObjectCount = 0;
+    int32 Schema26AppendOffset = INDEX_NONE;
+    int32 Schema26AppendSize = 0;
 };
 
 inline bool SelectUniqueReceiptCandidate(
@@ -185,8 +187,10 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
             1 + 2 * static_cast<int32>(echoes::sim::kMaximumPlayers);
         constexpr int32 EmptyTrailingBytes =
             // One empty remembered-object ledger per player, then the empty
-            // entity, pending-command and receipt ledgers.
-            static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 + 4 + 4 + 4;
+            // entity, pending-command, receipt, schema-26 work, and ballistic
+            // ledgers. The latter is flag + next ID + count with no records.
+            static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
+            4 + 4 + 4 + 4 + 1 + 4 + 4;
         constexpr int32 SnapshotSignatureSize = 8;
         const echoes::sim::Simulation Probe(
             echoes::sim::SimulationConfig{2, 2, 20, 0});
@@ -307,6 +311,150 @@ inline bool ResolveEmbeddedSnapshotMemoryLedger(
     return true;
 }
 
+// Schema 26 appends worker work/order state and in-flight projectile state
+// after the receipt block. This helper walks that append from the preceding
+// entity and command counts; it never guesses a tail length. The real schema
+// 26 loader has already validated record semantics before callers reach here.
+inline bool ResolveEmbeddedSnapshotSchema26Append(
+    const TArray<uint8>& Envelope,
+    const FEmbeddedSnapshotLayout& Layout,
+    int32& OutAppendOffset,
+    int32& OutAppendSize,
+    FEmbeddedSnapshotLayout& OutLayout)
+{
+    constexpr int32 SnapshotSignatureSize = 8;
+    constexpr int32 SerializedEntitySize = 235;
+    constexpr int32 SerializedCommandSize = 38;
+    constexpr int32 SerializedReceiptSize = 19;
+    constexpr int32 SerializedWorkStateSize = 31;
+    constexpr int32 SerializedQueuedOrderSize = 23;
+    constexpr int32 SerializedProjectileSize = 41;
+    constexpr uint32 MaximumSerializedEntities = 64U * 1024U;
+    OutAppendOffset = INDEX_NONE;
+    OutAppendSize = 0;
+    OutLayout = Layout;
+    if (Layout.SnapshotOffset < 0 || Layout.SnapshotLength < 8U ||
+        Layout.MemoryLedgerOffset == INDEX_NONE ||
+        Layout.MemoryLedgerSize < 0)
+    {
+        return false;
+    }
+    const int64 PayloadEnd = static_cast<int64>(Layout.SnapshotOffset) +
+        Layout.SnapshotLength - SnapshotSignatureSize;
+    int64 Cursor = static_cast<int64>(Layout.MemoryLedgerOffset) +
+        Layout.MemoryLedgerSize;
+    const auto ReadCount = [&Envelope, &Cursor, PayloadEnd](uint32& OutCount)
+    {
+        if (Cursor + 4 > PayloadEnd || Cursor > MAX_int32)
+        {
+            return false;
+        }
+        OutCount = ReadUint32(Envelope, static_cast<int32>(Cursor));
+        Cursor += 4;
+        return true;
+    };
+    uint32 EntityCount = 0;
+    if (!ReadCount(EntityCount) ||
+        EntityCount > MaximumSerializedEntities ||
+        Cursor + static_cast<int64>(EntityCount) * SerializedEntitySize >
+            PayloadEnd)
+    {
+        return false;
+    }
+    Cursor += static_cast<int64>(EntityCount) * SerializedEntitySize;
+    uint32 CommandCount = 0;
+    if (!ReadCount(CommandCount) ||
+        CommandCount > echoes::sim::kMaximumCommandLogEntries ||
+        Cursor + static_cast<int64>(CommandCount) * SerializedCommandSize >
+            PayloadEnd)
+    {
+        return false;
+    }
+    Cursor += static_cast<int64>(CommandCount) * SerializedCommandSize;
+    const int64 ReceiptOffset = Cursor;
+    uint32 ReceiptCount = 0;
+    if (!ReadCount(ReceiptCount) ||
+        ReceiptCount > echoes::sim::kMaximumCommandResolutionReceipts ||
+        Cursor + static_cast<int64>(ReceiptCount) * SerializedReceiptSize >
+            PayloadEnd)
+    {
+        return false;
+    }
+    Cursor += static_cast<int64>(ReceiptCount) * SerializedReceiptSize;
+    const int64 AppendOffset = Cursor;
+    uint32 WorkCount = 0;
+    if (!ReadCount(WorkCount) || WorkCount != EntityCount)
+    {
+        return false;
+    }
+    for (uint32 Index = 0; Index < WorkCount; ++Index)
+    {
+        if (Cursor + SerializedWorkStateSize > PayloadEnd ||
+            Cursor > MAX_int32)
+        {
+            return false;
+        }
+        const uint8 QueueCount = Envelope[static_cast<int32>(Cursor) + 30];
+        if (QueueCount > echoes::sim::Entity::kMaxQueuedOrders)
+        {
+            return false;
+        }
+        Cursor += SerializedWorkStateSize +
+            static_cast<int64>(QueueCount) * SerializedQueuedOrderSize;
+        if (Cursor > PayloadEnd)
+        {
+            return false;
+        }
+    }
+    if (Cursor + 9 > PayloadEnd || Cursor > MAX_int32 ||
+        Envelope[static_cast<int32>(Cursor)] > 1U)
+    {
+        return false;
+    }
+    const uint32 NextProjectileId = ReadUint32(
+        Envelope, static_cast<int32>(Cursor) + 1);
+    const uint32 ProjectileCount = ReadUint32(
+        Envelope, static_cast<int32>(Cursor) + 5);
+    if (NextProjectileId == 0 ||
+        ProjectileCount > MaximumSerializedEntities ||
+        (Envelope[static_cast<int32>(Cursor)] == 0U && ProjectileCount != 0) ||
+        Cursor + 9 + static_cast<int64>(ProjectileCount) *
+            SerializedProjectileSize > PayloadEnd)
+    {
+        return false;
+    }
+    Cursor += 9 + static_cast<int64>(ProjectileCount) * SerializedProjectileSize;
+    // Schema 27 appends exact per-entity capture/telegraph records. These
+    // synthetic legacy fixtures intentionally project away both append blocks;
+    // the real current loader above already validated lifecycle semantics.
+    const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
+    if (Version >= 27U)
+    {
+        uint32 WellRecordCount = 0;
+        if (!ReadCount(WellRecordCount) || WellRecordCount != EntityCount ||
+            Cursor + static_cast<int64>(WellRecordCount) * 16 != PayloadEnd)
+        {
+            return false;
+        }
+        Cursor += static_cast<int64>(WellRecordCount) * 16;
+    }
+    if (Cursor != PayloadEnd) return false;
+    if (ReceiptOffset > MAX_int32 || AppendOffset > MAX_int32 ||
+        PayloadEnd - AppendOffset > MAX_int32)
+    {
+        return false;
+    }
+    OutLayout.ReceiptBlockOffset = static_cast<int32>(ReceiptOffset);
+    OutLayout.ReceiptCount = ReceiptCount;
+    OutLayout.ReceiptBlockSize = 4 +
+        static_cast<int32>(ReceiptCount) * SerializedReceiptSize;
+    OutAppendOffset = static_cast<int32>(AppendOffset);
+    OutAppendSize = static_cast<int32>(PayloadEnd - AppendOffset);
+    OutLayout.Schema26AppendOffset = OutAppendOffset;
+    OutLayout.Schema26AppendSize = OutAppendSize;
+    return true;
+}
+
 // Locates the trailing command-resolution receipt block of one embedded
 // snapshot, and on schema 25 the memory ledgers as well.
 //
@@ -394,6 +542,25 @@ inline bool InspectEmbeddedSnapshot(
         return false;
     }
 
+    if (ExpectedSnapshotVersion >= 26U)
+    {
+        int32 AppendOffset = INDEX_NONE;
+        int32 AppendSize = 0;
+        FEmbeddedSnapshotLayout Schema26Layout;
+        if (!ResolveEmbeddedSnapshotSchema26Append(
+                Envelope,
+                MeasuredLayout,
+                AppendOffset,
+                AppendSize,
+                Schema26Layout) ||
+            AppendOffset == INDEX_NONE || AppendSize <= 0)
+        {
+            return false;
+        }
+        OutLayout = Schema26Layout;
+        return true;
+    }
+
     const int32 SnapshotSignatureOffset =
         SnapshotOffset + static_cast<int32>(SnapshotLength) -
         SnapshotSignatureSize;
@@ -469,6 +636,67 @@ inline bool InspectEmbeddedSnapshot(
         LoadableCandidates.Add(CandidateLayout);
     }
     return SelectUniqueReceiptCandidate(LoadableCandidates, OutLayout);
+}
+
+// Synthetic regression migrations may deliberately project a current schema
+// checkpoint down to schema 25 before exercising the older 25->22 path. The
+// schema-26 append is removed only after its exact variable layout has been
+// parsed and the resulting schema-25 payload is accepted by the real loader.
+inline bool ConvertEmbeddedSnapshotV26ToV25(
+    TArray<uint8>& Envelope,
+    int32 FixedHeaderSize,
+    int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    constexpr uint32 MemorySnapshotVersion = 25U;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(
+            Envelope,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            Layout,
+            echoes::sim::kSnapshotVersion))
+    {
+        return false;
+    }
+    int32 AppendOffset = INDEX_NONE;
+    int32 AppendSize = 0;
+    FEmbeddedSnapshotLayout Schema26Layout;
+    if (!ResolveEmbeddedSnapshotSchema26Append(
+            Envelope, Layout, AppendOffset, AppendSize, Schema26Layout) ||
+        AppendOffset == INDEX_NONE || AppendSize <= 0 ||
+        Schema26Layout.SnapshotLength < static_cast<uint32>(AppendSize))
+    {
+        return false;
+    }
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(AppendOffset, AppendSize, EAllowShrinking::No);
+    const uint32 V25SnapshotLength = Schema26Layout.SnapshotLength -
+        static_cast<uint32>(AppendSize);
+    WriteUint32(Working, SnapshotLengthOffset, V25SnapshotLength);
+    WriteUint32(Working,
+                Schema26Layout.SnapshotOffset + SnapshotVersionOffset,
+                MemorySnapshotVersion);
+    if (!ResignEmbeddedSnapshot(
+            Working, Schema26Layout.SnapshotOffset, V25SnapshotLength))
+    {
+        return false;
+    }
+    UpdateEnvelopeChecksum(Working);
+    if (static_cast<uint64>(Envelope.Num() - Working.Num()) !=
+            static_cast<uint64>(AppendSize) ||
+        !IsLoadableEmbeddedSnapshot(
+            Working,
+            Schema26Layout.SnapshotOffset,
+            V25SnapshotLength,
+            MemorySnapshotVersion))
+    {
+        return false;
+    }
+    Envelope = MoveTemp(Working);
+    return true;
 }
 
 inline bool ConvertEmbeddedSnapshotV23ToV22(
@@ -561,18 +789,28 @@ inline bool ConvertEmbeddedSnapshotToV22(
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr uint32 ReceiptSnapshotVersion = 24U;
     constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
+    TArray<uint8> Source = Envelope;
+    if (!ConvertEmbeddedSnapshotV26ToV25(
+            Source,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset))
+    {
+        return false;
+    }
     FEmbeddedSnapshotLayout Layout;
     if (!InspectEmbeddedSnapshot(
-            Envelope,
+            Source,
             FixedHeaderSize,
             LedgerLengthOffset,
             SnapshotLengthOffset,
-            Layout))
+            Layout,
+            25U))
     {
         return false;
     }
 
-    TArray<uint8> Working = Envelope;
+    TArray<uint8> Working = Source;
     uint32 WorkingSnapshotLength = Layout.SnapshotLength;
     FEmbeddedSnapshotLayout ReceiptLayout = Layout;
     if (Layout.MemoryLedgerSize > 0)
@@ -648,7 +886,7 @@ inline bool ConvertEmbeddedSnapshotToV22(
     const uint64 ExpectedShrink = 5ULL +
         static_cast<uint64>(Layout.ReceiptCount) * 19ULL +
         static_cast<uint64>(Layout.MemoryLedgerSize);
-    if (static_cast<uint64>(Envelope.Num() - Working.Num()) !=
+    if (static_cast<uint64>(Source.Num() - Working.Num()) !=
         ExpectedShrink)
     {
         return false;

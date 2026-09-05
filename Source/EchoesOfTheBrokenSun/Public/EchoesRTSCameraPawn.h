@@ -22,6 +22,13 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+    /**
+     * Applies an orthographic frame using the existing authored perspective
+     * arm-distance/FOV vocabulary. Editor and review callers that alter the
+     * arm directly while ticking is disabled must call this explicitly.
+     */
+    void SetCameraFraming(float LegacyArmLength, float LegacyFieldOfViewDegrees = 55.0f);
+
 private:
     /** Applies the authored exposure, tonemapper, and bloom baseline
      *  (revision exposure-authored-v1) to the camera. Every mode inherits
@@ -33,6 +40,8 @@ private:
     void ZoomIn();
     void ZoomOut();
     void ApplyZoom(float Direction);
+    /** Keeps direct arm edits made while ticking in sync with OrthoWidth. */
+    void SynchronizeOrthographicFraming();
     void ClampToBattlefield();
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|Camera")
@@ -57,6 +66,7 @@ private:
     // at end of play so a capture never rewrites the saved setting.
     bool bArtReviewContrastOverridden = false;
     bool bArtReviewContrastPrevious = false;
+    float ActiveFramingFieldOfViewDegrees = 55.0f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Echoes|Camera")
     float PanSpeed = 2400.0f;

@@ -1,0 +1,329 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M15",
+  "map_id": "broken-sun-accord-dais",
+  "operation_mode": "CampaignTheBrokenSun",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-015",
+    "map_concepts_reference": "MapConcepts#M15"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "approach-west-shoulder",
+      "op": "block",
+      "x0": 4,
+      "x1": 14,
+      "y0": 28,
+      "y1": 34
+    },
+    {
+      "id": "approach-east-shoulder",
+      "op": "block",
+      "x0": 50,
+      "x1": 60,
+      "y0": 28,
+      "y1": 34
+    },
+    {
+      "id": "dais-north-ring-west",
+      "op": "block",
+      "x0": 19,
+      "x1": 27,
+      "y0": 50,
+      "y1": 55
+    },
+    {
+      "id": "dais-north-ring-east",
+      "op": "block",
+      "x0": 37,
+      "x1": 45,
+      "y0": 50,
+      "y1": 55
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 60,
+      "y1": 61
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "open-evolution-conduit-socket",
+      "op": "open",
+      "x0": 25,
+      "x1": 26,
+      "y0": 49,
+      "y1": 54
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 8,
+          "x1": 11,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 372
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 29,
+          "x1": 34,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 368
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 51,
+          "x1": 54,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 372
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "mara-accord",
+      "x": 26,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "oruun-accord",
+      "x": 38,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "neme-accord",
+      "x": 32,
+      "y": 49,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "talar-record",
+      "x": 32,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "crownfall-approach",
+      "x": 32,
+      "y": 56,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "final-convergence",
+      "x": 32,
+      "y": 53,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "mara-accord-spawn",
+      "x": 24,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "oruun-accord-spawn",
+      "x": 40,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "talar-record-spawn",
+      "x": 32,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "restoration-conduit",
+      "x": 32,
+      "y": 49,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "controlled-stabilization-conduit",
+      "x": 32,
+      "y": 44,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "extinguishment-conduit",
+      "x": 26,
+      "y": 49,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "open-evolution-conduit",
+      "x": 26,
+      "y": 54,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "mara-accord",
+      "x": 26,
+      "y": 43
+    },
+    {
+      "id": "oruun-accord",
+      "x": 38,
+      "y": 43
+    },
+    {
+      "id": "neme-accord",
+      "x": 32,
+      "y": 49
+    },
+    {
+      "id": "talar-record",
+      "x": 32,
+      "y": 43
+    },
+    {
+      "id": "crownfall-approach",
+      "x": 32,
+      "y": 56
+    },
+    {
+      "id": "final-convergence",
+      "x": 32,
+      "y": 53
+    }
+  ]
+}

@@ -7,12 +7,16 @@ metadata:
 
 # Echoes animation, motion, and VFX
 
-Read `CLAUDE.md`, `Docs/GameCompletionDirective.md` Tracks A/G/H, `Docs/Archive/DevelopmentBible.md` (§Combat and controls, §Art and audio), `Docs/ArtDirection.md`, `Docs/Archive/TechnicalArchitecture.md` (§Presentation), `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Mutate only under a live owned lane.
+## Project authority
 
-Derive motion from authoritative events; never feed animation, particles, camera shake, or timing back into simulation, commands, fog, saves, replay, checksums, collision, overlaps, or navigation. Treat effect timing as communicative rather than authoritative. Keep threats, order outcomes, selection, and ownership legible at normal RTS zoom.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-Specify reduced-motion and reduced-flashing behavior before implementation: disable/attenuate shake, strobing, large screen displacement, and high-frequency flashes while retaining equivalent non-motion feedback. Test normal, reduced-motion, and reduced-flashing paths in the running game, including interrupted, repeated, and congested effects.
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
 
-Acceptance output: authoritative event binding, behavior matrix, in-motion captured inspection, performance observation, and evidence status. Exclude unbound spectacle, simulated state changes, and screenshot-only approval. Stop for a missing authoritative event, unavailable accessibility alternative, lane conflict, or unmeasured frame/legibility regression.
+Use this compatibility router only to choose the narrow work skill.
 
-This combined skill routes animation systems to `echoes-animation-systems` and effects to `echoes-vfx-effects`; do not duplicate their implementation detail. Use exact authorities `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, `Docs/Archive/SetupAndBuild.md`, current `Docs/` directives/ledgers, and `../WorkstreamControl/ACTIVE_LANES.md`. For runtime/GPU review, read/acquire-or-stop on `../WorkstreamControl/HEAVY_RUN_LOCK.md`, then use `echoes-realtime-visual-review`; route accessibility interaction to `echoes-ui-accessibility-playtest` and gate evidence to `echoes-evidence-gate-review`.
+Animation state, blending, and gameplay binding: [echoes-animation-systems](../echoes-animation-systems/SKILL.md).
+
+Effects, particles, readability, and performance: [echoes-vfx-effects](../echoes-vfx-effects/SKILL.md).
+
+This router does not authorize cross-domain changes or replace the selected skill's required evidence.

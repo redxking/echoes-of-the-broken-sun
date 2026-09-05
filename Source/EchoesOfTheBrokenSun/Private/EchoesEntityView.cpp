@@ -154,15 +154,15 @@ constexpr float EntityPickHeadroomCentimetres = 26.0f;
     return FVector(PlanarScale, PlanarScale, Thickness);
 }
 
-// Same radius on the halo ring mesh (68 cm extent at scale 1) when it is
-// available; falls back to the disc scale on the unit cylinder otherwise.
+// The dedicated ability boundary has a 50 cm outer radius without brackets.
+// Selection glyphs have a different extent and must never define this radius.
 [[nodiscard]] FVector AbilityRingScale(float RadiusCentimetres, float Thickness, bool bRingMesh)
 {
     if (!bRingMesh)
     {
         return AbilityDiscScale(RadiusCentimetres, Thickness);
     }
-    const float PlanarScale = RadiusCentimetres / SelectionHaloExtentCentimetres;
+    const float PlanarScale = RadiusCentimetres / UnitCylinderRadiusCentimetres;
     return FVector(PlanarScale, PlanarScale, 1.0f);
 }
 
@@ -513,6 +513,30 @@ AEchoesEntityView::AEchoesEntityView()
     FutureWellGroundGlyphA->SetCastShadow(false);
     FutureWellGroundGlyphB->SetCastShadow(false);
 
+    FutureWellCollapseRim = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellCollapseRim"));
+    FutureWellCollapseCavity = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellCollapseCavity"));
+    FutureWellCollapseFractureA = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellCollapseFractureA"));
+    FutureWellCollapseFractureB = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("FutureWellCollapseFractureB"));
+    for (UStaticMeshComponent* CollapseComponent : {
+             FutureWellCollapseRim,
+             FutureWellCollapseCavity,
+             FutureWellCollapseFractureA,
+             FutureWellCollapseFractureB})
+    {
+        CollapseComponent->SetupAttachment(SceneRoot);
+        CollapseComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        CollapseComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+        CollapseComponent->SetGenerateOverlapEvents(false);
+        CollapseComponent->SetCanEverAffectNavigation(false);
+        CollapseComponent->SetReceivesDecals(true);
+        CollapseComponent->SetCastShadow(true);
+        CollapseComponent->SetVisibility(false);
+    }
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(
         TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(
@@ -546,6 +570,9 @@ AEchoesEntityView::AEchoesEntityView()
     FutureWellCoreMesh = FutureWellCoreFinder.Object;
     FutureWellGlyphMesh = FutureWellGlyphFinder.Object;
     SelectionHaloMesh = SelectionHaloFinder.Object;
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> AbilityRangeRingFinder(
+        TEXT("/Game/Art/Generated/VFX/SM_VFX_AbilityRangeRing.SM_VFX_AbilityRangeRing"));
+    AbilityRangeRingMesh = AbilityRangeRingFinder.Object;
     BasicMaterial = MaterialFinder.Object;
     AuthoredSurfaceMaterial = ArtMaterialFinder.Succeeded()
                                   ? ArtMaterialFinder.Object
@@ -567,10 +594,8 @@ AEchoesEntityView::AEchoesEntityView()
     HealthBarFill->SetStaticMesh(CubeMesh);
     DeploymentCover->SetStaticMesh(CubeMesh);
     DamageAcknowledgeMarker->SetStaticMesh(CubeMesh);
-    // Ability fields are radius outlines on the selection-halo ring, not solid
-    // discs: a filled cylinder covered the ground under an entire base with a
-    // pale plate in the composed frame (gate 50 base captures).
-    RelaySupplyField->SetStaticMesh(SelectionHaloMesh != nullptr ? SelectionHaloMesh : CylinderMesh);
+    // Fine continuous boundaries preserve the true rule radius at tactical scale.
+    RelaySupplyField->SetStaticMesh(AbilityRangeRingMesh != nullptr ? AbilityRangeRingMesh : CylinderMesh);
     RelaySupplyField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     // Sized from the authored default rule, not from a literal. The live rule
     // set re-derives it in ConfigureAppearance once a simulation exists; this
@@ -585,7 +610,7 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     ChoirIdentityField->SetStaticMesh(CylinderMesh);
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
-    AegisPowerField->SetStaticMesh(SelectionHaloMesh != nullptr ? SelectionHaloMesh : CylinderMesh);
+    AegisPowerField->SetStaticMesh(AbilityRangeRingMesh != nullptr ? AbilityRangeRingMesh : CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeScale3D(AbilityDiscScale(
         AbilityDiscRadiusCentimetres(
@@ -596,6 +621,18 @@ AEchoesEntityView::AEchoesEntityView()
     FutureWellCore->SetStaticMesh(FutureWellCoreMesh);
     FutureWellGroundGlyphA->SetStaticMesh(FutureWellGlyphMesh);
     FutureWellGroundGlyphB->SetStaticMesh(FutureWellGlyphMesh);
+    FutureWellCollapseRim->SetStaticMesh(CylinderMesh);
+    FutureWellCollapseCavity->SetStaticMesh(ConeMesh);
+    FutureWellCollapseFractureA->SetStaticMesh(CubeMesh);
+    FutureWellCollapseFractureB->SetStaticMesh(CubeMesh);
+    for (UStaticMeshComponent* CollapseComponent : {
+             FutureWellCollapseRim,
+             FutureWellCollapseCavity,
+             FutureWellCollapseFractureA,
+             FutureWellCollapseFractureB})
+    {
+        CollapseComponent->SetMaterial(0, AuthoredWorldSurfaceMaterial);
+    }
     GatherBeam->SetStaticMesh(CylinderMesh);
     ConstructionField->SetStaticMesh(CylinderMesh);
     ReshapeTelegraph->SetStaticMesh(CylinderMesh);
@@ -643,6 +680,8 @@ void AEchoesEntityView::ActivateForEntity(
 
 void AEchoesEntityView::PrepareForPool()
 {
+    ResetM01SurveyorRig();
+    ResetM01BulwarkParts();
     SetSelected(false);
     SetActorHiddenInGame(true);
     SetActorTickEnabled(false);
@@ -662,6 +701,7 @@ void AEchoesEntityView::PrepareForPool()
     EntityType = echoes::sim::EntityType::Worker;
     WellChoice = echoes::sim::FutureWellChoice::Dormant;
     FutureWellVisualChoice = echoes::sim::FutureWellChoice::Dormant;
+    WellPendingChoice = echoes::sim::FutureWellChoice::Dormant;
     HitPoints = 0;
     MaxHitPoints = 0;
     DisplayedHealthFraction = 0.0f;
@@ -690,6 +730,8 @@ void AEchoesEntityView::PrepareForPool()
     bUsingAuthoredRosterMesh = false;
     bUsingAuthoredFutureWellMesh = false;
     bUsingAuthoredResourceMesh = false;
+    bWellProtocolActive = false;
+    bFutureWellTerminallyCollapsed = false;
     FutureWellVisualTimeSeconds = 0.0f;
     FutureWellCoreBaseScale = FVector::OneVector;
     SelectionVFXBaseScale = FVector::OneVector;
@@ -1076,7 +1118,11 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
              FutureWellOrbitInner,
              FutureWellCore,
              FutureWellGroundGlyphA,
-             FutureWellGroundGlyphB})
+             FutureWellGroundGlyphB,
+             FutureWellCollapseRim,
+             FutureWellCollapseCavity,
+             FutureWellCollapseFractureA,
+             FutureWellCollapseFractureB})
     {
         // Same gate as every other hide: a pooled view must leave no
         // pickable overlay behind for the next entity to inherit.
@@ -1103,10 +1149,17 @@ void AEchoesEntityView::ResetPresentationComponentsForPool()
     FutureWellCore->SetRelativeLocation(FVector::ZeroVector);
     FutureWellGroundGlyphA->SetRelativeLocation(FVector::ZeroVector);
     FutureWellGroundGlyphB->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellCollapseRim->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellCollapseCavity->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellCollapseFractureA->SetRelativeLocation(FVector::ZeroVector);
+    FutureWellCollapseFractureB->SetRelativeLocation(FVector::ZeroVector);
 
     bGatherBeamActive = false;
+    bM01GatherTargetBound = false;
+    GatherTargetWorld = FVector::ZeroVector;
     bConstructionFieldActive = false;
     bReshapeTelegraphActive = false;
+    bM01ReshapeExpired = false;
     ConstructionFraction = 0.0f;
     GatherBeamPulsePhase = 0.0f;
     ReshapeTelegraphPulsePhase = 0.0f;
@@ -1135,11 +1188,15 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
     {
         if (!bMotionReducedMotionApplied)
         {
-            CurrentHeadingYaw = FMath::FInterpTo(
-                CurrentHeadingYaw,
-                TargetHeadingYaw,
-                DeltaSeconds,
-                10.0f);
+            CurrentHeadingYaw = bUsingM01SurveyorRig
+                // SPEC-MOV-010: one authored 720 deg/s heading sweep. An
+                // exponential prefilter would slow the articulated pelvis
+                // even when its own angular and reach limits permit the turn.
+                ? CurrentHeadingYaw + FMath::Clamp(
+                    FMath::FindDeltaAngleDegrees(CurrentHeadingYaw, TargetHeadingYaw),
+                    -720.0f * FMath::Max(DeltaSeconds, 0.0f),
+                    720.0f * FMath::Max(DeltaSeconds, 0.0f))
+                : FMath::FInterpTo(CurrentHeadingYaw, TargetHeadingYaw, DeltaSeconds, 10.0f);
         }
         else
         {
@@ -1183,6 +1240,7 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
             SelectionVFXEmissiveStrength);
     }
     if (EntityType == echoes::sim::EntityType::FutureWell &&
+        !bFutureWellTerminallyCollapsed &&
         bUsingAuthoredFutureWellMesh &&
         FutureWellOrbitOuter != nullptr &&
         FutureWellOrbitInner != nullptr &&
@@ -1190,7 +1248,7 @@ void AEchoesEntityView::Tick(float DeltaSeconds)
     {
         const bool bReducedMotion =
             Settings != nullptr && Settings->IsReducedMotionEnabled();
-        if (!bReducedMotion)
+        if (!bReducedMotion && !bM01ReshapeExpired)
         {
             FutureWellVisualTimeSeconds += DeltaSeconds;
             const float OuterSpeed =
@@ -1254,10 +1312,28 @@ void AEchoesEntityView::ApplyAuthoritativeState(
 {
     const bool bHadAuthoritativeState = EntityId != 0;
     const int32 PreviousHitPoints = HitPoints;
+    const UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    const bool bNewM01ReshapeExpired = Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+        State.type == echoes::sim::EntityType::FutureWell &&
+        State.wellChoice == echoes::sim::FutureWellChoice::Reshape &&
+        State.reshapeUntilTick == 0;
+    const bool bNewWellProtocolActive = State.wellProtocolTicks > 0 &&
+        State.wellPendingChoice != echoes::sim::FutureWellChoice::Dormant;
+    const bool bNewFutureWellTerminallyCollapsed =
+        State.type == echoes::sim::EntityType::FutureWell &&
+        State.wellChoice == echoes::sim::FutureWellChoice::Harvest &&
+        !bNewWellProtocolActive;
     const bool bNeedsAppearance = EntityId == 0 || EntityType != State.type ||
                                   OwnerPlayerId != State.owner ||
                                   EntityFaction != State.faction ||
                                   WellChoice != State.wellChoice ||
+                                  WellPendingChoice != State.wellPendingChoice ||
+                                  bWellProtocolActive != bNewWellProtocolActive ||
+                                  bFutureWellTerminallyCollapsed !=
+                                      bNewFutureWellTerminallyCollapsed ||
+                                  bM01ReshapeExpired != bNewM01ReshapeExpired ||
                                   bDeployed != State.deployed ||
                                   DeploymentFacing != State.deploymentFacing ||
                                   bRelaySupplyActive != State.relaySupplyActive ||
@@ -1275,6 +1351,10 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     EntityFaction = State.faction;
     EntityType = State.type;
     WellChoice = State.wellChoice;
+    WellPendingChoice = State.wellPendingChoice;
+    bWellProtocolActive = bNewWellProtocolActive;
+    bFutureWellTerminallyCollapsed = bNewFutureWellTerminallyCollapsed;
+    bM01ReshapeExpired = bNewM01ReshapeExpired;
     bDeployed = State.deployed;
     DeploymentFacing = State.deploymentFacing;
     bRelaySupplyActive = State.relaySupplyActive;
@@ -1287,10 +1367,6 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
-    const UEchoesSimulationSubsystem* Bridge =
-        GetWorld() != nullptr
-            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
-            : nullptr;
     if (Bridge == nullptr)
     {
         UE_LOG(
@@ -1332,10 +1408,22 @@ void AEchoesEntityView::ApplyAuthoritativeState(
         bIsWalkerUnit = true;
     }
 
+    bM01GatherTargetBound = EntityType == echoes::sim::EntityType::Worker &&
+        EntityFaction == echoes::sim::Faction::MeridianCompact &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
     bWorkerHarvestingActive =
-        (EntityType == echoes::sim::EntityType::Worker) && (State.harvestTicks > 0);
+        (EntityType == echoes::sim::EntityType::Worker) && State.harvestSlotHeld &&
+        State.harvestTicks > 0 &&
+        State.harvestState == echoes::sim::HarvestState::Harvesting &&
+        (!bM01GatherTargetBound || State.order.type == echoes::sim::OrderType::Gather);
     CarriedCargoAmount = State.cargo;
     bGatherBeamActive = bWorkerHarvestingActive;
+    if (bM01GatherTargetBound && bGatherBeamActive)
+    {
+        // This is the accepted order's destination, not a lookup of a hidden
+        // entity. The ray meets the lower Matter facets during actual work.
+        GatherTargetWorld = Bridge->SimToWorld(State.order.destination) + FVector(0, 0, 65);
+    }
     bConstructionFieldActive = (!State.completed && State.constructionProgress > 0);
     ConstructionFraction = (State.constructionRequired > 0)
         ? FMath::Clamp(static_cast<float>(State.constructionProgress) / static_cast<float>(State.constructionRequired), 0.0f, 1.0f)
@@ -1387,6 +1475,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
 
     if (bTeleport || !bHasAuthoritativeLocation)
     {
+        bM01RigInitialized = false;
         SetActorLocation(
             AuthoritativeWorldLocation,
             false,
@@ -1705,6 +1794,16 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
     BodyPivot->SetRelativeScale3D(FVector(PresentationScale));
+    if (bUsingAuthoredFutureWellMesh)
+    {
+        const auto* M01Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+        if (M01Bridge && M01Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+        {
+            // The physical basin fits the compact authoritative Well footprint.
+            // Its vertical construction, elevated core and semantic rings remain.
+            BodyPivot->SetRelativeScale3D(FVector(.35f, .35f, 1.0f));
+        }
+    }
     BodyMesh->SetVisibility(true, true);
     UStaticMesh* AccentMesh = CubeMesh;
     FVector AccentScale(0.18f, 0.54f, 0.12f);
@@ -1914,9 +2013,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             DefaultRules.poweredAegis.connectionRadiusRaw);
     }
     RelaySupplyField->SetRelativeScale3D(
-        AbilityRingScale(RelaySupplyFieldRadiusCentimetres, 0.025f, SelectionHaloMesh != nullptr));
+        AbilityRingScale(RelaySupplyFieldRadiusCentimetres, 0.025f, AbilityRangeRingMesh != nullptr));
     AegisPowerField->SetRelativeScale3D(
-        AbilityRingScale(AegisPowerFieldRadiusCentimetres, 0.045f, SelectionHaloMesh != nullptr));
+        AbilityRingScale(AegisPowerFieldRadiusCentimetres, 0.045f, AbilityRangeRingMesh != nullptr));
 
     RelaySupplyField->SetVisibility(
         State.relaySupplyActive &&
@@ -2041,7 +2140,9 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
                   : State.owner == 3
                         ? FVector(0.18f, 0.18f, 0.08f)
                         : FVector(0.18f, 0.18f, 0.12f));
-    SetOverlayVisibleAndPickable(OwnerMarker, MarkerMesh != nullptr);
+    SetOverlayVisibleAndPickable(
+        OwnerMarker,
+        MarkerMesh != nullptr && !bFutureWellTerminallyCollapsed);
 
     if (BasicMaterial != nullptr)
     {
@@ -2118,7 +2219,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         if (RelaySupplyFieldMaterial == nullptr)
         {
             RelaySupplyFieldMaterial =
-                CreateOwnedMaterial(BasicMaterial);
+                CreateOwnedMaterial(AbilityRangeRingMesh ? AbilityRangeRingMesh->GetMaterial(0) : AuthoredPresentationVFXMaterial.Get());
             RelaySupplyField->SetMaterial(0, RelaySupplyFieldMaterial);
         }
         if (WaystoneStateFieldMaterial == nullptr)
@@ -2163,7 +2264,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         if (AegisPowerFieldMaterial == nullptr)
         {
             AegisPowerFieldMaterial =
-                CreateOwnedMaterial(BasicMaterial);
+                CreateOwnedMaterial(AbilityRangeRingMesh ? AbilityRangeRingMesh->GetMaterial(0) : AuthoredPresentationVFXMaterial.Get());
             AegisPowerField->SetMaterial(0, AegisPowerFieldMaterial);
         }
         if (RingMaterial != nullptr)
@@ -2191,7 +2292,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         {
             RelaySupplyFieldMaterial->SetVectorParameterValue(
                 EntityColorParameterName,
-                FLinearColor(0.95f, 0.76f, 0.18f));
+                FLinearColor(0.18f, 0.12f, 0.035f));
+            RelaySupplyFieldMaterial->SetScalarParameterValue(EmissiveStrengthParameterName, 0.35f);
         }
         if (WaystoneStateFieldMaterial != nullptr)
         {
@@ -2209,7 +2311,8 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         {
             AegisPowerFieldMaterial->SetVectorParameterValue(
                 EntityColorParameterName,
-                FLinearColor(0.98f, 0.84f, 0.18f));
+                FLinearColor(0.18f, 0.14f, 0.045f));
+            AegisPowerFieldMaterial->SetScalarParameterValue(EmissiveStrengthParameterName, 0.35f);
         }
         const FLinearColor TeamColor = ColorForState(State);
         BaseBodyColor = bUsingAuthoredFutureWellMesh
@@ -2364,7 +2467,39 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             TeamColor);
     }
 
+    ConfigureM01SurveyorRig();
+    ConfigureM01BulwarkParts();
     ConfigureFutureWellPresentation(State);
+    if (bFutureWellTerminallyCollapsed)
+    {
+        // Harvest preserves the authoritative record but removes the landmark
+        // from interaction. The collapsed remnant is environmental evidence,
+        // not a selectable substitute for an exhausted Well.
+        SetSelected(false);
+        SetActorEnableCollision(false);
+        BodyMesh->SetVisibility(false, true);
+        BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        EntityPickProxy->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        SetOverlayVisibleAndPickable(HealthBarBackground, false);
+        SetOverlayVisibleAndPickable(HealthBarFill, false);
+        SetOverlayVisibleAndPickable(OwnerMarker, false);
+        SelectionRing->SetVisibility(false, true);
+    }
+    else if (State.type == echoes::sim::EntityType::FutureWell)
+    {
+        // ApplyAuthoritativeState may recover a retained actor directly from a
+        // terminal snapshot. Restore ordinary landmark picking before its
+        // active presentation is made visible again.
+        SetActorEnableCollision(true);
+        BodyMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        BodyMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+        BodyMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+        BodyMesh->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Block);
+        BodyMesh->SetVisibility(true, true);
+        EntityPickProxy->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        EntityPickProxy->SetCollisionResponseToAllChannels(ECR_Ignore);
+        EntityPickProxy->SetCollisionResponseToChannel(ECC_EchoesEntityPick, ECR_Block);
+    }
     if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewHideUI")))
     {
         if (OwnerMarker != nullptr) OwnerMarker->SetVisibility(false, true);
@@ -2400,9 +2535,80 @@ void AEchoesEntityView::EnsureFutureWellMaterialSet(
     }
 }
 
+void AEchoesEntityView::ConfigureFutureWellCollapseRemnant(bool bVisible)
+{
+    if (FutureWellCollapseRim == nullptr || FutureWellCollapseCavity == nullptr ||
+        FutureWellCollapseFractureA == nullptr || FutureWellCollapseFractureB == nullptr)
+    {
+        return;
+    }
+
+    // The terminal geometry stays above the Z=0 world floor: a flattened copy
+    // of the registered Well basin forms the broken rim around a sealed dark
+    // cavity, with two displaced plates. The parent terrain presentation owns
+    // the wider 600 cm scar; this actor supplies the readable terminal remnant
+    // without an elevation or pathing change.
+    FutureWellCollapseRim->SetStaticMesh(
+        bUsingAuthoredFutureWellMesh && BodyMesh->GetStaticMesh() != nullptr
+            ? BodyMesh->GetStaticMesh()
+            : CylinderMesh);
+    FutureWellCollapseRim->SetRelativeLocation(FVector(0.0f, 0.0f, 9.0f));
+    FutureWellCollapseRim->SetRelativeScale3D(FVector(0.55f, 0.55f, 0.10f));
+    FutureWellCollapseRim->SetRelativeRotation(FRotator::ZeroRotator);
+
+    // A solid, low dark base remains visible from the orthographic camera;
+    // an inverted or below-floor cone would be occluded by the map surface.
+    FutureWellCollapseCavity->SetStaticMesh(CylinderMesh);
+    FutureWellCollapseCavity->SetRelativeLocation(FVector(0.0f, 0.0f, 16.0f));
+    FutureWellCollapseCavity->SetRelativeScale3D(FVector(1.75f, 1.75f, 0.07f));
+    FutureWellCollapseCavity->SetRelativeRotation(FRotator::ZeroRotator);
+
+    FutureWellCollapseFractureA->SetStaticMesh(CubeMesh);
+    FutureWellCollapseFractureA->SetRelativeLocation(FVector(85.0f, -30.0f, 25.0f));
+    FutureWellCollapseFractureA->SetRelativeScale3D(FVector(2.10f, 0.12f, 0.07f));
+    FutureWellCollapseFractureA->SetRelativeRotation(FRotator(0.0f, 33.0f, 0.0f));
+
+    FutureWellCollapseFractureB->SetStaticMesh(CubeMesh);
+    FutureWellCollapseFractureB->SetRelativeLocation(FVector(-70.0f, 42.0f, 25.0f));
+    FutureWellCollapseFractureB->SetRelativeScale3D(FVector(1.75f, 0.10f, 0.07f));
+    FutureWellCollapseFractureB->SetRelativeRotation(FRotator(0.0f, -28.0f, 0.0f));
+
+    for (UStaticMeshComponent* Component : {
+             FutureWellCollapseRim,
+             FutureWellCollapseCavity,
+             FutureWellCollapseFractureA,
+             FutureWellCollapseFractureB})
+    {
+        Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Component->SetCollisionResponseToAllChannels(ECR_Ignore);
+        for (int32 MaterialIndex = 0; MaterialIndex < 4; ++MaterialIndex)
+        {
+            Component->SetMaterial(MaterialIndex, AuthoredWorldSurfaceMaterial);
+        }
+        Component->SetVisibility(bVisible, true);
+    }
+}
+
 void AEchoesEntityView::ConfigureFutureWellPresentation(
     const echoes::sim::Entity& State)
 {
+    if (bFutureWellTerminallyCollapsed)
+    {
+        FutureWellVisualChoice = echoes::sim::FutureWellChoice::Harvest;
+        for (UStaticMeshComponent* Component : {
+                 FutureWellOrbitOuter,
+                 FutureWellOrbitInner,
+                 FutureWellCore,
+                 FutureWellGroundGlyphA,
+                 FutureWellGroundGlyphB})
+        {
+            SetOverlayVisibleAndPickable(Component, false);
+        }
+        ConfigureFutureWellCollapseRemnant(true);
+        return;
+    }
+
+    ConfigureFutureWellCollapseRemnant(false);
     const bool bVisible =
         State.type == echoes::sim::EntityType::FutureWell &&
         bUsingAuthoredFutureWellMesh &&
@@ -2450,7 +2656,17 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
     float SecondaryEmissive = 0.05f;
     float GlowEmissive = 1.25f;
 
-    FutureWellVisualChoice = State.wellChoice;
+    // Freeze the last operating pose when the real window ends. The crossed
+    // glyph keeps the recorded protocol identity; no terrain or owner changes.
+    const bool bKeepExpiredPose = bM01ReshapeExpired &&
+        FutureWellVisualChoice == echoes::sim::FutureWellChoice::Reshape;
+    // The protocol is visually public during its timed commitment. Its terminal
+    // identity remains wellChoice only after the authoritative timer ends.
+    FutureWellVisualChoice =
+        State.wellProtocolTicks > 0 &&
+                State.wellPendingChoice != echoes::sim::FutureWellChoice::Dormant
+            ? State.wellPendingChoice
+            : State.wellChoice;
 #if !UE_BUILD_SHIPPING
     FString PreviewChoice;
     if (FParse::Value(
@@ -2544,13 +2760,34 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
         case echoes::sim::FutureWellChoice::Dormant:
             break;
     }
+    if (bM01ReshapeExpired)
+    {
+        SecondaryColor = FLinearColor(0.06f, 0.055f, 0.07f);
+        GlowColor = FLinearColor(0.10f, 0.065f, 0.15f);
+        SecondaryEmissive = 0.02f;
+        GlowEmissive = 0.18f;
+    }
 
+    const auto* M01LayoutBridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    const bool bM01Layout = M01LayoutBridge && M01LayoutBridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    for (UStaticMeshComponent* Ornament : {FutureWellOrbitOuter, FutureWellOrbitInner, FutureWellCore})
+        Ornament->SetCastShadow(!bM01Layout);
+    if (bM01Layout)
+    {
+        // Keep the legal worker approach outside the solid machinery. Protocol
+        // heights, tilts, count, timing and external range cues keep their meaning.
+        OuterScale *= .55f;
+        InnerScale *= .55f;
+        CoreScale.X *= .7f; CoreScale.Y *= .7f;
+        GlyphAScale.X *= .35f; GlyphAScale.Y *= .35f;
+        GlyphBScale.X *= .35f; GlyphBScale.Y *= .35f;
+    }
     FutureWellOrbitOuter->SetRelativeLocation(OuterLocation);
     FutureWellOrbitOuter->SetRelativeScale3D(OuterScale);
-    FutureWellOrbitOuter->SetRelativeRotation(OuterRotation);
+    if (!bKeepExpiredPose) FutureWellOrbitOuter->SetRelativeRotation(OuterRotation);
     FutureWellOrbitInner->SetRelativeLocation(InnerLocation);
     FutureWellOrbitInner->SetRelativeScale3D(InnerScale);
-    FutureWellOrbitInner->SetRelativeRotation(InnerRotation);
+    if (!bKeepExpiredPose) FutureWellOrbitInner->SetRelativeRotation(InnerRotation);
     FutureWellCore->SetRelativeLocation(CoreLocation);
     FutureWellCoreBaseScale = CoreScale;
     FutureWellCore->SetRelativeScale3D(CoreScale);
@@ -2656,6 +2893,18 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
         GlowEmissive * 0.72f,
         ESurfaceTextureFamily::VitrifiedGlass,
         GlowEmissive * 0.30f);
+    const UEchoesSimulationSubsystem* Mission = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (Mission != nullptr && Mission->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    {
+        // The civic basin is a worn working surface. Keep the protocol rings
+        // distinct without letting a broad specular reflection erase the dais.
+        for (UMaterialInstanceDynamic* Material : BodyMaterials)
+        {
+            Material->SetScalarParameterValue(MetallicParameterName, 0.08f);
+            Material->SetScalarParameterValue(RoughnessParameterName, 0.78f);
+        }
+    }
     ApplyPalette(
         FutureWellOrbitOuterMaterials,
         SecondaryEmissive * 0.30f,
@@ -2697,6 +2946,9 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
 
 bool AEchoesEntityView::IsDeploymentCoverVisible() const
 {
+    if (bUsingM01BulwarkParts)
+        return bDeployed && M01BulwarkWings.Num() == 2 &&
+            M01BulwarkWings[0]->IsVisible() && M01BulwarkWings[1]->IsVisible();
     return DeploymentCover != nullptr && DeploymentCover->IsVisible();
 }
 
@@ -2741,6 +2993,19 @@ bool AEchoesEntityView::IsFutureWellPresentationVisible() const
            FutureWellCore->IsVisible();
 }
 
+bool AEchoesEntityView::IsFutureWellCollapsedRemnantVisible() const
+{
+    return bFutureWellTerminallyCollapsed &&
+           FutureWellCollapseRim != nullptr &&
+           FutureWellCollapseRim->IsVisible() &&
+           FutureWellCollapseCavity != nullptr &&
+           FutureWellCollapseCavity->IsVisible() &&
+           FutureWellCollapseFractureA != nullptr &&
+           FutureWellCollapseFractureA->IsVisible() &&
+           FutureWellCollapseFractureB != nullptr &&
+           FutureWellCollapseFractureB->IsVisible();
+}
+
 void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
 {
     if (BodyMaterial != nullptr)
@@ -2751,7 +3016,7 @@ void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
 
 void AEchoesEntityView::SetSelected(bool bInSelected)
 {
-    bSelected = bInSelected;
+    bSelected = bFutureWellTerminallyCollapsed ? false : bInSelected;
     SelectionVFXTimeSeconds = 0.0f;
     SelectionRing->SetRelativeRotation(FRotator::ZeroRotator);
     SelectionRing->SetRelativeScale3D(SelectionVFXBaseScale);
@@ -2806,7 +3071,8 @@ void AEchoesEntityView::UpdateHealthBar()
     {
         return;
     }
-    const bool bShowHealth = bSelected || DisplayedHealthFraction < 0.999f;
+    const bool bShowHealth = !bFutureWellTerminallyCollapsed &&
+        (bSelected || DisplayedHealthFraction < 0.999f);
     SetOverlayVisibleAndPickable(HealthBarBackground, bShowHealth);
     SetOverlayVisibleAndPickable(
         HealthBarFill, bShowHealth && DisplayedHealthFraction > 0.0f);
@@ -2877,6 +3143,10 @@ uint8 AEchoesEntityView::GetOwnerMarkerVariant() const
 
 FString AEchoesEntityView::GetDisplayName() const
 {
+    const auto* Mission = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (Mission && Mission->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+        EntityId != 0 && EntityId == Mission->GetArchiveCarrierId())
+        return TEXT("Archive Carrier");
     if (EntityFaction == echoes::sim::Faction::HollowChoir)
     {
         switch (EntityType)
@@ -2950,6 +3220,14 @@ void AEchoesEntityView::UpdateComponentMotion(
 {
     if (BodyMesh == nullptr)
     {
+        return;
+    }
+
+    if (bUsingM01SurveyorRig)
+    {
+        UpdateM01SurveyorRig(DeltaSeconds, bReducedMotion);
+        UpdateTacticalStateMotion(DeltaSeconds, bReducedMotion);
+        UpdateWorkerResourceMotion(DeltaSeconds, bReducedMotion);
         return;
     }
 
@@ -3103,6 +3381,7 @@ void AEchoesEntityView::UpdateIdleMotion(
     {
         const float ServoCycle = FMath::Sin(IdlePhaseTime * 0.8f);
         const float ServoTick =
+            (bUsingM01BulwarkParts && bDeployed) ? 0.0f :
             (ServoCycle > 0.85f) ? (ServoCycle - 0.85f) * 6.0f * 0.8f : 0.0f;
         BodyMesh->SetRelativeLocation(FVector::ZeroVector);
         BodyMesh->SetRelativeRotation(
@@ -3164,6 +3443,7 @@ void AEchoesEntityView::UpdateTacticalStateMotion(
     float DeltaSeconds,
     bool bReducedMotion)
 {
+    UpdateM01BulwarkParts(DeltaSeconds, bReducedMotion);
     if (DeploymentCover != nullptr && DeploymentCover->IsVisible())
     {
         const FVector TargetCoverScale =
@@ -3299,7 +3579,8 @@ void AEchoesEntityView::UpdateCombatVFX(
         }
 
         const float BaseEmissive = bReducedFlashing ? 1.0f : 3.5f;
-        const float Pulse = bReducedMotion ? 0.0f : FMath::Sin(GatherBeamPulsePhase) * 0.5f;
+        const float Pulse = bReducedMotion || (bM01GatherTargetBound && bReducedFlashing)
+            ? 0.0f : FMath::Sin(GatherBeamPulsePhase) * 0.5f;
         if (GatherBeamMaterial != nullptr)
         {
             GatherBeamMaterial->SetVectorParameterValue(TEXT("Color"), BeamColor);
@@ -3308,10 +3589,32 @@ void AEchoesEntityView::UpdateCombatVFX(
                 BaseEmissive + Pulse);
         }
 
-        GatherBeam->SetRelativeLocation(FVector(40.0f, 0.0f, 25.0f));
-        GatherBeam->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
-        GatherBeam->SetRelativeScale3D(FVector(0.04f, 0.04f, 0.75f));
-        GatherBeam->SetVisibility(true);
+        bool bShowBeam = true;
+        if (bM01GatherTargetBound && BodyMesh != nullptr)
+        {
+            // Registered Surveyor rotary-drill tip, in source-mesh coordinates.
+            // Component transform includes heading, work pose and readability scale.
+            const FVector Source = BodyMesh->GetComponentTransform().TransformPosition(FVector(82, 52, 54));
+            const FVector Delta = GatherTargetWorld - Source;
+            const float Length = Delta.Size();
+            if (Length < 1.0f || Length > 350.0f)
+            {
+                bShowBeam = false;
+            }
+            else
+            {
+                GatherBeam->SetWorldLocation((Source + GatherTargetWorld) * .5f);
+                GatherBeam->SetWorldRotation(FQuat::FindBetweenNormals(FVector::UpVector, Delta / Length));
+                GatherBeam->SetWorldScale3D(FVector(.035f, .035f, Length / 100.0f));
+            }
+        }
+        else
+        {
+            GatherBeam->SetRelativeLocation(FVector(40.0f, 0.0f, 25.0f));
+            GatherBeam->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+            GatherBeam->SetRelativeScale3D(FVector(0.04f, 0.04f, 0.75f));
+        }
+        GatherBeam->SetVisibility(bShowBeam);
     }
     else if (GatherBeam != nullptr)
     {
@@ -3392,5 +3695,3 @@ void AEchoesEntityView::UpdateCombatVFX(
         ReshapeTelegraph->SetVisibility(false);
     }
 }
-
-

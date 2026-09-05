@@ -5,113 +5,8 @@ project_root="${0:A:h:h}"
 ue_root="${UE_ROOT:-/Users/Shared/Epic Games/UE_5.8}"
 editor="$ue_root/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
 project="$project_root/EchoesOfTheBrokenSun.uproject"
-report_dir="$project_root/BuildArtifacts/Automation"
+report_dir="${ECHOES_AUTOMATION_REPORT_DIR:-$project_root/BuildArtifacts/Automation/$(date -u +%Y%m%dT%H%M%SZ)-$$}"
 report="$report_dir/index.json"
-player_save_dir="$project_root/Saved/SaveGames"
-temporary_base="${TMPDIR:-/tmp}"
-suite_storage_root=""
-snapshot_root=""
-
-cleanup_temporary_roots() {
-  if [[ -n "$suite_storage_root" &&
-        -d "$suite_storage_root" &&
-        "${suite_storage_root:t}" == EchoesAutomationSuite.* ]]; then
-    rm -rf "$suite_storage_root"
-  fi
-  if [[ -n "$snapshot_root" &&
-        -d "$snapshot_root" &&
-        "${snapshot_root:t}" == EchoesSaveSnapshot.* ]]; then
-    rm -rf "$snapshot_root"
-  fi
-}
-trap cleanup_temporary_roots EXIT INT TERM
-
-suite_storage_root="$(mktemp -d "$temporary_base/EchoesAutomationSuite.XXXXXX")"
-snapshot_root="$(mktemp -d "$temporary_base/EchoesSaveSnapshot.XXXXXX")"
-before_manifest="$snapshot_root/before.manifest"
-after_manifest="$snapshot_root/after.manifest"
-
-snapshot_player_saves() {
-  local destination="$1"
-  /usr/bin/python3 - "$player_save_dir" "$destination" <<'PY'
-import hashlib
-import json
-import os
-import stat
-import sys
-
-root, destination = sys.argv[1:]
-
-
-def signature(info):
-    return {
-        "device": info.st_dev,
-        "inode": info.st_ino,
-        "mode": info.st_mode,
-        "size": info.st_size,
-        "mtime_ns": info.st_mtime_ns,
-    }
-
-
-entries = []
-if not os.path.lexists(root):
-    entries.append({"path": "", "type": "root-absent"})
-else:
-    root_before = os.lstat(root)
-    if not stat.S_ISDIR(root_before.st_mode):
-        raise RuntimeError("Saved/SaveGames exists but is not a directory")
-
-    def walk(directory, relative_directory):
-        directory_before = os.lstat(directory)
-        entries.append({
-            "path": relative_directory,
-            "type": "directory",
-            **signature(directory_before),
-        })
-        children = sorted(
-            list(os.scandir(directory)),
-            key=lambda child: os.fsencode(child.name),
-        )
-        for child in children:
-            relative_path = os.path.join(relative_directory, child.name)
-            child_info = child.stat(follow_symlinks=False)
-            record = {"path": relative_path, **signature(child_info)}
-            if stat.S_ISLNK(child_info.st_mode):
-                record.update(type="symlink", target=os.readlink(child.path))
-                entries.append(record)
-            elif stat.S_ISDIR(child_info.st_mode):
-                walk(child.path, relative_path)
-            elif stat.S_ISREG(child_info.st_mode):
-                digest = hashlib.sha256()
-                with open(child.path, "rb") as source:
-                    for block in iter(lambda: source.read(1024 * 1024), b""):
-                        digest.update(block)
-                child_after = os.lstat(child.path)
-                if signature(child_info) != signature(child_after):
-                    raise RuntimeError(
-                        f"Save file changed while it was being hashed: {relative_path!r}"
-                    )
-                record.update(type="file", sha256=digest.hexdigest())
-                entries.append(record)
-            else:
-                record.update(type="other")
-                entries.append(record)
-        directory_after = os.lstat(directory)
-        if signature(directory_before) != signature(directory_after):
-            raise RuntimeError(
-                f"Save directory changed while it was being inventoried: {relative_directory!r}"
-            )
-
-    walk(root, "")
-    root_after = os.lstat(root)
-    if signature(root_before) != signature(root_after):
-        raise RuntimeError("Saved/SaveGames changed during snapshot collection")
-
-with open(destination, "w", encoding="utf-8", newline="\n") as output:
-    json.dump(entries, output, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-    output.write("\n")
-PY
-}
 
 if [[ ! -x "$editor" ]]; then
   print -u2 "Unreal Editor is not available at: $editor"
@@ -119,49 +14,49 @@ if [[ ! -x "$editor" ]]; then
 fi
 
 mkdir -p "$project_root/BuildArtifacts"
-rm -rf "$report_dir"
-if ! snapshot_player_saves "$before_manifest"; then
-  print -u2 "[ECHOES_PLAYER_SAVE_SNAPSHOT_FAILED] Could not capture the pre-suite SaveGames manifest."
-  exit 9
+if [[ -e "$report_dir" ]]; then
+  print -u2 "Automation report directory already exists; choose a fresh directory: $report_dir"
+  exit 3
 fi
 
 set +e
-"$editor" "$project" \
+/usr/bin/python3 "$project_root/Scripts/echoes_test_sandbox.py" \
+  --editor "$editor" \
+  --project "$project" \
+  --report-dir "$report_dir" \
+  -- \
   -unattended -nop4 -nosplash -nullrhi -Multiprocess \
-  -EchoesSaveGameDirectory="$suite_storage_root" \
   -ExecCmds="Automation RunTests Echoes.; Quit" \
   -TestExit="Automation Test Queue Empty" \
-  -ReportExportPath="$report_dir"
+  -ReportExportPath="$report_dir" \
+  -abslog="$report_dir/Engine.log"
 editor_status=$?
 set -e
 
-if ! snapshot_player_saves "$after_manifest"; then
-  print -u2 "[ECHOES_PLAYER_SAVE_SNAPSHOT_FAILED] Could not capture the post-suite SaveGames manifest."
+isolation_report="$report_dir/SaveIsolation/launcher-result.json"
+if [[ ! -f "$isolation_report" ]]; then
+  print -u2 "[ECHOES_TEST_SANDBOX_REPORT_MISSING] The isolated launcher did not produce a result report."
   exit 9
 fi
-mkdir -p "$report_dir/SaveIsolation"
-cp "$before_manifest" "$report_dir/SaveIsolation/player-save-before.manifest"
-cp "$after_manifest" "$report_dir/SaveIsolation/player-save-after.manifest"
+if ! /usr/bin/python3 - "$isolation_report" <<'PY'
+import json
+import sys
 
-if ! cmp -s "$before_manifest" "$after_manifest"; then
-  diff -u "$before_manifest" "$after_manifest" \
-    > "$report_dir/SaveIsolation/player-save-diff.txt" || true
-  print -u2 "[ECHOES_PLAYER_SAVE_GUARD_FAILED] Automation changed the real Saved/SaveGames tree."
-  print -u2 "No player files were deleted or restored; inspect the retained manifests and diff."
-  exit 7
-fi
-
-if [[ -n "$(find "$suite_storage_root" -mindepth 1 -print -quit)" ]]; then
-  find "$suite_storage_root" -mindepth 1 -print | LC_ALL=C sort \
-    > "$report_dir/SaveIsolation/scoped-storage-leftovers.txt"
-  print -u2 "[ECHOES_TEST_STORAGE_CLEANUP_FAILED] GUID-scoped automation storage was not empty after the suite."
+with open(sys.argv[1], encoding="utf-8") as source:
+    report = json.load(source)
+if not report.get("synthetic_denial_probe"):
+    raise SystemExit("synthetic sandbox denial probe did not pass")
+if not report.get("protected_policy_clauses_verified"):
+    raise SystemExit("targeted production deny clauses were not verified")
+if not report.get("scoped_save_directory_empty_after_run"):
+    raise SystemExit("scoped SaveGames directory was not empty after the suite")
+if not report.get("cleanup_succeeded") or report.get("prelaunch_failure"):
+    raise SystemExit("sandbox launch or cleanup did not complete successfully")
+PY
+then
+  print -u2 "[ECHOES_TEST_SANDBOX_GUARD_FAILED] Inspect: $isolation_report"
   exit 8
 fi
-
-print -r -- "realSaveGamesUnchanged=true" \
-  > "$report_dir/SaveIsolation/result.txt"
-print -r -- "scopedStorageEmpty=true" \
-  >> "$report_dir/SaveIsolation/result.txt"
 
 if (( editor_status != 0 )); then
   print -u2 "Unreal Editor exited with status $editor_status."
@@ -184,17 +79,9 @@ read_report_value() {
   /usr/bin/plutil -extract "$1" raw "$report"
 }
 
-if [[ "$(read_report_value succeeded)" != "77" ||
-      "$(read_report_value succeededWithWarnings)" != "0" ||
-      "$(read_report_value failed)" != "0" ||
-      "$(read_report_value notRun)" != "0" ||
-      "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the expected 77/77 clean result."
-  print -u2 "Inspect: $report"
-  exit 4
-fi
-
 expected_tests=(
+  "Echoes.Runtime.Map.ContinuousCliffGeometry"
+  "Echoes.Runtime.Map.M01ExteriorBanks"
   "Echoes.Runtime.Accessibility.GameUserSettings"
   "Echoes.Runtime.Audio.MixArchitecture"
   "Echoes.Runtime.Audio.MusicAmbience"
@@ -252,6 +139,11 @@ expected_tests=(
   "Echoes.Runtime.Map.GlassScarDressing"
   "Echoes.Runtime.Map.LumeReachDressing"
   "Echoes.Runtime.Map.PresentationProfiles"
+  "Echoes.Runtime.Map.WorldKitVisibility"
+  "Echoes.Runtime.Map.MissionLandmarkVisibility"
+  "Echoes.Runtime.Map.CampaignTerrain"
+  "Echoes.Runtime.Persistence.CampaignMapCheckpoint"
+  "Echoes.Runtime.Persistence.CampaignMapAdmission"
   "Echoes.Runtime.Network.ProtocolAdmission"
   "Echoes.Runtime.Network.OnlineFrontDoor"
   "Echoes.Runtime.Performance.FourTeamScale"
@@ -264,6 +156,10 @@ expected_tests=(
   "Echoes.Runtime.Presentation.DestructionVFX"
   "Echoes.Runtime.Presentation.FormationLayout"
   "Echoes.Runtime.Presentation.MotionFamilies"
+  "Echoes.Runtime.Presentation.M01BulwarkParts"
+  "Echoes.Runtime.Presentation.M01SurveyorRig"
+  "Echoes.Runtime.Presentation.M01WellExpiry"
+  "Echoes.Runtime.Presentation.M01WorkContact"
   "Echoes.Runtime.Presentation.Pooling"
   "Echoes.Runtime.Presentation.ProductionFog"
   "Echoes.Runtime.Persistence.QuickSaveLoad"
@@ -272,13 +168,36 @@ expected_tests=(
   "Echoes.Runtime.Persistence.AutosaveRecovery"
   "Echoes.Runtime.Presentation.VisualTheme"
   "Echoes.Runtime.Visibility.ActorLifecycle"
+  "Echoes.Runtime.Campaign.OperationsMap"
+  "Echoes.Runtime.Campaign.FailureReasonDisplay"
 )
 
+num_expected="${#expected_tests[@]}"
+test_max_index=$(( num_expected - 1 ))
+typeset -A expected_inventory
 for expected_test in "${expected_tests[@]}"; do
-  matched=false
-  for test_index in {0..76}; do
+  if [[ -n "${expected_inventory[$expected_test]-}" ]]; then
+    print -u2 "Expected Unreal automation inventory contains a duplicate: $expected_test"
+    exit 4
+  fi
+  expected_inventory[$expected_test]=1
+done
+
+if [[ "$(read_report_value succeeded)" != "$num_expected" ||
+      "$(read_report_value succeededWithWarnings)" != "0" ||
+      "$(read_report_value failed)" != "0" ||
+      "$(read_report_value notRun)" != "0" ||
+      "$(read_report_value inProcess)" != "0" ]]; then
+  print -u2 "Unreal automation totals did not match the expected ${num_expected}/${num_expected} clean result."
+  print -u2 "Inspect: $report"
+  exit 4
+fi
+
+for expected_test in "${expected_tests[@]}"; do
+  match_count=0
+  for (( test_index=0; test_index<=test_max_index; test_index++ )); do
     if [[ "$(read_report_value tests.$test_index.fullTestPath)" == "$expected_test" ]]; then
-      matched=true
+      match_count=$(( match_count + 1 ))
       if [[ "$(read_report_value tests.$test_index.state)" != "Success" ||
             "$(read_report_value tests.$test_index.errors)" != "0" ||
             "$(read_report_value tests.$test_index.warnings)" != "0" ]]; then
@@ -288,13 +207,18 @@ for expected_test in "${expected_tests[@]}"; do
       fi
     fi
   done
-  if [[ "$matched" != true ]]; then
+  if (( match_count == 0 )); then
     print -u2 "Expected Unreal automation test was absent: $expected_test"
     print -u2 "Inspect: $report"
     exit 6
   fi
+  if (( match_count > 1 )); then
+    print -u2 "Unreal automation inventory contains a duplicate: $expected_test"
+    print -u2 "Inspect: $report"
+    exit 4
+  fi
 done
 
-print "Unreal automation passed: 77/77 Echoes tests, 0 warnings, 0 errors."
-print "Player SaveGames guard passed: sampled tree unchanged; scoped storage empty."
+print "Unreal automation passed: ${num_expected}/${num_expected} Echoes tests, 0 warnings, 0 errors."
+print "Save isolation boundary passed: exact deny clauses and synthetic protected-data denial passed; scoped storage was empty."
 print "Evidence report: $report"

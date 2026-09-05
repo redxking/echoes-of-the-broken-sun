@@ -15,6 +15,92 @@ fi
 
 mkdir -p "$project_root/Saved/Logs"
 
+if [[ "${ECHOES_M01_BULWARK_PARTS_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_M01_BULWARK_PARTS_READY\].*revision=m01-bulwark-deployment-parts-v1.*assets=3 lods=2 collision=0' "$log"
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_M01_SURVEYOR_PARTS_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_M01_SURVEYOR_PARTS_READY\].*revision=m01-surveyor-articulation-v1.*assets=4 lods=2 collision=0' "$log"
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_M01_SHROUD_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_M01_SHROUD_READY\].*revision=m01-shroud-unlit-v3 assets=2 opaque=true' "$log"
+  if rg -q 'LogPython: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_CLIFF_MATERIAL_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_CLIFF_MATERIAL_READY\].*revision=cliff-surface-3d-basalt-v4 assets=1 emissive=false' "$log"
+  if rg -q 'LogPython: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_MERIDIAN_FACING_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_MERIDIAN_FACING_READY\].*revision=meridian-forward-axis-v4 assets=2 lods=2' "$log"
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_EVACUATION_PROPS_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_EVACUATION_PROPS_READY\].*assets=6 lods=2 collision=0' "$log"
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+if [[ "${ECHOES_ABILITY_RING_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  rg -q '\[ECHOES_ABILITY_RING_READY\].*assets=1 lods=2 collision=0' "$log"
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+    exit 13
+  fi
+  exit 0
+fi
+
+# World-only regeneration leaves roster, VFX, texture masters and unrelated assets intact.
+if [[ "${ECHOES_WORLD_KITS_ONLY:-0}" == "1" ]]; then
+  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$generator" -abslog="$log"
+  if ! rg -q '\[ECHOES_WORLD_KITS_READY\].*assets=16.*authority=presentation' "$log"; then
+    print -u2 "World-kit generation did not finish; inspect $log"
+    exit 12
+  fi
+  if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material|Missing Clamp input' "$log"; then
+    print -u2 "World-kit generation reported an error; inspect $log"
+    exit 13
+  fi
+  print "World-kit candidates generated; rendered qualification remains separate."
+  exit 0
+fi
+
 purge="$project_root/Scripts/purge_stale_art_masters.py"
 purge_log="$project_root/Saved/Logs/ArtAssetPurge.log"
 
@@ -46,7 +132,7 @@ if ! grep -Eq '\[ECHOES_ROSTER_READY\].*revision=roster-silhouette-v2.*assets=24
   exit 11
 fi
 
-if ! grep -Eq '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-textured-v6.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
+if ! grep -Eq '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-textured-v7.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
   print -u2 "The world-surface material is not qualified for instanced terrain."
   print -u2 "Inspect: $log"
   exit 10
@@ -70,7 +156,7 @@ if ! grep -Eq '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v1.*uvChann
   exit 5
 fi
 
-if ! grep -Eq '\[ECHOES_BURIED_CAUSEWAY_READY\].*revision=buried-causeway-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+if ! grep -Eq '\[ECHOES_BURIED_CAUSEWAY_READY\].*revision=buried-causeway-production-v3.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
   print -u2 "The Buried Causeway route-kit audit did not pass."
   print -u2 "Inspect: $log"
   exit 8

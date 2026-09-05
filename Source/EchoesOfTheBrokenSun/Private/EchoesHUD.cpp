@@ -12,6 +12,8 @@
 #include "EchoesCommandDeckModel.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesTitleOverlayLayout.h"
+#include "EchoesCampaignMapLayout.h"
+#include "EchoesCampaignRewards.h"
 #include "EchoesEntityView.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameUserSettings.h"
@@ -35,6 +37,45 @@
 
 namespace
 {
+// Measure with the font actually drawn. Preserve every word and explicit newline;
+// split an overlong token only when it cannot fit on an otherwise empty line.
+TArray<FString> WrapCanvasText(UCanvas* Canvas, UFont* Font, const FString& Text,
+    float Width, float Scale)
+{
+    TArray<FString> Lines;
+    if (!Canvas || !Font || Text.IsEmpty() || Width <= 0.0f) return Lines;
+    TArray<FString> Paragraphs;
+    Text.ParseIntoArray(Paragraphs, TEXT("\n"), false);
+    const auto Fits = [&](const FString& Value)
+    {
+        float X = 0.0f, Y = 0.0f;
+        Canvas->TextSize(Font, Value, X, Y, Scale, Scale);
+        return X <= Width;
+    };
+    for (const FString& Paragraph : Paragraphs)
+    {
+        TArray<FString> Words;
+        Paragraph.ParseIntoArrayWS(Words);
+        FString Line;
+        for (FString Word : Words)
+        {
+            const FString Candidate = Line.IsEmpty() ? Word : Line + TEXT(" ") + Word;
+            if (Fits(Candidate)) { Line = Candidate; continue; }
+            if (!Line.IsEmpty()) { Lines.Add(Line); Line.Reset(); }
+            while (!Word.IsEmpty() && !Fits(Word))
+            {
+                int32 Count = 1;
+                while (Count < Word.Len() && Fits(Word.Left(Count + 1))) ++Count;
+                Lines.Add(Word.Left(Count));
+                Word.RightChopInline(Count);
+            }
+            Line = Word;
+        }
+        if (!Line.IsEmpty() || Words.IsEmpty()) Lines.Add(Line);
+    }
+    return Lines;
+}
+
 /**
  * FOG-001 lookup. Resolves an entity id inside the player-scoped view only, so
  * presentation can never learn the position of something the local player is
@@ -105,6 +146,36 @@ const TCHAR* WellChoiceDisplayName(echoes::sim::FutureWellChoice Choice)
         case echoes::sim::FutureWellChoice::Reshape: return TEXT("RESHAPE");
         default: return TEXT("UNRESOLVED");
     }
+}
+
+// Only the public Harvest countdown bypasses fog. Capture details remain
+// local-owner information; a contest is observable feedback about that Well.
+FString FutureWellStatus(const echoes::sim::Simulation& Sim)
+{
+    const auto Telegraphs = Sim.PublicFutureWellTelegraphs();
+    if (!Telegraphs.empty())
+    {
+        const auto& Event = Telegraphs.front();
+        return FString::Printf(TEXT("HARVEST IN %.1fs  //  WELL %d, %d  //  PERMANENT COLLAPSE"),
+            static_cast<double>(Event.remainingTicks) / Sim.Config().ticksPerSecond,
+            Event.position.x.FloorToInt(), Event.position.y.FloorToInt());
+    }
+    for (const auto& Well : Sim.Entities())
+    {
+        if (Well.type != echoes::sim::EntityType::FutureWell) continue;
+        if (Well.wellCapturePlayer == UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            return FString::Printf(TEXT("WELL CAPTURE %u/300  //  %s"),
+                static_cast<unsigned>(Well.wellCaptureProgress),
+                Sim.IsFutureWellContested(Well) ? TEXT("CONTESTED — CLEAR THE ZONE")
+                                              : TEXT("KEEP YOUR WORKER IN THE ZONE"));
+        }
+        if (Well.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Well.wellChoice == echoes::sim::FutureWellChoice::Preserve &&
+            Sim.IsFutureWellContested(Well))
+            return TEXT("PRESERVED WELL CONTESTED  //  DAWN INCOME AND RADAR PAUSED");
+    }
+    return {};
 }
 
 const TCHAR* ChoirIdentityDisplayName(
@@ -397,6 +468,8 @@ void AEchoesHUD::DrawHUD()
             : nullptr;
     const echoes::sim::Simulation* Sim =
         Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+    const bool bM01Hud = Bridge != nullptr &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
 
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
@@ -490,6 +563,13 @@ void AEchoesHUD::DrawHUD()
         return;
     }
 
+    if (EchoesController != nullptr &&
+        EchoesController->IsCampaignOperationsMapVisible())
+    {
+        DrawCampaignOperationsMap(EchoesController, Settings);
+        return;
+    }
+
     if (EchoesController != nullptr && EchoesController->IsTitleScreenVisible())
     {
         if (EchoesController->IsSkirmishSetupVisible())
@@ -561,7 +641,8 @@ void AEchoesHUD::DrawHUD()
         PanelWidth,
         HudLayout.MainPanel.GetSize().Y);
     DrawText(
-        TEXT("ECHOES OF THE BROKEN SUN  //  SORYN TACTICAL AUTHORITY"),
+        bM01Hud ? TEXT("ECHOES OF THE BROKEN SUN")
+                : TEXT("ECHOES OF THE BROKEN SUN  //  SORYN TACTICAL AUTHORITY"),
         AccentColor,
         TextX,
         HudY(13.0f),
@@ -604,6 +685,15 @@ void AEchoesHUD::DrawHUD()
                 *MatchState,
                 static_cast<unsigned long long>(Sim->CurrentTick()),
                 Sim->Config().ticksPerSecond);
+            if (bM01Hud)
+            {
+                ResourceLine = FString::Printf(
+                    TEXT("Matter %d    Dawnshards %d    Logistics %d/%d    %s"),
+                    Player->resources.material, Player->resources.dawnshards,
+                    Sim->PopulationUsed(UEchoesSimulationSubsystem::LocalPlayerId),
+                    Sim->PopulationCapacity(UEchoesSimulationSubsystem::LocalPlayerId),
+                    *MatchState);
+            }
             const echoes::presentation::FFactionTechnologyProfile Profile =
                 echoes::presentation::TechnologyProfile(Player->faction);
             const echoes::sim::ResearchType First = Profile.TierOne;
@@ -619,6 +709,11 @@ void AEchoesHUD::DrawHUD()
                     TEXT("RESEARCH  %s  %d%%     [X] cancel selected producer // NO REFUND"),
                     ResearchDisplayName(Player->activeResearch),
                     Percent);
+                if (bM01Hud)
+                {
+                    ResearchLine = FString::Printf(
+                        TEXT("RESEARCH IN PROGRESS %d%% // F2 TECHNOLOGY"), Percent);
+                }
             }
             else if (Player->lastInterruptedResearch !=
                      echoes::sim::ResearchType::None)
@@ -626,6 +721,10 @@ void AEchoesHUD::DrawHUD()
                 ResearchLine = FString::Printf(
                     TEXT("RESEARCH INTERRUPTED  %s     NO REFUND"),
                     ResearchDisplayName(Player->lastInterruptedResearch));
+                if (bM01Hud)
+                {
+                    ResearchLine = TEXT("RESEARCH INTERRUPTED // NO REFUND");
+                }
             }
             else
             {
@@ -635,6 +734,11 @@ void AEchoesHUD::DrawHUD()
                 ResearchLine = FString::Printf(
                     TEXT("RESEARCH  %d/2 complete     [Shift+R] next from selected production structure     [K/L] save/load"),
                     Completed);
+                if (bM01Hud)
+                {
+                    ResearchLine = FString::Printf(
+                        TEXT("RESEARCH %d/2 // F2 TECHNOLOGY"), Completed);
+                }
             }
         }
     }
@@ -657,6 +761,11 @@ void AEchoesHUD::DrawHUD()
                 EchoesController->GetNetworkPresentedEntityCount());
         }
     }
+    if (Sim != nullptr)
+    {
+        const FString WellStatus = FutureWellStatus(*Sim);
+        if (!WellStatus.IsEmpty()) ResearchLine = WellStatus;
+    }
     if (HudLayout.bResourceVisible)
     {
         DrawRect(
@@ -673,20 +782,23 @@ void AEchoesHUD::DrawHUD()
             EchoesTypeface::Chrome(),
             0.78f * HudScale,
             false);
-        DrawText(
-            ResourceLine,
-            FLinearColor::White,
-            HudLayout.ResourcePanel.Min.X + 16.0f,
-            HudLayout.ResourcePanel.Min.Y + 26.0f * HudScale,
-            EchoesTypeface::Readout(),
-            1.0f * HudScale,
-            false);
+        const TArray<FString> ResourceLines = WrapCanvasText(
+            Canvas, EchoesTypeface::Readout(), ResourceLine,
+            HudLayout.ResourcePanel.GetSize().X - 32.0f, HudScale);
+        float ResourceTop = HudLayout.ResourcePanel.Min.Y + 25.0f * HudScale;
+        for (const FString& Line : ResourceLines)
+        {
+            DrawText(Line, Theme.TextPrimary,
+                     HudLayout.ResourcePanel.Min.X + 16.0f, ResourceTop,
+                     EchoesTypeface::Readout(), HudScale, false);
+            ResourceTop += 18.0f * HudScale;
+        }
     }
     else
     {
         DrawText(
             ResourceLine,
-            FLinearColor::White,
+            Theme.TextPrimary,
             TextX,
             HudY(40.0f),
             EchoesTypeface::Readout(),
@@ -736,6 +848,7 @@ void AEchoesHUD::DrawHUD()
                     100);
                 SelectedType += FString::Printf(
                     TEXT(" — producing %s %d%%"),
+                    bM01Hud ? FEchoesCommandDeckModel::GetM01RoleName(Entity->productionType) :
                     Entity->productionType == echoes::sim::EntityType::Worker
                         ? TEXT("Worker")
                         : Entity->productionType == echoes::sim::EntityType::HeavyUnit
@@ -786,7 +899,13 @@ void AEchoesHUD::DrawHUD()
                 }
             }
         }
-        if (Bridge != nullptr &&
+        if (bM01Hud)
+        {
+            SelectionLine = SelectedIds.IsEmpty()
+                ? TEXT("Select a unit or structure.")
+                : FString::Printf(TEXT("%d selected%s"), SelectedIds.Num(), *SelectedType);
+        }
+        else if (Bridge != nullptr &&
             Bridge->GetOperationMode() ==
                 EEchoesOperationMode::CampaignSevenAccounts)
         {
@@ -981,7 +1100,7 @@ void AEchoesHUD::DrawHUD()
         }
     }
     DrawText(
-        SelectionLine,
+        bM01Hud ? TEXT("COMMAND // MERIDIAN COMPACT") : SelectionLine,
         FLinearColor(0.76f, 0.92f, 1.0f),
         TextX,
         HudY(HudLayout.bResourceVisible ? 40.0f : 64.0f),
@@ -1018,7 +1137,8 @@ void AEchoesHUD::DrawHUD()
                 ? EchoesController->GetSelectedEntityIds()
                 : TArray<uint32>();
         const float PortraitSize = FMath::Min(
-            96.0f * HudScale, SelectionPanel.GetSize().Y - 56.0f * HudScale);
+            (bM01Hud ? 64.0f : 96.0f) * HudScale,
+            SelectionPanel.GetSize().Y - 56.0f * HudScale);
         const FVector2D PortraitMin(
             SelectionPanel.Min.X + 18.0f * HudScale,
             SelectionPanel.Min.Y + 40.0f * HudScale);
@@ -1053,14 +1173,17 @@ void AEchoesHUD::DrawHUD()
                 1.0f);
             TextLeft = PortraitMin.X + PortraitSize + 16.0f * HudScale;
         }
-        DrawText(
-            SelectionLine,
-            FLinearColor(0.76f, 0.92f, 1.0f),
-            TextLeft,
-            SelectionPanel.Min.Y + 40.0f * HudScale,
-            EchoesTypeface::Chrome(),
-            1.0f * HudScale,
-            false);
+        float SelectionTextBottom = SelectionPanel.Min.Y + 40.0f * HudScale;
+        const TArray<FString> SelectionLines = bM01Hud
+            ? WrapCanvasText(Canvas, EchoesTypeface::Chrome(), SelectionLine,
+                  SelectionPanel.Max.X - TextLeft - 18.0f * HudScale, HudScale)
+            : TArray<FString>{SelectionLine};
+        for (const FString& Line : SelectionLines)
+        {
+            DrawText(Line, FLinearColor(0.76f, 0.92f, 1.0f), TextLeft,
+                     SelectionTextBottom, EchoesTypeface::Chrome(), HudScale, false);
+            SelectionTextBottom += 18.0f * HudScale;
+        }
         if (Focus != nullptr && Focus->maxHitPoints > 0)
         {
             // Integrity bar: pale ceramic, turning amber under a third.
@@ -1068,7 +1191,9 @@ void AEchoesHUD::DrawHUD()
                 static_cast<float>(Focus->hitPoints) / static_cast<float>(Focus->maxHitPoints), 0.0f, 1.0f);
             const float BarWidth = FMath::Min(
                 320.0f * HudScale, SelectionPanel.Max.X - TextLeft - 18.0f * HudScale);
-            const float BarTop = SelectionPanel.Min.Y + 88.0f * HudScale;
+            const float BarTop = bM01Hud
+                ? SelectionTextBottom + 28.0f * HudScale
+                : SelectionPanel.Min.Y + 88.0f * HudScale;
             DrawText(
                 FString::Printf(TEXT("INTEGRITY  %d / %d"), Focus->hitPoints, Focus->maxHitPoints),
                 SecondaryColor,
@@ -1084,7 +1209,7 @@ void AEchoesHUD::DrawHUD()
                 Fraction < 0.34f ? FLinearColor(1.0f, 0.55f, 0.12f) : FLinearColor(0.86f, 0.84f, 0.80f),
                 TextLeft, BarTop, BarWidth * Fraction, 8.0f * HudScale);
         }
-        if (PanelSelection.Num() > 1 && EchoesController != nullptr)
+        if (PanelSelection.Num() > 1 && EchoesController != nullptr && !bM01Hud)
         {
             const FEchoesCommandDeckProfile GroupProfile =
                 EchoesController->BuildCommandDeckProfile();
@@ -2567,9 +2692,8 @@ void AEchoesHUD::DrawTitleScreen(
              Left + 48.0f, Top + 202.0f * ContentScale,
              SmallFont, 1.42f * TextScale, false);
     const FString OperationMetadata = bPrologue
-        ? FString::Printf(
-              TEXT("CAMPAIGN PROLOGUE  //  %s  //  MARA VEY"),
-              *LocalFaction)
+        ? FText::Format(NSLOCTEXT("EchoesM01", "TitleCommandAuthority",
+              "CAMPAIGN PROLOGUE  //  {0}  //  MARA VEY COMMAND AUTHORITY"), FText::FromString(LocalFaction)).ToString()
         : bSevenAccounts
             ? FString::Printf(
                   TEXT("CAMPAIGN MISSION 02  //  %s  //  ORUUN"),
@@ -2733,17 +2857,20 @@ void AEchoesHUD::DrawTitleScreen(
             false,
             0.72f * TextScale);
     }
-    DrawText(
-        FString::Printf(
-            TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
-            ActiveCampaignRecords,
-            ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S")),
-        Muted,
-        Left + 48.0f,
-        Top + 246.0f * ContentScale,
-        SmallFont,
-        0.74f * TextScale,
-        false);
+    if (!bPrologue)
+    {
+        DrawText(
+            FString::Printf(
+                TEXT("CAMPAIGN  //  ACTIVE %d RECORD%s"),
+                ActiveCampaignRecords,
+                ActiveCampaignRecords == 1 ? TEXT("") : TEXT("S")),
+            Muted,
+            Left + 48.0f,
+            Top + 246.0f * ContentScale,
+            SmallFont,
+            0.74f * TextScale,
+            false);
+    }
     DrawText(
         bNewCampaignArmed
             ? TEXT("NEW CAMPAIGN CONFIRMATION ARMED — ACTIVE PROGRESS WILL BE REPLACED.")
@@ -2900,18 +3027,29 @@ void AEchoesHUD::DrawObjectiveTracker(
         const bool bProtocolChosen =
             Objective.PrologueWellChoice !=
             echoes::sim::FutureWellChoice::Dormant;
-        const FString ArchiveState = bFailed
-            ? TEXT("LOST — MISSION FAILED")
+        const FString ArchiveState = !Objective.bArchiveCarrierIntact
+            ? TEXT("CARRIER LOST")
             : bArchiveRecovered
-                ? TEXT("RECOVERED — CARRIER INTACT")
-                : TEXT("RENDEZVOUS — TILE 22,18");
-        const FString WellState = bProtocolChosen
+                ? FString::Printf(TEXT("RECOVERED — INTEGRITY %d"), Objective.ArchiveCarrierHitPoints)
+                : FString::Printf(TEXT("TO 22,18 — INTEGRITY %d"), Objective.ArchiveCarrierHitPoints);
+        FString WellState = bProtocolChosen
             ? FString::Printf(
                   TEXT("COMMITTED — %s"),
                   WellChoiceDisplayName(Objective.PrologueWellChoice))
             : Objective.ProloguePhase == EEchoesProloguePhase::DecideFutureWell
                 ? TEXT("AUTHORIZE Z / C / V AT WELL")
                 : TEXT("LOCKED — RECOVER ARCHIVE FIRST");
+        if (Objective.bPrologueWellEnemyControlled)
+            WellState = TEXT("ENEMY CONTROL");
+        else if (Objective.bPrologueReshapeExpired)
+            WellState = TEXT("RESHAPE WINDOW EXPIRED");
+        else if (Objective.PrologueReshapeRemainingTicks > 0)
+        {
+            const uint64 Seconds = (Objective.PrologueReshapeRemainingTicks + 19) / 20;
+            WellState = Seconds <= 10
+                ? FString::Printf(TEXT("RESHAPE %llus — WINDOW CLOSING"), static_cast<unsigned long long>(Seconds))
+                : FString::Printf(TEXT("RESHAPE ACTIVE — %llus REMAIN"), static_cast<unsigned long long>(Seconds));
+        }
         const FString WithdrawalState =
             Objective.ProloguePhase == EEchoesProloguePhase::Complete
                 ? TEXT("COMPLETE — LUME REACH")
@@ -2922,19 +3060,21 @@ void AEchoesHUD::DrawObjectiveTracker(
         DrawRect(Backdrop, Left, Top, PanelWidth, PanelHeight);
         DrawLine(Left, Top, Left + PanelWidth, Top, Accent, 2.0f);
         DrawText(TEXT("WHAT THE LEDGER KEEPS  //  MISSION 01"), Accent,
-                 Left + 18.0f, Top + 15.0f, SmallFont, 0.90f * TextScale, false);
+                 Left + 18.0f, Top + PanelHeight * 0.10f, SmallFont, 0.90f * TextScale, false);
         DrawText(FString::Printf(TEXT("01  ARCHIVE CARRIER  %s"), *ArchiveState),
                  bFailed ? Failed : bArchiveRecovered ? Complete : Active,
-                 Left + 18.0f, Top + 52.0f, SmallFont, 0.80f * TextScale, false);
+                 Left + 18.0f, Top + PanelHeight * 0.34f, SmallFont, 0.80f * TextScale, false);
         DrawText(FString::Printf(TEXT("02  FUTURE WELL     %s"), *WellState),
-                 bProtocolChosen ? Complete : Active,
-                 Left + 18.0f, Top + 89.0f, SmallFont, 0.80f * TextScale, false);
+                 Objective.bPrologueWellEnemyControlled ? Failed
+                    : Objective.PrologueReshapeRemainingTicks > 0 && Objective.PrologueReshapeRemainingTicks <= 200
+                        ? Theme.Warning : bProtocolChosen ? Complete : Active,
+                 Left + 18.0f, Top + PanelHeight * 0.58f, SmallFont, 0.80f * TextScale, false);
         DrawText(FString::Printf(TEXT("03  WITHDRAWAL      %s"), *WithdrawalState),
                  bFailed ? Failed
                          : Objective.ProloguePhase == EEchoesProloguePhase::Complete
                                ? Complete
                                : Active,
-                 Left + 18.0f, Top + 126.0f, SmallFont, 0.80f * TextScale, false);
+                 Left + 18.0f, Top + PanelHeight * 0.82f, SmallFont, 0.80f * TextScale, false);
         if (!bLoggedObjectiveTrackerReady)
         {
             bLoggedObjectiveTrackerReady = true;
@@ -4436,27 +4576,41 @@ void AEchoesHUD::DrawNarrativeSubtitle(
     const FString Composite =
         FString::Printf(TEXT("%s — %s"), *Speaker.ToUpper(), *Text);
     const float TextScaleValue = 0.95f * HudScale;
-    const float ApproxWidth =
-        7.2f * TextScaleValue * static_cast<float>(Composite.Len());
-    const float BandWidth =
-        FMath::Min(ApproxWidth + 48.0f, Canvas->ClipX - 40.0f);
-    const float BandHeight = 34.0f * HudScale;
-    const float BandLeft = (Canvas->ClipX - BandWidth) * 0.5f;
-    const float BandTop = Canvas->ClipY - 96.0f * HudScale - BandHeight;
+    float TextWidth = 0.0f, TextHeight = 0.0f;
+    Canvas->TextSize(SmallFont, Composite, TextWidth, TextHeight, TextScaleValue, TextScaleValue);
+    const float Padding = 20.0f * HudScale;
+    float BandWidth = FMath::Min(TextWidth + 2.0f * Padding, Canvas->ClipX - 40.0f);
+    TArray<FString> Lines = WrapCanvasText(
+        Canvas, SmallFont, Composite, BandWidth - 2.0f * Padding, TextScaleValue);
+    const float LineHeight = FMath::Max(TextHeight + 4.0f * HudScale, 18.0f * HudScale);
+    float BandHeight = Lines.Num() * LineHeight + 16.0f * HudScale;
+    float BandLeft = (Canvas->ClipX - BandWidth) * 0.5f;
+    const FEchoesHudLayout HudLayout = FEchoesHudLayout::Build(
+        FVector2D(Canvas->ClipX, Canvas->ClipY), HudScale,
+        !EchoesController->GetStatusMessage().IsEmpty());
+    // Order/rejection feedback keeps its independent lifetime and visible lane.
+    const float BandBottom = HudLayout.bStatusVisible ? HudLayout.StatusPanel.Min.Y - 12.0f
+        : HudLayout.bBottomBarVisible ? HudLayout.BottomBar.Min.Y - 12.0f : Canvas->ClipY - 20.0f;
+    float BandTop = FMath::Max(20.0f, BandBottom - BandHeight);
+    if (HudLayout.bObjectiveVisible && BandTop < HudLayout.ObjectivePanel.Max.Y + 12.0f)
+    {
+        BandLeft = HudLayout.ObjectivePanel.Max.X + 16.0f;
+        BandWidth = Canvas->ClipX - 20.0f - BandLeft;
+        Lines = WrapCanvasText(Canvas, SmallFont, Composite,
+            BandWidth - 2.0f * Padding, TextScaleValue);
+        BandHeight = Lines.Num() * LineHeight + 16.0f * HudScale;
+        BandTop = FMath::Max(20.0f, BandBottom - BandHeight);
+    }
     DrawRect(
         Theme.Surface.CopyWithNewOpacity(bHighContrast ? 1.0f : 0.82f),
         BandLeft,
         BandTop,
         BandWidth,
         BandHeight);
-    DrawText(
-        Composite,
-        Theme.TextPrimary,
-        BandLeft + 24.0f,
-        BandTop + 9.0f * HudScale,
-        SmallFont,
-        TextScaleValue,
-        false);
+    for (int32 Index = 0; Index < Lines.Num(); ++Index)
+        DrawText(Lines[Index], Theme.TextPrimary, BandLeft + Padding,
+            BandTop + 8.0f * HudScale + Index * LineHeight,
+            SmallFont, TextScaleValue, false);
 }
 
 void AEchoesHUD::DrawMatchResult(
@@ -4657,7 +4811,49 @@ void AEchoesHUD::DrawMatchResult(
                   *SkirmishMapName)
         : bDraw ? TEXT("NO COMMAND CORE REMAINS")
                 : FString::Printf(TEXT("THE %s LINE BROKE"), *LocalFaction);
-    const FString Summary = bCampaignResult
+
+    FString AuthoredFailureSummary;
+    if (bCampaignResult && !bVictory)
+    {
+        const UEchoesNarrativeSubsystem* NarrativeSubsystem =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr;
+        const EEchoesOperationMode Operation = EchoesController->GetPresentedCampaignOperation();
+        const FString ReasonCode = Bridge != nullptr
+            ? Bridge->GetMissionFailureReasonCode()
+            : TEXT("generic");
+
+        if (NarrativeSubsystem != nullptr)
+        {
+            FString FailureCondition =
+                NarrativeSubsystem->GetFailureCondition(Operation, ReasonCode);
+            if (FailureCondition.IsEmpty() && ReasonCode != TEXT("generic"))
+            {
+                FailureCondition =
+                    NarrativeSubsystem->GetFailureCondition(Operation, TEXT("generic"));
+            }
+            if (!FailureCondition.IsEmpty())
+            {
+                const FString RetryText =
+                    NarrativeSubsystem->GetRetryCopy(Operation);
+                AuthoredFailureSummary = Operation == EEchoesOperationMode::CampaignPrologue
+                    ? (RetryText.IsEmpty() ? FailureCondition : FailureCondition + TEXT(" ") + RetryText)
+                    : RetryText.IsEmpty()
+                    ? FString::Printf(
+                          TEXT("CRITICAL FAILURE: %s"),
+                          *FailureCondition)
+                    : FString::Printf(
+                          TEXT("CRITICAL FAILURE: %s  //  %s"),
+                          *FailureCondition,
+                          *RetryText);
+            }
+        }
+    }
+
+    const FString Summary = !AuthoredFailureSummary.IsEmpty()
+        ? AuthoredFailureSummary
+        : bCampaignResult
         ? bBrokenSunResult
             ? bVictory
                 ? FString::Printf(
@@ -4890,17 +5086,31 @@ void AEchoesHUD::DrawMatchResult(
     DrawRect(Theme.Scrim, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
     DrawVisualPanel(
         FBox2D(Layout.Origin, Layout.Origin + Layout.Size), Theme, true);
-    DrawShatteredSunMotif(
-        FBox2D(Layout.Origin, Layout.Origin + Layout.Size),
-        Theme, Settings, bHighContrast ? 0.12f : 0.05f);
+    const bool bM01Result = bCampaignResult &&
+        EchoesController->GetPresentedCampaignOperation() == EEchoesOperationMode::CampaignPrologue;
+    const FBox2D MotifBounds = bM01Result
+        ? FBox2D(FVector2D(Left + PanelWidth - 190.0f, Top + 24.0f),
+                 FVector2D(Left + PanelWidth - 30.0f, Top + 144.0f))
+        : FBox2D(Layout.Origin, Layout.Origin + Layout.Size);
+    DrawShatteredSunMotif(MotifBounds, Theme, Settings, bHighContrast ? 0.12f : 0.05f);
     DrawLine(Left, Top, Left + PanelWidth, Top, Accent,
              Theme.EmphasisThickness);
     DrawText(Result, Accent, Left + 44.0f, Top + 42.0f * ContentScale,
              SmallFont, 1.9f * TextScale, false);
     DrawText(Headline, Body, Left + 44.0f, Top + 96.0f * ContentScale,
              SmallFont, 1.22f * TextScale, false);
-    DrawText(Summary, Body, Left + 44.0f, Top + 148.0f * ContentScale,
-             SmallFont, 0.92f * TextScale, false);
+    const TArray<FString> SummaryLines = WrapCanvasText(
+        Canvas, SmallFont, Summary, PanelWidth - 88.0f, 0.92f * TextScale);
+    float SummaryLineHeight = 0.0f, SummaryWidth = 0.0f;
+    Canvas->TextSize(SmallFont, TEXT("Ag"), SummaryWidth, SummaryLineHeight,
+        0.92f * TextScale, 0.92f * TextScale);
+    SummaryLineHeight = FMath::Max(SummaryLineHeight + 4.0f, 18.0f * ContentScale);
+    for (int32 Index = 0; Index < SummaryLines.Num(); ++Index)
+        DrawText(SummaryLines[Index], Body, Left + 44.0f,
+            Top + 148.0f * ContentScale + Index * SummaryLineHeight,
+            SmallFont, 0.92f * TextScale, false);
+    const float DetailsTop = FMath::Max(Top + 204.0f * ContentScale,
+        Top + 148.0f * ContentScale + SummaryLines.Num() * SummaryLineHeight + 8.0f);
     const FString FinalTickLine = bCampaignResult
         ? bBrokenSunResult
             ? FString::Printf(
@@ -4958,22 +5168,22 @@ void AEchoesHUD::DrawMatchResult(
             ? FString::Printf(
                   TEXT("MISSION 02 — SEVEN ACCOUNTS OF RAIN  //  FINAL TICK %llu"),
                   static_cast<unsigned long long>(FinalTick))
-            : FString::Printf(
-                  TEXT("MISSION 01 — WHAT THE LEDGER KEEPS  //  FINAL TICK %llu"),
-                  static_cast<unsigned long long>(FinalTick))
+            : FString(TEXT("MISSION 01 — WHAT THE LEDGER KEEPS"))
         : FString::Printf(
               TEXT("OPERATION %s  //  FINAL TICK %llu"),
               *SkirmishMapName,
               static_cast<unsigned long long>(FinalTick));
     DrawText(
         FinalTickLine,
-        Muted, Left + 44.0f, Top + 204.0f * ContentScale,
+        Muted, Left + 44.0f, DetailsTop,
         SmallFont, 0.82f * TextScale, false);
     DrawText(
              bCampaignResult && bVictory
                  ? CampaignPersistenceLine
-                 : TEXT("The simulation is stopped. Battlefield commands are locked."),
-             Muted, Left + 44.0f, Top + 244.0f * ContentScale,
+                 : bCampaignResult && EchoesController->GetPresentedCampaignOperation() == EEchoesOperationMode::CampaignPrologue
+                     ? TEXT("The evacuation has ended.")
+                     : TEXT("The simulation is stopped. Battlefield commands are locked."),
+             Muted, Left + 44.0f, DetailsTop + 40.0f * ContentScale,
              SmallFont, 0.82f * TextScale, false);
 
     const FLinearColor ButtonText = Theme.ActionText;
@@ -5076,40 +5286,32 @@ void AEchoesHUD::DrawMatchResult(
             : CommitStatus == EEchoesCampaignCommitStatus::StorageFailure
                 ? TEXT("StorageFailure")
                 : nullptr;
-        const FString AuthoredResult =
+        FString AuthoredResult =
             Narrative != nullptr && StatusKey != nullptr
                 ? Narrative->GetResultCopy(
                       EchoesController->GetPresentedCampaignOperation(),
                       StatusKey)
                 : FString();
+        if (bM01Result)
+        {
+            // Resolve the approved placeholders from the frozen result/ledger,
+            // not the current protocol picker or a later live mission.
+            AuthoredResult.ReplaceInline(TEXT("{well_choice}"),
+                WellChoiceDisplayName(EchoesController->GetRecordedCampaignConsequence()));
+            AuthoredResult.ReplaceInline(TEXT("{recorded_choice}"),
+                WellChoiceDisplayName(EchoesController->GetRecordedCampaignConsequence()));
+            AuthoredResult.ReplaceInline(TEXT("{local_choice}"),
+                WellChoiceDisplayName(EchoesController->GetCampaignConsequence()));
+        }
         if (!AuthoredResult.IsEmpty())
         {
             const float ResultScale = 0.82f * TextScale;
-            const int32 CharsPerLine = FMath::Max(
-                40,
-                FMath::FloorToInt(
-                    (PanelWidth - 84.0f) / (7.2f * ResultScale)));
-            TArray<FString> Wrapped;
-            FString Remaining = AuthoredResult;
-            while (!Remaining.IsEmpty() && Wrapped.Num() < 3)
-            {
-                if (Remaining.Len() <= CharsPerLine)
-                {
-                    Wrapped.Add(Remaining);
-                    break;
-                }
-                int32 Break = CharsPerLine;
-                while (Break > 0 && Remaining[Break] != TEXT(' '))
-                {
-                    --Break;
-                }
-                if (Break == 0)
-                {
-                    Break = CharsPerLine;
-                }
-                Wrapped.Add(Remaining.Left(Break));
-                Remaining.RightChopInline(Break + 1);
-            }
+            const TArray<FString> Wrapped = WrapCanvasText(
+                Canvas, SmallFont, AuthoredResult, PanelWidth - 88.0f, ResultScale);
+            float ResultWidth = 0.0f, ResultHeight = 0.0f;
+            Canvas->TextSize(SmallFont, TEXT("Ag"), ResultWidth, ResultHeight, ResultScale, ResultScale);
+            const float ResultLineHeight = FMath::Max(ResultHeight + 4.0f, 17.0f * ContentScale);
+            const float ResultTop = Layout.FullButton.Min.Y - 12.0f - Wrapped.Num() * ResultLineHeight;
             UFont* ResultFont =
                 EchoesTypeface::Chrome();
             const FEchoesVisualTheme ResultTheme =
@@ -5122,8 +5324,7 @@ void AEchoesHUD::DrawMatchResult(
                     Wrapped[Index],
                     ResultTheme.TextSecondary,
                     Left + 42.0f,
-                    Top + PanelHeight -
-                        (78.0f - 15.0f * Index) * ContentScale,
+                    ResultTop + Index * ResultLineHeight,
                     ResultFont,
                     ResultScale,
                     false);
@@ -5157,7 +5358,6 @@ void AEchoesHUD::DrawPauseMenu(
     const float Left = Layout.Origin.X;
     const float Top = Layout.Origin.Y;
     const float ContentScale = Layout.ContentScale;
-    const float TextScale = Layout.TextScale;
     const FLinearColor Accent = Theme.Accent;
     const FLinearColor Body = Theme.TextPrimary;
     const FLinearColor Muted = Theme.TextSecondary;
@@ -5166,6 +5366,8 @@ void AEchoesHUD::DrawPauseMenu(
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
+    const bool bM01 = Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    const float TextScale = bM01 ? HudScale : Layout.TextScale;
     const bool bSkirmish = Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish;
     const bool bCanReturnToOperations = bSkirmish &&
@@ -5241,7 +5443,8 @@ void AEchoesHUD::DrawPauseMenu(
         Layout.RestartButton.Min.Y,
         Layout.RestartButton.GetSize().X,
         Layout.RestartButton.GetSize().Y);
-    DrawText(TEXT("[R]  RESTART OPERATION FROM ITS DETERMINISTIC BASELINE"), Body,
+    DrawText(bM01 ? NSLOCTEXT("EchoesM01", "RestartPause", "[R]  RESTART MISSION 01").ToString()
+                 : TEXT("[R]  RESTART OPERATION FROM ITS DETERMINISTIC BASELINE"), Body,
              Left + 42.0f, Top + 192.0f * ContentScale,
              SmallFont, 0.92f * TextScale, false);
     if (bCanReturnToOperations)
@@ -5265,30 +5468,61 @@ void AEchoesHUD::DrawPauseMenu(
             SmallFont, 0.84f * TextScale, false);
     }
 
-    DrawText(TEXT("ACCESSIBILITY & CAMERA"), Accent, Left + 42.0f,
-             Top + 250.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
-    DrawText(SettingsLineA, Body, Left + 42.0f, Top + 282.0f * ContentScale,
-             SmallFont, 0.88f * TextScale, false);
-    DrawText(SettingsLineB, Body, Left + 42.0f, Top + 316.0f * ContentScale,
-             SmallFont, 0.88f * TextScale, false);
-    DrawText(SettingsLineC, Body, Left + 42.0f, Top + 350.0f * ContentScale,
-             SmallFont, 0.82f * TextScale, false);
-    DrawText(SettingsLineD, Body, Left + 42.0f, Top + 384.0f * ContentScale,
-             SmallFont, 0.88f * TextScale, false);
-    DrawText(SettingsLineE, Body, Left + 42.0f, Top + 418.0f * ContentScale,
-             SmallFont, 0.78f * TextScale, false);
-    DrawText(TEXT("FIELD KEYS"), Accent, Left + 42.0f,
-             Top + 440.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
-    for (int32 KeyIndex = 0; KeyIndex < FieldKeyLines.Num(); ++KeyIndex)
+    if (bM01)
     {
-        DrawText(FieldKeyLines[KeyIndex], Muted, Left + 42.0f,
-                 Top + (458.0f + 15.0f * static_cast<float>(KeyIndex)) * ContentScale,
-                 SmallFont, 0.68f * TextScale, false);
+        float RowY = Layout.RestartButton.Max.Y + 16;
+        const auto Flow = [&](const FString& Text, const FLinearColor& Color, float Scale)
+        {
+            float W = 0, H = 0;
+            Canvas->TextSize(SmallFont, TEXT("Ag"), W, H, Scale, Scale);
+            for (const FString& Line : WrapCanvasText(Canvas, SmallFont, Text, PanelWidth - 84, Scale))
+            {
+                DrawText(Line, Color, Left + 42, RowY, SmallFont, Scale, false);
+                RowY += FMath::Max(10.0f, H) + 3;
+            }
+        };
+        Flow(NSLOCTEXT("EchoesM01", "PauseAccessibility", "ACCESSIBILITY & CAMERA").ToString(), Accent, .90f * HudScale);
+        for (const FString& Line : {SettingsLineA, SettingsLineB, SettingsLineC, SettingsLineD, SettingsLineE})
+            Flow(Line, Body, .80f * HudScale);
+        RowY += 8;
+        Flow(NSLOCTEXT("EchoesM01", "FieldKeys", "FIELD KEYS").ToString(), Accent, .90f * HudScale);
+        // M01's compact field card keeps its Well controls above the resume
+        // action at720p/150%; generic faction/formation help is not duplicated.
+        const FString M01Keys[] = {
+            NSLOCTEXT("EchoesM01", "FieldNavigation", "Left-click / drag: select   Right-click: order   WASD: pan   Wheel: zoom").ToString(),
+            NSLOCTEXT("EchoesM01", "FieldKeyboardTarget", "[Home] Keyboard target   [Arrows] Aim   [Space] Order   [End] Center selection").ToString(),
+            NSLOCTEXT("EchoesM01", "FieldOrders", "[Tab / Backspace] Next / previous unit   [F] Attack-move   [X] Stop   [H] Hold").ToString(),
+            NSLOCTEXT("EchoesM01", "FieldWork", "[B/N/M] Build   [Backslash] Bulwark   [=] Relay   [F2] Technology").ToString(),
+            NSLOCTEXT("EchoesM01", "FieldWell", "[Z] Harvest   [C] Preserve   [V] Reshape   [P] Pause").ToString()};
+        for (const FString& Line : M01Keys) Flow(Line, Muted, .66f * HudScale);
     }
-    DrawText(
-        TEXT("Only implemented, behavior-verified options are exposed in this build."),
-        Muted, Left + 42.0f, Top + 521.0f * ContentScale,
-        SmallFont, 0.78f * TextScale, false);
+    else
+    {
+        DrawText(TEXT("ACCESSIBILITY & CAMERA"), Accent, Left + 42.0f,
+                 Top + 250.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+        DrawText(SettingsLineA, Body, Left + 42.0f, Top + 282.0f * ContentScale,
+                 SmallFont, 0.88f * TextScale, false);
+        DrawText(SettingsLineB, Body, Left + 42.0f, Top + 316.0f * ContentScale,
+                 SmallFont, 0.88f * TextScale, false);
+        DrawText(SettingsLineC, Body, Left + 42.0f, Top + 350.0f * ContentScale,
+                 SmallFont, 0.82f * TextScale, false);
+        DrawText(SettingsLineD, Body, Left + 42.0f, Top + 384.0f * ContentScale,
+                 SmallFont, 0.88f * TextScale, false);
+        DrawText(SettingsLineE, Body, Left + 42.0f, Top + 418.0f * ContentScale,
+                 SmallFont, 0.78f * TextScale, false);
+        DrawText(TEXT("FIELD KEYS"), Accent, Left + 42.0f,
+                 Top + 440.0f * ContentScale, SmallFont, 0.92f * TextScale, false);
+        for (int32 KeyIndex = 0; KeyIndex < FieldKeyLines.Num(); ++KeyIndex)
+        {
+            DrawText(FieldKeyLines[KeyIndex], Muted, Left + 42.0f,
+                     Top + (458.0f + 15.0f * static_cast<float>(KeyIndex)) * ContentScale,
+                     SmallFont, 0.68f * TextScale, false);
+        }
+        DrawText(
+            TEXT("Only implemented, behavior-verified options are exposed in this build."),
+            Muted, Left + 42.0f, Top + 521.0f * ContentScale,
+            SmallFont, 0.78f * TextScale, false);
+    }
 
     DrawRect(Accent,
              Layout.PrimaryButton.Min.X,
@@ -5304,6 +5538,440 @@ void AEchoesHUD::DrawPauseMenu(
              Left + PanelWidth * 0.5f - 142.0f * TextScale,
              Top + PanelHeight - 65.0f,
              SmallFont, 0.92f * TextScale, false);
+}
+
+void AEchoesHUD::DrawCampaignOperationsMap(
+    const AEchoesPlayerController* EchoesController,
+    const UEchoesGameUserSettings* Settings)
+{
+    if (Canvas == nullptr || EchoesController == nullptr ||
+        !EchoesController->IsCampaignOperationsMapVisible())
+    {
+        return;
+    }
+
+    const bool bHighContrast =
+        Settings != nullptr && Settings->IsHighContrastHudEnabled();
+    const FEchoesVisualTheme Theme =
+        UEchoesVisualThemeSettings::Resolve(bHighContrast);
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const FEchoesCampaignProgress Progress = Bridge != nullptr
+        ? Bridge->GetCampaignProgress()
+        : FEchoesCampaignProgress{};
+
+    const int32 SelectedIndex = EchoesController->GetSelectedCampaignMapNodeIndex();
+
+    const FEchoesCampaignMapLayout Layout = FEchoesCampaignMapLayout::Build(
+        FVector2D(Canvas->ClipX, Canvas->ClipY),
+        HudScale,
+        Progress,
+        SelectedIndex);
+
+    UFont* FontSmall = EchoesTypeface::Chrome();
+    UFont* FontLarge = EchoesTypeface::ChromeLarge();
+
+    // 1. Canvas Background
+    DrawRect(Theme.Canvas, 0.0f, 0.0f, Canvas->ClipX, Canvas->ClipY);
+    DrawShatteredSunMotif(
+        Layout.FullBounds, Theme, Settings, bHighContrast ? 0.10f : 0.045f);
+
+    // 2. Top Ribbon
+    DrawVisualPanel(Layout.TopRibbon, Theme, true);
+    DrawText(
+        TEXT("ECHOES OF THE BROKEN SUN  //  SORYN STRATEGIC OPERATIONS MAP"),
+        Theme.Accent,
+        Layout.TopRibbon.Min.X + 24.0f * Layout.ContentScale,
+        Layout.TopRibbon.Min.Y + 10.0f * Layout.ContentScale,
+        FontLarge,
+        1.10f * Layout.TextScale,
+        false);
+
+    int32 HarvestCount = 0;
+    int32 PreserveCount = 0;
+    int32 ReshapeCount = 0;
+    for (const FEchoesCampaignDecisionRecord& Dec : Progress.Decisions)
+    {
+        if (Dec.WellChoice == echoes::sim::FutureWellChoice::Harvest)
+        {
+            ++HarvestCount;
+        }
+        else if (Dec.WellChoice == echoes::sim::FutureWellChoice::Preserve)
+        {
+            ++PreserveCount;
+        }
+        else if (Dec.WellChoice == echoes::sim::FutureWellChoice::Reshape)
+        {
+            ++ReshapeCount;
+        }
+    }
+
+    const FString StatusSummary = FString::Printf(
+        TEXT("SECTORS SECURED: %d/15    //    PROTOCOLS: [H:%d  P:%d  R:%d]    //    TACTICAL ATLAS 2.0"),
+        Layout.CompletedMissionCount,
+        HarvestCount,
+        PreserveCount,
+        ReshapeCount);
+
+    DrawText(
+        StatusSummary,
+        Theme.TextSecondary,
+        Layout.TopRibbon.Min.X + 24.0f * Layout.ContentScale,
+        Layout.TopRibbon.Min.Y + 34.0f * Layout.ContentScale,
+        FontSmall,
+        0.82f * Layout.TextScale,
+        false);
+
+    // 3. Map Canvas
+    DrawVisualPanel(Layout.MapCanvas, Theme, false);
+
+    const float MapW = Layout.MapCanvas.GetSize().X;
+    const float MapH = Layout.MapCanvas.GetSize().Y;
+    const float MapX = Layout.MapCanvas.Min.X;
+    const float MapY = Layout.MapCanvas.Min.Y;
+
+    // Regional territory labels
+    const auto DrawRegionalWatermark = [&](const TCHAR* Name, float NX, float NY, const FLinearColor& Col)
+    {
+        DrawText(
+            Name,
+            Col,
+            MapX + NX * MapW,
+            MapY + NY * MapH,
+            FontSmall,
+            0.78f * Layout.TextScale,
+            false);
+    };
+
+    const FLinearColor WatermarkColor =
+        FLinearColor(Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B, 0.28f);
+    DrawRegionalWatermark(TEXT("VITRIFIED BASIN // GLASS SCAR"), 0.08f, 0.52f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("SHIVERGRASS CRYO STEPPE"), 0.18f, 0.12f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("ARK-CITY CITADEL VERGE"), 0.44f, 0.08f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("UNBURIED ARTERY NETWORK"), 0.32f, 0.58f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("LUME REACH CALDERAS"), 0.62f, 0.28f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("CENSUS VOID HORIZON"), 0.65f, 0.82f, WatermarkColor);
+    DrawRegionalWatermark(TEXT("SOLAR-FALL DAIS [SEC-15-SD]"), 0.76f, 0.94f, WatermarkColor);
+
+    // Corridors
+    for (const FEchoesCampaignMapCorridor& Corridor : Layout.Corridors)
+    {
+        const FLinearColor CorridorColor = Corridor.bActive
+            ? Theme.Accent
+            : FLinearColor(Theme.Border.R, Theme.Border.G, Theme.Border.B, 0.40f);
+        DrawLine(
+            Corridor.StartPos.X, Corridor.StartPos.Y,
+            Corridor.EndPos.X, Corridor.EndPos.Y,
+            CorridorColor,
+            Corridor.bActive ? 2.5f : 1.2f);
+    }
+
+    // Nodes
+    for (int32 i = 0; i < Layout.Nodes.Num(); ++i)
+    {
+        const FEchoesCampaignMapNode& Node = Layout.Nodes[i];
+        const bool bSelected = (i == SelectedIndex);
+
+        FLinearColor RingColor;
+        if (Node.State == EEchoesCampaignNodeState::Completed)
+        {
+            if (Node.RecordedChoice == echoes::sim::FutureWellChoice::Harvest)
+            {
+                RingColor = FLinearColor(0.95f, 0.65f, 0.15f); // Amber
+            }
+            else if (Node.RecordedChoice == echoes::sim::FutureWellChoice::Preserve)
+            {
+                RingColor = FLinearColor(0.20f, 0.85f, 0.95f); // Cyan
+            }
+            else if (Node.RecordedChoice == echoes::sim::FutureWellChoice::Reshape)
+            {
+                RingColor = FLinearColor(0.92f, 0.25f, 0.85f); // Magenta
+            }
+            else
+            {
+                RingColor = Theme.Success;
+            }
+        }
+        else if (Node.State == EEchoesCampaignNodeState::Available)
+        {
+            RingColor = Theme.Accent;
+        }
+        else
+        {
+            RingColor = FLinearColor(0.32f, 0.32f, 0.36f, 0.65f);
+        }
+
+        // 16-segment circle outline
+        constexpr int32 Segments = 16;
+        for (int32 Seg = 0; Seg < Segments; ++Seg)
+        {
+            const float Angle0 = (static_cast<float>(Seg) / Segments) * UE_TWO_PI;
+            const float Angle1 = (static_cast<float>(Seg + 1) / Segments) * UE_TWO_PI;
+            const FVector2D P0 = Node.ScreenPos +
+                FVector2D(FMath::Cos(Angle0), FMath::Sin(Angle0)) * Node.Radius;
+            const FVector2D P1 = Node.ScreenPos +
+                FVector2D(FMath::Cos(Angle1), FMath::Sin(Angle1)) * Node.Radius;
+            DrawLine(P0.X, P0.Y, P1.X, P1.Y, RingColor, bSelected ? 3.0f : 2.0f);
+        }
+
+        // Node center label
+        DrawText(
+            Node.MissionCode,
+            bSelected ? FLinearColor::White : Theme.TextPrimary,
+            Node.ScreenPos.X - (12.0f * Layout.ContentScale),
+            Node.ScreenPos.Y - (7.0f * Layout.ContentScale),
+            FontSmall,
+            0.72f * Layout.TextScale,
+            false);
+
+        // Selection Reticle
+        if (bSelected)
+        {
+            const float ReticleOffset = Node.Radius * 1.55f;
+            const float ReticleLen = 8.0f * Layout.ContentScale;
+            const FVector2D C = Node.ScreenPos;
+
+            DrawLine(C.X - ReticleOffset, C.Y - ReticleOffset, C.X - ReticleOffset + ReticleLen, C.Y - ReticleOffset, Theme.Accent, 2.5f);
+            DrawLine(C.X - ReticleOffset, C.Y - ReticleOffset, C.X - ReticleOffset, C.Y - ReticleOffset + ReticleLen, Theme.Accent, 2.5f);
+
+            DrawLine(C.X + ReticleOffset, C.Y - ReticleOffset, C.X + ReticleOffset - ReticleLen, C.Y - ReticleOffset, Theme.Accent, 2.5f);
+            DrawLine(C.X + ReticleOffset, C.Y - ReticleOffset, C.X + ReticleOffset, C.Y - ReticleOffset + ReticleLen, Theme.Accent, 2.5f);
+
+            DrawLine(C.X - ReticleOffset, C.Y + ReticleOffset, C.X - ReticleOffset + ReticleLen, C.Y + ReticleOffset, Theme.Accent, 2.5f);
+            DrawLine(C.X - ReticleOffset, C.Y + ReticleOffset, C.X - ReticleOffset, C.Y + ReticleOffset - ReticleLen, Theme.Accent, 2.5f);
+
+            DrawLine(C.X + ReticleOffset, C.Y + ReticleOffset, C.X + ReticleOffset - ReticleLen, C.Y + ReticleOffset, Theme.Accent, 2.5f);
+            DrawLine(C.X + ReticleOffset, C.Y + ReticleOffset, C.X + ReticleOffset, C.Y + ReticleOffset - ReticleLen, Theme.Accent, 2.5f);
+        }
+    }
+
+    // 4. Inspector Drawer
+    DrawVisualPanel(Layout.InspectorDrawer, Theme, true);
+
+    if (Layout.Nodes.IsValidIndex(SelectedIndex))
+    {
+        const FEchoesCampaignMapNode& CurNode = Layout.Nodes[SelectedIndex];
+        const float InspLeft = Layout.InspectorDrawer.Min.X + 22.0f * Layout.ContentScale;
+        float InspY = Layout.InspectorDrawer.Min.Y + 22.0f * Layout.ContentScale;
+
+        // Sector header
+        DrawText(
+            FString::Printf(TEXT("SECTOR %s // ACT %d"), *CurNode.MissionCode, CurNode.Act),
+            Theme.Accent,
+            InspLeft,
+            InspY,
+            FontSmall,
+            0.82f * Layout.TextScale,
+            false);
+        InspY += 22.0f * Layout.ContentScale;
+
+        // Title
+        DrawText(
+            CurNode.Title,
+            Theme.TextPrimary,
+            InspLeft,
+            InspY,
+            FontLarge,
+            1.20f * Layout.TextScale,
+            false);
+        InspY += 34.0f * Layout.ContentScale;
+
+        // Biome
+        DrawText(
+            FString::Printf(TEXT("BIOME: %s"), *CurNode.BiomeName),
+            Theme.TextSecondary,
+            InspLeft,
+            InspY,
+            FontSmall,
+            0.82f * Layout.TextScale,
+            false);
+        InspY += 22.0f * Layout.ContentScale;
+
+        // Status Badge
+        FString StatusBadge;
+        FLinearColor BadgeColor;
+        if (CurNode.State == EEchoesCampaignNodeState::Completed)
+        {
+            StatusBadge = TEXT("[STATUS: SECURED // REPLAY AVAILABLE]");
+            BadgeColor = Theme.Success;
+        }
+        else if (CurNode.State == EEchoesCampaignNodeState::Available)
+        {
+            StatusBadge = TEXT("[STATUS: READY FOR DEPLOYMENT]");
+            BadgeColor = Theme.Accent;
+        }
+        else
+        {
+            StatusBadge = TEXT("[STATUS: LOCKED — SECURE EARLIER SECTORS]");
+            BadgeColor = Theme.Danger;
+        }
+        DrawText(
+            StatusBadge,
+            BadgeColor,
+            InspLeft,
+            InspY,
+            FontSmall,
+            0.84f * Layout.TextScale,
+            false);
+        InspY += 26.0f * Layout.ContentScale;
+
+        // Divider
+        DrawLine(InspLeft, InspY, Layout.InspectorDrawer.Max.X - 22.0f * Layout.ContentScale, InspY, Theme.Border, 1.0f);
+        InspY += 12.0f * Layout.ContentScale;
+
+        // Briefing
+        const UEchoesNarrativeSubsystem* NarrativeSubsystem =
+            GetGameInstance() != nullptr
+                ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr;
+
+        DrawText(
+            TEXT("TACTICAL BRIEFING:"),
+            Theme.Accent,
+            InspLeft,
+            InspY,
+            FontSmall,
+            0.80f * Layout.TextScale,
+            false);
+        InspY += 20.0f * Layout.ContentScale;
+
+        FString BriefingText;
+        if (NarrativeSubsystem != nullptr)
+        {
+            BriefingText = NarrativeSubsystem->GetBriefing(CurNode.Operation);
+        }
+        if (BriefingText.IsEmpty())
+        {
+            BriefingText = TEXT("Authoritative briefing data securely linked in narrative pack.");
+        }
+
+        const float MaxWidth = Layout.InspectorDrawer.GetSize().X - 44.0f * Layout.ContentScale;
+        TArray<FString> BriefingWords;
+        BriefingText.ParseIntoArray(BriefingWords, TEXT(" "), true);
+        FString CurrentLine;
+        int32 LinesDrawn = 0;
+        for (const FString& Word : BriefingWords)
+        {
+            const FString TestLine = CurrentLine.IsEmpty() ? Word : CurrentLine + TEXT(" ") + Word;
+            if (TestLine.Len() * 8.0f * Layout.TextScale > MaxWidth && !CurrentLine.IsEmpty())
+            {
+                DrawText(CurrentLine, Theme.TextPrimary, InspLeft, InspY, FontSmall, 0.76f * Layout.TextScale, false);
+                InspY += 18.0f * Layout.ContentScale;
+                CurrentLine = Word;
+                if (++LinesDrawn >= 4)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                CurrentLine = TestLine;
+            }
+        }
+        if (!CurrentLine.IsEmpty() && LinesDrawn < 4)
+        {
+            DrawText(CurrentLine, Theme.TextPrimary, InspLeft, InspY, FontSmall, 0.76f * Layout.TextScale, false);
+            InspY += 22.0f * Layout.ContentScale;
+        }
+
+        // Persistent Rewards
+        InspY += 6.0f * Layout.ContentScale;
+        DrawLine(InspLeft, InspY, Layout.InspectorDrawer.Max.X - 22.0f * Layout.ContentScale, InspY, Theme.Border, 1.0f);
+        InspY += 12.0f * Layout.ContentScale;
+
+        DrawText(
+            TEXT("PERSISTENT REWARDS & UNLOCKS:"),
+            Theme.Accent,
+            InspLeft,
+            InspY,
+            FontSmall,
+            0.80f * Layout.TextScale,
+            false);
+        InspY += 20.0f * Layout.ContentScale;
+
+        const FEchoesMissionReward* Reward = FEchoesCampaignRewards::GetReward(CurNode.MissionId);
+        if (Reward != nullptr)
+        {
+            DrawText(
+                FString::Printf(TEXT("• SKIRMISH: %s"), *Reward->SkirmishMapUnlock),
+                Theme.TextPrimary,
+                InspLeft,
+                InspY,
+                FontSmall,
+                0.74f * Layout.TextScale,
+                false);
+            InspY += 18.0f * Layout.ContentScale;
+
+            DrawText(
+                FString::Printf(TEXT("• DOCTRINE: %s"), *Reward->DoctrineUnlock),
+                Theme.TextPrimary,
+                InspLeft,
+                InspY,
+                FontSmall,
+                0.74f * Layout.TextScale,
+                false);
+            InspY += 18.0f * Layout.ContentScale;
+
+            DrawText(
+                FString::Printf(TEXT("• CODEX: %s"), *Reward->CodexUnlock),
+                Theme.TextSecondary,
+                InspLeft,
+                InspY,
+                FontSmall,
+                0.74f * Layout.TextScale,
+                false);
+            InspY += 20.0f * Layout.ContentScale;
+        }
+
+        // Deploy Button
+        FString DeployLabel;
+        bool bDeployPrimary = false;
+        if (CurNode.State == EEchoesCampaignNodeState::Available)
+        {
+            DeployLabel = TEXT("[ENTER / CLICK] DEPLOY OPERATION");
+            bDeployPrimary = true;
+        }
+        else if (CurNode.State == EEchoesCampaignNodeState::Completed)
+        {
+            DeployLabel = TEXT("[ENTER / CLICK] REPLAY SECTOR");
+            bDeployPrimary = false;
+        }
+        else
+        {
+            DeployLabel = TEXT("[LOCKED — RESTRICTED SECTOR]");
+            bDeployPrimary = false;
+        }
+
+        DrawPointerButton(
+            Layout.DeployButton,
+            DeployLabel,
+            Theme,
+            bDeployPrimary,
+            0.80f * Layout.TextScale);
+
+        // Back Button
+        DrawPointerButton(
+            Layout.BackButton,
+            TEXT("[ESC] RETURN TO TITLE"),
+            Theme,
+            false,
+            0.78f * Layout.TextScale);
+    }
+
+    // 5. Bottom Status Bar
+    DrawVisualPanel(Layout.BottomStatusBar, Theme, false);
+    DrawText(
+        TEXT("[ARROWS / CLICK] SELECT SECTOR    [1-9, 0] DIRECT JUMP    [ENTER / SPACE] DEPLOY    [ESC] TITLE SCREEN"),
+        Theme.TextSecondary,
+        Layout.BottomStatusBar.Min.X + 20.0f * Layout.ContentScale,
+        Layout.BottomStatusBar.Min.Y + 12.0f * Layout.ContentScale,
+        FontSmall,
+        0.80f * Layout.TextScale,
+        false);
 }
 
 void AEchoesHUD::DrawMissionBriefing(
@@ -5350,6 +6018,102 @@ void AEchoesHUD::DrawMissionBriefing(
     const bool bPrologue = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignPrologue;
+    if (bPrologue)
+    {
+        // M01 has one authored brief and one objective sequence. Measure every
+        // row with the actual font; HUD scaling must change both text and flow.
+        const FEchoesBriefingOverlayLayout Layout =
+            FEchoesBriefingOverlayLayout::Build(FVector2D(Canvas->ClipX, Canvas->ClipY));
+        DrawRect(Theme.Scrim, 0, 0, Canvas->ClipX, Canvas->ClipY);
+        DrawVisualPanel(Layout.Panel, Theme, true);
+        DrawFactionSigil(EEchoesVisualFaction::MeridianCompact,
+            FVector2D(Layout.Panel.Max.X - 58, Top + 49), 19, Theme, .92f);
+        const float Width = Layout.Panel.GetSize().X - 84;
+        const float TextOriginX = Layout.Panel.Min.X + 42;
+        const float TextOriginY = Layout.Panel.Min.Y + 28;
+        struct FBriefRun { FString Text; FLinearColor Color; float Y; float Height; float Scale; };
+        TArray<FBriefRun> Runs;
+        float TextHeight = 0;
+        float CursorY = TextOriginY;
+        const auto Paragraph = [&](const FString& Text, const FLinearColor& Color,
+                                   float Scale, float RowWidth)
+        {
+            float SampleWidth = 0, SampleHeight = 0;
+            Canvas->TextSize(SmallFont, TEXT("Ag"), SampleWidth, SampleHeight, Scale, Scale);
+            const float LineHeight = FMath::Max(12.0f, SampleHeight) + 4;
+            for (const FString& Line : WrapCanvasText(Canvas, SmallFont, Text, RowWidth, Scale))
+            {
+                const float Height = FMath::Max(12.0f, SampleHeight);
+                Runs.Add({Line, Color, CursorY, Height, Scale});
+                TextHeight += Height;
+                CursorY += LineHeight;
+            }
+        };
+        Paragraph(NSLOCTEXT("EchoesM01", "BriefTitle", "WHAT THE LEDGER KEEPS").ToString(),
+                  Accent, 1.55f * HudScale, Width - 78);
+        Paragraph(NSLOCTEXT("EchoesM01", "BriefChapter", "MISSION 01  /  MERIDIAN COMPACT").ToString(),
+                  Muted, .90f * HudScale, Width - 78);
+        CursorY += 14;
+        const float DividerY = CursorY;
+        const float HeaderTextHeight = TextHeight;
+        CursorY += 14;
+        const UEchoesNarrativeSubsystem* Narrative = GetGameInstance()
+            ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr;
+        FString Brief = Narrative ? Narrative->GetBriefing(EEchoesOperationMode::CampaignPrologue) : FString();
+        if (Brief.IsEmpty())
+            Brief = NSLOCTEXT("EchoesM01", "BriefFallback",
+                "Recover the archive at tile 22,18, commit one Future Well protocol while the carrier holds the site, then evacuate to Lume Reach at tile 6,17.").ToString();
+        Paragraph(NSLOCTEXT("EchoesM01", "Situation", "SITUATION").ToString(), Accent, .90f * HudScale, Width);
+        Paragraph(Brief, Body, HudScale, Width);
+        CursorY += 14;
+        Paragraph(NSLOCTEXT("EchoesM01", "Objectives", "PRIMARY OBJECTIVES").ToString(), Accent, .90f * HudScale, Width);
+        TArray<FString> Objectives = Narrative
+            ? Narrative->GetObjectives(EEchoesOperationMode::CampaignPrologue) : TArray<FString>();
+        if (Objectives.IsEmpty())
+        {
+            Objectives = {
+                NSLOCTEXT("EchoesM01", "ArchiveFallback", "Bring the archive carrier to tile 22,18.").ToString(),
+                NSLOCTEXT("EchoesM01", "WellFallback", "Hold the carrier at the recovery site while a worker commits Harvest, Preserve, or Reshape at the Future Well.").ToString(),
+                NSLOCTEXT("EchoesM01", "WithdrawalFallback", "Bring the surviving carrier to Lume Reach at tile 6,17 after the protocol commits.").ToString()};
+        }
+        for (int32 Index = 0; Index < Objectives.Num(); ++Index)
+        {
+            Paragraph(FString::Printf(TEXT("%02d  %s"), Index + 1, *Objectives[Index]), Body, HudScale, Width);
+            CursorY += 5;
+        }
+        CursorY += 9;
+        Paragraph(NSLOCTEXT("EchoesM01", "Irreversible", "IRREVERSIBLE CHOICE").ToString(), Accent, .90f * HudScale, Width);
+        Paragraph(NSLOCTEXT("EchoesM01", "VictoryWarning",
+            "The Well choice is irreversible. Evacuate the surviving carrier; destroying the opposing Core does not complete the mission.").ToString(), Body, HudScale, Width);
+        CursorY += 14;
+        Paragraph(NSLOCTEXT("EchoesM01", "Accessibility", "ACCESSIBILITY BEFORE DEPLOYMENT").ToString(), Accent, .90f * HudScale, Width);
+        Paragraph(NSLOCTEXT("EchoesM01", "AccessibilityKeys",
+            "[U] UI scale   [I] high contrast   [O] reduced motion   [/] reduced flashing").ToString(), Muted, .90f * HudScale, Width);
+        // Preserve the selected glyph size. Compress only empty spacing when
+        // narrow-screen wrapping uses more rows; the buttons retain their
+        // shared input geometry and never cover authored briefing text.
+        const float AvailableHeight = Layout.OperationButton.Min.Y - 12 - TextOriginY;
+        const float EmptyHeight = FMath::Max(0.0f, CursorY - TextOriginY - TextHeight);
+        const float GapFactor = EmptyHeight > UE_SMALL_NUMBER
+            ? FMath::Clamp((AvailableHeight - TextHeight) / EmptyHeight, 0.0f, 1.0f) : 1.0f;
+        float PrecedingTextHeight = 0;
+        for (const FBriefRun& Run : Runs)
+        {
+            const float EmptyBefore = Run.Y - TextOriginY - PrecedingTextHeight;
+            DrawText(Run.Text, Run.Color, TextOriginX,
+                TextOriginY + PrecedingTextHeight + EmptyBefore * GapFactor,
+                SmallFont, Run.Scale, false);
+            PrecedingTextHeight += Run.Height;
+        }
+        const float DividerDrawY = TextOriginY + HeaderTextHeight +
+            (DividerY - TextOriginY - HeaderTextHeight) * GapFactor;
+        DrawLine(TextOriginX, DividerDrawY, TextOriginX + Width, DividerDrawY, Theme.Border, 1);
+        DrawPointerButton(Layout.OperationButton,
+            NSLOCTEXT("EchoesM01", "ChangeOperation", "[F9] CHANGE OPERATION").ToString(), Theme, false, .85f * HudScale);
+        DrawPointerButton(Layout.DeployButton,
+            NSLOCTEXT("EchoesM01", "DeployForce", "[ENTER] DEPLOY MERIDIAN FORCE").ToString(), Theme, true, .90f * HudScale);
+        return;
+    }
     const bool bSevenAccounts = BriefingBridge != nullptr &&
         BriefingBridge->GetOperationMode() ==
             EEchoesOperationMode::CampaignSevenAccounts;
@@ -5782,7 +6546,7 @@ void AEchoesHUD::DrawMissionBriefing(
              SmallFont, 0.95f * TextScale, false);
     const FString MechanicalObjective01 =
         bPrologue
-            ? TEXT("01  Move Mara Vey's scout carrier to the archive rendezvous at tile 22,18.")
+            ? TEXT("01  Move the archive carrier to the archive rendezvous at tile 22,18.")
         : bSevenAccounts
             ? FString::Printf(
                   TEXT("01  Uproot, move, and re-root the Waystone at tile %d,%d."),
@@ -6143,7 +6907,7 @@ void AEchoesHUD::DrawMissionBriefing(
         BriefingPointerLayout.DeployButton.GetSize().Y);
     DrawText(
         bPrologue
-            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MARA VEY")
+            ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS MERIDIAN FORCE")
         : bSevenAccounts
             ? TEXT("F9 CHANGES OPERATION  //  ENTER DEPLOYS ORUUN")
         : bCityReserve
@@ -6280,7 +7044,7 @@ void AEchoesHUD::DrawTacticalMinimap(
         const bool bSelected = SelectedIds != nullptr && SelectedIds->Contains(Entity.id);
         if (bSelected)
         {
-            DrawRect(FLinearColor::White, X - MarkerSize, Y - MarkerSize,
+            DrawRect(Theme.TextPrimary, X - MarkerSize, Y - MarkerSize,
                      MarkerSize * 2.0f, MarkerSize * 2.0f);
         }
         if (Entity.aegisPowered &&
@@ -6363,8 +7127,8 @@ void AEchoesHUD::DrawTacticalMinimap(
                     static_cast<float>(echoes::sim::kFixedScale * MapHeight),
                 0.0f,
                 1.0f) * Size;
-        DrawLine(CameraX - 6.0f, CameraY, CameraX + 6.0f, CameraY, FLinearColor::White, 1.0f);
-        DrawLine(CameraX, CameraY - 6.0f, CameraX, CameraY + 6.0f, FLinearColor::White, 1.0f);
+        DrawLine(CameraX - 6.0f, CameraY, CameraX + 6.0f, CameraY, Theme.TextPrimary, 1.0f);
+        DrawLine(CameraX, CameraY - 6.0f, CameraX, CameraY + 6.0f, Theme.TextPrimary, 1.0f);
     }
 
     if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||

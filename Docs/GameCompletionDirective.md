@@ -2,91 +2,53 @@
 
 **Author and control owner:** Angelis Pseftis
 **Created:** 2026-09-01
-**Applies to:** every Claude session working in this repository until the professional release ships
+**Applies to:** every project collaborator; current owner instructions govern task scope and authorization
 **Supersedes:** [`DemoReleaseDirective.md`](Archive/Superseded/DemoReleaseDirective.md) — its accepted evidence carries forward into section 10; its scope is replaced by section 2
-**Companion file:** [`CLAUDE.md`](../CLAUDE.md) — the standing session contract, build commands, and environment traps
+**Companion file:** [AGENTS.md](../AGENTS.md) — the shared session contract; [SetupAndBuild.md](Archive/SetupAndBuild.md) holds procedures
 
 This directive defines the work required to take *Echoes of the Broken Sun* from a verified
 playable-systems prototype with partial demo evidence to a **professional real-time strategy release**:
-a single-player, player-versus-AI macOS game whose polish stands comparison with the genre's reference
+a macOS game with the authored campaign, Conquest/roguelite, offline PvAI and bounded team/FFA multiplayer,
+whose polish stands comparison with the genre's reference
 titles — the readability and pacing discipline of *StarCraft*, the story delivery of *Warcraft III*, the
 approachability of *Age of Empires* — while remaining entirely this game: Soryn, the Crownfall, the
 Future Wells, and the three factions the Development Bible defines. Nothing in this directive changes
 the theme, the world, the factions, the characters, the campaign structure, or the mechanics the Bible
 authorizes. It raises the execution bar on everything the player sees, hears, reads, and feels.
 
-It is a plan, not a record of completion. Every gate in section 10 that does not carry forward prior
-evidence starts at NOT RUN. Move a gate only when you have run it and read the result.
+This is a backlog and historical planning view. [Requirements.md](Requirements.md) owns criteria;
+[RequirementsState.md](RequirementsState.md) owns lifecycle, evidence state, and owner decisions.
+The descriptive targets below remain subordinate to the master. Existing gate notes retain their
+original evidence boundaries and are not current acceptance assignments.
 
 ---
 
-## 0. How to run a session against this directive
+## 0. Session workflow
 
-This section exists so that no session wastes its hours. It is the operating loop; the tracks in
-section 6 are the work.
+Follow [AGENTS.md](../AGENTS.md) and [AgentSkillRouting.md](AgentSkillRouting.md). Read the current
+requirement/state records for the selected work, then the affected track below and its design references.
+Identify source/branch/dirty state, ownership, intended outcome, and the check that establishes it.
 
-**The loop.**
+Build a bounded authorized slice, run the appropriate checks, inspect retained results, and resolve defects
+without weakening the criteria. Use current task coordination for shared paths and heavy resources. Continue
+reversible work through internal qualification where authorized; prepare a concrete decision packet only
+for an unresolved material owner decision. Internal reviewer/subagent work is internal QA.
 
-1. **Orient.** Read this directive's gate matrix, `Docs/Archive/ProjectLedger.md`'s *Current known
-   limitations*, and `../WorkstreamControl/ACTIVE_LANES.md`. Do not re-read the whole documentation set;
-   read the files the chosen gate names.
-2. **Pick one gate.** Select the next unblocked gate from section 10. One gate per session is the
-   default; take a second only when the first closes with time and context to spare. If the work
-   touches files another lane holds, take a lease; if isolated, a branch is enough. Say which and why.
-3. **Define the check before building.** Write down, before the first edit, the exact command, capture,
-   or measurement that will prove the slice — a test that fails now and must pass, a packaged capture
-   that must show a named property, a measured number that must land inside a budget. If no such check
-   can be stated, the slice is not ready to build; decompose it until it is.
-4. **Baseline.** Run the narrowest existing suite that covers the area you are about to touch, and read
-   the result, so a pre-existing failure is never mistaken for damage you caused — and damage you cause
-   is never blamed on history.
-5. **Build the smallest slice that can pass the check.** Not the whole track. Not two gates at once.
-   Incremental, verified progress compounds; heroic sessions that end in an unverifiable pile do not.
-6. **Run the check. Read the result.** Iterate until it passes or you can state precisely why it cannot.
-7. **Adversarial pass before closing.** Before marking a gate PASS, re-read the gate's text as written
-   and attack your own evidence against it: does the run actually establish each clause, on the current
-   commit, at the layer the player will use? Where feasible, have a fresh session or subagent that did
-   not build the work review the evidence against the gate text. Record this as internal QA — it is
-   never independent validation.
-8. **Record and commit.** Update the gate matrix, the ledger's evidence register, and
-   `AssetRegister.md` for any new asset family, in the same commit as the work. Evidence artifacts go
-   under `../WorkstreamControl/evidence/`. Commit, push from the Mac shell, report.
+Record requirement outcomes and decisions in `RequirementsState.md`; register asset provenance in
+`Archive/AssetRegister.md`. New evidence belongs in `BuildArtifacts/Evidence/<gate>-<UTC>/` or the designated
+root, with source/package identity and actual check results. Preserve historical evidence here and in the
+ledger. Commit or publish only within current authorization; do not treat this backlog as a standing push command.
 
-**Rules that protect the loop.**
-
-- **A check the session can run is mandatory.** Work without a runnable check is work whose defects
-  wait for a human to trip over them. Tests, builds, captures read back with your own eyes, measured
-  logs — any of these; assertion alone, never.
-- **Evidence over assertion.** Report what you ran, on what commit, what it returned, and what it does
-  not establish. A passing test supports only what that test exercised.
-- **Never weaken the check to pass it.** Do not raise a timeout, loosen a tolerance, skip a case,
-  delete or edit a test, or reword a gate so the current state satisfies it. Repair the cause or report
-  the blocker. Editing acceptance criteria to match output is the one behavior that silently destroys
-  this project's evidence discipline.
-- **Leave the tree better than you found it.** Never end a session with the build broken or a suite
-  newly red without a written blocker note. The next session must be able to start from *Orient*
-  without archaeology.
-- **Context discipline.** Read what the gate needs; use subagents or separate sessions for wide
-  searches and reviews; do not paste large binary or log dumps into working notes. A session drowning
-  in unrelated context makes worse decisions near its end than its start.
-- **Stop at real decision points.** If a gate cannot pass without a decision only Angelis can make, do
-  the preparatory work, write the decision into section 9 with options and costs, and stop there.
-  Guessing at an owner-level decision wastes more time than waiting for one.
-- **Report states precisely.** Every consequential result is exactly one of: **verified complete,
-  prepared but not executed, executed but outcome not confirmed, partially complete, blocked,
-  unknown.**
+For documentation maintenance, authority/link/source checks are sufficient unless the change also makes
+or changes a runtime claim. Report editorial completion separately from game or release qualification.
 
 ## 1. Authority and sources
 
-This directive is a backlog, sequencing plan, and tracking matrix. It does not establish, author, or waive software or game design requirements. The repository is the sole authority on how this game works. Before designing, building, or verifying any feature, a session must read and defer to the explicit documents that own the domain:
-
-1. **Docs/Requirements.md (Tier 1 — Ultimate Normative Authority):** This file is the absolute driver for all game development, features, mechanics, mathematical models, and balance implementations. If any behavioral description in this directive or any historical source contradicts `Docs/Requirements.md`, `Docs/Requirements.md` wins unconditionally.
-2. **Docs/Archive/DevelopmentBible.md (Tier 1 — Creative Authority):** The sole normative source for world, factions, characters, Future Wells, and narrative intent. This directive raises the execution bar on what the player experiences, but never alters the canon authorized by the Bible.
-3. **Docs/RequirementsState.md (Tier 1 — Lifecycle Authority):** The sole registry tracking whether an individual requirement is OPEN, WIP, or VERIFIED. 
-4. **Docs/Archive/ProjectLedger.md (Tier 2 — Historic Evidence Register):** Tracks verified software performance limits, known limitations, and accepted engineering outcomes.
-
-Design recollections carried from other tools or earlier conversations are hypotheses. Check them against these tracking files before acting on them.
-
+Use [Docs/README.md](README.md) for the complete authority map. The sole normative behavior source is
+`Requirements.md`; lifecycle, evidence state, and owner decisions live in `RequirementsState.md`.
+`Archive/DevelopmentBible.md` owns creative canon. Architecture, direction pages, map references, and this
+backlog support those sources; they cannot define conflicting requirements or waive an acceptance gate.
+`Archive/ProjectLedger.md` preserves historical evidence and does not establish current task ownership.
 
 ## 2. Scope
 
@@ -98,9 +60,11 @@ renegotiate these without him.
 - Glass Scar skirmish, player versus the AI opponent, all three factions selectable — Meridian
   Compact, Kharuun Assemblies, Hollow Choir — with the full setup screen (map, faction, AI
   personality, difficulty, starting resources, victory conditions, speed).
-- All fifteen campaign operations, **What the Ledger Keeps** through **The Broken Sun**, playable by an
-  ordinary person from an empty ledger to any of the four endings, using rendered UI and physical
-  input.
+- All fifteen campaign operations, **What the Ledger Keeps** through **The Broken Sun**, each on a
+  unique story-driven map, connected through the geography, characters, and consequences of Soryn. The
+  journey must be playable from an empty ledger through the authored ending paths using rendered UI and
+  physical input. The owner clarified this connected-world experience on 2026-09-04; the master records
+  its exact requirements. Campaign maps are counted separately from skirmish maps.
 - **Professional visuals**: production textures and materials, dressed environments for every site,
   motion, effects, fog, lighting, and a coherent interface art system — no placeholder, no debug
   surface, no Engine-primitive stand-in anywhere a player can see.
@@ -117,14 +81,19 @@ renegotiate these without him.
 - macOS Apple Silicon distribution: Shipping configuration, Developer ID signed, notarized,
   installable, and verified on a clean machine.
 
+**Additional release scope approved 2026-09-04:** Conquest/roguelite (`REL-CAM-033..038`), team/comp-stomp (`REL-AI-037..040`) and bounded multiplayer/FFA (`REL-MP-*`). Qualify complete seeded Conquest runs, loss/restart/persistence and cosmetic reward isolation; qualify every multiplayer format through normal lobby/play/results, network failures/security, full-load performance/soak and human/owner evidence. Read `SPEC-SKM-014..018` and `REL-MP-018..019` before treating existing maps or loopback checks as coverage. Current state remains in RequirementsState.md.
+
 **Deliberately out of this release:**
 
-- **Multiplayer of any kind.** The accepted networking work stays behind its existing gates and ships
-  disabled. The release is defined as the polished player-versus-AI experience.
+- **Multiplayer hosting services and hosted relay deployment.** Owner deferred these on 2026-09-04 to the next game version, after this version is fully completed. Current direct/LAN modes must qualify their actual connectivity and fail clearly where unsupported.
+
+- **MMO/shared persistent-world and live-service scope.** The separately approved session multiplayer
+  must meet the master's network, security, recovery and experience gates; a working lobby is insufficient.
 - **Windows and Linux builds.** The platform roadmap after this release is: **Linux/SteamOS first,
   then Windows, then others.** This release must not add obstacles to that path — see gate track I's
   portability guard — but ships on macOS only.
-- Any map beyond those the fifteen operations and the skirmish require.
+- Unspecified additional map products. The fifteen story maps, three named offline maps, approved
+  multiplayer format variants and Conquest sector/encounter contracts are included under the master.
 - Any change to theme, world, factions, characters, campaign structure, endings, or authorized
   mechanics. Polish is in scope; redesign is not.
 
@@ -410,11 +379,11 @@ engineered metal and ceramic, higher and cleaner; Kharuun is stone, strata, and 
 warmer; Choir is phase, interference, and held tones that arrive slightly before or after their
 visual. Alerts are brief and rate-limited. Nothing is approved until registered.
 
-**B1 — Mix architecture.** PASS — carried forward (demo gate 14, `a470eb9`): five-category submix
+**B1 — Mix architecture.** Historical engineering result carried forward (demo gate 14, `a470eb9`): five-category submix
 graph (music, dialogue, interface, ambience, effects) with independent volumes and whole-graph reduced
 dynamic range. Remaining under this track: the dialogue category becomes the voice bus for track C,
-with ducking rules (music and ambience duck under voice by a fixed, measured amount; effects do not
-duck — combat information never disappears).
+with ducking governed by the exact current master side-chain requirement. Preserve intelligibility and
+critical combat information and verify the actual mix; the older effects-never-duck recipe is retired.
 
 **B2 — Music.** Extend the registered fifteen-cue set to the full score, deterministically synthesized
 through the established pipeline. Required cue set, each with a stated musical intent, target length,
@@ -552,7 +521,7 @@ file plus a claims check against the evidence register.
 **Goal:** an ordinary person plays all fifteen operations from an empty ledger to an ending they
 chose, with mouse and keyboard, immersed the whole way.
 
-**E1 — Suite health.** PASS — carried forward (demo gates 1–4): automation 58/58 including
+**E1 — Suite health.** Historical engineering result carried forward (demo gates 1–4): automation 58/58 including
 `FreshJourney` all four journeys; native 37/37 ×3; content 123/123. Standing requirement: these
 suites stay green on every merge to `main`; any red is the next session's first work.
 
@@ -638,7 +607,7 @@ mission, unaided, recorded. Every confusion becomes a defect or a documented lim
 
 **Goal:** the packaged build holds its budgets and survives a long session.
 
-Budgets (from the ledger, unchanged): 16.67 ms frame; ≤ 4.0 ms game thread; ≤ 11.0 ms render + GPU;
+Historical planning budget summary (the current master controls): 16.67 ms frame; ≤ 4.0 ms game thread; ≤ 11.0 ms render + GPU;
 ≤ 1.5 ms fog; ≤ 6.0 ms path burst; ≤ 10 GB resident; ≤ 250 ms save. Tracks A–D add cost to exactly
 the systems that were already over budget, so profile after each visual and audio track lands, not
 once at the end; a track whose landing breaks a budget is not closed. Close with a valid
@@ -691,15 +660,16 @@ duplication (section 9) to one authoritative public property. Every public claim
 gate. Evidence: a claims audit mapping each public statement to its evidence, and rendered page
 reviews at desktop and mobile widths.
 
-**J3 — Documentation and rights.** `ProjectLedger.md` evidence register and known limitations current;
+**J3 — Documentation and rights.** Current requirement/evidence state and known limitations reconciled in `RequirementsState.md`;
 `AssetRegister.md` complete including every exception family (TTS model and license, typeface, any
 Niagara or generative exceptions); player manual and controls reference written; the rights position
 confirmed in writing — all assets project-generated or exception-recorded with license, no third-party
 obligation unaccounted, typeface licensed before ship.
 
 **J4 — Known limitations shipped.** The release ships with a visible, accurate limitations page —
-multiplayer absent, bounded AI, the measured balance spread, and anything else the evidence register
-requires — in the build and on the site.
+the actual qualified mode coverage, bounded AI, measured balance spread, and any other retained
+limitations. The separately approved multiplayer scope must be delivered and qualified; an absence
+cannot be presented as fulfillment of that obligation — in the build and on the site.
 
 ## 7. Asset pipeline rules
 
@@ -724,27 +694,18 @@ a parallel path.
 - If a required asset cannot be produced at the professional bar by any authorized path, stop and
   write it into section 9. Do not quietly lower the bar and do not quietly import.
 
-## 8. Execution model
+## 8. Execution and evidence
 
-**Process.** Judge per task: lane lease when touching files another lane holds
-(`../WorkstreamControl/ACTIVE_LANES.md`), branch otherwise — `release/<track>-<topic>`. Stage explicit
-paths only; the tree carries unrelated modifications and gigabytes of build artifacts. Merge to `main`
-when the gate's acceptance evidence exists; push from the Mac shell with LFS objects; never rewrite
-`main` history, never force-push.
+Use the shared contract for ownership, tools, source generation, Git, and external-action authority.
+Run Unreal build/generation/inspection work on the designated local Mac through an available authorized
+interface. Read current scripts and [SetupAndBuild.md](Archive/SetupAndBuild.md); do not assume an old
+bridge timeout, disk identifier, or host snapshot is current.
 
-**Where work runs.** Builds, the automation suite, packaging, asset and voice generation: on the Mac
-through Desktop Commander, with the environment traps in `CLAUDE.md` section 3 respected (TMPDIR, the
-60-second bridge cap, the Seagate remount, the Linux-only test failures).
-
-**Visual proof.** A Track A or D item is not offered for acceptance without the owner review packet
-defined in `CLAUDE.md` section 3: Mac-rendered screenshots of each final asset in context and a short
-movie of every animation or moving effect, with commit, preset, and resolution recorded.
-
-**Sessions.** Run the section 0 loop. Update this directive's gate matrix in the same commit as the
-work it describes; the directive is worthless if it drifts from reality.
-
-**Claims.** Evidence-bounded language everywhere, the six reporting states, self-review labeled
-internal QA. Independent validation requires a source that is not the session that built the work.
+For final visual-family review, retain stills of each asset in its rendered gameplay context and a short
+motion clip (normally 10–30 seconds) for animation or moving effects. Bind captures to source/package,
+hardware, preset, resolution, and date. Editor images are authoring previews. Required packaged evidence,
+physical input, listening, and owner acceptance remain separate gates. Owner review is recorded only on
+explicit acceptance of the identified candidate; an internal review or historic PASS is not that decision.
 
 ## 9. Open decisions
 
@@ -813,23 +774,26 @@ Add to this list rather than guessing. Each entry needs the question, the option
    `CLAUDE.md` and `SetupAndBuild.md` the same day.
 10. **Demo versus full labeling.** This release contains the full fifteen-operation campaign and
    skirmish. **RESOLVED 2026-09-01 (Angelis):** the public label is **Version 1.0 — full release**.
-   All store and site text is written against the 1.0 full-release claim set; nothing may be
-   labeled a demo.
+   Use that label only for the qualified release. Current development surfaces must disclose their
+   actual status; this historical naming decision does not authorize presenting a prototype as released.
 
 ## 10. Gate matrix
 
-Every gate without carried evidence is NOT RUN until a session runs it and records the evidence here
-with its commit SHA and date. Dependencies are hard: do not accept a gate whose prerequisite has not
-passed. "OD n" means open decision n in section 9 must be resolved first.
+This is a retained planning/evidence snapshot through its individually dated entries, not a second
+lifecycle ledger. “PASS” below is the original engineering report at its cited boundary, not an owner
+acceptance or a fresh verification by this documentation audit. Read current outcomes and decisions in
+`RequirementsState.md`, inspect the exact artifacts, and map each gate to current master IDs before relying
+on it. Record new state only in that file. A dependency is satisfied only by its required evidence.
+“OD n” points to a historical decision in section 9; verify its current disposition in the state record.
 
-| # | Gate | Track | Depends on | State |
+| # | Planning gate summary | Track | Depends on | Historical engineering/evidence note |
 |---|---|---|---|---|
 | 1 | Suite health: automation, native ×3, and content suites green on current `main`; standing requirement on every merge | E1 | — | PASS 2026-09-04 — Full 77/77 Unreal automation tests passing clean (0 errors, 0 warnings); 96/96 native simulation tests passing across Release, Debug, and ASan/UBSan; content/world suites 33/33 tests passing (15 map dressing, 7 dressing pack header, 11 Lume Reach dressing); runtime smoke clean across all factions |
 | 2 | Five-category submix graph with independent volumes | B1 | — | PASS carried from demo gate 14 — `Echoes.Runtime.Audio.MixArchitecture` green at `a470eb9`; evidence `demo-gate14-mix-architecture-*`; voice-bus ducking rules remain under gate 16 |
 | 3 | Exposure, tonemapping, and per-site lighting rig; no clipped highlights in packaged captures | A1 | 1 | OPEN — themed packaged captures accepted 2026-09-01 at `f47dbff8`: hero-referenced Glass Scar (golden-fracture vitrified ground, authored gold/indigo rig) at 1920×1080, 2560×1440, and high-contrast, clipped ≤0.00058% (ledger ART-A4-001/PKG-I1-002, evidence `release-gate3-themed-packaged-*`); Glass Scar's rig is authored — per-site rigs for the remaining campaign sites still owed |
 | 4 | No debug overlay or prototype text in shipping-configuration captures | A2 | 3 | NOT RUN |
 | 5 | Production texture/material families registered, byte-idempotent, reviewed per family | A3 | 3 | IN PROGRESS — all nine A3 families registered at `surface-textures-v8` and bound per faction on 2026-09-03 (ledger ART-A3-002, evidence `BuildArtifacts/Evidence/release-gate5-a3-surface-families-20260903T231806Z`): editor-render captures measured within the exposure window; per-family isolated Metal composition review, packaged and high-contrast captures, Folded Verge route-kit binding, and owner review still owed; Future Well landmark bound to vitrified glass and crystal on 2026-09-04 (ART-A3-003), Dormant state captured only |
-| 6 | Every campaign site dressed to its stated identity; no bare collision floor | A4 | 5 | IN PROGRESS — Glass Scar and Lume Reach / Ark-City district dressing packs consumed at runtime on 2026-09-04 (ledger WORLD-A4-001/002, evidence `BuildArtifacts/Evidence/release-gate6-*` and `BuildArtifacts/ChoirAtLumeReach/LumeReach*.png`): 39 digest-pinned civic_frame and conduit_pylon records drawn on live-Blocked perimeter wall and transit cells with pale ceramic plates, amber interior lighting, and zero simulation touch (`SIM-002` / `REL-ART-026`); automated test `Echoes.Runtime.Map.LumeReachDressing` green in 77/77 automation suite; rendered captures verify no bare collision floor for Lume Reach campaign missions; Crownfall, Unburied Road, and Choir manifestation site vocabularies remain to complete full campaign coverage |
+| 6 | Every campaign site dressed to its stated identity; no bare collision floor | A4 | 5 | IN PROGRESS — Glass Scar and Lume Reach / Ark-City district dressing packs consumed at runtime on 2026-09-04 (ledger WORLD-A4-001/002, evidence `BuildArtifacts/Evidence/release-gate6-*` and `BuildArtifacts/ChoirAtLumeReach/LumeReach*.png`): 39 digest-pinned civic_frame and conduit_pylon records drawn on live-Blocked perimeter wall and transit cells with pale ceramic plates, amber interior lighting, and zero simulation touch (`SIM-002` / legacy `REL-ART-026`; passability successor `REL-ART-030` needs retained-evidence recheck); automated test `Echoes.Runtime.Map.LumeReachDressing` green in 77/77 automation suite; rendered captures verify no bare collision floor for Lume Reach campaign missions; Crownfall, Unburied Road, and Choir manifestation site vocabularies remain to complete full campaign coverage |
 | 7 | Motion families implemented, presentation-only, reduced-motion compliant | A5 | 5 | PASS 2026-09-04 — presentation-only code-driven motion families implemented across all roster archetypes, structures, and landmarks (EchoesEntityView); verified zero simulation touch (checksum bit-for-bit identical), full reduced-motion accessibility compliance, and in-engine automation test green (Echoes.Runtime.Presentation.MotionFamilies PASS, 96/96 native sim tests PASS across release/debug/ASan, runtime smoke PASS; ledger ART-A5-001) |
 | 8 | Effect families implemented with recorded combat-load frame cost | A6 | 7 | PASS 2026-09-04 — presentation-only combat effect families implemented across all factions (AEchoesCombatEffectView weapon beams, muzzles, impact bursts, Choir dual-offset phase afterimage; AEchoesEntityView worker matter gather beams, construction assembly fields, and Reshape telegraph ground sigils); pooled allocation with tier caps (48 low, 128 medium, 256 high) and deterministic overflow coalescing; verified zero simulation touch (checksum bit-for-bit identical), full accessibility compliance (ReducedMotion suppresses afterimages/jitters; ReducedFlashing clamps emission <= 1.0), and in-engine automation test green (Echoes.Runtime.Presentation.CombatEffects PASS, 96/96 native sim tests PASS across release/debug/ASan, runtime smoke PASS across Meridian, Kharuun, and Choir; ledger ART-A6-001) |
 | 9 | Production fog and shroud within the 1.5 ms budget | A7 | 3 | PASS 2026-09-04 — production fog/shroud presentation implemented over authoritative 64×64 visibility grid (`AEchoesFogView`); deep charcoal basalt with faint magenta fracture-bleed for unexplored (`Height: -16 to 184 uu`), desaturated memory tint (`Height: 6 uu, Centre: 14 uu`) over persistent geometry for explored, full palette for visible; zero simulation touch verified (SIM-002 checksum bit-for-bit identical across 40 ticks), complete accessibility compliance (ReducedFlashing clamps fracture emission to ≤0.1; ReducedMotion freezes drift/phase coordinates), collision/shadows/nav/overlaps strictly disabled; synchronization measured within ≤1.5 ms budget across 4,096 tiles (incremental average <0.2 ms); dedicated automation test `Echoes.Runtime.Presentation.ProductionFog` green (exit code 0), 96/96 native simulation tests PASS across release/debug/ASan, and runtime smoke PASS across Meridian, Kharuun, Choir (ledger ART-A7-001) |

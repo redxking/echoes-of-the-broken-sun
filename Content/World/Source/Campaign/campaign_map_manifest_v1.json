@@ -1,0 +1,112 @@
+{
+  "manifest_format": "echoes-campaign-map-manifest",
+  "manifest_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_maps": [
+    {
+      "mission_code": "M01",
+      "map_id": "glass-scar-evacuation-margin",
+      "operation_mode": "CampaignPrologue",
+      "source_path": "Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json",
+      "source_sha256": "8ae50fa5adf740f0f7f0508c151e82c4e86b7f3a1e70cf323717ee536418669b"
+    },
+    {
+      "mission_code": "M02",
+      "map_id": "shivergrass-migration-basin",
+      "operation_mode": "CampaignSevenAccounts",
+      "source_path": "Content/World/Source/Campaign/m02_shivergrass-migration-basin_v1.json",
+      "source_sha256": "5024db41cd825e2e948a84860b9f58f2a71690a650929cafa80a24fef6458f6c"
+    },
+    {
+      "mission_code": "M03",
+      "map_id": "ark-city-reserve-service",
+      "operation_mode": "CampaignCityReserve",
+      "source_path": "Content/World/Source/Campaign/m03_ark-city-reserve-service_v1.json",
+      "source_sha256": "28d3373a6af7413311e85b5eb62d9700787f3a782289452c8431159dc498c6e4"
+    },
+    {
+      "mission_code": "M04",
+      "map_id": "unburied-road-vaults",
+      "operation_mode": "CampaignUnburiedRoad",
+      "source_path": "Content/World/Source/Campaign/m04_unburied-road-vaults_v1.json",
+      "source_sha256": "532c6953893689090f55a6e03147b1824537a6e707de36a7cd9eb9130141d36d"
+    },
+    {
+      "mission_code": "M05",
+      "map_id": "terms-of-continuance-corridor",
+      "operation_mode": "CampaignTermsOfContinuance",
+      "source_path": "Content/World/Source/Campaign/m05_terms-of-continuance-corridor_v1.json",
+      "source_sha256": "fa1443c58ef754de49d09218ce5b499f269f5a3776397fe86553bcf255110a4e"
+    },
+    {
+      "mission_code": "M06",
+      "map_id": "names-without-births-district",
+      "operation_mode": "CampaignNamesWithoutBirths",
+      "source_path": "Content/World/Source/Campaign/m06_names-without-births-district_v1.json",
+      "source_sha256": "a70ce5089096fe776884eead58441bb19538a34bc818ae52adf6b3ddcb6190a4"
+    },
+    {
+      "mission_code": "M07",
+      "map_id": "listening-spine-ridge",
+      "operation_mode": "CampaignShapeOfSilence",
+      "source_path": "Content/World/Source/Campaign/m07_listening-spine-ridge_v1.json",
+      "source_sha256": "7977033d5ced5032741fcebe4dffbd243803a61e61e1af382e7de8faafa6bfd0"
+    },
+    {
+      "mission_code": "M08",
+      "map_id": "reciprocal-contact-verge",
+      "operation_mode": "CampaignShapeBesideUs",
+      "source_path": "Content/World/Source/Campaign/m08_reciprocal-contact-verge_v1.json",
+      "source_sha256": "bb48f971b3c94c8b399f0001c07abaea6e9b955bb4cfb5d960ad73233c3fd227"
+    },
+    {
+      "mission_code": "M09",
+      "map_id": "reserve-authority-exchange",
+      "operation_mode": "CampaignReserveAuthority",
+      "source_path": "Content/World/Source/Campaign/m09_reserve-authority-exchange_v1.json",
+      "source_sha256": "4ca4c4d3e629537d46dcf4f617e0ba6a7167765119ef3a2ee445c15edbaf4464"
+    },
+    {
+      "mission_code": "M10",
+      "map_id": "lume-reach-liability-district",
+      "operation_mode": "CampaignChoirAtLumeReach",
+      "source_path": "Content/World/Source/Campaign/m10_lume-reach-liability-district_v1.json",
+      "source_sha256": "f994b12847186d275c718eea94f605b3ea54d193a065135cf7af9e8fc408b429"
+    },
+    {
+      "mission_code": "M11",
+      "map_id": "public-coalition-interface",
+      "operation_mode": "CampaignNoNeutralLedger",
+      "source_path": "Content/World/Source/Campaign/m11_public-coalition-interface_v1.json",
+      "source_sha256": "87f4fc3effbde0e92b2feb39fa3c7a99672848ba1ba88d0afddaf79b9d09cf75"
+    },
+    {
+      "mission_code": "M12",
+      "map_id": "public-readback-demonstrator",
+      "operation_mode": "CampaignFutureThatWon",
+      "source_path": "Content/World/Source/Campaign/m12_public-readback-demonstrator_v1.json",
+      "source_sha256": "90161ff3cecb08dc6f159cac072e4cace1ab3a7c5e015743397aabc43a8e8e62"
+    },
+    {
+      "mission_code": "M13",
+      "map_id": "crownfall-public-index",
+      "operation_mode": "CampaignAssemblyOfTheMissing",
+      "source_path": "Content/World/Source/Campaign/m13_crownfall-public-index_v1.json",
+      "source_sha256": "2266b4acab0ef04e04eca266e2705509aa30d50b97c5e5d57a69f44e4d89552e"
+    },
+    {
+      "mission_code": "M14",
+      "map_id": "crownfall-command-crisis",
+      "operation_mode": "CampaignSeveralVoicesOneCommand",
+      "source_path": "Content/World/Source/Campaign/m14_crownfall-command-crisis_v1.json",
+      "source_sha256": "08628f6789304465fb1c5004bc0b0786d258fe0ad0aebe2fd1a7170e1798a38f"
+    },
+    {
+      "mission_code": "M15",
+      "map_id": "broken-sun-accord-dais",
+      "operation_mode": "CampaignTheBrokenSun",
+      "source_path": "Content/World/Source/Campaign/m15_broken-sun-accord-dais_v1.json",
+      "source_sha256": "5fa8590d1398ea18517a3ec8dc2fd496dca9ff071cec24d3abe443ba943767b6"
+    }
+  ]
+}

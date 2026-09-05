@@ -7,8 +7,14 @@ metadata:
 
 # Echoes GUI control readiness
 
-Read live `CLAUDE.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, `Docs/Archive/SetupAndBuild.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`; verify exact worktree/package identity and lane before launching or interacting with a build.
+## Project authority
 
-Verify—not assume—a callable macOS UI tool, fresh screenshot/state capture, real pointer and keyboard event delivery, Screen Recording permission, Accessibility permission, and an audio observation route. Bind captures to time, package/build identity, screen/window state, input sequence, and observer. Synthetic or agent GUI input is its own evidence class and never human play.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-Do not install tools, grant permissions, claim a screenshot is current, or claim that a route proves gameplay. Capability inspection alone does not take the heavy lock, but any game launch or delivered input requires a current detailed lease acquired through `echoes-heavy-run-coordination` and explicitly released afterward. Stop if the lease, capability, attribution, visible state, or audio observation route is absent; record the precise missing prerequisite and use `BLOCKED`, never a fabricated play/pass/acceptance status. Route valid runs to the relevant implementation skill, `echoes-evidence-gate-review`, then owner-only `echoes-human-acceptance-session`.
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+
+Use to determine whether a live GUI route can provide attributable pointer, keyboard, and visual observations. It is a read-only capability check unless a game is launched or input is delivered.
+
+Verify a callable UI interface, fresh visible state/capture, real pointer and keyboard delivery, and the relevant macOS permissions. Require an audio observation route only when the requested task needs audio evidence. Bind any capture to time, package/build identity, window state, input sequence, and observer. Synthetic or agent GUI input is its own evidence class and never human play.
+
+Capability inspection does not need heavy-run coordination. A launch or delivered input does: reserve the resource through [echoes-heavy-run-coordination](../echoes-heavy-run-coordination/SKILL.md), retain the resulting evidence, and report an unavailable capability precisely. Do not claim play, pass, or human acceptance from capability alone.

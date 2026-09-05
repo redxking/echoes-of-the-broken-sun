@@ -15,9 +15,53 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#if WITH_EDITOR
+#include "HAL/IConsoleManager.h"
+#endif
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "String/LexFromString.h"
 #include "UnrealClient.h"
+
+namespace
+{
+#if WITH_EDITOR
+TAutoConsoleVariable<int32> CVarEchoesEditorArtReviewCameraEnabled(
+    TEXT("Echoes.EditorArtReviewCameraEnabled"), 1,
+    TEXT("PIE only: 0 restores the ordinary camera on next play without restarting the editor."), ECVF_Default);
+TAutoConsoleVariable<FString> CVarEchoesEditorArtReviewCenter(
+    TEXT("Echoes.EditorArtReviewCenter"), TEXT(""),
+    TEXT("Editor EchoesArtReview override: world X,Y center; empty uses command line."), ECVF_Default);
+TAutoConsoleVariable<float> CVarEchoesEditorArtReviewZoom(
+    TEXT("Echoes.EditorArtReviewZoom"), -1.0f,
+    TEXT("Editor EchoesArtReview override: camera zoom; -1 uses command line."), ECVF_Default);
+TAutoConsoleVariable<FString> CVarEchoesEditorArtReviewScout(
+    TEXT("Echoes.EditorArtReviewScout"), TEXT(""),
+    TEXT("Editor EchoesArtReview override: world X,Y owned-unit scout destination; empty uses command line."), ECVF_Default);
+TAutoConsoleVariable<float> CVarEchoesEditorArtReviewDelay(
+    TEXT("Echoes.EditorArtReviewDelay"), -1.0f,
+    TEXT("Editor EchoesArtReview override: screenshot delay seconds; -1 uses command line."), ECVF_Default);
+TAutoConsoleVariable<FString> CVarEchoesEditorArtReviewOutput(
+    TEXT("Echoes.EditorArtReviewOutput"), TEXT(""),
+    TEXT("Editor EchoesArtReview override: screenshot output path; empty uses command line."), ECVF_Default);
+
+bool TryParseArtReviewPoint(const FString& Text, const UWorld* World, FVector& OutPoint)
+{
+    FString XText, YText;
+    if (!Text.Split(TEXT(","), &XText, &YText)) return false;
+    float X = 0.0f, Y = 0.0f;
+    if (!LexTryParseString(X, *XText) || !LexTryParseString(Y, *YText)) return false;
+    const UEchoesSimulationSubsystem* Bridge =
+        World != nullptr ? World->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (Bridge == nullptr || !FMath::IsFinite(X) || !FMath::IsFinite(Y)) return false;
+    const float HalfWidth = Bridge->GetMapWidthTiles() * UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
+    const float HalfHeight = Bridge->GetMapHeightTiles() * UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
+    if (X < -HalfWidth || X > HalfWidth || Y < -HalfHeight || Y > HalfHeight) return false;
+    OutPoint = FVector(X, Y, 0.0f);
+    return true;
+}
+#endif
+}
 
 AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
 {
@@ -28,15 +72,15 @@ AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(SceneRoot);
-    SpringArm->TargetArmLength = 3800.0f;
-    SpringArm->SetRelativeRotation(FRotator(-58.0f, -45.0f, 0.0f));
+    SpringArm->SetRelativeRotation(FRotator(-48.0f, -45.0f, 0.0f));
     SpringArm->bDoCollisionTest = false;
     SpringArm->bEnableCameraLag = true;
     SpringArm->CameraLagSpeed = 12.0f;
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-    Camera->SetFieldOfView(55.0f);
+    Camera->ProjectionMode = ECameraProjectionMode::Orthographic;
+    SetCameraFraming(3800.0f);
 
 }
 
@@ -48,22 +92,22 @@ void AEchoesRTSCameraPawn::ApplyAuthoredPostProcess()
     }
     FPostProcessSettings& Settings = Camera->PostProcessSettings;
 
-    // Track A1's explicit exposure contract: histogram metering, but bounded
-    // to a fraction of a stop so site brightness variation survives while
-    // nothing runs away, and no exposure bias by default. Review fixtures
-    // still override the bias after this baseline is applied.
+    // REL-ART-019: equal histogram limits hold exposure during tactical pans.
+    // Site lighting supplies brightness differences; the camera does not adapt
+    // to the amount of shroud or bright terrain in the frame. Review fixtures
+    // may still apply their explicitly authored exposure bias below.
     Settings.bOverride_AutoExposureMethod = true;
     Settings.AutoExposureMethod = EAutoExposureMethod::AEM_Histogram;
     Settings.bOverride_AutoExposureMinBrightness = true;
     Settings.AutoExposureMinBrightness = 1.0f;
     Settings.bOverride_AutoExposureMaxBrightness = true;
-    Settings.AutoExposureMaxBrightness = 1.2f;
+    Settings.AutoExposureMaxBrightness = 1.0f;
     Settings.bOverride_AutoExposureSpeedUp = true;
     Settings.AutoExposureSpeedUp = 3.0f;
     Settings.bOverride_AutoExposureSpeedDown = true;
     Settings.AutoExposureSpeedDown = 1.0f;
     Settings.bOverride_AutoExposureBias = true;
-    Settings.AutoExposureBias = 0.75f;
+    Settings.AutoExposureBias = 0.0f;
 
     // Filmic tonemapper chosen against the charcoal / pale-ceramic /
     // broken-sun-amber palette: a slightly relaxed slope with an earlier,
@@ -81,19 +125,43 @@ void AEchoesRTSCameraPawn::ApplyAuthoredPostProcess()
     Settings.bOverride_BloomIntensity = true;
     Settings.BloomIntensity = 0.3f;
 
+    // Restrained contact shading keeps small feet and shaded equipment from
+    // merging into wide black halos at RTS distance. The world-space radius
+    // follows the equipment scale instead of expanding with camera distance.
+    Settings.bOverride_AmbientOcclusionIntensity = true;
+    Settings.AmbientOcclusionIntensity = 0.3f;
+    Settings.bOverride_AmbientOcclusionRadius = true;
+    Settings.AmbientOcclusionRadius = 80.0f;
+    Settings.bOverride_AmbientOcclusionRadiusInWS = true;
+    Settings.AmbientOcclusionRadiusInWS = true;
+
+    // Stable edge and silhouette clarity across the whole tactical viewport.
+    Settings.bOverride_MotionBlurAmount = true;
+    Settings.MotionBlurAmount = 0.0f;
+    Settings.bOverride_LensFlareIntensity = true;
+    Settings.LensFlareIntensity = 0.0f;
+    Settings.bOverride_SceneFringeIntensity = true;
+    Settings.SceneFringeIntensity = 0.0f;
+    Settings.bOverride_FilmGrainIntensity = true;
+    Settings.FilmGrainIntensity = 0.0f;
+    Settings.bOverride_VignetteIntensity = true;
+    Settings.VignetteIntensity = 0.0f;
+
     Camera->PostProcessBlendWeight = 1.0f;
 
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_EXPOSURE_AUTHORED] method=histogram minBrightness=%.2f maxBrightness=%.2f bias=%.2f filmSlope=%.2f filmShoulder=%.2f whiteClip=%.3f bloom=%.2f revision=exposure-authored-v1"),
+        TEXT("[ECHOES_EXPOSURE_AUTHORED] method=histogram minBrightness=%.2f maxBrightness=%.2f bias=%.2f filmSlope=%.2f filmShoulder=%.2f whiteClip=%.3f bloom=%.2f ao=%.2f aoRadiusCm=%.1f revision=exposure-authored-v2"),
         Settings.AutoExposureMinBrightness,
         Settings.AutoExposureMaxBrightness,
         Settings.AutoExposureBias,
         Settings.FilmSlope,
         Settings.FilmShoulder,
         Settings.FilmWhiteClip,
-        Settings.BloomIntensity);
+        Settings.BloomIntensity,
+        Settings.AmbientOcclusionIntensity,
+        Settings.AmbientOcclusionRadius);
 }
 
 void AEchoesRTSCameraPawn::BeginPlay()
@@ -122,10 +190,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
             return;
         }
         SetActorLocation(ReviewConfiguration.CameraLocation);
-        SpringArm->TargetArmLength = ReviewConfiguration.CameraZoom;
+        SetCameraFraming(ReviewConfiguration.CameraZoom, 52.0f);
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
-        Camera->SetFieldOfView(52.0f);
         UE_LOG(
             LogEchoes,
             Display,
@@ -148,10 +215,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
             TEXT("EchoesReviewReducedPresentation"));
         bArtReviewMode = true;
         SetActorLocation(FVector(-4200.0f, -4200.0f, 100.0f));
-        SpringArm->TargetArmLength = 2500.0f;
+        SetCameraFraming(2500.0f, 52.0f);
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
-        Camera->SetFieldOfView(52.0f);
         Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
         Camera->PostProcessSettings.AutoExposureBias = -0.25f;
         Camera->PostProcessBlendWeight = 1.0f;
@@ -172,10 +238,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
             TEXT("EchoesReviewReducedPresentation"));
         bArtReviewMode = true;
         SetActorLocation(FVector(-4200.0f, -4200.0f, 100.0f));
-        SpringArm->TargetArmLength = 2500.0f;
+        SetCameraFraming(2500.0f, 52.0f);
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
-        Camera->SetFieldOfView(52.0f);
         Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
         Camera->PostProcessSettings.AutoExposureBias = -0.25f;
         Camera->PostProcessBlendWeight = 1.0f;
@@ -230,28 +295,29 @@ void AEchoesRTSCameraPawn::BeginPlay()
             SetActorLocation(FVector(0.0f, 0.0f, 100.0f));
             // Gate 50 frame: both banks, the chasm floor, and the dais in one view. No
             // fixture-only exposure override: the frame renders under the A1 rig as play does.
-            SpringArm->TargetArmLength = 3200.0f;
+            SetCameraFraming(3200.0f, 62.0f);
             SpringArm->SetRelativeRotation(FRotator(-19.0f, 43.0f, 0.0f));
-            Camera->SetFieldOfView(62.0f);
         }
         else if (bBrokenSun)
         {
             SetActorLocation(FVector(2800.0f, -2000.0f, 650.0f));
-            SpringArm->TargetArmLength = 0.0f;
+            // Perspective used an arm length of zero for this close review
+            // frame. Orthographic scale needs a finite width, so the shared
+            // conversion applies its documented minimum framing distance.
+            SetCameraFraming(0.0f, 72.0f);
             SpringArm->SetRelativeRotation(FRotator(32.0f, 145.0f, 0.0f));
-            Camera->SetFieldOfView(72.0f);
             Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
             Camera->PostProcessSettings.AutoExposureBias = 0.0f;
         }
         else
         {
-            SpringArm->TargetArmLength =
+            SetCameraFraming(
                 bOverview
                     ? 10800.0f
-                    : (bFoldedVerge ? 3350.0f : (bBuriedCauseway ? 2850.0f : 2300.0f));
+                    : (bFoldedVerge ? 3350.0f : (bBuriedCauseway ? 2850.0f : 2300.0f)),
+                bOverview ? 58.0f : 52.0f);
             SpringArm->SetRelativeRotation(
                 FRotator(bOverview ? -68.0f : -58.0f, bOverview ? -90.0f : -45.0f, 0.0f));
-            Camera->SetFieldOfView(bOverview ? 58.0f : 52.0f);
             Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
             Camera->PostProcessSettings.AutoExposureBias = bOverview ? -0.05f : 0.15f;
         }
@@ -272,7 +338,7 @@ void AEchoesRTSCameraPawn::BeginPlay()
     {
         bArtReviewMode = true;
         SetActorLocation(FVector(-4400.0f, -4400.0f, 100.0f));
-        SpringArm->TargetArmLength = 1350.0f;
+        SetCameraFraming(1350.0f);
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
         Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
@@ -289,10 +355,9 @@ void AEchoesRTSCameraPawn::BeginPlay()
     {
         bArtReviewMode = true;
         SetActorLocation(FVector(4000.0f, 4000.0f, 100.0f));
-        SpringArm->TargetArmLength = 2600.0f;
+        SetCameraFraming(2600.0f, 52.0f);
         SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
         SpringArm->bEnableCameraLag = false;
-        Camera->SetFieldOfView(52.0f);
         Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
         Camera->PostProcessSettings.AutoExposureBias = 0.10f;
         Camera->PostProcessBlendWeight = 1.0f;
@@ -302,7 +367,13 @@ void AEchoesRTSCameraPawn::BeginPlay()
             TEXT("[ECHOES_NETWORK_VISUAL_REVIEW_CAMERA] scopedSeat=1 centerTile=(52,52) zoom=2600 editorOnly=true"));
         return;
     }
-    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
+    bool bUseArtReviewCamera = FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview"));
+#if WITH_EDITOR
+    if (GetWorld() && GetWorld()->WorldType == EWorldType::PIE &&
+        CVarEchoesEditorArtReviewCameraEnabled.GetValueOnGameThread() == 0)
+        bUseArtReviewCamera = false;
+#endif
+    if (bUseArtReviewCamera)
     {
         bArtReviewMode = true;
         // Default: the local base. -EchoesArtReviewCenter=X,Y and
@@ -326,6 +397,42 @@ void AEchoesRTSCameraPawn::BeginPlay()
         // (-EchoesArtReviewScout=X,Y, issued through the ordinary command
         // path) can reach and reveal the framed area first.
         FParse::Value(FCommandLine::Get(), TEXT("EchoesArtReviewDelay="), ArtReviewCaptureDelaySeconds);
+#if WITH_EDITOR
+        if (GIsEditor)
+        {
+            const FString EditorCenter = CVarEchoesEditorArtReviewCenter.GetValueOnGameThread();
+            if (!EditorCenter.IsEmpty())
+            {
+                FVector Candidate;
+                if (TryParseArtReviewPoint(EditorCenter, GetWorld(), Candidate))
+                {
+                    Center = Candidate;
+                    Center.Z = 100.0f;
+                    CenterText = EditorCenter;
+                }
+                else
+                {
+                    UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_ART_REVIEW_REJECTED] field=center value=%s"), *EditorCenter);
+                }
+            }
+            const float EditorZoom = CVarEchoesEditorArtReviewZoom.GetValueOnGameThread();
+            if (EditorZoom >= 0.0f)
+            {
+                if (FMath::IsFinite(EditorZoom) && EditorZoom >= 600.0f && EditorZoom <= 6000.0f)
+                    Zoom = EditorZoom;
+                else
+                    UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_ART_REVIEW_REJECTED] field=zoom value=%.2f"), EditorZoom);
+            }
+            const float EditorDelay = CVarEchoesEditorArtReviewDelay.GetValueOnGameThread();
+            if (EditorDelay >= 0.0f)
+            {
+                if (FMath::IsFinite(EditorDelay) && EditorDelay >= 2.0f && EditorDelay <= 600.0f)
+                    ArtReviewCaptureDelaySeconds = EditorDelay;
+                else
+                    UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_ART_REVIEW_REJECTED] field=delay value=%.2f"), EditorDelay);
+            }
+        }
+#endif
         // -EchoesArtReviewHighContrast renders the review in the high-contrast
         // HUD variant so the accessibility branch is captured, not assumed.
         if (FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewHighContrast")))
@@ -339,7 +446,7 @@ void AEchoesRTSCameraPawn::BeginPlay()
         }
         ArtReviewCaptureDelaySeconds = FMath::Clamp(ArtReviewCaptureDelaySeconds, 2.0f, 600.0f);
         SetActorLocation(Center);
-        SpringArm->TargetArmLength = FMath::Clamp(Zoom, 600.0f, 6000.0f);
+        SetCameraFraming(FMath::Clamp(Zoom, 600.0f, 6000.0f));
         SpringArm->bEnableCameraLag = false;
         UE_LOG(
             LogEchoes,
@@ -397,6 +504,7 @@ void AEchoesRTSCameraPawn::SetupPlayerInputComponent(
 void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    SynchronizeOrthographicFraming();
 
 #if !UE_BUILD_SHIPPING
     if (bArtReviewMode && !bArtReviewScreenshotRequested)
@@ -420,11 +528,28 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         {
             bArtReviewScoutIssued = true;
             FString ScoutText;
+            bool bEditorScoutOverride = false;
             if (FParse::Value(
                     FCommandLine::Get(),
                     TEXT("EchoesArtReviewScout="),
                     ScoutText,
                     /*bShouldStopOnSeparator*/ false))
+            {
+                // Command-line behavior remains unchanged when no editor
+                // override is active.
+            }
+#if WITH_EDITOR
+            if (GIsEditor && FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
+            {
+                const FString EditorScout = CVarEchoesEditorArtReviewScout.GetValueOnGameThread();
+                if (!EditorScout.IsEmpty())
+                {
+                    ScoutText = EditorScout;
+                    bEditorScoutOverride = true;
+                }
+            }
+#endif
+            if (!ScoutText.IsEmpty())
             {
                 FString XText;
                 FString YText;
@@ -434,9 +559,16 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                         : nullptr;
                 const echoes::sim::Simulation* ScoutSimulation =
                     ScoutBridge != nullptr ? ScoutBridge->GetSimulation() : nullptr;
-                if (ScoutText.Split(TEXT(","), &XText, &YText) && ScoutSimulation != nullptr)
+                FVector Target;
+                bool bTargetValid = ScoutText.Split(TEXT(","), &XText, &YText);
+#if WITH_EDITOR
+                if (bEditorScoutOverride)
+                    bTargetValid = TryParseArtReviewPoint(ScoutText, GetWorld(), Target);
+#endif
+                if (bTargetValid && ScoutSimulation != nullptr)
                 {
-                    const FVector Target(FCString::Atof(*XText), FCString::Atof(*YText), 0.0f);
+                    if (!bEditorScoutOverride)
+                        Target = FVector(FCString::Atof(*XText), FCString::Atof(*YText), 0.0f);
                     // A review capture of explored ground must be earned the
                     // way a player earns it: real move orders on the local
                     // player's own mobile units, resolved by the simulation.
@@ -449,7 +581,9 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                             Entity.type == echoes::sim::EntityType::Soldier ||
                             Entity.type == echoes::sim::EntityType::HeavyUnit ||
                             Entity.type == echoes::sim::EntityType::ScoutUnit;
-                        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId || !bMobile)
+                        const bool bScoutOnly = FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReviewScoutOnly"));
+                        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId || !bMobile ||
+                            (bScoutOnly && Entity.type != echoes::sim::EntityType::ScoutUnit))
                         {
                             continue;
                         }
@@ -484,6 +618,10 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                         Target.Y,
                         Ordered,
                         ArtReviewCaptureDelaySeconds);
+                }
+                else if (bEditorScoutOverride)
+                {
+                    UE_LOG(LogEchoes, Error, TEXT("[ECHOES_EDITOR_ART_REVIEW_REJECTED] field=scout value=%s"), *ScoutText);
                 }
             }
         }
@@ -531,14 +669,21 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
             }
 
             FString OutputPath;
+            FParse::Value(
+                FCommandLine::Get(),
+                TEXT("EchoesArtReviewOutput="),
+                OutputPath);
+#if WITH_EDITOR
+            if (GIsEditor && FParse::Param(FCommandLine::Get(), TEXT("EchoesArtReview")))
+            {
+                const FString EditorOutput = CVarEchoesEditorArtReviewOutput.GetValueOnGameThread();
+                if (!EditorOutput.IsEmpty()) OutputPath = EditorOutput;
+            }
+#endif
             const bool bShowUI = !FParse::Param(
                 FCommandLine::Get(),
                 TEXT("EchoesArtReviewHideUI"));
-            if (FParse::Value(
-                    FCommandLine::Get(),
-                    TEXT("EchoesArtReviewOutput="),
-                    OutputPath) &&
-                !OutputPath.IsEmpty())
+            if (!OutputPath.IsEmpty())
             {
                 FScreenshotRequest::RequestScreenshot(
                     OutputPath,
@@ -561,6 +706,15 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                 ArtReviewCaptureDelaySeconds,
                 OutputPath.IsEmpty() ? TEXT("default") : *OutputPath);
         }
+    }
+#endif
+
+#if !UE_BUILD_SHIPPING
+    // Authoring captures must not depend on the desktop pointer position.
+    if (bArtReviewMode)
+    {
+        SpringArm->bEnableCameraLag = false;
+        return;
     }
 #endif
 
@@ -672,10 +826,45 @@ void AEchoesRTSCameraPawn::ApplyZoom(float Direction)
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const float ZoomScale =
         Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f;
-    SpringArm->TargetArmLength = FMath::Clamp(
+    SetCameraFraming(FMath::Clamp(
         SpringArm->TargetArmLength + ZoomStep * ZoomScale * Direction,
         MinimumZoom,
-        MaximumZoom);
+        MaximumZoom));
+}
+
+void AEchoesRTSCameraPawn::SetCameraFraming(
+    float LegacyArmLength,
+    float LegacyFieldOfViewDegrees)
+{
+    check(SpringArm != nullptr);
+    check(Camera != nullptr);
+
+    ActiveFramingFieldOfViewDegrees = LegacyFieldOfViewDegrees;
+    SpringArm->TargetArmLength = FMath::Max(0.0f, LegacyArmLength);
+    SynchronizeOrthographicFraming();
+}
+
+void AEchoesRTSCameraPawn::SynchronizeOrthographicFraming()
+{
+    check(SpringArm != nullptr);
+    check(Camera != nullptr);
+
+    // The authored review presets and player zoom values were specified as a
+    // perspective camera's distance and horizontal FOV. Preserve their
+    // on-ground framing with width = 2 * distance * tan(horizontalFOV / 2).
+    // A zero-arm cinematic preset has no perspective distance to convert, so
+    // use the smallest authored review distance (600 cm) for a stable close
+    // orthographic frame rather than producing an invalid zero-width camera.
+    constexpr float MinimumFramingDistance = 600.0f;
+    const float SafeArmLength = FMath::Max(0.0f, SpringArm->TargetArmLength);
+    const float SafeFieldOfView = FMath::Clamp(ActiveFramingFieldOfViewDegrees, 1.0f, 170.0f);
+    const float ProjectionDistance = FMath::Max(SafeArmLength, MinimumFramingDistance);
+    const float EquivalentOrthoWidth = 2.0f * ProjectionDistance *
+        FMath::Tan(FMath::DegreesToRadians(SafeFieldOfView * 0.5f));
+
+    SpringArm->TargetArmLength = SafeArmLength;
+    Camera->ProjectionMode = ECameraProjectionMode::Orthographic;
+    Camera->SetOrthoWidth(EquivalentOrthoWidth);
 }
 
 void AEchoesRTSCameraPawn::ClampToBattlefield()

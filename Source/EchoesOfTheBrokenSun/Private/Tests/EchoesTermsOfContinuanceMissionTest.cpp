@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
@@ -1257,10 +1258,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             return false;
         }
         TArray<uint8> LegacyContainerBytes;
+        TArray<uint8> LegacyMapEnvelope;
+        FEchoesCampaignMapCheckpointIdentity LegacyMapIdentity;
+        EEchoesCampaignMapCheckpointFailure LegacyMapFailure{};
         bool bLegacyRevisionMaterialized =
             FFileHelper::LoadFileToArray(
-                LegacyContainerBytes,
+                LegacyMapEnvelope,
                 *LegacyTopologyQuickSavePath) &&
+            FEchoesCampaignMapCheckpoint::Inspect(
+                LegacyMapEnvelope, LegacyMapIdentity, LegacyContainerBytes,
+                LegacyMapFailure) &&
             LegacyContainerBytes.Num() > 16;
         if (bLegacyRevisionMaterialized)
         {
@@ -1280,9 +1287,13 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     static_cast<uint8>(
                         Checksum >> (ByteIndex * 8));
             }
+            TArray<uint8> RewrappedLegacyEnvelope;
             bLegacyRevisionMaterialized =
+                FEchoesCampaignMapCheckpoint::Wrap(
+                    LegacyMapIdentity, LegacyContainerBytes,
+                    RewrappedLegacyEnvelope, LegacyMapFailure) &&
                 FFileHelper::SaveArrayToFile(
-                    LegacyContainerBytes,
+                    RewrappedLegacyEnvelope,
                     *LegacyTopologyQuickSavePath);
         }
         if (!TestTrue(
@@ -1404,11 +1415,17 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             return false;
         }
         TArray<uint8> CurrentTopologyBytes;
+        TArray<uint8> CurrentMapEnvelope;
+        FEchoesCampaignMapCheckpointIdentity CurrentMapIdentity;
+        EEchoesCampaignMapCheckpointFailure CurrentMapFailure{};
         const bool bCurrentDegradedCheckpointWritten =
             DegradedBridge->QuickSaveScenario(Feedback) &&
             FFileHelper::LoadFileToArray(
-                CurrentTopologyBytes,
+                CurrentMapEnvelope,
                 *LegacyTopologyQuickSavePath) &&
+            FEchoesCampaignMapCheckpoint::Inspect(
+                CurrentMapEnvelope, CurrentMapIdentity,
+                CurrentTopologyBytes, CurrentMapFailure) &&
             CurrentTopologyBytes.Num() > 16 &&
             CurrentTopologyBytes[11] == 2;
         if (!TestTrue(

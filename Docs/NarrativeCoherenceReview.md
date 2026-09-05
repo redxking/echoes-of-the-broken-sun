@@ -8,6 +8,11 @@ updated: 2026-09-02
 
 # Narrative Coherence Review
 
+**Standing:** dated narrative assessment and recommendations. Follow the [authority map](README.md).
+“COMPLETE” in the historical header describes inventory consolidation, not requirement completion.
+Verify adoption and owner acceptance in [RequirementsState.md](RequirementsState.md); unresolved
+recommendations do not amend [Requirements.md](Requirements.md) or creative canon.
+
 **Requirement**: DEMO-NAR-011. **Lead**: Campaign lane; contributions from Visual, Audio,
 Player, World, and AI lanes are consolidated here as their handoff inventories land.
 **Companion**: the Character & Voice Identity Bible (DEMO-NAR-010); the owner reviews both

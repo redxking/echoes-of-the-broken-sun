@@ -7,6 +7,7 @@
 #include "EchoesCampaignProgress.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesCampaignSlotTest,
@@ -82,14 +83,26 @@ bool FEchoesCampaignSlotTest::RunTest(const FString& Parameters)
         MakeProgress(echoes::sim::FutureWellChoice::Preserve, 1111);
     TestTrue(TEXT("A named slot saves transactionally"),
              FStore::SaveSlot(TEXT("First Run"), PreserveRun, Feedback));
+    const FEchoesCampaignProgress UnderscoreRun =
+        MakeProgress(echoes::sim::FutureWellChoice::Reshape, 4444);
+    TestTrue(TEXT("An underscore-bearing name saves independently"),
+             FStore::SaveSlot(TEXT("First_Run"), UnderscoreRun, Feedback));
+    TestTrue(
+        TEXT("Spaces and underscores resolve to distinct escaped paths"),
+        FStore::GetSlotPath(TEXT("First Run")) !=
+            FStore::GetSlotPath(TEXT("First_Run")) &&
+            FStore::GetSlotPath(TEXT("First Run")).EndsWith(
+                TEXT("EchoesCampaignSlot_First~sRun.bin")) &&
+            FStore::GetSlotPath(TEXT("First_Run")).EndsWith(
+                TEXT("EchoesCampaignSlot_First~uRun.bin")));
     const FEchoesCampaignProgress HarvestRun =
         MakeProgress(echoes::sim::FutureWellChoice::Harvest, 2222);
     TestTrue(TEXT("A second slot saves independently"),
              FStore::SaveSlot(TEXT("Branch B"), HarvestRun, Feedback));
 
     TArray<FStore::FSlotSummary> Slots = FStore::ListSlots();
-    TestEqual(TEXT("Both slots list"), Slots.Num(), 2);
-    if (Slots.Num() == 2)
+    TestEqual(TEXT("All independently named slots list"), Slots.Num(), 3);
+    if (Slots.Num() == 3)
     {
         TestEqual(TEXT("Slots list in stable order"),
                   Slots[0].SlotName, FString(TEXT("Branch B")));
@@ -99,6 +112,8 @@ bool FEchoesCampaignSlotTest::RunTest(const FString& Parameters)
                   Slots[1].SlotName, FString(TEXT("First Run")));
         TestEqual(TEXT("Its decision count decodes too"),
                   Slots[1].DecisionCount, 1);
+        TestEqual(TEXT("The escaped underscore slot remains distinct"),
+                  Slots[2].SlotName, FString(TEXT("First_Run")));
     }
 
     FEchoesCampaignProgress Loaded;
@@ -109,6 +124,13 @@ bool FEchoesCampaignSlotTest::RunTest(const FString& Parameters)
                  Loaded.Decisions[0].WellChoice ==
                      echoes::sim::FutureWellChoice::Preserve &&
                  Loaded.Decisions[0].FinalStateChecksum == 1111);
+    TestTrue(TEXT("The underscore slot loads its own ledger"),
+             FStore::LoadSlot(TEXT("First_Run"), Loaded, Feedback));
+    TestTrue(TEXT("The underscore slot did not inherit the space slot"),
+             Loaded.Decisions.Num() == 1 &&
+                 Loaded.Decisions[0].WellChoice ==
+                     echoes::sim::FutureWellChoice::Reshape &&
+                 Loaded.Decisions[0].FinalStateChecksum == 4444);
 
     // --- Overwrite keeps a prior generation --------------------------------
 
@@ -159,10 +181,36 @@ bool FEchoesCampaignSlotTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("The absence reason is stable"),
              Feedback.Contains(TEXT("[CAMPAIGN_SLOT_ABSENT]")));
     TestFalse(TEXT("Deleting an absent slot fails honestly"),
-              FStore::DeleteSlot(TEXT("First Run"), Feedback));
+             FStore::DeleteSlot(TEXT("First Run"), Feedback));
 
     Slots = FStore::ListSlots();
-    TestEqual(TEXT("Only the surviving slot lists"), Slots.Num(), 1);
+    TestEqual(TEXT("The independent underscore slot survives deletion"),
+              Slots.Num(), 2);
+
+    // --- Legacy aliases are preserved without being attributed ------------
+
+    const FString LegacyAliasPath = FPaths::Combine(
+        FStore::GetSaveGameDirectory(),
+        TEXT("EchoesCampaignSlot_Legacy_Run.bin"));
+    TestTrue(TEXT("A synthetic legacy alias fixture is written in isolation"),
+             FStore::SaveAtomic(LegacyAliasPath, PreserveRun, Feedback));
+    TestFalse(TEXT("A legacy space name is not guessed during load"),
+              FStore::LoadSlot(TEXT("Legacy Run"), Loaded, Feedback));
+    TestTrue(TEXT("The legacy space refusal has a stable migration reason"),
+             Feedback.Contains(TEXT("[CAMPAIGN_SLOT_LEGACY_ALIAS]")));
+    TestFalse(TEXT("A legacy underscore name is not guessed during load"),
+              FStore::LoadSlot(TEXT("Legacy_Run"), Loaded, Feedback));
+    TestTrue(TEXT("The legacy underscore refusal has the same stable reason"),
+             Feedback.Contains(TEXT("[CAMPAIGN_SLOT_LEGACY_ALIAS]")));
+    TestFalse(TEXT("Legacy aliases are not deleted by a guessed name"),
+              FStore::DeleteSlot(TEXT("Legacy Run"), Feedback));
+    TestTrue(TEXT("The legacy alias remains preserved after delete refusal"),
+             IFileManager::Get().FileExists(*LegacyAliasPath));
+    Slots = FStore::ListSlots();
+    TestEqual(TEXT("Legacy aliases are not listed as attributable journeys"),
+              Slots.Num(), 2);
+    IFileManager::Get().Delete(*LegacyAliasPath, false, true, true);
+    IFileManager::Get().Delete(*(LegacyAliasPath + TEXT(".bak")), false, true, true);
 
     // --- An unreadable slot is not listed as loadable ----------------------
 
@@ -174,9 +222,10 @@ bool FEchoesCampaignSlotTest::RunTest(const FString& Parameters)
     }
     Slots = FStore::ListSlots();
     TestEqual(TEXT("A wholly corrupt slot fails closed out of the list"),
-              Slots.Num(), 1);
+              Slots.Num(), 2);
     FStore::DeleteSlot(TEXT("Broken"), Feedback);
     FStore::DeleteSlot(TEXT("Branch B"), Feedback);
+    FStore::DeleteSlot(TEXT("First_Run"), Feedback);
 
     return true;
 }

@@ -1,5 +1,10 @@
 # Initial Release Requirements — Sole Normative REL-* Ledger
 
+> **Historical record only.** All instructions, roles, status labels, paths, and claims below describe
+> the retired baseline. They are not current agent instructions. Use [AGENTS.md](../../../AGENTS.md),
+> [Requirements.md](../../Requirements.md), [RequirementsState.md](../../RequirementsState.md), and
+> the [authority map](../../README.md). Preserve this record; edit current authorities instead.
+
 **Author and owner:** Angelis Pseftis
 **Status:** SUPERSEDED 2026-09-03 by [`Requirements.md`](../../Requirements.md) and [`RequirementsState.md`](../../RequirementsState.md). Its 106 transcribed `REL-*` bodies and all governance (record schema, acceptance-card rule, quality target, scope boundary, TBR decisions, release gates, final definition of done) migrated to Part III of the master; its change log migrated to the state file. The 369 identifiers it declared as ranges without ever transcribing a statement are now listed individually in the master as `DECLARED — NO TEXT`. Retained as the record of the ledger as it stood; it defines nothing and accepts nothing.
 

@@ -1,14 +1,20 @@
 ---
 name: echoes-production-orchestration
-description: "Sequence one bounded Echoes release slice across design, implementation, verification, and owner acceptance without crossing live lane boundaries."
+description: "Sequence one bounded Echoes release slice across design, implementation, verification, and owner acceptance within established path ownership."
 metadata:
   author: Angelis Pseftis
 ---
 
 # Echoes production orchestration
 
-Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`. Before mutation, verify exact lane lease, worktree, branch/SHA, dirty paths, and acceptance-card child checks.
+## Project authority
 
-Plan one requirement slice: authorized source/design → named implementation skill → focused build/runtime check → physical GUI/play/listening if player-facing → `echoes-evidence-gate-review` → `echoes-human-acceptance-session`. Keep DEMO recovery prerequisites ahead of release expansion. Generated data/assets are outputs of their registered source compiler/generator, never edit targets. Simulation remains authoritative over presentation.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-State required inputs, named owner, exact test, evidence directory, heavy-run need, and stop condition before work. Any full build, automation, cook, package, profile, soak, GPU-intensive review, port-bound run, or GUI play routes through `echoes-heavy-run-coordination`; it requires a current detailed lease and explicit release. Stop for lease conflict, unowned shared path, missing requirement transcription, unavailable evidence method, or Angelis-only decision. Report agent state only; human acceptance and COMPLETE/PASS remain owner-controlled.
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+
+Use to sequence one bounded requirement slice across authority, implementation, verification, and owner review.
+
+Define the controlling IDs, exact source/design authority, accountable task owner, affected paths, test method, evidence root, resource need, and stop condition. Preserve simulation authority, registered-source generation, and existing work. Select the narrow domain skill for implementation, then perform the evidence class the requirement actually calls for; player-facing work may require physical GUI, rendered visual, or listening evidence, each distinct from owner acceptance.
+
+Use [echoes-session-control](../echoes-session-control/SKILL.md) for overlapping-path ownership and [echoes-heavy-run-coordination](../echoes-heavy-run-coordination/SKILL.md) for exclusive resources. Missing historical coordination records do not block authorized safe work. Report observed state through [RequirementsState](../../../Docs/RequirementsState.md#state-vocabulary); owner acceptance and requirement completion remain Angelis decisions.

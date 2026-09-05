@@ -1353,11 +1353,11 @@
     "terminal_match_outcome": "nar_m01_line_mara_fail_terminal"
    },
    "failures": {
-    "archive_carrier_lost": "The archive carrier is absent or has no hit points.",
-    "future_well_lost": "A committed Future Well is controlled by a nonlocal player.",
-    "generic": "The mission entered Failed without a presentation-safe reason code.",
-    "local_core_lost": "The local Command Core is absent or has no hit points.",
-    "terminal_match_outcome": "The skirmish outcome is no longer ongoing before mission completion."
+    "archive_carrier_lost": "The archive carrier was lost.",
+    "future_well_lost": "The opposing force controls the Future Well.",
+    "generic": "The evacuation failed.",
+    "local_core_lost": "Your Command Core was destroyed.",
+    "terminal_match_outcome": "The evacuation can no longer be completed."
    },
    "lines": [
     {
@@ -1416,55 +1416,55 @@
     },
     {
      "id": "nar_m01_line_mara_harvest_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Harvest",
      "speaker": "Mara Vey",
      "text": "Harvest. Take the Dawn. The reserve gets time; the Well does not."
     },
     {
      "id": "nar_m01_line_oruun_harvest_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Harvest",
      "speaker": "Oruun-of-Seven-Stones",
      "text": "The city gains time. The cavern loses a possibility. Record both."
     },
     {
      "id": "nar_m01_line_talar_harvest_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Harvest",
      "speaker": "Talar Venn",
      "text": "Both are in the ledger."
     },
     {
      "id": "nar_m01_line_mara_preserve_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Preserve",
      "speaker": "Mara Vey",
      "text": "Preserve. Keep the Well intact. We hold this ground without immediate reserve relief."
     },
     {
      "id": "nar_m01_line_oruun_preserve_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Preserve",
      "speaker": "Oruun-of-Seven-Stones",
      "text": "Possibility survives, and every force here has reason to keep fighting."
     },
     {
      "id": "nar_m01_line_talar_preserve_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Preserve",
      "speaker": "Talar Venn",
      "text": "The delay and the open Well are recorded."
     },
     {
      "id": "nar_m01_line_mara_reshape_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Reshape",
      "speaker": "Mara Vey",
      "text": "Reshape. We spend Dawn for a temporary option. Publish the expiry."
     },
     {
      "id": "nar_m01_line_oruun_reshape_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Reshape",
      "speaker": "Oruun-of-Seven-Stones",
      "text": "Then no one mistakes a borrowed path for a permanent one."
     },
     {
      "id": "nar_m01_line_talar_reshape_001",
-     "signal": "phase_entered:Withdraw",
+     "signal": "phase_entered:Withdraw:Reshape",
      "speaker": "Talar Venn",
      "text": "Cost and expiry recorded. The carrier is ready."
     },
@@ -1541,7 +1541,7 @@
     "ReplayConflict": "This replay completed with {local_choice}; the campaign ledger remains {recorded_choice}.",
     "StorageFailure": "Mission complete locally. Campaign progress was not saved; durable history remains unconfirmed."
    },
-   "retry": "Retry Mission 01 from its deterministic initial state. A failed attempt does not add or alter a campaign record.",
+   "retry": "Retry Mission 01. This failed attempt does not change your campaign record.",
    "title": "What the Ledger Keeps"
   },
   "CampaignReserveAuthority": {

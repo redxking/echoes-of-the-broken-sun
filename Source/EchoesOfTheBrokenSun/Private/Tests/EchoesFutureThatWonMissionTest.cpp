@@ -3,8 +3,10 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesCampaignLedgerProbe.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignTerrainBinding.h"
 #include "EchoesFutureThatWonMissionModel.h"
 #include "EchoesPlayerController.h"
 #include "EchoesSimulationSubsystem.h"
@@ -305,7 +307,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(25));
+        static_cast<uint32>(26));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -609,10 +611,17 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             }
         }
     }
-    TestEqual(
-        TEXT("Mission 12 retains the exact 223-tile Lume topology"),
-        BlockedTiles,
-        223);
+    const auto* TerrainFounding = Bridge->GetCampaignProgress().FindDecision(
+        EEchoesCampaignMissionId::WhatTheLedgerKeeps);
+    if (!TestNotNull(TEXT("Terrain binding has the founding record"), TerrainFounding)) return false;
+    const auto TerrainContract = echoes::world::CheckCampaignTerrain(12, TerrainFounding->WellChoice);
+    TestTrue(TEXT("Dedicated mission terrain contract validates"), TerrainContract.ok);
+    TestEqual(TEXT("Dedicated mission census matches its source"), BlockedTiles, TerrainContract.blocked_cells);
+    for (int32 Y = 0; Y < 64; ++Y)
+        for (int32 X = 0; X < 64; ++X)
+            TestEqual(TEXT("Mission terrain matches every source cell"),
+                Bridge->GetSimulation()->TerrainAt(X,Y) != echoes::sim::Terrain::Blocked,
+                echoes::world::IsCampaignTerrainPassable(12, TerrainFounding->WellChoice, X,Y));
     TestTrue(
         TEXT("Mission 12 begins at independent readback"),
         Bridge->GetFutureThatWonPhase() ==
@@ -669,6 +678,12 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TestFalse(
             TEXT("A renamed checkpoint cannot cross eleven-record chains"),
             AlternateBridge->QuickLoadScenario(Feedback));
+        TestTrue(TEXT("The foreign founding doctrine is refused by the map envelope"),
+                 Feedback.Contains(TEXT("CAMPAIGN_MAP_STALE")));
+        if (!TestTrue(TEXT("A current-map envelope can carry the deliberate foreign-ledger probe"),
+                      EchoesCampaignTest::BindForeignLedgerToCurrentMap(*AlternateBridge))) return false;
+        TestFalse(TEXT("The inner ledger binding independently refuses the foreign payload"),
+                  AlternateBridge->QuickLoadScenario(Feedback));
         TestTrue(
             TEXT("Cross-ledger loading reports exact binding rejection"),
             Feedback.Contains(TEXT("ledger binding does not match")));
@@ -960,7 +975,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             MissionRecord->AvailableWellChoices ==
                 FutureThatWonChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 25 &&
+            MissionRecord->SimulationSnapshotVersion == 26 &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

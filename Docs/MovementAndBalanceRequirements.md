@@ -1,5 +1,10 @@
 # Movement, Control, and Balance-Validation Requirements
 
+**Author and owner:** Angelis Pseftis
+
+Follow [Requirements.md](Requirements.md) and [RequirementsState.md](RequirementsState.md) for current
+requirements and outcomes. The owner wording and original numbering below are retained as historical input.
+
 **Status: SUPERSEDED — MERGED INTO `Requirements.md` ON 2026-09-03.**
 This file is retained as a historical source only. Its requirements were incorporated into the sole normative
 authority, `Docs/Requirements.md`; it creates no current requirement and does not override that master.

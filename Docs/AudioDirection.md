@@ -1,12 +1,13 @@
 # Audio Direction — Echoes of the Broken Sun
 
 **Author and owner:** Angelis Pseftis
-**Status:** authoritative audio-direction document, edited in place. Subordinate to
-`Docs/Archive/DevelopmentBible.md` (canon) and `Docs/GameCompletionDirective.md` (Tracks B and C, the
-work orders and gates). Where this document states a target the directive does not fix, that target is
-an authored design decision of this document and is marked *(authored here)*; it binds future audio work
-until revised, but is not evidence of anything implemented. Nothing in this document claims a cue,
-route, or mix is accepted — acceptance lives only in `Docs/Archive/ProjectLedger.md`.
+**Status:** audio-direction reference, edited in place under the [authority map](README.md).
+[Requirements.md](Requirements.md) owns numeric and behavioral acceptance criteria;
+[RequirementsState.md](RequirementsState.md) owns lifecycle and owner acceptance.
+[DevelopmentBible.md](Archive/DevelopmentBible.md) owns canon. Tracks B/C sequence production.
+Targets marked *(authored here)* are design choices to reconcile with the master before using them as
+new gates; they are not independent authority to increase scope or change acceptance thresholds.
+Follow [AGENTS.md](../AGENTS.md). No cue, route, or mix is accepted merely because it is listed here.
 
 Every audio decision — new cue, revision, routing change, mix move, or voice direction — must be
 checkable against this document. A cue that cannot be justified by a section below is not ready to
@@ -125,18 +126,20 @@ performance asserts certainty the text does not carry.
 
 ## 7. Mix architecture, priority, and loudness
 
-**Buses** (implemented, gate 14): master → music, dialogue, interface, ambience, effects; independent
+**Buses** (design; implementation evidence remains at its recorded gate boundary): master → music, dialogue, interface, ambience, effects; independent
 per-category volumes; whole-graph reduced dynamic range.
 
-**Ducking** *(authored here, pending implementation and measurement — the B1 remainder)*: music ducks
-−6 dB and ambience −4 dB under active voice, with 150 ms attack / 400 ms release; **effects never
-duck** — combat information never disappears. Exact amounts are fixed by measurement at implementation
-and recorded in the ledger.
+**Ducking:** The retired `REL-AUD-002` combined unrelated obligations. Loudness now resolves to
+`REL-AUD-019` and its session clauses. Two inherited ducking alternatives remain under `REL-AUD-022`
+(critical dialogue: Music/SFX, 300 ms attack) and `REL-AUD-023` (Dialogue: Music/Ambience, 150 ms attack).
+Use the owner's `TBR-DOC-003` decision in RequirementsState.md before choosing a policy; this direction
+file selects neither while it is unresolved. Both require live routing, intelligibility and recovery
+verification. An authored rule or source check does not establish audible dialogue activation.
 
 **Priority order** when simultaneous (highest first) *(authored here)*: voice → alerts → rejection →
 combat-critical effects (destruction, weapons, impacts) → other effects → interface → music → ambience.
 
-**Loudness targets.** Directive-fixed: packaged ordinary-session integrated loudness **−16 LUFS ±1**;
+**Loudness targets.** Follow the master; its session target is: packaged ordinary-session integrated loudness **−16 LUFS ±1**;
 true peak **≤ −1 dBTP everywhere**; voice intelligible over bed at default levels; reduced dynamic
 range preserves the quietest mapped cue. Per-cue source normalization targets *(authored here — these
 order the categories so bus gains start near unity and the measured ambience-over-alert inversion is
@@ -191,4 +194,17 @@ The review that gates (f) above is a human pass over rendered cues against this 
 Review criteria per family: identity (is it unmistakably this faction/site/event?), information (is the
 fact it carries unambiguous at gameplay attention?), craft (envelope, spectrum, and decay free of
 synthesis artifacts; nothing reads as a raw oscillator), and restraint (earns its place in a quiet
-world). A review sheet template lives with each review's evidence under `WorkstreamControl/evidence/`.
+world). A review sheet template lives with each review's evidence under `BuildArtifacts/Evidence/<gate>-<UTC>/` or the current designated evidence root.
+
+
+## Context, function, and action review
+
+Apply `SPEC-VISD-008`, `SPEC-ART-004`, and the audio master records. Before producing a cue family, establish
+its location/story point, material/source, player purpose, and matching visible action. Preserve faction,
+character, and regional identity without masking the tactical information the player needs.
+
+Review sound and movement together in the running game: anticipation, contact/action, result, decay, and
+recovery should describe the same event at the right scale. Record intentional silence and inaccessible
+or unavailable evidence separately. A unit/building sound must reinforce its purpose and state rather than
+supply arbitrary spectacle. Repeated sounds, abrupt cuts, unclear spatial sources, and timing/material
+mismatches are defects to investigate. Programmatic loudness and listening remain separate checks.

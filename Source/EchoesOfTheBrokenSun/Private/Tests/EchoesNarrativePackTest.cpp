@@ -148,6 +148,35 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
             StartLines >= 1);
     }
 
+    // M01 withdrawal must never concatenate the three mutually exclusive
+    // choices. Each exact signal owns its trio; the generic signal is common.
+    for (const TCHAR* Choice : { TEXT("Harvest"), TEXT("Preserve"), TEXT("Reshape") })
+    {
+        const FString Signal = FString::Printf(TEXT("phase_entered:Withdraw:%s"), Choice);
+        const TArray<FEchoesNarrativeLine> Branch = Narrative->GetLinesForSignal(
+            EEchoesOperationMode::CampaignPrologue, Signal);
+        TestEqual(*FString::Printf(TEXT("%s binds exactly three lines"), Choice), Branch.Num(), 3);
+        const TCHAR* Speakers[] = { TEXT("mara"), TEXT("oruun"), TEXT("talar") };
+        for (int32 Index = 0; Index < Branch.Num() && Index < 3; ++Index)
+        {
+            TestEqual(TEXT("The branch contains only its own authored IDs in order"),
+                Branch[Index].Id, FString::Printf(TEXT("nar_m01_line_%s_%s_001"),
+                    Speakers[Index], *FString(Choice).ToLower()));
+        }
+        Narrative->ClearSubtitleQueue();
+        Narrative->EnqueueSignal(EEchoesOperationMode::CampaignPrologue, Signal, 10.0);
+        TestEqual(TEXT("Enqueueing one choice cannot enqueue other choices"),
+            Narrative->GetQueuedLineCountForTest(), 3);
+    }
+    const TArray<FEchoesNarrativeLine> Common = Narrative->GetLinesForSignal(
+        EEchoesOperationMode::CampaignPrologue, TEXT("phase_entered:Withdraw"));
+    TestEqual(TEXT("Generic withdrawal binds only its three common lines"), Common.Num(), 3);
+    const TCHAR* CommonIds[] = { TEXT("nar_m01_line_mara_004"),
+        TEXT("nar_m01_line_talar_004"), TEXT("nar_m01_line_oruun_004") };
+    for (int32 Index = 0; Index < Common.Num() && Index < 3; ++Index)
+        TestEqual(TEXT("Generic withdrawal contains no choice-specific line"),
+            Common[Index].Id, FString(CommonIds[Index]));
+
     // --- The subtitle queue consumes lines in authored order --------------
 
     Narrative->ClearSubtitleQueue();

@@ -54,6 +54,9 @@ private:
     void DrawMissionBriefing(
         const AEchoesPlayerController* EchoesController,
         const UEchoesGameUserSettings* Settings);
+    void DrawCampaignOperationsMap(
+        const AEchoesPlayerController* EchoesController,
+        const UEchoesGameUserSettings* Settings);
     void DrawObjectiveTracker(
         const UEchoesSimulationSubsystem* Bridge,
         const UEchoesGameUserSettings* Settings);

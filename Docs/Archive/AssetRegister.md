@@ -2,7 +2,7 @@
 title: Echoes of the Broken Sun Asset and License Register
 author: Angelis Pseftis
 creator: Angelis Pseftis
-status: Authoritative
+status: Authoritative asset provenance register
 created: 2026-08-28
 updated: 2026-09-04
 ---
@@ -10,6 +10,10 @@ updated: 2026-09-04
 # Asset and License Register
 
 This is the single authoritative provenance register and is edited in place. An asset is distributable only when its source, author, license or assignment, modification record, and shipped files are recorded here. Repository presence alone does not establish distribution rights.
+
+[Requirements.md](../Requirements.md) owns product criteria; [RequirementsState.md](../RequirementsState.md)
+owns lifecycle and owner acceptance. Verification notes in asset rows describe only their cited source,
+revision, and evidence boundary. Follow [AGENTS.md](../../AGENTS.md) for generation, ownership, and claims.
 
 | ID | Asset or family | Source | Rights holder / creator | License or authorization | Use | Status |
 |---|---|---|---|---|---|---|
@@ -44,6 +48,10 @@ This is the single authoritative provenance register and is edited in place. An 
 | ART-020 | Procedural acoustic resonator monoliths (`SM_World_AcousticMonolith_01..02`) and temporal refractor spurs under `Content/Art/Generated/World/Void` | `Scripts/generate_art_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original work; generated only from project code and Unreal-provided geometry operations | Presentation-only dressing for Crownfall Void Horizons (M05, M08, M09, M11, M14) | Authorized biome dressing specification (Gate 6 / A4) |
 | ART-021 | Procedural obsidian dais platform tiles (`SM_World_ObsidianDaisTile_01..02`) and coronal flare emitters under `Content/Art/Generated/World/SolarDais` | `Scripts/generate_art_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original work; generated only from project code and Unreal-provided geometry operations | Presentation-only dressing for Solar Fall Dais (M13, M15) | Authorized biome dressing specification (Gate 6 / A4) |
 | ART-022 | Procedural skirmish competitive props: destructible frostshard drifts and acoustic line-of-sight pillars under `Content/Art/Generated/World/Skirmish` | `Scripts/generate_art_assets.py` in Unreal Engine 5.8.2 | Angelis Pseftis | Project-owned original work; generated only from project code and Unreal-provided geometry operations | Presentation-only dressing for Skirmish Theaters (S01–S06) | Authorized biome dressing specification (Gate 6 / A4) |
+| ART-WORLD-001 | Six original formation/low-relief kit families and walk substrate, plus scoped runtime dressing | `Scripts/echoes_world_kits.py`, `Scripts/generate_art_assets.py`; `soryn-world-kits-v5` | Angelis Pseftis | Project-owned original geometry; Unreal engine operations and neutral white texture under UE-ENGINE | Reusable world presentation foundation | Generated candidate; per-mission composition and final qualification incomplete |
+| ART-WORLD-002 | `M_EchoesSky`, altitude gradient | `Scripts/generate_art_assets.py`; `soryn-sky-gradient-v1` | Angelis Pseftis | Project-owned original material graph | Shared outdoor sky presentation | Generated and editor rendered; final sky composition incomplete |
+| ART-WORLD-003 | `SM_VFX_AbilityRangeRing`, true-radius power/supply boundary | `Scripts/generate_art_assets.py`; `ability-range-ring-v1` | Angelis Pseftis | Project-owned original geometry and material | State-bound ability range | Generated; radius automation and rendered review pending |
+| ART-WORLD-004 | `M_EchoesShivergrassLeaf`, two-sided foliage | `Scripts/generate_art_assets.py`; `shivergrass-leaf-v1` | Angelis Pseftis | Project-owned original shader; no source texture | Silver foliage lighting | Generated; lit runtime verification pending |
 | CONCEPT-001 | Four 2x2 Meridian/Kharuun unit and structure presentation sheets under `site/assets/concepts` | OpenAI image generation through Codex, 2026-08-29; exact prompts below; no source images | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Arsenal visual targets | Development concept reference; not a runtime or production asset |
 | CONCEPT-002 | Four-state Future Well presentation sheet at `site/assets/concepts/future-well-states.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Future Well visual target | Development concept reference; not a runtime or production asset |
 | CONCEPT-003 | Four-view Glass Scar environment and route presentation sheet at `site/assets/concepts/glass-scar-routes.png` | OpenAI image generation through Codex, 2026-08-29; exact prompt below; no source image | Direction and project authorship: Angelis Pseftis; generated output: OpenAI service | Account plan was not exposed by the tool and is not inferred; retain for project concept presentation pending release-rights review | Public Glass Scar visual target | Development concept reference; not a runtime or production asset |
@@ -430,3 +438,518 @@ Avoid: checkerboard game tiles, placeholder cubes, featureless flat arena, neon 
 ## Current evidence boundary
 
 No final environment, character, animation, music, voice-acting, complete sound-effect, cinematic-art, typeface, or third-party-plugin family has been added. ART-001 replaces the baseline unit and structure primitives with distinct project-authored static-mesh candidates. ART-002 replaces the Future Well basic-shape placeholder with a four-part landmark and geometry-distinct states. ART-003 replaces visible Glass Scar shelves, ridges, shard fields, three route treatments, and Matter-node primitives with project-authored static-mesh candidates and a shared world material. Its shared material now passes one exact-package local Metal instancing-compatibility gate, but the captured overexposure and prototype overlay remain open presentation debt. ART-004, ART-007, and ART-008 advance the Ash Cut, Buried Causeway, and Folded Verge through production-oriented topology, UV, collision, dedicated-material, provenance, regeneration, runtime-isolation, and isolated-review gates. ART-005 replaces the selection halo and seven accepted-order primitive compositions with authored emissive mesh candidates and explicit reduced-motion/reduced-flashing behavior. ART-006 adds geometry-driven functional-loss feedback after a previously visible authoritative entity is removed, with fog/load/restart exclusions and the same presentation-only accessibility boundary. AUDIO-001 adds original accepted-command and faction-distinct functional-loss cues with bounded spatial/rate-limit and effects-volume/reduced-dynamic-range behavior. The collision floor and every authoritative terrain, route, pathing, resource, placement, line-of-sight, command, damage, removal, save, replay, and checksum decision remain unchanged. These families do not establish completed production textures, final surface response, character animation, transparent dissolve, Niagara debris/smoke, final mixing/mastering, music, ambience, voice, complete alerts, sustained performance, broad player readability, general package behavior, or final production quality. Fog, atmosphere, health bars, ownership markers, tactical minimap, and most audio remain project-code, Engine-provided prototype presentation, or unimplemented. Visual and audio quality requirements have not been fully validated.
+
+
+## ART-WORLD-001 — Soryn terrain kits (world-map concept pass)
+
+**Author:** Angelis Pseftis. **State:** authored source; generation and rendered qualification pending.
+Original deterministic project geometry in `Scripts/echoes_world_kits.py`, called exclusively by
+`Scripts/generate_art_assets.py`. Revision `soryn-world-kits-v3`: twelve meshes under
+`/Game/Art/Generated/World/Environment/SM_World_{Basalt,Shivergrass,Cavern,Civic,Choir,Solar}{Formation,Ground}`.
+No external assets, licensed meshes, or generated concept pixels are imported. Shapes derive from
+`Docs/MapConcepts.md` and the Track A site identities, subordinate to SPEC-VISD-001/006,
+SPEC-SIM-002, REL-ART-015/016 and visibility authority. Formation footprints fit blocked cells;
+ground relief stays below 20 cm. Four material zones use charcoal, ceramic, amber/magenta accents.
+All runtime instances disable collision, overlap, navigation influence and shadows. Tall formations
+and ground relief share the player's explored/visible tile gate. Static geometry does not pulse or drift.
+Both detail levels have explicit recipes. Source repeatability, mesh generation, in-game appearance,
+performance, per-site landmark composition and owner acceptance remain separate unproven gates.
+
+`SM_World_GlassScarShelf` source revision advances to `glass-scar-shelf-fractured-v6`: flush walking surface with
+irregular extruded strata below it; removes repeated luminous bars and raised rectangular plates.
+This replaces the registered shelf in place and preserves its 780 cm footprint and 39 cm top datum.
+
+World material revision `world-surface-textured-v7` adds a final shader roughness clamp to
+[0.85, 1.0] after texture/noise modulation (REL-ART-003). The material graph is repaired in place,
+retaining existing references. Parameter values alone had not enforced the surface floor.
+Distant terrain-kit formations form a fixed public backdrop beyond the playable rectangle;
+they disclose no live terrain or game state. Per-site landmark authoring is still outstanding.
+
+ART-WORLD-001 revision v2 replaces stacked-disc natural formations with original closed fracture
+polyhedra, explicit face normals and UVs. The revised Glass Scar shelf uses those fractured volumes below the
+unchanged walking surface. Source remains deterministic; geometry contracts cover footprint,
+height, face normals and repeatability. Runtime and packaged qualification remain separate.
+
+ART-007 Buried Causeway advances to `buried-causeway-production-v2`: concentric fitted
+stone pavers, weathered matte ceramic, narrow amber service conduits and recessed seams.
+`Scripts/generate_art_assets.py` and `Scripts/echoes_world_kits.py` are the original source.
+The prior blank disc and bright transverse cyan bars are retired. No gameplay footprint changes.
+
+`SM_World_BrokenSunSky` advances to `broken-sun-sky-fractured-v4`: original spherical fracture
+plates enclosing the amber core, irregular seams and drifting basalt Dawnshards. Tangent box
+plates are retired. Both LODs use the same authored construction method. These are original
+in-project geometry, with no third-party mesh, texture or concept-image pixels incorporated.
+
+ART-WORLD-001 also registers `SM_World_WalkSurface`, an original 200 cm substrate generated by
+`walk_surface` in `Scripts/echoes_world_kits.py`. Its top is exactly z=0; all depth is below.
+Runtime instances follow the local player's terrain visibility and replace the visible Engine
+cube on non-chasm sites. The existing invisible pointer-trace floor remains unchanged.
+
+ART-WORLD-002 registers `M_EchoesSky` (`soryn-sky-gradient-v1`), an original in-project unlit
+altitude gradient generated in `Scripts/generate_art_assets.py`. It replaces ground-texture
+reuse on the sky dome, with continuous transitions across four existing bands. No third-party
+image or shader source is used. The shared sky/celestial backdrop is now available to all
+outdoor sites. Lighting uses the Art Direction gold key and indigo fill anchors.
+
+ART-WORLD-001 revision v3 gives Shivergrass original bent, double-sided leaf ribbons,
+with 64/24 leaves by LOD. Leaves use the Unreal Engine white texture solely as neutral
+albedo input (UE-ENGINE license); their shape and coloring are project-authored. No
+reference-image pixels, downloaded models or third-party foliage are used. Shelf v6
+corrects the fracture wedges to the registered 780 cm footprint; geometry-contract
+checks verify the bounds and 39 cm top datum. Public perimeter forms remain outside
+playable cells; local detail and canyon instances follow known terrain. The six kit
+families do not constitute fifteen finished mission maps.
+
+Identifier note: this pass uses ART-WORLD-001/002 because historical ART-017/018 and
+ART-022 labels already name different entries in the register table and generation
+records. Those historical records are retained; the new IDs avoid expanding the collision.
+
+ART-WORLD-003 registers `SM_VFX_AbilityRangeRing` (`ability-range-ring-v1`). Original
+scripted torus geometry in `Scripts/generate_art_assets.py`, using the existing registered
+project VFX material; no external source. The 50 cm outer radius and 1 cm band use
+128/96 circumferential segments by LOD. Power/supply fields scale to authoritative
+rule radii, retain state visibility, and use steady restrained emission. No collision,
+overlap, navigation or shadow authority. This replaces oversized selection brackets
+on ability fields; it does not alter the selected-unit glyph. Generation and rendered
+qualification pending. Regenerate with `ECHOES_ABILITY_RING_ONLY=1 Scripts/generate_art_assets.sh`.
+
+ART-WORLD-004 registers `M_EchoesShivergrassLeaf` (`shivergrass-leaf-v1`): original
+project two-sided foliage shader, silver tint, .9 roughness, tinted transmission,
+no external image, texture, or emissive source. A retained Unlit runtime capture
+confirmed the v4 black ribbons carried the pale albedo; the defect was in lighting.
+World-kit v5 removes coplanar reversed leaf duplicates, uses the dedicated foliage
+shader, and computes tangents for world-kit meshes. Actual lit result remains pending.
+
+## ART-WORLD-005 — M01 evacuation site
+
+Original project-owned archive cradles, parked service frames, fitted route paving and
+terminated conduit hardware are authored in `Scripts/echoes_evacuation_props.py`, revision
+`m01-evacuation-props-v1`, through `Scripts/generate_art_assets.py`. Author: Angelis Pseftis.
+No external asset or generated-image source is used; Unreal geometry operations retain
+UE-ENGINE provenance. Outputs are `SM_World_M01ArchiveCradle`, `SM_World_M01ArchiveFrame`,
+`SM_World_M01RoutePaving`, `SM_World_M01ServiceConduit`, and four `MI_M01Evacuation_*`
+materials. The family explains loading, maintenance and worked access in the current M01
+production brief; it adds no actor interaction or power signal.
+
+Recipes provide two LODs, authored normals/UVs, four matte material zones and bounded
+single-tile footprints. Solid hardware is restricted to blocked source cells; paving is
+flush on passable terrain. Source placement is registered in
+`Content/World/Source/Presentation/m01_evacuation_landmarks_v1.json`, compiled with its
+terrain/source digests. Runtime must gate every record by explored visibility and current
+terrain, disabling collision, overlap, navigation and shadows. Generation is idempotent
+by asset revision; a recipe change requires a new revision and regeneration. Three Python
+geometry checks passed; generated/runtime/rendered qualification remains pending.
+
+ART-WORLD-005 revision `m01-evacuation-props-v3` corrects the narrow paving cross-member's
+chamfer limit, fills panel bays, and projects UVs by face orientation to avoid collapsed
+vertical-face UVs. Revision v1 stopped on sparse material-section validation; v2 was rejected
+by the strengthened winding test. Both generation logs are retained. Source tests now check
+triangle winding against authored normals and nonzero UV triangle area as well as bounds,
+materials and deterministic LOD output. Sparse LOD material bindings are explicitly retained.
+
+ART-WORLD-003 revision `ability-range-ring-v2` retains the exact 50 cm outer source radius
+but narrows the band to 0.36 cm. `M_EchoesRangeBoundary` (`range-boundary-v1`) is an original
+steady unlit Color×EmissiveStrength graph, preventing directional-light specular highlights
+from overwhelming the terrain. Runtime power/supply fields use that mesh's material;
+selection and combat effects retain their own materials. The prior lit capture showed the
+v1 boundary remained too prominent. Source provenance remains Angelis Pseftis/project-owned;
+this revision requires a new render and radius/material checks.
+
+ART-WORLD-001 revision `soryn-world-kits-v6` and ART-WORLD-005 revision
+`m01-evacuation-props-v4` correct custom buffer triangle winding to Unreal's left-handed
+front-face convention. Local UE5.8 GeometryCore `Public/VectorUtil.h` lines80–96 defines
+triangle normal as `(V2-V0).Cross(V1-V0)`; previous mathematical CCW fans disagreed with
+supplied outward normals. Nonplanar fractured rock caps now receive per-triangle normals,
+and dominant-face projection preserves UV area. The retained M01 v3 lit capture shows
+black paving/hardware and is rejected as material/geometry quality evidence.
+
+Affected shared descendants are shelf `glass-scar-shelf-fractured-v7`, fractured sun
+`broken-sun-sky-fractured-v5`, and Buried Causeway `buried-causeway-production-v3`.
+Four world-kit geometry tests and three evacuation tests pass, including engine-convention
+winding and UV-area checks. Regeneration and lit reinspection are required before any claim
+that the dark-face defect is fixed. No simulation, collision or navigation change is intended.
+
+
+### 2026-09-04 — Meridian forward axes and M01 civic material correction
+
+ART-001 retains its roster-silhouette-v2 baseline except Meridian Bulwark and Lancer,
+which now record `meridian-forward-axis-v3`. The original generator used yaw instead of
+pitch to orient local-Z shield cylinders and the forward rail muzzle. Updated Bulwark
+faces and projectors and the Lancer muzzle point along mesh-local +X, with symmetric
+outward shield cant. Two generator geometry-axis tests passed; retained generation evidence:
+`BuildArtifacts/Evidence/world-map-concept-pass/meridian-forward-v3-engine.log`.
+This is a geometry correction, not completed unit art or animation qualification.
+
+ART-WORLD-005's four M01 material instances now use the registered civic surface master
+instead of the basalt ground shader. Their source revision is `m01-evacuation-material-v2`;
+geometry stays `m01-evacuation-props-v4`. UV scale is1, emission is0, and the ceramic/service
+palette is unchanged. The actual prior graph/parameter evidence is retained in
+`BuildArtifacts/Evidence/world-map-concept-pass/material-bindings-audit.json`.
+The materials and geometry are original project work by Angelis Pseftis, using existing
+registered texture sources. No external assets or licenses were introduced.
+
+
+### 2026-09-04 — M01 evacuation architecture and geology production pass
+
+ART-WORLD-005 now uses `m01-evacuation-props-v5`: archive load rails and retaining
+straps, braced handling frames with parked trolley hardware, terminated service conduits,
+and fitted paving repair keys. Four meshes retain two authored LODs and no collision.
+The source is `Scripts/echoes_evacuation_props.py`; material revision remains
+`m01-evacuation-material-v2`. `evacuation-v5-engine.log` records generation. Three
+geometry-contract tests passed; visual detail and motion qualification remain open.
+
+ART-WORLD-001 advanced through v7/v8 to `soryn-world-kits-v9`. The v7 all-tile fracture
+plates were rejected after rendering because they looked like repeated paving. V8 removed
+that overlap/repetition but its square rock crowns were also rejected. V9 uses broad,
+cleaved basalt crowns, recessed strata and sparse low outcrops. The shared world shader
+`world-surface-textured-v8` bounds texture modulation to preserve the authored palette.
+Shelf revision is `glass-scar-shelf-fractured-v8`; celestial crust revision is
+`broken-sun-sky-fractured-v6`. Generation receipts are `geology-v7-engine.log`,
+`geology-v8-engine.log` and `geology-v9-engine.log` under
+`BuildArtifacts/Evidence/world-map-concept-pass`. Four geometry-contract tests passed;
+V9 awaits current rendered inspection. Prior screenshots are not visual acceptance.
+
+ART-001's Meridian Bulwark/Lancer override is now `meridian-forward-axis-v4`.
+Chamfered ceramic armor shells sit over dark load joints; corrected +X shield/muzzle
+orientation is retained. `meridian-armor-v4-engine.log` records two generated meshes
+with two LODs. The first wrapper returned1 solely because its success pattern still
+expected v3; the engine's v4 completion marker and absence of material/geometry errors
+were verified, and the wrapper pattern was corrected. V8 captures show the new armor;
+full unit craft, animation and combat readability remain open.
+
+All geometry and shader modifications above are original project work by Angelis Pseftis,
+using previously registered textures and Unreal geometry operations. No new external
+source asset or distribution license was introduced.
+
+
+### 2026-09-04 — continuous M01 cliff source and occupied gantries
+
+`Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.h/.cpp` now generates M01's
+continuous known-terrain cliff surfaces. This original project geometry is authored by
+Angelis Pseftis and uses the installed Unreal ProceduralMeshComponent runtime module.
+The adapter uses the registered world material; no new external art or texture source
+is introduced. Geometry is disposable presentation derived from scoped terrain, with no
+collision, navigation, overlap, shadow, save or checksum authority. Build succeeded;
+rendered qualification remains pending at this record.
+
+ART-WORLD-005 advances to `m01-evacuation-props-v6`. Gantries hold a retained equipment
+load, making blocked terrain visually legible, and the trolley's load line reaches its
+handling fixture. Source remains `Scripts/echoes_evacuation_props.py`, materials remain
+`m01-evacuation-material-v2`; four meshes/twoLODs/no collision generated successfully in
+`BuildArtifacts/Evidence/world-map-concept-pass/evacuation-v6-engine.log`.
+
+
+### M01 continuous basalt surface production — 2026-09-04
+
+**Author:** Angelis Pseftis. Original deterministic project source; no external art inputs.
+The dedicated `M_EchoesCliffSurface` source in `Scripts/echoes_cliff_material.py` is registered
+for the M01 evacuation margin under the existing world-art family. It separates cut basalt
+bedding, darker cross-fractures and grain from the horizontally projected ground texture.
+The shader must retain a charcoal body, matte roughness and non-emissive walls. Its first
+revision is an authoring candidate, pending generation and rendered inspection; no acceptance
+or performance claim is assigned here. Procedural geometry remains scoped to known blocked
+terrain and cannot affect collision, navigation, fog authority or simulation results.
+
+M01 voice preparation now has exact-byte model/distributor provenance in
+`BuildArtifacts/Evidence/world-map-concept-pass/kokoro-provenance/`. The installed ONNX and
+aggregate voices files match streamed official release SHA-256 values. Retained Hexgrad
+model-family Apache-2.0 and wrapper MIT documents have distinct scopes. Generated takes remain
+private evidence candidates, not final registered/runtime-bound audio. V1's full-scale PCM
+samples require a protected retake; final listening, subtitle/action binding and mix checks
+remain outstanding.
+
+
+The first dedicated cliff material revision `cliff-surface-3d-basalt-v1` generated successfully
+on 2026-09-04 (`cliff-material-v1-engine-retry.log` in the current evidence root). Stale graph
+revisions rebuild within the same asset; no asset-reference replacement is required. Runtime
+integration and rendered comparison remain pending at this entry.
+
+Protected M01 voice retakes completed at `m01-voice-candidates-v2/`: 28 canonical lines,
+109.95 seconds total, 48 kHz mono PCM24. File hashes and finite PCM streams passed; no PCM24
+full-scale samples remain. Sample peaks span -6.64 to -2.61 dBFS after conversion. The driver
+records source peak and applied gain; this is not integrated loudness, true-peak, perceptual
+listening or runtime synchronization evidence. V1 is retained with the identified headroom
+defect rather than treated as an accepted take.
+
+
+### M01 archive working apron — 2026-09-04
+
+Original project recipe `m01-evacuation-props-v7` adds `SM_World_M01ArchiveApron` as a fifth
+family mesh. The civic work surface occupies the source-validated open footprint x18–22,
+y16–19 around recovery. Local bounds X±499/Y±399/Z0–3.3 cm and the authored half-tile pivot
+keep it flush with the movement plane. Panels, cargo-registration recesses, wear strips and
+fitted repairs explain loading use without a new interaction or obstruction. Two LODs keep
+the footprint and meaningful markings. All 20 cells must be known and compatible before it
+appears; overlapping single-tile paving has been removed. Compiler tests and three prop
+geometry tests pass; generation/render evidence is pending at this entry.
+
+The basalt material advances to `cliff-surface-3d-basalt-v2`: wider, narrower-value bedding
+seams replace the visually excessive contour bands. It generated successfully; renderer
+comparison remains pending. These are authoring revisions, not final visual qualification.
+
+
+### Composed archive loading face — 2026-09-04
+
+`m01-evacuation-props-v8` adds the sixth mesh, `SM_World_M01ArchiveLoadingFace`, from original
+project geometry. It replaces two cradles and their conduit on the source-verified blocked
+strip x23–27,y19. A continuous retaining base explains the obstruction, while four restrained
+cassettes, rear piers, supported overhead rail and attached parked trolley explain archive
+handling. Cassette count/locations and support connections stay consistent between LODs.
+All geometry remains inside the 5×1 footprint; the renderer gates all five cells. The compiler
+now enforces actual recipe dimensions, zero yaw and the exact anchor/pivot-to-footprint center,
+including negative tests, to prevent visual disclosure outside the checked footprint.
+
+V8 also corrects apron material semantics: slot0 pale ceramic, slot1 dark metal/registration,
+slot2 aged ceramic and slot3 muted non-emissive teal fittings. Generation and combined runtime
+qualification are pending at this entry; no finished environmental or audio quality is claimed.
+
+### M01 live editor surface pass — 2026-09-04
+
+`m01-evacuation-material-v4` persists instanced-static-mesh usage on the civic master and
+inherits it explicitly in the four service instances. A fresh editor launch confirmed the
+saved flag on all four instances and removed the observed default-material fallback. The
+instances now use the original `T_EchoesServiceCeramic` BaseColor/MRE/Normal maps: continuous
+warm-grey aggregate, shallow pitting and restrained service wear, without the small panel
+grid in the general civic texture. The new named family retains the existing texture-family
+revision convention; its exact source and generated hashes are retained with this pass.
+
+`m01-evacuation-props-v9` raises the apron registration fields, wear rails and repair plates
+above the panel tops; they were previously partly or wholly buried. All six family meshes
+were regenerated in the open editor with two LODs and zero simple collision. Existing
+geometry checks passed bounds, winding, UV area, material zones and deterministic LODs.
+`cliff-surface-3d-basalt-v4` uses a darker charcoal body, restrained grain/bedding and removes
+the warped fracture pattern that read as contour lines. This changes material appearance,
+not terrain, cliff silhouettes, collision or visibility rules.
+
+Evidence: `BuildArtifacts/Evidence/editor-visual-pass-20260904T235321Z/`, especially
+`m01-archive-approach.png`, `editor_session/editor-archive-approach.log` and
+`surface-pass-manifest.json`. The carrier reached recovery through the existing ordinary
+scout-command preview; the recovered/intact state and loading face were inspected in PIE.
+This is an editor-rendered material/geometry correction, not complete-map, packaged-journey,
+performance, audio, physical-input or owner-acceptance evidence. Original project source;
+author and owner Angelis Pseftis; no external art dependency was introduced.
+
+### M02 migration-lane stonework — 2026-09-05
+
+Author and owner: Angelis Pseftis. Original project geometry, no external art dependency.
+`Scripts/echoes_migration_props.py` revision `m02-migration-props-v2` defines
+`SM_World_M02ObservationSill`, `SM_World_M02RootingShoulder` and
+`SM_World_M02PassagePaving`. The first occupies a yaw-aware 3×1 blocked footprint;
+shoulders occupy single blocked cells; paving stays below four centimetres on passable cells.
+All three meshes were regenerated in the open editor with two LODs and zero simple collision.
+Four `MI_M02Migration_*` instances inherit the original world-position basalt master, with
+instanced-mesh usage retained and muted mineral values. Material revision is
+`m02-migration-material-v1`; no emissive objective or ecological signal is introduced.
+
+The 47-record M02 presentation source binds unchanged terrain SHA-256
+`5024db41cd825e2e948a84860b9f58f2a71690a650929cafa80a24fef6458f6c`.
+Three pure geometry checks and nine presentation compiler checks passed. These establish
+bounds, faces, material zones, repeatable LODs and source/footprint integrity; they do not
+establish complete-map quality, gameplay or owner acceptance. Evidence remains under
+`BuildArtifacts/Evidence/editor-visual-pass-20260904T235321Z/`.
+
+### M01 frame joint correction — 2026-09-05
+
+ART-WORLD-005 revision `m01-evacuation-props-v10` seats the ArchiveFrame posts against
+the main crossbeam and seats its upper running rail directly on that beam. This closes
+two 2 cm construction gaps without moving a landmark or changing its footprint. Other
+family geometry and materials remain identical. Original project-owned deterministic
+source by Angelis Pseftis; same two-LOD, zero-collision pipeline and licensing basis.
+The current object-finish session retains generation and rendered review evidence.
+
+### M01 conduit contact correction — 2026-09-05
+
+ART-WORLD-005 revision `m01-evacuation-props-v11` extends the two ServiceConduit tubes
+into their tapered east-side receiving housings while preserving their original capped
+west ends. Endpoints lie inside each fitting, avoiding a nominal face contact that would
+still miss the taper. The original five placements, footprint, materials, static behavior,
+two LODs and zero collision remain. Original deterministic project geometry by Angelis
+Pseftis; no external dependency or rights change. Generation and scene inspection are
+retained in the active M01 object-finish evidence root.
+
+### M01 cradle support correction — 2026-09-05
+
+ART-WORLD-005 revision `m01-evacuation-props-v12` gives each ArchiveCradle shell a
+grounded transverse saddle connected to both load rails. One continuous retention band
+replaces two overlapping horizontal bands per shell; its ends return to the rails. The
+inspection cabinet gains a grounded footing and its panel seats on the cap. The source
+retains the registered footprint, static archive-handling role, materials, high/low detail
+structure and zero collision. Original project-owned deterministic geometry by Angelis
+Pseftis, with unchanged licensing and no external dependency. Final generated identities
+and close placement inspection belong to the active M01 object-finish evidence root.
+
+### M01 service route surface finish — 2026-09-05
+
+ART-WORLD-005 revision `m01-evacuation-props-v13` replaces RoutePaving's four small
+quarter-panels and repeated corner fittings with one 198 cm service slab, two continuous
+wear tracks along its working axis and one close-detail repair. The retained normal-camera
+return view exposed the former small-grid repetition. All fifteen paving records, ≤4 cm
+height, registered footprint, material zones and zero collision remain. Original
+project-owned deterministic geometry by Angelis Pseftis; no external dependency.
+The object-finish evidence root retains before/after views and the generated two-LOD audit.
+
+### M01 outpost service recess visibility — 2026-09-05
+
+The registered continuous-basalt compositor in `EchoesCliffMesh.cpp` lowers only the
+foreground shoulders of the existing east18–20/9–12 and west0–2/10–13 outcrops, retaining
+taller back crests. Close normal-camera evidence showed these banks obscuring the low
+ServiceConduit and ArchiveCradle. No blocked/visible mask, X/Y footprint, landmark placement
+or simulation state changes; original project geometry by Angelis Pseftis. The active
+object-finish evidence root records source hashes, live rebuild and before/after inspection.
+
+### M01 knowledge boundary and retaining-bank correction — 2026-09-05
+
+Original source `Scripts/echoes_m01_shroud.py`, revision `m01-shroud-unlit-v1`, adds
+`M_EchoesM01Shroud` to the existing registered M01 presentation pipeline. The material
+is opaque, unlit, instancing-enabled and receives the same authoritative knowledge
+color as the prior shroud. Only CampaignPrologue selects it; the complete occluding volume, visibility masks,
+terrain hiding, collision, navigation and simulation remain unchanged. The material
+repair does not replace the required volumetric occlusion with a ground decal.
+It removes lighting/specular response from unknown space rather than inventing terrain.
+Generation is revision-idempotent and checks its color graph output. No external assets
+or new rights dependency are introduced. Author: Angelis Pseftis. Runtime review pending.
+
+The existing `EchoesCliffMesh.cpp` M01 compositor now varies its inward perimeter erosion
+and shoulder height continuously across chunks, with a ground-reaching wall foot. This
+corrects the observed machined bevel and undercut-foot appearance. Only known blocked
+cells emit geometry; tests and matched tactical reinspection remain required.
+
+### M01 remembered terrain and fracture-bed correction — 2026-09-05
+
+`Scripts/echoes_m01_shroud.py` revision `m01-shroud-unlit-v2` retains the opaque,
+unlit `M_EchoesM01Shroud` and adds `M_EchoesM01Explored`, an unlit translucent
+remembered-terrain tint with static opacity0.48. Both are original deterministic
+project materials authored by Angelis Pseftis, generated by the existing art pipeline,
+and selected only by M01. There is no third-party asset or rights dependency. The
+existing opaque explored layer obscured the remembered ground; the new layer leaves
+it readable. Unknown-space occlusion, tile transforms and simulation knowledge remain
+unchanged. Revision metadata supplies an idempotent generation fast path; byte identity
+and runtime blend behavior still require retained checks.
+
+M01 retires the legacy `EchoesScarBand`, `EchoesGlassShard` and `EchoesScarGlow`
+presentation actors. Their bright trays and unscoped shards were visible in the
+wide fracture diagnostic. `EchoesTerrainView.cpp` instead reuses registered
+`SM_World_BasaltFormation` in low bed fragments confined to fully blocked scar spans.
+The existing full-footprint knowledge checks hide unknown fragments and lights.
+M01 rim formations now start on the authored bed instead of floating1490cm above it (old base−260cm versus current bed−1750cm).
+All instances retain cosmetic collision/navigation behavior. This is a composition
+revision of an existing kit, not a seventh bespoke M01 prop family or a terrain edit.
+Generation and native/runtime reinspection are retained in the active M01 evidence root.
+
+M01 shroud revision `m01-shroud-unlit-v3` corrects the dark grid observed in the v2
+explored overlay: opacity applies only to the upward face, so tile side faces do
+not overlap and darken every joint. Unknown-space material and volume are unchanged.
+The actual `SM_World_GlassScarFoldedVerge` crossing caused the remaining tall magenta
+silhouettes at the knowledge edge. All three existing M01 route actors now share
+full-footprint known-terrain admission at initial presentation and subsequent
+visibility changes; remembered routes remain visible, and reset hides them.
+Their source geometry, route/collision contract and other scenarios are preserved.
+
+M01's bed now reuses registered `SM_World_WalkSurface` per known blocked bed cell at
+the unchanged authored depth−1750cm. Span-wide fog admission previously suppressed
+the bed beneath already known cells, exposing the blue background. The bed's static
+material, full authoritative cell mask and all crossings remain unchanged; only
+presentation subdivision and knowledge admission change. Reinspection is pending.
+
+### M01 ravine concealment follow-up — 2026-09-05
+
+Author and owner: Angelis Pseftis. `m01-shroud-unlit-v3` materials are unchanged.
+The M01-only unknown instance volume now extends from−1766 to184cm to conceal
+unknown terrain beneath the authored−1750cm ravine bed. Other-map instances retain
+−16..184cm. No mesh/material regeneration, external asset, license or collision change
+is introduced. `b1-ravine-admission-audit.json` in the current M01 visual evidence root
+retains245-cell source/runtime admission analysis; rendered closure is still pending.
+
+### 2026-09-05 — M01 B1 backing and capture provenance follow-up
+
+Author and owner: Angelis Pseftis. Runtime module8831 adds M01 retaining-bank backing
+using the existing registered WorldSurface mesh/material, inside unchanged blocked
+rim cells. No external asset or new rights dependency is introduced. EDT bank/fracture
+reinspection is retained under `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z`;
+vertical material streaking remains M01-V012. The diagnostic capture helper and native
+Swift decoder are original project tooling. Four calibration movies failed full-frame
+qualification and are explicitly excluded from mission-motion acceptance. The4496
+helper rejects invalid capture geometry. Generator, source, editor and package
+evidence remain separate; no package or owner acceptance is asserted.
+
+### 2026-09-05 — M01 B2 material reuse and branch-capture provenance
+
+Author and owner: Angelis Pseftis. M01 ChasmBed now uses the existing registered
+`M_EchoesCliffSurface` / cliff-surface-3d-basalt-v4 in all four runtime slots. The mesh,
+blocked mask, navigation and collision are unchanged; other map materials retain their
+existing binding. M01 ground WorldUVScale is0.0004, while other profiles retain0.0012.
+M01 Well body MIDs use metallic0.08/roughness0.78; protocol/core materials are unchanged.
+No imported art, license, new rights dependency or generator bypass was introduced.
+Receipts: `basalt-basin-ui-identity.json`, `state-ui-identity.json` and
+`responsive-hud-identity.json` under the current M01 visual evidence root.
+
+The original editor-only capture helper, isolated accessibility preview and guarded
+native-window resize are review tooling. Full-frame1280×720 Harvest and Reshape clips
+are retained with decoder metadata and sampled-frame qualification; earlier failed
+calibrations remain explicitly excluded. These are EDT motion evidence only. Runtime
+identity is the actual loaded suffixed module, not the stale hot-reload modules manifest.
+Current-source native automation, packaged provenance and Angelis acceptance remain
+separate gates.
+
+
+### M01 public perimeter and narrative binding follow-up —2026-09-05
+
+**Author and owner:** Angelis Pseftis. The current source reuses registered
+`SM_World_WalkSurface` in a separate four-instance `M01ExteriorSkirt`, with Z scale1
+and the existing M01 world-aligned material. M01 exterior basalt reuses registered
+`SM_World_BasaltFormation` with bounded, deterministic two-course placement. No new
+asset, rights source, later-map recipe or gameplay geometry is introduced. The
+perimeter placements and HUD objective fit await compiled runtime reinspection.
+
+M01 narrative source/validator now bind each Well branch trio to its own withdrawal
+signal; common withdrawal remains generic. `Scripts/compile_narrative.py` emits the
+updated pack and SHA sidecar. Approved prose is unchanged. Runtime text binding is
+being verified independently from the source's still-pinned authored-unbound voice
+and cinematic metadata; no audio synchronization or owner acceptance is implied.
+Source and execution identities remain under the existing
+`BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z` evidence root.
+
+### M01 connected exterior basalt — 2026-09-05
+
+**Author and owner:** Angelis Pseftis. Original project source; no external art inputs.
+The existing continuous-basalt family adds `EchoesCliffMesh::BuildExteriorBank` for M01's
+fixed public backdrop. Four joined sides replace that mission's enlarged, repeated
+`SM_World_BasaltFormation` perimeter/horizon instances. Each side rises from the exterior
+substrate into irregular strata, with shared corner coordinates and a ground-reaching outer
+edge. The four registered walking-substrate strips remain. The existing registered
+`M_EchoesCliffSurface` supplies the matte, non-emissive surface; no new asset family, imported
+content, material recipe or rights dependency is introduced.
+
+The separate `M01ExteriorBanks` procedural component receives no collision, overlap, navigation,
+shadow or decal role. It reads only map dimensions and presentation scale, never hidden terrain
+or simulation state, and clears on reinitialization outside M01. Interior fog-scoped cliffs and
+all other map recipes are unchanged. Source review and the staged patch are retained in
+`BuildArtifacts/Evidence/m01-terrain-environment-20260905T115824Z`. Compilation, native geometry
+and visibility checks, and rendered review are pending at this entry; no acceptance is assigned.
+
+
+### 2026-09-05 — M01 Surveyor articulated derivatives (source prepared)
+
+**Author and owner:** Angelis Pseftis
+
+Under existing original Surveyor provenance (ART-001), `Scripts/generate_art_assets.py` defines `m01-surveyor-articulation-v1`: M01SurveyorBody, M01SurveyorUpper, M01SurveyorLower and M01SurveyorFoot. These split the approved exoframe, joint, shin and clamp forms for presentation articulation in M01 only. Original combined Surveyor and the 24-role baseline remain unchanged. Four material zones retain their role assignments; sparse sections are explicitly remapped in both LODs. No external content, rights or canon is introduced.
+
+Runtime binds all four parts atomically for Meridian M01 Workers only. Legs have no collision, overlap or navigation role; existing entity pick proxy remains. Source test four cases passed; generated assets, native motion/contact checks, current editor motion, packaged performance and owner review remain pending. Source-to-generated receipt will be appended in this same register after generation.
+
+
+M01 Surveyor derivative generation completed 2026-09-05 06:51:14 UTC through `ECHOES_M01_SURVEYOR_PARTS_ONLY=1 Scripts/generate_art_assets.sh`. Four assets passed both-LOD zone/collision audit; no broad purge ran. Exact uasset and generator SHA-256 records: `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z/surveyor-parts-identity.json`; retained Unreal log `surveyor-parts-unreal-generation.log`. Source/generated evidence only; locomotion remains under native/editor inspection.
+
+
+### 2026-09-05 — M01 Bulwark deployment derivatives
+
+**Author and owner:** Angelis Pseftis
+
+Under the existing original Meridian Bulwark provenance, `m01-bulwark-deployment-parts-v1` separates the approved chassis and two framed barrier wings. The standard24-role roster remains unchanged. The three M01-only assets are `SM_Meridian_M01BulwarkBody`, `SM_Meridian_M01BulwarkLeftWing` and `SM_Meridian_M01BulwarkRightWing` under `/Game/Art/Generated/Meridian/Units`. Wing hinges use source coordinates26,−24,72 and26,24,72; zero relative rotation restores the approved deployed assembly. No external content or rights source is introduced.
+
+Narrow generation succeeded at2026-09-05 08:33:48 UTC with two LODs and collision0. Chassis LOD0/1 has972/486 triangles; each wing392/196. Chassis sections use material zones0,1,2,3 in both LODs; wing LOD0 uses0,1,2,3 and LOD1 uses1,2,3 because the high-detail primary fittings are omitted. The first generation failed its low-LOD section audit and is retained; correction binds the actual sections to their proper material indices without adding geometry. Nine combined Surveyor/Bulwark source tests pass. Generated SHA-256 and source identities, both generation logs, and partial-attempt evidence are retained under `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z`, notably `bulwark-parts-identity.json`.
+
+Runtime integration uses inert children of the existing body transform, shared faction materials and authoritative deployed/facing state. Missing-part fallback is source-inspected only; current native and rendered state checks remain pending. This entry establishes source/generated provenance, not packaged visual quality or owner acceptance.
+
+M01 deployment-part runtime follow-up, 2026-09-05: generated Bulwark revision `m01-bulwark-deployment-parts-v1` was bound in loaded module8594. Native084912Z derivative/pool/deployment checks pass with zero warnings/errors; I1 sampled frames1–8 show attached packed/unfolded/folding geometry and consistent facing. These are bounded native/EDT observations, not final locomotion, combat, material, package or owner acceptance. The linked qualification and source/generated/module hashes remain in `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z` and `m01-motion-tested-actors-live-comparison-20260905T085741Z-3CB1DBE3`. No asset rights or authorship claim changes.
+
+M01 public-bank material binding follow-up, 2026-09-05: the existing `M_EchoesCliffSurface` now shades M01 `BiomeHorizon`; horizontal exterior substrate retains its ground material. No new asset or rights source was introduced. The two existing placement courses receive independent deterministic variation and distinct outside-play depth bands; their124 total instances and inert roles remain. Native101237Z verifies bounds/material separation and non-M01 controls. Loaded4481 L2 all ten normal-camera samples show the material/depth correction, with repeated cap shapes and bare lanes still open asV042. This is source/native/bounded EDT progress, not finished bank composition or owner acceptance.

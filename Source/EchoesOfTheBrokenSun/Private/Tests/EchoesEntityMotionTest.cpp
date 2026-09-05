@@ -331,7 +331,7 @@ bool FEchoesEntityMotionTest::RunTest(const FString& Parameters)
                 22,
                 22);
             Surveyor.cargo = 20;
-            Surveyor.harvestTicks = 5;
+            Surveyor.harvestTicks = 5; Surveyor.harvestSlotHeld = true; Surveyor.harvestState = echoes::sim::HarvestState::Harvesting;
             WorkerView->ActivateForEntity(Surveyor, true);
             WorkerView->Tick(0.1f);
 

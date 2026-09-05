@@ -14,6 +14,11 @@ Companion document: `Docs/NarrativeCoherenceReview.md` (DEMO-NAR-011).
 
 # Character & Voice Identity Bible (DEMO-NAR-010)
 
+Follow [AGENTS.md](../AGENTS.md) and the [authority map](README.md). This is the named creative/production
+reference; [Requirements.md](Requirements.md) owns behavior and [RequirementsState.md](RequirementsState.md)
+owns lifecycle and recorded owner decisions. Approval of text or character direction does not establish
+generated asset quality, runtime integration, or player acceptance.
+
 **Scope**: the demo path (opening -> tutorial -> AI match). Three speaking characters carry the demo; two more are specified for casting coherence with the full campaign; two system voices are defined with hard personality boundaries.
 
 #### 1. Commander Mara Vey — Meridian Compact (demo path: opening + player command authority; proposed tutorial voice)

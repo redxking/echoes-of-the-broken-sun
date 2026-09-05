@@ -1,0 +1,273 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M14",
+  "map_id": "crownfall-command-crisis",
+  "operation_mode": "CampaignSeveralVoicesOneCommand",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-014",
+    "map_concepts_reference": "MapConcepts#M14"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "possible-bastion",
+      "op": "block",
+      "x0": 8,
+      "x1": 14,
+      "y0": 17,
+      "y1": 25
+    },
+    {
+      "id": "manifest-bastion",
+      "op": "block",
+      "x0": 49,
+      "x1": 57,
+      "y0": 17,
+      "y1": 25
+    },
+    {
+      "id": "phase-west-offset",
+      "op": "block",
+      "x0": 18,
+      "x1": 23,
+      "y0": 40,
+      "y1": 47
+    },
+    {
+      "id": "phase-east-offset",
+      "op": "block",
+      "x0": 40,
+      "x1": 45,
+      "y0": 40,
+      "y1": 47
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "resource-5-footprint-clearance",
+      "op": "open",
+      "x0": 23,
+      "x1": 23,
+      "y0": 47,
+      "y1": 47
+    },
+    {
+      "id": "resource-6-footprint-clearance",
+      "op": "open",
+      "x0": 40,
+      "x1": 40,
+      "y0": 47,
+      "y1": 47
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 338
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 330
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 55,
+          "x1": 58,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 342
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "possible-site",
+      "x": 26,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "manifest-site",
+      "x": 38,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "neme-command",
+      "x": 32,
+      "y": 49,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "crisis-anchor",
+      "x": 32,
+      "y": 56,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 26,
+      "y": 24
+    },
+    {
+      "id": "resource-4",
+      "x": 38,
+      "y": 24
+    },
+    {
+      "id": "resource-5",
+      "x": 24,
+      "y": 48
+    },
+    {
+      "id": "resource-6",
+      "x": 40,
+      "y": 48
+    },
+    {
+      "id": "resource-7",
+      "x": 48,
+      "y": 42
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "possible-site",
+      "x": 26,
+      "y": 43
+    },
+    {
+      "id": "manifest-site",
+      "x": 38,
+      "y": 43
+    },
+    {
+      "id": "neme-command",
+      "x": 32,
+      "y": 49
+    },
+    {
+      "id": "crisis-anchor",
+      "x": 32,
+      "y": 56
+    }
+  ]
+}

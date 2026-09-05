@@ -1,0 +1,252 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M03",
+  "map_id": "ark-city-reserve-service",
+  "operation_mode": "CampaignCityReserve",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-003",
+    "map_concepts_reference": "MapConcepts#M03"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "life-support-stack",
+      "op": "block",
+      "x0": 0,
+      "x1": 5,
+      "y0": 5,
+      "y1": 21
+    },
+    {
+      "id": "transit-viaduct",
+      "op": "block",
+      "x0": 35,
+      "x1": 39,
+      "y0": 2,
+      "y1": 17
+    },
+    {
+      "id": "archive-stack",
+      "op": "block",
+      "x0": 42,
+      "x1": 47,
+      "y0": 27,
+      "y1": 32
+    },
+    {
+      "id": "reserve-yard",
+      "op": "block",
+      "x0": 8,
+      "x1": 12,
+      "y0": 36,
+      "y1": 40
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 60,
+      "y1": 61
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 8,
+          "x1": 11,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 350
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 29,
+          "x1": 34,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 346
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 51,
+          "x1": 54,
+          "y0": 60,
+          "y1": 61
+        }
+      ],
+      "expected_blocked_cell_count": 350
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "life-support",
+      "x": 24,
+      "y": 10,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "transit",
+      "x": 10,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "archive",
+      "x": 20,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 32,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "life-support",
+      "x": 24,
+      "y": 10
+    },
+    {
+      "id": "transit",
+      "x": 10,
+      "y": 24
+    },
+    {
+      "id": "archive",
+      "x": 20,
+      "y": 20
+    }
+  ]
+}

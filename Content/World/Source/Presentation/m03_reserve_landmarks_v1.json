@@ -1,0 +1,94 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M03",
+  "map_id": "ark-city-reserve-service",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-003",
+    "map_concepts_reference": "MapConcepts#M03"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m03_ark-city-reserve-service_v1.json",
+  "terrain_source_sha256": "28d3373a6af7413311e85b5eb62d9700787f3a782289452c8431159dc498c6e4",
+  "records": [
+    {
+      "id": "life-support-bank-west",
+      "kind": "LifeSupportBank",
+      "x": 1,
+      "y": 10,
+      "yaw": 0,
+      "footprint": {"x0": 0, "x1": 2, "y0": 10, "y1": 10},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {
+      "id": "life-support-bank-east",
+      "kind": "LifeSupportBank",
+      "x": 4,
+      "y": 18,
+      "yaw": 180,
+      "footprint": {"x0": 3, "x1": 5, "y0": 18, "y1": 18},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {"id": "life-trunk-24-10", "kind": "ReservePaving", "x": 24, "y": 10, "yaw": 0},
+    {"id": "life-trunk-20-10", "kind": "ReservePaving", "x": 20, "y": 10, "yaw": 0},
+    {"id": "life-trunk-16-10", "kind": "ReservePaving", "x": 16, "y": 10, "yaw": 0},
+    {"id": "life-trunk-12-10", "kind": "ReservePaving", "x": 12, "y": 10, "yaw": 0},
+    {"id": "life-trunk-08-10", "kind": "ReservePaving", "x": 8, "y": 10, "yaw": 0},
+    {"id": "life-trunk-06-10", "kind": "ReservePaving", "x": 6, "y": 10, "yaw": 0},
+    {
+      "id": "transit-support-north",
+      "kind": "TransitSupport",
+      "x": 36,
+      "y": 12,
+      "yaw": 0,
+      "footprint": {"x0": 35, "x1": 37, "y0": 12, "y1": 12},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {
+      "id": "transit-support-south",
+      "kind": "TransitSupport",
+      "x": 38,
+      "y": 6,
+      "yaw": 180,
+      "footprint": {"x0": 37, "x1": 39, "y0": 6, "y1": 6},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {"id": "transit-trunk-10-24", "kind": "ReservePaving", "x": 10, "y": 24, "yaw": 0},
+    {"id": "transit-trunk-14-22", "kind": "ReservePaving", "x": 14, "y": 22, "yaw": 0},
+    {"id": "transit-trunk-18-20", "kind": "ReservePaving", "x": 18, "y": 20, "yaw": 0},
+    {"id": "transit-trunk-22-18", "kind": "ReservePaving", "x": 22, "y": 18, "yaw": 0},
+    {"id": "transit-trunk-26-16", "kind": "ReservePaving", "x": 26, "y": 16, "yaw": 0},
+    {"id": "transit-trunk-30-14", "kind": "ReservePaving", "x": 30, "y": 14, "yaw": 0},
+    {"id": "transit-trunk-34-14", "kind": "ReservePaving", "x": 34, "y": 14, "yaw": 0},
+    {
+      "id": "archive-stack-west",
+      "kind": "ArchiveStack",
+      "x": 43,
+      "y": 28,
+      "yaw": 0,
+      "footprint": {"x0": 42, "x1": 44, "y0": 28, "y1": 28},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {
+      "id": "archive-stack-east",
+      "kind": "ArchiveStack",
+      "x": 46,
+      "y": 31,
+      "yaw": 180,
+      "footprint": {"x0": 45, "x1": 47, "y0": 31, "y1": 31},
+      "pivot": {"x_half_tiles": 0, "y_half_tiles": 0}
+    },
+    {"id": "archive-trunk-20-20", "kind": "ReservePaving", "x": 20, "y": 20, "yaw": 0},
+    {"id": "archive-trunk-24-22", "kind": "ReservePaving", "x": 24, "y": 22, "yaw": 0},
+    {"id": "archive-trunk-28-24", "kind": "ReservePaving", "x": 28, "y": 24, "yaw": 0},
+    {"id": "archive-trunk-32-26", "kind": "ReservePaving", "x": 32, "y": 26, "yaw": 0},
+    {"id": "archive-trunk-36-28", "kind": "ReservePaving", "x": 36, "y": 28, "yaw": 0},
+    {"id": "archive-trunk-40-28", "kind": "ReservePaving", "x": 40, "y": 28, "yaw": 0},
+    {"id": "well-reserve-trunk-32-32", "kind": "ReservePaving", "x": 32, "y": 32, "yaw": 0},
+    {"id": "well-reserve-trunk-28-33", "kind": "ReservePaving", "x": 28, "y": 33, "yaw": 0},
+    {"id": "well-reserve-trunk-24-34", "kind": "ReservePaving", "x": 24, "y": 34, "yaw": 0},
+    {"id": "well-reserve-trunk-20-35", "kind": "ReservePaving", "x": 20, "y": 35, "yaw": 0},
+    {"id": "well-reserve-trunk-16-36", "kind": "ReservePaving", "x": 16, "y": 36, "yaw": 0},
+    {"id": "well-reserve-trunk-14-37", "kind": "ReservePaving", "x": 14, "y": 37, "yaw": 0}
+  ]
+}

@@ -2,20 +2,42 @@
 title: Echoes of the Broken Sun Art Direction Reference
 author: Angelis Pseftis
 creator: Angelis Pseftis
-status: Operational reference — subordinate to the Development Bible and Track A
+status: Art reference subordinate to master requirements and creative canon
 created: 2026-09-01
-updated: 2026-09-01
+updated: 2026-09-04
 ---
 
 # Art Direction Reference
 
-This is the single page every visual pass is checked against before it is called done. It does not
-replace authority: creative intent lives in `Docs/Archive/DevelopmentBible.md` (Art and audio), the
-gate program lives in `Docs/GameCompletionDirective.md` Track A, and acceptance evidence lives in
-`Docs/Archive/ProjectLedger.md`. Where this page and those documents disagree, they win and this page
-gets corrected. What this page adds is the operational layer: the accepted concrete values, the frame
-hierarchy, and the binary composed-frame checklist established by the owner review protocol
-(ledger ART-A4-002).
+This is the art-direction reference used to assess composed gameplay frames.
+[Requirements.md](Requirements.md) owns behavioral and numeric gates;
+[RequirementsState.md](RequirementsState.md) owns evidence state and owner acceptance.
+Creative intent follows [DevelopmentBible.md](Archive/DevelopmentBible.md); Track A in the
+[completion directive](GameCompletionDirective.md) sequences the work. Follow [AGENTS.md](../AGENTS.md).
+
+Values and review protocols below retain their recorded provenance. Resolve any material conflict through
+the master and owner decision record. A direction value, source asset, or validator claim is not evidence
+of rendered conformance; verify the actual output and the required accessibility variants.
+
+## Context and detail before production
+
+Apply `SPEC-VISD-008` and `SPEC-ART-004` from [Requirements.md](Requirements.md). Before producing or
+materially revising an asset family, record the brief in its existing map, art, character, or source record:
+
+| Design question | Required concrete treatment |
+|---|---|
+| Where and when does it belong? | Mission/site and story point; faction/culture; relevant character/history; approved source. |
+| What belongs here, and what does not? | Climate/geology/architecture/use constraints and explicit exclusions; proposed lore clearly labeled. |
+| What does the player need to understand? | Unit/building role, principal use, current state, threat/opportunity, objective and navigation cues. |
+| What carries the large composition? | Silhouette, proportion, route/landmark hierarchy, focal points, and gameplay-camera readability. |
+| What earns the small details? | Construction joints, load paths, material transitions, wear/use traces, instruments or organic structures tied to function and place. Detail density must survive the RTS camera. |
+| How does it act and sound? | Purposeful movement/work sequence, anticipation/result/recovery, force/material logic, sound/effect timing, and interruption behavior. |
+| How will it be reviewed? | Actual gameplay views, motion/listening checks, accessibility variants, role-recognition review, source/state binding, and applicable performance budgets. |
+
+Use reusable kits deliberately, preserving distinct map composition and role identity. A recolor, generic
+prop scatter, decorative noise, or a larger polygon count alone is not craftsmanship. Show the intended
+function in the shape and action of units and buildings, then verify players can read it. Keep fine detail
+where it contributes; do not sacrifice control response, silhouette, frame cost, or fair visibility for it.
 
 ## The direction in one sentence
 
@@ -63,6 +85,12 @@ layer's budget is a defect regardless of how good the element looks in isolation
   gold key (1.0, 0.82, 0.62) at 10.0; indigo skylight fill (0.48, 0.60, 0.88) at 1.6
   (`EchoesGameMode.cpp`, A1/ART-A4-002). New sites re-weight this duality; they do not invent new suns.
 - Exposure is authored (`exposure-authored-v1`, EXPOSURE-001), never free-running auto-exposure.
+- Current M01 working rig (2026-09-05, IN PROGRESS) retains the10.0 gold key but uses
+  public emissive-sky capture at30000cm, intensity8.0, tint(0.70,0.79,1.0), and fixed
+  lower-hemisphere bounce(0.035,0.045,0.065) to recover shaded equipment detail.
+  This is the existing source treatment recorded in `WorldMapWorkLog.md`, not an owner
+  acceptance of a new global rig. Module2947 F3 gameplay frame0 at1920×1080 measures
+  mean luma67.3 and zero fully clipped pixels; this one view does not certify the scene.
 - Accepted capture window: clipped highlights ≤ 0.005% of pixels, mean luma between roughly 50 and 70
   (accepted frames measure 55.9–66.1 via `measure_capture_exposure.py`). A frame outside this window
   fails regardless of intent.
@@ -126,8 +154,8 @@ One system across every screen (A8): charcoal panels, pale-ceramic type, cyan co
 alert, the three non-color ownership marks everywhere ownership appears. Everything obeys HUD scale
 and has a high-contrast variant that changes palette, never information. Development diagnostics live
 behind a flag absent from packaged builds (A2); a placeholder leaves only when its registered
-replacement lands. Typography remains an open decision under directive section 9 — a licensed or
-original registered typeface; until it is registered, no decorative font enters the project.
+replacement lands. Typeface selection follows the latest recorded owner decision and registered font provenance. Verify the
+current asset and runtime binding; a historic open-decision label does not undo a later approved choice.
 
 ## The composed-frame checklist
 
@@ -145,7 +173,7 @@ every line is true:
 7. Layer hierarchy holds: UI type is the brightest stable element; transient feedback may exceed it
    only briefly.
 8. Nothing new collides, casts shadows, influences navigation, or touches simulation state.
-9. The asset is registered (`AssetRegister.md`), regeneration is byte-idempotent, and the ledger
+9. The asset is registered (`AssetRegister.md`), regeneration is byte-idempotent, and the state/evidence
    entry states what the pass does *not* cover.
 10. The owner's eye remains the final acceptance authority (ART-A4-002); this checklist qualifies a
     pass for that review, it does not replace it.

@@ -78,6 +78,13 @@ inline const FName& LegacyGlassScarTag()
     return Tag;
 }
 
+inline bool IsGlassScarRoute(const TArray<FName>& Tags)
+{
+    return Tags.Contains(TEXT("EchoesRouteAshCut")) ||
+           Tags.Contains(TEXT("EchoesRouteBuriedCauseway")) ||
+           Tags.Contains(TEXT("EchoesRouteFoldedVerge"));
+}
+
 inline const FName& TagForPreset(EEchoesSkirmishMapPreset Preset)
 {
     switch (Preset)

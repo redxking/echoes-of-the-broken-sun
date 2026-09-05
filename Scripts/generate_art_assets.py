@@ -17,6 +17,12 @@ import unreal
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import echoes_texture_synth as texture_synth
+import echoes_world_kits as world_kits
+import echoes_evacuation_props as evacuation_props
+import echoes_migration_props as migration_props
+import echoes_civic_service_props as civic_service_props
+import echoes_cliff_material as cliff_material
+import echoes_m01_shroud as m01_shroud
 
 
 ART_ROOT = "/Game/Art/Generated"
@@ -24,7 +30,7 @@ TEXTURE_ROOT = f"{ART_ROOT}/Textures"
 SURFACE_TEXTURED_REVISION = "surface-textured-v7"
 MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesSurface"
 WORLD_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesWorldSurface"
-WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v6"
+WORLD_MATERIAL_ASSET_REVISION = "world-surface-textured-v8"
 ASH_CUT_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarAshCut"
 ASH_CUT_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarAshCut_Basalt",
@@ -40,7 +46,7 @@ BURIED_CAUSEWAY_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Ceramic",
     f"{ART_ROOT}/Materials/MI_GlassScarBuriedCauseway_Conduit",
 )
-BURIED_CAUSEWAY_ASSET_REVISION = "buried-causeway-production-v1"
+BURIED_CAUSEWAY_ASSET_REVISION = "buried-causeway-production-v3"
 FOLDED_VERGE_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_GlassScarFoldedVerge"
 FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
     f"{ART_ROOT}/Materials/MI_GlassScarFoldedVerge_Obsidian",
@@ -51,10 +57,10 @@ FOLDED_VERGE_MATERIAL_INSTANCE_PATHS = (
 FOLDED_VERGE_ASSET_REVISION = "folded-verge-production-v2"  # v2: chasm piers under the plates (gate 50)
 # Glass Scar bank shelf: vitrified plate with strata faces; replaces the v1 shelf whose edge
 # spires and strata slabs stood proud of the plate and read as a slab mosaic (gate 50).
-GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-vitrified-v2"
+GLASS_SCAR_SHELF_ASSET_REVISION = "glass-scar-shelf-fractured-v8"
 # Broken Sun: a fractured stellar sphere (crust plates over a molten core, shards drifting in
 # three dimensions) replacing the v1 flattened disc with rings (gate 50).
-BROKEN_SUN_SKY_ASSET_REVISION = "broken-sun-sky-fractured-v3"
+BROKEN_SUN_SKY_ASSET_REVISION = "broken-sun-sky-fractured-v6"
 # Sky dome: four inward-facing bands from a warm horizon haze to a near-black zenith, so the
 # sky reads as a lit gradient instead of the flat fog colour (gate 50). One mesh, no atmosphere pass.
 SKY_DOME_ASSET_REVISION = "sky-dome-banded-v1"
@@ -63,6 +69,15 @@ VFX_MATERIAL_PATH = f"{ART_ROOT}/Materials/M_EchoesPresentationVFX"
 PRESENTATION_VFX_ASSET_REVISION = "selection-command-vfx-v2"
 DESTRUCTION_VFX_ASSET_REVISION = "destruction-vfx-v1"
 ROSTER_ASSET_REVISION = "roster-silhouette-v2"
+MERIDIAN_FORWARD_ASSET_REVISION = "meridian-forward-axis-v4"
+M01_SURVEYOR_ARTICULATION_ASSET_REVISION = "m01-surveyor-articulation-v1"
+M01_BULWARK_ARTICULATION_ASSET_REVISION = "m01-bulwark-deployment-parts-v1"
+
+
+def roster_asset_revision(spec):
+    return (MERIDIAN_FORWARD_ASSET_REVISION
+            if spec.faction == "Meridian" and spec.name in ("Bulwark", "Lancer")
+            else ROSTER_ASSET_REVISION)
 
 PRIMARY = 0
 DARK = 1
@@ -226,6 +241,51 @@ def torus(
     )
 
 
+def armor_cassette(
+    mesh: unreal.DynamicMesh,
+    width: float,
+    height: float,
+    depth: float,
+    at: tuple[float, float, float],
+    high: bool,
+) -> None:
+    """Layered Meridian armor: chamfered ceramic shell over an exposed dark joint.
+
+    The cassette is a shallow +X-facing extrusion. Its profile is deliberately
+    broad enough to carry the silhouette at tactical distance while the dark
+    rear plate keeps the engineered load path legible without cyan glow.
+    """
+    x, y, z = at
+
+    def profile(profile_width: float, profile_height: float, cut: float):
+        # Local X maps to vertical world Z under the -90 degree pitch below;
+        # local Y remains width, and local +Z becomes world +X.
+        return ((-profile_height*.5+cut, -profile_width*.5),
+                (profile_height*.5-cut, -profile_width*.5),
+                (profile_height*.5, -profile_width*.5+cut),
+                (profile_height*.5, profile_width*.5-cut),
+                (profile_height*.5-cut, profile_width*.5),
+                (-profile_height*.5+cut, profile_width*.5),
+                (-profile_height*.5, profile_width*.5-cut),
+                (-profile_height*.5, -profile_width*.5+cut))
+
+    def plate(material_id: int, plate_width: float, plate_height: float,
+              start_x: float, thickness: float, cut: float):
+        cut = min(cut, min(plate_width, plate_height) * .24)
+        mesh.append_simple_extrude_polygon(
+            primitive_options(material_id),
+            transform((start_x, y, z), (-90.0, 0.0, 0.0)),
+            [unreal.Vector2D(*point) for point in profile(plate_width, plate_height, cut)],
+            thickness, 0, True, unreal.GeometryScriptPrimitiveOriginMode.BASE)
+
+    start_x = x - depth*.5
+    plate(DARK, width, height, start_x, 4.0, min(width, height)*.13)
+    plate(LIGHT, width*.92, height*.91, start_x + 3.0, depth, min(width, height)*.15)
+    if high:
+        plate(PRIMARY, width*.36, height*.56, start_x + depth + 2.0, 2.0,
+              min(width, height)*.18)
+
+
 def radial_box(
     mesh: unreal.DynamicMesh,
     angle_degrees: float,
@@ -285,19 +345,15 @@ def paired_leg(
     box(mesh, (14.0, width + 6.0, 6.0), (foot_x + 12.0, y, 6.0), LIGHT)
 
 
-def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Meridian Surveyor: compact engineering exoframe with twin tool arms and sensor mast."""
+def meridian_surveyor_body(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Surveyor torso derivative; deliberately excludes the two welded leg recipes."""
     # 1. Main Torso & Cockpit Chassis
     box(mesh, (58.0, 48.0, 36.0), (0.0, 0.0, 78.0), LIGHT)
     box(mesh, (48.0, 38.0, 24.0), (-7.0, 0.0, 104.0), DARK, (-8.0, 0.0, 0.0))
     box(mesh, (36.0, 42.0, 16.0), (4.0, 0.0, 102.0), PRIMARY, (-12.0, 0.0, 0.0))
     box(mesh, (10.0, 34.0, 14.0), (27.0, 0.0, 95.0), GLOW)
 
-    # 2. Bipedal Locomotion
-    paired_leg(mesh, -21.0, 69.0, 18.0)
-    paired_leg(mesh, 21.0, 69.0, 18.0)
-
-    # 3. Articulated Manipulator Arms (Right: Rotary Drill, Left: Pincer)
+    # 2. Articulated Manipulator Arms (Right: Rotary Drill, Left: Pincer)
     # Right arm: Rotary Matter Drill
     box(mesh, (43.0, 10.0, 10.0), (15.0, 39.0, 79.0), DARK, (0.0, 8.0, 15.0))
     box(mesh, (38.0, 8.0, 8.0), (46.0, 48.0, 62.0), LIGHT, (0.0, 8.0, 30.0))
@@ -310,13 +366,13 @@ def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
     box(mesh, (18.0, 4.0, 8.0), (66.0, -52.0, 56.0), DARK, (0.0, -15.0, 20.0))
     sphere(mesh, 5.0, (56.0, -48.0, 58.0), GLOW, high_detail=False)
 
-    # 4. Rear Matter Harvest Canisters
+    # 3. Rear Matter Harvest Canisters
     for side in (-1.0, 1.0):
         cylinder(mesh, 11.0, 34.0, (-28.0, side * 18.0, 90.0), DARK, sides=8)
         cylinder(mesh, 7.0, 26.0, (-28.0, side * 18.0, 90.0), GLOW, sides=8)
         box(mesh, (8.0, 16.0, 10.0), (-24.0, side * 18.0, 104.0), PRIMARY)
 
-    # 5. Fold-Out Survey Mast & Prismatic Optics
+    # 4. Fold-Out Survey Mast & Prismatic Optics
     box(mesh, (8.0, 8.0, 55.0), (-18.0, 0.0, 137.0), DARK)
     box(mesh, (15.0, 8.0, 28.0), (-18.0, 0.0, 168.0), GLOW)
     if high:
@@ -325,16 +381,49 @@ def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
         box(mesh, (10.0, 10.0, 6.0), (-3.0, 0.0, 153.0), PRIMARY)
 
 
+def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Meridian Surveyor: compact engineering exoframe with twin tool arms and sensor mast."""
+    meridian_surveyor_body(mesh, high)
+    # The standard roster remains a welded source mesh. M01 uses the separate
+    # presentation-only derivatives below so its locomotion can articulate.
+    paired_leg(mesh, -21.0, 69.0, 18.0)
+    paired_leg(mesh, 21.0, 69.0, 18.0)
+
+
+def m01_surveyor_upper(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """M01 upper leg, hip-pivoted at the origin and authored along local +X."""
+    del high
+    width = 11.0
+    box(mesh, (42.0, width, width), (21.0, 0.0, 0.0), DARK)
+    sphere(mesh, width * 0.72, (0.0, 0.0, 0.0), GLOW, high_detail=False)
+
+
+def m01_surveyor_lower(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """M01 lower leg, knee-pivoted at the origin and authored along local +X."""
+    del high
+    width = 11.0
+    box(mesh, (46.0, width, width), (23.0, 0.0, 0.0), LIGHT)
+    box(mesh, (16.0, width + 3.0, 14.0), (8.0, 0.0, 0.0), PRIMARY)
+
+
+def m01_surveyor_foot(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """M01 foot with the ankle at the origin and a sole resting on local Z=0."""
+    del high
+    width = 11.0
+    box(mesh, (32.0, width + 8.0, 10.0), (0.0, 0.0, 5.0), DARK)
+    box(mesh, (14.0, width + 6.0, 6.0), (12.0, 0.0, 4.0), LIGHT)
+
+
 def meridian_lancer(mesh: unreal.DynamicMesh, high: bool) -> None:
     """Meridian Lancer: tall line infantry marksman with precision rail-lance."""
     # 1. Bipedal Chassis
     paired_leg(mesh, -15.0, 72.0, 10.0)
     paired_leg(mesh, 15.0, 72.0, 10.0)
 
-    # 2. Torso Cuirass & Pauldrons
-    box(mesh, (42.0, 38.0, 52.0), (-2.0, 0.0, 98.0), LIGHT)
-    box(mesh, (28.0, 32.0, 18.0), (8.0, 0.0, 106.0), PRIMARY)
-    box(mesh, (34.0, 30.0, 20.0), (2.0, 0.0, 132.0), DARK)
+    # 2. Torso Cuirass & Pauldrons. The broad cassette carries an ivory load
+    # shell, recessed dark service joint, and high-LOD status spine.
+    armor_cassette(mesh, 43.0, 58.0, 13.0, (-5.0, 0.0, 99.0), high)
+    box(mesh, (30.0, 32.0, 17.0), (1.0, 0.0, 132.0), DARK)
     box(mesh, (12.0, 24.0, 10.0), (20.0, 0.0, 133.0), GLOW)
     box(mesh, (4.0, 4.0, 22.0), (-6.0, 12.0, 146.0), DARK)
 
@@ -350,7 +439,7 @@ def meridian_lancer(mesh: unreal.DynamicMesh, high: bool) -> None:
     for rx in (42.0, 68.0, 94.0):
         box(mesh, (12.0, 16.0, 18.0), (rx, -6.0, 91.0), LIGHT, (0.0, 0.0, -7.0))
         box(mesh, (6.0, 18.0, 20.0), (rx, -6.0, 91.0), PRIMARY, (0.0, 0.0, -7.0))
-    cone(mesh, 10.0, 3.0, 38.0, (124.0, -6.0, 81.0), LIGHT, (0.0, 90.0, 0.0), 6)
+    cone(mesh, 10.0, 3.0, 38.0, (124.0, -6.0, 81.0), LIGHT, (-90.0, 0.0, 0.0), 6)
     sphere(mesh, 4.0, (144.0, -6.0, 81.0), GLOW, high_detail=False)
 
     # 5. Backpack Capacitor
@@ -368,14 +457,15 @@ def meridian_bulwark(mesh: unreal.DynamicMesh, high: bool) -> None:
     box(mesh, (52.0, 72.0, 20.0), (-22.0, 0.0, 74.0), PRIMARY)
     for side in (-1.0, 1.0):
         paired_leg(mesh, side * 34.0, 55.0, 4.0, heavy=True)
-        box(mesh, (40.0, 34.0, 46.0), (-5.0, side * 26.0, 88.0), LIGHT)
+        armor_cassette(mesh, 39.0, 50.0, 14.0, (-7.0, side * 26.0, 88.0), high)
         box(mesh, (14.0, 20.0, 10.0), (18.0, side * 26.0, 104.0), GLOW)
         box(mesh, (20.0, 12.0, 28.0), (-5.0, side * 44.0, 88.0), PRIMARY)
 
     # 2. Central Heavy Shield Core Emitter & Articulated Pivot
     cylinder(mesh, 24.0, 86.0, (26.0, 0.0, 72.0), DARK, (90.0, 0.0, 0.0), 10)
     torus(mesh, 28.0, 5.0, (24.0, 0.0, 72.0), GLOW, (90.0, 0.0, 0.0), high)
-    cylinder(mesh, 14.0, 22.0, (46.0, 0.0, 72.0), LIGHT, (0.0, 90.0, 0.0), 8)
+    cylinder(mesh, 14.0, 22.0, (46.0, 0.0, 72.0), LIGHT, (-90.0, 0.0, 0.0), 8)
+    armor_cassette(mesh, 52.0, 34.0, 8.0, (38.0, 0.0, 92.0), high)
     sphere(mesh, 10.0, (56.0, 0.0, 72.0), GLOW, high_detail=high)
 
     # 3. Hexagonal Holographic Energy Shield Barrier Wings (Matching Concept Target)
@@ -392,21 +482,89 @@ def meridian_bulwark(mesh: unreal.DynamicMesh, high: bool) -> None:
             (50.0, side * 64.0, 92.0, side * 20.0, 25.0),
         )
         for cx, cy, cz, cyaw, radius in cell_specs:
+            # Rotator is (pitch, yaw, roll); primitives extend along local +Z.
+            # Pitch -90 turns the face toward +X; yaw cants each wing outward.
             # Outer Beveled Frame (Dark & Ceramic)
-            cylinder(mesh, radius + 4.0, 7.0, (cx, cy, cz), DARK, (0.0, 90.0, cyaw), sides=6)
-            cylinder(mesh, radius + 1.0, 5.0, (cx + 1.0, cy, cz), LIGHT, (0.0, 90.0, cyaw), sides=6)
+            cylinder(mesh, radius + 4.0, 7.0, (cx, cy, cz), DARK, (-90.0, cyaw, 0.0), sides=6)
+            cylinder(mesh, radius + 1.0, 5.0, (cx + 1.0, cy, cz), LIGHT, (-90.0, cyaw, 0.0), sides=6)
             # Radiant Cyan Holographic Energy Cell
-            cylinder(mesh, radius - 2.0, 9.0, (cx + 2.0, cy, cz), GLOW, (0.0, 90.0, cyaw), sides=6)
+            cylinder(mesh, radius - 2.0, 9.0, (cx + 2.0, cy, cz), GLOW, (-90.0, cyaw, 0.0), sides=6)
             # Inner Concentric Honeycomb Ring
             if high:
-                cylinder(mesh, radius * 0.55, 11.0, (cx + 2.5, cy, cz), GLOW, (0.0, 90.0, cyaw), sides=6)
+                cylinder(mesh, radius * 0.55, 11.0, (cx + 2.5, cy, cz), GLOW, (-90.0, cyaw, 0.0), sides=6)
 
     # 4. Outrigger Projector Pylons & Upper Sensors
     if high:
         for side in (-1.0, 1.0):
             box(mesh, (42.0, 8.0, 8.0), (35.0, side * 50.0, 44.0), GLOW)
-            cone(mesh, 9.0, 2.0, 32.0, (56.0, side * 52.0, 126.0), PRIMARY, (0.0, 90.0, 0.0), 6)
+            cone(mesh, 9.0, 2.0, 32.0, (56.0, side * 52.0, 126.0), PRIMARY, (-90.0, 0.0, 0.0), 6)
             cylinder(mesh, 8.0, 35.0, (-38.0, side * 40.0, 42.0), DARK, (25.0, 0.0, 0.0), 8)
+
+
+# M01 retains the approved Bulwark silhouette by assembling these three
+# presentation-only derivatives at their authored hinge transforms. The roster
+# mesh above stays welded for every other operation. The wings contain the
+# original outriggers and all six framed cells; their local origins are the
+# physical pivot collars at (26, +/-24, 72) in the deployed body space.
+M01_BULWARK_WING_HINGES = {
+    "Left": (26.0, -24.0, 72.0),
+    "Right": (26.0, 24.0, 72.0),
+}
+
+
+def m01_bulwark_body(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """M01 Bulwark chassis and emitter, with both fold-out wings excluded."""
+    # This is sections 1 and 2 of meridian_bulwark, unchanged in deployed
+    # coordinates. It deliberately retains the central pivot hardware.
+    box(mesh, (78.0, 96.0, 30.0), (-12.0, 0.0, 58.0), DARK)
+    box(mesh, (52.0, 72.0, 20.0), (-22.0, 0.0, 74.0), PRIMARY)
+    for side in (-1.0, 1.0):
+        paired_leg(mesh, side * 34.0, 55.0, 4.0, heavy=True)
+        armor_cassette(mesh, 39.0, 50.0, 14.0, (-7.0, side * 26.0, 88.0), high)
+        box(mesh, (14.0, 20.0, 10.0), (18.0, side * 26.0, 104.0), GLOW)
+        box(mesh, (20.0, 12.0, 28.0), (-5.0, side * 44.0, 88.0), PRIMARY)
+    cylinder(mesh, 24.0, 86.0, (26.0, 0.0, 72.0), DARK, (90.0, 0.0, 0.0), 10)
+    torus(mesh, 28.0, 5.0, (24.0, 0.0, 72.0), GLOW, (90.0, 0.0, 0.0), high)
+    cylinder(mesh, 14.0, 22.0, (46.0, 0.0, 72.0), LIGHT, (-90.0, 0.0, 0.0), 8)
+    armor_cassette(mesh, 52.0, 34.0, 8.0, (38.0, 0.0, 92.0), high)
+    sphere(mesh, 10.0, (56.0, 0.0, 72.0), GLOW, high_detail=high)
+
+
+def m01_bulwark_wing(mesh: unreal.DynamicMesh, high: bool, side: float) -> None:
+    """One fold-out Bulwark wing, local to its existing emitter-outrigger hinge."""
+    hinge = M01_BULWARK_WING_HINGES["Left" if side < 0.0 else "Right"]
+
+    def local(global_at: tuple[float, float, float]) -> tuple[float, float, float]:
+        return tuple(global_at[index] - hinge[index] for index in range(3))
+
+    # Structural Outrigger Arms. At zero component rotation these coordinates
+    # reconstruct the deployed meridian_bulwark geometry exactly.
+    box(mesh, (38.0, 12.0, 12.0), local((32.0, side * 38.0, 72.0)), DARK, (0.0, 0.0, side * 15.0))
+    box(mesh, (28.0, 8.0, 8.0), local((38.0, side * 48.0, 72.0)), LIGHT, (0.0, 0.0, side * 15.0))
+    cell_specs = (
+        (56.0, side * 34.0, 72.0, side * 8.0, 29.0),
+        (56.0, side * 34.0, 114.0, side * 8.0, 26.0),
+        (50.0, side * 64.0, 92.0, side * 20.0, 25.0),
+    )
+    for cx, cy, cz, cyaw, radius in cell_specs:
+        center = local((cx, cy, cz))
+        cylinder(mesh, radius + 4.0, 7.0, center, DARK, (-90.0, cyaw, 0.0), sides=6)
+        cylinder(mesh, radius + 1.0, 5.0, (center[0] + 1.0, center[1], center[2]), LIGHT, (-90.0, cyaw, 0.0), sides=6)
+        cylinder(mesh, radius - 2.0, 9.0, (center[0] + 2.0, center[1], center[2]), GLOW, (-90.0, cyaw, 0.0), sides=6)
+        if high:
+            cylinder(mesh, radius * 0.55, 11.0, (center[0] + 2.5, center[1], center[2]), GLOW, (-90.0, cyaw, 0.0), sides=6)
+    if high:
+        box(mesh, (42.0, 8.0, 8.0), local((35.0, side * 50.0, 44.0)), GLOW)
+        cone(mesh, 9.0, 2.0, 32.0, local((56.0, side * 52.0, 126.0)), PRIMARY, (-90.0, 0.0, 0.0), 6)
+        cylinder(mesh, 8.0, 35.0, local((-38.0, side * 40.0, 42.0)), DARK, (25.0, 0.0, 0.0), 8)
+
+
+def m01_bulwark_left_wing(mesh: unreal.DynamicMesh, high: bool) -> None:
+    m01_bulwark_wing(mesh, high, -1.0)
+
+
+def m01_bulwark_right_wing(mesh: unreal.DynamicMesh, high: bool) -> None:
+    m01_bulwark_wing(mesh, high, 1.0)
 
 
 def meridian_relay_skiff(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -968,75 +1126,7 @@ def world_future_well_glyph(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_glass_scar_shelf(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """Vitrified basalt bank: a flush charcoal plate with hairline fracture relief, sheer strata
-    faces on all four sides, and molten amber fissures in the faces and across the surface.
-
-    Nothing stands proud of the plate beyond low relief, so tiled instances read as one ground
-    rather than a mosaic of slabs; the silhouette work lives on the cliff faces."""
-    # Foundation block descending into the chasm, flush with the plate edges
-    box(mesh, (780.0, 780.0, 400.0), (0.0, 0.0, -180.0), DARK)
-    # Walking plate, same footprint as the foundation so no rim shows at tile seams
-    box(mesh, (780.0, 780.0, 38.0), (0.0, 0.0, 20.0), PRIMARY)
-
-    # Low fracture relief: broad shards of the plate lifted 3 to 5 units, slightly tilted
-    for x, y, sx, sy, lift, tilt_roll, tilt_pitch, yaw in (
-        (-190.0, -150.0, 300.0, 240.0, 4.0, 0.6, -0.4, 11.0),
-        (170.0, 120.0, 260.0, 300.0, 3.0, -0.5, 0.5, -17.0),
-        (-40.0, 210.0, 220.0, 170.0, 5.0, 0.4, 0.7, 29.0),
-        (210.0, -210.0, 200.0, 180.0, 3.0, -0.6, -0.3, -33.0),
-    ):
-        box(mesh, (sx, sy, 8.0), (x, y, 36.0 + lift), PRIMARY, (tilt_roll, tilt_pitch, yaw))
-
-    # Surface fissures: amber hairlines set into the plate, a hand proud of it
-    for x, y, length, yaw in (
-        (-120.0, 40.0, 420.0, 24.0),
-        (150.0, -60.0, 360.0, -38.0),
-        (40.0, 230.0, 240.0, 71.0),
-        (-230.0, -230.0, 200.0, -62.0),
-    ):
-        box(mesh, (length, 5.0, 6.0), (x, y, 39.0), GLOW, (0.0, 0.0, yaw))
-    if high:
-        for x, y, length, yaw in (
-            (60.0, 110.0, 180.0, 8.0),
-            (-260.0, 150.0, 150.0, -80.0),
-            (240.0, 240.0, 120.0, 40.0),
-        ):
-            box(mesh, (length, 4.0, 5.0), (x, y, 39.0), GLOW, (0.0, 0.0, yaw))
-
-    # Strata bands: full-perimeter ledges at several depths so every face reads as layered rock
-    for z, thickness, proud, material in (
-        (-36.0, 26.0, 10.0, PRIMARY),
-        (-104.0, 42.0, 18.0, DARK),
-        (-176.0, 28.0, 8.0, PRIMARY),
-        (-256.0, 50.0, 22.0, DARK),
-        (-338.0, 24.0, 12.0, PRIMARY),
-    ):
-        box(mesh, (780.0 + 2.0 * proud, 780.0 + 2.0 * proud, thickness), (0.0, 0.0, z), material)
-
-    # Face fissures: molten amber slabs lying in each cliff face, tilted along the face
-    face = 390.0
-    for x, z, length, tilt in (
-        (-140.0, -70.0, 300.0, 22.0),
-        (120.0, -150.0, 260.0, -18.0),
-        (-60.0, -290.0, 340.0, 12.0),
-    ):
-        # +/-Y faces: thin in Y, tilted about Y (pitch)
-        for side in (-1.0, 1.0):
-            box(mesh, (length, 10.0, 16.0), (x, side * face, z), GLOW, (0.0, tilt, 0.0))
-        # +/-X faces: thin in X, tilted about X (roll)
-        for side in (-1.0, 1.0):
-            box(mesh, (10.0, length, 16.0), (side * face, x, z - 30.0), GLOW, (tilt, 0.0, 0.0))
-
-    # Face relief: broken buttresses standing out of the lower faces
-    if high:
-        for x, z, w, h, proud in (
-            (-250.0, -240.0, 120.0, 260.0, 26.0),
-            (90.0, -300.0, 160.0, 180.0, 30.0),
-            (260.0, -200.0, 100.0, 300.0, 22.0),
-        ):
-            for side in (-1.0, 1.0):
-                box(mesh, (w, proud, h), (x, side * (face + proud * 0.5), z), DARK)
-                box(mesh, (proud, w, h), (side * (face + proud * 0.5), -x, z - 20.0), DARK)
+    world_kits.shelf(mesh, high)
 
 
 def world_glass_scar_ridge(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1126,61 +1216,9 @@ def world_matter_deposit(mesh: unreal.DynamicMesh, high: bool) -> None:
 
 
 def world_broken_sun_sky(mesh: unreal.DynamicMesh, high: bool) -> None:
-    """The Broken Sun: a fractured stellar sphere. A molten core shows through the cracks of a
-    broken dark crust of tangent plates, and Dawnshards drift away from it in every direction.
-
-    v2 replaces the flattened disc-and-rings of v1: the concept target reads the sun as a
-    cracked sphere with no ring, lit from within."""
-    core_radius = 1200.0
-    # 1. Molten core, seen only through the crust gaps
-    sphere(mesh, core_radius, (0.0, 0.0, 0.0), GLOW, high_detail=high)
-
-    # 2. Broken crust: tangent plates on a Fibonacci sphere with gaps between them.
-    #    Rotator order is (roll, pitch, yaw); yaw/pitch turn the plate's local X onto the
-    #    outward normal, so the plate's thin axis points along the normal.
-    plate_count = 76 if high else 48
-    golden = math.pi * (3.0 - math.sqrt(5.0))
-    for index in range(plate_count):
-        z = 1.0 - 2.0 * (index + 0.5) / plate_count
-        ring = math.sqrt(max(0.0, 1.0 - z * z))
-        theta = golden * index
-        normal = (ring * math.cos(theta), ring * math.sin(theta), z)
-        yaw = math.degrees(math.atan2(normal[1], normal[0]))
-        pitch = math.degrees(math.asin(normal[2]))
-        roll = float((index * 29) % 44) - 22.0
-        width = 250.0 + float((index * 37) % 210)
-        height = 210.0 + float((index * 53) % 200)
-        offset = core_radius * 1.02
-        at = (normal[0] * offset, normal[1] * offset, normal[2] * offset)
-        box(mesh, (70.0, width, height), at, DARK, (roll, pitch, yaw))
-        # A hot inner rim on every third plate: the crust is thinnest where it just broke
-        if index % 3 == 0:
-            box(mesh, (30.0, width * 0.6, height * 0.6), at, LIGHT, (roll, pitch, yaw))
-
-    # 3. Dawnshards drifting away from the sphere in three dimensions: a dark body with
-    #    an incandescent inner spike, larger and further out the longer they have drifted.
-    shard_count = 16 if high else 10
-    for index in range(shard_count):
-        z = 1.0 - 2.0 * (index + 0.5) / shard_count
-        ring = math.sqrt(max(0.0, 1.0 - z * z))
-        theta = golden * index + 1.7
-        direction = (ring * math.cos(theta), ring * math.sin(theta), z * 0.55)
-        dist = 1750.0 + float((index * 173) % 900)
-        at = (direction[0] * dist, direction[1] * dist, direction[2] * dist)
-        size = 260.0 + float((index * 61) % 180)
-        rotation = (float((index * 31) % 50) - 25.0, float((index * 47) % 40) - 20.0, math.degrees(theta))
-        cone(mesh, size * 0.5, size * 0.12, size * 1.5, at, DARK, rotation, 6 if high else 5)
-        cone(mesh, size * 0.32, size * 0.05, size * 1.25, (at[0], at[1], at[2] + 30.0), GLOW, rotation, 5)
-
-    # 4. Embers: small glowing fragments far out, high detail only
-    if high:
-        for index in range(18):
-            theta = golden * index * 1.3 + 0.4
-            z = math.sin(index * 0.9) * 0.6
-            ring = math.sqrt(max(0.0, 1.0 - z * z))
-            dist = 2900.0 + float((index * 97) % 500)
-            at = (ring * math.cos(theta) * dist, ring * math.sin(theta) * dist, z * dist)
-            cone(mesh, 70.0, 12.0, 170.0, at, GLOW, (float(index * 23 % 60), float(index * 41 % 90), 0.0), 5)
+    """Fractured stellar crust with a recessed amber core and drifting Dawnshards."""
+    sphere(mesh, 1185.0, (0.0, 0.0, 0.0), GLOW, high_detail=high)
+    world_kits.sun_crust(mesh, high)
 
 
 def world_sky_dome(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1318,7 +1356,8 @@ def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> No
     # 1. Central Circular Foundation Dais (where Future Well sits)
     cylinder(mesh, 620.0, 50.0, (0.0, 0.0, 25.0), DARK, sides=32 if high else 20)
     cylinder(mesh, 560.0, 24.0, (0.0, 0.0, 42.0), PRIMARY, sides=32 if high else 20)
-    cylinder(mesh, 480.0, 14.0, (0.0, 0.0, 52.0), LIGHT, sides=32 if high else 20)
+    cylinder(mesh, 480.0, 8.0, (0.0, 0.0, 48.0), DARK, sides=32 if high else 20)
+    world_kits.radial_paving(mesh, high)
     torus(mesh, 475.0, 5.5, (0.0, 0.0, 58.0), GLOW, high_detail=high)
     torus(mesh, 555.0, 6.0, (0.0, 0.0, 48.0), GLOW, high_detail=high)
     torus(mesh, 615.0, 8.0, (0.0, 0.0, 40.0), DARK, high_detail=high)
@@ -1343,7 +1382,7 @@ def world_glass_scar_buried_causeway(mesh: unreal.DynamicMesh, high: bool) -> No
         # Paved slab divisions
         for y_offset in (-140.0, 0.0, 140.0):
             box(mesh, (420.0, 12.0, 7.0), (0.0, sign * 680.0 + y_offset, 58.0), DARK)
-            box(mesh, (28.0, 120.0, 8.0), (0.0, sign * 680.0 + y_offset, 60.0), GLOW)
+            box(mesh, (2.0, 120.0, 2.0), (0.0, sign * 680.0 + y_offset, 60.0), DARK)
 
     # 3. Massive Vertical Chasm Piers Descending into the Abyss
     # Under central dais: massive circular foundation column
@@ -1457,6 +1496,19 @@ def world_glass_scar_folded_verge(mesh: unreal.DynamicMesh, high: bool) -> None:
                 (side * lean, side * 18.0, 0.0),
                 7 if high else 5,
             )
+
+
+def vfx_ability_range_ring(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """A smooth 50 cm outer radius, 0.36 cm band, without selection brackets."""
+    mesh.append_torus(primitive_options(PRIMARY), transform((0., 0., 1.)),
+        unreal.GeometryScriptRevolveOptions(), 49.82, .18,
+        128 if high else 96, 6 if high else 4,
+        unreal.GeometryScriptPrimitiveOriginMode.CENTER)
+
+
+ABILITY_RANGE_RING = VfxAssetSpec(
+    "AbilityRangeRing", "Ability range boundary", "authoritative power and supply radius",
+    vfx_ability_range_ring, revision="ability-range-ring-v2")
 
 
 def vfx_selection_halo(mesh: unreal.DynamicMesh, high: bool) -> None:
@@ -1682,6 +1734,167 @@ ASSETS = (
 )
 
 
+# M01-only presentation derivatives. These retain the Surveyor's authored
+# materials and silhouette while letting the entity view animate a two-link leg
+# from its actual hip, knee, and ankle pivots. They do not alter the 24-unit
+# roster manifest or authorize simulation, collision, or navigation changes.
+M01_SURVEYOR_PARTS_ASSETS = (
+    AssetSpec("Meridian", "Units", "M01SurveyorBody", "M01 Surveyor body",
+              "M01 worker-engineer articulated torso", meridian_surveyor_body),
+    AssetSpec("Meridian", "Units", "M01SurveyorUpper", "M01 Surveyor upper leg",
+              "M01 worker-engineer hip-to-knee strut", m01_surveyor_upper),
+    AssetSpec("Meridian", "Units", "M01SurveyorLower", "M01 Surveyor lower leg",
+              "M01 worker-engineer knee-to-ankle ceramic strut", m01_surveyor_lower),
+    AssetSpec("Meridian", "Units", "M01SurveyorFoot", "M01 Surveyor foot",
+              "M01 worker-engineer ground-contact foot", m01_surveyor_foot),
+)
+
+M01_SURVEYOR_PART_MATERIAL_ZONES = {
+    "M01SurveyorBody": (0, 1, 2, 3),
+    "M01SurveyorUpper": (1, 3),
+    "M01SurveyorLower": (0, 2),
+    "M01SurveyorFoot": (1, 2),
+}
+
+
+# M01-only Bulwark deployment derivatives. The Body is the stable chassis;
+# both wings start at their hinge-local origins and are rotated only by the
+# entity view. These assets are deliberately outside ASSETS so the 24-unit
+# roster manifest and all later operations remain unchanged.
+M01_BULWARK_PARTS_ASSETS = (
+    AssetSpec("Meridian", "Units", "M01BulwarkBody", "M01 Bulwark body",
+              "M01 deployable-screen chassis and pivot collars", m01_bulwark_body),
+    AssetSpec("Meridian", "Units", "M01BulwarkLeftWing", "M01 Bulwark left wing",
+              "M01 deployable-screen left outrigger and three framed cells", m01_bulwark_left_wing),
+    AssetSpec("Meridian", "Units", "M01BulwarkRightWing", "M01 Bulwark right wing",
+              "M01 deployable-screen right outrigger and three framed cells", m01_bulwark_right_wing),
+)
+
+M01_BULWARK_PART_MATERIAL_ZONES = {
+    # Low-detail wings omit only their high-LOD sensor/cone fittings (zone 0).
+    # The remaining dark frame, ceramic inset, and glow cell retain their real
+    # source material IDs; we must not add a cosmetic primary primitive merely
+    # to force a fourth section into LOD1.
+    "M01BulwarkBody": ((0, 1, 2, 3), (0, 1, 2, 3)),
+    "M01BulwarkLeftWing": ((0, 1, 2, 3), (1, 2, 3)),
+    "M01BulwarkRightWing": ((0, 1, 2, 3), (1, 2, 3)),
+}
+
+
+WORLD_KIT_ASSETS = tuple(
+    AssetSpec("World", "Environment", f"{kind}{suffix}", f"{kind} {suffix}",
+              "visibility-scoped terrain kit",
+              lambda mesh, high, k=kind, g=(suffix == "Ground"): world_kits.build(mesh, high, k, g))
+    for kind in world_kits.KINDS for suffix in ("Formation", "Ground")
+)
+WORLD_KIT_ASSETS += (AssetSpec("World", "Environment", "WalkSurface", "World walking substrate",
+                              "scoped matte walking surface", world_kits.walk_surface),)
+
+
+EVACUATION_ASSETS = tuple(
+    AssetSpec("World", "Environment", "M01" + kind,
+              "Evacuation " + kind, "M01 archive handling and maintained access",
+              lambda mesh, high, k=kind: evacuation_props.build(mesh, high, k))
+    for kind in evacuation_props.KINDS
+)
+
+MIGRATION_ASSETS = tuple(
+    AssetSpec("World", "Environment", "M02" + kind,
+              "Migration " + kind, "M02 observation and maintained mineral passage",
+              lambda mesh, high, k=kind: migration_props.build(mesh, high, k))
+    for kind in migration_props.KINDS
+)
+
+
+CIVIC_SERVICE_ASSETS = tuple(
+    AssetSpec("World", "Environment", "M03" + kind,
+              "Reserve service " + kind, "M03 civic reserve branches and maintained access",
+              lambda mesh, high, k=kind: civic_service_props.build(mesh, high, k))
+    for kind in civic_service_props.KINDS
+)
+
+
+def create_migration_materials():
+    master = cliff_material.create_cliff_material()
+    ensure_instanced_surface_usage(master)
+    materials = []
+    colors = ((.040,.044,.043), (.018,.021,.022), (.070,.068,.059), (.060,.066,.060))
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    for index, color in enumerate(colors):
+        name = "MI_M02Migration_%d" % index
+        path = f"{ART_ROOT}/Materials/{name}"
+        instance = unreal.EditorAssetLibrary.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else None
+        if instance is None:
+            instance = tools.create_asset(name, f"{ART_ROOT}/Materials", unreal.MaterialInstanceConstant,
+                                          unreal.MaterialInstanceConstantFactoryNew())
+        if not isinstance(instance, unreal.MaterialInstanceConstant):
+            raise RuntimeError("Invalid M02 mineral material: " + path)
+        lib = unreal.MaterialEditingLibrary
+        lib.set_material_instance_parent(instance, master)
+        lib.set_material_usage_override(instance, unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES, False)
+        lib.set_material_instance_vector_parameter_value(instance, "Color", unreal.LinearColor(*color, 1.))
+        lib.set_material_instance_scalar_parameter_value(instance, "Roughness", .90)
+        lib.set_material_instance_scalar_parameter_value(instance, "Metallic", .0)
+        lib.update_material_instance(instance)
+        for key, value in (("Echoes.Creator", "Angelis Pseftis"),
+                           ("Echoes.AssetRevision", "m02-migration-material-v1"),
+                           ("Echoes.Provenance", "Original maintained mineral surface; no external source")):
+            unreal.EditorAssetLibrary.set_metadata_tag(instance, key, value)
+        if not unreal.EditorAssetLibrary.save_loaded_asset(instance, False):
+            raise RuntimeError("Could not save M02 mineral material: " + path)
+        materials.append(instance)
+    return materials
+
+
+def ensure_instanced_surface_usage(material):
+    """Persist shader support before the runtime's instanced components use it."""
+    lib = unreal.MaterialEditingLibrary
+    usage = unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES
+    if not lib.has_material_usage(material, usage):
+        lib.set_base_material_usage(material, usage, True)
+        if not unreal.EditorAssetLibrary.save_loaded_asset(material, False):
+            raise RuntimeError("Could not save instanced surface usage: " + material.get_path_name())
+
+
+def create_evacuation_materials():
+    """Muted, unpowered ceramic/service surfaces; no invented gameplay signal."""
+    # Use manufactured ceramic maps, not the dark basalt ground albedo.
+    master = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+    if not isinstance(master, unreal.Material):
+        raise RuntimeError("M01 service materials require the registered civic surface master")
+    ensure_instanced_surface_usage(master)
+    service_textures = import_surface_textures(("T_EchoesServiceCeramic",))
+    tools = unreal.AssetToolsHelpers.get_asset_tools()
+    colors = ((.28,.26,.22), (.065,.075,.085), (.17,.15,.12), (.06,.15,.16))
+    instances = []
+    for index, color in enumerate(colors):
+        name = "MI_M01Evacuation_%d" % index
+        path = f"{ART_ROOT}/Materials/{name}"
+        instance = unreal.EditorAssetLibrary.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else None
+        if instance is None:
+            instance = tools.create_asset(name, f"{ART_ROOT}/Materials", unreal.MaterialInstanceConstant,
+                                          unreal.MaterialInstanceConstantFactoryNew())
+        if not isinstance(instance, unreal.MaterialInstanceConstant):
+            raise RuntimeError("Invalid evacuation material: " + path)
+        unreal.MaterialEditingLibrary.set_material_instance_parent(instance, master)
+        unreal.MaterialEditingLibrary.set_material_usage_override(
+            instance, unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES, False)
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(instance, "Color", unreal.LinearColor(*color, 1))
+        for suffix, parameter in (("BaseColor", "BaseColorMap"), ("MRE", "MREMap"), ("Normal", "NormalMap")):
+            unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
+                instance, parameter, service_textures["T_EchoesServiceCeramic_" + suffix])
+        for key, value in (("Metallic", .0), ("Roughness", .93), ("EmissiveStrength", .0), ("MaskedEmissiveStrength", .0), ("UVScale", 1.0)):
+            unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(instance, key, value)
+        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Creator", "Angelis Pseftis")
+        unreal.MaterialEditingLibrary.update_material_instance(instance)
+        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.AssetRevision", "m01-evacuation-material-v4")
+        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Provenance", "Original M01 ceramic and service material; no external source")
+        if not unreal.EditorAssetLibrary.save_loaded_asset(instance, False):
+            raise RuntimeError("Could not save evacuation material: " + path)
+        instances.append(instance)
+    return instances
+
+
 def texture_source_dir() -> str:
     return os.path.join(
         unreal.SystemLibrary.get_project_content_directory(),
@@ -1689,12 +1902,13 @@ def texture_source_dir() -> str:
     )
 
 
-def import_surface_textures() -> dict[str, unreal.Texture2D]:
+def import_surface_textures(families=None) -> dict[str, unreal.Texture2D]:
     """Synthesize (byte-idempotent) and import the A3 surface texture maps."""
     source_dir = texture_source_dir()
     os.makedirs(source_dir, exist_ok=True)
     imported: dict[str, unreal.Texture2D] = {}
-    for family in texture_synth.FAMILIES:
+    selected_families = tuple(texture_synth.FAMILIES if families is None else families)
+    for family in selected_families:
         maps = texture_synth.render_family(family)
         for suffix, payload in maps.items():
             file_path = os.path.join(source_dir, f"{family}_{suffix}.png")
@@ -1756,7 +1970,7 @@ def import_surface_textures() -> dict[str, unreal.Texture2D]:
                 f"[ECHOES_ART_TEXTURE] path={asset_path} action=imported"
             )
     unreal.log(
-        f"[ECHOES_ART_TEXTURES_READY] families={len(texture_synth.FAMILIES)} "
+        f"[ECHOES_ART_TEXTURES_READY] families={len(selected_families)} "
         f"maps={len(imported)} revision={texture_synth.REVISION_TEXTURES}"
     )
     return imported
@@ -1790,6 +2004,7 @@ def rebuild_textured_surface_master(
     texture parameters per family later.
     """
     lib = unreal.MaterialEditingLibrary
+    material.set_editor_property("used_with_instanced_static_meshes", True)
 
     color = lib.create_material_expression(
         material, unreal.MaterialExpressionVectorParameter, -900, -260
@@ -1980,6 +2195,7 @@ def create_surface_material(
                     f"{MATERIAL_PATH} (recorded {revision})"
                 )
             unreal.log(f"[ECHOES_ART_MATERIAL] path={MATERIAL_PATH} action=reused")
+            ensure_instanced_surface_usage(existing)
             return existing
         raise RuntimeError(f"Existing asset is not a Material: {MATERIAL_PATH}")
 
@@ -1993,6 +2209,94 @@ def create_surface_material(
     if material is None:
         raise RuntimeError("Could not create M_EchoesSurface")
     rebuild_textured_surface_master(material, textures)
+    return material
+
+
+def create_sky_material() -> unreal.Material:
+    """Original unlit altitude gradient; no ground textures or fracture glow in the sky."""
+    path = f"{ART_ROOT}/Materials/M_EchoesSky"
+    lib = unreal.MaterialEditingLibrary
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        material = unreal.EditorAssetLibrary.load_asset(path)
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError("Sky material path contains a different asset type")
+        return material
+    material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        "M_EchoesSky", f"{ART_ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    def parameter(name, value):
+        vector = isinstance(value, unreal.LinearColor)
+        node = lib.create_material_expression(material,
+            unreal.MaterialExpressionVectorParameter if vector else unreal.MaterialExpressionScalarParameter)
+        node.set_editor_property("parameter_name", name)
+        node.set_editor_property("default_value", value)
+        return node
+    def connect(source, output, target, pin=""):
+        if not lib.connect_material_expressions(source, output, target, pin):
+            raise RuntimeError(f"Could not connect sky material pin {pin}")
+    position = lib.create_material_expression(material, unreal.MaterialExpressionWorldPosition)
+    z = lib.create_material_expression(material, unreal.MaterialExpressionComponentMask)
+    for channel in ("r","g","a"): z.set_editor_property(channel, False)
+    z.set_editor_property("b",True)
+    connect(position,"",z)
+    offset = lib.create_material_expression(material, unreal.MaterialExpressionSubtract)
+    connect(z,"",offset,"A"); connect(parameter("BaseHeight",-4500.),"",offset,"B")
+    fraction = lib.create_material_expression(material, unreal.MaterialExpressionDivide)
+    connect(offset,"",fraction,"A"); connect(parameter("HeightRange",8000.),"",fraction,"B")
+    clamp = lib.create_material_expression(material, unreal.MaterialExpressionClamp)
+    connect(fraction,"",clamp)
+    blend = lib.create_material_expression(material, unreal.MaterialExpressionLinearInterpolate)
+    connect(parameter("Color",unreal.LinearColor(.04,.045,.08,1)),"",blend,"A")
+    connect(parameter("TopColor",unreal.LinearColor(.012,.017,.045,1)),"",blend,"B")
+    connect(clamp,"",blend,"Alpha")
+    emission = lib.create_material_expression(material, unreal.MaterialExpressionMultiply)
+    connect(blend,"",emission,"A"); connect(parameter("EmissiveStrength",.5),"",emission,"B")
+    if not lib.connect_material_property(emission,"",unreal.MaterialProperty.MP_EMISSIVE_COLOR):
+        raise RuntimeError("Could not connect sky output")
+    errors = lib.recompile_material(material)
+    if errors: raise RuntimeError(f"Sky material compilation failed: {errors}")
+    unreal.EditorAssetLibrary.set_metadata_tag(material,"Echoes.Creator","Angelis Pseftis")
+    unreal.EditorAssetLibrary.set_metadata_tag(material,"Echoes.AssetRevision","soryn-sky-gradient-v1")
+    unreal.EditorAssetLibrary.set_metadata_tag(material,"Echoes.Provenance","Original scripted altitude gradient")
+    if not unreal.EditorAssetLibrary.save_loaded_asset(material,False):
+        raise RuntimeError("Could not save sky material")
+    return material
+
+
+def create_shivergrass_leaf_material() -> unreal.Material:
+    """Thin silver foliage has its own two-sided lighting, without terrain normals."""
+    path = f"{ART_ROOT}/Materials/M_EchoesShivergrassLeaf"
+    material = unreal.EditorAssetLibrary.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else None
+    if material is not None:
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError("Shivergrass leaf path is not a material")
+        if unreal.EditorAssetLibrary.get_metadata_tag(material, "Echoes.AssetRevision") == "shivergrass-leaf-v1":
+            return material
+        raise RuntimeError("Unexpected existing Shivergrass leaf revision")
+    material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        "M_EchoesShivergrassLeaf", f"{ART_ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    if material is None: raise RuntimeError("Could not create Shivergrass leaf material")
+    lib = unreal.MaterialEditingLibrary
+    color = lib.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -500, -120)
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property("default_value", unreal.LinearColor(.52, .50, .53, 1.))
+    lib.connect_material_property(color, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    transmitted = lib.create_material_expression(material, unreal.MaterialExpressionMultiply, -220, 100)
+    transmitted.set_editor_property("const_b", .55)
+    lib.connect_material_expressions(color, "", transmitted, "A")
+    lib.connect_material_property(transmitted, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+    rough = lib.create_material_expression(material, unreal.MaterialExpressionConstant, -220, 220)
+    rough.set_editor_property("r", .9)
+    lib.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    material.set_editor_property("two_sided", True)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    lib.layout_material_expressions(material)
+    lib.recompile_material(material)
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Creator", "Angelis Pseftis")
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.AssetRevision", "shivergrass-leaf-v1")
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Provenance", "Original project foliage shader; no source texture")
+    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
     return material
 
 
@@ -2181,8 +2485,67 @@ def create_world_surface_material() -> unreal.Material:
         )
         unreal.MaterialEditingLibrary.layout_material_expressions(material)
 
+    # Clamp the final shader value, not merely the material-instance parameter:
+    # noise and texture modulation previously drove nominal 0.9 roughness below 0.85.
+    if unreal.EditorAssetLibrary.get_metadata_tag(material, "Echoes.WorldRoughnessClamp") != "0.85-1.0-connected":
+        lib = unreal.MaterialEditingLibrary
+        previous = lib.get_material_property_input_node(material, unreal.MaterialProperty.MP_ROUGHNESS)
+        if previous is None:
+            raise RuntimeError("World surface has no roughness input to qualify")
+        if isinstance(previous, unreal.MaterialExpressionClamp):
+            clamp = previous
+            # Repair the earlier disconnected clamp in place. Terrain's matte
+            # response is authored; noisy colour relief must not lower roughness.
+            previous = lib.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -80, 520)
+            previous.set_editor_property("parameter_name", "Roughness")
+            previous.set_editor_property("default_value", 0.9)
+        else:
+            clamp = lib.create_material_expression(material, unreal.MaterialExpressionClamp, 120, 520)
+        clamp.set_editor_property("min_default", 0.85)
+        clamp.set_editor_property("max_default", 1.0)
+        if not lib.connect_material_expressions(previous, "", clamp, ""):
+            raise RuntimeError("Could not connect world roughness clamp input")
+        if not lib.connect_material_property(clamp, "", unreal.MaterialProperty.MP_ROUGHNESS):
+            raise RuntimeError("Could not connect world roughness output")
+        if previous not in lib.get_inputs_for_material_expression(material, clamp):
+            raise RuntimeError("World roughness clamp retained no source input")
+        unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.WorldRoughnessClamp", "0.85-1.0-connected")
+        action = "repaired"
+
+    # Palette colors describe the surface reflectance. Dark encoded basalt
+    # must supply texture variation, not multiply that reflectance into black.
+    if unreal.EditorAssetLibrary.get_metadata_tag(material, "Echoes.PaletteModulation") != "geology-v1":
+        lib = unreal.MaterialEditingLibrary
+        root = lib.get_material_property_input_node(material, unreal.MaterialProperty.MP_BASE_COLOR)
+        nodes, visited = [], set()
+        def visit(node):
+            if node is None or node.get_path_name() in visited: return
+            visited.add(node.get_path_name()); nodes.append(node)
+            for child in lib.get_inputs_for_material_expression(material, node): visit(child)
+        visit(root)
+        textures = [node for node in nodes if isinstance(node, unreal.MaterialExpressionTextureSampleParameter2D)
+                    and str(node.get_editor_property("parameter_name")) == "GroundBaseColorMap"]
+        noises = [node for node in nodes if isinstance(node, unreal.MaterialExpressionNoise)]
+        if not isinstance(root, unreal.MaterialExpressionMultiply) or len(textures) != 1 or len(noises) != 1:
+            raise RuntimeError("Unexpected world base-color graph; refusing an ambiguous migration")
+        noise = noises[0]
+        noise.set_editor_property("scale", .014)
+        noise.set_editor_property("output_min", .72)
+        noise.set_editor_property("output_max", 1.0)
+        relief = lib.create_material_expression(material, unreal.MaterialExpressionPower, -160, -60)
+        relief.set_editor_property("const_exponent", .22)
+        modulation = lib.create_material_expression(material, unreal.MaterialExpressionLinearInterpolate, -20, -90)
+        modulation.set_editor_property("const_a", .64)
+        modulation.set_editor_property("const_b", 1.0)
+        if not (lib.connect_material_expressions(textures[0], "RGB", relief, "Base") and
+                lib.connect_material_expressions(relief, "", modulation, "Alpha") and
+                lib.connect_material_expressions(modulation, "", root, "B")):
+            raise RuntimeError("World palette modulation shader failed to connect")
+        unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.PaletteModulation", "geology-v1")
+        action = "repaired"
+
     usage = unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES
-    needs_save = action == "created"
+    needs_save = action in ("created", "repaired")
     if not unreal.MaterialEditingLibrary.has_material_usage(material, usage):
         unreal.MaterialEditingLibrary.set_base_material_usage(
             material, usage, True
@@ -2220,7 +2583,9 @@ def create_world_surface_material() -> unreal.Material:
         unreal.EditorAssetLibrary.set_metadata_tag(
             material, "Echoes.AssetRevision", WORLD_MATERIAL_ASSET_REVISION
         )
-        unreal.MaterialEditingLibrary.recompile_material(material)
+        errors = unreal.MaterialEditingLibrary.recompile_material(material)
+        if errors:
+            raise RuntimeError(f"World surface material compilation failed: {errors}")
         if not unreal.EditorAssetLibrary.save_loaded_asset(material, False):
             raise RuntimeError("Could not save M_EchoesWorldSurface")
 
@@ -2503,38 +2868,10 @@ def create_buried_causeway_materials() -> tuple[unreal.MaterialInterface, ...]:
         unreal.EditorAssetLibrary.save_loaded_asset(master, False)
 
     zone_specs = (
-        (
-            unreal.LinearColor(0.090, 0.082, 0.070, 1.0),
-            unreal.LinearColor(0.22, 0.17, 0.115, 1.0),
-            0.10,
-            0.78,
-            0.0,
-            0.25,
-        ),
-        (
-            unreal.LinearColor(0.026, 0.030, 0.034, 1.0),
-            unreal.LinearColor(0.070, 0.082, 0.090, 1.0),
-            0.34,
-            0.30,
-            0.0,
-            0.20,
-        ),
-        (
-            unreal.LinearColor(0.34, 0.29, 0.21, 1.0),
-            unreal.LinearColor(0.64, 0.53, 0.36, 1.0),
-            0.03,
-            0.58,
-            0.0,
-            0.32,
-        ),
-        (
-            unreal.LinearColor(0.025, 0.22, 0.31, 1.0),
-            unreal.LinearColor(0.18, 0.72, 0.88, 1.0),
-            0.18,
-            0.25,
-            2.3,
-            0.18,
-        ),
+        (unreal.LinearColor(.055,.048,.038,1), unreal.LinearColor(.12,.095,.065,1), .03,.90,0.,.28),
+        (unreal.LinearColor(.013,.016,.021,1), unreal.LinearColor(.04,.044,.049,1), .03,.93,0.,.22),
+        (unreal.LinearColor(.14,.12,.09,1), unreal.LinearColor(.29,.24,.17,1), .03,.90,0.,.38),
+        (unreal.LinearColor(.08,.048,.019,1), unreal.LinearColor(.24,.15,.04,1), .02,.90,.28,.18),
     )
     tools = unreal.AssetToolsHelpers.get_asset_tools()
     instances: list[unreal.MaterialInterface] = []
@@ -2851,6 +3188,38 @@ def build_dynamic_mesh(
     return mesh
 
 
+def create_range_boundary_material():
+    path = f"{ART_ROOT}/Materials/M_EchoesRangeBoundary"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        material = unreal.EditorAssetLibrary.load_asset(path)
+        if not isinstance(material, unreal.Material): raise RuntimeError("Range boundary material path is invalid")
+        return material
+    lib = unreal.MaterialEditingLibrary
+    material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        "M_EchoesRangeBoundary", f"{ART_ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    if material is None: raise RuntimeError("Cannot create range boundary material")
+    color = lib.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -500, -100)
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property("default_value", unreal.LinearColor(.18,.14,.045,1))
+    strength = lib.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -500, 100)
+    strength.set_editor_property("parameter_name", "EmissiveStrength")
+    strength.set_editor_property("default_value", .35)
+    product = lib.create_material_expression(material, unreal.MaterialExpressionMultiply, -220, 0)
+    if not (lib.connect_material_expressions(color, "", product, "A") and
+            lib.connect_material_expressions(strength, "", product, "B") and
+            lib.connect_material_property(product, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)):
+        raise RuntimeError("Range boundary shader connection failed")
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
+    lib.layout_material_expressions(material)
+    lib.recompile_material(material)
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Creator", "Angelis Pseftis")
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.AssetRevision", "range-boundary-v1")
+    unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Provenance", "Original steady unlit range shader")
+    unreal.EditorAssetLibrary.save_loaded_asset(material, False)
+    return material
+
+
 def create_presentation_vfx_mesh(
     spec: VfxAssetSpec, material: unreal.MaterialInterface
 ) -> unreal.StaticMesh:
@@ -2952,15 +3321,26 @@ def create_static_mesh(
         "BrokenSunSky": BROKEN_SUN_SKY_ASSET_REVISION,
         "SkyDome": SKY_DOME_ASSET_REVISION,
     }
-    environment_revision = environment_revisions.get(spec.name)
+    environment_revision = (civic_service_props.REVISION if spec in CIVIC_SERVICE_ASSETS
+                            else migration_props.REVISION if spec in MIGRATION_ASSETS
+                            else evacuation_props.REVISION if spec in EVACUATION_ASSETS
+                            else world_kits.REVISION if spec in WORLD_KIT_ASSETS
+                            else environment_revisions.get(spec.name))
+    is_m01_surveyor_part = spec in M01_SURVEYOR_PARTS_ASSETS
+    is_m01_bulwark_part = spec in M01_BULWARK_PARTS_ASSETS
+    is_m01_presentation_part = is_m01_surveyor_part or is_m01_bulwark_part
     roster_factions = ("Meridian", "Kharuun", "Choir")
-    is_roster_unit = spec.faction in roster_factions
+    is_roster_unit = spec.faction in roster_factions and not is_m01_presentation_part
     expected_revision = (
-        route_revision
+        M01_SURVEYOR_ARTICULATION_ASSET_REVISION
+        if is_m01_surveyor_part
+        else M01_BULWARK_ARTICULATION_ASSET_REVISION
+        if is_m01_bulwark_part
+        else route_revision
         if is_production_route
         else environment_revision
         if environment_revision is not None
-        else (ROSTER_ASSET_REVISION if is_roster_unit else None)
+        else (roster_asset_revision(spec) if is_roster_unit else None)
     )
     route_labels = {
         "GlassScarAshCut": "Ash Cut",
@@ -2997,9 +3377,10 @@ def create_static_mesh(
     lod_one = build_dynamic_mesh(spec, False)
     options = unreal.GeometryScriptCreateNewStaticMeshAssetOptions(
         enable_recompute_normals=False,
-        enable_recompute_tangents=False,
+        enable_recompute_tangents=spec in WORLD_KIT_ASSETS or spec in EVACUATION_ASSETS or spec in MIGRATION_ASSETS or spec in CIVIC_SERVICE_ASSETS,
         enable_nanite=False,
-        enable_collision=True,
+        enable_collision=(spec not in EVACUATION_ASSETS and spec not in MIGRATION_ASSETS
+                          and spec not in CIVIC_SERVICE_ASSETS and not is_m01_presentation_part),
         collision_mode=unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE,
     )
     asset, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh_lods(
@@ -3012,6 +3393,63 @@ def create_static_mesh(
         asset.add_material(materials[0])
     for material_index in range(4):
         asset.set_material(material_index, materials[material_index])
+
+    if spec.name == "ShivergrassGround":
+        # UE's LOD import may compact a sparse material-ID set to slot zero in
+        # later LODs. Every ribbon is authored in zone 2; pin the actual section
+        # binding on both LODs rather than only adding an unused material slot.
+        mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        for lod_index in range(asset.get_num_lods()):
+            for section_index in range(asset.get_num_sections(lod_index)):
+                mesh_editor.set_lod_material_slot(asset, 2, lod_index, section_index)
+                if mesh_editor.get_lod_material_slot(asset, lod_index, section_index) != 2:
+                    raise RuntimeError("Shivergrass leaf LOD lost its material zone")
+
+    if spec in EVACUATION_ASSETS or spec in MIGRATION_ASSETS or spec in CIVIC_SERVICE_ASSETS:
+        mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        zones = (0, 2) if spec.name == "M01RoutePaving" else (0, 1, 2, 3)
+        for lod_index in range(asset.get_num_lods()):
+            # Tiny inset fasteners belong to the close apron only. The distant
+            # recipe retains its repair panels, registration and load lanes.
+            if spec.name == "M01ArchiveApron":
+                zones = (0, 1, 2, 3) if lod_index == 0 else (0, 1, 2)
+            section_count = asset.get_num_sections(lod_index)
+            # LOD import can retain empty sparse-ID sections or compact them.
+            lod_zones = tuple(range(max(zones) + 1)) if section_count == max(zones) + 1 else zones
+            if section_count != len(lod_zones):
+                raise RuntimeError(f"Unexpected evacuation section count: {spec.name} LOD{lod_index}={section_count}")
+            for section_index, zone in enumerate(lod_zones):
+                mesh_editor.set_lod_material_slot(asset, zone, lod_index, section_index)
+                if mesh_editor.get_lod_material_slot(asset, lod_index, section_index) != zone:
+                    raise RuntimeError("Evacuation material zone binding failed")
+        mesh_editor.remove_collisions(asset)
+
+    if is_m01_presentation_part:
+        mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+        for lod_index in range(asset.get_num_lods()):
+            zones = (M01_SURVEYOR_PART_MATERIAL_ZONES[spec.name]
+                     if is_m01_surveyor_part
+                     else M01_BULWARK_PART_MATERIAL_ZONES[spec.name][lod_index])
+            section_count = asset.get_num_sections(lod_index)
+            # Geometry import may compact sparse source IDs. In that case, the
+            # section order is the authored-zone order. If UE retains sparse
+            # sections, their indices are already the authored material zones.
+            if section_count == len(zones):
+                section_zones = zones
+            elif section_count == max(zones) + 1:
+                section_zones = tuple(range(section_count))
+            else:
+                raise RuntimeError(
+                    f"Unexpected M01 presentation-part section count: {spec.name} "
+                    f"LOD{lod_index}={section_count} zones={zones}"
+                )
+            for section_index, zone in enumerate(section_zones):
+                mesh_editor.set_lod_material_slot(asset, zone, lod_index, section_index)
+                if mesh_editor.get_lod_material_slot(asset, lod_index, section_index) != zone:
+                    raise RuntimeError("M01 presentation-part material zone binding failed")
+        mesh_editor.remove_collisions(asset)
+        if mesh_editor.get_simple_collision_count(asset) != 0:
+            raise RuntimeError("M01 presentation-part assets require zero collision")
 
     if is_production_route:
         mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
@@ -3071,14 +3509,49 @@ def create_static_mesh(
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Creator", "Angelis Pseftis")
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Faction", spec.faction)
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Role", spec.role)
-    unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.Provenance", "Original scripted Unreal geometry")
+    unreal.EditorAssetLibrary.set_metadata_tag(
+        asset,
+        "Echoes.Provenance",
+        ("Original M01 Surveyor articulation derivative geometry"
+         if is_m01_surveyor_part
+         else "Original M01 Bulwark deployment derivative geometry"
+         if is_m01_bulwark_part else "Original scripted Unreal geometry"),
+    )
     unreal.EditorAssetLibrary.set_metadata_tag(
         asset,
         "Echoes.Status",
-        "Production route-kit candidate" if is_production_route else "Vertical-slice art candidate",
+        ("M01 presentation-only articulation candidate" if is_m01_surveyor_part
+         else "M01 presentation-only deployment candidate" if is_m01_bulwark_part
+         else "Production route-kit candidate" if is_production_route
+         else "Vertical-slice art candidate"),
     )
     unreal.EditorAssetLibrary.set_metadata_tag(asset, "Echoes.RuntimeAuthority", "Presentation only")
-    if is_production_route:
+    if is_m01_surveyor_part:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.AssetRevision", M01_SURVEYOR_ARTICULATION_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.CollisionPolicy", "No asset or runtime collision"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.MaterialZones", ",".join(
+                str(zone) for zone in M01_SURVEYOR_PART_MATERIAL_ZONES[spec.name]
+            )
+        )
+    elif is_m01_bulwark_part:
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.AssetRevision", M01_BULWARK_ARTICULATION_ASSET_REVISION
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.CollisionPolicy", "No asset or runtime collision"
+        )
+        unreal.EditorAssetLibrary.set_metadata_tag(
+            asset, "Echoes.MaterialZones", ";".join(
+                f"lod{lod_index}:" + ",".join(str(zone) for zone in zones)
+                for lod_index, zones in enumerate(M01_BULWARK_PART_MATERIAL_ZONES[spec.name])
+            )
+        )
+    elif is_production_route:
         unreal.EditorAssetLibrary.set_metadata_tag(
             asset, "Echoes.AssetRevision", route_revision
         )
@@ -3094,7 +3567,7 @@ def create_static_mesh(
         )
     elif is_roster_unit:
         unreal.EditorAssetLibrary.set_metadata_tag(
-            asset, "Echoes.AssetRevision", ROSTER_ASSET_REVISION
+            asset, "Echoes.AssetRevision", roster_asset_revision(spec)
         )
     unreal.EditorAssetLibrary.save_loaded_asset(asset, False)
 
@@ -3108,7 +3581,181 @@ def create_static_mesh(
     return asset
 
 
+def audit_m01_surveyor_part(asset: unreal.StaticMesh, spec: AssetSpec) -> None:
+    """Validate the reusable M01 derivative boundary before reporting readiness."""
+    if spec not in M01_SURVEYOR_PARTS_ASSETS:
+        raise RuntimeError("M01 Surveyor audit received an unrelated asset")
+    mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    if asset.get_num_lods() != 2:
+        raise RuntimeError(f"M01 Surveyor part requires two LODs: {spec.name}")
+    if mesh_editor.get_simple_collision_count(asset) != 0:
+        raise RuntimeError(f"M01 Surveyor part has collision: {spec.name}")
+    if unreal.EditorAssetLibrary.get_metadata_tag(
+        asset, "Echoes.AssetRevision"
+    ) != M01_SURVEYOR_ARTICULATION_ASSET_REVISION:
+        raise RuntimeError(f"M01 Surveyor part has an unexpected revision: {spec.name}")
+    if unreal.EditorAssetLibrary.get_metadata_tag(
+        asset, "Echoes.CollisionPolicy"
+    ) != "No asset or runtime collision":
+        raise RuntimeError(f"M01 Surveyor part has an unexpected collision policy: {spec.name}")
+    zones = M01_SURVEYOR_PART_MATERIAL_ZONES[spec.name]
+    for lod_index in range(asset.get_num_lods()):
+        section_count = asset.get_num_sections(lod_index)
+        expected = zones if section_count == len(zones) else tuple(range(section_count))
+        if section_count not in (len(zones), max(zones) + 1):
+            raise RuntimeError(
+                f"Unexpected M01 Surveyor section count: {spec.name} "
+                f"LOD{lod_index}={section_count} zones={zones}"
+            )
+        actual = tuple(
+            mesh_editor.get_lod_material_slot(asset, lod_index, section_index)
+            for section_index in range(section_count)
+        )
+        if actual != expected:
+            raise RuntimeError(
+                f"M01 Surveyor material zone audit failed: {spec.name} "
+                f"LOD{lod_index} actual={actual} expected={expected}"
+            )
+
+
+def audit_m01_bulwark_part(asset: unreal.StaticMesh, spec: AssetSpec) -> None:
+    """Validate M01's presentation-only deployment derivatives before use."""
+    if spec not in M01_BULWARK_PARTS_ASSETS:
+        raise RuntimeError("M01 Bulwark audit received an unrelated asset")
+    mesh_editor = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    if asset.get_num_lods() != 2:
+        raise RuntimeError(f"M01 Bulwark part requires two LODs: {spec.name}")
+    if mesh_editor.get_simple_collision_count(asset) != 0:
+        raise RuntimeError(f"M01 Bulwark part has collision: {spec.name}")
+    if unreal.EditorAssetLibrary.get_metadata_tag(
+        asset, "Echoes.AssetRevision"
+    ) != M01_BULWARK_ARTICULATION_ASSET_REVISION:
+        raise RuntimeError(f"M01 Bulwark part has an unexpected revision: {spec.name}")
+    if unreal.EditorAssetLibrary.get_metadata_tag(
+        asset, "Echoes.CollisionPolicy"
+    ) != "No asset or runtime collision":
+        raise RuntimeError(f"M01 Bulwark part has an unexpected collision policy: {spec.name}")
+    for lod_index in range(asset.get_num_lods()):
+        zones = M01_BULWARK_PART_MATERIAL_ZONES[spec.name][lod_index]
+        section_count = asset.get_num_sections(lod_index)
+        expected = zones if section_count == len(zones) else tuple(range(section_count))
+        if section_count not in (len(zones), max(zones) + 1):
+            raise RuntimeError(
+                f"Unexpected M01 Bulwark section count: {spec.name} "
+                f"LOD{lod_index}={section_count} zones={zones}"
+            )
+        actual = tuple(
+            mesh_editor.get_lod_material_slot(asset, lod_index, section_index)
+            for section_index in range(section_count)
+        )
+        if actual != expected:
+            raise RuntimeError(
+                f"M01 Bulwark material zone audit failed: {spec.name} "
+                f"LOD{lod_index} actual={actual} expected={expected}"
+            )
+
+
 def main() -> None:
+    if os.environ.get("ECHOES_M01_BULWARK_PARTS_ONLY") == "1":
+        material = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError(
+                "M01 Bulwark deployment parts require the registered surface master"
+            )
+        parts = [create_static_mesh(spec, [material] * 4) for spec in M01_BULWARK_PARTS_ASSETS]
+        for part, spec in zip(parts, M01_BULWARK_PARTS_ASSETS):
+            audit_m01_bulwark_part(part, spec)
+        if len(parts) != 3:
+            raise RuntimeError("M01 Bulwark deployment asset audit failed")
+        unreal.log(
+            "[ECHOES_M01_BULWARK_PARTS_READY] "
+            f"revision={M01_BULWARK_ARTICULATION_ASSET_REVISION} "
+            "assets=3 lods=2 collision=0 "
+            "zones=body:0,1,2,3;leftWing:0,1,2,3;rightWing:0,1,2,3 "
+            "hinges=left:26,-24,72;right:26,24,72 runtimeAuthority=presentation"
+        )
+        return
+    if os.environ.get("ECHOES_M01_SURVEYOR_PARTS_ONLY") == "1":
+        material = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError(
+                "M01 Surveyor articulation requires the registered surface master"
+            )
+        parts = [create_static_mesh(spec, [material] * 4) for spec in M01_SURVEYOR_PARTS_ASSETS]
+        for part, spec in zip(parts, M01_SURVEYOR_PARTS_ASSETS):
+            audit_m01_surveyor_part(part, spec)
+        if (
+            len(parts) != 4
+        ):
+            raise RuntimeError("M01 Surveyor articulation asset audit failed")
+        unreal.log(
+            "[ECHOES_M01_SURVEYOR_PARTS_READY] "
+            f"revision={M01_SURVEYOR_ARTICULATION_ASSET_REVISION} "
+            "assets=4 lods=2 collision=0 "
+            "zones=body:0,1,2,3;upper:1,3;lower:0,2;foot:1,2 "
+            "runtimeAuthority=presentation"
+        )
+        return
+    if os.environ.get("ECHOES_M01_SHROUD_ONLY") == "1":
+        m01_shroud.create_material()
+        unreal.log(f"[ECHOES_M01_SHROUD_READY] revision={m01_shroud.REVISION} assets=2 opaque=true")
+        return
+    if os.environ.get("ECHOES_CIVIC_SERVICE_PROPS_ONLY") == "1":
+        # Lume's maintained civic materials recur across M01 and M03.
+        materials = create_evacuation_materials()
+        for spec in CIVIC_SERVICE_ASSETS:
+            asset = create_static_mesh(spec, materials)
+            if asset.get_num_lods() != 2 or unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_simple_collision_count(asset) != 0:
+                raise RuntimeError("Civic service assets require two LODs and no collision")
+        unreal.log(f"[ECHOES_CIVIC_SERVICE_PROPS_READY] revision={civic_service_props.REVISION} assets=4 lods=2 collision=0")
+        return
+    if os.environ.get("ECHOES_MIGRATION_PROPS_ONLY") == "1":
+        materials = create_migration_materials()
+        for spec in MIGRATION_ASSETS:
+            asset = create_static_mesh(spec, materials)
+            if asset.get_num_lods() != 2 or unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_simple_collision_count(asset) != 0:
+                raise RuntimeError("Migration assets require two LODs and no collision")
+        unreal.log(f"[ECHOES_MIGRATION_PROPS_READY] revision={migration_props.REVISION} assets=3 lods=2 collision=0")
+        return
+    if os.environ.get("ECHOES_CLIFF_MATERIAL_ONLY") == "1":
+        cliff_material.create_cliff_material()
+        unreal.log(f"[ECHOES_CLIFF_MATERIAL_READY] revision={cliff_material.REVISION} assets=1 emissive=false")
+        return
+    if os.environ.get("ECHOES_MERIDIAN_FACING_ONLY") == "1":
+        material = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+        if not isinstance(material, unreal.Material):
+            raise RuntimeError("Forward-axis regeneration requires the registered surface master")
+        selected = [spec for spec in ASSETS if spec.faction == "Meridian" and spec.name in ("Bulwark", "Lancer")]
+        for spec in selected:
+            asset = create_static_mesh(spec, [material] * 4)
+            if asset.get_num_lods() != 2:
+                raise RuntimeError("Meridian forward-axis mesh requires two LODs")
+        unreal.log(f"[ECHOES_MERIDIAN_FACING_READY] revision={MERIDIAN_FORWARD_ASSET_REVISION} assets=2 lods=2")
+        return
+    if os.environ.get("ECHOES_EVACUATION_PROPS_ONLY") == "1":
+        materials = create_evacuation_materials()
+        for spec in EVACUATION_ASSETS:
+            asset = create_static_mesh(spec, materials)
+            if asset.get_num_lods() != 2 or unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_simple_collision_count(asset) != 0:
+                raise RuntimeError("Evacuation assets require two LODs and no collision")
+        unreal.log(f"[ECHOES_EVACUATION_PROPS_READY] revision={evacuation_props.REVISION} assets={len(EVACUATION_ASSETS)} lods=2 collision=0")
+        return
+    if os.environ.get("ECHOES_ABILITY_RING_ONLY") == "1":
+        asset = create_presentation_vfx_mesh(ABILITY_RANGE_RING, create_range_boundary_material())
+        if asset.get_num_lods() != 2 or unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).get_simple_collision_count(asset) != 0:
+            raise RuntimeError("Ability range boundary requires two LODs and zero collision")
+        unreal.log("[ECHOES_ABILITY_RING_READY] revision=ability-range-ring-v2 assets=1 lods=2 collision=0")
+        return
+    create_sky_material()
+    create_shivergrass_leaf_material()
+    if os.environ.get("ECHOES_WORLD_KITS_ONLY") == "1":
+        material = create_world_surface_material()
+        selected = list(WORLD_KIT_ASSETS) + [a for a in ASSETS if a.name in ("GlassScarShelf", "BrokenSunSky", "GlassScarBuriedCauseway")]
+        route_materials = create_buried_causeway_materials()
+        for spec in selected:
+            create_static_mesh(spec, route_materials if spec.name == "GlassScarBuriedCauseway" else [material] * 4)
+        unreal.log(f"[ECHOES_WORLD_KITS_READY] revision={world_kits.REVISION} assets={len(selected)} authority=presentation")
+        return
     unreal.log(
         "[ECHOES_ART_BEGIN] generating 24 roster assets, 4 Future Well assets, "
         "8 Glass Scar environment assets, 8 selection/command VFX assets, "
@@ -3117,10 +3764,24 @@ def main() -> None:
     surface_textures = import_surface_textures()
     surface_material = create_surface_material(surface_textures)
     world_surface_material = create_world_surface_material()
+    cliff_material.create_cliff_material()
+    m01_shroud.create_material()
+    evacuation_materials = create_evacuation_materials()
+    for spec in EVACUATION_ASSETS:
+        create_static_mesh(spec, evacuation_materials)
+    civic_materials = create_evacuation_materials()
+    for spec in CIVIC_SERVICE_ASSETS:
+        create_static_mesh(spec, civic_materials)
+    migration_materials = create_migration_materials()
+    for spec in MIGRATION_ASSETS:
+        create_static_mesh(spec, migration_materials)
+    for spec in WORLD_KIT_ASSETS:
+        create_static_mesh(spec, [world_surface_material] * 4)
     ash_cut_materials = create_ash_cut_materials()
     buried_causeway_materials = create_buried_causeway_materials()
     folded_verge_materials = create_folded_verge_materials()
     presentation_vfx_material = create_presentation_vfx_material()
+    create_presentation_vfx_mesh(ABILITY_RANGE_RING, create_range_boundary_material())
     generated = [
         create_static_mesh(
             spec,
@@ -3335,14 +3996,15 @@ def main() -> None:
             unreal.EditorAssetLibrary.get_metadata_tag(
                 asset, "Echoes.AssetRevision"
             )
-            != ROSTER_ASSET_REVISION
-            for asset in roster_assets
+            != roster_asset_revision(spec)
+            for asset, spec in zip(generated, ASSETS)
+            if spec.faction in ("Meridian", "Kharuun", "Choir")
         )
     ):
         raise RuntimeError(f"Roster asset audit failed: count={len(roster_assets)}")
     unreal.log(
         "[ECHOES_ROSTER_READY] "
-        f"revision={ROSTER_ASSET_REVISION} assets=24 lods=2 runtimeAuthority=presentation"
+        f"revision={ROSTER_ASSET_REVISION} assets=24 lods=2 runtimeAuthority=presentation meridianForwardAxis={MERIDIAN_FORWARD_ASSET_REVISION}"
     )
     unreal.log(
         f"[ECHOES_ART_COMPLETE] generated={len(generated) + len(presentation_vfx_assets) + len(destruction_vfx_assets)} "

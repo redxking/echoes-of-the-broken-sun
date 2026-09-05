@@ -25,5 +25,4 @@ __pycache__/
 .env.*
 Config/DefaultEngine.ini.local
 Worktrees/*
-AGENTS.md
 

@@ -2,22 +2,64 @@
 title: Echoes of the Broken Sun Setup and Build Guide
 author: Angelis Pseftis
 creator: Angelis Pseftis
-status: Authoritative
+status: Build procedure reference; dated host and run evidence
 created: 2026-08-28
-updated: 2026-08-30
+updated: 2026-09-04
 ---
 
 # Setup and Build Guide
 
-This is the single authoritative setup and build guide. Edit it in place; do not create version-copy guides.
+This is the single setup/build reference, edited in place under [AGENTS.md](../../AGENTS.md) and the
+[authority map](../README.md). The master requirements control gates; the state record controls outcomes.
 
-## Verified host state
+## Current execution procedure
+
+Use an available authorized Mac shell for Unreal and Apple tooling. Read the relevant script and its
+supported arguments before running it. Reserve heavy resources through `echoes-heavy-run-coordination`;
+coordinate the editor, GPU, ports, save paths, and generated outputs with current work.
+
+From the actual checkout, inspect `git status --short`, `xcode-select -p`, `xcodebuild -version`, the engine
+association/build version, and `df -h . /`. Discover mounted volumes with `diskutil list` if needed;
+never run a hardcoded device-remount command copied from a historical note. Storage floors are enforced
+by `Scripts/check_environment.sh` and `Scripts/package_macos.sh`; inspect them rather than copying a
+stale threshold. The configured M1 Pro baseline keeps Nanite and Virtual Shadow Maps disabled.
+
+| Purpose | Entry point |
+|---|---|
+| Environment readiness | `./Scripts/check_environment.sh` |
+| Native simulation | `./Scripts/test_sim.sh` |
+| Content/compiler verification | `./Scripts/test_content.sh` |
+| Mac editor/game build | `./Scripts/build_editor.sh` |
+| Unreal automation | `env TMPDIR="$(getconf DARWIN_USER_TEMP_DIR)" ./Scripts/run_unreal_tests.sh` |
+| macOS packaging | `./Scripts/package_macos.sh` |
+| Packaged profiling | `./Scripts/profile_packaged_macos.sh` |
+| Registered art generation | `./Scripts/generate_art_assets.sh` |
+| Registered audio generation | `./Scripts/generate_audio_assets.sh` |
+
+The automation wrapper needs a valid macOS temporary root for isolated save tests. Check current filtering
+and report behavior in the script before appending arguments; a historic example does not establish a
+supported filter. Long jobs use the available process/session interface and bounded output checks; bridge
+timeouts and detached-job requirements are tool-specific, not project invariants.
+
+Retain evidence under `BuildArtifacts/Evidence/<gate>-<UTC>/` or the designated root. Bind it to exact source,
+dirty state, command/configuration, actual counts, exit status, package identity, and hashes where needed.
+Read the required package/signing/installation/performance skills separately; build success proves none
+of those other gates.
+
+## Historical observations and procedure rationale
+
+The remaining host facts, version numbers, storage figures, installed paths, signatures, package names,
+test counts, and qualification claims were recorded at the dates/versions shown. They are not live
+inventory. Recheck current scripts, installed tools, primary vendor documentation, and retained evidence
+before relying on them. Preserve these observations; do not mistake them for a fresh run.
+
+## Recorded host state — August 2026
 
 The initial development host is a MacBook Pro (`MacBookPro18,1`) with an Apple M1 Pro, 10 CPU cores, 16 GPU cores, 16 GB unified memory, Metal 4, and macOS 26.6.2. Xcode 26.6 is installed and `xcode-select -p` currently resolves to `/Applications/Xcode.app/Contents/Developer`. Apple's separately delivered Metal Toolchain build `17F109` is installed and `xcrun metal` resolves. Epic Games Launcher 20.2.4 completed Unreal Engine 5.8.2 after an authorized Docker builder-cache cleanup recovered 39.47 GB of rebuildable space. The authoritative checkout now resides at `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project`; it occupies about 8.2 GB on a Seagate APFS volume with about 3.6 TiB free. The Mac internal volume has about 67 GiB free at the current 0.93.0 evidence checkpoint, above the packaging floor but below the safer 100 GiB sustained-production target for internal caches and temporary build products. `/Users/angelispseftis/PycharmProjects/echoes-of-the-broken-sun` is only a symlink to the Seagate checkout, not duplicate project storage. Keep the Seagate volume mounted for all development from this checkout. The exact 1.1 GB 0.23.1 rebuildable staging tree was moved recoverably to `/Users/angelispseftis/.Trash/Echoes-StagedBuilds-Mac-20260829T060555Z`. Older staging trees and superseded archives remain in Trash; they continue to occupy space until Trash is emptied.
 
 The official Epic installer endpoint was downloaded and the disk image verified. The retained file is `~/Downloads/EpicInstaller-20.1.4.dmg`, 114,676,675 bytes, SHA-256 `5c4f204ed623b01890f26cc99d4af657c3fbd6be1d04be7fed176ddbc94b1259`. Because the installed launcher is newer, do not install this backup over it unless repairing the launcher becomes necessary.
 
-## Supported production baseline
+## Recorded platform baseline and primary references
 
 The project pins Unreal Engine 5.8. Epic's version-specific macOS table lists Xcode 26.0 as the minimum and 26.1.1 as recommended, and explicitly marks 26.4 incompatible. The locally installed Xcode 26.6 has passed project generation, current-source arm64 Development Editor and Game compilation, forty-eight Unreal automation tests, null-RHI and rendered startup, and an earlier local Development cook/package. That is positive evidence on this host, not a clean-machine, Developer ID signing, notarization, passing current performance gate, or full compatibility result. Xcode 26.1.1 remains Epic's recommended support baseline.
 

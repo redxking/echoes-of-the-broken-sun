@@ -28,7 +28,7 @@ struct FEchoesCommandDeckLayout final
         {
             return Layout;
         }
-        const float Scale = FMath::Clamp(HudScale, 0.85f, 1.35f);
+        const float Scale = FMath::Clamp(HudScale, 0.8f, 1.5f);
         const float Margin = 16.0f * Scale;
         const float Gap = 8.0f * Scale;
         // Command card: a grid, three columns when the panel is card-shaped,

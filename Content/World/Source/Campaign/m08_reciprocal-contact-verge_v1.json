@@ -1,0 +1,428 @@
+{
+  "source_format": "echoes-campaign-map-source",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M08",
+  "map_id": "reciprocal-contact-verge",
+  "operation_mode": "CampaignShapeBesideUs",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-008",
+    "map_concepts_reference": "MapConcepts#M08"
+  },
+  "grid": {
+    "width_tiles": 64,
+    "height_tiles": 64,
+    "index_formula": "y*width+x",
+    "coordinate_origin": "southwest"
+  },
+  "base_terrain": "open",
+  "terrain_region_ops": [
+    {
+      "id": "possible-frame",
+      "op": "block",
+      "x0": 7,
+      "x1": 12,
+      "y0": 20,
+      "y1": 35
+    },
+    {
+      "id": "manifest-frame",
+      "op": "block",
+      "x0": 51,
+      "x1": 56,
+      "y0": 20,
+      "y1": 35
+    },
+    {
+      "id": "offset-terrace-west",
+      "op": "block",
+      "x0": 16,
+      "x1": 25,
+      "y0": 48,
+      "y1": 53
+    },
+    {
+      "id": "offset-terrace-east",
+      "op": "block",
+      "x0": 39,
+      "x1": 46,
+      "y0": 48,
+      "y1": 53
+    },
+    {
+      "id": "southern-route-separation",
+      "op": "block",
+      "x0": 0,
+      "x1": 63,
+      "y0": 58,
+      "y1": 59
+    },
+    {
+      "id": "local-deployment-clearance",
+      "op": "open",
+      "x0": 5,
+      "x1": 16,
+      "y0": 5,
+      "y1": 17
+    },
+    {
+      "id": "opponent-deployment-clearance",
+      "op": "open",
+      "x0": 47,
+      "x1": 59,
+      "y0": 47,
+      "y1": 58
+    },
+    {
+      "id": "east-resource-pressure-clearance",
+      "op": "open",
+      "x0": 45,
+      "x1": 46,
+      "y0": 49,
+      "y1": 54
+    }
+  ],
+  "founding_doctrine_variants": [
+    {
+      "doctrine": "Harvest",
+      "terrain_region_ops": [
+        {
+          "id": "harvest-edge-aperture",
+          "op": "open",
+          "x0": 5,
+          "x1": 8,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 397
+    },
+    {
+      "doctrine": "Preserve",
+      "terrain_region_ops": [
+        {
+          "id": "preserve-edge-aperture",
+          "op": "open",
+          "x0": 28,
+          "x1": 35,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 389
+    },
+    {
+      "doctrine": "Reshape",
+      "terrain_region_ops": [
+        {
+          "id": "reshape-edge-aperture",
+          "op": "open",
+          "x0": 55,
+          "x1": 58,
+          "y0": 58,
+          "y1": 59
+        }
+      ],
+      "expected_blocked_cell_count": 401
+    }
+  ],
+  "required_clearance": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-echo",
+      "x": 14,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-relay",
+      "x": 14,
+      "y": 38,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-witness-a",
+      "x": 10,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-witness-b",
+      "x": 18,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "harvest-convergence",
+      "x": 14,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-echo",
+      "x": 32,
+      "y": 28,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-relay",
+      "x": 32,
+      "y": 38,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-witness-a",
+      "x": 28,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-witness-b",
+      "x": 36,
+      "y": 45,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "preserve-convergence",
+      "x": 32,
+      "y": 50,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-echo",
+      "x": 46,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-relay",
+      "x": 38,
+      "y": 26,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-witness-a",
+      "x": 40,
+      "y": 12,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-witness-b",
+      "x": 48,
+      "y": 12,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "reshape-convergence",
+      "x": 44,
+      "y": 6,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "talar-spawn",
+      "x": 18,
+      "y": 20,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "state-witness-a",
+      "x": 20,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "state-witness-b",
+      "x": 23,
+      "y": 24,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-a",
+      "x": 46,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-b",
+      "x": 49,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "opponent-pressure-c",
+      "x": 52,
+      "y": 54,
+      "half_extent_raw": 1024
+    },
+    {
+      "id": "future-well",
+      "x": 32,
+      "y": 32,
+      "half_extent_raw": 1024
+    }
+  ],
+  "required_passable": [
+    {
+      "id": "resource-1",
+      "x": 16,
+      "y": 16
+    },
+    {
+      "id": "resource-2",
+      "x": 21,
+      "y": 13
+    },
+    {
+      "id": "resource-3",
+      "x": 25,
+      "y": 28
+    },
+    {
+      "id": "resource-4",
+      "x": 33,
+      "y": 22
+    },
+    {
+      "id": "resource-5",
+      "x": 31,
+      "y": 43
+    },
+    {
+      "id": "resource-6",
+      "x": 43,
+      "y": 36
+    },
+    {
+      "id": "resource-7",
+      "x": 47,
+      "y": 50
+    },
+    {
+      "id": "resource-8",
+      "x": 52,
+      "y": 45
+    },
+    {
+      "id": "harvest-echo",
+      "x": 14,
+      "y": 28
+    },
+    {
+      "id": "harvest-relay",
+      "x": 14,
+      "y": 38
+    },
+    {
+      "id": "harvest-witness-a",
+      "x": 10,
+      "y": 45
+    },
+    {
+      "id": "harvest-witness-b",
+      "x": 18,
+      "y": 45
+    },
+    {
+      "id": "harvest-convergence",
+      "x": 14,
+      "y": 50
+    },
+    {
+      "id": "preserve-echo",
+      "x": 32,
+      "y": 28
+    },
+    {
+      "id": "preserve-relay",
+      "x": 32,
+      "y": 38
+    },
+    {
+      "id": "preserve-witness-a",
+      "x": 28,
+      "y": 45
+    },
+    {
+      "id": "preserve-witness-b",
+      "x": 36,
+      "y": 45
+    },
+    {
+      "id": "preserve-convergence",
+      "x": 32,
+      "y": 50
+    },
+    {
+      "id": "reshape-echo",
+      "x": 46,
+      "y": 20
+    },
+    {
+      "id": "reshape-relay",
+      "x": 38,
+      "y": 26
+    },
+    {
+      "id": "reshape-witness-a",
+      "x": 40,
+      "y": 12
+    },
+    {
+      "id": "reshape-witness-b",
+      "x": 48,
+      "y": 12
+    },
+    {
+      "id": "reshape-convergence",
+      "x": 44,
+      "y": 6
+    }
+  ]
+}

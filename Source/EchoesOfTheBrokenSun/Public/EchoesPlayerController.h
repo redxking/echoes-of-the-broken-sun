@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignMapLayout.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesFormationLayout.h"
 #include "EchoesNetworkSession.h"
@@ -212,6 +213,21 @@ public:
     void RequestReturnToOperations();
     /** Opens the exact next briefing derived from durable campaign progress. */
     void ContinueCampaign();
+    void OpenCampaignOperationsMap();
+    void CloseCampaignOperationsMap();
+    void ToggleCampaignOperationsMap();
+    void SelectNextCampaignMapNode();
+    void SelectPreviousCampaignMapNode();
+    void SetSelectedCampaignMapNodeIndex(int32 Index);
+    void DeploySelectedCampaignOperation();
+    [[nodiscard]] bool IsCampaignOperationsMapVisible() const
+    {
+        return bCampaignOperationsMapVisible;
+    }
+    [[nodiscard]] int32 GetSelectedCampaignMapNodeIndex() const
+    {
+        return SelectedCampaignMapNodeIndex;
+    }
     void ChooseFinalRestoration();
     void ChooseFinalStabilization();
     void ChooseFinalExtinguishment();
@@ -235,6 +251,10 @@ public:
         const FVector2D& ViewportSize,
         float HudScale);
     bool HandleOnlineFrontDoorPointer(
+        const FVector2D& ScreenPosition,
+        const FVector2D& ViewportSize,
+        float HudScale);
+    bool HandleCampaignOperationsMapPointer(
         const FVector2D& ScreenPosition,
         const FVector2D& ViewportSize,
         float HudScale);
@@ -333,6 +353,7 @@ public:
         return bTitleScreenVisible || bMissionBriefingVisible ||
                bPauseMenuVisible || bTechnologyPanelVisible ||
                bMatchResultVisible || bOnlineLocalMenuVisible ||
+               bCampaignOperationsMapVisible ||
                IsOpponentReconnectGraceActive() ||
                IsOnlineFrontDoorVisible() ||
                (bNetworkCompatibilityAccepted && !bNetworkMatchStarted);
@@ -796,6 +817,8 @@ private:
     bool bNewCampaignConfirmationArmed = false;
     bool bCampaignRestoreConfirmationArmed = false;
     bool bReturnToOperationsConfirmationArmed = false;
+    bool bCampaignOperationsMapVisible = false;
+    int32 SelectedCampaignMapNodeIndex = 0;
     bool bCampaignResult = false;
     FEchoesSkirmishSetup PendingSkirmishSetup =
         FEchoesSkirmishSetupModel::DefaultSetup();

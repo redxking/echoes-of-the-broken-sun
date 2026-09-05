@@ -376,7 +376,7 @@ class Mission01NarrativeContractTests(unittest.TestCase):
             branches["Reshape"]["dialogue_line_ids"],
             branches["Harvest"]["dialogue_line_ids"],
         )
-        self.assert_invalid_mission("reviewed_branch_projection.dialogue_line_ids")
+        self.assert_invalid_mission("branch line trigger mismatch")
 
     def test_branch_line_speaker_and_matching_channel_reassignment_is_rejected(self) -> None:
         line = next(

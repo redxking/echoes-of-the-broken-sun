@@ -7,14 +7,16 @@ metadata:
 
 # Echoes gameplay mechanics
 
-Use as the cross-mechanic router when a slice spans several systems. Route focused work to `echoes-input-controls`, `echoes-selection-movement-pathing`, `echoes-formations-unit-cohesion`, `echoes-combat-targeting-damage`, `echoes-economy-logistics`, `echoes-construction-production`, `echoes-research-technology`, `echoes-future-wells-gameplay`, or `echoes-camera-navigation`; do not collapse their separate acceptance gates into this umbrella.
+## Project authority
 
-1. Read live `CLAUDE.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/TechnicalArchitecture.md`, `Docs/Archive/ProjectLedger.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, and `../WorkstreamControl/ACTIVE_LANES.md`. Verify exact lease/worktree/branch/dirty paths before mutation.
-2. State the player intent, valid/rejected inputs, authoritative command semantics, visible/audio acknowledgment, stable rejection reason, accessibility variants, and failure/recovery behavior before coding.
-3. Put rule resolution in simulation and map physical input to validated commands through the Unreal adapter. UI, effects, sound, and camera may reflect state but cannot create authority.
-4. Test in layers: simulation semantics, adapter/UI behavior, then packaged physical mouse/keyboard play where the requirement concerns the player. Exercise focus, modal, drag/click, rapid input, pause/Escape, failure, and recovery paths relevant to the slice.
-5. Do not accept screenshot-only proof, synthetic input as human play, or a successful action without testing denial feedback. Stop for a shared input hotspot, missing lease, or owner decision on controls/remapping.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-## Acceptance checks
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
 
-Capture exact requirement IDs, test/build commands, input method, build/commit, observed outcomes, and evidence class. Route physical control to `echoes-gui-control-readiness`, then `echoes-evidence-gate-review` and `echoes-human-acceptance-session`; owner-only human play acceptance is distinct from automated or agent GUI evidence.
+Use this compatibility router only to choose the narrow work skill.
+
+Economy and logistics: [echoes-economy-logistics](../echoes-economy-logistics/SKILL.md). Construction and production: [echoes-construction-production](../echoes-construction-production/SKILL.md). Combat: [echoes-combat-targeting-damage](../echoes-combat-targeting-damage/SKILL.md). Selection and movement: [echoes-selection-movement-pathing](../echoes-selection-movement-pathing/SKILL.md). Formations: [echoes-formations-unit-cohesion](../echoes-formations-unit-cohesion/SKILL.md). Input controls: [echoes-input-controls](../echoes-input-controls/SKILL.md). Camera: [echoes-camera-navigation](../echoes-camera-navigation/SKILL.md). Research: [echoes-research-technology](../echoes-research-technology/SKILL.md). Future Wells: [echoes-future-wells-gameplay](../echoes-future-wells-gameplay/SKILL.md).
+
+For rendered player interaction, route through [echoes-gui-control-readiness](../echoes-gui-control-readiness/SKILL.md); classify retained evidence through [echoes-evidence-gate-review](../echoes-evidence-gate-review/SKILL.md).
+
+This router does not authorize cross-domain changes or replace the selected skill's required evidence.

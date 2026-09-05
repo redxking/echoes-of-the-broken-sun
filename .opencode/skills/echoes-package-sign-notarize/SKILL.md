@@ -1,15 +1,20 @@
 ---
 name: echoes-package-sign-notarize
 description: Route macOS Echoes packaging, provenance, Developer ID/notarization, installer, and clean-machine work to separately authorized skills without executing credentialed or release-state actions.
-metadata: { author: Angelis Pseftis }
+metadata:
+  author: Angelis Pseftis
 ---
 
 # Echoes package release router
 
-Read `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/SetupAndBuild.md`, `../WorkstreamControl/handoffs/build-distribution.md`, `../WorkstreamControl/ACTIVE_LANES.md`, and `../WorkstreamControl/HEAVY_RUN_LOCK.md`.
+## Project authority
 
-This skill routes; it does not package, sign, notarize, create an installer, upload, publish, or claim release status. Packaging belongs to `echoes-package-provenance`; Developer ID/keychain/notary/installer work belongs to `echoes-developer-id-notarization-installer`; a clean-machine run belongs to `echoes-clean-machine-install-qualification`.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-Any package attempt requires a current detailed Heavy-Run lease acquired through the live control process and explicitly released afterward; never reuse, assume, or invent a lease. The package skill must require a clean detached dedicated worktree at the exact pushed live `origin/main`, equality among `HEAD`, `origin/main`, and live remote, hydrated LFS, cleared `GIT_*` overrides, a new archive, and at least 60 GiB free on both archive and internal filesystems. The authorized configuration comes from the live gate: `package_macos.sh` is currently a Development procedure, so never silently substitute Shipping.
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
 
-Developer ID credentials, keychain use, notarization submission, installer creation, upload, and publishing are external-state actions requiring separate explicit Angelis authority. A submission receipt, ad-hoc signature, local launch, or Development package is not notarization or release qualification.
+Use this compatibility router only to choose the narrow work skill.
+
+Package identity and reproducibility: [echoes-package-provenance](../echoes-package-provenance/SKILL.md). Developer ID signing, notarization, installer, and clean-machine qualification: [echoes-developer-id-notarization-installer](../echoes-developer-id-notarization-installer/SKILL.md) and [echoes-clean-machine-install-qualification](../echoes-clean-machine-install-qualification/SKILL.md).
+
+This router does not authorize cross-domain changes or replace the selected skill's required evidence.

@@ -20,30 +20,24 @@ and no longer governs; where it and this file differ, this file wins.
 
 Creative intent for world, factions, characters, and narrative remains with
 `Archive/DevelopmentBible.md`. Sequencing, gates, and lane control remain with
-`GameCompletionDirective.md`, `DeliveryPlan.md`, and `../WorkstreamControl/ACTIVE_LANES.md` — those
-documents order the work and may not define, restate, or waive a requirement.
+`GameCompletionDirective.md` and `DeliveryPlan.md`, subject to current owner instructions and the
+shared `AGENTS.md` contract. They order work and may not define or waive a game requirement.
+Current task coordination replaces obsolete external lane-file dependencies.
 
-Carried forward from the build specification and still binding:
-
-* **SPEC-AUTH-002 — Normative language.** *Shall* is mandatory. *May* is permitted. *Tuning baseline* is a
-  binding starting value that may change only through documented balance review without changing the
-  element's purpose or counterplay.
-* **SPEC-AUTH-003 — No silent invention.** Where a required behavior is genuinely absent or contradictory,
-  work stops at that decision boundary. The proposed change identifies affected requirements, player
-  impact, dependencies, migration, tests, and owner approval.
-* **SPEC-AUTH-004 — Traceable change.** Every approved change edits **this file** in place, preserves
-  stable identifiers where meaning is unchanged, records rationale, and updates dependent content, UI, AI,
-  saves, replays, tests, and player documentation. (Amended 2026-09-03: the file this rule governs is now
-  `Docs/Requirements.md`, not the `.docx`.)
+The retained authority rules are defined once under `SPEC-AUTH-001..006` in Part I.
+Current owner-directed document maintenance follows `SPEC-AUTH-004` and the shared contract.
 
 ## Identifier namespaces
 
-Identifiers are permanent. Nothing here is ever renumbered, reused, or deleted: 335 citations in
-evidence logs, QA matrices, and lane handoffs resolve against these IDs, and
-renumbering would break the evidence trail for work already accepted. A withdrawn requirement keeps its ID
+Identifiers are permanent. Never renumber, reuse, or delete an ID: evidence logs, QA matrices, and
+handoffs resolve against them. Changing an ID would break that evidence trail. A withdrawn requirement keeps its ID
 and reads `SUPERSEDED BY <id>` or `WITHDRAWN — <authority, date>`.
 
-| Namespace | Count | Origin | Defines |
+The counts below describe the original 2026-09-03 migration, not the current requirement total.
+The identifier index is rebuilt from definitions; original migration counts remain historical.
+Structural coverage does not establish semantic consistency or acceptance; see `RequirementsState.md`.
+
+| Namespace | Original migration count | Origin | Defines |
 |---|---|---|---|
 | `SPEC-*` | 368 | the build specification | what the finished game shall be |
 | `DEMO-*` | 152 | `DemoReadinessRequirements.md`, retired 2026-09-03 | what the demo must satisfy |
@@ -58,6 +52,32 @@ Of the 368 `SPEC-*` records, **129** carry the identifiers the build specificati
 (prefix added, number untouched) and **239** were minted on 2026-09-03 for normative content that
 previously had no identifier at all — including the entire twelve-unit roster, the twelve-structure set,
 and all fifteen mission objective and failure contracts. Nothing could cite or test that content before.
+
+## Retired ambiguous identifiers
+
+On 2026-09-04 the owner authorized the documented conflict-reconciliation pass. These IDs had already
+been assigned to different obligations. They are retained as traceability tombstones; neither old body
+wins by position or date. Active bodies and every preserved clause now use the successors below. An old
+ID-only citation is ambiguous: match its exact title, clause, artifact and source revision before mapping
+it. Do not transfer acceptance or rewrite historical logs. Child collisions inherit the same rule.
+
+* **REL-AI-016 — Retired ambiguous identifier.** SUPERSEDED BY `REL-AI-041` (Strategic Controller State Expansion); `REL-AI-042` (Standard Matchup Competitive Balance Band).
+* **REL-ART-024 — Retired ambiguous identifier.** SUPERSEDED BY `REL-ART-028` (Meridian Roster Engineering form Language); `REL-ART-031` (Deterministic-Decoupled Kinetic Combat Ragdolls).
+* **REL-ART-025 — Retired ambiguous identifier.** SUPERSEDED BY `REL-ART-029` (Kharuun Roster Grown Mineral Architecture); `REL-ART-032` (Persistent Battlefield Scorch Decals & Vitrification).
+* **REL-ART-026 — Retired ambiguous identifier.** SUPERSEDED BY `REL-ART-030` (Glass Scar Landscape Passability Truth); `REL-ART-033` (Dynamic Directional Shield Impact Ripples).
+* **REL-AUD-001 — Retired ambiguous identifier.** SUPERSEDED BY `REL-AUD-019` (BS.1770-4 Loudness Compliance); `REL-AUD-020` (Five-Category Submix Hierarchy).
+* **REL-AUD-002 — Retired ambiguous identifier.** SUPERSEDED BY `REL-AUD-019.SESSION` (Integrated Loudness & True Peak Mastering Target); `REL-AUD-022` (Dynamic Side-Chain Vocal Ducking (Dumper Loops)).
+* **REL-AUD-003 — Retired ambiguous identifier.** SUPERSEDED BY `REL-AUD-021` (Low-Level PBR Audio Cue Parameters); `REL-AUD-023` (Dynamic Side-Chain Vocal Ducking).
+* **REL-UI-017 — Retired ambiguous identifier.** SUPERSEDED BY `REL-UI-025` (Production UMG/Slate Command Deck Architecture); `REL-UI-026` (Selection identity.).
+* **REL-UI-018 — Retired ambiguous identifier.** SUPERSEDED BY `REL-UI-027` (Interface Atlas and Multi-Channel Affiliation Feedback); `REL-UI-028` (Selection state.).
+
+`REL-AUD-019.SESSION` retains the 30-minute session measurement and failure/verification clauses under
+the combined loudness parent. `REL-AI-041.SIG.*` and `REL-SAV-008.SIG.*` identify scenario-card fields,
+separately from generic parent fields. Asset manifests and interface sheets use `.ASSET` and `.SHEET`.
+The duplicate M13 `REL-CAM-013.AUTH` label is corrected to `REL-CAM-018.AUTH`; M08 retains its own clause.
+The two `REL-MOV-012` child labels were transcription errors for `SPEC-MOV-012`. Historical labels remain
+resolvable through this record. Repeated identical authority, campaign-outcome and faction-tech copies
+are replaced by pointers to one body; none of their obligations is withdrawn.
 
 ## Record schema
 
@@ -94,70 +114,72 @@ end of Part II section C. Their change-log entries are retained as history.
 
 ## Crosswalk
 
-Each `DEMO-*` and `REL-*` family bound to the `SPEC-*` requirements it implements. Mapping is by family,
-read from section intent; a family marked *spec gap* has no `SPEC-*` parent, which is a finding against the
-specification, not a defect in the record. Never infer a match from a shared prefix name:
-`REL-SIM-005` and `SPEC-SIM-005` are unrelated requirements.
+This family reading map selects related requirements; it is not an exact requirement-to-test traceability
+matrix. Match each implementation/evidence claim to its exact body and acceptance criteria. A common
+prefix never establishes equivalence. Counts include retired IDs retained for traceability; they are not
+counts of accepted or independently distinct behavior. The identifier index and registry guard provide
+exact structural coverage; per-ID evidence remains in RequirementsState.md.
 
-| Records | Count | Implements |
+| Records | Count | Related SPEC scope |
 |---|---|---|
-| `DEMO-ACC-001..006` | 6 | SPEC-ACC-*, SPEC-LOC-* |
-| `DEMO-AI-001..010` | 10 | SPEC-AI-*, SPEC-AIST-*, SPEC-DOC-*, SPEC-DIF-* |
-| `DEMO-AUD-001..013` | 13 | SPEC-AUD-*, SPEC-AUDF-*, SPEC-CIN-* |
-| `DEMO-GOV-001..010` | 10 | SPEC-AUTH-*, SPEC-VAL-*, SPEC-EVID-* |
-| `DEMO-INP-001..015` | 15 | SPEC-CTL-*, SPEC-CMD-*, SPEC-UI-* |
-| `DEMO-JRN-001..007` | 7 | SPEC-PIL-*, SPEC-PRD-*, SPEC-OUT-* |
-| `DEMO-NAR-001..011` | 11 | SPEC-CANON-*, SPEC-CIN-*, SPEC-CAM-* |
-| `DEMO-PERF-001..015` | 15 | SPEC-BUD-*, SPEC-PLAT-* |
-| `DEMO-TUT-001..022` | 22 | SPEC-TUT-*, SPEC-LSN-* |
-| `DEMO-UI-001..013` | 13 | SPEC-HUD-*, SPEC-UI-* |
-| `DEMO-VAL-001..017` | 17 | SPEC-VAL-*, SPEC-EVID-*, SPEC-PLAT-* |
-| `DEMO-VIS-001..013` | 13 | SPEC-ART-*, SPEC-VISD-* |
-| `REL-ACC-001..017` | 17 | SPEC-ACC-* |
-| `REL-AI-001..036` | 36 | SPEC-AI-*, SPEC-AIST-*, SPEC-DOC-*, SPEC-DIF-* |
-| `REL-ART-001..023` | 23 | SPEC-ART-*, SPEC-VISD-* |
-| `REL-AUD-001..015` | 15 | SPEC-AUD-*, SPEC-AUDF-* |
-| `REL-BLD-001..020` | 20 | SPEC-BLD-*, SPEC-STR-* |
-| `REL-CAM-001..032` | 32 | SPEC-CAM-*, SPEC-MSN-*, SPEC-PLAN-*, SPEC-END-* |
-| `REL-CIN-001..008` | 8 | SPEC-CIN-* |
-| `REL-CMB-001..027` | 27 | SPEC-CMB-*, SPEC-CMD-*, SPEC-STANCE-* |
-| `REL-DIST-001..017` | 17 | SPEC-PLAT-*, SPEC-ARC-* |
-| `REL-ECO-001..017` | 17 | SPEC-ECO-*, SPEC-RES-* |
-| `REL-FAC-001..029` | 29 | SPEC-FACID-*, SPEC-UNIT-* |
-| `REL-FTU-001..012` | 12 | SPEC-PIL-*, SPEC-TUT-* |
-| `REL-GOV-001..015` | 15 | SPEC-AUTH-*, SPEC-VAL-* |
-| `REL-LOC-001..006` | 6 | SPEC-LOC-* |
-| `REL-MP-001..017` | 17 | SPEC-PRD-* (excluded scope) |
-| `REL-PERF-001..025` | 25 | SPEC-BUD-*, SPEC-PLAT-* |
-| `REL-PORT-001..010` | 10 | SPEC-PLAT-* |
-| `REL-PUB-001..015` | 15 | — none (spec gap) |
-| `REL-QA-001..036` | 36 | SPEC-VAL-*, SPEC-EVID-* |
-| `REL-QOL-001..012` | 12 | SPEC-SAV-* |
-| `REL-SAV-001..014` | 14 | SPEC-SAV-* |
-| `REL-SEC-001..006` | 6 | SPEC-PLAT-*, SPEC-ARC-* |
-| `REL-SIM-001..019` | 19 | SPEC-SIM-*, SPEC-OUT-* |
-| `REL-STAB-001..005` | 5 | SPEC-BUD-*, SPEC-PLAT-* |
-| `REL-UI-001..024` | 24 | SPEC-UI-*, SPEC-HUD-*, SPEC-CTL-* |
-| `REL-WEL-001..018` | 18 | SPEC-WEL-*, SPEC-WELLP-* |
+| `DEMO-ACC-*` | 6 | SPEC-ACC-*, SPEC-LOC-* |
+| `DEMO-AI-*` | 10 | SPEC-AI-*, SPEC-AIST-*, SPEC-DOC-*, SPEC-DIF-* |
+| `DEMO-AUD-*` | 13 | SPEC-AUD-*, SPEC-AUDF-*, SPEC-CIN-* |
+| `DEMO-GOV-*` | 10 | SPEC-AUTH-*, SPEC-VAL-*, SPEC-EVID-* |
+| `DEMO-INP-*` | 15 | SPEC-CTL-*, SPEC-CMD-*, SPEC-UI-* |
+| `DEMO-JRN-*` | 7 | SPEC-PIL-*, SPEC-PRD-*, SPEC-OUT-* |
+| `DEMO-NAR-*` | 11 | SPEC-CANON-*, SPEC-CIN-*, SPEC-CAM-* |
+| `DEMO-PERF-*` | 15 | SPEC-BUD-*, SPEC-PLAT-* |
+| `DEMO-TUT-*` | 22 | SPEC-TUT-*, SPEC-LSN-* |
+| `DEMO-UI-*` | 13 | SPEC-HUD-*, SPEC-UI-* |
+| `DEMO-VAL-*` | 17 | SPEC-VAL-*, SPEC-EVID-*, SPEC-PLAT-* |
+| `DEMO-VIS-*` | 13 | SPEC-ART-*, SPEC-VISD-* |
+| `REL-ACC-*` | 22 | SPEC-ACC-* |
+| `REL-AI-*` | 42 | SPEC-AI-*, SPEC-AIST-*, SPEC-DOC-*, SPEC-DIF-*, SPEC-SKM-* |
+| `REL-ART-*` | 33 | SPEC-ART-*, SPEC-VISD-* |
+| `REL-AUD-*` | 23 | SPEC-AUD-*, SPEC-AUDF-* |
+| `REL-BLD-*` | 20 | SPEC-BLD-*, SPEC-STR-* |
+| `REL-CAM-*` | 38 | SPEC-CAM-*, SPEC-MSN-*, SPEC-PLAN-*, SPEC-END-* |
+| `REL-CIN-*` | 8 | SPEC-CIN-* |
+| `REL-CMB-*` | 32 | SPEC-CMB-*, SPEC-CMD-*, SPEC-STANCE-* |
+| `REL-DIST-*` | 17 | SPEC-PLAT-*, SPEC-ARC-* |
+| `REL-ECO-*` | 17 | SPEC-ECO-*, SPEC-RES-* |
+| `REL-EDT-*` | 10 | SPEC-MAP-*, SPEC-ARC-*, SPEC-SAV-*; editor-specific obligations also stand on their own source authority |
+| `REL-FAC-*` | 29 | SPEC-FACID-*, SPEC-UNIT-* |
+| `REL-FTU-*` | 12 | SPEC-PIL-*, SPEC-TUT-* |
+| `REL-GOV-*` | 15 | SPEC-AUTH-*, SPEC-VAL-* |
+| `REL-LOC-*` | 6 | SPEC-LOC-* |
+| `REL-MP-*` | 19 | SPEC-PRD-003, SPEC-SKM-014..018, SPEC-ARC-*, SPEC-PLAT-*; active bounded-session scope |
+| `REL-PERF-*` | 25 | SPEC-BUD-*, SPEC-PLAT-* |
+| `REL-PORT-*` | 10 | SPEC-PLAT-* |
+| `REL-PUB-*` | 20 | — none (spec gap) |
+| `REL-QA-*` | 36 | SPEC-VAL-*, SPEC-EVID-* |
+| `REL-QOL-*` | 16 | SPEC-SAV-* |
+| `REL-SAV-*` | 14 | SPEC-SAV-* |
+| `REL-SEC-*` | 6 | SPEC-PLAT-*, SPEC-ARC-* |
+| `REL-SIM-*` | 19 | SPEC-SIM-*, SPEC-OUT-* |
+| `REL-STAB-*` | 5 | SPEC-BUD-*, SPEC-PLAT-* |
+| `REL-UI-*` | 28 | SPEC-UI-*, SPEC-HUD-*, SPEC-CTL-* |
+| `REL-WEL-*` | 18 | SPEC-WEL-*, SPEC-WELLP-* |
 
-**Spec gaps.** `REL-PUB-*` (15 records) have no `SPEC-*` parent. The specification defines no public-website, manual, claims, or support
-requirements, so those release records stand on their own authority until the specification is extended.
-
+Families with no exact SPEC parent still retain their own normative source; a missing family mapping
+is not permission to delete a requirement. Complete per-ID parent/test/evidence binding before closure.
 
 ---
 
 ## Specification Blueprint & Structural Framework
 
-The normative requirements of *Echoes of the Broken Sun* are divided into two primary parts:
-* **Part I — Core Specifications (`SPEC-*`):** Sections §1 through §31 define the deterministic simulation core, unit archetypes, game rules, and world systems.
-* **Part II — Release Specifications (`REL-*`):** Sections §6 through §26 define commercial release requirements, content tracks, platform packaging, and QA gates.
+The master contains the core `SPEC-*` bodies, migrated demo `DEMO-*` bodies, and migrated release
+`REL-*` bodies. Section numbers inherited from source documents repeat; identify a record by its full ID
+and body title, not section number alone. Acceptance cards decompose those bodies and do not create a
+separate authority. Known reused IDs remain explicit reconciliation issues in the state record.
 
 ### Core Architectural Pillars
 * **Governance and Change Control:** Single source of truth, normative language (*shall* / *may*), zero silent invention, and atomic inline changes (governed by `SPEC-AUTH-001..006` and `REL-GOV-001..015`).
 * **Visual-Auditory Infrastructure:** Silhouette-first tactical readability, 5-color palette, matte terrain (roughness $\ge 0.85$), and BS.1770-4 audio mastering at -16 LUFS (governed by `SPEC-ART-*`, `SPEC-AUD-*`, `REL-ART-*`, and `REL-AUD-*`).
 * **Economy and Logistics:** Matter harvesting on a calibrated 20-tick cadence, deposit saturation, fail-closed Dawn accounting, and 200-cap Logistics networks (governed by `SPEC-RES-*` and `REL-ECO-001..017`).
 * **Movement, Control, and Micro-Management:** Any-angle string-pulled movement, soft separation, 3-tick command responsiveness, and micro-management honoring (governed by `SPEC-MOV-001..013`, `SPEC-CTL-001..019`, and `REL-CMB-001..027`).
-* **Tactical Interface and Interaction:** Production UMG/Slate framework, 3x3 command card, 7-target screen resolution matrix (1280x720 to 2560x1440), and 80%–150% UI scaling (governed by `SPEC-UI-*` and `REL-UI-001..024`).
+* **Tactical Interface and Interaction:** Production UMG/Slate framework, 3x3 command card, 7-target screen resolution matrix (1280x720 to 2560x1440), and 80%–150% UI scaling (governed by `SPEC-UI-*` and `REL-UI-001..028`).
 
 ---
 
@@ -197,30 +219,34 @@ Every requirement row in active phase development must populate this data-contra
 |---|---|---|
 | SPEC-PRD-001 | Genre | Premium 3D science-fantasy real-time strategy game. |
 | SPEC-PRD-002 | Camera and control | Isometric battlefield camera; mouse-and-keyboard first; real-time unit, economy, base, terrain, and information control. |
-| SPEC-PRD-003 | Primary experience | Single-player campaign and configurable 1v1 skirmish against fair AI. |
+| SPEC-PRD-003 | Primary experience | Fifteen-operation story campaign; separate 25-sector single-player Conquest/roguelite; offline 1v1 PvAI and bounded session multiplayer including team battles, comp-stomp and free-for-all. Expansion authorized by Angelis Pseftis on 2026-09-04. |
 | SPEC-PRD-004 | Player fantasy | Command a civilization under consequence: build a force, interpret incomplete information, choose which future becomes real, and live with the spatial and human cost. |
 | SPEC-PRD-005 | Release platform | macOS on Apple Silicon. The architecture remains portable, but other operating systems are not release deliverables. |
-| SPEC-PRD-006 | Campaign | Fifteen operations across three acts with four earned endings. |
-| SPEC-PRD-007 | Skirmish | Three maps; any of three factions versus any faction, including mirror matchups; five AI doctrines; four difficulty levels; Corefall victory. |
+| SPEC-PRD-006 | Campaign | Fifteen operations across three acts, each on a unique story-driven map, forming one connected Soryn adventure with strong characters/backstories and four earned endings. See SPEC-MAP-004 and SPEC-CAM-041..042. |
+| SPEC-PRD-007 | Skirmish | Three named maps remain required for offline 1v1 PvAI; faction mirrors, five AI doctrines, four difficulty levels and Corefall remain. Team/FFA sessions use explicit format, participant and map-eligibility contracts under SPEC-SKM-014..018. |
 | SPEC-PRD-008 | Launch language | English voice and text; all player-facing strings externalized for later localization. |
 | SPEC-PRD-009 | Expected match length | 20–35 minutes on Standard. Campaign operations target 20–45 minutes according to mission scale. |
 | SPEC-PRD-010 | Business model | Complete premium game. No advertising, loot boxes, premium currency, battle pass, gacha, or pay-to-win progression. |
 
 ### §2.1 Included systems
+
+**Hosting sequence — owner direction, 2026-09-04:** Multiplayer hosting services and hosted relay deployment are deferred to the next game version, after this version is fully completed. Current bounded session modes must disclose and qualify the connectivity they actually provide; no hosted fallback is promised in this version. This targeted hosting deferral does not withdraw the separately approved Conquest, team or FFA modes.
+
+* Owner-approved 2026-09-04 expansion: the existing `REL-CAM-033..038` Conquest/roguelite mode, `REL-AI-037..040` team/comp-stomp support and bounded multiplayer/FFA under `REL-MP-*`. These are release obligations; approval establishes scope, not implementation or acceptance.
 * All three playable factions and the exact twelve-unit/twelve-structure launch roster defined here.
 * Matter, Dawn, Logistics, construction, production, research, combat, fog, reconnaissance, terrain interaction, Future Wells, saves, replays, tutorial, accessibility, campaign persistence, and post-match reporting.
 * Professional original environments, models, animation, effects, interface, music, ambience, sound effects, character voice, in-engine cinematics, subtitles, manual, support information, signing, notarization, and clean-machine installation.
 
 ### §2.2 Explicit exclusions
-* Multiplayer, matchmaking, accounts, social features, teams, free-for-all, cooperative campaign, and live-service systems.
+* MMO/shared persistent worlds, live-service progression and cooperative conversion of the fifteen story operations. Accounts, social platforms, hosted matchmaking and public competitive-rating services are not implied by session multiplayer; any required service has an explicit authority, trust, cost and qualification decision. The local rating model and connection/relay obligations in REL-MP remain separately tracked.
 * Combat aircraft, air transports, air pathfinding, altitude combat, naval units, water combat, and amphibious systems.
 * Unrestricted burrowing. Kharuun subsurface movement is limited to visible map-authored entrance/exit passages.
 * Random weapon accuracy, random critical hits, hidden damage modifiers, and undisclosed AI information or resource advantages.
 
 ## §3. Creative canon, setting, and lore
 
-* **SPEC-CANON-015 — Central theme:** *Echoes of the Broken Sun* is about the cost of making one future real. Strategy, narrative, economy, interface, art, and sound must repeatedly express the tension between immediate survival and futures that become impossible.
-* **SPEC-CANON-016 — Tone:** The tone is urgent, humane, and occasionally dry. No faction is a proxy for good or evil. Characters act from incomplete evidence and defensible needs. Painful choices remain understandable rather than becoming morality quizzes.
+* **SPEC-CANON-015 — Retired duplicate canon record.** SUPERSEDED BY `SPEC-CAN-001`; the stable original body is restored without a change of meaning.
+* **SPEC-CANON-016 — Retired duplicate canon record.** SUPERSEDED BY `SPEC-CAN-002`; the stable original body is restored without a change of meaning.
 
 ### §3.1 Soryn and the Crownfall
 Soryn orbits a field of stellar fragments called the Crownfall. The breaking of the sun condensed unrealized causal branches into mineral-organic Dawnshards. A shard can power a city or expose a technology that never developed in the surviving timeline; consuming it also closes the possibility it contains. Future Wells are large deposits where several futures remain locally coherent.
@@ -263,6 +289,10 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 * Humor comes from character and circumstance, never from undermining loss or turning lore into quips.
 * Mission and result text states what happened and what remains unresolved. It does not invent population counts, consent, trust, moral correctness, or wider consequences that the game did not model.
 
+* **SPEC-CAN-001 —** Central theme. Echoes of the Broken Sun is about the cost of making one future real. Strategy, narrative, economy, interface, art, and sound must repeatedly express the tension between immediate survival and futures that become impossible.
+
+* **SPEC-CAN-002 —** Tone. The tone is urgent, humane, and occasionally dry. No faction is a proxy for good or evil. Characters act from incomplete evidence and defensible needs. Painful choices remain understandable rather than becoming morality quizzes.
+
 ## §4. Player experience pillars and gameplay loops
 
 | ID | Pillar | Required player experience |
@@ -293,16 +323,50 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 
 ---
 
+### Stable pillar and decision-loop records
+
+| ID | Pillar | Required player experience |
+|---|---|---|
+| SPEC-PIL-001 | Spatial economy | Resource choices change routes, exposure, drop-off value, vision, and timing. A resource is never only a number. |
+| SPEC-PIL-002 | Asymmetric planning | Meridian establishes networks; Kharuun changes terrain and composition; Choir spends possibility and manages temporary coherence. |
+| SPEC-PIL-003 | Readable consequence | The player can identify ownership, role, order, threat, cost, duration, terrain effect, and Well state at combat speed. |
+| SPEC-PIL-004 | Fair uncertainty | Scouting matters because hidden information stays hidden from player and AI. Automation reduces repetition without becoming omniscience. |
+| SPEC-PIL-005 | Recoverable command | Valid commands acknowledge immediately. Invalid commands explain why and how to recover. Context input never silently becomes a plausible wrong action. |
+| SPEC-PIL-006 | Story through play | Objectives, terrain, resources, alerts, music, and consequences communicate the story while the player retains control. |
+
+| ID | Loop | Player sequence | Decision |
+|---|---|---|---|
+| SPEC-PIL-007 | Seconds | Select → issue order → read acknowledgment → reposition/fire/ability → reassess. | What must move, fire, hold, retreat, or change state now? |
+| SPEC-PIL-008 | Minutes | Gather → expand Logistics → scout → choose production/research → contest routes and Wells. | Where does the next advantage come from, and what does it cost elsewhere? |
+| SPEC-PIL-009 | Match | Infer doctrine → counter visible composition → deny economy/information → create a timing → convert it into Core damage. | What is the opponent protecting, and when can that protection be broken? |
+| SPEC-PIL-010 | Campaign | Learn a system → solve a distinct operation → record consequence → receive an authored later effect → qualify an ending. | Which future did this operation make possible, and which did it close? |
+
 ## §5. Match and operation outcomes
 
 * **SPEC-SIM-013 — Corefall standard-match victory:** Standard skirmish and competitive play shall use Corefall: a player or team wins when every opposing team has no surviving Command Core. Anchor, Memory Hearth, and Concordance are faction-specific Command Cores. Destroying the final opposing Core shall end the match immediately and reject later commands. Future Well control, score, kills, resources, army size, and destruction of non-Core assets shall not independently award victory.
 * **SPEC-SIM-014 — Corefall defeat and concession:** A player loses when its final Command Core is destroyed or the player explicitly confirms concession. Zero workers, zero combat units, zero production structures, or zero resources shall not automatically defeat a player while its Core survives. Concession shall be deliberate, recoverable before confirmation, and attributable in results and replay metadata.
 * **SPEC-SIM-016 — Draw:** If all remaining Command Cores are destroyed within the same authoritative resolution window, the result shall be Draw. No hidden tiebreak based on score, damage, resources, or command order shall replace it.
-* **REL-CAM-022 — Objective-based operation victory:** A campaign operation shall be won only by completing its authored primary objective sequence. The briefing shall identify the primary objective, protected people/assets, optional objectives, and irreversible choices. Enemy-Core destruction shall not substitute for escort, recovery, hold, witness, Well, route, withdrawal, or other authored objectives unless the operation explicitly says it does.
-* **REL-CAM-023 — Objective-based operation defeat:** Each operation shall define its terminal failures: required Core loss, mission-critical unit/structure loss, expired opportunity, invalid irreversible commitment, impossible escort/evacuation, or force state that makes the primary objective impossible. Ordinary unit loss shall not silently cause defeat.
-* **REL-CAM-024 — Result causality:** Results shall state why the player won or lost, optional outcomes, the exact irreversible campaign record written, and material states not changed. Restart and alternate replay shall not silently rewrite established campaign history.
+* See `REL-CAM-022` in Part III for the single canonical body; its full clauses remain binding.
+* See `REL-CAM-023` in Part III for the single canonical body; its full clauses remain binding.
+* See `REL-CAM-024` in Part III for the single canonical body; its full clauses remain binding.
 * **SPEC-SIM-024 — Stalemate tolerance:** At 45 minutes, the simulation core warns that the match is prolonged but does not force an arbitrary termination result. An AI controller possessing zero recoverable production, economy, or Core-defense paths shall automatically execute an attributable concession command sequence.
 
+
+### Stable outcome records
+
+* **SPEC-OUT-001 —** Corefall victory. A player wins a standard skirmish when the opposing player has no surviving Command Core. Anchor, Memory Hearth, and Concordance are Command Cores. The match ends in the authoritative resolution window in which the final enemy Core is destroyed.
+
+* **SPEC-OUT-002 —** Defeat. A player loses when the player's final Command Core is destroyed or the player confirms concession. Losing all workers, combat units, production, resources, or Wells is not defeat while the Core survives.
+
+* **SPEC-OUT-003 —** Draw. If both final Command Cores are destroyed in the same 20 Hz resolution tick, the result is Draw. Score, resources, damage, command order, and elapsed time never break the tie.
+
+* **SPEC-OUT-004 —** Campaign success. An operation is won only when every mandatory objective and required consequence commitment is complete. Destroying a hostile Core substitutes only where that operation explicitly names Corefall as an objective.
+
+* **SPEC-OUT-005 —** Campaign failure. Each operation names failure predicates before play: required Core, character, civilian, witness, route, asset, timer, or irreversible contract. Ordinary unit loss is not a hidden failure.
+
+* **SPEC-OUT-006 —** Result explanation. The result screen states the precise win/loss cause, optional objectives, rewards, irreversible record, elapsed time, resources, units, and Well decisions. A campaign replay cannot silently rewrite established history.
+
+* **SPEC-OUT-007 —** Stalemate. At 45 minutes, skirmish warns that the match is prolonged but does not force a result. An AI with no recoverable production/economy/Core-defense path concedes. The player may continue or concede at any time.
 
 ## §6. Authoritative simulation and command rules
 
@@ -402,7 +466,7 @@ Here is the finalized and formatted section §7. Movement, pathfinding, formatio
    * **SPEC-MOV-007.VERIF:** SRC (native speed-ratio assertion across 8 cardinal and intercardinal headings).
    * **SPEC-MOV-007.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-008 — Soft Separation and Non-Imprisonment:** Allied mobile units sharing ground space shall maintain clearance via local steering forces, pushing past one another rather than colliding rigidly, and shall never permanently trap or imprison another allied unit.
-* **SPEC-MOV-008.AUTH:** No two allied mobile units shall remain overlapped beyond their combined clearance radii for more than 20 consecutive simulation ticks (1.0 second).
+* **SPEC-MOV-008.AUTH:** No two allied mobile units shall remain overlapped beyond their combined clearance radii for more than 20 consecutive simulation ticks (1.0 second), except workers sharing an active deposit assignment under SPEC-RES-003. Those workers use explicit queue positions and may pass each other during the gathering loop.
    * **SPEC-MOV-008.ACT:** When two allied units are ordered to swap positions on open ground, both units shall resolve opposing velocities via lateral deflection and reach their destinations.
    * **SPEC-MOV-008.PERF:** In a 200-tick soak test with 40 units ordered simultaneously to a single focal point, zero units shall remain permanently deadlocked; every unit shall either reach the destination or stabilize within its arrival packing radius.
    * **SPEC-MOV-008.FAIL:** If separation forces cannot resolve within 40 ticks, the lower-priority unit shall yield by taking a temporary lateral step.
@@ -427,8 +491,8 @@ Here is the finalized and formatted section §7. Movement, pathfinding, formatio
 * **SPEC-MOV-012 — Damped Clean Arrival:** Units reaching their destination shall halt cleanly without overshooting, jittering against neighbors, or oscillating between adjacent waypoints.
 * **SPEC-MOV-012.AUTH:** Upon entering the arrival radius, a unit's position shall change by no more than 0.05 tiles over 20 consecutive ticks.
    * **SPEC-MOV-012.FAIL:** Unstable microscopic oscillation between waypoints or repulsive neighbor pushing at rest shall immediately trigger arrival velocity clamping to zero.
-   * **REL-MOV-012.VERIF:** SRC (single-unit and multi-unit arrival velocity settle test).
-   * **REL-MOV-012.LANE:** Core Gameplay (EchoesSimCore).
+   * **SPEC-MOV-012.VERIF:** SRC (single-unit and multi-unit arrival velocity settle test).
+   * **SPEC-MOV-012.LANE:** Core Gameplay (EchoesSimCore).
 * **SPEC-MOV-013 — Movement Determinism & Sanitizer Invariance:** All movement, steering, and pathfinding math shall execute strictly within the deterministic core under Q22.10 fixed point, yielding byte-identical state checksums across platforms and compilers.
 * **SPEC-MOV-013.AUTH:** Identical movement command sequences shall yield 100% byte-identical state checksums across Clang on Apple Silicon, GCC on Linux x86_64, and MSVC on Windows, across Optimized, Debug, and ASan+UBSan configurations.
    * **SPEC-MOV-013.FAIL:** Any use of float, double, trigonometric standard library functions, or non-deterministic container iteration in movement logic shall fail compilation closed.
@@ -445,6 +509,35 @@ Here is the finalized and formatted section §7. Movement, pathfinding, formatio
 | SPEC-TER-004 | Water / Void Rift | Completely Impassable | Strictly prohibited inside compilation masks | Does not obstruct line of fire or vision layers |
 | SPEC-TER-005 | Mineral Cover | Completely Impassable | Temporary object; rejects building placement | Cylindrical collision volume shatters projectiles |
 | SPEC-TER-006 | Subsurface Conduit | Fixed transit velocity caps | Entrance/Exit footprints remain static | Suppresses internal entity vision and attack loops |
+
+### Restored control responsiveness contracts
+
+* **SPEC-CTL-016 — Command Responsiveness Invariant:** Player commands shall produce instantaneous visual acknowledgement in the received frame and execute authoritatively within the lockstep input delay window.
+  * **SPEC-CTL-016.AUTH:** Order acknowledgement audio/visual markers shall fire in the exact frame the click is sampled (≤16.67 ms at 60 fps). Authoritative order execution shall occur within `minimumInputDelayTicks` (3 ticks = 150 ms) in single-player mode; network play executes within the negotiated input delay defined by `REL-MP-005`, with the same immediate local acknowledgement.
+  * **SPEC-CTL-016.FAIL:** If simulation tick processing stalls, the input buffer shall queue orders without dropping clicks, up to a depth of 16 commands.
+  * **SPEC-CTL-016.VERIF:** `PKG-PHYS` (high-speed capture measuring click-to-ring latency).
+  * **SPEC-CTL-016.LANE:** Player Experience (`EchoesPlayerController`).
+
+* **SPEC-CTL-017 — Fluid Command Interruptibility:** In-flight movement and combat orders shall be immediately replaceable on the subsequent simulation tick without penalty stalls or artificial replanning delays.
+  * **SPEC-CTL-017.AUTH:** Issuing a new move order to a unit already in motion shall repath and redirect velocity on the very next simulation tick (≤50 ms).
+  * **SPEC-CTL-017.FAIL:** The unit shall not decelerate to zero before starting the new path unless the heading change exceeds 135 degrees.
+  * **SPEC-CTL-017.VERIF:** `SRC` (re-path latency and velocity continuity test).
+  * **SPEC-CTL-017.LANE:** Core Gameplay (`EchoesSimCore`).
+
+* **SPEC-CTL-018 — Micro-Management Usability Preservation:** The control system shall preserve high-cadence player micro-management (stutter-stepping, focus-firing, damaged unit retraction) without input dropping, queue starvation, or camera hitching.
+  * **SPEC-CTL-018.AUTH:** Rapid sequential selection and order issuance at up to 300 actions per minute (APM) shall process with 0% command drop and 100% spatial target fidelity.
+  * **SPEC-CTL-018.FAIL:** Any input queue drop under 300 APM bursts shall fail acceptance.
+  * **SPEC-CTL-018.VERIF:** `HUM` (experienced RTS player usability sessions under VAL-001 protocol).
+  * **SPEC-CTL-018.LANE:** Player Experience & QA.
+
+* **SPEC-CTL-019 — Simulation Tick Cost Ceiling for Steering:** Movement, steering, and separation calculations for up to 400 active units shall fit within the per-tick game thread budget.
+  * **SPEC-CTL-019.AUTH:** Total movement and path resolution time for 400 mobile units shall not exceed 3.0 ms per simulation tick on the baseline M1 Pro Apple Silicon processor. Spatial queries shall use an O(N) spatial hash grid, strictly prohibiting O(N^2) pairwise distance scans.
+  * **SPEC-CTL-019.FAIL:** Tick processing exceeding 4.0 ms shall flag a performance regression.
+  * **SPEC-CTL-019.VERIF:** `PKG-AUTO` (400-unit steering benchmark harness).
+  * **SPEC-CTL-019.LANE:** Core Gameplay & Performance (`EchoesSimCore`).
+
+`SPEC-CTL-019` measures the movement/path-resolution portion of the tick; `REL-SIM-012` measures
+the complete simulation tick. Both budgets apply to their named measurement scopes; neither relaxes the other.
 
 ## 8. Fog of war, intelligence, alerts, and reconnaissance
 
@@ -481,11 +574,29 @@ Here is the finalized and formatted section §7. Movement, pathfinding, formatio
 
 * **SPEC-RES-001 — Three resource pillars:** The economic engine shall be governed strictly by three resources: Matter (primary construction/production), Dawn (advanced tech, abilities, and Future Well commitment), and Logistics (population throughput ceiling). No secondary unmodeled currencies, hidden reserves, or temporal build-tokens shall exist.
 * **SPEC-RES-002 — Starting resources preset:** Standard skirmish and campaign operations shall initialize player resource balances strictly from the authored difficulty presets: Scarce (250 Matter / 18 Dawn), Standard (400 Matter / 30 Dawn), and Abundant (700 Matter / 60 Dawn). Both players receive identical starting balances and initialize with one Command Core and five worker units.
-* **SPEC-RES-003 — Matter deposit extraction constraints:** Matter deposits shall carry a finite resource volume (Standard node = 1,500 Matter). A single deposit node supports a maximum allocation of two worker units at optimal extraction rates; additional workers assigned to the same node shall wait visibly in an arrival queue. Workers extract Matter over a 20-tick harvest phase to fill a 10-unit cargo capacity.
-* **SPEC-RES-004 — Continuous automated worker gathering loop:** A valid Gather order shall transition a worker into an autonomous continuous state loop: Move to Node → Harvest 20 Ticks → Move to Drop-off → Deposit Cargo → Return to Node without requiring repeated manual clicks. The cycle repeats until deposit depletion, path invalidation, or manual command override.
-* **SPEC-RES-005 — Drop-off target selection:** Workers carrying cargo shall dynamically select the closest operational, reachable friendly drop-off structure. If the targeted drop-off is destroyed or disconnected en route, the worker shall recalculate pathing to the nearest alternate drop-off within exactly 1 simulation tick.
-* **SPEC-RES-006 — Deposit depletion lifecycle:** When a Matter deposit's volume reaches zero, it shall deplete immediately and leave a non-interactable remembered terrain marker. Assigned workers shall halt, cease collection loops, enter the Idle Worker registry, and fire a high-priority HUD alert. Workers shall never independently seek un-scouted resource nodes.
-* **SPEC-RES-007 — Logistics cap enforcement & supply deficit:** When committed population equals total Logistics capacity, production queues attempting to train new units shall freeze with the status LOGISTICS FULL. Destroying a supply structure while at maximum capacity places the player in supply deficit; existing units remain active and controllable, but all new production is blocked until supply infrastructure is restored.
+* **SPEC-RES-003 — Matter deposit extraction constraints:** A standard deposit contains 1,500 Matter and permits exactly one active extractor at a time, shared across factions. This follows the owner's repeated harvesting FSM instruction and Proceed on 2026-09-05, superseding the earlier two-position testing baseline. Assigned haulers are not capped; workers acquire the position on arrival and release it before delivery or on cancellation, death or invalid assignment. Waiters retain deterministic arrival order, with entity ID breaking same-tick ties, and occupy visible positions beside the node. Workers assigned to the same node may pass through one another during the harvest/delivery loop; terrain passability and combat targetability remain authoritative. Configured capacities and work rates remain untuned pending TBR-ECO-001; extraction commits the actual load at completion of its work phase. Delivered-income and faction balance acceptance still require measurement.
+* **SPEC-RES-004 — Continuous automated worker gathering loop:** Gather shall repeat Move to Node → Wait for Position if occupied → Harvest 20 Ticks → Move to Drop-off → Deposit Cargo → Return to Node without manual delivery commands. Depletion, invalid route/drop-off, an explicitly authored danger policy or player override interrupts the cycle. Extracting, carrying, delivering, waiting and failed-route states shall be distinguishable in animation and player feedback; idle or stranded workers shall not appear to be producing.
+* **SPEC-RES-005 — Drop-off target selection:** Respect an explicit operational, reachable friendly drop-off assignment; otherwise choose the known reachable operational friendly drop-off with lowest predicted round-trip travel time, using deterministic tie-breaking. Keep a valid assignment stable, including a player lock; do not oscillate between routes. If it becomes invalid, initiate reassessment within one simulation tick, show DROP-OFF LOST, and select a valid known fallback without hidden-state knowledge. If none exists, halt, retain cargo and show NO OPERATIONAL DROP-OFF. A lock shall not strand a worker silently or prevent this failure fallback; the player may replace it.
+* **SPEC-RES-006 — Deposit depletion lifecycle:** At zero Matter, stop extraction immediately and make the deposit non-interactable. Preserve recognizable exhausted terrain while observed and its last observed state under fog-of-war memory rules; no 200-tick disappearance or hidden-state reveal is permitted. Finish delivery of already extracted cargo through the valid delivery rules, then enter the Idle Worker registry and alert the player. Workers shall not automatically select another deposit; reassignment requires a player order, and unscouted deposits shall never be selected through hidden knowledge.
+* **SPEC-RES-007 — Logistics cap enforcement & supply deficit:** Reserve Logistics at production start. If available capacity cannot cover a new start, leave that unreserved queue entry waiting with LOGISTICS FULL. Capacity loss shall not disable completed units or freeze already reserved production: that production may finish, retaining its reservation until completion or cancellation. Block new starts until sufficient capacity returns; cancellation releases its reservation exactly once.
+
+### Stable economy records retained from the source specification
+
+These stable IDs were restored from the source specification. The owner subsequently accepted the worker
+economy resolution recorded in RequirementsState.md. The references below preserve the IDs while giving
+each overlapping rule one authoritative body; older alternatives are historical, not implementation instructions.
+
+* **SPEC-ECO-001 —** Starting resources. Skirmish presets are Scarce 250 Matter/18 Dawn, Standard 400/30, and Abundant 700/60. Both players receive the same preset and begin with one Command Core and five workers.
+
+* **SPEC-ECO-002 —** Matter deposits. Follow `SPEC-RES-003`. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance with the amended rule.
+
+* **SPEC-ECO-003 —** Automatic gather cycle. Follow `SPEC-RES-004`. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance with the amended rule.
+
+* **SPEC-ECO-004 —** Drop-off choice. Follow `SPEC-RES-005`. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance with the amended rule.
+
+* **SPEC-ECO-005 —** Depletion. Follow `SPEC-RES-006`. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance with the amended rule.
+
+* **SPEC-ECO-006 —** Logistics loss. Follow `SPEC-RES-007`. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance with the amended rule.
 
 ## §9.1 Resource monitor and telemetry deck tracking
 The persistent economy interface shall consume player-scoped visibility authority exclusively and render the following unified tracking rows within the top-left HUD telemetry deck:
@@ -513,9 +624,9 @@ The persistent economy interface shall consume player-scoped visibility authorit
 ### §10.1 Technology model and strategic progression
 
 Launch research upgrades are intentionally compact, providing exactly two sequential faction technologies to enforce clear timing choices rather than breadth:
-* **REL-FAC-028.MC.TECH — Compact technology:** Array Foundry research shall provide Prismatic Targeting (120 Matter/40 Dawn, 180 ticks, 115% combat damage) followed by Horizon Lattice (90/55, 220 ticks, requires Tier 1, 120% combat vision).
-* **REL-FAC-028.KA.TECH — Kharuun technology:** Growth Basin research shall provide Echo Cartography (100/45, 180 ticks, 120% combat vision) followed by Ancestral Edge (110/50, 220 ticks, requires Tier 1, 115% combat damage).
-* **REL-FAC-028.HC.TECH — Choir technology:** Chorus Loom research shall provide Held Alternatives (105/50, 190 ticks, 110% combat damage and vision) followed by Shared Resolution (115/60, 230 ticks, requires Tier 1, 120% combat vision). UI shall show every applied effect.
+* See `REL-FAC-028.MC.TECH` in Part III for the single canonical body; its full clauses remain binding.
+* See `REL-FAC-028.KA.TECH` in Part III for the single canonical body; its full clauses remain binding.
+* See `REL-FAC-028.HC.TECH` in Part III for the single canonical body; its full clauses remain binding.
 
 ## §11. Combat resolution, stances, and counterplay
 
@@ -530,6 +641,8 @@ Launch research upgrades are intentionally compact, providing exactly two sequen
 * **SPEC-CMB-009 — Lifecycle termination and remains cleanup:** When an entity's health reaches 0, it loses authority immediately, drops active order queues, clears its collision footprint from the spatial hash grid, and instantiates a cosmetic destruction view actor. Ruin wreckage blocks zero unit paths or commands, remaining on screen for exactly 200 simulation ticks before executing a clean fade out.
 * **SPEC-CMB-010 — Tactical disengagement and retreat:** Unit retreat is handled as ordinary user-directed movement, carrying zero hidden disengagement penalties or artificial morale state nerfs. Wounded units receive immediate low-health notifications and may be included in player-configured automatic automated retreat policies to designated safe nodes.
 
+* **SPEC-CMB-011 —** No hidden systems. There is no suppression, morale, stun, knockback, capture, stealth, camouflage, resurrection, or regeneration unless an explicit named ability in this document supplies the complete rule.
+
 ## §11.1 Combat stances
 All combat units support five explicit combat stances switchable via the HUD command card or hotkey cycling (F). Stance states govern autonomous acquisition range and maximum pursuit distance thresholds:
 
@@ -541,12 +654,16 @@ All combat units support five explicit combat stances switchable via the HUD com
 | SPEC-STANCE-004 | Return Fire | Engages exclusively units that damage self or guardee | Pursues up to 250 cm from initial damage coordinate |
 | SPEC-STANCE-005 | Hold Fire | None; suppresses all autonomous attack behaviors | Zero pursuit translation allowed (0.0 cm) |
 
+* **SPEC-CMB-012 —** Automation. Automatic ability use is disabled by default. A player may enable an ability-specific toggle where offered; the toggle shows allowed targets, resource floor, and cancellation. Automation never spends the last 20 Dawn unless the player lowers that reserve.
+
 ## §11.2 Unit and worker automation policies
 
 * **SPEC-AUT-001 — Player-owned automation guidelines:** Every automated behavior is strictly opt-in, toggled via selection panels, and immediately cancelled by any direct manual command. Automation handles execution tasks only; it is completely barred from choosing research, tech paths, adaptation states, or irreversible Well decisions.
 * **SPEC-AUT-002 — Worker automated repair policy:** When enabled inside an active selection group, workers may autonomously repair the closest damaged completed allied target within a player-set radius. Repair loops execute exclusively while the player's projected Matter balance remains above a user-defined threshold, automatically returning the worker to its prior task when the target is fully repaired.
 * **SPEC-AUT-003 — Worker automated flee policy:** Players may set a health threshold and designated fallback node (e.g. Anchor, Hearth, Concordance). Upon receiving hostile damage below that threshold, the worker drops active tasks and flees toward the safe point using known pathing, emitting a high-priority alert if no safe path is found.
 * **SPEC-AUT-004 — Idle worker registry tracking:** A worker unit with zero valid orders remains idle, receives an overhead idle indicator, and appends to the global idle-worker registry index. Idle workers never independently harvest, build, repair, or move into un-scouted territory.
+
+* **SPEC-AUT-005 —** Reinforcement policy. Each production structure may optionally assign completed combat units to one control group and send them along its rally route. The option is explicit, survives save/load, stops when the group is full or invalid, and never replaces an existing unit order after the unit joins.
 
 ## §12. Factions and strategic identities
 
@@ -648,6 +765,8 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 ## §13. Buildings and base-management actions
 ### §13.1 Meridian Compact structures
 
+* **SPEC-BLD-015 — Meridian structure function profiles.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 #### SPEC-BLD-015.MC.ANCHOR — Anchor
 * **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,400 HP. Sight Radius: 800 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Faction Command Core network root.
 * **Player Purpose:** Compact Command Core, primary worker producer, power network source vertex, and secure Matter resource drop-off.
@@ -674,6 +793,8 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 * **Opponent Counterplay:** Sever its connecting link node to drop the weapon offline instantly, or bypass its fixed firing arc entirely using mobile skirmishers.
 
 ### §13.2 Kharuun Assemblies structures
+
+* **SPEC-BLD-016 — Kharuun structure function profiles.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
 
 #### SPEC-BLD-016.KA.HEARTH — Memory Hearth
 * **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,300 HP. Sight Radius: 800 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Faction Command Core adaptation root.
@@ -702,6 +823,8 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 
 ### §13.3 Hollow Choir structures
 
+* **SPEC-BLD-017 — Choir structure function profiles.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 #### SPEC-BLD-017.HC.CONCORDANCE — Concordance
 * **Data Metrics:** Role: Headquarters Drop-off. Cost: 0 Matter / 0 Dawn. Health: 1,250 HP. Sight Radius: 900 cm. Construction Time: 400 ticks (20.0s). Base Footprint: 5×5 tiles. Logistics Modifier: +12 Capacity. Special: Reclaimed from ordinary non-Core coherence upkeep rules.
 * **Player Purpose:** Choir Command Core, primary worker producer, Matter resource drop-off, and global coherence obligation monitor.
@@ -728,6 +851,252 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 * **Strategic Playbook:** Position centrally so its 700 cm stabilization field envelopes both your Chorus Loom and Interval Loom, dropping their upkeep costs from 5 to 4 Dawn. Fields do not stack.
 * **Opponent Counterplay:** Focus or bypass the anchor; when its optimization field collapse, the next structure charges instantly spike back to full 5-Dawn costs.
 
+### Stable structure data and interaction records
+
+These original structure IDs remain the reference for their complete binding-value tables. The
+`SPEC-BLD-015..017` role/action profiles complement these records; equal numerical fields must remain
+synchronized. A profile never silently replaces the structure record or removes a command/failure rule.
+
+#### SPEC-STR-001 — Anchor
+
+
+| Field | Binding value |
+|---|---|
+| Role | Headquarters Dropoff |
+| Cost | 0 Matter / 0 Dawn |
+| Health / sight | 1400 / 800 cm |
+| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
+| Logistics | 12 |
+| Special | None |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Compact Command Core, worker producer, network root, and Matter drop-off. |
+| Selection options | Produce Surveyor; set rally; inspect economy/network; repair. |
+| How to use | Protect it because its loss is defeat. It cannot be rebuilt or replaced in standard play. |
+| Counterplay | Attack from several routes, sever outward links, and force the Compact to defend its center. |
+
+#### SPEC-STR-002 — Power Link
+
+
+| Field | Binding value |
+|---|---|
+| Role | Supply Node |
+| Cost | 90 Matter / 10 Dawn |
+| Health / sight | 450 / 500 cm |
+| Construction / footprint | 100 ticks (5.0 s) / 2×2 tiles |
+| Logistics | 6 |
+| Special | None |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Extend the Compact network, Matter drop-off coverage, and Logistics. |
+| Selection options | Inspect connection; set worker drop-off priority; dismantle is not available. |
+| How to use | Place links with overlap and defensible spacing; one link should not expose the whole chain. |
+| Counterplay | Sever narrow links and attack the isolated systems they supported. |
+
+#### SPEC-STR-003 — Array Foundry
+
+
+| Field | Binding value |
+|---|---|
+| Role | Production |
+| Cost | 180 Matter / 30 Dawn |
+| Health / sight | 760 / 500 cm |
+| Construction / footprint | 160 ticks (8.0 s) / 4×4 tiles |
+| Logistics | 0 |
+| Special | None |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Produce all Compact combat units and research Compact technology. |
+| Selection options | Queue up to five units; research one technology; reorder/cancel units; set rally. |
+| How to use | Add production only when resources and Logistics can sustain it; research consumes its active slot. |
+| Counterplay | Raid it during research, block emergence, or force production away from the needed counter. |
+
+#### SPEC-STR-004 — Aegis Post
+
+
+| Field | Binding value |
+|---|---|
+| Role | Defense |
+| Cost | 130 Matter / 30 Dawn |
+| Health / sight | 520 / 700 cm |
+| Construction / footprint | 120 ticks (6.0 s) / 2×2 tiles |
+| Logistics | 0 |
+| Special | Powered attack: 28 damage, 900 cm, 20 ticks; connection 800 cm. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Provide powered automatic area defense. |
+| Selection options | Inspect network source, power state, range, target priority, and hold-fire toggle. |
+| How to use | Cover an economy route or network junction; combine with units rather than relying on it alone. |
+| Counterplay | Sever power, attack beyond its arc/range, overwhelm another route, or focus it with a screened force. |
+
+#### SPEC-STR-005 — Memory Hearth
+
+
+| Field | Binding value |
+|---|---|
+| Role | Headquarters Dropoff |
+| Cost | 0 Matter / 0 Dawn |
+| Health / sight | 1300 / 800 cm |
+| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
+| Logistics | 12 |
+| Special | None |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Kharuun Command Core, worker producer, adaptation root, and Matter drop-off. |
+| Selection options | Produce Tender; set rally; inspect economy and migration network. |
+| How to use | Protect it because its loss is defeat. It cannot be rebuilt in standard play. |
+| Counterplay | Draw mobile forces away, deny rooted Waystones, then pressure the Hearth. |
+
+#### SPEC-STR-006 — Waystone
+
+
+| Field | Binding value |
+|---|---|
+| Role | Mobile Supply Node |
+| Cost | 80 Matter / 20 Dawn |
+| Health / sight | 390 / 500 cm |
+| Construction / footprint | 100 ticks (5.0 s) / 2×2 tiles |
+| Logistics | 5 |
+| Special | Uproot 40 ticks; move 120 cm/s at 125% damage; root 60 ticks. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Mobile Logistics and Matter drop-off node. |
+| Selection options | Root, Uproot, move while uprooted, set drop-off priority, inspect affected capacity. |
+| How to use | Root after scouting, then migrate when the value of a new route exceeds the exposure window. |
+| Counterplay | Attack during uproot/root, force capacity loss, occupy the intended footprint, or harass the new route. |
+
+#### SPEC-STR-007 — Growth Basin
+
+
+| Field | Binding value |
+|---|---|
+| Role | Production |
+| Cost | 165 Matter / 35 Dawn |
+| Health / sight | 700 / 500 cm |
+| Construction / footprint | 160 ticks (8.0 s) / 4×4 tiles |
+| Logistics | 0 |
+| Special | Adaptation site within 600 cm; see Warform Adaptation. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Produce Kharuun combat units, research, and enable Warform Adaptation. |
+| Selection options | Queue/reorder/cancel units; research; set rally; inspect nearby eligible units and molt risk. |
+| How to use | Place where returning units can adapt without exposing the entire economy. |
+| Counterplay | Attack during research or molt, deny the 600 cm site, and force repeated expensive adaptations. |
+
+#### SPEC-STR-008 — Listening Spine
+
+
+| Field | Binding value |
+|---|---|
+| Role | Detection |
+| Cost | 115 Matter / 25 Dawn |
+| Health / sight | 440 / 900 cm |
+| Construction / footprint | 120 ticks (6.0 s) / 2×2 tiles |
+| Logistics | 0 |
+| Special | Moving signatures within 2600 cm; 200 cm resolution; 40 ticks. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Provide broad anonymous vibration detection. |
+| Selection options | Inspect coverage and contact history; toggle alert threshold. |
+| How to use | Cover routes that direct vision cannot safely hold and combine with Resonants for confirmation. |
+| Counterplay | Approach stationary, split routes, use projections, or destroy the Spine. |
+
+#### SPEC-STR-009 — Concordance
+
+
+| Field | Binding value |
+|---|---|
+| Role | Headquarters Dropoff |
+| Cost | 0 Matter / 0 Dawn |
+| Health / sight | 1250 / 900 cm |
+| Construction / footprint | 400 ticks (20.0 s) / 5×5 tiles |
+| Logistics | 12 |
+| Special | None |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Choir Command Core, worker producer, Matter drop-off, and coherence summary. |
+| Selection options | Produce Threadkeeper; set rally; inspect all upcoming structure charges. |
+| How to use | Anchor the economy and keep a Dawn reserve. It has no ordinary coherence charge and cannot be rebuilt. |
+| Counterplay | Pressure Dawn and structures simultaneously, then attack the Core when the field contracts. |
+
+#### SPEC-STR-010 — Interval Loom
+
+
+| Field | Binding value |
+|---|---|
+| Role | Supply Node |
+| Cost | 85 Matter / 25 Dawn |
+| Health / sight | 400 / 600 cm |
+| Construction / footprint | 110 ticks (5.5 s) / 2×2 tiles |
+| Logistics | 6 |
+| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Provide Logistics and a Matter drop-off while adding a recurring coherence obligation. |
+| Selection options | Inspect next charge, route assignment, capacity, and projected insolvency. |
+| How to use | Build only when its route and added capacity generate more value than its 5-Dawn charge every 600 ticks. |
+| Counterplay | Force the Choir to choose between the Loom, production, abilities, and Well control. |
+
+#### SPEC-STR-011 — Chorus Loom
+
+
+| Field | Binding value |
+|---|---|
+| Role | Production |
+| Cost | 175 Matter / 40 Dawn |
+| Health / sight | 680 / 550 cm |
+| Construction / footprint | 170 ticks (8.5 s) / 4×4 tiles |
+| Logistics | 0 |
+| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Produce Choir combat units and research Choir technology. |
+| Selection options | Queue/reorder/cancel units; research; set rally; inspect production plus coherence forecast. |
+| How to use | Synchronize production with Dawn income and identity windows. |
+| Counterplay | Attack before a charge, interrupt a key unit, and force the Choir to overspend. |
+
+#### SPEC-STR-012 — Phase Anchor
+
+
+| Field | Binding value |
+|---|---|
+| Role | Coherence |
+| Cost | 120 Matter / 35 Dawn |
+| Health / sight | 480 / 800 cm |
+| Construction / footprint | 130 ticks (6.5 s) / 2×2 tiles |
+| Logistics | 0 |
+| Special | Coherence: 5 Dawn every 600 ticks; 4 within one Phase Anchor field. |
+
+
+| Player question | Answer |
+|---|---|
+| Purpose | Reduce the recurring cost of a compact Choir position. |
+| Selection options | Inspect coherence field, protected structures, next charges, and hold-fire. |
+| How to use | Within 700 cm, each eligible non-Core Choir structure pays 4 rather than 5 Dawn per charge. Fields do not stack. |
+| Counterplay | Destroy or bypass it; when its field ends, the next full charges remain due and must be forecast. |
+
 ## §14. Technology and strategic progression
 
 | ID | Faction | Technology | Cost | Time | Requires | Effect | Why choose it |
@@ -744,6 +1113,21 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 
 ---
 
+### Stable technology records
+
+| ID | Faction | Technology | Cost | Time | Prerequisite | Effects | Player purpose |
+|---|---|---|---|---|---|---|---|
+| SPEC-TECH-001 | Meridian Compact | Prismatic Targeting | 120 M / 40 D | 180 ticks (9.0s) | None | Damage 115%; vision 100% | Create a decisive Lancer/Bulwark damage timing. |
+| SPEC-TECH-002 | Meridian Compact | Horizon Lattice | 90 M / 55 D | 220 ticks (11.0s) | mc_prismatic_targeting | Damage 100%; vision 120% | Extend safe acquisition and network-supported pressure. |
+| SPEC-TECH-003 | Kharuun Assemblies | Echo Cartography | 100 M / 45 D | 180 ticks (9.0s) | None | Damage 100%; vision 120% | Improve scouting, route control, and pre-contact adaptation. |
+| SPEC-TECH-004 | Kharuun Assemblies | Ancestral Edge | 110 M / 50 D | 220 ticks (11.0s) | ka_echo_cartography | Damage 115%; vision 100% | Convert successful approach and adaptation into damage. |
+| SPEC-TECH-005 | Hollow Choir | Held Alternatives | 105 M / 50 D | 190 ticks (9.5s) | None | Damage 110%; vision 110% | Increase both present combat value and information before the final commitment. |
+| SPEC-TECH-006 | Hollow Choir | Shared Resolution | 115 M / 60 D | 230 ticks (11.5s) | hc_held_alternatives | Damage 100%; vision 120% | Extend vision for coordinated identity and coherence play. |
+
+The detailed `SPEC-TEC-003..008` descriptions and `REL-FAC-028.*.TECH` clauses refine these same six
+technologies; they do not define six additional upgrades. Preserve both IDs and all nonduplicated clauses.
+
+
 ## §15. Future Wells
 
 * **SPEC-WEL-004 — Contested landmark entity rule:** A Future Well exists as an impassable, indestructible neutral spatial map landmark. One eligible friendly worker unit captures within an authored 420 cm zone over 300 uncontested simulation ticks. Enemy contestation instantly halts progress; vacating the zone decays progress at -1 point per tick. Control can change hands continuously until a protocol is committed.
@@ -759,7 +1143,7 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 * **SPEC-WEL-003 — Information and determinism invariance:** Capture tracking, contestation states, public telegraph warnings, landscape deformations, income intervals, and ownership transfers shall pass through the same client visibility masks. All state transitions must persist deterministically across save/load records and replays.
 
 
-## 16. Single-player opponent AI
+## 16. Fair opponent and allied AI
 
 * **SPEC-AI-001 —** Fair information. AI reads the same player-scoped terrain, vision, public events, sensor contacts, and aged memory available to a human player. It never reads hidden units, resources, queues, routes, or Well choices.
 * **SPEC-AI-002 —** Equal rules. AI pays the same costs, waits the same times, obeys the same Logistics, pathing, fog, range, cooldown, formation, Well, and coherence rules, and receives no hidden income or damage bonuses on any difficulty.
@@ -845,7 +1229,7 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 * **SPEC-BAL-007 — Balance Evidence Expiry and Re-Validation:** Any modification to unit statistics, economy rates, combat algorithms, or movement code shall automatically invalidate existing balance evidence.
   * **SPEC-BAL-007.AUTH:** The balance evidence registry shall record the exact Git commit SHA of the simulation rules pack. Merging a simulation rule change automatically marks all balance claims as `STALE — RE-RUN REQUIRED`.
   * **SPEC-BAL-007.FAIL:** Quoting balance win rates derived from a prior rules commit is prohibited.
-  * **SPEC-BAL-007.VERIF:** `SRC` (SHA binding assertion in `AssetRegister.md` / `ProjectLedger.md`).
+  * **SPEC-BAL-007.VERIF:** `SRC` (SHA binding assertion in `Docs/RequirementsState.md` and the retained balance artifacts).
   * **SPEC-BAL-007.LANE:** Coordinator & QA.
 
 * **SPEC-BAL-008 — AI Instrument Competence Baseline:** Balance validation evidence shall be measured exclusively with AI models that demonstrate baseline RTS competence, ensuring the instrument measures game balance rather than AI incompetence.
@@ -858,11 +1242,11 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 
 ### §16.5 AI Architecture and Fair-Fog Decision Weights
 
-* **REL-AI-016 — Strategic Controller State Expansion:** The AI controller shall transition between macroscopic strategy states using a strict, fair-fog weighted evaluation matrix rather than omniscient thresholding.
-  * **REL-AI-016.ESTABLISH_ECONOMY:** Base weight 100. Multiplied by 1.5 if `Worker_Count < Optimal_Saturation`. Multiplied by 0.2 if `Logistics_Cap_Reached`.
-  * **REL-AI-016.RAID:** Base weight 40. Multiplied by 2.0 if an un-defended enemy worker route is identified in scout memory. Multiplied by 0.1 if `Enemy_Defensive_Structures > 2` near target.
-  * **REL-AI-016.RECOVER:** Base weight 0. Jumps to 200 (Highest Priority) if `Command_Core_HP < 50%` or `Dawn_Balance < 0` (Insolvency).
-  * **REL-AI-016.FAIL:** Any AI state transition triggered by information hidden within the fog of war (e.g., enemy queuing a unit outside of vision) fails the fair-play constraint.
+* **REL-AI-041 — Strategic Controller State Expansion:** The AI controller shall transition between macroscopic strategy states using a strict, fair-fog weighted evaluation matrix rather than omniscient thresholding.
+  * **REL-AI-041.ESTABLISH_ECONOMY:** Base weight 100. Multiplied by 1.5 if `Worker_Count < Optimal_Saturation`. Multiplied by 0.2 if `Logistics_Cap_Reached`.
+  * **REL-AI-041.RAID:** Base weight 40. Multiplied by 2.0 if an un-defended enemy worker route is identified in scout memory. Multiplied by 0.1 if `Enemy_Defensive_Structures > 2` near target.
+  * **REL-AI-041.RECOVER:** Base weight 0. Jumps to 200 (Highest Priority) if `Command_Core_HP < 50%` or `Dawn_Balance < 0` (Insolvency).
+  * **REL-AI-041.FAIL:** Any AI state transition triggered by information hidden within the fog of war (e.g., enemy queuing a unit outside of vision) fails the fair-play constraint.
 
 ## 17. Skirmish configuration and maps
 
@@ -887,23 +1271,122 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 | SPEC-SKM-012 | Crownfall Basin | 64×64. Twin vertical ridges with three gates plus north/south shelf walls. The player chooses which gate becomes economy route, defense line, or flank. | One Well offset north of center; two home, two near-expansion, and four contested deposits. |
 | SPEC-SKM-013 | The Confluence Ring | 64×64. Central walled ring with four cardinal gates, west/east shards, and repeated Choir geometry. Control of entrances matters more than raw distance. | One central Well inside the ring; two home deposits and six distributed contested deposits. |
 
-* **SPEC-MAP-001 —** Spawn fairness. Each map supports two fixed mirrored-distance spawn regions with equivalent starting build area, resource travel time within 5%, Well approach time within 5%, and no sightline into the opposing start.
+* **SPEC-MAP-001 —** Spawn fairness. Each standard skirmish map in §17 supports two fixed mirrored-distance spawn regions with equivalent starting build area, resource travel time within 5%, Well approach time within 5%, and no sightline into the opposing start. Mission-authored campaign layouts remain governed by their distinct objective/access contracts, not mirrored skirmish starts.
 * **SPEC-MAP-002 —** Map truth. Every map ships with a machine-readable contract for grid, starts, terrain, resources, Well, passages, objectives, camera bounds, Reshape outcomes, fallbacks, and deterministic hash.
 * **SPEC-MAP-003 —** Post-match. Results show outcome cause, duration, resource curves, unit production/losses, damage, scouting coverage, idle-worker time, Well control/protocol, Logistics blocks, and AI doctrine/difficulty. Rematch preserves settings; Restart uses the same seed; New Match returns to setup.
 
+### Approved additional match formats
+
+These records derive from the owner's 2026-09-04 scope decision, `REL-AI-038..040` and `REL-MP-008`.
+The earlier two-player faction/spawn settings remain the offline 1v1 contract; they do not limit the
+separately configured team/FFA sessions or silently supply their map layouts.
+
+* **SPEC-SKM-014 — Format selection.** Setup shall distinguish offline 1v1 PvAI, network 1v1, 2v2, 3v3, comp-stomp and up-to-four-player FFA before deployment; only configurations with complete authored rules and qualified map bindings are selectable in the release. Owner: Player/Network. Verification: `PKG-PHYS`, including invalid format and return paths.
+* **SPEC-SKM-015 — Participant configuration.** Setup shall enforce the selected format's human/AI occupancy and the six-participant maximum required by 3v3. Empty, duplicate, out-of-range or incompatible slots reject with an actionable reason before simulation starts. Owner: Network. Verification: `PKG-AUTO` for every supported format and invalid occupancy.
+* **SPEC-SKM-016 — Team authority.** Team assignments, allied command/ping/tribute permissions and victory membership shall be explicit and identical across peers. A participant cannot command another participant's units or disclose another team's hidden state by changing a local team label. Owner: Network/Simulation. Verification: `PKG-AUTO`, including forged/changed assignments and unauthorized commands.
+* **SPEC-SKM-017 — Session separation.** Offline entry shall make no network calls; network entry shall show connection, host/participant state and session rules. Leaving or failing a network session shall release its sockets/resources before returning to offline play. Owner: Network. Verification: `PKG-AUTO` for mode transitions, failure and cleanup.
+* **SPEC-SKM-018 — Map-format binding.** Every offered format shall have a registered map variant with matching participant/spawn count, team access, resources, Well placement, camera and simulation bounds. The three named offline maps remain required. An old mirrored two-spawn pack cannot launch a team/FFA match by silently stacking participants or renaming the map. Missing/incompatible bindings reject before deployment. Owner: World/Network. Verification: `PKG-AUTO`, including missing and mismatched bindings; fairness and rendered review remain separate master obligations.
+
 ## 18. Campaign structure, persistence, and progression
 
-* **SPEC-CAM-001 —** Structure. The campaign contains fifteen operations: five in Necessary Fires, five in The Cost of One Future, and five in Crownfall. All operations remain replayable after first completion.
+* **SPEC-CAM-001 —** Structure. The campaign contains fifteen operations: five in Necessary Fires, five in The Cost of One Future, and five in Crownfall. Each operation has its own unique story-driven battlefield under `SPEC-MAP-004`; the fifteen locations form the connected journey in `SPEC-CAM-041..042`. All operations remain replayable after first completion.
 * **SPEC-CAM-002 —** Feature introduction. Every operation has a capability manifest marking each unit, building, command, ability, resource, terrain interaction, and UI system as introduced, practiced, assessed, retained, or locked. A low-pressure lesson precedes required mastery.
 * **SPEC-CAM-003 —** Persistence. Mission completion, Well records, district allocation, public evidence, optional objectives, campaign rewards, unlocked roster, and ending eligibility persist. Units, unit damage, ordinary resources, constructed bases, and skirmish research reset between operations. There is no unit permadeath or persistent army.
 * **SPEC-CAM-004 —** Rewards. Rewards change a later tactical or strategic decision and show exact effects. They never create an unknowable trap, purchase power outside the campaign, or replace the consequence of the original choice.
 * **SPEC-CAM-005 —** Retry. Autosave occurs before deployment, at authored checkpoints, and after successful result commitment. Retry restores the last checkpoint. Failure writes no campaign consequence. Replaying a completed operation shows alternate outcomes but does not rewrite the established ledger.
 * **SPEC-CAM-006 —** Branch clarity. The campaign map shows completed operations, known consequences, available next operations, and the decision classes affecting the future. It does not reveal unearned narrative information or use a hidden morality score.
 
+### 18.0 Campaign places, connected world, and character continuity
+
+**Owner direction, 2026-09-04:** Missions 1–15 each have a unique map serving the story. The intended
+experience is a large connected world experienced through distinct RTS battlefields, a strong storyline,
+and characters with meaningful backstories. The comparison to an MMO describes that sense of scale,
+connection, and immersion. The separate owner decision on 2026-09-04 adds Conquest and bounded multiplayer; the world-scale analogy itself adds no MMO or shared persistent-world system.
+The fifteen campaign maps are a separate deliverable from the three skirmish maps in §17. Shared assets,
+regional motifs, and revisited regions are permitted; substituting recolored copies of one battlefield
+for distinct mission maps is not.
+
+* **SPEC-MAP-004 — Distinct story-driven campaign battlefields.** Every operation M01–M15 shall bind to
+  its own identifiable authored map contract and a distinguishable battlefield whose layout and landmarks
+  serve that operation's story and objectives. Reusable kits and compiler infrastructure may be shared;
+  every mission must retain its own playable spatial identity.
+  * **SPEC-MAP-004.BINDING:** A complete source mapping shall contain exactly fifteen operation rows,
+    M01 through M15, each linked to one unique mission-map ID and its source/compiled identity. A missing,
+    duplicate, or unresolved binding fails this leaf. Verification: `SRC`.
+  * **SPEC-MAP-004.LAYOUT:** Each map contract shall define its mission-specific topology, routes,
+    objective locations, resource/Well behavior where applicable, camera bounds, and deterministic output
+    identity under `SPEC-MAP-002`. All fifteen shall be compared; a renamed or recolored duplicate layout
+    without a distinct mission-specific spatial design fails. Verification: `SRC`.
+  * **SPEC-MAP-004.PRESENTATION:** Packaged views of all fifteen battlefields at gameplay camera distances
+    shall show each map's named landmarks and distinct composition in service of its approved setting.
+    Palette swaps alone fail this check. Required accessibility variants retain landmark/objective
+    readability. Verification: `PKG-REND`.
+  * **SPEC-MAP-004.REFUSAL:** A missing, duplicate, stale, or mismatched campaign-map binding shall refuse
+    deployment with an actionable explanation; it shall not silently substitute another mission or a
+    generic skirmish map. Existing source-integrity and campaign recovery criteria remain applicable.
+    Verification: `PKG-AUTO`.
+  * **SPEC-MAP-004.OWNER:** Owner review shall explicitly cover the fifteen-map comparison and the
+    distinct identity of every mission before this parent can be accepted. Verification: `OWNER`.
+  Dependencies: `SPEC-MAP-002`, `SPEC-CAM-001`, `SPEC-PLAN-001..015`, `SPEC-MSN-001..015`, applicable art,
+  accessibility, fog, performance, save/replay, and content-integrity requirements.
+
+* **SPEC-CAM-041 — Connected Soryn campaign journey.** The campaign shall present its fifteen mission
+  locations as parts of one coherent large world. The campaign map and transitions shall communicate
+  where the player is, why the next available battle matters, and how it follows from the authored journey
+  and recorded consequences, without revealing unearned narrative information.
+  * **SPEC-CAM-041.CONNECTIONS:** Each M01–M15 source record shall identify its region/site, immediate
+    story stake, and authored relationship to the preceding/next operation where one exists. The opening
+    identifies the starting context; the finale resolves its place in the journey. Missing links or
+    contradictions with the mission/canon record fail. Verification: `SRC`.
+  * **SPEC-CAM-041.MAP:** The packaged campaign map and mission transitions shall show current/completed
+    and available locations, their known connections, and the reason for the next available operation,
+    consistent with `SPEC-CAM-006` and the current campaign ledger. Verification: `PKG-REND`.
+  * **SPEC-CAM-041.RECOVERY:** Save/resume, retry, replay, and result commitment shall retain the correct
+    mission/location and earned-story boundary; they shall not skip a site, reveal an unearned connection,
+    or imply a consequence that was not recorded. Verification: `PKG-AUTO`.
+  * **SPEC-CAM-041.EXPERIENCE:** The required uncoached campaign playthrough shall record whether the
+    player understands the current place, immediate stakes, and connection to the wider journey at each
+    mission transition. Confusion and disconnects are retained as findings; source coverage alone cannot
+    establish immersion. Verification: `HUM`.
+  * **SPEC-CAM-041.OWNER:** Owner review shall assess the connected-world experience across the full
+    campaign, with unresolved continuity gaps visible in the review packet. Verification: `OWNER`.
+  Dependencies: `SPEC-CAM-003`, `SPEC-CAM-005`, `SPEC-CAM-006`, `SPEC-MAP-004`, mission narrative/transition
+  requirements. This record adds no seamless traversal, shared persistent battlefield, or MMO systems.
+
+* **SPEC-CAM-042 — Character and story expressed through place and battle.** Every mission shall connect
+  its approved objective and setting to the characters' immediate motivations, relevant established
+  backstories/relationships, and the larger storyline. Briefings, dialogue, environmental storytelling,
+  events, and results shall consistently express those connections within the mission's authorized
+  command roles and modeled consequences.
+  * **SPEC-CAM-042.TRACE:** Maintain a fifteen-row mission trace within the existing design sources that
+    links each `SPEC-PLAN-*`/`SPEC-MSN-*` record to its site, story stake, relevant character/backstory or
+    relationship, environmental expression, and known consequence. Missing authored support is an explicit
+    design gap, never fabricated canon. Verification: `SRC`.
+  * **SPEC-CAM-042.DELIVERY:** The packaged mission shall deliver its mapped story/character connections
+    through the approved narrative and environmental surfaces, including required subtitles and voice-off
+    accessibility. An authored file without in-game delivery fails. Verification: `PKG-REND`.
+  * **SPEC-CAM-042.CONSISTENCY:** Narrative source and presentation mappings shall agree with the
+    character's approved knowledge, motivations, command authority, and permitted consequences across
+    authored result variants. A map concept cannot silently add a contradictory event or outcome.
+    Verification: `SRC`.
+  * **SPEC-CAM-042.RESULT_PATHS:** Packaged review shall exercise authored alternative valid mission
+    results, replay, and recovery and confirm that delivered story/character cues match the selected
+    result and earned knowledge. Source inspection alone does not establish this behavior.
+    Verification: `PKG-REND`.
+  * **SPEC-CAM-042.EXPERIENCE:** The required uncoached campaign review shall retain observations of
+    character recognition, understanding of motivations/stakes, and story continuity, including weak or
+    confusing moments. These observations support revision and owner review; no fabricated numerical
+    immersion score substitutes for them. Verification: `HUM`.
+  * **SPEC-CAM-042.OWNER:** Owner review shall explicitly assess storyline strength, character/backstory
+    expression, and connection to Soryn across all fifteen missions. Verification: `OWNER`.
+  Dependencies: creative canon, approved character/script records, `SPEC-CAM-041`, `SPEC-MAP-004`, mission,
+  cinematic, subtitle, audio, and accessibility requirements. Unsupported narrative changes follow the
+  existing owner-decision process; this requirement authorizes no invented prior owner approval.
+
 ### 18.1 Mission plan
 
 
-| ID | ID | Scale | Duration | Command | Starting package | System focus | Primary purpose | Optional/reward or consequence |
+| Requirement | Mission | Scale | Duration | Command | Starting package | System focus | Primary purpose | Optional/reward or consequence |
 |---|---|---|---|---|---|---|---|---|
 | SPEC-PLAN-001 | M01 | MICRO | 20–25 min | Meridian | Anchor; 6 Surveyors; 2 Lancers; 1 Bulwark; 1 Relay Skiff | Selection, camera, gathering, construction, combat, Future Wells | Recover the archive carrier and evacuate after one Well decision. | Optional: save both outer reserve stations; reward: +1 starting Surveyor in Meridian-led operations. |
 | SPEC-PLAN-002 | M02 | MICRO | 20–25 min | Kharuun | Memory Hearth; 6 Tenders; 2 Riftstalkers; 1 Resonant | Vibration contacts, patrol, fixed subsurface passages | Defend a migration route while reconciling conflicting terrain memories. | Optional: verify all seven memory markers; reward: longer vibration-contact linger in campaign only. |
@@ -912,7 +1395,7 @@ An eligible Intervalist, Lacuna Warden, or Afterimage unit may spend 20 Dawn to 
 | SPEC-PLAN-005 | M05 | HYBRID | 25–30 min | Meridian/Kharuun alliance fiction; Meridian command | Anchor detachment; mixed allied NPC column | Guard, escort, ceasefire rules, scripted-event fairness | Hold a ceasefire corridor and preserve witnesses while pressure reveals a wider conflict. | Optional: prevent damage to both networks; reward: additional branch evidence and later dialogue, not a combat bonus. |
 | SPEC-PLAN-006 | M06 | MICRO | 20–25 min | Meridian | Small mobile force; no initial production | Low-force reconnaissance, evidence protection, avoidance | Trace erased census records and extract civilians and evidence. | Optional: recover every census fragment; reward: unlock the Archive district as a later power candidate. |
 | SPEC-PLAN-007 | M07 | HYBRID | 25–30 min | Kharuun | Hearth; scouting and mobile-infrastructure force | Paired witnesses, detection triangulation | Prove a correspondence between erased census entries and curated communal-memory omissions. | Optional: leave neutral records untouched; reward: additional ending eligibility context. |
-| SPEC-PLAN-008 | M08 | MICRO | 20–25 min | Choir contact through bounded proxy command | Intervalists and Afterimages; no full base | Choir identity, projections, reciprocal contact | Establish actionable contact with Neme across overlapping possible states. | Optional: make contact without destroying a neutral defense; reward: one additional M15 dialogue resolution path. |
+| SPEC-PLAN-008 | M08 | MICRO | 20–25 min | Talar Venn / Meridian proxies; Neme guides contact | Meridian proxy force and paired-state witnesses under SPEC-MSN-008; no playable Choir base or roster | Choir identity, projections, reciprocal contact | Establish actionable contact with Neme across overlapping possible states. | Optional: make contact without destroying a neutral defense; reward: one additional M15 dialogue resolution path. |
 | SPEC-PLAN-009 | M09 | MACRO | 30–35 min | Meridian | Full Compact base and roster | Resource triage, multi-base defense, irreversible allocation | Power exactly two of Life Support, Transit, and Archive while defending the city. | The unpowered district becomes an explicit deferred liability and changes M15 hold duration. |
 | SPEC-PLAN-010 | M10 | HYBRID | 25–30 min | Kharuun | Full Kharuun base and roster | Three-faction contact, sequential Listening Spines, Well commitment | Establish branch-specific contact at Lume Reach and resolve one new Well protocol. | The chosen Lume protocol becomes a final-ending eligibility axis. |
 | SPEC-PLAN-011 | M11 | MACRO | 30–35 min | Kharuun | Full Kharuun base | Ledger readback, multi-site coordination, route inheritance | Assemble public coalition evidence using the exact prior campaign record. | Optional: hold all public interfaces simultaneously; reward: shorter M12 activation hold. |
@@ -1243,10 +1726,14 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 
 ## §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`)
 
-* **REL-AUD-001 — BS.1770-4 Loudness Compliance:** All audio submixes (music, dialogue, SFX) shall be mastered to a combined target integrated loudness of -16 LUFS (±1 LU), with a true peak no higher than -1 dBTP.
-  * **REL-AUD-001.VERIF:** `PKG-AUTO` (BS.1770-4 programmatic meter measurement across a 30-minute standard match).
-* **REL-AUD-002 — Dynamic Side-Chain Vocal Ducking (Dumper Loops):** When critical narrative or Meridian Operations Annunciator dialogue is triggered, the engine shall apply a 300ms attack / 500ms release ducking loop, reducing the `SFX` and `Music` submixes by exactly -6 dB to guarantee vocal intelligibility without jarring drops.
-* **REL-AUD-003 — Low-Level PBR Audio Cue Parameters:** Physical combat and movement sounds shall use physically-based spatial attenuation. Sound radii must match the simulated unit footprint and decay logarithmically to 0% volume at 2,500 cm.
+* **REL-AUD-019 — BS.1770-4 Loudness Compliance:** All audio submixes (music, dialogue, SFX) shall be mastered to a combined target integrated loudness of -16 LUFS (±1 LU), with a true peak no higher than -1 dBTP.
+  * **REL-AUD-019.VERIF:** `PKG-AUTO` (BS.1770-4 programmatic meter measurement across a 30-minute standard match).
+The alternative dialogue-ducking policies `REL-AUD-022` and `REL-AUD-023` await the owner
+choice recorded under `TBR-DOC-003` in RequirementsState.md. Neither may be selected implicitly or
+claimed jointly satisfied while the routing/attack conflict remains unresolved.
+
+* **REL-AUD-022 — Dynamic Side-Chain Vocal Ducking (Dumper Loops):** When critical narrative or Meridian Operations Annunciator dialogue is triggered, the engine shall apply a 300ms attack / 500ms release ducking loop, reducing the `SFX` and `Music` submixes by exactly -6 dB to guarantee vocal intelligibility without jarring drops.
+* **REL-AUD-021 — Low-Level PBR Audio Cue Parameters:** Physical combat and movement sounds shall use physically-based spatial attenuation. Sound radii must match the simulated unit footprint and decay logarithmically to 0% volume at 2,500 cm.
 
 ## 20. Interface, selection, controls, and player feedback
 
@@ -1332,12 +1819,74 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | SPEC-VISD-003 | Meridian form | Orthogonal frames, plates, rails, exposed load paths, redundant conduits, modular hardpoints, and readable status bands. |
 | SPEC-VISD-004 | Kharuun form | Grown mineral-organic facets, strata, cavities, and maintained living surfaces without primitive or tribal coding. |
 | SPEC-VISD-005 | Choir form | Repeated near-identical geometry, offset silhouettes, luminous edges, and locally contradictory alignment that remains target-readable. |
-| SPEC-VISD-006 | World | Terrain silhouette and route shape communicate gameplay first. Decorative dressing never obscures units, markers, footprints, projectiles, or construction validity. |
+| SPEC-VISD-006 | World | Terrain silhouette and route shape communicate gameplay first. Decorative dressing never obscures units, markers, footprints, projectiles, or construction validity. Macro composition and fine detail follow the story/place brief in SPEC-VISD-008 and preserve authored passability and objective readability. |
 | SPEC-VISD-007 | Effects | Every effect identifies source, faction, target, radius/facing, start, active state, expiry, and result. Reduced-motion/flashing variants preserve timing and information. |
 
 * **SPEC-ART-001 —** Unit readability. At normal gameplay camera, faction, role, ownership, selection, health band, order, and high-impact ability state are identifiable within one second under combat load.
-* **SPEC-ART-002 —** Animation set. Each unit has idle, locomotion, turn, acquire, wind-up, attack, recovery, hit, ability, state transition, death, and selection acknowledgment as applicable. Workers add gather, carry, deliver, construct, and repair. Buildings add construction, operational, offline, produce/research, damaged, and destruction states.
+* **SPEC-ART-002 —** Animation set. Each unit has idle, locomotion, turn, acquire, wind-up, attack, recovery, hit, ability, state transition, death, and selection acknowledgment as applicable. Workers add gather, carry, deliver, construct, and repair. Buildings add construction, operational, offline, produce/research, damaged, and destruction states. Motion shall express purposeful anticipation, action, result, and recovery where applicable to the role and authoritative state; transitions remain smooth and readable under the existing responsiveness, frame-budget, and accessibility requirements.
 * **SPEC-ART-003 —** Camera framing. Cinematics may use closer detail, but all gameplay assets must be authored first for tactical camera legibility. No cinematic model or effect may imply a player ability absent from gameplay.
+
+### 23.1 Contextual craftsmanship and functional identity
+
+**Owner direction, 2026-09-04:** every map, unit, building, and visible world element needs deliberate large
+and small details appropriate to its story, place, purpose, and action. Planning precedes production.
+Visuals, sound, response, and movement must feel coherent and carefully made; a populated scene or a
+technically valid asset is insufficient. Subjective impact is evaluated through retained player/owner
+review, not asserted by the producing agent.
+
+* **SPEC-VISD-008 — Contextual design brief before production.** Before constructing or materially
+  revising a map, landmark, unit, building, or presentation family, its design brief shall establish the
+  relevant story point, purpose, place, and constraints. Maintain the brief in the existing appropriate
+  map/art/audio/character design document or source record; do not create competing document copies.
+  * **SPEC-VISD-008.CONTEXT:** The brief shall cite the mission/canon and relevant requirements, identify
+    who uses or inhabits the place/object and why, and state what belongs there and what must be absent.
+    Unsupported lore, mechanical capability, or consequence is marked as a proposal. Verification: `SRC`.
+  * **SPEC-VISD-008.DETAIL:** The brief shall identify large-scale composition/silhouette and meaningful
+    medium/fine detail, their material/construction/history rationale, and the camera distances at which
+    each matters. Random clutter or detail unrelated to place/function does not satisfy this leaf.
+    Verification: `SRC`.
+  * **SPEC-VISD-008.ACTION:** The brief shall specify the applicable visible states, movement/action logic,
+    corresponding sound/effects, accessibility behavior, and performance/simulation boundaries. Intentional
+    silence, static elements, and other inapplicable fields need a rationale, not silent omission.
+    Verification: `SRC`.
+  * **SPEC-VISD-008.REVIEW:** Internal design review shall confirm these fields and traceability before
+    production proceeds. Missing context or an unresolved material canon/mechanic conflict blocks only
+    that dependent production portion; approved reusable parts and independent work may continue.
+    Verification: `SRC`.
+  Dependencies: `SPEC-AUTH-005`, creative canon, `SPEC-MAP-004`, `SPEC-CAM-042`, `SPEC-VISD-001..007`, and
+  applicable asset/source/provenance requirements. This is preparation for quality, not evidence of it.
+
+* **SPEC-ART-004 — Role-legible, coherent production detail.** Maps, units, buildings, and landmarks shall
+  combine deliberate detail with readable purpose. A unit or building shall communicate its faction,
+  broad operational role, principal use, and material/functional logic at gameplay distance through its
+  form, components, posture, state, movement, effects, and sound. Those cues shall agree with what it
+  actually does and with its contextual brief.
+  * **SPEC-ART-004.FORM:** Packaged roster/building reviews shall show role-defining silhouettes and
+    functional components at normal gameplay zoom and required accessibility settings. Essential role
+    identity shall not depend solely on color, tiny decorative detail, or a tooltip. Verification: `PKG-REND`.
+  * **SPEC-ART-004.CONTEXT:** Packaged reviews of each mission's world/landmark families shall show the
+    brief's coherent material, regional, story, and use-related detail at tactical and intended close
+    views. Placeholder assembly, arbitrary clutter, and unexplained visual contradictions are defects.
+    Verification: `PKG-REND`.
+  * **SPEC-ART-004.MOTION:** Applicable movement and work/combat/production state transitions shall
+    visibly express purposeful action and recovery without abrupt unexplained snaps, sliding unsupported
+    by the motion design, or movement inconsistent with role/material. Existing response/performance
+    thresholds apply; polish shall not delay authoritative command behavior. Verification: `PKG-REND`.
+  * **SPEC-ART-004.SOUND:** Listening review during those actions shall confirm that sound material,
+    event timing, force/scale, and spatial source agree with the visible event and defined cue; intentional
+    silence remains explicit. A waveform or generated file alone fails this check. Verification: `PKG-REND`.
+  * **SPEC-ART-004.AUTHORITY:** Presentation mappings shall consume authorized state, preserve fair fog,
+    and leave simulation, navigation, collision/input, save/replay, and checksums within their contracts.
+    Verification: `SRC`.
+  * **SPEC-ART-004.RECOGNITION:** The required uncoached review shall ask players to identify broad unit
+    and building roles, intended use, and active/result states from gameplay presentation, recording
+    ambiguity and misidentification as defects. Existing timed readability gates remain in force.
+    Verification: `HUM`.
+  * **SPEC-ART-004.OWNER:** Owner review shall assess the integrated craft of world, units, buildings,
+    motion, feedback, and sound against their briefs and the professional quality bar. Source completeness,
+    screenshots alone, or an agent's assertion of polish cannot accept this parent. Verification: `OWNER`.
+  Dependencies: `SPEC-ART-001..003`, `SPEC-VISD-008`, `SPEC-AUD-001..003`, `SPEC-AUDF-*`, applicable input,
+  movement, performance, accessibility, and provenance requirements.
 
 ## 24. Audio, music, voice, and cinematics
 
@@ -1347,7 +1896,7 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | SPEC-AUDF-001 | Meridian music | Measured pulse, prepared piano, restrained brass, and mechanical resonance. |
 | SPEC-AUDF-002 | Kharuun music | Interlocking rhythms and resonant stone/ceramic timbres without generic tribal coding. |
 | SPEC-AUDF-003 | Choir music | Harmony resolves in more than one direction before committing; temporal displacement remains rhythmic and intelligible. |
-| SPEC-AUDF-004 | Effects | Material truth: engineered collapse, mineral fracture, temporary coherence, Matter handling, weapon roles, routes, and Well states are audible and faction-readable. |
+| SPEC-AUDF-004 | Effects | Material truth: engineered collapse, mineral fracture, temporary coherence, Matter handling, weapon roles, routes, and Well states are audible and faction-readable. Sound agrees with the same contextual brief, visible material/action, and authoritative event as the motion and effects. |
 | SPEC-AUDF-005 | Interface | Brief modern confirmation and alert grammar; no retro bleeps; rate limiting preserves critical information. |
 | SPEC-AUDF-006 | Voice | Character performances follow identity, motivation, relationship, pace, and emotional beat. Mara teaches; the Annunciator reports state; no narrator. |
 
@@ -1362,7 +1911,7 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 * **SPEC-SAV-001 —** Transactional save. Manual save, autosave, checkpoint, settings, campaign ledger, and replay write atomically through temporary file, validation, and replace. A failed write preserves the prior valid generation.
 * **SPEC-SAV-002 —** Slots. Campaign provides three named journeys plus autosave and one prior validated generation. Skirmish provides quicksave and manual saves. Delete requires confirmation and recovery information.
 * **SPEC-SAV-003 —** Compatibility. A save records schema, content identifiers, map, mission, seed, difficulty, campaign ledger, entities, orders, queues, timers, AI state, fog, alerts, and deterministic checksum. Unsupported saves fail without mutation and explain why.
-* **SPEC-SAV-004 —** Replay. Every match and completed operation may produce a deterministic command replay with setup, content hash, seed, inputs, periodic checksums, outcome, and branch context. Replays are local and contain no observer or multiplayer authority.
+* **SPEC-SAV-004 —** Replay. Every match and completed operation may produce a deterministic command replay with setup, content hash, seed, inputs, periodic checksums, outcome, and branch context. Replays are local records and cannot issue commands into or alter a live multiplayer match. Recorded team/participant/session context and authorized replay observation follow the applicable REL-QOL/REL-MP contracts; replay data never grants live-player authority.
 * **SPEC-SAV-005 —** Replay browser. Filter by mode, operation/map, faction, result, date, and duration; inspect version-independent content identifiers; play, pause, seek from checkpoints, change camera, and exit safely.
 
 ## 26. Technical architecture and content contracts
@@ -1379,7 +1928,7 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | SPEC-MOD-007 | Presentation | Never mutates authority; supports quality scaling, accessibility, fair fog, pooling, and graceful missing-asset failure. |
 
 * **SPEC-ARC-001 —** Data ownership. Faction, unit, building, technology, Well, map, mission, dialogue, localization, and asset metadata live in validated source files. Generated or compiled outputs are never hand-edited.
-* **SPEC-ARC-002 —** Trust boundaries. Save files, replay files, settings, and content packs are untrusted input. Validate size, schema, identifiers, numeric bounds, references, paths, and checksums before allocation or mutation.
+* **SPEC-ARC-002 —** Trust boundaries. Save files, replay files, settings, content packs, network packets and session metadata are untrusted input. Validate size, schema, identifiers, numeric bounds, references, paths, and checksums before allocation or mutation.
 * **SPEC-ARC-003 —** Failure behavior. Missing or invalid optional presentation assets use a registered fallback and visible diagnostics outside release UI. Missing authoritative content prevents start with a stable error; it never substitutes different gameplay silently.
 
 ## 27. Performance, stability, and platform
@@ -1392,14 +1941,14 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 | SPEC-BUD-003 | Fog | ≤1.5 ms baseline p95. |
 | SPEC-BUD-004 | Path burst | ≤6.0 ms for accepted stress burst without sustained hitching. |
 | SPEC-BUD-005 | Memory | Resident memory ≤10 GB on baseline and ≤6.5 GB on minimum profile. |
-| SPEC-BUD-006 | Scale | 400-unit/four-force stress scene remains controllable; launch 1v1 design targets 200 simultaneous controllable units. |
+| SPEC-BUD-006 | Scale | Retain the 400-unit/four-force stress scene and 200-unit 1v1 design target. Qualify every approved team/FFA format at its authored full participant/unit load, including six-participant 3v3, under the same applicable budgets. A four-force result cannot qualify six participants. |
 | SPEC-BUD-007 | Save | Ordinary save initiation ≤250 ms without corrupting active play; background completion reports success/failure. |
 | SPEC-BUD-008 | Stability | 60-minute rendered match, multi-hour AI soak, repeated save/load/restart, and clean exit with no crash, hang, leak trend, or deterministic divergence. |
 
 * **SPEC-PLAT-001 —** Display matrix. 1280×720, 1440×900, 1600×900, 1920×1080, 2560×1440, native Retina, windowed, fullscreen, and live resize remain readable and operable at every supported HUD scale.
 * **SPEC-PLAT-002 —** Graphics scaling. Low, Medium, High, and Auto alter texture, shadow, effects, foliage, post-processing, and resolution scale without changing visibility authority, collision, targetability, terrain truth, or simulation.
 * **SPEC-PLAT-003 —** Distribution. Ship a Release configuration app signed with Developer ID, notarized, stapled, installable by an ordinary user, removable without orphaned privileged components, and qualified on a clean supported Mac.
-* **SPEC-PLAT-004 —** Privacy. The game operates offline, creates no account, sends no telemetry by default, and stores saves, settings, logs, and replays locally. Any future diagnostic upload requires explicit user selection and preview.
+* **SPEC-PLAT-004 —** Privacy. Offline campaign, Conquest, tutorial and skirmish require no network or account. Network activity is confined to explicitly initiated multiplayer sessions; zero-telemetry obligations remain binding. Saves, settings, logs and replays are stored locally. Any future diagnostic upload requires explicit user selection and preview.
 
 ## 28. Team ownership and development sequence
 
@@ -1436,21 +1985,21 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 
 ### §28.1 Low-Level Verification Suite Expansion
 
-#### [Acceptance Card: REL-AI-016.SIG — Competitive Balance Matchup AI Fair-Play]
-* **REL-AI-016.PRE:** Headless match simulation environment instantiated. AI Doctrine set to `Raider`. Enemy base constructed entirely within fog of war without ever being scouted by the AI.
-* **REL-AI-016.ACT:** Advance simulation 5,000 ticks. Evaluate AI decision weight vectors.
-* **REL-AI-016.AUTH:** The RAID weight evaluates to 40 (Base), ignoring the hidden enemy worker line. The AI does not route units to the hidden base.
-* **REL-AI-016.FAIL:** AI routes a strike force directly to the hidden base, failing the fair-fog constraint.
-* **REL-AI-016.VERIF:** `SRC` (`EchoesAIControllerFogTest.cpp`) asserting that `OpponentMemoryState` contains zero references to the hidden coordinates.
-* **REL-AI-016.LANE:** Opponent AI & QA.
+#### [Acceptance Card: REL-AI-041.SIG — Strategic Controller Fair-Fog Scenario]
+* **REL-AI-041.SIG.PRE:** Headless match simulation environment instantiated. AI Doctrine set to `Raider`. Enemy base constructed entirely within fog of war without ever being scouted by the AI.
+* **REL-AI-041.SIG.ACT:** Advance simulation 5,000 ticks. Evaluate AI decision weight vectors.
+* **REL-AI-041.SIG.AUTH:** The RAID weight evaluates to 40 (Base), ignoring the hidden enemy worker line. The AI does not route units to the hidden base.
+* **REL-AI-041.SIG.FAIL:** AI routes a strike force directly to the hidden base, failing the fair-fog constraint.
+* **REL-AI-041.SIG.VERIF:** `SRC` (`EchoesAIControllerFogTest.cpp`) asserting that `OpponentMemoryState` contains zero references to the hidden coordinates.
+* **REL-AI-041.SIG.LANE:** Opponent AI & QA.
 
 #### [Acceptance Card: REL-SAV-008.SIG — Cross-Platform Endian-Safe Binary Serialization]
-* **REL-SAV-008.PRE:** A complex, 45-minute campaign save file (`Save01.sav`) generated on an Apple Silicon (little-endian) architecture containing 2,000 active entities.
-* **REL-SAV-008.ACT:** Read binary file via the internal platform-agnostic bitstream deserializer. Compare header CRC32 checksums.
-* **REL-SAV-008.AUTH:** Deserialized entity property floats and integer flags map perfectly into engine structs without bit-shifting corruption.
-* **REL-SAV-008.FAIL:** Big-endian misinterpretation corrupts entity health to NaN or absurd values, crashing the simulation tick.
-* **REL-SAV-008.VERIF:** `PKG-AUTO` cross-compilation harness writing and verifying dummy saves via the bitstream parser.
-* **REL-SAV-008.LANE:** Core Gameplay & Save Recovery.
+* **REL-SAV-008.SIG.PRE:** A complex, 45-minute campaign save file (`Save01.sav`) generated on an Apple Silicon (little-endian) architecture containing 2,000 active entities.
+* **REL-SAV-008.SIG.ACT:** Read binary file via the internal platform-agnostic bitstream deserializer. Compare header CRC32 checksums.
+* **REL-SAV-008.SIG.AUTH:** Deserialized entity property floats and integer flags map perfectly into engine structs without bit-shifting corruption.
+* **REL-SAV-008.SIG.FAIL:** Big-endian misinterpretation corrupts entity health to NaN or absurd values, crashing the simulation tick.
+* **REL-SAV-008.SIG.VERIF:** `PKG-AUTO` cross-compilation harness writing and verifying dummy saves via the bitstream parser.
+* **REL-SAV-008.SIG.LANE:** Core Gameplay & Save Recovery.
 
 ## 29. Requirement acceptance-card template
 
@@ -1709,29 +2258,19 @@ Lesson cycle (binding for every lesson): Explain → highlight or demonstrate �
 Governance and bodies migrated verbatim from `InitialReleaseRequirements.md` on 2026-09-03.
 
 
-Authority:** owner order of 2026-09-02 ("Initial-Release Requirements Expansion and Agent
-Synchronization Order"), received verbatim by the Claude Code coordinator. Owner and final
-acceptance authority: Angelis Pseftis. This file is the sole normative ledger for `REL-*`
-requirements (REL-GOV-001). It references and never duplicates `DEMO-*` bodies
-(`Docs/DemoReadinessRequirements.md`); all `DEMO-*` requirements are prerequisites to release.
-Orchestration/gates: `Docs/GameCompletionDirective.md` (bidirectional gate mapping per
-REL-GOV-002 is an open ledger task). Roles: Claude Code coordinator + lane fleet = write owner;
-ChatGPT Codex = read-only requirements/evidence reviewer (audits, challenges; never edits or
-commits; Claude verifies Codex findings against the live checkout and integrates accepted ones
-through its own write lane).
+**Origin:** owner requirements-expansion order of 2026-09-02. The migrated `REL-*` bodies now live in
+this master alongside `DEMO-*`; retired ledgers are historical sources only. The master defines behavior,
+`RequirementsState.md` records lifecycle/evidence/decisions, and `AGENTS.md` controls current task roles.
+No model-specific writing/review restriction is inherited from the original coordinator roster.
 
 ## Record schema and states
 
-Every REL-* record carries: ID; normative shall statement; player outcome; preconditions;
-dependencies; acceptance threshold; failure/recovery behavior; accessibility behavior;
-automated verification; packaged verification; human-play requirement; owner acceptance
-requirement; evidence location; exact source and package identity; engineering state; human
-acceptance state; reopening conditions. Baseline default for all records below: state `OPEN`,
-no bindings, evidence under `WorkstreamControl/evidence/release/<req-id>/` when produced.
-Agent states: `OPEN → IN PROGRESS → IMPLEMENTED → AGENT VERIFIED → EVIDENCE READY → AWAITING
-HUMAN ACCEPTANCE`. Owner-only: `HUMAN ACCEPTED`, `HUMAN REJECTED — CHANGES REQUIRED`,
-`COMPLETE`. Batch acceptance permitted; parents stay open until every mandatory child is
-accepted.
+Every REL-* body carries its ID, normative statement, player outcome, preconditions, dependencies,
+acceptance threshold, failure/recovery behavior, accessibility behavior, and required verification classes.
+Evidence locations, source/package identity, engineering state, human acceptance, and reopen conditions
+belong in `RequirementsState.md`, using its state vocabulary. Record new evidence under the shared
+contract's designated root. Batch acceptance remains permitted; a parent stays open until every mandatory
+child has the required acceptance. A created or edited body is not a completed implementation.
 
 ## Acceptance-card rule (applies to every DEMO-* and REL-* requirement)
 
@@ -1765,17 +2304,15 @@ exact candidate build.
 
 ## Scope boundary and TBR decisions (§4)
 
-1.0 scope per `GameCompletionDirective.md` (preserved until the owner changes it): macOS Apple
-Silicon; single-player; fifteen campaign operations; four reachable endings; Glass Scar PvAI
-skirmish; Meridian Compact, Kharuun Assemblies, Hollow Choir selectable in skirmish; five AI
-personalities; full professional art/audio/voice/cinematics/UI/accessibility/saves; Developer
-ID signed and notarized distribution; coherent website/trailer/manual/rights/known-limitations;
-no multiplayer; no Windows/Linux; no maps beyond approved. One consolidated scope-sufficiency
-decision packet SHALL be prepared (recommendation, cost, schedule, dependencies, playable
-consequences per item) and presented together:
+The current release scope is defined by `SPEC-PRD-003..008`: macOS Apple Silicon, fifteen unique
+story-operation maps/four endings, the separate 25-sector Conquest/roguelite, three named offline PvAI
+maps and bounded session multiplayer with team/comp-stomp/FFA modes. All required art/audio/voice,
+cinematics/UI/accessibility/save, distribution and evidence gates still apply. No Windows/Linux or MMO
+release is implied. Remaining scope decisions identify recommendation, cost, schedule, dependencies and
+player consequences in RequirementsState.md; old observed implementation limits do not shrink this scope.
 
-* **TBR-SCP-001 — Keep multiplayer out of 1.0 or add human-versus-human multiplayer.
-* TBR-SCP-002 — Keep one skirmish map or expand the launch map set. Proposed professional breadth:** at least six fully finished skirmish maps unless human testing supports an intentionally compact alternative.
+* **TBR-SCP-001 — Resolved 2026-09-04:** Angelis includes bounded multiplayer, team battles and free-for-all in this release. Implement and qualify the full applicable REL-MP obligations; local/loopback code is not release evidence.
+* **TBR-SCP-002 — Named maps and format eligibility:** The three named maps in §17 remain required. Neither the retired one-map snapshot nor the six-map proposal controls scope. Every supported multiplayer format needs an authored map/spawn binding under SPEC-SKM-018; no additional fixed map count is imposed here.
 * **TBR-SCP-003 — Keep the currently observed approximate roster of four units, four buildings, and two technologies per faction or expand strategic breadth. Proposed review target:** at least eight fieldable unit roles, six constructed building roles, and ten meaningful technology or upgrade decisions per faction, unless a smaller roster demonstrates equivalent strategic depth.
 * **TBR-SCP-004 — Direct-download release, Steam release, or both.
 * TBR-SCP-005 — English-only launch or additional launch languages.
@@ -1796,52 +2333,50 @@ The complete normative shall statements for the following sections were delivere
 the owner's 2026-09-02 order and are transcribed in the section files of this ledger BELOW —
 this ledger is authoritative once the transcription audit (QA lane) confirms fidelity.
 
-### §6 Release governance and integrity — REL-GOV-001..015
-### §7 First-run, front door, onboarding — REL-FTU-001..012
-### §8 Core simulation, time, player authority — REL-SIM-001..012
-### §9 Economy and logistics — REL-ECO-001..014 (Matter, Dawn, Logistics)
-### §10 Construction, production, research — REL-BLD-001..014
-### §11 Selection, movement, commands, combat — REL-CMB-001..018
-### §12 Factions, rosters, strategic depth — REL-FAC-001..013
-### §13 Future Wells — REL-WEL-001..012 (canonical values: Harvest 180-tick telegraph/500 Dawn; Preserve 15 Dawn per 300 ticks/1,400 cm radius; Reshape 120 Dawn/180-tick telegraph/1,800-tick manifestation — changes require owner approval)
-### §14 Campaign and narrative — REL-CAM-001..021
-### §15 Skirmish, AI, difficulty, balance — REL-AI-001..021 (balance target REL-AI-016: no non-mirror Standard matchup outside 40–60% and no start-position advantage >5 points over the approved test set, absent owner-accepted design reason)
-### §16 Replays and QoL — REL-QOL-001..012 (unless owner excludes at scope approval)
+### §6 Release governance and integrity — see the exact family bodies and identifier index
+### §7 First-run, front door, onboarding — see the exact family bodies and identifier index
+### §8 Core simulation, time, player authority — see the exact family bodies and identifier index
+### §9 Economy and logistics — see the exact family bodies and identifier index
+### §10 Construction, production, research — see the exact family bodies and identifier index
+### §11 Selection, movement, commands, combat — see the exact family bodies and identifier index
+### §12 Factions, rosters, strategic depth — see the exact family bodies and identifier index
+### §13 Future Wells — see the exact family bodies and identifier index
+### §14 Campaign and narrative — see the exact family bodies and identifier index
+### §15 Skirmish, AI, difficulty, balance — see the exact family bodies and identifier index
+### §16 Replays and QoL — see the exact family bodies and identifier index
 ## §17 UI and interaction
 
-[... existing REL-UI-001 through REL-UI-016 requirements live here ...]
 
 ### §17.1 Tactical HUD and Command Deck Specifications
-* **REL-UI-017 — Production UMG/Slate Command Deck Architecture:** The lower-right viewport HUD interface shall render as a rigid 3x3 interactive command grid built within a modular UMG framework...
-* **REL-UI-018 — Interface Atlas and Multi-Channel Affiliation Feedback:** All interface highlight assets, slot backings, and status toggles shall be compiled into a single 1024x1024 compression-optimized UI texture atlas...
-#### [Interface Sheet: REL-UI-004 — Upper Resource Telemetry Deck Layout]
+* **REL-UI-025 — Production UMG/Slate Command Deck Architecture:** The lower-right viewport HUD interface shall render as a rigid 3x3 interactive command grid built within a modular UMG framework.
+* **REL-UI-027 — Interface Atlas and Multi-Channel Affiliation Feedback:** All interface highlight assets, slot backings, and status toggles shall be compiled into a single 1024x1024 compression-optimized UI texture atlas.
+#### [Interface Sheet: REL-UI-004.SHEET — Upper Resource Telemetry Deck Layout]
 * **.WIDGET_GEOM:** Fixed horizontal bounding box ($420 \times 60 \text{ pixels}$) anchored tightly to the top-left viewport corner. Grids use an explicit 9-slice boundary layout with a persistent 30% text expansion safety margin.
 * **.TELEMETRY_DATA:** Matter and Dawn resource text labels map dynamically to 64-bit integer values. Trailing 30s and 60s income velocity metrics stream via low-overhead dynamic array sampling fields, updating every 20 simulation ticks.
 * **.VIS_FEEDBACK:** Resource values flash a low-frequency ambient alert pulse if expenditures drop net values near zero. Toggling the high-contrast accessibility preset replaces alpha-blended backgrounds with flat, high-contrast black backings.
 
-#### [Interface Sheet: REL-UI-003 — Selection Inspector Panel Layout]
+#### [Interface Sheet: REL-UI-003.SHEET — Selection Inspector Panel Layout]
 * **.WIDGET_GEOM:** Balanced central panel container ($680 \times 180 \text{ pixels}$) anchored cleanly to the bottom-center screen margin, fully supporting a runtime interface scaling range of 80% to 150% without bounding box clipping.
 * **.INSPECTOR_DATA:** Displays a 2D portrait texture, 32-bit unique entity identifier string, alphanumeric health/shield values, and a dynamic cargo grid array. Multi-unit grouping creates a clean grid of type-classified unit icons embedded with numeric quantity badges.
 * **.VIS_FEEDBACK:** Selected units project a ground selection ring matching faction identity. Hovering mouse cursors over component slots exposes tooltips detailing active unit roles, limiting, and precise mechanical counterplay.
 
-#### [Interface Sheet: REL-UI-005 — Tactical Minimap Window Layout]
+#### [Interface Sheet: REL-UI-005.SHEET — Tactical Minimap Window Layout]
 * **.WIDGET_GEOM:** Rigid square container ($240 \times 240 \text{ pixels}$) anchored to the bottom-left screen border, constructed within Unreal's production Slate architecture to completely bypass Canvas immediate-mode drawing loops.
 * **.MAP_DATA:** Renders static 64x64 navigation cost grid contours, friendly unit positions, revealed enemy entities, and telegraphed Well pings using dual-channel non-color vector markers. Superimposes a dynamic bounding box tracking the main camera viewport frustum.
 * **.VIS_FEEDBACK:** Left-clicking or click-dragging on the minimap surface updates camera coordinates instantaneously. Clicks falling outside active vision boundaries route commands to a 12px proximity vector fallback layer to handle input triggers with 100% spatial target fidelity.
 
-#### [Interface Sheet: REL-UI-010 — Mission Briefing Terminal Layout]
+#### [Interface Sheet: REL-UI-010.SHEET — Mission Briefing Terminal Layout]
 * **.WIDGET_GEOM:** Modal overlay container panel ($1280 \times 720 \text{ pixels}$) scaling dynamically across the 7-target screen resolution matrix without text clipping or widget clipping defects.
 * **.TERMINAL_DATA:** Renders level map topography vectors, briefing dialogue text strings, character portrait channels, primary/optional objective tracking rows, and high-visibility irreversible choice warnings.
 * **.VIS_FEEDBACK:** Hovered menu buttons play the interface click audio cue. Clicking the primary `DEPLOY` action executes validation locks, clears the terminal, and launches the active single-player simulation loop within exactly 1 tick.
 
 ## §18 World art, units, structures, animation, VFX
 
-[... existing REL-ART-001 through REL-ART-020 requirements live here ...]
 
 ### §18.1 Faction Asset Material and Geometry Manifests
-* **REL-ART-024 — Meridian Roster Engineering form Language:** All Meridian units and structures shall package finished production models enforcing an engineered silhouette language: heavy plates, orthogonal load frames, and exposed conduits. Model properties scale to a maximum LOD0 cap of ≤8,000 triangles, transitioning smoothly down to ≤3,500 triangles at distancezoom thresholds. Team color accent mapping uses exclusive vertex ID masks.
-* **REL-ART-025 — Kharuun Roster Grown Mineral Architecture:** All Kharuun units and structures shall package models enforcing a faceted basalt silhouette layout with zero organic smoothing properties. Carapace plates use packed 2048x2048 PBR texture stacks mapping micro-noise normal maps. Dynamic molten or adaptation textures route through localized subsurface-scattering shaders, clamping Broken-Sun Amber emissive channels to a strict maximum floor of ≤15.0% mesh surface area.
-* **REL-ART-026 — Glass Scar Landscape Passability Truth:** Environmental terrain geometry maps shall compute passability parameters across an authoritative 64x64 navigation cost grid. Natural cliff spurs and rock meshes are locked to strict Blocked cell properties, while open paths clamp decorative ground assets to a maximum vertical displacement threshold of ≤20 cm. All landscape surfaces enforce a strict matte roughness floor of ≥0.85 to completely eliminate glint reflection noise.
+* **REL-ART-028 — Meridian Roster Engineering form Language:** All Meridian units and structures shall package finished production models enforcing an engineered silhouette language: heavy plates, orthogonal load frames, and exposed conduits. Model properties scale to a maximum LOD0 cap of ≤8,000 triangles, transitioning smoothly down to ≤3,500 triangles at distancezoom thresholds. Team color accent mapping uses exclusive vertex ID masks.
+* **REL-ART-029 — Kharuun Roster Grown Mineral Architecture:** All Kharuun units and structures shall package models enforcing a faceted basalt silhouette layout with zero organic smoothing properties. Carapace plates use packed 2048x2048 PBR texture stacks mapping micro-noise normal maps. Dynamic molten or adaptation textures route through localized subsurface-scattering shaders, clamping Broken-Sun Amber emissive channels to a strict maximum floor of ≤15.0% mesh surface area.
+* **REL-ART-030 — Glass Scar Landscape Passability Truth:** Environmental terrain geometry maps shall compute passability parameters across an authoritative 64x64 navigation cost grid. Natural cliff spurs and rock meshes are locked to strict Blocked cell properties, while open paths clamp decorative ground assets to a maximum vertical displacement threshold of ≤20 cm. All landscape surfaces enforce a strict matte roughness floor of ≥0.85 to completely eliminate glint reflection noise.
 
 ### §18.2 Production Visual Asset Cards
 #### [Asset Card: REL-ART-005.MC.LANCER — Visual Asset Manifest]
@@ -1851,35 +2386,35 @@ this ledger is authoritative once the transcription audit (QA lane) confirms fid
 * .ANIM_RIG: 18-bone kinematic layout. Skeleton requires named sockets: `Muzzle_Flash_01`, `Target_Anchor_Center`, and `Left_Tread_Vector`.
 * .VFX_POLY: Niagara system attachment bounds restricted to local emitter nodes. Particles utilize the default un-shadowed optimization profile.
 
-#### [Asset Card: REL-FAC-025.MC.SURVEYOR — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-025.MC.SURVEYOR.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤4,500 tris; LOD1 ceiling ≤1,800 tris. Model properties enforce an engineered industrial look: orthogonal frames, heavy machined chassis plates, visible conduit tracks, and modular hardpoint mounts.
 * .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Emissive Mask). Ceramic chassis plates use a micro-noise normal map. Cargo handling tools use a packed grease/scratch utility map.
 * .MAT_RULE: Albedo channel masked by TeamColor vertex data. Faction emissive conduit paths utilize a steady Cyan color space shader, restricted to ≤5% mesh surface area to guarantee tactical readability. No attack properties exist.
 * .ANIM_RIG: 12-bone kinematic rigging layout. Includes fixed named socket nodes: `Harvest_Tether_Muzzle`, `Cargo_Drop_Anchor`, and `Center_Hitbox_Socket`. Locomotion rotates mechanical treads relative to velocity.
 * .VFX_POLY: Activating `Network Repair` or Well harvesting projects a linear Cyan particle stream linking muzzle to target. Niagara system emitters are presentation-only, drawing zero shadow cascades to preserve performance.
 
-#### [Asset Card: REL-FAC-025.MC.BULWARK — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-025.MC.BULWARK.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤8,200 tris; LOD1 ceiling ≤3,600 tris. Heavy, mechanical box outline built from thick segmented plates. Sub-object separation required for `Left_Shield_Panel` and `Right_Shield_Panel` components to handle physical transformation.
 * .TEX_MAPS: 2048x2048 PBR texture stack mapping heavy matte ceramic panel values. Shield boundaries apply an un-glinted scuff noise layer to preserve clean readability.
 * .MAT_RULE: Base material applies a strict matte roughness floor of ≥0.85. Deployed states project a 120-degree directional visual shield gradient, rendering dynamic chromatic ripple animations upon projectile impact that scale with hit damage.
 * .ANIM_RIG: 18-bone mechanical transformation rig. Setup action drives a 20-tick deployment sequence uncoupling side shielding to form a rigid frontal wall; packing folds panels to a compact travel profile over 15 ticks.
 * .VFX_POLY: Niagara concussive flash emitters hook onto forward muzzle sockets. Destroyed units spawn decoupled cosmetic debris pieces that tumble dynamically down slopes on the client thread with zero navigation influence.
 
-#### [Asset Card: REL-FAC-025.MC.SKIFF — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-025.MC.SKIFF.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤5,000 tris; LOD1 ceiling ≤2,100 tris. Light, aerodynamic scout silhouette following an orthogonal rail framework. Main hull floats cleanly above an engineered anti-gravity radiator core.
 * .TEX_MAPS: 2048x2048 PBR stack mapping polished ceramic textures and copper Link link conduits. Includes a dedicated dynamic opacity map to handle temporary logistics relay visualizations.
 * .MAT_RULE: Continuous Cyan link conduit lines glow with an un-bloomed, low-saturation material shader, physically capped to ≤8% visible mesh surface area. Hovering behaviors use standard ground raycasts to float the view actor without altering simulation passability.
 * .ANIM_RIG: 8-bone rigging layout carrying a continuous harmonic hover bobbing component. Includes fixed named sockets: `Scouting_Sensor_Pod` and `Logistics_Relay_Beam`. Snaps facing instantly under Reduced Motion accessibility profiles.
 * .VFX_POLY: Activating `Extend Relay` projects a wide conical Cyan vector volume toward the nearest grid node within 700 cm. Emitters discard runtime CPU dynamic heap allocations to stay strictly within the performance budget.
 
-#### [Asset Card: REL-BLD-015.MC.LINK — Visual Asset Manifest]
+#### [Asset Card: REL-BLD-015.MC.LINK.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤3,500 tris; LOD1 ceiling ≤1,200 tris. Compact 2x2 tile footprint. Heavy vertical antenna mast locked onto an orthogonal concrete base foundation ring.
 * .TEX_MAPS: 1024x1024 compact PBR texture maps (Albedo, Normal, packed Metallic/Roughness utility channels). Surface panels apply high-contrast non-color grid markings to satisfy accessibility rules.
 * .MAT_RULE: Network connection lines project a continuous Cyan light spline linking adjacent links within 800 cm. Severing a node immediately darkens the conduit line within 1 tick, altering the structure's visual state to offline.
 * .ANIM_RIG: NOT APPLICABLE. Structure remains statically batched on the GPU thread. Destructible states trigger structural material degradation animations when health drops below 30%.
 * .VFX_POLY: Ruin states trigger destruction VFX and clear terrain footprints after exactly 200 ticks. Environmental particle cascades run on the GPU thread with zero shadow allocations.
 
-#### [Asset Card: REL-BLD-015.MC.FOUNDRY — Visual Asset Manifest]
+#### [Asset Card: REL-BLD-015.MC.FOUNDRY.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤8,000 tris; LOD1 ceiling ≤3,400 tris. Heavy 4x4 tile base footprint. Industrial manufacturing center featuring orthogonal gantries, visible crane rails, and thick assembly plates.
 * .TEX_MAPS: 2048x2048 PBR texture pack mapping grit, oxidation, and industrial grease noise layers. Output bays include high-contrast yellow non-color directional markers.
 * .MAT_RULE: Operational states update albedo textures to reveal interior assembly lights. Processing research upgrades hooks a progress percentage vector to an exterior data status band. Entire mesh maintains a matte roughness floor of ≥0.85.
@@ -1893,21 +2428,23 @@ this ledger is authoritative once the transcription audit (QA lane) confirms fid
 * .ANIM_RIG: 4-bone rigging controlling core exhaust vanes and data grid extensions. Critical damage triggers macro panel deformation states, venting black smoke and electrical sparks when health falls below 30%.
 * .VFX_POLY: Core collapse initializes a massive, screen-space independent Cyan blast wave decal ring that vitrifies adjacent ground coordinates without altering simulation data. Purges from render pipelines within 200 ticks.
 
-.MAT_RULE: Firing loops update barrel emissive lines to an intense Cyan-white state. Severing connected network power links immediately darkens all status bands, dropping the turret into a heavy, drooping unpowered offline visual pose within 1 tick..ANIM_RIG: 2-bone pitch and yaw turret aiming rig. Rotation velocities sweep smoothly at 360 deg/s to track authoritative target positions, snapping instantly if accessibility profiles request it..VFX_POLY: Discharges instantiate heavy Blue linear tracer beams traveling at 1,200 cm/s toward the target coordinate. Muzzle concussions project brief smoke ring decals onto adjacent landscape planes.
 
-#### [Asset Card: REL-BLD-015.MC.AEGIS — Visual Asset Manifest]
+#### [Asset Card: REL-BLD-015.MC.AEGIS.ASSET — Visual Asset Manifest]
+* .MAT_RULE: Firing loops update barrel emissive lines to an intense Cyan-white state. Severing connected network power links immediately darkens all status bands, dropping the turret into a heavy, drooping unpowered offline visual pose within 1 tick.
+* .ANIM_RIG: 2-bone pitch and yaw turret aiming rig. Rotation velocities sweep smoothly at 360 deg/s to track authoritative target positions, snapping instantly if accessibility profiles request it.
+* .VFX_POLY: Discharges instantiate heavy Blue linear tracer beams traveling at 1,200 cm/s toward the target coordinate. Muzzle concussions project brief smoke ring decals onto adjacent landscape planes.
 * .MESH_PROP: LOD0 polycount ceiling ≤4,000 tris; LOD1 ceiling ≤1,600 tris. 2x2 tile localized defensive outpost footprint. Vertical heavy turret barrel mounted onto an elevated orthogonal protective concrete pillbox carriage.
 * .TEX_MAPS: 2048x2048 PBR texture pack. Barrel rails map high-frequency heat-distortion patterns to handle sustained rapid combat engagements.
 
 
-### §19 Audio, voice, music, cinematics — REL-AUD-001..015, REL-CIN-001..008 (mix standard REL-AUD-010: −16 LUFS ±1 integrated, true peak ≤ −1 dBTP unless owner revises)
-### §20 Saves, profiles, progression, recovery — REL-SAV-001..014
-### §21 Accessibility and localization readiness — REL-ACC-001..017, REL-LOC-001..006
-### §22 Graphics scalability, performance, stability — REL-PERF-001..018, REL-STAB-001..005 (budgets REL-PERF-007: p95 ≤16.67 ms, game thread ≤4.0 ms, render+GPU ≤11.0 ms, fog ≤1.5 ms, path burst ≤6.0 ms, resident ≤10 GB, save ≤250 ms; REL-PERF-010: 400-unit/four-team stress; REL-PERF-011: 600 s preflight + 60-min rendered session; REL-PERF-012: multi-hour AI soak)
-### §23 Security, privacy, packaging, distribution — REL-DIST-001..017, REL-SEC-001..006
-### §24 Public website, manual, claims, support — REL-PUB-001..015
-### §25 QA, human validation, release blockers — REL-QA-001..032; severity ladder S0 (release prohibited) / S1 (release prohibited) / S2 (zero known on release-critical path absent owner waiver) / S3 (correct or accept+disclose) / S4 (record and disposition)
-### §26 Conditional multiplayer module — REL-MP-001..016 (DORMANT; activates only if the owner changes the multiplayer scope decision)
+### §19 Audio, voice, music, cinematics — see the exact family bodies and identifier index
+### §20 Saves, profiles, progression, recovery — see the exact family bodies and identifier index
+### §21 Accessibility and localization readiness — see the exact family bodies and identifier index
+### §22 Graphics scalability, performance, stability — see the exact family bodies and identifier index
+### §23 Security, privacy, packaging, distribution — see the exact family bodies and identifier index
+### §24 Public website, manual, claims, support — see the exact family bodies and identifier index
+### §25 QA, human validation, release blockers — see the exact family bodies and identifier index
+### §26 Multiplayer release module — see the exact family bodies and identifier index
 
 > TRANSCRIPTION STATUS: the section headers above carry the load-bearing numeric standards
 > inline; the full per-requirement shall statements are being transcribed verbatim from the
@@ -2080,10 +2617,10 @@ shown in seconds; deterministic ticks may also appear in detailed information an
 
 ### Universal selection and command contract
 
-* **REL-UI-017 — Selection identity.** Selecting any owned entity shall show faction marker,
+* **REL-UI-026 — Selection identity.** Selecting any owned entity shall show faction marker,
   faction-specific name, role, owner, health, current order/state, and selected count. Grouped and
   mixed selections shall expose composition and deterministic subgroup navigation.
-* **REL-UI-018 — Selection state.** Where applicable, selection shall expose cargo; target and
+* **REL-UI-028 — Selection state.** Where applicable, selection shall expose cargo; target and
   route; construction, production, and research progress; queue; Logistics; power connection;
   deployment facing; rooting/migration; adaptation; Choir identity; upkeep; ability cost, duration,
   and cooldown; Well control and protocol state.
@@ -2154,6 +2691,8 @@ shown in seconds; deterministic ticks may also appear in detailed information an
 The numeric baselines below bind content-hydrated play at 20 simulation ticks per second. Balance
 changes require traceable rationale, updated UI/tooltips/tests, regression play, and owner acceptance.
 
+* **REL-FAC-025 — Meridian roster release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-FAC-025.MC.SURVEYOR — Surveyor.** Cost 50 Matter; 90 health; 360 cm/s; 900 cm sight;
   1 Logistics; 60-tick production; work rate 10; cargo 10. It shall gather, deliver, build Array
   Foundry, Power Link, and Aegis Post, operate Future Wells, and repair only if REL-CMB-023 is met.
@@ -2171,6 +2710,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   700 cm of valid Compact infrastructure may grant +4 temporary Logistics for 400 ticks with an
   800-tick cooldown. UI shall disclose connection, duration, expiry risk, and cooldown. It is a
   fragile scout/support, not a line combatant.
+* **REL-FAC-026 — Kharuun roster release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-FAC-026.KA.TENDER — Tender.** Cost 50 Matter; 100 health; 390 cm/s; 920 cm sight;
   1 Logistics; 60-tick production; work rate 9; cargo 10. It shall gather, deliver, grow Growth Basin,
   Waystone, and Listening Spine, operate Wells, and have no attack. Terrain stabilization shall be
@@ -2192,6 +2733,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   Carapace shall set health to 135% and movement to 80%; Striker shall set damage to 125% and attack
   cooldown to 85%. The choice, resulting stats, vulnerability, invalid reasons, and interruption
   shall be visible. Adaptation shall reward scouting, not blind universal upgrading.
+* **REL-FAC-027 — Choir roster release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-FAC-027.HC.THREADKEEPER — Threadkeeper.** Cost 55 Matter/5 Dawn; 80 health; 380 cm/s;
   1,000 cm sight; 1 Logistics; 65-tick production; work rate 9; cargo 12. It shall perform common
   worker actions and expose the Choir's projected coherence obligations. It shall have no attack.
@@ -2216,6 +2759,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
 
 ### Exact structure requirements
 
+* **REL-BLD-015 — Meridian structure release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-BLD-015.MC.ANCHOR — Anchor.** Faction Command Core and Matter drop-off; 1,400 health;
   800 cm sight; +12 Logistics; 5x5 footprint. It shall produce Surveyors and expose own-Core health,
   economy, capacity, queue, rally when implemented, and loss warning. It is not a complete defense.
@@ -2232,6 +2777,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   within 800 cm shall automatically attack valid visible enemies for 28 damage at 900 cm every
   20 ticks. Powered/offline state, source, range, and severance shall be visible. It shall remain
   inert when unpowered and shall not replace a field army.
+* **REL-BLD-016 — Kharuun structure release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-BLD-016.KA.HEARTH — Memory Hearth.** Kharuun Command Core and Matter drop-off;
   1,300 health; 800 cm sight; +12 Logistics; 5x5 footprint. It shall produce Tenders and expose the
   common Core, economy, capacity, queue, and loss information.
@@ -2248,6 +2795,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   construction; 2x2 footprint. Passive detection shall report moving signatures within 2,600 cm at
   200 cm resolution for 40 ticks. Coverage and anonymous contacts shall be visible but not directly
   targetable. It shall not attack or identify contacts.
+* **REL-BLD-017 — Choir structure release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-BLD-017.HC.CONCORDANCE — Concordance.** Choir Command Core and Matter drop-off;
   1,250 health; 900 cm sight; +12 Logistics; 5x5 footprint. It shall produce Threadkeepers and remain
   excluded from ordinary non-Core coherence upkeep. It shall show total projected obligations.
@@ -2281,6 +2830,8 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   is destroyed and shall warn before commitment/cancellation. Unit-production and construction
   cancellation/refund rules shall be explicitly decided, displayed, tested, and owner-accepted; no
   interface shall imply a refund before that decision.
+* **REL-FAC-028 — Faction technology release contracts.** Aggregate of the subordinate records under this identifier; all their existing clauses apply. This parent registers the existing group and adds no separate behavior or threshold.
+
 * **REL-FAC-028.MC.TECH — Compact technology.** Array Foundry research shall provide Prismatic
   Targeting (120 Matter/40 Dawn, 180 ticks, 115% combat damage) followed by Horizon Lattice (90/55,
   220 ticks, requires Tier 1, 120% combat vision).
@@ -2410,12 +2961,6 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
   packaged observation, and human play. Acceptance shall measure rule compliance, scouting provenance,
   state transitions, recovery, tactical readability, challenge, frustration, and strategic variety;
   win rate alone shall not establish intelligence or fairness.
-* **REL-MP-017 — Development network boundary.** The current localhost fixed-rules direct-connect
-  path is a development validation surface, not release multiplayer. It shall remain inaccessible in
-  release-facing UI unless the conditional multiplayer scope is activated and REL-MP-001..016 plus
-  security, reachability, lobby, configuration, reconnect, abuse, packaging, and human requirements
-  are satisfied.
-
 ### Purpose-map closure gate
 
 * **REL-QA-033 — No purposeless element.** Every release-accessible unit, structure, technology,
@@ -2441,7 +2986,7 @@ changes require traceable rationale, updated UI/tooltips/tests, regression play,
 
 Authority for this section: direct owner instruction of 2026-09-03 — the game is being built for macOS, a
 Linux and a Windows version follow after it is finished, and discrete graphics cards with expanded graphics
-options are to be supported later. Combined with `CLAUDE.md` (macOS ships first; Linux/SteamOS then Windows
+options are to be supported later. Combined with the recorded platform roadmap (macOS ships first; Linux/SteamOS then Windows
 in later releases), `Docs/GameCompletionDirective.md` Track I4 and gate 45, and the numeric, serialization,
 and preset clauses of `Docs/Archive/TechnicalArchitecture.md`.
 
@@ -2454,7 +2999,7 @@ project has not built, run, and measured. All records are `OPEN`.
 ### Platform portability constraints — REL-PORT-001..010
 
 * **REL-PORT-001 — Portability constraint authority.** *(DERIVED FROM owner instruction 2026-09-03,
-  `CLAUDE.md` platform roadmap, `GameCompletionDirective.md` Track I4.)* The platform roadmap after the
+  `SPEC-PRD-005` and the recorded platform roadmap, `GameCompletionDirective.md` Track I4.)* The platform roadmap after the
   initial release shall be Linux/SteamOS, then Windows. REL-PORT-002..010 shall bind macOS initial-release
   work so that those releases are ports rather than rewrites. They shall not be read as a platform
   commitment, schedule, build, support statement, or addition to the 1.0 scope recorded above.
@@ -2496,7 +3041,7 @@ project has not built, run, and measured. All records are `OPEN`.
   shall carry a recorded Linux and Windows availability status, the named replacement where it is
   unavailable, and the accepted blocker where none exists. The register shall be updated when a dependency is
   added, not reconstructed once at release; the Track I4 audit shall read this register. Verification: `SRC`.
-* **REL-PORT-007 — Generator and compiler platform behavior.** *(DERIVED FROM `CLAUDE.md` rule 3,
+* **REL-PORT-007 — Generator and compiler platform behavior.** *(DERIVED FROM `AGENTS.md` source/output and asset-provenance rules,
   REL-ART-*, REL-AUD-*.)* The registered asset, audio, and content generators required to be byte-idempotent
   under their recorded revision shall either produce byte-identical registered output on every roadmap
   platform, or record the exact platform dependence, its cause, and its accepted disposition in
@@ -2510,8 +3055,7 @@ project has not built, run, and measured. All records are `OPEN`.
   Nothing in this section authorizes a Linux, SteamOS, or Windows claim in the game, store text, website,
   manual, support material, or evidence. Only a package built, run, and human-accepted on that platform may
   support such a claim. Verification: `SRC` + `OWNER`.
-* **REL-PORT-010 — Roadmap modules are dormant.** *(DERIVED FROM the REL-MP-001..016 dormant-module
-  pattern.)* The Linux/SteamOS and Windows release modules are `DORMANT`. Activating either requires its own
+* **REL-PORT-010 — Roadmap platform modules are dormant.** The Linux/SteamOS and Windows release modules are `DORMANT`. Activating either requires its own
   complete requirement set — build host, toolchain, engine target, packaging, signing and store, input, GPU
   and driver matrix, per-platform performance budgets, clean-machine qualification, support, and human
   acceptance. Satisfying REL-PORT-001..009 shall never be represented as partial completion of either module.
@@ -2519,7 +3063,7 @@ project has not built, run, and measured. All records are `OPEN`.
 ### Graphics-hardware and options expansion — REL-PERF-019..025
 
 * **REL-PERF-019 — Quality tiers are data, not code.** *(DERIVED FROM owner instruction 2026-09-03,
-  `CLAUDE.md` M1 Pro baseline with Nanite and Virtual Shadow Maps off, `TechnicalArchitecture.md` §Scalable
+  `Docs/Archive/SetupAndBuild.md` M1 Pro baseline with Nanite and Virtual Shadow Maps off, `TechnicalArchitecture.md` §Scalable
   presets.)* Every graphics quality tier and individual option shall be defined in versioned data carrying
   its scalability values and its supported-hardware predicate, not hardcoded against the M1 Pro baseline.
   Adding a tier, an option, or a device class shall require no code change, no settings-schema break, and no
@@ -2529,7 +3073,7 @@ project has not built, run, and measured. All records are `OPEN`.
   version, preserve unknown keys it did not write, supply the accepted default for an absent key, and never
   silently reset or discard a profile written by a different build. It shall fail closed only where a value
   cannot be safely interpreted, and shall report which value and why. Verification: `SRC` + `PKG-AUTO`.
-* **REL-PERF-021 — Presentation cannot reach authority.** *(DERIVED FROM `CLAUDE.md` rule 2,
+* **REL-PERF-021 — Presentation cannot reach authority.** *(DERIVED FROM `AGENTS.md` simulation-authority rule,
   `TechnicalArchitecture.md` §Graphics preset boundary, REL-SIM-019.)* No quality tier, graphics option,
   renderer path, GPU capability, feature level, resolution, or display mode shall change simulation state,
   fog authority, command validity or result, checksums, snapshots, replays, or AI information. Acceptance:
@@ -2546,7 +3090,7 @@ project has not built, run, and measured. All records are `OPEN`.
   cannot provide shall fall back to a supported, readable, playable configuration, shall state the fallback
   in the settings UI and in the log, and shall never present a black screen, a crash, a hang, or a silently
   incorrect render. Verification: `PKG-REND` + `PKG-AUTO`.
-* **REL-PERF-024 — Readability floor across every tier.** *(DERIVED FROM `CLAUDE.md` rule 6, REL-ACC-*,
+* **REL-PERF-024 — Readability floor across every tier.** *(DERIVED FROM `AGENTS.md` accessibility rule, REL-ACC-*,
   REL-UI-*.)* No tier or option shall remove a gameplay-relevant signal: team ownership marker, non-color
   ownership mark, selection state, fog and shroud boundary, alert, ability telegraph, construction or damage
   state, or health threshold. A configuration that removes one is not a valid configuration regardless of its
@@ -2574,7 +3118,7 @@ and all four endings through physical human play; all approved content complete;
 player-facing surface final; saves/recovery protect progress; graphics scale across verified
 hardware; performance/stability budgets met; Shipping artifact signed, notarized, stapled,
 installable, clean-machine qualified; rights/provenance/privacy/security/docs/website/support/
-claims complete; zero S0/S1; all evidence on the same frozen candidate; Codex adversarial
+claims complete; zero S0/S1; all evidence on the same frozen candidate; read-only adversarial internal
 review complete and every finding dispositioned; every mandatory requirement `HUMAN ACCEPTED`;
 and Angelis explicitly authorizes public release. Until then the precise state vocabulary is:
 prototype / implementation / integrated slice / demo candidate / release candidate /
@@ -2595,7 +3139,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-GOV-001.VERIF:** `SRC` (documentation audit script).
   * **REL-GOV-001.LANE:** Coordinator & QA.
 
-* **REL-GOV-002 — Bidirectional Gate and Milestone Mapping:** Every release requirement shall map bidirectionally to an executable release gate in `Docs/GameCompletionDirective.md` and an evidence location in `WorkstreamControl/evidence/release/`.
+* **REL-GOV-002 — Bidirectional Gate and Milestone Mapping:** Every release requirement shall map bidirectionally to an executable release gate in `Docs/GameCompletionDirective.md` and an evidence location in `BuildArtifacts/Evidence/release/`.
   * **REL-GOV-002.AUTH:** Traceability matrix shall contain no orphaned release requirements and no unmapped delivery gates.
   * **REL-GOV-002.FAIL:** Unmapped requirements cannot advance beyond `IN PROGRESS`.
   * **REL-GOV-002.VERIF:** `SRC` (traceability crosswalk audit).
@@ -2613,8 +3157,8 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-GOV-004.VERIF:** `SRC` (`test_content_schema.py` and catalog compilation).
   * **REL-GOV-004.LANE:** Core Gameplay & Content.
 
-* **REL-GOV-005 — Evidence-Bounded State Vocabulary:** Requirement states shall strictly obey the authorized vocabulary: `OPEN`, `IN PROGRESS`, `IMPLEMENTED — NOT YET VERIFIED`, `AGENT VERIFIED`, `EVIDENCE READY`, `AWAITING HUMAN ACCEPTANCE`, and `BLOCKED`.
-  * **REL-GOV-005.AUTH:** Terms such as `COMPLETE`, `DONE`, `VERIFIED`, or `PASS` are prohibited in agent status reports unless backed by explicit human acceptance.
+* **REL-GOV-005 — Evidence-Bounded State Vocabulary:** Requirement states shall obey the vocabulary in `Docs/RequirementsState.md`: `OPEN`, `IN PROGRESS`, `IMPLEMENTED`, `AGENT VERIFIED`, `EVIDENCE READY`, `AWAITING HUMAN ACCEPTANCE`, and `BLOCKED`. The historical label `IMPLEMENTED — NOT YET VERIFIED` is an alias of `IMPLEMENTED`; neither asserts verification.
+  * **REL-GOV-005.AUTH:** Unconditional requirement closure (`COMPLETE`, `DONE`, or requirement `PASS`) requires explicit owner acceptance. Bounded labels such as `AGENT VERIFIED`, a named test PASS, or completed document maintenance may describe only their actual evidence; none supplies human acceptance or release qualification.
   * **REL-GOV-005.FAIL:** Unauthorized promotion of unverified work fails gate review.
   * **REL-GOV-005.VERIF:** `SRC` (`RequirementsState.md` linter).
   * **REL-GOV-005.LANE:** Independent QA.
@@ -2664,7 +3208,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 * **REL-GOV-013 — Defect Severity Ladder and Release Prohibitions:** All defects shall be categorized under the project severity ladder: S0 (Catastrophic/Crash), S1 (Functional Blocker), S2 (Major Usability), S3 (Minor Glitch), S4 (Cosmetic/Trivial).
   * **REL-GOV-013.AUTH:** Zero S0 and zero S1 defects shall exist in a release candidate. Zero un-waived S2 defects on the critical path.
   * **REL-GOV-013.FAIL:** Presence of an open S0 or S1 defect blocks release packaging.
-  * **REL-GOV-013.VERIF:** `SRC` (`ProjectLedger.md` defect register).
+  * **REL-GOV-013.VERIF:** `SRC` (`Docs/RequirementsState.md` defect register).
   * **REL-GOV-013.LANE:** Independent QA.
 
 * **REL-GOV-014 — Single-Candidate Frozen Evidence Binding:** All evidence supporting release qualification shall be captured from the exact same frozen, signed, and notarized build candidate.
@@ -2760,7 +3304,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 ### §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`)
 
 * **REL-SIM-001 — Deterministic Fixed-Accumulator Simulation Loop:** The simulation engine (`EchoesSimCore`) shall execute at a fixed 20 Hz tick rate (50.0 ms per step) driven by an accumulator, completely decoupled from variable rendering frame rates.
-  * **REL-SIM-001.AUTH:** Simulation step count shall match elapsed game time exactly ($Ticks = TimeSeconds 	imes 20$). Rendering at 30 fps, 60 fps, or 144 fps shall not alter simulation tick frequency.
+  * **REL-SIM-001.AUTH:** Simulation step count shall match elapsed game time exactly ($Ticks = TimeSeconds \times 20$). Rendering at 30 fps, 60 fps, or 144 fps shall not alter simulation tick frequency.
   * **REL-SIM-001.FAIL:** Wall-clock time leaks, frame-rate dependent physics, or drift >1 tick per 10,000 ticks fails acceptance.
   * **REL-SIM-001.VERIF:** `SRC` (native simulation accumulator test).
   * **REL-SIM-001.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -2813,7 +3357,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-SIM-009.VERIF:** `SRC` (entity lifecycle stress tests).
   * **REL-SIM-009.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-SIM-010 — Map Spatial Boundary Invariant:** Mobile entities and projectiles shall remain strictly bounded within the map coordinate extents (e.g. $[0, 6400	ext{ cm}] 	imes [0, 6400	ext{ cm}]$).
+* **REL-SIM-010 — Map Spatial Boundary Invariant:** Mobile entities and projectiles shall remain strictly bounded within the map coordinate extents (e.g. $[0, 6400\text{ cm}] \times [0, 6400\text{ cm}]$).
   * **REL-SIM-010.AUTH:** Any velocity vector attempting to push a unit outside the playable bounding box shall clamp to the boundary perimeter.
   * **REL-SIM-010.FAIL:** Entities falling out of world or teleporting across coordinate overflow boundaries fails acceptance.
   * **REL-SIM-010.VERIF:** `SRC` (boundary collision stress suite).
@@ -2825,7 +3369,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-SIM-011.VERIF:** `SRC` (10,000-tick cross-run checksum comparison).
   * **REL-SIM-011.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-SIM-012 — Core Tick Processing Time Ceiling:** Core simulation tick execution (excluding rendering and presentation) for 400 active units shall execute within $\le 4.0	ext{ ms}$ on the baseline Apple Silicon processor.
+* **REL-SIM-012 — Core Tick Processing Time Ceiling:** Core simulation tick execution (excluding rendering and presentation) for 400 active units shall execute within $\le 4.0\text{ ms}$ on the baseline Apple Silicon processor.
   * **REL-SIM-012.AUTH:** Profiling traces shall measure simulation step time; p95 execution time must maintain $\ge 60\%$ headroom within the 50 ms tick allocation.
   * **REL-SIM-012.FAIL:** Tick processing exceeding 8.0 ms triggers a high-severity performance alert.
   * **REL-SIM-012.VERIF:** `PKG-AUTO` (400-unit sim core profile run).
@@ -2846,19 +3390,19 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ECO-002.LANE:** Core Gameplay & Skirmish.
 
 * **REL-ECO-003 — Calibrated Matter Harvesting Cadence:** Worker units (`Surveyor`, `Tender`, `Threadkeeper`) assigned to a Matter deposit shall execute a 20-tick harvest extraction phase (1.0 second at 20 Hz) to fill a 10-unit cargo capacity (resolving C14).
-  * **REL-ECO-003.AUTH:** Work extraction rate shall add 0.5 Matter per tick over 20 ticks, filling 10 Matter exactly at tick 20.
+  * **REL-ECO-003.AUTH:** The calibrated 10-Matter load shall commit after 20 uninterrupted extraction ticks. Waiting and travel shall not advance extraction; no cargo or node deduction occurs before completion. Commit at most the remaining node stock and free cargo capacity. Faction capacity/rate reconciliation remains TBR-ECO-001.
   * **REL-ECO-003.FAIL:** Instant 1-tick harvesting (20x speed bug) is strictly prohibited.
   * **REL-ECO-003.VERIF:** `SRC` (native simulation worker harvesting tick test).
   * **REL-ECO-003.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-ECO-004 — Deposit Saturation & Diminishing Returns:** Matter deposits shall enforce spatial saturation dynamics. Optimal extraction throughput shall cap at 2 workers per deposit node; additional workers shall experience queuing delays.
-  * **REL-ECO-004.AUTH:** A third worker targeting a node shall wait in arrival queue until the active worker vacates the harvesting slot.
+* **REL-ECO-004 — Deposit Saturation & Diminishing Returns:** Apply the single extraction position in SPEC-RES-003. Assigned haulers may exceed one; release ownership for the next waiter when its occupant leaves to deliver.
+  * **REL-ECO-004.AUTH:** At most one worker may advance extraction for a deposit in any simulation transition. Expose waiting/saturation and use deterministic arrival order. This is an owner-directed behavior, not a demonstrated balance result.
   * **REL-ECO-004.FAIL:** Stacking unlimited workers inside a single deposit mesh is prohibited.
   * **REL-ECO-004.VERIF:** `SRC` (deposit saturation and queue test).
   * **REL-ECO-004.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-ECO-005 — Deposit Depletion Lifecycle:** Matter deposits shall carry a finite resource volume (Standard node = 1,500 Matter). When volume reaches zero, the deposit shall deplete, collapse its mesh footprint, and alert assigned workers.
-  * **REL-ECO-005.AUTH:** Upon depletion, assigned workers shall automatically retarget the nearest known unexhausted deposit within 2,000 cm or transition to `Idle Worker` registry.
+* **REL-ECO-005 — Deposit Depletion Lifecycle:** Apply SPEC-RES-006: immediate extraction stop, non-interactable persistent exhausted terrain, observation-bound fog memory, delivery of retained cargo, then idle and alert.
+  * **REL-ECO-005.AUTH:** Do not automatically retarget another deposit. Require player reassignment; never discover hidden deposits through worker routing.
   * **REL-ECO-005.FAIL:** Workers continuing to harvest an exhausted 0-Matter node fails acceptance.
   * **REL-ECO-005.VERIF:** `SRC` (deposit exhaustion state machine test).
   * **REL-ECO-005.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -2869,8 +3413,8 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ECO-006.VERIF:** `PKG-AUTO` (10-minute continuous worker throughput test).
   * **REL-ECO-006.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-ECO-007 — Drop-Off Target Selection & Routing:** Workers returning with cargo shall dynamically select the closest operational, reachable friendly drop-off structure (`Command Core`, `Power Link`, `Waystone`, `Interval Loom`).
-  * **REL-ECO-007.AUTH:** If the primary drop-off is destroyed en route, the worker shall recalculate pathing to the nearest alternate drop-off within 1 simulation tick.
+* **REL-ECO-007 — Drop-Off Target Selection & Routing:** Apply SPEC-RES-005 to faction-valid Command Core, Power Link, Waystone and Interval Loom delivery. Prefer a valid explicit assignment; otherwise select the known reachable operational friendly destination with lowest predicted round-trip travel time and keep the assignment stable.
+  * **REL-ECO-007.AUTH:** On destination destruction, disconnection or other invalidation, initiate reassessment within one simulation tick and alert. Use a valid known fallback; without one retain cargo, halt and show NO OPERATIONAL DROP-OFF. Test player locks, deterministic ties, unreachable destinations, fog boundaries and repeated routing changes.
   * **REL-ECO-007.FAIL:** Worker deadlocking at the destroyed site fails acceptance.
   * **REL-ECO-007.VERIF:** `SRC` (drop-off destruction rerouting test).
   * **REL-ECO-007.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -2899,14 +3443,14 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ECO-011.VERIF:** `SRC` (Logistics accounting and reservation test).
   * **REL-ECO-011.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-ECO-012 — Logistics Cap Enforcement & Supply Deficit:** When committed population equals total Logistics capacity, production queues attempting to train units shall halt with the status `LOGISTICS FULL`.
-  * **REL-ECO-012.AUTH:** Destroying a supply structure while at max capacity places the player in supply deficit; existing units remain active, but all new production is blocked until supply is restored.
-  * **REL-ECO-012.FAIL:** Producing units while in supply deficit fails simulation rules.
+* **REL-ECO-012 — Logistics Cap Enforcement & Supply Deficit:** Apply SPEC-RES-007. Insufficient capacity blocks new production starts with LOGISTICS FULL; completed units remain controllable and previously reserved production may finish.
+  * **REL-ECO-012.AUTH:** Retain existing production reservations until completion or cancellation; release cancelled reservations once. Unreserved queued units shall wait until sufficient capacity is available.
+  * **REL-ECO-012.FAIL:** Starting unreserved production without sufficient Logistics, freezing previously reserved production solely because supply fell, or double-releasing a reservation fails acceptance.
   * **REL-ECO-012.VERIF:** `SRC` (supply deficit production lock test).
   * **REL-ECO-012.LANE:** Core Gameplay (`EchoesSimCore`).
 
 * **REL-ECO-013 — Temporary Logistics Burst Dynamics:** Temporary Logistics granted by faction abilities (e.g. Meridian Relay Skiff +4 supply) shall enforce strict duration timers (400 ticks) and cooldowns (800 ticks).
-  * **REL-ECO-013.AUTH:** When the 400-tick duration expires, temporary capacity collapses; if the player exceeds permanent capacity, production locks until normal capacity is restored.
+  * **REL-ECO-013.AUTH:** When the 400-tick duration expires, temporary capacity collapses; apply SPEC-RES-007 to block new starts without freezing previously reserved production.
   * **REL-ECO-013.FAIL:** Permanent retention of temporary supply bursts fails balance.
   * **REL-ECO-013.VERIF:** `SRC` (Relay Skiff temporary supply duration test).
   * **REL-ECO-013.LANE:** Core Gameplay & Faction Design.
@@ -2945,7 +3489,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-BLD-004.VERIF:** `SRC` (builder assist rate falloff test).
   * **REL-BLD-004.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-BLD-005 — Incomplete Structure Vulnerability:** Structures under construction shall possess health proportional to their completion percentage ($HP = MaxHP 	imes ProgressPct$, minimum 10% HP) and take standard combat damage.
+* **REL-BLD-005 — Incomplete Structure Vulnerability:** Structures under construction shall possess health proportional to their completion percentage ($HP = MaxHP \times ProgressPct$, minimum 10% HP) and take standard combat damage.
   * **REL-BLD-005.AUTH:** If an incomplete structure's health is reduced to 0, it collapses, destroys the construction site, and kills or frees assisting workers.
   * **REL-BLD-005.FAIL:** Invulnerable construction sites fail combat balance.
   * **REL-BLD-005.VERIF:** `SRC` (construction site damage and destruction test).
@@ -3010,7 +3554,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 ### §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`)
 
 * **REL-CMB-001 — Authoritative Range & Line-of-Sight Firing Arcs:** Units and defensive structures shall engage hostile targets strictly within their authored discrete firing ranges (Lancer: 650 cm; Bulwark: 300 cm; Riftstalker: 500 cm; Intervalist: 550 cm; Aegis Post: 900 cm).
-  * **REL-CMB-001.AUTH:** Targets positioned at $Range + 1	ext{ cm}$ shall not be attacked. Ranged attacks require unoccluded straight-line line-of-sight.
+  * **REL-CMB-001.AUTH:** Targets positioned at $Range + 1\text{ cm}$ shall not be attacked. Ranged attacks require unoccluded straight-line line-of-sight.
   * **REL-CMB-001.FAIL:** Units shooting beyond declared range bounds or through opaque terrain occluders fails verification.
   * **REL-CMB-001.VERIF:** `SRC` (combat range and occlusion checks).
   * **REL-CMB-001.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -3022,7 +3566,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-CMB-002.LANE:** Core Gameplay & Animation.
 
 * **REL-CMB-003 — Ballistic Projectile Travel Simulation:** Ranged combat weapons shall simulate discrete ballistic or linear projectile entities travelling at an authored velocity of 1,200 cm/s, replacing instantaneous hitscan resolution (resolving C18).
-  * **REL-CMB-003.AUTH:** Damage is applied authoritatively upon projectile arrival at the target coordinates ($TravelTime = Distance / 1200	ext{ cm/s}$).
+  * **REL-CMB-003.AUTH:** Damage is applied authoritatively upon projectile arrival at the target coordinates ($TravelTime = Distance / 1200\text{ cm/s}$).
   * **REL-CMB-003.FAIL:** Instantaneous same-tick hitscan damage across the map is strictly prohibited.
   * **REL-CMB-003.VERIF:** `SRC` (projectile travel time and impact resolution tests).
   * **REL-CMB-003.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -3208,27 +3752,29 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-FAC-010.FAIL:** Erection on impassable tiles or overlapping existing units rejects cleanly.
   * **REL-FAC-010.VERIF:** `SRC` (Cairnback cover placement and projectile blocking tests).
   * **REL-FAC-010.LANE:** Core Gameplay & Factions.
+* **REL-FAC-011 — Hollow Choir structural coherence upkeep cycle.** Structures shall meet the existing upkeep, insolvency, presentation, save/replay and performance clauses in `REL-FAC-011.SIG`. This parent restores the identity already carried by the index; the scenario clauses below retain their thresholds.
+
 #### [Acceptance Card: REL-FAC-011.SIG — Structural Coherence Upkeep Cycle]
-* **REL-FAC-011.PRE (Preconditions):** Packaged arm64 shipping configuration build running on baseline Mac hardware. The active scene contains one completed friendly Hollow Choir production facility (Chorus Loom) located at coordinates (24,24). The global player resource bank initializes with a liquid reserve of exactly 24 Dawn. The simulation master tick accumulator is tracking at standard time step speed.
-* **REL-FAC-011.ACT (Actions):**
+* **REL-FAC-011.SIG.PRE (Preconditions):** Packaged arm64 shipping configuration build running on baseline Mac hardware. The active scene contains one completed friendly Hollow Choir production facility (Chorus Loom) located at coordinates (24,24). The global player resource bank initializes with a liquid reserve of exactly 24 Dawn. The simulation master tick accumulator is tracking at standard time step speed.
+* **REL-FAC-011.SIG.ACT (Actions):**
   1. Allow the simulation to advance continuously up to tick 599. Observe the structural telemetry values and resource balances in the upper resource telemetry deck.
   2. At exactly tick 600, sample the global Dawn asset pool.
   3. Allow the simulation to advance up to tick 1,199. Manually exhaust the remaining resource bank by executing an ability command, bringing the liquid player balance to exactly 0 Dawn.
   4. Observe the structure's physical lifecycle states as the simulation passes tick 1,200, tick 1,800, tick 2,400, and tick 3,000.
-* **REL-FAC-011.AUTH (Authoritative Results):**
+* **REL-FAC-011.SIG.AUTH (Authoritative Results):**
   * **Tick 600 Pass Case:** The core engine executes the first upkeep validation check on tick 600. The structure consumes exactly 5 Dawn from the asset pool, updating the player balance to 19 Dawn within a single simulation tick. The structure stays 100% active and fully functional.
   * **Tick 1,200 Overdraft Zone:** At tick 1,200, the engine detects a resource deficit (Balance: 0; Upkeep Cost: 5). The transaction fails closed. The structure remains standing but transitions cleanly into its first warning threshold state.
   * **Tick 1,800 Stage 2 Warning:** The structure advances to warning tier 2 on tick 1,800 as the resource pool remains empty.
   * **Tick 2,400 Final Warning:** The structure enters its final tier 3 warning threshold on tick 2,400.
   * **Tick 3,000 Invariance Collapse:** At exactly tick 3,000 (representing 4 consecutive failed payments across 2,400 ticks total), the structure loses authority completely, purges its entity footprint from the spatial grid, and triggers instant demolition. Net liquid balance is locked safely at 0 Dawn, preventing any negative resource exploits or underflows.
-* **REL-FAC-011.VIS (Visual Presentation):**
+* **REL-FAC-011.SIG.VIS (Visual Presentation):**
   * **Normal Loop (Ticks 1–1,199):** The structural panel displays a ticking vector circular countdown timer measuring the approach of the next upkeep charge window.
   * **Warning Stage 1 (Tick 1,200):** The bounding selection ring shifts to a low-frequency pulsing Magenta Fracture line asset. The HUD sidebar flashes a structural hazard alert banner: [WARNING: INTERVAL LOOM INSTABILITY — DAWN DEFICIT].
   * **Warning Stage 2 & 3 (Ticks 1,800–2,999):** The structure vents erratic, bright magenta electrical sparks (FX_Choir_Bleed_Spark) from its core nodes. The mesh albedo desaturates dynamically by 30%.
   * **Under Accessibility Toggles:** If Reduced Flashing is enabled, pulsing energy strobes are completely suppressed, replacing particle sparks with a static, bright magenta outline border highlight.
-* **REL-FAC-011.AUD (Audio Feedback):** On the exact tick of overdraft entry (tick 1,200), the Hollow Choir tactical announcer fires the high-priority, rate-limited spoken alert cue VO_Choir_Dawn_Deficit over the Interface submix bus. During the warning phases, the structure emits a localized, low-frequency phase distortion hum (AUE_Structure_Unstable_Lp). Instant destruction on tick 3,000 triggers a crisp crystalline dissolution audio cue (AUE_Choir_Material_Collapse) mastered performantly at -16 LUFS.
-* **REL-FAC-011.FAIL (Failure Behavior):** If the player injects a temporary Dawn inflow (e.g., via a successful Future Well Harvest protocol) prior to tick 3,000, the warning timers instantly clear, the structure stabilizes, and normal asset deductions resume. If the local Command Core is destroyed at any point during an active warning cycle, the match ends instantly in Corefall defeat, safely rejecting all subsequent dynamic structure upkeep evaluations.
-* **REL-FAC-011.PERF (Performance):** Total array traversal and upkeep balance checking logic for up to 100 simultaneous active Choir structures remains strictly bounded under ≤ 0.05 ms per tick on the game loop thread, processing cleanly within a spatial hash grid optimization layer.
+* **REL-FAC-011.SIG.AUD (Audio Feedback):** On the exact tick of overdraft entry (tick 1,200), the Hollow Choir tactical announcer fires the high-priority, rate-limited spoken alert cue VO_Choir_Dawn_Deficit over the Interface submix bus. During the warning phases, the structure emits a localized, low-frequency phase distortion hum (AUE_Structure_Unstable_Lp). Instant destruction on tick 3,000 triggers a crisp crystalline dissolution audio cue (AUE_Choir_Material_Collapse) mastered performantly at -16 LUFS.
+* **REL-FAC-011.SIG.FAIL (Failure Behavior):** If the player injects a temporary Dawn inflow (e.g., via a successful Future Well Harvest protocol) prior to tick 3,000, the warning timers instantly clear, the structure stabilizes, and normal asset deductions resume. If the local Command Core is destroyed at any point during an active warning cycle, the match ends instantly in Corefall defeat, safely rejecting all subsequent dynamic structure upkeep evaluations.
+* **REL-FAC-011.SIG.PERF (Performance):** Total array traversal and upkeep balance checking logic for up to 100 simultaneous active Choir structures remains strictly bounded under ≤ 0.05 ms per tick on the game loop thread, processing cleanly within a spatial hash grid optimization layer.
 
 
 * **REL-FAC-012 — Hollow Choir Reconciliation Identity Transition:** Choir combat units may spend 20 Dawn to reconcile into `Manifest` (130% damage) or `Possible` (130% speed, 125% vision).
@@ -3426,7 +3972,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-CAM-017.LANE:** Campaign.
 
 * **REL-CAM-018 — Mission 13: "Archive Severance" Contract:** M13 shall require extracting the Crownfall index data cores from the central archive facility while under total tactical siege.
-  * **REL-CAM-013.AUTH:** Data extraction requires holding the 3 archive terminals for 400 ticks.
+  * **REL-CAM-018.AUTH:** Data extraction requires holding the 3 archive terminals for 400 ticks.
   * **REL-CAM-018.FAIL:** Total terminal destruction causes defeat.
   * **REL-CAM-018.VERIF:** `PKG-AUTO` (`EchoesArchiveSeveranceMissionTest`).
   * **REL-CAM-018.LANE:** Campaign.
@@ -3577,11 +4123,11 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-AI-015.VERIF:** `PKG-AUTO` (Standard AI fairness assertion).
   * **REL-AI-015.LANE:** Opponent AI.
 
-* **REL-AI-016 — Standard Matchup Competitive Balance Band:** Under Standard AI difficulty across 1,000 matches per cell, no non-mirror matchup shall fall outside a 40.0%–60.0% win-rate window, and no start position shall confer >5.0% advantage (binding baseline).
-  * **REL-AI-016.AUTH:** Measured matrix: Meridian vs. Kharuun, Meridian vs. Choir, Kharuun vs. Choir.
-  * **REL-AI-016.FAIL:** Any faction sitting at <40% or >60% win rate halts release.
-  * **REL-AI-016.VERIF:** `PKG-AUTO` (1,000-match automated balance validation suite).
-  * **REL-AI-016.LANE:** Opponent AI & Faction Design.
+* **REL-AI-042 — Standard Matchup Competitive Balance Band:** Under Standard AI difficulty across 1,000 matches per cell, no non-mirror matchup shall fall outside a 40.0%–60.0% win-rate window, and no start position shall confer >5.0% advantage (binding baseline).
+  * **REL-AI-042.AUTH:** Measured matrix: Meridian vs. Kharuun, Meridian vs. Choir, Kharuun vs. Choir.
+  * **REL-AI-042.FAIL:** Any faction sitting at <40% or >60% win rate halts release.
+  * **REL-AI-042.VERIF:** `PKG-AUTO` (1,000-match automated balance validation suite).
+  * **REL-AI-042.LANE:** Opponent AI & Faction Design.
 
 * **REL-AI-017 — AI Difficulty Tier: Challenging:** Challenging difficulty shall provide tight tactical execution: reaction delay 0.4s, APM ceiling 140, disciplined focus-firing, and optimal expansion timings without economic cheats.
   * **REL-AI-017.AUTH:** Defeating Challenging AI requires solid player macro-economy and tactical control.
@@ -3849,7 +4395,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ART-001.VERIF:** `PKG-REND` (palette compliance frame inspection).
   * **REL-ART-001.LANE:** Visual Presentation.
 
-* **REL-ART-002 — One-Second Tactical Readability Invariant:** At default RTS camera arm length (3,800 uu, 45-degree isometric tilt), unit ownership, archetype role, health state, and active stance shall be recognizable within $\le 1.0	ext{ second}$ under full combat load.
+* **REL-ART-002 — One-Second Tactical Readability Invariant:** At default RTS camera arm length (3,800 uu, 45-degree isometric tilt), unit ownership, archetype role, health state, and active stance shall be recognizable within $\le 1.0\text{ second}$ under full combat load.
   * **REL-ART-002.AUTH:** Unit silhouettes shall be distinct in black-and-white value inspection.
   * **REL-ART-002.FAIL:** Indistinguishable unit silhouettes causing tactical misidentification fail acceptance.
   * **REL-ART-002.VERIF:** `HUM` + `PKG-REND` (readability perceptual test).
@@ -3963,23 +4509,23 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ART-020.VERIF:** `SRC` + `PKG-AUTO` (VFX property check and GPU profiler test).
   * **REL-ART-020.LANE:** VFX & Performance.
 
-* **REL-ART-024 — Deterministic-Decoupled Kinetic Combat Ragdolls:** When mechanical or organic units are destroyed by explosive or heavy concussive fire, the presentation layer shall spawn decoupled cosmetic physics ragdolls and debris pieces that tumble dynamically down slopes.
-  * **REL-ART-024.AUTH:** Physics pieces are presentation-only, run on the GPU/client thread, and have zero influence on simulation collision or pathing.
-  * **REL-ART-024.FAIL:** Physics ragdolls desynchronizing simulation state or blocking unit movement is prohibited.
-  * **REL-ART-024.VERIF:** `PKG-REND` (kinetic ragdoll visual review).
-  * **REL-ART-024.LANE:** Visual Presentation & VFX.
+* **REL-ART-031 — Deterministic-Decoupled Kinetic Combat Ragdolls:** When mechanical or organic units are destroyed by explosive or heavy concussive fire, the presentation layer shall spawn decoupled cosmetic physics ragdolls and debris pieces that tumble dynamically down slopes.
+  * **REL-ART-031.AUTH:** Physics pieces are presentation-only, run on the GPU/client thread, and have zero influence on simulation collision or pathing.
+  * **REL-ART-031.FAIL:** Physics ragdolls desynchronizing simulation state or blocking unit movement is prohibited.
+  * **REL-ART-031.VERIF:** `PKG-REND` (kinetic ragdoll visual review).
+  * **REL-ART-031.LANE:** Visual Presentation & VFX.
 
-* **REL-ART-025 — Persistent Battlefield Scorch Decals & Vitrification:** Heavy combat, building collapses, and Future Well Harvests shall project persistent scorch marks, vitrified glass craters, and ash blast seams on the terrain plane that linger for the remainder of the match.
-  * **REL-ART-025.AUTH:** Decals render via a static terrain decal atlas, maintaining 0% performance degradation over time.
-  * **REL-ART-025.FAIL:** Battlefield instantly erasing all combat marks after 5 seconds fails visual permanence.
-  * **REL-ART-025.VERIF:** `PKG-REND` (persistent terrain scorch decal review).
-  * **REL-ART-025.LANE:** Visual Presentation.
+* **REL-ART-032 — Persistent Battlefield Scorch Decals & Vitrification:** Heavy combat, building collapses, and Future Well Harvests shall project persistent scorch marks, vitrified glass craters, and ash blast seams on the terrain plane that linger for the remainder of the match.
+  * **REL-ART-032.AUTH:** Decals render via a static terrain decal atlas, maintaining 0% performance degradation over time.
+  * **REL-ART-032.FAIL:** Battlefield instantly erasing all combat marks after 5 seconds fails visual permanence.
+  * **REL-ART-032.VERIF:** `PKG-REND` (persistent terrain scorch decal review).
+  * **REL-ART-032.LANE:** Visual Presentation.
 
-* **REL-ART-026 — Dynamic Directional Shield Impact Ripples:** High-energy projectiles impacting unit shields (Bulwark barriers, Core shields) shall project directional chromatic wave ripples expanding across the shield surface, styled in the faction palette.
-  * **REL-ART-026.AUTH:** Ripple intensity scales with damage received, providing immediate visual feedback on hit severity.
-  * **REL-ART-026.FAIL:** Shields disappearing on hit without impact animation fails visual feedback.
-  * **REL-ART-026.VERIF:** `PKG-REND` (shield impact ripple shader review).
-  * **REL-ART-026.LANE:** Visual Presentation & VFX.
+* **REL-ART-033 — Dynamic Directional Shield Impact Ripples:** High-energy projectiles impacting unit shields (Bulwark barriers, Core shields) shall project directional chromatic wave ripples expanding across the shield surface, styled in the faction palette.
+  * **REL-ART-033.AUTH:** Ripple intensity scales with damage received, providing immediate visual feedback on hit severity.
+  * **REL-ART-033.FAIL:** Shields disappearing on hit without impact animation fails visual feedback.
+  * **REL-ART-033.VERIF:** `PKG-REND` (shield impact ripple shader review).
+  * **REL-ART-033.LANE:** Visual Presentation & VFX.
 
 * **REL-ART-027 — Structural Critical Degradation States:** Structures damaged below 30% maximum health shall transition to a critical degradation visual state: emitting billowing black smoke, venting electrical sparks, and displaying warning lighting strips.
   * **REL-ART-027.AUTH:** Provides instant situational awareness that a building is near collapse without reading health bars.
@@ -4006,28 +4552,28 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 * .MAT_RULE: Panel backings use an opaque, dark charcoal luma layer to maintain clean battlefield readability. Focused or hovered skill slots update highlight states instantly within ≤1 frame (16.67 ms at 60 fps), projecting luminous outlines when accessibility filters are toggled.
 * .ANIM_RIG: UI layout scale supports a continuous runtime dynamic range adjustment from 80% to 150% via settings configuration, dynamically recalculating anchor boundaries without requiring a game application reboot.
 * .VFX_POLY: Selecting active abilities projects an interactive targeting spline vector. Click interception passes through a 12px proximity vector fallback layer to handle input triggers with 100% spatial target fidelity under rapid bursts.
-#### [Asset Card: REL-FAC-027.HC.THREADKEEPER — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-027.HC.THREADKEEPER.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤6,800 tris; LOD1 ceiling ≤2,800 tris. Silhouette must project a floating, multi-limbed weaver outline. The main torso mass features an offset duplicate mesh layer offset by 3 cm, rendering with a fluctuating transparency profile to visualize reality bleed.
 * .TEX_MAPS: 2048x2048 PBR texture stack (Albedo, Normal, Packed Roughness/Metallic, Superposition Mask). Textures map a shifting silk-matter weave over a solid vitrified glass core.
 * .MAT_RULE: Carapace plates apply an opaque charcoal value mask. Luminous crystalline edges use a specialized dynamic fresnel material shader tied to the Magenta Fracture color space, restricted to ≤12% visible surface footprint to maintain tactical camera legibility. 
 * .ANIM_RIG: 16-bone hovering rigging layout. Locomotion uses a fluid, floating harmonic wave component with zero mechanical joints or footstep impact physics. Rotation sweeping switches to instantaneous snaps when the Reduced Motion accessibility preset is toggled.
 * .VFX_POLY: Gathering or structural reconciliation actions project continuous dual-strand magenta light lattices intersecting target geometries. Emitters are presentation-only, running on local Niagara nodes with zero shadow cascades or CPU dynamic memory allocations.
 
-#### [Asset Card: REL-FAC-027.HC.INTERVALIST — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-027.HC.INTERVALIST.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤7,200 tris; LOD1 ceiling ≤3,100 tris. Mesh geometry enforces a split-silhouette profile representing competing possibility states. Requires 2 distinct structural variations compiled into sub-object actors to handle dynamic state transitions.
 * .TEX_MAPS: Twin 2048x2048 PBR texture stacks mapping independent surface values for Manifest and Possible identities. Carapace uses a micro-noise interference pattern map to simulate shifting light boundaries.
 * .MAT_RULE: Transitioning states triggers a 160-tick public identity reconciliation window on the GPU. Manifest state drives a high-saturation Magenta emissive pulse up to the strict 15% surface area limit. Possible state shifts material luma toward a desaturated, transparent light lattice.
 * .ANIM_RIG: 14-bone kinematic rigging layout featuring named sockets: `VFX_Phase_Lance_01`, `Target_Hitbox_Center`, and `VFX_Reconcile_Anchor`. Frontage facing is decoupled from simulation targeting loops; turning sweeping sweeps at 720 deg/s.
 * .VFX_POLY: Firing lances instantiate linear phase bolt projectiles traveling at an uncompromised velocity of 1,200 cm/s. Weapon muzzle discharge and collision impact effects are rate-limited to prevent visual noise during multi-unit engagements.
 
-#### [Asset Card: REL-FAC-027.HC.WARDEN — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-027.HC.WARDEN.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤8,500 tris; LOD1 ceiling ≤3,800 tris. Heavy line silhouette framing a massive, centralized hollow cavity enclosing a suspended, non-colliding crystalline core. Outer plates use a heavy, angular ceramic value structure.
 * .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Roughness/Metallic packed, Tether Mask). Micro-fractured stone textures blend into smooth pale civic ceramics along structural boundaries.
 * .MAT_RULE: Base material applies a strict matte roughness floor of ≥0.85 to isolate the unit against the landscape background. Activating `Bind Interval` projects a 500 cm physical vector tether beam toward the target coordinate. The tether shader clamps to a low-frequency Magenta ripple, fading cleanly on vision loss or warden translation beyond 700 cm.
 * .ANIM_RIG: 18-bone heavy kinematic layout. Locomotion features slow, rhythmic step cadences that automatically align with box, line, or wedge group centroid arrival points. Core oscillations clamp to zero under the Reduced Motion preset.
 * .VFX_POLY: Emitters are bound to native skeletal socket anchors. Destruction events trigger a bespoke structural collapse effect: dissolving the outer shell into fading light interference waves over exactly 200 ticks, leaving no colliding remnants.
 
-#### [Asset Card: REL-FAC-027.HC.AFTERIMAGE — Visual Asset Manifest]
+#### [Asset Card: REL-FAC-027.HC.AFTERIMAGE.ASSET — Visual Asset Manifest]
 * .MESH_PROP: LOD0 polycount ceiling ≤5,500 tris; LOD1 ceiling ≤2,200 tris. Sharp, elongated scout silhouette featuring twin trailing mesh echoes. The trailing echo geometries use a vertex-shimmer shader to project anonymous approximate contact indicators through fog.
 * .TEX_MAPS: 2048x2048 PBR stack (Albedo, Normal, Packed Utility maps). Projections generated via `Forked Trace` inherit the base mesh boundary data but strip custom textures, rendering as 1-health anonymous pings.
 * .MAT_RULE: Core material loops an animated phase shift shader across the superposition mask. Emissive outlines use an un-bloomed Magenta/Cyan shader blend. Direct player observation instantly overrides the anonymous shader state, rendering the explicit text sigil `PROJECTION` above the entity view.
@@ -4038,23 +4584,23 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 
 ### §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`)
 
-* **REL-AUD-001 — Five-Category Submix Hierarchy:** The runtime audio engine shall route all sound through a five-category submix graph: Music, Dialogue/Voice, Interface, Ambience, and Effects, with independent volume controls and master bus routing.
-  * **REL-AUD-001.AUTH:** Changing the volume slider for one category in Options modifies only that submix without altering others.
-  * **REL-AUD-001.FAIL:** Unrouted cues playing directly to master output fail mix architecture.
-  * **REL-AUD-001.VERIF:** `SRC` + `PKG-AUTO` (`EchoesAudioSubmixTest`).
-  * **REL-AUD-001.LANE:** Audio.
+* **REL-AUD-020 — Five-Category Submix Hierarchy:** The runtime audio engine shall route all sound through a five-category submix graph: Music, Dialogue/Voice, Interface, Ambience, and Effects, with independent volume controls and master bus routing.
+  * **REL-AUD-020.AUTH:** Changing the volume slider for one category in Options modifies only that submix without altering others.
+  * **REL-AUD-020.FAIL:** Unrouted cues playing directly to master output fail mix architecture.
+  * **REL-AUD-020.VERIF:** `SRC` + `PKG-AUTO` (`EchoesAudioSubmixTest`).
+  * **REL-AUD-020.LANE:** Audio.
 
-* **REL-AUD-002 — Integrated Loudness & True Peak Mastering Target:** Packaged gameplay audio shall adhere to the ITU-R BS.1770-4 mastering standard: integrated loudness of $-16.0	ext{ LUFS} \pm 1.0	ext{ LU}$ across a 30-minute session, with true peaks strictly capping at $\le -1.0	ext{ dBTP}$ (resolving C38).
-  * **REL-AUD-002.AUTH:** Eliminates clipping distortion and excessive loudness spikes.
-  * **REL-AUD-002.FAIL:** Session loudness of -10 LUFS or peaks exceeding 0 dBTP fail acceptance.
-  * **REL-AUD-002.VERIF:** `PKG-AUTO` (BS.1770-4 automated loudness measurement).
-  * **REL-AUD-002.LANE:** Audio.
+* **REL-AUD-019.SESSION — Integrated Loudness & True Peak Mastering Target:** Packaged gameplay audio shall adhere to the ITU-R BS.1770-4 mastering standard: integrated loudness of $-16.0\text{ LUFS} \pm 1.0\text{ LU}$ across a 30-minute session, with true peaks strictly capping at $\le -1.0\text{ dBTP}$ (resolving C38).
+  * **REL-AUD-019.SESSION.AUTH:** Eliminates clipping distortion and excessive loudness spikes.
+  * **REL-AUD-019.SESSION.FAIL:** Session loudness of -10 LUFS or peaks exceeding 0 dBTP fail acceptance.
+  * **REL-AUD-019.SESSION.VERIF:** `PKG-AUTO` (BS.1770-4 automated loudness measurement).
+  * **REL-AUD-019.SESSION.LANE:** Audio.
 
-* **REL-AUD-003 — Dynamic Side-Chain Vocal Ducking:** When character dialogue or voiced narration initializes on the Dialogue submix, the audio engine shall duck active Music by -6.0 dB and Ambience by -4.0 dB within 150 ms.
-  * **REL-AUD-003.AUTH:** Combat and interface effects do NOT duck, ensuring combat readability remains uncompromised. Music returns to nominal level over 500 ms upon line completion.
-  * **REL-AUD-003.FAIL:** Unintelligible voice masked by loud background music fails audio review.
-  * **REL-AUD-003.VERIF:** `SRC` + `PKG-AUTO` (side-chain ducking submix test).
-  * **REL-AUD-003.LANE:** Audio.
+* **REL-AUD-023 — Dynamic Side-Chain Vocal Ducking:** When character dialogue or voiced narration initializes on the Dialogue submix, the audio engine shall duck active Music by -6.0 dB and Ambience by -4.0 dB within 150 ms.
+  * **REL-AUD-023.AUTH:** Combat and interface effects do NOT duck, ensuring combat readability remains uncompromised. Music returns to nominal level over 500 ms upon line completion.
+  * **REL-AUD-023.FAIL:** Unintelligible voice masked by loud background music fails audio review.
+  * **REL-AUD-023.VERIF:** `SRC` + `PKG-AUTO` (side-chain ducking submix test).
+  * **REL-AUD-023.LANE:** Audio.
 
 * **REL-AUD-004 — Local Neural Text-to-Speech Voice Generation Pipeline:** Campaign dialogue and briefing narration shall be generated locally using the Kokoro-82M open-weights neural TTS engine at 48 kHz mono PCM, registered deterministically in `AssetRegister.md` without runtime cloud dependencies.
   * **REL-AUD-004.AUTH:** All 308 authored dialogue lines across the 15 campaign missions shall possess registered audio files.
@@ -4153,7 +4699,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-CIN-001.LANE:** Cinematics.
 
 * **REL-CIN-002 — In-Engine Title Cinematic Sequence:** The game shall open with an authored in-engine sequence establishing Soryn's fractured sun, the fall of Dawnshards, and the emergence of the three factions.
-  * **REL-CIN-002.AUTH:** Duration $\le 90	ext{ seconds}$, fully voiced narration, letterbox presentation.
+  * **REL-CIN-002.AUTH:** Duration $\le 90\text{ seconds}$, fully voiced narration, letterbox presentation.
   * **REL-CIN-002.FAIL:** Shipped build lacking an opening title cinematic fails release scope.
   * **REL-CIN-002.VERIF:** `PKG-REND` (opening sequence review).
   * **REL-CIN-002.LANE:** Cinematics.
@@ -4183,7 +4729,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-CIN-006.LANE:** Cinematics & Narrative.
 
 * **REL-CIN-007 — Universal Cinematic Skippability & Subtitle Guarantee:** Every cinematic sequence shall be skippable by pressing `Escape` or holding `Space` for 1.0 second, displaying an on-screen skip prompt.
-  * **REL-CIN-007.AUTH:** Subtitles with high-contrast background boxes are enabled by default and synchronize with dialogue $\pm 100	ext{ ms}$.
+  * **REL-CIN-007.AUTH:** Subtitles with high-contrast background boxes are enabled by default and synchronize with dialogue $\pm 100\text{ ms}$.
   * **REL-CIN-007.FAIL:** Unskippable cutscenes or missing subtitles fails accessibility standards.
   * **REL-CIN-007.VERIF:** `PKG-PHYS` (cutscene skip and subtitle sync test).
   * **REL-CIN-007.LANE:** Cinematics & Accessibility.
@@ -4232,9 +4778,9 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-SAV-006.VERIF:** `PKG-AUTO` (autosave cadence and non-blocking execution test).
   * **REL-SAV-006.LANE:** Save Recovery & Player Experience.
 
-* **REL-SAV-007 — Asynchronous Non-Blocking Save Frame Budget:** Save file serialization shall execute asynchronously on a background worker thread, imposing no more than $250.00	ext{ ms}$ total frame delay on the main game thread (resolving C39).
+* **REL-SAV-007 — Asynchronous Non-Blocking Save Frame Budget:** Save file serialization shall execute asynchronously on a background worker thread, imposing no more than $250.00\text{ ms}$ total frame delay on the main game thread (resolving C39).
   * **REL-SAV-007.AUTH:** The game thread takes a fast memory snapshot (≤10 ms) and offloads disk I/O to the background thread.
-  * **REL-SAV-007.FAIL:** Hitching the game thread for $>250	ext{ ms}$ during save writes is a critical performance defect.
+  * **REL-SAV-007.FAIL:** Hitching the game thread for $>250\text{ ms}$ during save writes is a critical performance defect.
   * **REL-SAV-007.VERIF:** `PKG-AUTO` (save thread profiler budget assertion).
   * **REL-SAV-007.LANE:** Performance & Save Recovery.
 
@@ -4256,7 +4802,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-SAV-010.VERIF:** `SRC` (schema version migration test).
   * **REL-SAV-010.LANE:** Save Recovery.
 
-* **REL-SAV-011 — Campaign Consequence Ledger Tamper Resistance:** The campaign ledger shall record decisions as a forward-only cryptographic hash chain: $H_n = 	ext{Hash}(H_{n-1} + DecisionData)$.
+* **REL-SAV-011 — Campaign Consequence Ledger Tamper Resistance:** The campaign ledger shall record decisions as a forward-only cryptographic hash chain: $H_n = \text{Hash}(H_{n-1} + DecisionData)$.
   * **REL-SAV-011.AUTH:** Manual external file tampering or desynchronized decision order is detected and flagged on load.
   * **REL-SAV-011.FAIL:** Arbitrary text edits to the save unlocking all missions without verification fails integrity.
   * **REL-SAV-011.VERIF:** `SRC` (ledger hash-chain validation test).
@@ -4321,7 +4867,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ACC-006.LANE:** Player Experience (`EchoesHUD`).
 
 * **REL-ACC-007 — High-Contrast Subtitle Styling & Scalability:** Subtitles shall render with an authored semi-opaque charcoal bounding box, high-contrast pale text, and support font scaling between 14pt and 28pt.
-  * **REL-ACC-007.AUTH:** Subtitles synchronize with voice lines within $\pm 100	ext{ ms}$.
+  * **REL-ACC-007.AUTH:** Subtitles synchronize with voice lines within $\pm 100\text{ ms}$.
   * **REL-ACC-007.FAIL:** Transparent subtitles disappearing over bright terrain fails readability.
   * **REL-ACC-007.VERIF:** `PKG-REND` (subtitle readability and scale review).
   * **REL-ACC-007.LANE:** Player Experience & Cinematics.
@@ -4435,7 +4981,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-LOC-003.LANE:** Localization & Player Experience.
 
 * **REL-LOC-004 — Automated Localization Translation Extraction Pipeline:** The build system shall provide an automated extraction command (`Scripts/extract_localization.py`) generating standardized PO/CSV translation manifests from source data.
-  * **REL-LOC-004.AUTH:** Extraction completes in $\le 10.0	ext{ seconds}$ without requiring full editor launch.
+  * **REL-LOC-004.AUTH:** Extraction completes in $\le 10.0\text{ seconds}$ without requiring full editor launch.
   * **REL-LOC-004.FAIL:** Broken translation extraction pipeline fails release tool requirements.
   * **REL-LOC-004.VERIF:** `SRC` (localization pipeline execution test).
   * **REL-LOC-004.LANE:** Localization & Build.
@@ -4460,43 +5006,43 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-PERF-001.VERIF:** `PKG-AUTO` (automated frame-rate benchmark trace).
   * **REL-PERF-001.LANE:** Performance.
 
-* **REL-PERF-002 — Frame Time Distribution & Spike Ceiling:** In a 10-minute active gameplay benchmark, the 95th percentile (p95) frame time shall not exceed $16.67	ext{ ms}$, the 99th percentile (p99) shall not exceed $22.00	ext{ ms}$, and no single frame spike shall exceed $33.33	ext{ ms}$.
+* **REL-PERF-002 — Frame Time Distribution & Spike Ceiling:** In a 10-minute active gameplay benchmark, the 95th percentile (p95) frame time shall not exceed $16.67\text{ ms}$, the 99th percentile (p99) shall not exceed $22.00\text{ ms}$, and no single frame spike shall exceed $33.33\text{ ms}$.
   * **REL-PERF-002.AUTH:** Eliminates perceptible visual hitching and stuttering.
   * **REL-PERF-002.FAIL:** Any single frame exceeding 50.0 ms fails frame pacing criteria.
   * **REL-PERF-002.VERIF:** `PKG-AUTO` (Unreal Engine Insights frame pacing analysis).
   * **REL-PERF-002.LANE:** Performance.
 
-* **REL-PERF-003 — Game Thread Execution Budget:** Total game thread execution time (simulation update, player input sampling, order routing, and view synchronization) shall not exceed $4.00	ext{ ms}$ per frame under a 400-unit combat load.
-  * **REL-PERF-003.AUTH:** Leaves $\ge 12.67	ext{ ms}$ headroom for rendering and GPU execution within the 16.67 ms window.
+* **REL-PERF-003 — Game Thread Execution Budget:** Total game thread execution time (simulation update, player input sampling, order routing, and view synchronization) shall not exceed $4.00\text{ ms}$ per frame under a 400-unit combat load.
+  * **REL-PERF-003.AUTH:** Leaves $\ge 12.67\text{ ms}$ headroom for rendering and GPU execution within the 16.67 ms window.
   * **REL-PERF-003.FAIL:** Game thread exceeding 6.0 ms fails performance budget.
   * **REL-PERF-003.VERIF:** `PKG-AUTO` (stat Game profiler run).
   * **REL-PERF-003.LANE:** Performance & Core Gameplay.
 
-* **REL-PERF-004 — Render Thread & GPU Execution Budget:** Render thread time and GPU frame time combined shall not exceed $11.00	ext{ ms}$ per frame at 1080p resolution under standard lighting and shader quality.
+* **REL-PERF-004 — Render Thread & GPU Execution Budget:** Render thread time and GPU frame time combined shall not exceed $11.00\text{ ms}$ per frame at 1080p resolution under standard lighting and shader quality.
   * **REL-PERF-004.AUTH:** Measured on Metal GPU profiler across heavy particle and combat engagements.
   * **REL-PERF-004.FAIL:** GPU time exceeding 13.0 ms fails graphics budget.
   * **REL-PERF-004.VERIF:** `PKG-AUTO` (Metal GPU frame trace).
   * **REL-PERF-004.LANE:** Visual Presentation & Performance.
 
-* **REL-PERF-005 — Volumetric Fog GPU Computation Budget:** Volumetric 3D fog-of-war occlusion shader passes shall execute on the GPU within a strict budget of $\le 1.50	ext{ ms}$ per frame.
+* **REL-PERF-005 — Volumetric Fog GPU Computation Budget:** Volumetric 3D fog-of-war occlusion shader passes shall execute on the GPU within a strict budget of $\le 1.50\text{ ms}$ per frame.
   * **REL-PERF-005.AUTH:** Downsampled 3D fog computation with bilateral upsampling ensures full visual coverage within budget.
   * **REL-PERF-005.FAIL:** Fog pass exceeding 2.5 ms fails graphics optimization.
   * **REL-PERF-005.VERIF:** `PKG-AUTO` (GPU shader pass timing).
   * **REL-PERF-005.LANE:** Visual Presentation.
 
-* **REL-PERF-006 — Pathfinding Burst Re-plan Budget:** A simultaneous pathfinding recalculation burst triggered by 50 units (e.g. upon Reshape bridge manifestation or blockage) shall complete within $\le 6.00	ext{ ms}$ total compute time.
+* **REL-PERF-006 — Pathfinding Burst Re-plan Budget:** A simultaneous pathfinding recalculation burst triggered by 50 units (e.g. upon Reshape bridge manifestation or blockage) shall complete within $\le 6.00\text{ ms}$ total compute time.
   * **REL-PERF-006.AUTH:** Path requests exceeding 6.0 ms are time-sliced across adjacent ticks.
-  * **REL-PERF-006.FAIL:** Re-planning burst freezing the game thread for $>10	ext{ ms}$ fails pathfinding criteria.
+  * **REL-PERF-006.FAIL:** Re-planning burst freezing the game thread for $>10\text{ ms}$ fails pathfinding criteria.
   * **REL-PERF-006.VERIF:** `SRC` (50-unit path burst benchmark).
   * **REL-PERF-006.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-PERF-007 — Master Performance Budget Compliance Invariant:** The shipping packaged build shall simultaneously satisfy the entire master budget envelope: p95 frame time $\le 16.67	ext{ ms}$, game thread $\le 4.0	ext{ ms}$, render+GPU $\le 11.0	ext{ ms}$, fog $\le 1.5	ext{ ms}$, path burst $\le 6.0	ext{ ms}$, resident memory $\le 10	ext{ GB}$, and save write $\le 250	ext{ ms}$ (binding values).
+* **REL-PERF-007 — Master Performance Budget Compliance Invariant:** The shipping packaged build shall simultaneously satisfy the entire master budget envelope: p95 frame time $\le 16.67\text{ ms}$, game thread $\le 4.0\text{ ms}$, render+GPU $\le 11.0\text{ ms}$, fog $\le 1.5\text{ ms}$, path burst $\le 6.0\text{ ms}$, resident memory $\le 10\text{ GB}$, and save write $\le 250\text{ ms}$ (binding values).
   * **REL-PERF-007.AUTH:** All budgets verified on the identical packaged release candidate.
   * **REL-PERF-007.FAIL:** Exceeding any single ceiling invalidates release packaging.
   * **REL-PERF-007.VERIF:** `PKG-AUTO` (end-to-end performance qualification suite).
   * **REL-PERF-007.LANE:** Performance & QA.
 
-* **REL-PERF-008 — Resident Memory Ceiling (10 GB RSS):** Total resident set size (RSS) memory of the game process shall not exceed $10.0	ext{ GB}$ at any point during a 60-minute rendered gameplay session with 400 active units.
+* **REL-PERF-008 — Resident Memory Ceiling (10 GB RSS):** Total resident set size (RSS) memory of the game process shall not exceed $10.0\text{ GB}$ at any point during a 60-minute rendered gameplay session with 400 active units.
   * **REL-PERF-008.AUTH:** Prevents memory exhaustion on 16 GB unified memory systems.
   * **REL-PERF-008.FAIL:** Memory usage exceeding 11.0 GB triggers memory leak review.
   * **REL-PERF-008.VERIF:** `PKG-AUTO` (RSS memory tracking over 60 minutes).
@@ -4508,7 +5054,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-PERF-009.VERIF:** `PKG-AUTO` (texture streaming pool assert).
   * **REL-PERF-009.LANE:** Visual Presentation & Performance.
 
-* **REL-PERF-010 — 400-Unit Four-Team Stress Protocol:** The game shall execute a standardized 400-unit stress test (100 units per team across 4 AI teams in active combat) maintaining $\ge 45	ext{ FPS}$ on baseline hardware (binding protocol).
+* **REL-PERF-010 — 400-Unit Four-Team Stress Protocol:** The game shall execute a standardized 400-unit stress test (100 units per team across 4 AI teams in active combat) maintaining $\ge 45\text{ FPS}$ on baseline hardware (binding protocol).
   * **REL-PERF-010.AUTH:** Verified using automated headless-to-rendered harness `run_stress_benchmark.sh`.
   * **REL-PERF-010.FAIL:** Crash, memory exhaustion, or drop below 30 FPS fails qualification.
   * **REL-PERF-010.VERIF:** `PKG-AUTO` (400-unit stress benchmark receipt).
@@ -4538,15 +5084,15 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-PERF-014.VERIF:** `PKG-AUTO` (Metal shader cache precompilation audit).
   * **REL-PERF-014.LANE:** Build Distribution & Visual.
 
-* **REL-PERF-015 — Passive Thermal Throttling Resilience:** On passively cooled Apple Silicon systems (MacBook Air), the engine shall gracefully adapt frame pacing when thermal pressure reaches `Heavy`, reducing background dynamic resolution to maintain $\ge 40	ext{ FPS}$ without freezing.
+* **REL-PERF-015 — Passive Thermal Throttling Resilience:** On passively cooled Apple Silicon systems (MacBook Air), the engine shall gracefully adapt frame pacing when thermal pressure reaches `Heavy`, reducing background dynamic resolution to maintain $\ge 40\text{ FPS}$ without freezing.
   * **REL-PERF-015.AUTH:** Thermal notifications are polled cleanly via standard macOS APIs.
   * **REL-PERF-015.FAIL:** Hard freeze or kernel panic under sustained thermal load fails acceptance.
   * **REL-PERF-015.VERIF:** `PKG-AUTO` (thermal pressure simulation test).
   * **REL-PERF-015.LANE:** Performance.
 
-* **REL-PERF-016 — Headless Simulation Execution Throughput:** When running headless without rendering or frame rate capping, the simulation engine shall process ticks at $\ge 50	imes$ real-time speed (minimum 1,000 simulation ticks per second on a single M1 Pro core).
+* **REL-PERF-016 — Headless Simulation Execution Throughput:** When running headless without rendering or frame rate capping, the simulation engine shall process ticks at $\ge 50\times$ real-time speed (minimum 1,000 simulation ticks per second on a single M1 Pro core).
   * **REL-PERF-016.AUTH:** Enables fast automated balance verification and continuous regression testing.
-  * **REL-PERF-016.FAIL:** Headless simulation speed $<30	imes$ fails automation criteria.
+  * **REL-PERF-016.FAIL:** Headless simulation speed $<30\times$ fails automation criteria.
   * **REL-PERF-016.VERIF:** `SRC` (headless tick throughput benchmark).
   * **REL-PERF-016.LANE:** Core Gameplay & Build.
 
@@ -4568,7 +5114,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-STAB-001.VERIF:** `PKG-AUTO` (60-minute continuous run log).
   * **REL-STAB-001.LANE:** Independent QA.
 
-* **REL-STAB-002 — Match Restart Memory Leak Invariance:** Restarting a skirmish match or loading a campaign mission 10 consecutive times within a single game session shall result in net RSS memory growth of $\le 50.0	ext{ MB}$.
+* **REL-STAB-002 — Match Restart Memory Leak Invariance:** Restarting a skirmish match or loading a campaign mission 10 consecutive times within a single game session shall result in net RSS memory growth of $\le 50.0\text{ MB}$.
   * **REL-STAB-002.AUTH:** All entity memory, path grids, and textures must be cleanly released upon match termination.
   * **REL-STAB-002.FAIL:** Unbounded memory growth across match restarts fails stability.
   * **REL-STAB-002.VERIF:** `PKG-AUTO` (10-match restart memory leak harness).
@@ -4656,7 +5202,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-DIST-010.VERIF:** `PKG-AUTO` (unprivileged execution test).
   * **REL-DIST-010.LANE:** Build Distribution & Security.
 
-* **REL-DIST-011 — Distribution Package Compression Budget:** The distribution disk image (.dmg) file size shall not exceed $15.0	ext{ GB}$, with uncompressed installed footprint not exceeding $25.0	ext{ GB}$.
+* **REL-DIST-011 — Distribution Package Compression Budget:** The distribution disk image (.dmg) file size shall not exceed $15.0\text{ GB}$, with uncompressed installed footprint not exceeding $25.0\text{ GB}$.
   * **REL-DIST-011.AUTH:** Asset catalogs are packed using LZ4/Zstandard compression.
   * **REL-DIST-011.FAIL:** Package size exceeding 18 GB fails distribution budget.
   * **REL-DIST-011.VERIF:** `PKG-AUTO` (DMG file size assertion).
@@ -4669,7 +5215,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-DIST-012.LANE:** Build Distribution.
 
 * **REL-DIST-013 — Automated Package Seal & SHA-256 Digest:** Packaging completion shall generate an authoritative cryptographic seal file (`package_seal.json`) recording the Git commit SHA, build timestamp, binary SHA-256, and DMG SHA-256.
-  * **REL-DIST-013.AUTH:** Seal file is archived in `WorkstreamControl/evidence/release/`.
+  * **REL-DIST-013.AUTH:** Seal file is archived in `BuildArtifacts/Evidence/release/`.
   * **REL-DIST-013.FAIL:** Distributing packages without cryptographic seal file is prohibited.
   * **REL-DIST-013.VERIF:** `PKG-AUTO` (seal generation check).
   * **REL-DIST-013.LANE:** Build Distribution.
@@ -4693,7 +5239,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-DIST-016.LANE:** Build Distribution & Player Experience.
 
 * **REL-DIST-017 — Patching & Delta Update Architecture Readiness:** Data package files (`.pak`) shall be authored in modular chunks (Audio, Textures, Meshes, CoreData), enabling small delta updates without requiring redownload of the full 15 GB package.
-  * **REL-DIST-017.AUTH:** Patching core code or balance data requires updating a $<50	ext{ MB}$ data chunk.
+  * **REL-DIST-017.AUTH:** Patching core code or balance data requires updating a $<50\text{ MB}$ data chunk.
   * **REL-DIST-017.FAIL:** Monolithic single-file data blob preventing delta patching fails maintainability.
   * **REL-DIST-017.VERIF:** `SRC` (modular pak layout audit).
   * **REL-DIST-017.LANE:** Build Distribution.
@@ -4871,7 +5417,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 * **REL-QA-002 — Zero S0/S1 Release Prohibitions:** A candidate package shall contain exactly ZERO open S0 and ZERO open S1 defects to be authorized for release packaging.
   * **REL-QA-002.AUTH:** Any open S0 or S1 defect immediately blocks candidate promotion.
   * **REL-QA-002.FAIL:** Shipping with known crashes or soft-locks is strictly prohibited.
-  * **REL-QA-002.VERIF:** `SRC` (open defect query in `ProjectLedger.md`).
+  * **REL-QA-002.VERIF:** `SRC` (open defect query in `Docs/RequirementsState.md`).
   * **REL-QA-002.LANE:** Independent QA.
 
 * **REL-QA-003 — Zero Un-Waived S2 Critical Path Defects:** A candidate package shall have zero un-waived S2 defects on the release-critical path. Any S2 exception requires explicit written justification signed by Angelis Pseftis.
@@ -4880,7 +5426,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-QA-003.VERIF:** `SRC` (S2 waiver registry audit).
   * **REL-QA-003.LANE:** Independent QA & Owner.
 
-* **REL-QA-004 — Authoritative Defect Register Ledger:** All discovered defects shall be logged in `Docs/Archive/ProjectLedger.md` with: unique defect ID, severity, affected requirement ID, reproduction steps, expected behavior, actual behavior, and resolution status.
+* **REL-QA-004 — Authoritative Defect Register Ledger:** All discovered defects shall be logged in `Docs/RequirementsState.md` with: unique defect ID, severity, affected requirement ID, reproduction steps, expected behavior, actual behavior, and resolution status.
   * **REL-QA-004.AUTH:** No defects shall be tracked informally in external ephemeral chats.
   * **REL-QA-004.FAIL:** Untracked bugs found in release testing fails QA governance.
   * **REL-QA-004.VERIF:** `SRC` (defect register ledger validation).
@@ -4952,13 +5498,13 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-QA-015.VERIF:** `PKG-AUTO` (UI scaling layout validation).
   * **REL-QA-015.LANE:** Player Experience & QA.
 
-* **REL-QA-016 — BS.1770-4 Automated Loudness Test:** Audio output captured from a 30-minute gameplay session shall be analyzed via automated BS.1770-4 meter, asserting integrated loudness of $-16	ext{ LUFS} \pm 1	ext{ LU}$ and true peaks $\le -1	ext{ dBTP}$.
+* **REL-QA-016 — BS.1770-4 Automated Loudness Test:** Audio output captured from a 30-minute gameplay session shall be analyzed via automated BS.1770-4 meter, asserting integrated loudness of $-16\text{ LUFS} \pm 1\text{ LU}$ and true peaks $\le -1\text{ dBTP}$.
   * **REL-QA-016.AUTH:** Verifies audio compliance programmatically.
   * **REL-QA-016.FAIL:** Loudness exceeding -15 LUFS or true peaks > -1 dBTP fails test.
   * **REL-QA-016.VERIF:** `PKG-AUTO` (loudness compliance analysis report).
   * **REL-QA-016.LANE:** Audio & QA.
 
-* **REL-QA-017 — Complete Dialogue Voice & Subtitle Sync Test:** An automated test shall verify that all 308 campaign dialogue lines possess registered audio files, and that subtitles display within $\pm 100	ext{ ms}$ of audio start.
+* **REL-QA-017 — Complete Dialogue Voice & Subtitle Sync Test:** An automated test shall verify that all 308 campaign dialogue lines possess registered audio files, and that subtitles display within $\pm 100\text{ ms}$ of audio start.
   * **REL-QA-017.AUTH:** Verifies zero unvoiced dialogue lines.
   * **REL-QA-017.FAIL:** Missing voice files or desynchronized subtitles fails verification.
   * **REL-QA-017.VERIF:** `SRC` (voice asset sync test).
@@ -5000,15 +5546,15 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-QA-023.VERIF:** `PKG-AUTO` (chokepoint throughput test).
   * **REL-QA-023.LANE:** Core Gameplay & QA.
 
-* **REL-QA-024 — 400-Unit Combat Frame-Rate Benchmark:** QA shall record frame-time metrics during a 400-unit mass engagement, verifying p95 frame time $\le 16.67	ext{ ms}$ and minimum frame rate $\ge 45	ext{ FPS}$.
+* **REL-QA-024 — 400-Unit Combat Frame-Rate Benchmark:** QA shall record frame-time metrics during a 400-unit mass engagement, verifying p95 frame time $\le 16.67\text{ ms}$ and minimum frame rate $\ge 45\text{ FPS}$.
   * **REL-QA-024.AUTH:** Evaluates performance under maximum load.
   * **REL-QA-024.FAIL:** Performance dipping below 30 FPS fails qualification.
   * **REL-QA-024.VERIF:** `PKG-AUTO` (mass combat profiler trace).
   * **REL-QA-024.LANE:** Performance & QA.
 
-* **REL-QA-025 — Ten-Match Skirmish Restart Memory Leak Check:** QA shall automate 10 consecutive skirmish match cycles (Start Skirmish → Play 120 Ticks → Concede → Exit to Menu), asserting net memory growth $\le 50	ext{ MB}$.
+* **REL-QA-025 — Ten-Match Skirmish Restart Memory Leak Check:** QA shall automate 10 consecutive skirmish match cycles (Start Skirmish → Play 120 Ticks → Concede → Exit to Menu), asserting net memory growth $\le 50\text{ MB}$.
   * **REL-QA-025.AUTH:** Verifies complete asset and entity cleanup between matches.
-  * **REL-QA-025.FAIL:** Memory growing by $>100	ext{ MB}$ indicates a release-blocking leak.
+  * **REL-QA-025.FAIL:** Memory growing by $>100\text{ MB}$ indicates a release-blocking leak.
   * **REL-QA-025.VERIF:** `PKG-AUTO` (match restart memory tracking log).
   * **REL-QA-025.LANE:** Performance & QA.
 
@@ -5019,7 +5565,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-QA-026.LANE:** Independent QA.
 
 * **REL-QA-027 — Blind Naive Human Playtesting Sessions:** At least two uncoached, project-naive human playtesters shall play through the Prologue and Mission 01, documenting usability bottlenecks, confusion points, and gameplay feel.
-  * **REL-QA-027.AUTH:** Playtest observations are logged in `WorkstreamControl/evidence/human/`.
+  * **REL-QA-027.AUTH:** Playtest observations are logged in `BuildArtifacts/Evidence/human/`.
   * **REL-QA-027.FAIL:** Shipping without external naive human playtesting is prohibited.
   * **REL-QA-027.VERIF:** `HUM` (naive human playtest observation dossiers).
   * **REL-QA-027.LANE:** Independent QA & Player Experience.
@@ -5036,7 +5582,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-QA-029.VERIF:** `SRC` (git tag signature check).
   * **REL-QA-029.LANE:** Coordinator & Build.
 
-* **REL-QA-030 — Master Evidence Archive Binding:** All receipts, traces, test logs, and video captures supporting the release candidate shall be archived permanently in `WorkstreamControl/evidence/release/v1.0.0/`.
+* **REL-QA-030 — Master Evidence Archive Binding:** All receipts, traces, test logs, and video captures supporting the release candidate shall be archived permanently in `BuildArtifacts/Evidence/release/v1.0.0/`.
   * **REL-QA-030.AUTH:** Archive is bound cryptographically to the release commit SHA.
   * **REL-QA-030.FAIL:** Missing evidence files for accepted requirements fails release governance.
   * **REL-QA-030.VERIF:** `SRC` (evidence archive completeness audit).
@@ -5056,15 +5602,15 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 
 ---
 
-### §26 Conditional Multiplayer Module (`REL-MP-*`)
+### §26 Multiplayer Release Module (`REL-MP-*`)
 
 > [!NOTE]
-> In accordance with the Project Scope Decision (2026-09-02), the Multiplayer Module is **DORMANT** in the 1.0 initial release. The requirements below define the architectural boundary, data contracts, and isolation guarantees, ensuring multiplayer code remains dormant and executes ZERO network operations during single-player play.
+> Angelis activated bounded session multiplayer, team battles and FFA for the initial release on 2026-09-04. The earlier release-wide dormancy decision is superseded. Network execution remains isolated from offline modes under REL-MP-016; approval does not assert working multiplayer.
 
-* **REL-MP-001 — Conditional Multiplayer Module Dormancy:** The multiplayer subsystem shall remain completely dormant in 1.0 single-player and skirmish modes, compiled into an isolated module (`EchoesNetCore`) with zero runtime overhead.
-  * **REL-MP-001.AUTH:** Activating multiplayer features requires an explicit design scope change authorized by Angelis Pseftis.
+* **REL-MP-001 — Session-scoped Multiplayer Activation:** The multiplayer subsystem shall be available for the approved network session modes through an isolated module (`EchoesNetCore`), and remain dormant with zero network operations and no multiplayer runtime overhead during offline campaign, Conquest, tutorial and offline skirmish.
+  * **REL-MP-001.AUTH:** The owner authorized session multiplayer on 2026-09-04. A session activates networking only through its explicit player-facing network entry; offline launch never activates it.
   * **REL-MP-001.FAIL:** Single-player opening network sockets or calling multiplayer code fails dormancy.
-  * **REL-MP-001.VERIF:** `SRC` (multiplayer dormancy static check).
+  * **REL-MP-001.VERIF:** `SRC` (mode isolation checks), with packaged activation/isolation evidence under REL-MP-018.
   * **REL-MP-001.LANE:** Core Gameplay & Network.
 
 * **REL-MP-002 — Deterministic Lockstep Protocol Architecture:** The multiplayer network architecture shall be structured as an authoritative deterministic lockstep protocol, transmitting player input commands rather than entity transform synchronizations.
@@ -5074,7 +5620,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-MP-002.LANE:** Network.
 
 * **REL-MP-003 — Fixed-Width Command Packet Schema:** Network message packets shall use a compact, fixed-width binary schema: Client ID (8-bit), Target Tick (32-bit), Command Type (8-bit), Target Entity/Coordinate (64-bit), and CRC16 Checksum.
-  * **REL-MP-003.AUTH:** Total packet payload $\le 32	ext{ bytes}$ per command.
+  * **REL-MP-003.AUTH:** Total packet payload $\le 32\text{ bytes}$ per command.
   * **REL-MP-003.FAIL:** Variable-length string-based network payloads fail protocol standards.
   * **REL-MP-003.VERIF:** `SRC` (network packet struct size check).
   * **REL-MP-003.LANE:** Network.
@@ -5085,10 +5631,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-MP-004.VERIF:** `SRC` (desync detection unit test).
   * **REL-MP-004.LANE:** Network.
 
-* **REL-MP-005 — Dynamic Ping-Compensated Turn Buffer:** The turn scheduler shall adjust input delay buffer dynamically based on measured round-trip time (RTT): RTT $<50	ext{ ms} 
-ightarrow 2	ext{ ticks}$; RTT $50	ext{--}150	ext{ ms} 
-ightarrow 3	ext{ ticks}$; RTT $>150	ext{ ms} 
-ightarrow 4	ext{ ticks}$.
+* **REL-MP-005 — Dynamic Ping-Compensated Turn Buffer:** The turn scheduler shall adjust input delay buffer dynamically based on measured round-trip time (RTT): RTT $<50\text{ ms} \rightarrow 2\text{ ticks}$; RTT $50\text{--}150\text{ ms} \rightarrow 3\text{ ticks}$; RTT $>150\text{ ms} \rightarrow 4\text{ ticks}$.
   * **REL-MP-005.AUTH:** Maintains smooth lockstep flow under varying network latencies.
   * **REL-MP-005.FAIL:** Static input delay causing hitching on high latency fails pacing.
   * **REL-MP-005.VERIF:** `SRC` (dynamic turn buffer scaling test).
@@ -5100,19 +5643,19 @@ ightarrow 4	ext{ ticks}$.
   * **REL-MP-006.VERIF:** `SRC` (peer disconnect timeout test).
   * **REL-MP-006.LANE:** Network.
 
-* **REL-MP-007 — Lobby Discovery & Room Creation Interface:** The dormant multiplayer UI module defines a structured lobby interface: Create Room, Join by Code, LAN Discovery, and Map/Faction Selection.
-  * **REL-MP-007.AUTH:** UI components remain hidden in 1.0 builds until activated.
+* **REL-MP-007 — Lobby Discovery & Room Creation Interface:** The release multiplayer UI shall provide a structured lobby interface: Create Room, Join by Code, LAN Discovery, and Map/Faction Selection.
+  * **REL-MP-007.AUTH:** The qualified release exposes working Create/Join/LAN and configuration flows; no disabled development stub is presented as a playable mode.
   * **REL-MP-007.FAIL:** Exposing broken or unfunctional multiplayer lobby buttons in 1.0 fails release criteria.
-  * **REL-MP-007.VERIF:** `SRC` (dormant lobby UI visibility check).
+  * **REL-MP-007.VERIF:** `PKG-PHYS` (Create/Join/LAN, invalid configuration and return-to-menu paths).
   * **REL-MP-007.LANE:** UI & Network.
 
-* **REL-MP-008 — Player Slot & Asymmetric Faction Configuration:** Lobbies shall support up to 4 player slots (2v2 or 4-player FFA), validating that each player selects an authorized faction and starting color accent.
+* **REL-MP-008 — Player Slot & Asymmetric Faction Configuration:** Lobbies shall support 1v1, 2v2, 3v3 and up to four-player FFA, with a six-participant ceiling derived from the already specified 3v3 mode. Validate human/AI slot occupancy, faction, non-color ownership mark, team, map-format eligibility and starting configuration before launch. Six-player FFA is not implied.
   * **REL-MP-008.AUTH:** Validates map spawn eligibility before launching match.
   * **REL-MP-008.FAIL:** Starting a match with unassigned slots or conflicting colors rejects cleanly.
   * **REL-MP-008.VERIF:** `SRC` (lobby slot validation test).
   * **REL-MP-008.LANE:** Network.
 
-* **REL-MP-009 — Strict Network Bandwidth Budget (64 kbps):** Network bandwidth consumption per connected player shall not exceed $64.0	ext{ kbps}$ upstream and downstream under peak combat command issuance.
+* **REL-MP-009 — Strict Network Bandwidth Budget (64 kbps):** Network bandwidth consumption per connected player shall not exceed $64.0\text{ kbps}$ upstream and downstream under peak combat command issuance.
   * **REL-MP-009.AUTH:** Enables multiplayer play over constrained broadband connections.
   * **REL-MP-009.FAIL:** Bandwidth exceeding 128 kbps fails protocol efficiency criteria.
   * **REL-MP-009.VERIF:** `SRC` (bandwidth consumption simulation test).
@@ -5124,25 +5667,25 @@ ightarrow 4	ext{ ticks}$.
   * **REL-MP-010.VERIF:** `SRC` (client-side prediction acknowledgement test).
   * **REL-MP-010.LANE:** Network & Player Experience.
 
-* **REL-MP-011 — Automated Desync Dump Serialization:** When a state checksum mismatch occurs, both clients shall immediately serialize a desync diagnostic archive containing: tick number, entity arrays, RNG state, and the last 100 received command packets.
+* **REL-MP-011 — Automated Desync Dump Serialization:** When a state checksum mismatch occurs, each connected peer shall immediately serialize a desync diagnostic archive containing: tick number, entity arrays, RNG state, and the last 100 received command packets.
   * **REL-MP-011.AUTH:** Enables deterministic offline debugging of multiplayer desyncs.
   * **REL-MP-011.FAIL:** Desync occurring without diagnostic dump emission fails supportability.
   * **REL-MP-011.VERIF:** `SRC` (desync diagnostic archive generator test).
   * **REL-MP-011.LANE:** Network & Core Gameplay.
 
-* **REL-MP-012 — Cryptographic Packet Authentication & Anti-Spoofing:** Network packets shall embed a cryptographic HMAC or sequence counter preventing packet replay attacks, spoofed entity commands, or out-of-order execution.
+* **REL-MP-012 — Cryptographic Packet Authentication & Anti-Spoofing:** Network packets shall be cryptographically authenticated to the authorized session participant and include freshness/sequence validation, preventing replay, spoofed commands and out-of-order execution. A sequence counter or CRC alone does not satisfy authentication. Validate command issuer/ownership, session and turn before admission; reject unauthenticated, stale or unauthorized commands without mutating simulation state.
   * **REL-MP-012.AUTH:** Invalid packets are rejected immediately on receipt.
   * **REL-MP-012.FAIL:** Accepting unauthenticated or out-of-sequence packets fails security.
   * **REL-MP-012.VERIF:** `SRC` (packet authentication unit test).
   * **REL-MP-012.LANE:** Security & Network.
 
-* **REL-MP-013 — NAT Traversal & Direct Peer Fallback:** The network socket layer shall support standard UDP hole punching (STUN) for direct peer-to-peer connectivity, with fallback to relay routing if direct connection fails.
-  * **REL-MP-013.AUTH:** Enables connectivity across standard home routers without port forwarding.
-  * **REL-MP-013.FAIL:** Inability to connect behind symmetric NAT fails connectivity criteria.
+* **REL-MP-013 — NAT Traversal & Direct Peer Fallback:** The network socket layer shall support standard UDP hole punching (STUN) for direct peer-to-peer connectivity, with fallback to relay routing if direct connection fails in the next-version hosted offering. Hosting and hosted relay deployment are deferred by owner direction until this version is fully completed. Current direct/LAN connection failures shall return an actionable error and cleanly release session resources; they must not imply that an unavailable relay exists.
+  * **REL-MP-013.AUTH:** Current direct/LAN behavior is qualified and accurately disclosed. The general home-router connectivity promise depends on next-version hosted fallback and is not a current-version claim.
+  * **REL-MP-013.FAIL:** Inability to connect behind symmetric NAT fails the next-version hosted-fallback criteria. In this version, hidden failure, a false connection-success claim, or failure to return safely from unsupported connectivity is a defect.
   * **REL-MP-013.VERIF:** `SRC` (NAT traversal handshake test).
   * **REL-MP-013.LANE:** Network.
 
-* **REL-MP-014 — Host Migration & Listen-Server Resilience:** If the host player drops from a 4-player match, the session shall elect a new host based on lowest average ping and resume lockstep within 200 ticks.
+* **REL-MP-014 — Host Migration & Listen-Server Resilience:** If the host player drops from any supported multiplayer match, including a six-participant 3v3 session, the session shall elect a new host based on lowest average ping and resume lockstep within 200 ticks.
   * **REL-MP-014.AUTH:** Prevents premature match collapse when the host disconnects.
   * **REL-MP-014.FAIL:** Host drop instantly killing the entire match fails resilience.
   * **REL-MP-014.VERIF:** `SRC` (host migration election test).
@@ -5154,13 +5697,26 @@ ightarrow 4	ext{ ticks}$.
   * **REL-MP-015.VERIF:** `SRC` (MMR rating calculation unit test).
   * **REL-MP-015.LANE:** Network.
 
-* **REL-MP-016 — Absolute Single-Player Network Isolation:** In single-player campaign, tutorial, and offline skirmish modes, the application shall execute ZERO network code, open ZERO UDP/TCP sockets, and listen on ZERO ports (resolving isolation criteria).
+* **REL-MP-016 — Absolute Single-Player Network Isolation:** In single-player campaign, Conquest, tutorial, and offline skirmish modes, the application shall execute ZERO network code, open ZERO UDP/TCP sockets, and listen on ZERO ports (resolving isolation criteria).
   * **REL-MP-016.AUTH:** Complete firewall isolation verified; single-player runs with network interface disabled.
   * **REL-MP-016.FAIL:** Single player opening listen ports or attempting network broadcast is a critical defect.
   * **REL-MP-016.VERIF:** `SRC` + `PKG-AUTO` (offline network socket audit).
   * **REL-MP-016.LANE:** Security & Core Gameplay.
 
 ---
+
+* **REL-MP-017 — Development network boundary.** The current localhost fixed-rules direct-connect
+  path is a development validation surface, not release multiplayer. It shall remain inaccessible in
+  release-facing UI until REL-MP-001..019 plus
+  security, reachability, lobby, configuration, reconnect, abuse, packaging, and human requirements
+  are satisfied.
+
+* **REL-MP-018 — Packaged multiplayer qualification.** DERIVED FROM the approved session scope and REL-MP-001..017. Every supported format shall be qualified on the identified release package across distinct machines/peers, including ordinary Create/Join/LAN and currently shipped connectivity paths (hosted relay qualification is deferred to the next version), synchronized start, full match, team/FFA results, disconnect/reconnect, host migration, desync handling, leave/rejoin refusal, invalid/spoofed commands and offline return. Retain peer/build/map/seed identities, synchronized logs, captures and measured network/performance/soak results at the full supported participant load; a loopback or four-player test cannot qualify 3v3.
+  * **REL-MP-018.AUTO:** Packaged peer tests cover each format, failure, migration and abuse case with no inconsistent outcome or unauthorized state mutation. Owner: Network/QA. Verification: `PKG-AUTO`.
+  * **REL-MP-018.PLAY:** Complete each supported session format through its ordinary interface and observe its controls, team cues, result, reconnect and offline return. Owner: Player/QA. Verification: `PKG-PHYS`.
+  * **REL-MP-018.EXPERIENCE:** Uncoached participants can establish teams, identify allies/opponents, understand pings/tribute and attribute victory/loss/disconnection without developer coaching. Owner: QA. Verification: `HUM`.
+  * **REL-MP-018.OWNER:** Angelis accepts the exact package and complete format/evidence matrix. Verification: `OWNER`.
+* **REL-MP-019 — Session trust and service contracts.** DERIVED FROM REL-MP-002..004/006/012..015. Before network implementation is treated as release-ready, its design shall explicitly bind participant authentication/key lifecycle, authenticated packet/envelope layout (including tag, session, issuer and freshness fields and whether the existing 32-byte budget includes them), command authority, hidden-state exposure, reconnect/host-election ordering and per-mode disconnect outcomes. For the next-version hosted offering, relay availability, data retention/privacy, ownership, recurring cost and outage behavior shall be recorded before hosting deployment; the rating model shall state its identity, persistence and trust boundary. Local ratings are not proof of trusted public ranking. No unspecified hosted matchmaking/account platform is implied. Owner: Network/Security. Verification: `SRC`; packaged security, failure and experience evidence remain mandatory under REL-MP-018. Open material choices live in RequirementsState.md and cannot be silently implemented as assumptions.
 
 ### §27 In-Engine Scenario and Map Editor (`REL-EDT-*`)
 
@@ -5228,212 +5784,1042 @@ ightarrow 4	ext{ ticks}$.
 
 # Identifier index
 
-All 995 identifiers in this document.
+Navigation generated from the parent definitions by `Scripts/check_requirement_registry.py`.
+Retired identifiers remain indexed for traceability. Counts establish structural coverage only;
+they do not prove semantic consistency, implementation, evidence or owner acceptance.
 
 | ID | Requirement | Section |
 |---|---|---|
-| `SPEC-AUTH-001` | Single source of truth. This document owns the complete intended player experien | 1. Authority, interpretation, and change con |
-| `SPEC-AUTH-002` | Normative language. Shall means mandatory. May means permitted. Tuning baseline  | 1. Authority, interpretation, and change con |
-| `SPEC-AUTH-003` | No silent invention. When a required behavior is genuinely absent or contradicto | 1. Authority, interpretation, and change con |
-| `SPEC-AUTH-004` | Traceable change. Every approved design change updates this file in place, prese | 1. Authority, interpretation, and change con |
-| `SPEC-AUTH-005` | Purpose rule. Every accessible unit, building, technology, resource, terrain cla | 1. Authority, interpretation, and change con |
-| `SPEC-AUTH-006` | Truthful acceptance. A design requirement, automated test, visual inspection, ph | 1. Authority, interpretation, and change con |
-| `SPEC-PRD-001` | Genre | 2. Product definition and release boundary |
-| `SPEC-PRD-002` | Camera and control | 2. Product definition and release boundary |
-| `SPEC-PRD-003` | Primary experience | 2. Product definition and release boundary |
-| `SPEC-PRD-004` | Player fantasy | 2. Product definition and release boundary |
-| `SPEC-PRD-005` | Release platform | 2. Product definition and release boundary |
-| `SPEC-PRD-006` | Campaign | 2. Product definition and release boundary |
-| `SPEC-PRD-007` | Skirmish | 2. Product definition and release boundary |
-| `SPEC-PRD-008` | Launch language | 2. Product definition and release boundary |
-| `SPEC-PRD-009` | Expected match length | 2. Product definition and release boundary |
-| `SPEC-PRD-010` | Business model | 2. Product definition and release boundary |
-| `SPEC-CAN-001` | Central theme. Echoes of the Broken Sun is about the cost of making one future r | 3. Creative canon, setting, and lore |
-| `SPEC-CAN-002` | Tone. The tone is urgent, humane, and occasionally dry. No faction is a proxy fo | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-001` | Before Crownfall | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-002` | First Impact Generations | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-003` | Ledger Peace | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-004` | Quiet Omissions | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-005` | Present War | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-006` | Meridian Compact | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-007` | Kharuun Assemblies | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-008` | Hollow Choir | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-009` | Commander Mara Vey | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-010` | Talar Venn | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-011` | Oruun-of-Seven-Stones | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-012` | Neme | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-013` | Chancellor Cael Rhyse | 3. Creative canon, setting, and lore |
-| `SPEC-CANON-014` | Meridian Operations Annunciator | 3. Creative canon, setting, and lore |
-| `SPEC-PIL-001` | Spatial economy | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-002` | Asymmetric planning | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-003` | Readable consequence | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-004` | Fair uncertainty | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-005` | Recoverable command | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-006` | Story through play | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-007` | Seconds | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-008` | Minutes | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-009` | Match | 4. Player experience pillars and gameplay lo |
-| `SPEC-PIL-010` | Campaign | 4. Player experience pillars and gameplay lo |
-| `SPEC-OUT-001` | Corefall victory. A player wins a standard skirmish when the opposing player has | 5. Match and operation outcomes |
-| `SPEC-OUT-002` | Defeat. A player loses when the player's final Command Core is destroyed or the  | 5. Match and operation outcomes |
-| `SPEC-OUT-003` | Draw. If both final Command Cores are destroyed in the same 20 Hz resolution tic | 5. Match and operation outcomes |
-| `SPEC-OUT-004` | Campaign success. An operation is won only when every mandatory objective and re | 5. Match and operation outcomes |
-| `SPEC-OUT-005` | Campaign failure. Each operation names failure predicates before play: required  | 5. Match and operation outcomes |
-| `SPEC-OUT-006` | Result explanation. The result screen states the precise win/loss cause, optiona | 5. Match and operation outcomes |
-| `SPEC-OUT-007` | Stalemate. At 45 minutes, skirmish warns that the match is prolonged but does no | 5. Match and operation outcomes |
-| `SPEC-SIM-001` | Fixed time. Gameplay authority advances at 20 deterministic ticks per second. Pr | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-002` | Authority separation. Simulation owns entities, resources, commands, movement, t | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-003` | Command validation. Every command is validated against ownership, visibility, ta | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-004` | Determinism. The same initial state, content identifiers, player commands, and d | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-005` | Entity identity. Every authoritative entity has a stable identifier, faction, ow | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-006` | Limits. Entity and command limits fail visibly and safely. They never delete ano | 6. Authoritative simulation and command rule |
-| `SPEC-SIM-007` | Player time. UI expresses durations in seconds, with optional detailed tick valu | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-001` | Move / Context | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-002` | Direct Attack | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-003` | Attack-move | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-004` | Patrol | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-005` | Guard | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-006` | Hold Position | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-007` | Stop | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-008` | Ability | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-009` | Rally | 6. Authoritative simulation and command rule |
-| `SPEC-CMD-010` | Interact | 6. Authoritative simulation and command rule |
-| `SPEC-MOV-001` | Ground-only domain. All controllable launch units use one surface-ground domain. | 7. Movement, pathfinding, formations, and te |
-| `SPEC-MOV-002` | Pathfinding. Paths use deterministic destination-tile cost, known passability, u | 7. Movement, pathfinding, formations, and te |
-| `SPEC-MOV-003` | Avoidance and body blocking. Enemy and neutral solid entities block movement. Al | 7. Movement, pathfinding, formations, and te |
-| `SPEC-MOV-004` | Route change. When terrain changes under a route, units recalculate at the next  | 7. Movement, pathfinding, formations, and te |
-| `SPEC-MOV-005` | Formations. Box provides compact travel, Line maximizes frontage perpendicular t | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-001` | Open | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-002` | Scarred | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-003` | Blocked | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-004` | Water / void | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-005` | Mineral Cover | 7. Movement, pathfinding, formations, and te |
-| `SPEC-TER-006` | Subsurface Passage | 7. Movement, pathfinding, formations, and te |
-| `SPEC-INFO-001` | Unexplored | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-002` | Explored | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-003` | Visible | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-004` | Last known | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-005` | Anonymous vibration | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-006` | Public event | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-FOG-001` | Single information boundary. World rendering, terrain, minimap, targeting, alert | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-FOG-002` | Alert anatomy. An alert has class, urgency, short text, world location when legi | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-007` | Explore Area | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-008` | Find Matter | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-009` | Locate Hostiles | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-INFO-010` | Screen Route | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-001` | Eligible scouts. Relay Skiff, Resonant, and Afterimage may use every reconnaissa | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-002` | Legal routing. Automation searches reachable unexplored frontier from player-kno | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-003` | Policies. CAUTIOUS reports and returns on contact; OBSERVE maintains the player- | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-004` | Player control. Selection shows mission, boundary, planned route, progress, disc | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-005` | Outcomes. Matter, Well, route, hostile unit, hostile structure, damage, blocked  | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-SCT-006` | Authority limit. Reconnaissance never selects a Well protocol, gathers a newly f | 8. Fog of war, intelligence, alerts, and rec |
-| `SPEC-RES-001` | Matter | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-RES-002` | Dawn | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-RES-003` | Logistics | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-001` | Starting resources. Skirmish presets are Scarce 250 Matter/18 Dawn, Standard 400 | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-002` | Matter deposits. A standard deposit contains 1,500 Matter and supports three wor | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-003` | Automatic gather cycle. A Gather order repeats source → gather → valid drop-off  | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-004` | Drop-off choice. Workers choose the assigned operational drop-off; if none is as | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-005` | Depletion. A depleted deposit remains as a visible exhausted marker for 200 tick | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-ECO-006` | Logistics loss. Units already completed remain controllable when capacity falls  | 9. Economy, resources, Logistics, and foreca |
-| `SPEC-BLD-001` | Placement. Construction preview shows faction-specific name, cost, footprint, ro | 10. Construction, production, repair, and re |
-| `SPEC-BLD-002` | Payment. Construction and unit costs are paid when the order enters its active s | 10. Construction, production, repair, and re |
-| `SPEC-BLD-003` | Builders. One worker builds at 100% rate. A second and third assist at 60% and 4 | 10. Construction, production, repair, and re |
-| `SPEC-BLD-004` | Incomplete structures. An incomplete structure is targetable, has health proport | 10. Construction, production, repair, and re |
-| `SPEC-BLD-005` | Cancellation. Cancel construction or unit production before 50% progress for a 7 | 10. Construction, production, repair, and re |
-| `SPEC-BLD-006` | Queues. Each producer has a five-unit queue and one active slot. Units may be re | 10. Construction, production, repair, and re |
-| `SPEC-BLD-007` | Emergence. A completed unit appears at the nearest free legal tile to the produc | 10. Construction, production, repair, and re |
-| `SPEC-BLD-008` | Rally. The player may set one destination or a Shift-queued route. Rally paths m | 10. Construction, production, repair, and re |
-| `SPEC-BLD-009` | Base rules. Players may build multiple production, supply, utility, and drop-off | 10. Construction, production, repair, and re |
-| `SPEC-BLD-010` | Repair. All workers repair allied completed units and structures using the worke | 10. Construction, production, repair, and re |
-| `SPEC-CMB-001` | Deterministic direct hit. Weapons have no random accuracy or critical hits. A va | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-002` | Damage model. Launch combat has one damage class and no armor-class multipliers. | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-003` | Projectiles. Ranged attacks create deterministic projectiles traveling 1,200 cm/ | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-004` | Line of fire. A ray from muzzle to target checks authored occluders, temporary c | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-005` | Friendly fire. Ordinary weapons and launch abilities do not damage allies or the | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-006` | Fire and movement. All units except Riftstalker Slipfire stop to fire. They rota | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-007` | Acquisition. Default target priority is immediate threat to self/guardee, then l | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-008` | Overkill. Units with no explicit focus order avoid launching damage already pred | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-009` | Death. At zero health, an entity loses authority immediately, plays faction/role | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-010` | Retreat. Retreat is ordinary movement, not a hidden morale state. No disengageme | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-011` | No hidden systems. There is no suppression, morale, stun, knockback, capture, st | 11. Combat resolution, stances, and counterp |
-| `SPEC-STANCE-001` | Aggressive | 11. Combat resolution, stances, and counterp |
-| `SPEC-STANCE-002` | Defensive (default) | 11. Combat resolution, stances, and counterp |
-| `SPEC-STANCE-003` | Hold Position | 11. Combat resolution, stances, and counterp |
-| `SPEC-STANCE-004` | Return Fire | 11. Combat resolution, stances, and counterp |
-| `SPEC-STANCE-005` | Hold Fire | 11. Combat resolution, stances, and counterp |
-| `SPEC-CMB-012` | Automation. Automatic ability use is disabled by default. A player may enable an | 11. Combat resolution, stances, and counterp |
-| `SPEC-AUT-001` | Player-owned policy. Every automation is opt-in, visible on the selection card,  | 11. Combat resolution, stances, and counterp |
-| `SPEC-AUT-002` | Worker auto-repair. Disabled by default. When enabled for a worker or control gr | 11. Combat resolution, stances, and counterp |
-| `SPEC-AUT-003` | Worker flee. Disabled by default. The player selects a health threshold and owne | 11. Combat resolution, stances, and counterp |
-| `SPEC-AUT-004` | Idle workers. A worker with no valid order remains idle, receives the idle-worke | 11. Combat resolution, stances, and counterp |
-| `SPEC-AUT-005` | Reinforcement policy. Each production structure may optionally assign completed  | 11. Combat resolution, stances, and counterp |
-| `SPEC-FACID-001` | Meridian Compact | 12. Factions and strategic identities |
-| `SPEC-FACID-002` | Kharuun Assemblies | 12. Factions and strategic identities |
-| `SPEC-FACID-003` | Hollow Choir | 12. Factions and strategic identities |
-| `SPEC-UNIT-001` | Surveyor (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-002` | Lancer (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-003` | Bulwark Team (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-004` | Relay Skiff (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-005` | Tender (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-006` | Riftstalker (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-007` | Cairnback (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-008` | Resonant (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-009` | Threadkeeper (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-010` | Intervalist (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-011` | Lacuna Warden (unit) | 12. Factions and strategic identities |
-| `SPEC-UNIT-012` | Afterimage (unit) | 12. Factions and strategic identities |
-| `SPEC-STR-001` | Anchor (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-002` | Power Link (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-003` | Array Foundry (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-004` | Aegis Post (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-005` | Memory Hearth (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-006` | Waystone (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-007` | Growth Basin (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-008` | Listening Spine (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-009` | Concordance (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-010` | Interval Loom (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-011` | Chorus Loom (structure) | 13. Buildings and base-management actions |
-| `SPEC-STR-012` | Phase Anchor (structure) | 13. Buildings and base-management actions |
-| `SPEC-TECH-001` | Meridian Compact | 14. Technology and strategic progression |
-| `SPEC-TECH-002` | Meridian Compact | 14. Technology and strategic progression |
-| `SPEC-TECH-003` | Kharuun Assemblies | 14. Technology and strategic progression |
-| `SPEC-TECH-004` | Kharuun Assemblies | 14. Technology and strategic progression |
-| `SPEC-TECH-005` | Hollow Choir | 14. Technology and strategic progression |
-| `SPEC-TECH-006` | Hollow Choir | 14. Technology and strategic progression |
-| `SPEC-TEC-001` | Research visibility. The archive shows exact cost, time, effects, prerequisite,  | 14. Technology and strategic progression |
-| `SPEC-TEC-002` | Strategic sufficiency. These two steps are the complete launch tree. Their purpo | 14. Technology and strategic progression |
-| `SPEC-WELLP-001` | Harvest | 15. Future Wells |
-| `SPEC-WELLP-002` | Preserve | 15. Future Wells |
-| `SPEC-WELLP-003` | Reshape | 15. Future Wells |
-| `SPEC-WEL-001` | Confirmation. Before commitment, three comparable cards show immediate benefit,  | 15. Future Wells |
-| `SPEC-WEL-002` | Strategic neutrality. No protocol changes a hidden morality score or directly wi | 15. Future Wells |
-| `SPEC-WEL-003` | Fog and replay. Capture, contest, telegraph, protocol, terrain change, timers, i | 15. Future Wells |
-| `SPEC-AI-001` | Fair information. AI reads the same player-scoped terrain, vision, public events | 16. Single-player opponent AI |
-| `SPEC-AI-002` | Equal rules. AI pays the same costs, waits the same times, obeys the same Logist | 16. Single-player opponent AI |
-| `SPEC-AI-003` | Layered control. A strategic controller selects states; economy, production, sco | 16. Single-player opponent AI |
-| `SPEC-AIST-001` | ESTABLISH ECONOMY | 16. Single-player opponent AI |
-| `SPEC-AIST-002` | SCOUT | 16. Single-player opponent AI |
-| `SPEC-AIST-003` | EXPAND | 16. Single-player opponent AI |
-| `SPEC-AIST-004` | DEFEND | 16. Single-player opponent AI |
-| `SPEC-AIST-005` | ASSEMBLE | 16. Single-player opponent AI |
-| `SPEC-AIST-006` | ATTACK | 16. Single-player opponent AI |
-| `SPEC-AIST-007` | RAID | 16. Single-player opponent AI |
-| `SPEC-AIST-008` | CONTEST WELL | 16. Single-player opponent AI |
-| `SPEC-AIST-009` | RETREAT | 16. Single-player opponent AI |
-| `SPEC-AIST-010` | RECOVER | 16. Single-player opponent AI |
-| `SPEC-DOC-001` | Warden | 16. Single-player opponent AI |
-| `SPEC-DOC-002` | Raider | 16. Single-player opponent AI |
-| `SPEC-DOC-003` | Steward | 16. Single-player opponent AI |
-| `SPEC-DOC-004` | Expansionist | 16. Single-player opponent AI |
-| `SPEC-DOC-005` | Adaptive | 16. Single-player opponent AI |
-| `SPEC-DIF-001` | Story | 16. Single-player opponent AI |
-| `SPEC-DIF-002` | Standard | 16. Single-player opponent AI |
-| `SPEC-DIF-003` | Veteran | 16. Single-player opponent AI |
-| `SPEC-DIF-004` | Sovereign | 16. Single-player opponent AI |
-| `SPEC-AI-004` | Perceived intelligence. AI scouts, protects workers, retreats damaged forces, re | 16. Single-player opponent AI |
-| `SPEC-AI-005` | Recovery and concession. AI diagnoses stalled workers, blocked spawn, lost drop- | 16. Single-player opponent AI |
-| `SPEC-AI-006` | Mission director. Scripted waves, dialogue, reinforcements, hazards, and cinemat | 16. Single-player opponent AI |
+| `DEMO-ACC-001` | Subtitle size, subtitle background, UI scale, high-contrast mode, and color-vision-safe/non-color markers shall change actual packaged behavior. | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-ACC-002` | Reduced motion, reduced flashing, adjustable camera motion, and reduced dynamic range shall operate across the opening, tutorial, UI, and gameplay. | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-ACC-003` | Keyboard navigation shall remain available throughout menus even though mouse interaction is mandatory. | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-ACC-004` | Tutorial voice, text, hints, pacing, pause, replay, and recovery shall support players who require more time without automatically performing the less | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-ACC-005` | Remapped controls and accessibility settings shall persist and remain reflected accurately in every prompt and tooltip. | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-ACC-006` | I shall verify and accept the accessibility behaviors included in the demo. (Verify: | K. Accessibility and learning support (owner: Player; verify: PKG-PHYS/REND + OWNER) |
+| `DEMO-AI-001` | First-time players shall enter the AI skirmish only after completing the required tutorial mastery gates. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-002` | The skirmish setup shall clearly explain map, faction, AI personality or difficulty, starting conditions, victory conditions, and game speed. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-003` | Every option presented as selectable shall change the match as described and shall be operable by mouse and keyboard. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-004` | The AI shall gather resources, construct, produce units, respond to threats, expand or reposition where appropriate, attack, defend, and reach victory | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-005` | Standard AI shall use only authorized game information and shall not receive hidden resources or knowledge unless an assisted difficulty clearly discl | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-006` | The introductory opponent shall be beatable by a new player who successfully learned and applies the tutorial lessons. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-007` | The skirmish shall use the same mechanics and controls taught in the tutorial. Unexplained new requirements shall not be introduced at the transition. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-008` | Victory, defeat, pause, restart, rematch, and return-to-menu behavior shall work without debug intervention. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-009` | At least one complete unassisted victory and one complete defeat or controlled defeat-path validation shall be recorded from the packaged build. | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AI-010` | I shall play and accept the AI experience, difficulty, pacing, clarity, and match lifecycle. (Verify: | J. AI skirmish and complete match lifecycle (owner: Opponent-AI; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-AUD-001` | No player-facing scene or required action shall be unintentionally silent. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-002` | The title, menus, opening, tutorial, gameplay, combat, results, victory, and defeat shall have appropriate original music and ambience. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-003` | The opening and tutorial shall contain directed, final-demo-quality voice performances with synchronized subtitles. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-004` | Proposed character and narrator voice profiles shall receive my listening approval before large-scale generation or final integration. (OWNER decision | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-005` | Locally generated voice may satisfy the requirement only when its model, license, profile, performance, pronunciation, artifacts, mix, and final in-ga | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-006` | Hover, selection, confirmation, rejection, menu transitions, alerts, and objective updates shall provide suitable interface feedback. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-007` | Movement orders, attacks, impacts, damage, destruction, gathering, construction, production, abilities, and Future Well interactions shall have functi | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-008` | Music and ambience shall respond coherently to cinematic, exploration, tension, combat, victory, and defeat states without abrupt or broken transition | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-009` | Voice shall remain intelligible over music, ambience, and combat. Mixing shall meet the project's approved loudness, peak, and ducking requirements. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-010` | Music, voice, effects, interface, and ambience volumes shall be independently adjustable and persistent. Voice-off shall preserve all required informa | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-011` | Subtitle text shall match the spoken meaning and support accepted size and background controls. | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-012` | Audio files merely existing in the project shall not count; their correct triggering, routing, spatial behavior, transitions, and mix shall be verifie | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-AUD-013` | I shall listen to and accept the opening, tutorial, menu, representative gameplay, and result-state audio from the candidate package. (Verify: | G. Audio, voice, and cinematic sound (owner: Audio; verify: PKG-REND listened + OWNER) |
+| `DEMO-GOV-001` | The current demo shall remain classified as HUMAN REJECTED until I accept a later identified packaged build. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-002` | Every implementation task, commit, test, capture, and defect shall map to one or more requirement IDs. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-003` | Every evidence claim shall identify the exact commit, dirty or clean tree state, package, operating system, hardware, resolution, and graphics preset. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-004` | Source code, tests, editor demonstrations, screenshots, and packaged human play shall remain separate evidence classes. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-005` | Existing automated or headless campaign evidence shall not be represented as rendered human-play evidence. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-006` | Every player-visible asset shall have recorded authorship, generation, licensing, and integration provenance. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-007` | No unfinished option shall be presented as available. Incomplete functionality shall be completed, clearly identified as unavailable, or removed from  | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-008` | The demo shall contain no visible debug commands, prototype instructions, default engine assets, placeholder geometry, temporary icons, or knowingly d | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-009` | Genre references shall guide interaction quality and design discipline without copying protected expression. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-GOV-010` | A requirement shall not be called complete until its evidence is ready and I explicitly accept it. | A. Scope, integrity, and traceability (owner: Coordinator+QA; verify: SRC + ledger audit) |
+| `DEMO-INP-001` | Every visible title, menu, settings, pause, tutorial, gameplay, results, confirmation, and error-dialog control shall work with mouse hover and click. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-002` | Left click shall select valid units and buildings; clicking empty terrain shall clear selection when appropriate. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-003` | Dragging shall create a predictable selection box with visible feedback. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-004` | Shift modification, double-click selection, and multi-selection shall behave consistently where supported. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-005` | Right click shall issue the correct contextual command, including move, attack, gather, repair, enter, or interact when applicable. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-006` | Clickable command-card actions shall perform the same real action as their displayed keyboard shortcuts. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-007` | The cursor and target indicators shall communicate valid commands, invalid targets, placement state, interaction state, and cancellation. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-008` | Mouse-wheel zoom, edge or configured mouse pan, keyboard camera movement, and recentering shall be smooth and configurable. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-009` | Attack-move, stop, hold, control groups, queued commands, and other displayed RTS shortcuts shall function consistently. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-010` | All required actions shall be remappable, conflict-checked, resettable, persisted, and immediately reflected in tutorial prompts and tooltips. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-011` | Escape, cancel, pause, back-navigation, window focus changes, and input-mode transitions shall behave predictably. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-012` | Accepted and rejected commands shall receive immediate visual and audible acknowledgment. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-013` | No normal player path shall depend on a keyboard-only fallback because mouse interaction is broken. | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-014` | A packaged-build interaction matrix shall verify every control at all supported window modes and target resolutions. Calling event handlers directly d | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-INP-015` | I shall physically test and accept the mouse, keyboard, menu, camera, selection, command, and remapping behavior. (Verify: | E. Mouse, keyboard, and interaction behavior (owner: Player; verify: PKG-PHYS + OWNER) |
+| `DEMO-JRN-001` | A clean first-time profile shall complete the entire golden path without a terminal, editor, developer console, cheat, state injection, or developer c | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-002` | Every required menu and transition shall be usable with a physical mouse. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-003` | First-time players shall complete the tutorial before the full AI demo unlocks. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-004` | After tutorial completion, replay and approved skip behavior may become available for later sessions. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-005` | Loading, failure, cancellation, back-navigation, restart, and return-to-menu paths shall have clear visible states and shall not dead-end. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-006` | The demo shall end with a complete victory or defeat result and understandable replay, restart, and exit choices. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-JRN-007` | The player shall never need an external manual, developer explanation, or hidden control to complete the intended demo journey. | B. Complete player journey (owner:** Player+Campaign; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-NAR-001` | The first launch shall present a polished title and opening sequence before normal gameplay. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-002` | The opening shall establish the broken world of Soryn, the Crownfall, and the immediate situation without contradicting the Development Bible. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-003` | The opening shall tell the player who they are, what role they occupy, what immediate problem they face, what they must do next, and why it matters. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-004` | The opening shall use authored in-engine visuals, motion, lighting, voice-over, exact subtitles, music, ambience, and deliberate transitions. A silent | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-005` | The opening should remain focused enough to preserve player attention; the proposed maximum is 90 seconds unless I approve another duration. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-006` | The sequence shall support pause, accessible subtitle controls, replay, and approved skip behavior without losing required gameplay information. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-007` | The transition from cinematic to playable tutorial shall be coherent and shall immediately connect the story problem to the player's first action. | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-008` | At least four of five uncoached, project-naive testers shall be able to explain the player's identity, immediate situation, first objective, and why i | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-009` | I shall personally accept the opening's story clarity, emotional tone, pacing, visual direction, and ability to create interest in continuing. (Verify | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-010` | Before voice production, every speaking character and system voice in the demo shall have a designed identity: who they are in the story, their role,  | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-NAR-011` | a full review of everything in the game — story, setting, characters, missions/campaign, every screen element, mechanic, sound, and interaction — answ | C. Opening story and player orientation (owner:** Narrative+Visual+Audio; verify: PKG-REND + HUM + OWNER) |
+| `DEMO-PERF-001` | The implementation shall identify the exact CPU, GPU, memory, display, operating system, and relevant rendering capabilities without assuming the deve | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-002` | On first run, Auto quality shall execute a representative rendering benchmark or calibration rather than selecting a preset solely from a device-name  | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-003` | The game shall provide understandable Auto, Low, Medium, High, and highest-supported presets with clear descriptions of performance and visual consequ | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-004` | Auto shall choose a conservative stable starting configuration based on measured performance and shall record why that configuration was selected. | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-005` | Manual overrides shall work, persist, reset correctly, and not be silently replaced by Auto. | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-006` | Stronger supported hardware shall receive materially higher fidelity through appropriate resolution, textures, effects, shadows, view distance, densit | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-007` | Lower settings shall preserve every tactically important cue and remain visually acceptable rather than removing information required to play. | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-008` | On the developer's verified M1-class MacBook Pro, the proposed target is p95 frame time at or below 16.67 ms at the Auto-selected resolution and prese | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-009` | Performance evidence shall report frame-time distributions, game thread, render thread, GPU, memory, resolution, preset, thermals where available, and | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-010` | The candidate shall survive at least a 30-minute rendered demo session without crash, progressive memory growth, thermal collapse, lost audio, severe  | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-011` | Shader compilation, asset streaming, resolution changes, fullscreen changes, and settings application shall not create an unrecoverable state. | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-012` | A safe graphics fallback shall recover after a settings-related crash or failed launch. | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-013` | Higher-end qualification requires execution on an actual materially stronger supported computer. Simulated settings or theoretical scalability do not  | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-014` | The current platform boundary remains macOS Apple Silicon unless I approve expansion. Do not claim Windows, Linux, or discrete-GPU qualification witho | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-PERF-015` | I shall accept the visual-quality/performance tradeoff on the baseline Mac and any higher-capability system used for demo qualification. (Verify: | I. Automatic graphics calibration and performance (owner: Performance+Build; verify: PKG-REND measured + OWNER) |
+| `DEMO-TUT-001` | The tutorial shall assume no prior RTS knowledge. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-002` | It shall begin in a safe, low-pressure situation and introduce one coherent concept at a time. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-003` | It shall teach camera movement, zoom, recentering, and navigation. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-004` | It shall teach left-click selection, deselection, selection feedback, and how to identify the selected entity. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-005` | It shall teach drag-box and multi-selection before requiring management of multiple units. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-006` | It shall identify every introduced unit, building, resource, objective, and interface area by name, function, available action, and tactical reason fo | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-007` | It shall teach move, contextual right-click commands, attack, attack-move, stop, and other commands required by the demo. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-008` | It shall teach resource identification, gathering, delivery, current totals, and what the resources enable. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-009` | It shall teach valid and invalid building placement, construction, building purpose, and completion feedback. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-010` | It shall teach unit production, costs, prerequisites, queues, rally behavior, and unit roles. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-011` | It shall teach basic force composition and combat against a controlled initial threat. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-012` | It shall teach objectives, minimap use, alerts, and navigation to important events. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-013` | It shall introduce the Future Well mechanic and clearly explain the available choice, immediate effect, long-term consequence, and strategic reason it | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-014` | Tutorial instructions shall be presented through synchronized voice and readable text using the player's current bindings. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-015` | A step shall advance only after the game verifies that the player performed the required action and achieved the required state. Timers, dismissed tex | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-016` | Incorrect actions shall produce understandable feedback without punishing a new player unfairly. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-017` | Contextual hints shall escalate after hesitation or repeated failure without completing the action for the player. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-018` | Every step shall have recovery, retry, reset, save, and resume behavior that prevents a soft lock. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-019` | The tutorial shall not introduce unexplained controls or mechanics immediately after claiming the fundamentals are learned. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-020` | Tutorial completion shall transition naturally into the full AI portion of the demo. | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-021` | At least four of five project-naive testers shall complete the tutorial without verbal coaching. (Verify: | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-TUT-022` | I shall personally accept the tutorial's pacing, clarity, instructional quality, and mastery threshold. (Verify: | D. Progressive tutorial and demonstrated learning (owner: Campaign+Player; verify: PKG-PHYS + HUM + OWNER) |
+| `DEMO-UI-001` | The existing prototype-like UI shall be replaced by one coherent, original RTS interface system, not merely recolored. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-002` | The front door shall clearly present the guided demo, continue when valid, skirmish, options, accessibility, credits, and exit behavior appropriate to | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-003` | Every menu option shall provide a concise plain-language explanation on hover and keyboard focus. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-004` | Hovered, focused, pressed, selected, disabled, loading, warning, error, and confirmed states shall be visually distinct. Disabled controls shall expla | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-005` | The HUD shall clearly present resources, capacity, objectives, alerts, selected entities, health, status, production, abilities, and available command | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-006` | Unit and building panels shall explain identity, role, cost, prerequisites, current state, available actions, and why the entity matters. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-007` | Tooltips shall include the action, consequence, current hotkey, cost, prerequisites, and reason an unavailable action cannot be used. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-008` | The minimap shall clearly distinguish terrain, ownership, allies, enemies, objectives, alerts, and the current camera location using color and non-col | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-009` | Tutorial prompts and objectives shall remain readable without obscuring the play area or competing with other critical information. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-010` | Results screens shall clearly explain the outcome and provide working replay, restart, and return choices. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-011` | The interface shall be inspected at 1280×720, 1440×900, 1600×900, 1920×1080, and 2560×1440, with no clipped, overlapping, unreadable, or unreachable c | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-012` | Debug overlays, prototype instructions, engine-default styling, and internal validation text shall not appear in the public demo path. | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-UI-013` | I shall personally accept the UI's appearance, hierarchy, readability, discoverability, responsiveness, and consistency with the game universe. (Verif | F. Menu, HUD, and UX redesign (owner: Player+Visual; verify: PKG-REND + PKG-PHYS + OWNER) |
+| `DEMO-VAL-001` | All acceptance evidence shall come from one clearly identified candidate package built from the recorded source state. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-002` | A clean profile shall travel continuously from cold launch through opening, tutorial, AI match, result, and return to menu. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-003` | The end-to-end evidence shall use physical mouse and keyboard input. Editor play, headless automation, scripted controllers, state injection, and stit | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-004` | Existing automated suites shall remain green, but their claims shall remain limited to the behavior they actually exercise. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-005` | Every retained screenshot shall be opened and inspected. Every required audio segment shall be listened to. File existence alone is not usable evidenc | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-006` | The golden path shall contain zero crashes, progression blockers, broken visible controls, save corruption events, audio-loss failures, or known high- | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-007` | Reproducing a crash followed by a successful relaunch shall remain a failed run until the cause is understood and corrected. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-008` | Human testing shall use five project-naive participants where reasonably available, including players who cannot be assumed to know RTS conventions. ( | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-009` | Participants shall receive no verbal coaching about where to click or how to complete a lesson. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-010` | The test record shall capture time to begin, first selection, misclicks, ignored clicks, stalled lessons, hint use, tutorial completion time, story co | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-011` | At least four of five participants shall complete the tutorial, explain the immediate story and objective, begin the AI match, and execute the taught  | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-012` | At least four of five participants shall state that the demo is clear and that they would voluntarily continue playing. This is a bounded internal usa | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-013` | Failures found in human sessions shall become tracked defects and, where technically appropriate, regression tests before retesting. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-014` | I shall receive the same candidate package, a short review path, evidence summary, known limitations, and exact requirement IDs being offered for acce | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-015` | I shall personally play the candidate and explicitly accept or reject each review batch. (Verify: | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-016` | The aggregate demo may be called COMPLETE or DEMO-READY only after every mandatory requirement is HUMAN ACCEPTED for the same candidate build. | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VAL-017` | My final acceptance is a demo decision only. It does not by itself establish full-game completion, public release readiness, notarization, broad hardw | L. Packaging, human testing, and final acceptance (owner: QA+Build+Coordinator; verify: per row) |
+| `DEMO-VIS-001` | The demo path shall use one coherent original visual language derived from Soryn, its factions, and the Development Bible. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-002` | Terrain shall use sufficiently detailed materials, landmarks, elevation cues, boundaries, and environmental dressing to communicate place and gameplay | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-003` | Friendly units, enemies, unit classes, and factions shall have distinct silhouettes, scale, materials, motion, and non-color identity cues. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-004` | Buildings shall communicate faction, purpose, operational state, construction state, damage, and production activity at ordinary gameplay distance. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-005` | Resources, objectives, Future Wells, pathable areas, blocked areas, hazards, and interactive locations shall be immediately distinguishable. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-006` | Selection, ownership, health, command, target, damage, and threat states shall remain readable during representative combat. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-007` | Introduced units and buildings shall have credible idle, movement, work, attack, construction, production, damage, and destruction presentation as app | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-008` | Effects, lighting, fog, shadows, and atmosphere shall improve the scene without hiding tactical information. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-009` | Visual acceptance shall be judged at the normal RTS camera height and during motion, not only through close-up screenshots or isolated asset previews. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-010` | No placeholder cubes, primitive stand-ins, default materials, temporary icons, missing portraits, or visually unintegrated assets shall remain on the  | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-011` | Greater geometric or texture detail alone shall not pass if new players still cannot distinguish entities and gameplay states. | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-012` | At least four of five project-naive testers shall correctly identify representative allies, enemies, buildings, resources, objectives, and interactabl | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `DEMO-VIS-013` | I shall personally accept the terrain, units, buildings, animation, effects, visual hierarchy, and overall presentation. (Verify: | H. Art, animation, and battlefield readability (owner: Visual+World; verify: PKG-REND at gameplay camera + HUM + OWNER) |
+| `REL-ACC-001` | Color-Vision Deficiency Simulation Presets: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-002` | Dual-Channel Non-Color Information Encoding: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-003` | High-Contrast Silhouette Enhancement: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-004` | Reduced Motion Preset Invariant: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-005` | Reduced Flashing & Photosensitive Safety: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-006` | Full UI Scale Dynamic Range Compliance: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-007` | High-Contrast Subtitle Styling & Scalability: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-008` | Mandatory Subtitle Speaker Identity Tags: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-009` | Directional Spatial Off-Screen Visual Indicators: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-010` | Screen Reader TTS Menu Accessibility: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-011` | Comprehensive Input Key Re-mapping: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-012` | One-Handed Mouse-Only Playability: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-013` | Configurable Edge-Pan Speed & Dead-Zone Calibration: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-014` | High-Visibility Mouse Cursor & Click Ring: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-015` | Single-Player Simulation Game Speed Pacing: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-016` | Accessibility Profile Persistence Across Sessions: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-017` | Dedicated Top-Level Accessibility Menu Hub: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-018` | Active Tactical Pause (Single Player): | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-019` | Continuous Simulation Speed Scaling: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-020` | Smart Macro Assist & Auto-Queue Toggle: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-021` | Threat Warning Voice Assistant: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-ACC-022` | Content Filter & Family Comfort Presets: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-AI-001` | Scoped PlayerView AI Authority Invariant: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-002` | Autonomous AI Economic Expansion: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-003` | Fair Reconnaissance & Scouting Cadence: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-004` | Dynamic Army Composition & Archetype Replacement: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-005` | Defensive Reaction & Base Protection: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-006` | Strike Force Assembly & Coordinated Assault: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-007` | Combat Retreat & Force Preservation: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-008` | Future Well Protocol Doctrinal Alignment: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-009` | AI Doctrine: Warden (Defensive): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-010` | AI Doctrine: Raider (Aggressive Skirmish): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-011` | AI Doctrine: Steward (Economic Macro): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-012` | AI Doctrine: Expansionist (Territorial Control): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-013` | AI Doctrine: Adaptive (Counter-Play): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-014` | AI Difficulty Tier: Assisted: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-015` | AI Difficulty Tier: Standard: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-016` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-AI-017` | AI Difficulty Tier: Challenging: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-018` | AI Difficulty Tier: Sovereign: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-019` | AI Concession & Elimination Protocol: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-020` | Skirmish Mirror Matchup Support: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-021` | Elimination of Undocumented AI Doctrines: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-022` | Meridian strategy. | Faction strategy acceptance |
+| `REL-AI-023` | Kharuun strategy. | Faction strategy acceptance |
+| `REL-AI-024` | Choir strategy. | Faction strategy acceptance |
+| `REL-AI-025` | Advantage conversion. | Faction strategy acceptance |
+| `REL-AI-026` | Skirmish contract. | Faction strategy acceptance |
+| `REL-AI-027` | Layered AI architecture. | Faction strategy acceptance |
+| `REL-AI-028` | Mission director separation. | Faction strategy acceptance |
+| `REL-AI-029` | Fair information model. | Faction strategy acceptance |
+| `REL-AI-030` | Dynamic threat assessment. | Faction strategy acceptance |
+| `REL-AI-031` | Perceived intelligence behaviors. | Faction strategy acceptance |
+| `REL-AI-032` | Doctrine differentiation. | Faction strategy acceptance |
+| `REL-AI-033` | Scalable difficulty. | Faction strategy acceptance |
+| `REL-AI-034` | AI reconnaissance parity. | Faction strategy acceptance |
+| `REL-AI-035` | AI recovery and surrender. | Faction strategy acceptance |
+| `REL-AI-036` | AI acceptance. | Faction strategy acceptance |
+| `REL-AI-037` | Minimap Tactical Ping Communication: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-038` | Friendly AI Ally Comprehension & Force Dispatch: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-039` | Cooperative Resource Tribute & Request System: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-040` | Cooperative Comp-Stomp Skirmish Presets: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-041` | Strategic Controller State Expansion: | §16.5 AI Architecture and Fair-Fog Decision Weights |
+| `REL-AI-042` | Standard Matchup Competitive Balance Band: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-ART-001` | Five-Color Aesthetic Palette Enforcement: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-002` | One-Second Tactical Readability Invariant: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-003` | Matte Terrain Surface Anti-Glint Specification: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-004` | Emissive Accent Surface Area Ceiling: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-005` | 24 Production Mesh Silhouettes & LODs: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-006` | Meridian Compact Engineered Form Language: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-007` | Kharuun Assemblies Grown Mineral Architecture: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-008` | Hollow Choir Possibility Superposition Aesthetics: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-009` | Code-Driven Kinematic Motion Invariant: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-010` | Bulwark Team Deploy Transformation Rig: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-011` | Kharuun Waystone Rooting & Uproot Animation: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-012` | Distinct Weapon Projectile & Muzzle VFX: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-013` | Structural Collapse & Shatter Destruction VFX: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-014` | Future Well Landmark 4-State Visual Manifest: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-015` | Site Dressing & Environmental Coherence: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-016` | Dressing Collision Truth & Passability Parity: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-017` | True 3D Volumetric Fog of War Occlusion: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-018` | Explored Shroud Object Memory Persistence: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-019` | Rigorous Exposure & Lighting Calibration: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-020` | Particle VFX Performance & Collision Discipline: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-021` | Gameplay-truthful terrain. | Future Well and world-element requirements |
+| `REL-ART-022` | Cover truth. | Future Well and world-element requirements |
+| `REL-ART-023` | Ecological signal boundary. | Future Well and world-element requirements |
+| `REL-ART-024` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-ART-025` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-ART-026` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-ART-027` | Structural Critical Degradation States: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-028` | Meridian Roster Engineering form Language: | §18.1 Faction Asset Material and Geometry Manifests |
+| `REL-ART-029` | Kharuun Roster Grown Mineral Architecture: | §18.1 Faction Asset Material and Geometry Manifests |
+| `REL-ART-030` | Glass Scar Landscape Passability Truth: | §18.1 Faction Asset Material and Geometry Manifests |
+| `REL-ART-031` | Deterministic-Decoupled Kinetic Combat Ragdolls: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-032` | Persistent Battlefield Scorch Decals & Vitrification: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-ART-033` | Dynamic Directional Shield Impact Ripples: | §18 World Art, Units, Structures, Animation, and VFX (`REL-ART-*`) |
+| `REL-AUD-001` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-AUD-002` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-AUD-003` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-AUD-004` | Local Neural Text-to-Speech Voice Generation Pipeline: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-005` | Voice Profile: Mara Vey (Meridian Logistics Specialist): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-006` | Voice Profile: Oruun-of-Seven-Stones (Kharuun Speaker): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-007` | Voice Profile: Talar Venn (Meridian Archivist): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-008` | Voice Profile: Chancellor Cael Rhyse (Compact High Authority): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-009` | Voice Profile: Neme (Hollow Choir Consciousness): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-010` | Full Procedural Music Suite & Act Themes: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-011` | Dynamic Combat State Cross-Fading: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-012` | Positional Environmental Ambience Beds: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-013` | Textural Non-Spoken Unit Acknowledgements: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-014` | High-Priority Alert Audio Rate Limiting: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-015` | Whole-Graph Reduced Dynamic Range Mode: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-016` | Situational Unit Tactical Chatter & Annoyance Lines: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-017` | Bespoke Faction Tactical Announcers: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-018` | Acoustic Environmental Spatial Occlusion & Reverb: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-019` | BS.1770-4 Loudness Compliance: | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
+| `REL-AUD-020` | Five-Category Submix Hierarchy: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-AUD-021` | Low-Level PBR Audio Cue Parameters: | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
+| `REL-AUD-022` | Dynamic Side-Chain Vocal Ducking (Dumper Loops): | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
+| `REL-AUD-023` | Dynamic Side-Chain Vocal Ducking: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-BLD-001` | Footprint Validation & Passability Enforcement: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-002` | Dynamic Placement Visual Blueprint Preview: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-003` | Calibrated Construction Duration Scaling: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-004` | Multi-Builder Assist Diminishing Returns: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-005` | Incomplete Structure Vulnerability: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-006` | Construction Cancellation & Refund Policy: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-007` | Command Core Singularity Invariant: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-008` | Production Queue Depth & Management: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-009` | Unit Emergence, Rallying & Unblocking: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-010` | Production Queue Cancellation Invariant: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-011` | Research Slot Contention & Mutual Exclusivity: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-012` | Technology Irreversibility & Zero Refund: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-013` | Structural Repair Resolution: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-014` | Structural Destruction Debris & Footprint Clearance: | §10 Construction, Production, and Research (`REL-BLD-*`) |
+| `REL-BLD-015` | Meridian structure release contracts. | Exact structure requirements |
+| `REL-BLD-016` | Kharuun structure release contracts. | Exact structure requirements |
+| `REL-BLD-017` | Choir structure release contracts. | Exact structure requirements |
+| `REL-BLD-018` | Faction-specific construction language. | Production and technology requirements |
+| `REL-BLD-019` | Producer inspection. | Production and technology requirements |
+| `REL-BLD-020` | Cancellation policy. | Production and technology requirements |
+| `REL-CAM-001` | Fifteen-Operation Continuous Campaign Lifecycle: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-002` | Act I: "Necessary Fires" (Operations 01–05): | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-003` | Act II: "The Cost of One Future" (Operations 06–10): | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-004` | Act III: "Crownfall" (Operations 11–15): | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-005` | Four Earned Campaign Endings: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-006` | Mission 01: "What the Ledger Keeps" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-007` | Mission 02: "The Long Sift" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-008` | Mission 03: "City Reserve" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-009` | Mission 04: "The Unburied Road" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-010` | Mission 05: "Terms of Continuance" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-011` | Mission 06: "Names Without Births" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-012` | Mission 07: "Shape of Silence" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-013` | Mission 08: "Folded Echo" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-014` | Mission 09: "Authority Site" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-015` | Mission 10: "Basin of Scars" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-016` | Mission 11: "Life Support Fracture" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-017` | Mission 12: "Transit Collapse" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-018` | Mission 13: "Archive Severance" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-019` | Mission 14: "Possibility Bleed" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-020` | Mission 15: "The Broken Sun" Contract: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-021` | Campaign Objective Decoupling from Corefall: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-022` | Objective-based operation victory. | Core match and operation outcomes |
+| `REL-CAM-023` | Objective-based operation defeat. | Core match and operation outcomes |
+| `REL-CAM-024` | Result causality. | Core match and operation outcomes |
+| `REL-CAM-025` | Progressive capability introduction. | Core match and operation outcomes |
+| `REL-CAM-026` | Objective portfolio. | Core match and operation outcomes |
+| `REL-CAM-027` | Mission pacing. | Core match and operation outcomes |
+| `REL-CAM-028` | Environmental storytelling. | Core match and operation outcomes |
+| `REL-CAM-029` | Persistent progression contract. | Core match and operation outcomes |
+| `REL-CAM-030` | Meaningful campaign rewards. | Core match and operation outcomes |
+| `REL-CAM-031` | Feature teaching gate. | Core match and operation outcomes |
+| `REL-CAM-032` | Scripted-event fairness. | Core match and operation outcomes |
+| `REL-CAM-033` | "Shattered Sun Conquest" Planetary Meta-Map: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-034` | Procedural Sector Modifiers & Environmental Anomalies: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-035` | Persistent Faction Blueprint Research: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-036` | Conquest Roguelite Permadeath & Seed Sharing: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-037` | Dynamic AI Invasions & Territory Defense: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CAM-038` | Conquest Milestone Dossiers & Commemorative Unlocks: | §14 Campaign and Narrative (`REL-CAM-*`) |
+| `REL-CIN-001` | Sequencer In-Engine Cutscene Pipeline: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-002` | In-Engine Title Cinematic Sequence: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-003` | Act I Transition Sequence ("Necessary Fires"): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-004` | Act II Transition Sequence ("The Cost of One Future"): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-005` | Act III Transition Sequence ("Crownfall"): | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-006` | Four Authoritative Ending Cinematics: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-007` | Universal Cinematic Skippability & Subtitle Guarantee: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CIN-008` | Production Visual Bar Parity in Cinematics: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
+| `REL-CMB-001` | Authoritative Range & Line-of-Sight Firing Arcs: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-002` | Weapon Cooldown & Attack Cadence Sync: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-003` | Ballistic Projectile Travel Simulation: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-004` | Terrain Line-of-Sight Projectile Occlusion: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-005` | Destructible Mineral Cover Ballistic Shielding: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-006` | Deterministic Damage Calculation Hygiene: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-007` | Overkill Avoidance Targeting Protocol: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-008` | Threat-Based Target Priority Hierarchy: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-009` | Combat Stance Architecture: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-010` | Hold Ground Positional Rigidity: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-011` | Attack-Move Engagement Mechanics: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-012` | Cyclic Patrol Waypoint Navigation: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-013` | Guard Escort Dynamics: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-014` | Direct Focus Fire Command Override: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-015` | Entity Destruction & Collision Purge: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-016` | Multi-Channel Combat Damage Feedback: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-017` | Fog of War Engagement Constraints: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-018` | Worker Disarmament Invariant: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-019` | Common mobile commands. | Universal selection and command contract |
+| `REL-CMB-020` | Formation meaning. | Universal selection and command contract |
+| `REL-CMB-021` | Control groups. | Universal selection and command contract |
+| `REL-CMB-022` | Worker authority. | Universal selection and command contract |
+| `REL-CMB-023` | Repair resolution. | Universal selection and command contract |
+| `REL-CMB-024` | Rally resolution. | Universal selection and command contract |
+| `REL-CMB-025` | Player-issued reconnaissance. | Universal selection and command contract |
+| `REL-CMB-026` | Reconnaissance lifecycle. | Universal selection and command contract |
+| `REL-CMB-027` | Automation authority boundary. | Universal selection and command contract |
+| `REL-CMB-028` | Shift-Queued Order Pipelining Execution: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-029` | Real-Time Waypoint Path Preview: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-030` | Smart-Cast Energy & Cooldown Conservation: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-031` | Priority Threat Resolution in Combat Formations: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-CMB-032` | Chase Leash Boundary Enforcement: | §11 Selection, Movement, Commands, and Combat (`REL-CMB-*`) |
+| `REL-DIST-001` | Standalone macOS Application Bundle: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-002` | Apple Silicon ARM64 Native Architecture: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-003` | Apple Developer ID Code Signing: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-004` | Apple Notarization Service Qualification: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-005` | Cryptographic Ticket Stapling: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-006` | Read-Only Compressed DMG Distribution Installer: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-007` | Application Branding & Metadata Completeness: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-008` | Seamless Clean-Machine Gatekeeper Launch: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-009` | Complete Dynamic Library Self-Containment: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-010` | Strict File System Permission Sandboxing: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-011` | Distribution Package Compression Budget: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-012` | Clean Uninstallation & Zero System Debris: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-013` | Automated Package Seal & SHA-256 Digest: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-014` | Headless Automated Packaging Build Pipeline: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-015` | Multi-Version macOS OS Compatibility: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-016` | 100% Offline DRM-Free Execution: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-DIST-017` | Patching & Delta Update Architecture Readiness: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-ECO-001` | Three Resource Pillars: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-002` | Starting Matter Resource Presets: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-003` | Calibrated Matter Harvesting Cadence: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-004` | Deposit Saturation & Diminishing Returns: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-005` | Deposit Depletion Lifecycle: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-006` | Continuous Automated Worker Harvesting Loop: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-007` | Drop-Off Target Selection & Routing: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-008` | Cargo Loss and Drop-Off Severance Handling: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-009` | Dawn Inflow and Reserve Invariant: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-010` | Fail-Closed Dawn Reservation Invariant: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-011` | Logistics Capacity Allocation Mechanics: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-012` | Logistics Cap Enforcement & Supply Deficit: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-013` | Temporary Logistics Burst Dynamics: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-014` | Asymmetric Faction Economy Rules: | §9 Economy and Logistics (`REL-ECO-*`) |
+| `REL-ECO-015` | Continuous worker economy. | Strategic decision model |
+| `REL-ECO-016` | Dawn sources and obligations. | Strategic decision model |
+| `REL-ECO-017` | Resource monitor. | Strategic decision model |
+| `REL-EDT-001` | Native Scenario Editor Architecture: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-002` | Terrain Heightfield & Passability Sculpting: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-003` | Resource Deposit & Landmark Snapping: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-004` | Node-Based Tactical Event & Trigger Graph: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-005` | Custom Campaign Packaging & Manifest Compiler: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-006` | In-Game Community Map Browser & Loader: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-007` | Automated Map Validation Preflight Compiler: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-008` | Sandboxed Custom Asset Ingestion Policy: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-009` | Headless Map Compiler & Navigation Precomputation: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-EDT-010` | Map Schema Forward Migration Discipline: | §27 In-Engine Scenario and Map Editor (`REL-EDT-*`) |
+| `REL-FAC-001` | Tripartite Asymmetric Strategic Identity: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-002` | Meridian Compact Power Grid Topology: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-003` | Meridian Power Link Distribution & Throughput: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-004` | Meridian Aegis Post Automated Defensive Battery: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-005` | Meridian Bulwark Team Directional Shield Deployment: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-006` | Meridian Relay Skiff Logistics Relay: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-007` | Kharuun Waystone Rooting & Relocation: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-008` | Kharuun Listening Spine Seismic Detection: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-009` | Kharuun Warform Adaptation Molting: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-010` | Kharuun Cairnback Mineral Cover Erection: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-011` | Hollow Choir structural coherence upkeep cycle. | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-012` | Hollow Choir Reconciliation Identity Transition: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-013` | Hollow Choir Phase Anchor Coherence Field: | §12 Factions, Rosters, and Strategic Depth (`REL-FAC-*`) |
+| `REL-FAC-014` | Strategic loop. | Strategic decision model |
+| `REL-FAC-015` | Economic allocation. | Strategic decision model |
+| `REL-FAC-016` | Route economy. | Strategic decision model |
+| `REL-FAC-017` | Logistics strategy. | Strategic decision model |
+| `REL-FAC-018` | Information strategy. | Strategic decision model |
+| `REL-FAC-019` | Soft-counter strategy. | Strategic decision model |
+| `REL-FAC-020` | Engagement choice. | Strategic decision model |
+| `REL-FAC-021` | Production tempo. | Strategic decision model |
+| `REL-FAC-022` | Territory and conversion. | Strategic decision model |
+| `REL-FAC-023` | Attention strategy. | Strategic decision model |
+| `REL-FAC-024` | Strategic knowledge boundary. | Strategic decision model |
+| `REL-FAC-025` | Meridian roster release contracts. | Exact faction roster requirements |
+| `REL-FAC-026` | Kharuun roster release contracts. | Exact faction roster requirements |
+| `REL-FAC-027` | Choir roster release contracts. | Exact faction roster requirements |
+| `REL-FAC-028` | Faction technology release contracts. | Production and technology requirements |
+| `REL-FAC-029` | Technology purpose. | Production and technology requirements |
+| `REL-FTU-001` | Clean-Machine Cold Launch Reliability: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-002` | Atmospheric World-Coherent Title Treatment: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-003` | Primary Navigation Hub Ergonomics: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-004` | In-Engine Opening Story Sequence: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-005` | First-Run Progressive Onboarding Gate: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-006` | Tutorial Lesson 1: Camera Navigation & Tactical Pan: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-007` | Tutorial Lesson 2: Selection & Precision Movement: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-008` | Tutorial Lesson 3: Worker Economy & Matter Gathering: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-009` | Tutorial Lesson 4: Base Construction & Power Grid: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-010` | Tutorial Lesson 5: Unit Production & Attack-Move: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-011` | Tutorial Lesson 6: Future Well Decisions: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-FTU-012` | Demonstration of Fundamental Mastery: | §7 First-Run, Front Door, and Onboarding (`REL-FTU-*`) |
+| `REL-GOV-001` | Sole Normative Requirements Authority: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-002` | Bidirectional Gate and Milestone Mapping: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-003` | Prohibition of Silent Invention: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-004` | Traceable Inline Change Cascades: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-005` | Evidence-Bounded State Vocabulary: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-006` | Permanent Immutable Identifier Preservation: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-007` | Verification Class Exclusivity: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-008` | Human Acceptance Authority Reservation: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-009` | Fail-Closed Architectural Boundary: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-010` | Procedural-First Asset Provenance Registration: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-011` | Independent Verification Lane Separation: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-012` | Continuous Automated Regression Locks: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-013` | Defect Severity Ladder and Release Prohibitions: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-014` | Single-Candidate Frozen Evidence Binding: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-GOV-015` | Final Definition of Done Sign-Off Checklist: | §6 Release Governance and Integrity (`REL-GOV-*`) |
+| `REL-LOC-001` | Complete String Externalization Standard: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-LOC-002` | UTF-8 Unicode Encoding Invariant: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-LOC-003` | UI Text Container Expansion Margins: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-LOC-004` | Automated Localization Translation Extraction Pipeline: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-LOC-005` | International Font Fallback & Glyphs: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-LOC-006` | Culturalization & Regional Sensitivity Hygiene: | §21 Accessibility and Localization Readiness (`REL-ACC-*`, `REL-LOC-*`) |
+| `REL-MP-001` | Session-scoped Multiplayer Activation: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-002` | Deterministic Lockstep Protocol Architecture: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-003` | Fixed-Width Command Packet Schema: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-004` | Peer State Checksum Desynchronization Detection: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-005` | Dynamic Ping-Compensated Turn Buffer: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-006` | Graceful Disconnect & Reconnect Recovery: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-007` | Lobby Discovery & Room Creation Interface: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-008` | Player Slot & Asymmetric Faction Configuration: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-009` | Strict Network Bandwidth Budget (64 kbps): | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-010` | Client-Side Local Audio/Visual Command Prediction: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-011` | Automated Desync Dump Serialization: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-012` | Cryptographic Packet Authentication & Anti-Spoofing: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-013` | NAT Traversal & Direct Peer Fallback: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-014` | Host Migration & Listen-Server Resilience: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-015` | Matchmaking Rating (MMR) Calculation Model: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-016` | Absolute Single-Player Network Isolation: | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-017` | Development network boundary. | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-018` | Packaged multiplayer qualification. | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-019` | Session trust and service contracts. | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-PERF-001` | 60 FPS Target on Baseline Apple Silicon: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-002` | Frame Time Distribution & Spike Ceiling: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-003` | Game Thread Execution Budget: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-004` | Render Thread & GPU Execution Budget: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-005` | Volumetric Fog GPU Computation Budget: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-006` | Pathfinding Burst Re-plan Budget: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-007` | Master Performance Budget Compliance Invariant: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-008` | Resident Memory Ceiling (10 GB RSS): | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-009` | VRAM Texture Streaming & Unified Memory Management: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-010` | 400-Unit Four-Team Stress Protocol: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-011` | 600-Second Preflight & 60-Minute Rendered Soak: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-012` | Headless Multi-Hour AI Soak Validation: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-013` | Dynamic Graphics Scalability Presets: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-014` | Metal API Shader Precompilation Pipeline: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-015` | Passive Thermal Throttling Resilience: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-016` | Headless Simulation Execution Throughput: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-017` | Asynchronous Worker Thread Work Scheduler: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-018` | Zero Mid-Frame Heap Allocation Invariant: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-PERF-019` | Quality tiers are data, not code. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-020` | Settings forward and backward compatibility. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-021` | Presentation cannot reach authority. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-022` | Budgets bind to a measured device class. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-023` | Capability detection and fallback. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-024` | Readability floor across every tier. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PERF-025` | Graphics expansion is dormant. | Graphics-hardware and options expansion — REL-PERF-019..025 |
+| `REL-PORT-001` | Portability constraint authority. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-002` | Toolchain and architecture determinism. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-003` | Asset and content path portability. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-004` | Container encoding portability. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-005` | Input and binding portability. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-006` | Dependency portability register. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-007` | Generator and compiler platform behavior. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-008` | Portability guard runs continuously. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-009` | No unsupported platform claim. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PORT-010` | Roadmap platform modules are dormant. | Platform portability constraints — REL-PORT-001..010 |
+| `REL-PUB-001` | Absolute Truth in Public Gameplay Claims: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-002` | Comprehensive Standalone Game Manual (PDF): | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-003` | Authoritative Manual Content Architecture: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-004` | Official Public Product Website: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-005` | Truthful Hardware System Requirements: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-006` | Direct Support Contact & Issue Reporting: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-007` | Third-Party Open Source Software Disclosures: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-008` | Copyright & Trademark Notices: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-009` | Public Accessibility Feature Documentation: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-010` | Version Release Notes & Changelog: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-011` | In-Engine Truthful Media Assets: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-012` | Community Code of Conduct & Fair Play Rules: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-013` | Transparent Zero-Collection Privacy Policy: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-014` | Public Bug Report Template & Submission Guide: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-015` | Digital Signature Verification Guide: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-016` | The Soryn Archive In-Game Lore Codex: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-017` | Interactive 3D Model Viewer & Tactical Dossier: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-018` | Tactical Combat Sandbox / Testing Lab Mode: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-019` | Historical Trophy Vault & Feat Tracking Gallery: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-PUB-020` | Transparent In-Game Combat Mechanics Glossary: | §24 Public Website, Manual, Claims, and Support (`REL-PUB-*`) |
+| `REL-QA-001` | Rigorous Defect Severity Ladder: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-002` | Zero S0/S1 Release Prohibitions: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-003` | Zero Un-Waived S2 Critical Path Defects: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-004` | Authoritative Defect Register Ledger: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-005` | 85% Simulation Unit Test Coverage Ceiling: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-006` | Automated Campaign Integration Test Suite: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-007` | Automated Skirmish Matchup Matrix Suite: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-008` | ASan + UBSan Memory Sanitizer Qualification: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-009` | ThreadSanitizer Concurrency Validation: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-010` | 60-Minute Rendered Soak Qualification Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-011` | 1,000-Match Headless AI Soak Validation: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-012` | Save/Load Round-Trip Determinism Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-013` | Replay Playback Checksum Consistency Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-014` | Resolution Matrix Visual Quality Audit: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-015` | Continuous UI Scaling Sweep Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-016` | BS.1770-4 Automated Loudness Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-017` | Complete Dialogue Voice & Subtitle Sync Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-018` | Accessibility Preset Functional Verification: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-019` | Clean-Machine DMG Installation & Verification: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-020` | Gatekeeper Notarization & Offline Staple Verification: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-021` | Mouse-Only Full Mission Playability Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-022` | Rapid 300-APM Command Burst Stress Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-023` | Chokepoint Deadlock Stress Test: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-024` | 400-Unit Combat Frame-Rate Benchmark: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-025` | Ten-Match Skirmish Restart Memory Leak Check: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-026` | Independent QA Lane Review Isolation: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-027` | Blind Naive Human Playtesting Sessions: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-028` | Angelis Pseftis Formal Human Acceptance Sign-Off: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-029` | Release Candidate Tagging & Branch Lockdown: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-030` | Master Evidence Archive Binding: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-031` | Continuous CI Regression Guard Locks: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-032` | Post-Release Hotfix Qualification Protocol: | §25 QA, Human Validation, and Release Blockers (`REL-QA-*`) |
+| `REL-QA-033` | No purposeless element. | Purpose-map closure gate |
+| `REL-QA-034` | No fiction-only verbs. | Purpose-map closure gate |
+| `REL-QA-035` | Purpose comprehension. | Purpose-map closure gate |
+| `REL-QA-036` | Evidence separation. | Purpose-map closure gate |
+| `REL-QOL-001` | Control Group Assignment & Selection: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-002` | Control Group Camera Centering: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-003` | Multi-Unit Subgroup Navigation: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-004` | Structure Rally Point Management: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-005` | Queue Cancellation & Reordering: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-006` | Idle Worker Cycling Hotkey (F1): | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-007` | Production Facility Cycling Hotkey (F2): | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-008` | Combat Army Selection Hotkey (F3): | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-009` | Spatial Alert Feed & Jump Hotkey (Space): | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-010` | Replay Recording & Metadata Browser: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-011` | Replay Playback Transport Controls: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-012` | Anti-Rewrite Campaign Replay Protection: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-013` | "Take Command" Savestate Replay Branching: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-014` | Replay Bookmark & Event Timeline Navigation: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-015` | Advanced Esports / Spectator Observer Deck: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-QOL-016` | Cinematic Smooth Camera & Freecam Spectating: | §16 Replays and Quality-of-Life (`REL-QOL-*`) |
+| `REL-SAV-001` | Transactional Atomic Save Writing: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-002` | Header Schema & CRC32/FNV-1a Checksum Validation: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-003` | Isolated Player Profile Persistence: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-004` | Three Independent Campaign Journey Slots: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-005` | Tactical Mission Checkpoint State Serialization: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-006` | Autonomous Milestone Autosave Cadence: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-007` | Asynchronous Non-Blocking Save Frame Budget: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-008` | Cross-Platform Endian-Safe Binary Format: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-009` | Graceful Corrupt Save Containment & Backup Recovery: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-010` | Schema Versioning & Forward Migration Discipline: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-011` | Campaign Consequence Ledger Tamper Resistance: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-012` | In-Match Save Lockout Safety Zones: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-013` | macOS Sandboxed Directory Compliance: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SAV-014` | Save Data Privacy & Zero Personal Telemetry: | §20 Saves, Profiles, Progression, and Recovery (`REL-SAV-*`) |
+| `REL-SEC-001` | Memory Safety & Buffer Bounds Discipline: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SEC-002` | Path Traversal Attack Refusal: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SEC-003` | Zero Telemetry & Player Privacy Protection: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SEC-004` | macOS Hardened Runtime Compliance: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SEC-005` | Immutable Read-Only App Bundle Integrity: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SEC-006` | Sanitized Crash Dumps & Zero Memory Leakage: | §23 Security, Privacy, Packaging, and Distribution (`REL-DIST-*`, `REL-SEC-*`) |
+| `REL-SIM-001` | Deterministic Fixed-Accumulator Simulation Loop: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-002` | Integer and Fixed-Point Arithmetic Authority: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-003` | Seeded Pseudo-Random Number Generation: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-004` | Strict View Layer Isolation from Simulation Authority: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-005` | Filtered PlayerView Information Masking: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-006` | Fog of War Spatial Authority: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-007` | Dual Time Representation Contract: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-008` | Authoritative Command Validation Pipeline: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-009` | Entity Unique Identifier Lifecycle & Ghost Prevention: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-010` | Map Spatial Boundary Invariant: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-011` | Transactional State Checksum Verification: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-012` | Core Tick Processing Time Ceiling: | §8 Core Simulation, Time, and Player Authority (`REL-SIM-*`) |
+| `REL-SIM-013` | Corefall standard-match victory. | Core match and operation outcomes |
+| `REL-SIM-014` | Corefall defeat and concession. | Core match and operation outcomes |
+| `REL-SIM-015` | Team elimination. | Core match and operation outcomes |
+| `REL-SIM-016` | Draw. | Core match and operation outcomes |
+| `REL-SIM-017` | Outcome comprehension. | Core match and operation outcomes |
+| `REL-SIM-018` | Initial-release outcome scope. | Core match and operation outcomes |
+| `REL-SIM-019` | Visibility-scoped world presentation. | Core match and operation outcomes |
+| `REL-STAB-001` | Sixty-Minute Sustained Gameplay Stability: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-STAB-002` | Match Restart Memory Leak Invariance: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-STAB-003` | Graceful Crash Minidump Capture: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-STAB-004` | Clean Process Termination Invariant: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-STAB-005` | Display & Cursor State Restoration on Exit: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
+| `REL-UI-001` | Production UMG/Slate Widget Framework: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-002` | Command Card 3x3 Grid Ergonomics: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-003` | Comprehensive Selection Inspector Panel: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-004` | Upper Resource Telemetry Deck: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-005` | Tactical Minimap Presentation & Frustum: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-006` | Spatial Alert Feed & Banner Notifications: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-007` | Interactive Technology Archive Tree: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-008` | Operational Escape Pause Menu: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-009` | Post-Match Results & Statistics Dossier: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-010` | Campaign Mission Briefing & Directive Terminal: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-011` | Context-Sensitive Mouse Cursor State Machine: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-012` | Ground Selection Ring Visual Hierarchy: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-013` | Comprehensive Screen Resolution Matrix: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-014` | Calibrated UI Scale Dynamic Range: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-015` | Input Keybind Deconfliction Invariant: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-016` | Layout Safety Margins for Localization: | §17 UI and Interaction (`REL-UI-*`) |
+| `REL-UI-017` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-UI-018` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
+| `REL-UI-019` | Purpose and counterplay. | Universal selection and command contract |
+| `REL-UI-020` | Action availability. | Universal selection and command contract |
+| `REL-UI-021` | Action feedback. | Universal selection and command contract |
+| `REL-UI-022` | Input parity. | Universal selection and command contract |
+| `REL-UI-023` | Binding exclusivity. | Universal selection and command contract |
+| `REL-UI-024` | Tactical overview truth. | Universal selection and command contract |
+| `REL-UI-025` | Production UMG/Slate Command Deck Architecture: | §17.1 Tactical HUD and Command Deck Specifications |
+| `REL-UI-026` | Selection identity. | Universal selection and command contract |
+| `REL-UI-027` | Interface Atlas and Multi-Channel Affiliation Feedback: | §17.1 Tactical HUD and Command Deck Specifications |
+| `REL-UI-028` | Selection state. | Universal selection and command contract |
+| `REL-WEL-001` | Future Well Landmark Entity Authority: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-002` | Future Well Dormant State & Telemetry: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-003` | Contested Well Capture Resolution: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-004` | Well Contestation & Meter Decay: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-005` | Harvest Protocol Public Telegraph: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-006` | Harvest Collapse & Irreversible Scarring: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-007` | Preserve Protocol Compounding Inflow: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-008` | Preserve Radar Reconnaissance Aura: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-009` | Preserve Contested Recapture Mechanics: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-010` | Reshape Protocol Invocation: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-011` | Reshape Terrain Transformation Passability: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-012` | Reshape Expiration & Safe Boundary Displacement: | §13 Future Wells (`REL-WEL-*`) |
+| `REL-WEL-013` | Well selection. | Future Well and world-element requirements |
+| `REL-WEL-014` | Well capture. | Future Well and world-element requirements |
+| `REL-WEL-015` | Harvest. | Future Well and world-element requirements |
+| `REL-WEL-016` | Preserve. | Future Well and world-element requirements |
+| `REL-WEL-017` | Reshape. | Future Well and world-element requirements |
+| `REL-WEL-018` | Strategic neutrality. | Future Well and world-element requirements |
+| `SPEC-ACC-001` | Non-color communication. Ownership, state, command, alert, danger, route, and protocol use shape, text, motion, and sound redundancy; color is never t | 22. Accessibility and localization |
+| `SPEC-ACC-002` | Visual settings. HUD scale 80–150%; text scale; high contrast; color-vision presets; reduced motion; reduced flashing; subtitle size/background; curso | 22. Accessibility and localization |
+| `SPEC-ACC-003` | Audio settings. Separate master, music, effects, dialogue, interface, and ambience controls; reduced dynamic range; mono compatibility; directional in | 22. Accessibility and localization |
+| `SPEC-ACC-004` | Input. Full keyboard-only menu and field path, complete remapping, edge-pan toggle, camera-speed/zoom controls, hold/toggle options, and no timing-sen | 22. Accessibility and localization |
+| `SPEC-ACC-005` | Cognition. Pause, tutorial replay, glossary, persistent objective history, clear confirmations, stable error language, and optional simplified alert d | 22. Accessibility and localization |
+| `SPEC-AI-001` | Fair information. AI reads the same player-scoped terrain, vision, public events, sensor contacts, and aged memory available to a human player. It nev | 16. Fair opponent and allied AI |
+| `SPEC-AI-002` | Equal rules. AI pays the same costs, waits the same times, obeys the same Logistics, pathing, fog, range, cooldown, formation, Well, and coherence rul | 16. Fair opponent and allied AI |
+| `SPEC-AI-003` | Layered control. A strategic controller selects states; economy, production, scouting, tactical groups, and abilities execute bounded plans; campaign  | 16. Fair opponent and allied AI |
+| `SPEC-AI-004` | Perceived intelligence. AI scouts, protects workers, retreats damaged forces, regroups, expands to known resources, contests or concedes Wells intenti | 16.2 Difficulty |
+| `SPEC-AI-005` | Recovery and concession. AI diagnoses stalled workers, blocked spawn, lost drop-off, capacity loss, disconnected power, failed molt/identity, insolven | 16.2 Difficulty |
+| `SPEC-AI-006` | Mission director. Scripted waves, dialogue, reinforcements, hazards, and cinematic beats have authored triggers, telegraphs, save/load idempotence, an | 16.2 Difficulty |
+| `SPEC-AIST-001` | ESTABLISH ECONOMY | 16. Fair opponent and allied AI |
+| `SPEC-AIST-002` | SCOUT | 16. Fair opponent and allied AI |
+| `SPEC-AIST-003` | EXPAND | 16. Fair opponent and allied AI |
+| `SPEC-AIST-004` | DEFEND | 16. Fair opponent and allied AI |
+| `SPEC-AIST-005` | ASSEMBLE | 16. Fair opponent and allied AI |
+| `SPEC-AIST-006` | ATTACK | 16. Fair opponent and allied AI |
+| `SPEC-AIST-007` | RAID | 16. Fair opponent and allied AI |
+| `SPEC-AIST-008` | CONTEST WELL | 16. Fair opponent and allied AI |
+| `SPEC-AIST-009` | RETREAT | 16. Fair opponent and allied AI |
+| `SPEC-AIST-010` | RECOVER | 16. Fair opponent and allied AI |
+| `SPEC-ARC-001` | Data ownership. Faction, unit, building, technology, Well, map, mission, dialogue, localization, and asset metadata live in validated source files. Ge | 26. Technical architecture and content contracts |
+| `SPEC-ARC-002` | Trust boundaries. Save files, replay files, settings, content packs, network packets and session metadata are untrusted input. Validate size, schema,  | 26. Technical architecture and content contracts |
+| `SPEC-ARC-003` | Failure behavior. Missing or invalid optional presentation assets use a registered fallback and visible diagnostics outside release UI. Missing author | 26. Technical architecture and content contracts |
+| `SPEC-ART-001` | Unit readability. At normal gameplay camera, faction, role, ownership, selection, health band, order, and high-impact ability state are identifiable w | 23. Visual direction, animation, and effects |
+| `SPEC-ART-002` | Animation set. Each unit has idle, locomotion, turn, acquire, wind-up, attack, recovery, hit, ability, state transition, death, and selection acknowle | 23. Visual direction, animation, and effects |
+| `SPEC-ART-003` | Camera framing. Cinematics may use closer detail, but all gameplay assets must be authored first for tactical camera legibility. No cinematic model or | 23. Visual direction, animation, and effects |
+| `SPEC-ART-004` | Role-legible, coherent production detail. | 23.1 Contextual craftsmanship and functional identity |
+| `SPEC-AUD-001` | Mix. Target integrated loudness is −16 LUFS ±1 with true peak no higher than −1 dBTP. Dialogue remains intelligible over combat; side-chain reduction  | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUD-002` | Cue completeness. Every command, rejection, production, research, construction, resource, Logistics, alert, combat role, ability, terrain transformati | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUD-003` | Accessibility. Critical audio always has simultaneous visual/text information. Subtitle timing follows performance, identifies speaker, supports size/ | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-001` | Meridian music | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-002` | Kharuun music | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-003` | Choir music | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-004` | Effects | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-005` | Interface | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUDF-006` | Voice | 24. Audio, music, voice, and cinematics |
+| `SPEC-AUT-001` | Player-owned automation guidelines: | §11.2 Unit and worker automation policies |
+| `SPEC-AUT-002` | Worker automated repair policy: | §11.2 Unit and worker automation policies |
+| `SPEC-AUT-003` | Worker automated flee policy: | §11.2 Unit and worker automation policies |
+| `SPEC-AUT-004` | Idle worker registry tracking: | §11.2 Unit and worker automation policies |
+| `SPEC-AUT-005` | Reinforcement policy. Each production structure may optionally assign completed combat units to one control group and send them along its rally route. | §11.2 Unit and worker automation policies |
+| `SPEC-AUTH-001` | Single source of truth. This document owns the complete intended player experience, game rules, content boundaries, system contracts, and acceptance c | §1. Authority, interpretation, and change control |
+| `SPEC-AUTH-002` | Normative language. Shall means mandatory. May means permitted. Tuning baseline means a binding starting value that may change only through documented | §1. Authority, interpretation, and change control |
+| `SPEC-AUTH-003` | No silent invention. When a required behavior is genuinely absent or contradictory, work stops at that decision boundary. The proposed change must ide | §1. Authority, interpretation, and change control |
+| `SPEC-AUTH-004` | Traceable change. Every approved design change updates this file in place, preserves stable requirement identifiers where meaning remains, records rat | §1. Authority, interpretation, and change control |
+| `SPEC-AUTH-005` | Purpose rule. Every accessible unit, building, technology, resource, terrain class, objective, command, alert, map interaction, and narrative beat mus | §1. Authority, interpretation, and change control |
+| `SPEC-AUTH-006` | Truthful acceptance. A design requirement, automated test, visual inspection, physical play session, and player-comprehension result establish differe | §1. Authority, interpretation, and change control |
+| `SPEC-BAL-001` | Headless Batch Simulation Harness: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-002` | Statistical Balance Reporting with Uncertainty: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-003` | Faction Asymmetry Balance Band: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-004` | Map and Spawn Symmetry Fairness: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-005` | Strategy Primacy Over Randomness: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-006` | Batch Replayability and Verification: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-007` | Balance Evidence Expiry and Re-Validation: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-008` | AI Instrument Competence Baseline: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BLD-001` | Blueprint placement validation: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-002` | Transactional cost subtraction: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-003` | Multi-builder speed scaling falloff: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-004` | Incomplete structure vulnerability: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-005` | Manufacturing cancellation refunds: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-006` | Production queue depth mapping: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-007` | Unit emergence obstruction loops: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-008` | Rally path routing: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-009` | Base building governance infrastructure: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-010` | Maintenance repair resolution: | §10. Construction, production, repair, and research |
+| `SPEC-BLD-015` | Meridian structure function profiles. | §13.1 Meridian Compact structures |
+| `SPEC-BLD-016` | Kharuun structure function profiles. | §13.2 Kharuun Assemblies structures |
+| `SPEC-BLD-017` | Choir structure function profiles. | §13.3 Hollow Choir structures |
+| `SPEC-BUD-001` | Frame target | 27. Performance, stability, and platform |
+| `SPEC-BUD-002` | Frame time | 27. Performance, stability, and platform |
+| `SPEC-BUD-003` | Fog | 27. Performance, stability, and platform |
+| `SPEC-BUD-004` | Path burst | 27. Performance, stability, and platform |
+| `SPEC-BUD-005` | Memory | 27. Performance, stability, and platform |
+| `SPEC-BUD-006` | Scale | 27. Performance, stability, and platform |
+| `SPEC-BUD-007` | Save | 27. Performance, stability, and platform |
+| `SPEC-BUD-008` | Stability | 27. Performance, stability, and platform |
+| `SPEC-CAM-001` | Structure. The campaign contains fifteen operations: five in Necessary Fires, five in The Cost of One Future, and five in Crownfall. Each operation ha | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-002` | Feature introduction. Every operation has a capability manifest marking each unit, building, command, ability, resource, terrain interaction, and UI s | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-003` | Persistence. Mission completion, Well records, district allocation, public evidence, optional objectives, campaign rewards, unlocked roster, and endin | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-004` | Rewards. Rewards change a later tactical or strategic decision and show exact effects. They never create an unknowable trap, purchase power outside th | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-005` | Retry. Autosave occurs before deployment, at authored checkpoints, and after successful result commitment. Retry restores the last checkpoint. Failure | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-006` | Branch clarity. The campaign map shows completed operations, known consequences, available next operations, and the decision classes affecting the fut | 18. Campaign structure, persistence, and progression |
+| `SPEC-CAM-007` | Ending confirmation. The player sees the earned subset, eligibility reasons, known tradeoff, protected witnesses, conduit location, and hold duration; | 18.2 Four endings |
+| `SPEC-CAM-039` | Story through play | §4. Player experience pillars and gameplay loops |
+| `SPEC-CAM-040` | Campaign | §4.1 Time-scale loops |
+| `SPEC-CAM-041` | Connected Soryn campaign journey. | 18.0 Campaign places, connected world, and character continuity |
+| `SPEC-CAM-042` | Character and story expressed through place and battle. | 18.0 Campaign places, connected world, and character continuity |
+| `SPEC-CAN-001` | Central theme. Echoes of the Broken Sun is about the cost of making one future real. Strategy, narrative, economy, interface, art, and sound must repe | §3.5 Writing rules |
+| `SPEC-CAN-002` | Tone. The tone is urgent, humane, and occasionally dry. No faction is a proxy for good or evil. Characters act from incomplete evidence and defensible | §3.5 Writing rules |
+| `SPEC-CANON-001` | Before Crownfall | §3.2 Historical frame |
+| `SPEC-CANON-002` | First Impact Generations | §3.2 Historical frame |
+| `SPEC-CANON-003` | Ledger Peace | §3.2 Historical frame |
+| `SPEC-CANON-004` | Quiet Omissions | §3.2 Historical frame |
+| `SPEC-CANON-005` | Present War | §3.2 Historical frame |
+| `SPEC-CANON-006` | Meridian Compact | §3.3 Cultures and language |
+| `SPEC-CANON-007` | Kharuun Assemblies | §3.3 Cultures and language |
+| `SPEC-CANON-008` | Hollow Choir | §3.3 Cultures and language |
+| `SPEC-CANON-009` | Commander Mara Vey | §3.4 Principal characters |
+| `SPEC-CANON-010` | Talar Venn | §3.4 Principal characters |
+| `SPEC-CANON-011` | Oruun-of-Seven-Stones | §3.4 Principal characters |
+| `SPEC-CANON-012` | Neme | §3.4 Principal characters |
+| `SPEC-CANON-013` | Chancellor Cael Rhyse | §3.4 Principal characters |
+| `SPEC-CANON-014` | Meridian Operations Annunciator | §3.4 Principal characters |
+| `SPEC-CANON-015` | Retired duplicate canon record. SPEC-CAN-001 | §3. Creative canon, setting, and lore |
+| `SPEC-CANON-016` | Retired duplicate canon record. SPEC-CAN-002 | §3. Creative canon, setting, and lore |
+| `SPEC-CIN-001` | Cinematic set. The game includes a title sequence, campaign opening, act transitions, mission-critical in-engine scenes, and one ending cinematic per  | 24. Audio, music, voice, and cinematics |
+| `SPEC-CIN-002` | Control handoff. A cinematic states when control is removed, returns camera and selection safely, never advances combat invisibly, and resumes at a de | 24. Audio, music, voice, and cinematics |
+| `SPEC-CMB-001` | Deterministic direct combat resolution: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-002` | Unified damage calculation model: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-003` | Ballistic projectile travel simulation: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-004` | Terrain line-of-sight projectile occlusion: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-005` | Friendly fire immunity invariant: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-006` | Fire and movement constraints: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-007` | Autonomous threat acquisition priority: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-008` | Intelligent overkill damage avoidance: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-009` | Lifecycle termination and remains cleanup: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-010` | Tactical disengagement and retreat: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-011` | No hidden systems. There is no suppression, morale, stun, knockback, capture, stealth, camouflage, resurrection, or regeneration unless an explicit na | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-012` | Automation. Automatic ability use is disabled by default. A player may enable an ability-specific toggle where offered; the toggle shows allowed targe | §11.1 Combat stances |
+| `SPEC-CMD-001` | Move / Context | §6.1 Common commands |
+| `SPEC-CMD-002` | Direct Attack | §6.1 Common commands |
+| `SPEC-CMD-003` | Attack-move | §6.1 Common commands |
+| `SPEC-CMD-004` | Patrol | §6.1 Common commands |
+| `SPEC-CMD-005` | Guard | §6.1 Common commands |
+| `SPEC-CMD-006` | Hold Position | §6.1 Common commands |
+| `SPEC-CMD-007` | Stop | §6.1 Common commands |
+| `SPEC-CMD-008` | Ability | §6.1 Common commands |
+| `SPEC-CMD-009` | Rally | §6.1 Common commands |
+| `SPEC-CMD-010` | Interact | §6.1 Common commands |
+| `SPEC-CMD-011` | Shift-Queued Order Chaining: | §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting |
+| `SPEC-CMD-012` | Waypoint Vector Breadcrumb Visualization: | §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting |
+| `SPEC-CMD-013` | Smart-Cast Single-Unit Dispatch: | §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting |
+| `SPEC-CMD-014` | Attack-Move Intelligent Threat Filtering: | §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting |
+| `SPEC-CMD-015` | Focus-Fire Target Preservation on Range Loss: | §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting |
+| `SPEC-CTL-001` | Left click / drag | 20.1 Default controls |
+| `SPEC-CTL-002` | Shift + selection | 20.1 Default controls |
+| `SPEC-CTL-003` | Double click | 20.1 Default controls |
+| `SPEC-CTL-004` | Right click | 20.1 Default controls |
+| `SPEC-CTL-005` | A / S / H / P / G | 20.1 Default controls |
+| `SPEC-CTL-006` | B / R | 20.1 Default controls |
+| `SPEC-CTL-007` | Q / W / E | 20.1 Default controls |
+| `SPEC-CTL-008` | F | 20.1 Default controls |
+| `SPEC-CTL-009` | C | 20.1 Default controls |
+| `SPEC-CTL-010` | Ctrl + 1–0 | 20.1 Default controls |
+| `SPEC-CTL-011` | Tab / Shift+Tab | 20.1 Default controls |
+| `SPEC-CTL-012` | WASD / edge pan / middle drag / wheel | 20.1 Default controls |
+| `SPEC-CTL-013` | Space | 20.1 Default controls |
+| `SPEC-CTL-014` | F1 / F2 / F3 | 20.1 Default controls |
+| `SPEC-CTL-015` | Escape / Pause | 20.1 Default controls |
+| `SPEC-CTL-016` | Command Responsiveness Invariant: | Restored control responsiveness contracts |
+| `SPEC-CTL-017` | Fluid Command Interruptibility: | Restored control responsiveness contracts |
+| `SPEC-CTL-018` | Micro-Management Usability Preservation: | Restored control responsiveness contracts |
+| `SPEC-CTL-019` | Simulation Tick Cost Ceiling for Steering: | Restored control responsiveness contracts |
+| `SPEC-DIF-001` | Story | 16.2 Difficulty |
+| `SPEC-DIF-002` | Standard | 16.2 Difficulty |
+| `SPEC-DIF-003` | Veteran | 16.2 Difficulty |
+| `SPEC-DIF-004` | Sovereign | 16.2 Difficulty |
+| `SPEC-DOC-001` | Warden | 16.1 AI doctrines |
+| `SPEC-DOC-002` | Raider | 16.1 AI doctrines |
+| `SPEC-DOC-003` | Steward | 16.1 AI doctrines |
+| `SPEC-DOC-004` | Expansionist | 16.1 AI doctrines |
+| `SPEC-DOC-005` | Adaptive | 16.1 AI doctrines |
+| `SPEC-ECO-001` | Starting resources. Skirmish presets are Scarce 250 Matter/18 Dawn, Standard 400/30, and Abundant 700/60. Both players receive the same preset and beg | Stable economy records retained from the source specification |
+| `SPEC-ECO-002` | Matter deposits. Follow SPEC-RES-003. This stable reference replaces the conflicting restored alternative; historical evidence does not establish comp | Stable economy records retained from the source specification |
+| `SPEC-ECO-003` | Automatic gather cycle. Follow SPEC-RES-004. This stable reference replaces the conflicting restored alternative; historical evidence does not establi | Stable economy records retained from the source specification |
+| `SPEC-ECO-004` | Drop-off choice. Follow SPEC-RES-005. This stable reference replaces the conflicting restored alternative; historical evidence does not establish comp | Stable economy records retained from the source specification |
+| `SPEC-ECO-005` | Depletion. Follow SPEC-RES-006. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compliance | Stable economy records retained from the source specification |
+| `SPEC-ECO-006` | Logistics loss. Follow SPEC-RES-007. This stable reference replaces the conflicting restored alternative; historical evidence does not establish compl | Stable economy records retained from the source specification |
+| `SPEC-ECO-018` | Minutes | §4.1 Time-scale loops |
+| `SPEC-END-001` | Restoration | 18.2 Four endings |
+| `SPEC-END-002` | Controlled Stabilization | 18.2 Four endings |
+| `SPEC-END-003` | Extinguishment | 18.2 Four endings |
+| `SPEC-END-004` | Open Evolution | 18.2 Four endings |
+| `SPEC-EVID-001` | Static/schema | 30. Verification and validation strategy |
+| `SPEC-EVID-002` | Deterministic unit/system | 30. Verification and validation strategy |
+| `SPEC-EVID-003` | Adversarial | 30. Verification and validation strategy |
+| `SPEC-EVID-004` | Packaged physical play | 30. Verification and validation strategy |
+| `SPEC-EVID-005` | Rendered/audio inspection | 30. Verification and validation strategy |
+| `SPEC-EVID-006` | Uncoached player testing | 30. Verification and validation strategy |
+| `SPEC-EVID-007` | Balance | 30. Verification and validation strategy |
+| `SPEC-EVID-008` | Owner acceptance | 30. Verification and validation strategy |
+| `SPEC-FACID-001` | Meridian Compact strategic alignment: | §12. Factions and strategic identities |
+| `SPEC-FACID-002` | Kharuun Assemblies strategic alignment: | §12. Factions and strategic identities |
+| `SPEC-FACID-003` | Hollow Choir strategic alignment: | §12. Factions and strategic identities |
+| `SPEC-FACID-004` | Asymmetric planning | §4. Player experience pillars and gameplay loops |
+| `SPEC-FOG-001` | Single information boundary. World rendering, terrain, minimap, targeting, alerts, AI, audio, and effects consume the same player-scoped information v | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-FOG-002` | Alert anatomy. An alert has class, urgency, short text, world location when legitimate, timestamp, source, acknowledgment state, and recovery action.  | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-FOG-003` | Fair uncertainty | §4. Player experience pillars and gameplay loops |
+| `SPEC-HUD-001` | Top resource bar | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-002` | Objective panel | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-003` | Selection panel | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-004` | Command deck | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-005` | Production/research | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-006` | Minimap | 20. Interface, selection, controls, and player feedback |
+| `SPEC-HUD-007` | Alert history | 20. Interface, selection, controls, and player feedback |
+| `SPEC-INFO-001` | Unexplored | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-002` | Explored | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-003` | Visible | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-004` | Last known | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-005` | Anonymous vibration | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-006` | Public event | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-007` | Explore Area | §8.1 Automatic scouting |
+| `SPEC-INFO-008` | Find Matter | §8.1 Automatic scouting |
+| `SPEC-INFO-009` | Locate Hostiles | §8.1 Automatic scouting |
+| `SPEC-INFO-010` | Screen Route | §8.1 Automatic scouting |
+| `SPEC-LOC-001` | Externalized text. No player-facing string is hard-coded. Every string has an identifier, context, owner, length budget, plural/gender notes where rel | 22. Accessibility and localization |
+| `SPEC-LOC-002` | English launch. English is the release language. Fonts, layout, input, saves, and content pipelines accept later localization without changing gamepla | 22. Accessibility and localization |
+| `SPEC-LSN-001` | Survey | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-002` | Roster | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-003` | Section muster | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-004` | Route check | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-005` | Reserve | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-006` | Link restoration | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-007` | Foundry | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-008` | Perimeter probe | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-009` | The board | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-010` | The Well | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-LSN-011` | Readiness gate | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-MAP-001` | Spawn fairness. Each standard skirmish map in §17 supports two fixed mirrored-distance spawn regions with equivalent starting build area, resource tra | 17. Skirmish configuration and maps |
+| `SPEC-MAP-002` | Map truth. Every map ships with a machine-readable contract for grid, starts, terrain, resources, Well, passages, objectives, camera bounds, Reshape o | 17. Skirmish configuration and maps |
+| `SPEC-MAP-003` | Post-match. Results show outcome cause, duration, resource curves, unit production/losses, damage, scouting coverage, idle-worker time, Well control/p | 17. Skirmish configuration and maps |
+| `SPEC-MAP-004` | Distinct story-driven campaign battlefields. | 18.0 Campaign places, connected world, and character continuity |
+| `SPEC-MOD-001` | Simulation core | 26. Technical architecture and content contracts |
+| `SPEC-MOD-002` | Game adapter | 26. Technical architecture and content contracts |
+| `SPEC-MOD-003` | Content compiler | 26. Technical architecture and content contracts |
+| `SPEC-MOD-004` | AI | 26. Technical architecture and content contracts |
+| `SPEC-MOD-005` | Mission director | 26. Technical architecture and content contracts |
+| `SPEC-MOD-006` | Save/replay | 26. Technical architecture and content contracts |
+| `SPEC-MOD-007` | Presentation | 26. Technical architecture and content contracts |
+| `SPEC-MOV-001` | Ground-only domain restriction: | §7. Movement, pathfinding, formations, and terrain |
+| `SPEC-MOV-002` | Bounded deterministic pathfinding: | §7. Movement, pathfinding, formations, and terrain |
+| `SPEC-MOV-003` | Local steering avoidance & allied yielding: | §7. Movement, pathfinding, formations, and terrain |
+| `SPEC-MOV-004` | Dynamic terrain modification re-pathing: | §7. Movement, pathfinding, formations, and terrain |
+| `SPEC-MOV-005` | Group tactical formations: | §7. Movement, pathfinding, formations, and terrain |
+| `SPEC-MOV-006` | Any-Angle String-Pulled Movement: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-007` | Direction-Independent Speed: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-008` | Soft Separation and Non-Imprisonment: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-009` | Chokepoint Negotiation Without Deadlock: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-010` | Travel Facing and Presentation Decoupling: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-011` | Group Cohesion and Centroid Navigation: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-012` | Damped Clean Arrival: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-013` | Movement Determinism & Sanitizer Invariance: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MSN-001` | What the Ledger Keeps | What the Ledger Keeps |
+| `SPEC-MSN-002` | Seven Accounts of Rain | Seven Accounts of Rain |
+| `SPEC-MSN-003` | A City on Reserve | A City on Reserve |
+| `SPEC-MSN-004` | The Unburied Road | The Unburied Road |
+| `SPEC-MSN-005` | Terms of Continuance | Terms of Continuance |
+| `SPEC-MSN-006` | Names Without Births | Names Without Births |
+| `SPEC-MSN-007` | The Shape of Silence | The Shape of Silence |
+| `SPEC-MSN-008` | The Shape Beside Us | The Shape Beside Us |
+| `SPEC-MSN-009` | Reserve Authority | Reserve Authority |
+| `SPEC-MSN-010` | The Choir at Lume Reach | The Choir at Lume Reach |
+| `SPEC-MSN-011` | No Neutral Ledger | No Neutral Ledger |
+| `SPEC-MSN-012` | The Future That Won | The Future That Won |
+| `SPEC-MSN-013` | Assembly of the Missing | Assembly of the Missing |
+| `SPEC-MSN-014` | Several Voices, One Command | Several Voices, One Command |
+| `SPEC-MSN-015` | The Broken Sun | The Broken Sun |
+| `SPEC-OUT-001` | Corefall victory. A player wins a standard skirmish when the opposing player has no surviving Command Core. Anchor, Memory Hearth, and Concordance are | Stable outcome records |
+| `SPEC-OUT-002` | Defeat. A player loses when the player's final Command Core is destroyed or the player confirms concession. Losing all workers, combat units, producti | Stable outcome records |
+| `SPEC-OUT-003` | Draw. If both final Command Cores are destroyed in the same 20 Hz resolution tick, the result is Draw. Score, resources, damage, command order, and el | Stable outcome records |
+| `SPEC-OUT-004` | Campaign success. An operation is won only when every mandatory objective and required consequence commitment is complete. Destroying a hostile Core s | Stable outcome records |
+| `SPEC-OUT-005` | Campaign failure. Each operation names failure predicates before play: required Core, character, civilian, witness, route, asset, timer, or irreversib | Stable outcome records |
+| `SPEC-OUT-006` | Result explanation. The result screen states the precise win/loss cause, optional objectives, rewards, irreversible record, elapsed time, resources, u | Stable outcome records |
+| `SPEC-OUT-007` | Stalemate. At 45 minutes, skirmish warns that the match is prolonged but does not force a result. An AI with no recoverable production/economy/Core-de | Stable outcome records |
+| `SPEC-PIL-001` | Spatial economy | Stable pillar and decision-loop records |
+| `SPEC-PIL-002` | Asymmetric planning | Stable pillar and decision-loop records |
+| `SPEC-PIL-003` | Readable consequence | Stable pillar and decision-loop records |
+| `SPEC-PIL-004` | Fair uncertainty | Stable pillar and decision-loop records |
+| `SPEC-PIL-005` | Recoverable command | Stable pillar and decision-loop records |
+| `SPEC-PIL-006` | Story through play | Stable pillar and decision-loop records |
+| `SPEC-PIL-007` | Seconds | Stable pillar and decision-loop records |
+| `SPEC-PIL-008` | Minutes | Stable pillar and decision-loop records |
+| `SPEC-PIL-009` | Match | Stable pillar and decision-loop records |
+| `SPEC-PIL-010` | Campaign | Stable pillar and decision-loop records |
+| `SPEC-PLAN-001` | M01 | 18.1 Mission plan |
+| `SPEC-PLAN-002` | M02 | 18.1 Mission plan |
+| `SPEC-PLAN-003` | M03 | 18.1 Mission plan |
+| `SPEC-PLAN-004` | M04 | 18.1 Mission plan |
+| `SPEC-PLAN-005` | M05 | 18.1 Mission plan |
+| `SPEC-PLAN-006` | M06 | 18.1 Mission plan |
+| `SPEC-PLAN-007` | M07 | 18.1 Mission plan |
+| `SPEC-PLAN-008` | M08 | 18.1 Mission plan |
+| `SPEC-PLAN-009` | M09 | 18.1 Mission plan |
+| `SPEC-PLAN-010` | M10 | 18.1 Mission plan |
+| `SPEC-PLAN-011` | M11 | 18.1 Mission plan |
+| `SPEC-PLAN-012` | M12 | 18.1 Mission plan |
+| `SPEC-PLAN-013` | M13 | 18.1 Mission plan |
+| `SPEC-PLAN-014` | M14 | 18.1 Mission plan |
+| `SPEC-PLAN-015` | M15 | 18.1 Mission plan |
+| `SPEC-PLAT-001` | Display matrix. 1280×720, 1440×900, 1600×900, 1920×1080, 2560×1440, native Retina, windowed, fullscreen, and live resize remain readable and operable  | 27. Performance, stability, and platform |
+| `SPEC-PLAT-002` | Graphics scaling. Low, Medium, High, and Auto alter texture, shadow, effects, foliage, post-processing, and resolution scale without changing visibili | 27. Performance, stability, and platform |
+| `SPEC-PLAT-003` | Distribution. Ship a Release configuration app signed with Developer ID, notarized, stapled, installable by an ordinary user, removable without orphan | 27. Performance, stability, and platform |
+| `SPEC-PLAT-004` | Privacy. Offline campaign, Conquest, tutorial and skirmish require no network or account. Network activity is confined to explicitly initiated multipl | 27. Performance, stability, and platform |
+| `SPEC-PRD-001` | Genre | §2. Product definition and release boundary |
+| `SPEC-PRD-002` | Camera and control | §2. Product definition and release boundary |
+| `SPEC-PRD-003` | Primary experience | §2. Product definition and release boundary |
+| `SPEC-PRD-004` | Player fantasy | §2. Product definition and release boundary |
+| `SPEC-PRD-005` | Release platform | §2. Product definition and release boundary |
+| `SPEC-PRD-006` | Campaign | §2. Product definition and release boundary |
+| `SPEC-PRD-007` | Skirmish | §2. Product definition and release boundary |
+| `SPEC-PRD-008` | Launch language | §2. Product definition and release boundary |
+| `SPEC-PRD-009` | Expected match length | §2. Product definition and release boundary |
+| `SPEC-PRD-010` | Business model | §2. Product definition and release boundary |
+| `SPEC-RES-001` | Three resource pillars: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-002` | Starting resources preset: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-003` | Matter deposit extraction constraints: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-004` | Continuous automated worker gathering loop: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-005` | Drop-off target selection: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-006` | Deposit depletion lifecycle: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-007` | Logistics cap enforcement & supply deficit: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-018` | Spatial economy | §4. Player experience pillars and gameplay loops |
+| `SPEC-SAV-001` | Transactional save. Manual save, autosave, checkpoint, settings, campaign ledger, and replay write atomically through temporary file, validation, and  | 25. Saves, campaign records, and replays |
+| `SPEC-SAV-002` | Slots. Campaign provides three named journeys plus autosave and one prior validated generation. Skirmish provides quicksave and manual saves. Delete r | 25. Saves, campaign records, and replays |
+| `SPEC-SAV-003` | Compatibility. A save records schema, content identifiers, map, mission, seed, difficulty, campaign ledger, entities, orders, queues, timers, AI state | 25. Saves, campaign records, and replays |
+| `SPEC-SAV-004` | Replay. Every match and completed operation may produce a deterministic command replay with setup, content hash, seed, inputs, periodic checksums, out | 25. Saves, campaign records, and replays |
+| `SPEC-SAV-005` | Replay browser. Filter by mode, operation/map, faction, result, date, and duration; inspect version-independent content identifiers; play, pause, seek | 25. Saves, campaign records, and replays |
+| `SPEC-SCT-001` | Eligible scouts mapping: | §8.1 Automatic scouting |
+| `SPEC-SCT-002` | Legal routing constraint: | §8.1 Automatic scouting |
+| `SPEC-SCT-003` | Automated response policies: | §8.1 Automatic scouting |
+| `SPEC-SCT-004` | Active mission selection feedback: | §8.1 Automatic scouting |
+| `SPEC-SCT-005` | Autonomous mission outcomes: | §8.1 Automatic scouting |
+| `SPEC-SCT-006` | Structural authority boundaries: | §8.1 Automatic scouting |
+| `SPEC-SIM-001` | Fixed time authority: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-002` | View and simulation separation: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-003` | Command validation pipeline: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-004` | Absolute determinism: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-005` | Authoritative entity properties: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-006` | Safe allocation limits: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-007` | Time display representation: | §6. Authoritative simulation and command rules |
+| `SPEC-SIM-013` | Corefall standard-match victory: | §5. Match and operation outcomes |
+| `SPEC-SIM-014` | Corefall defeat and concession: | §5. Match and operation outcomes |
+| `SPEC-SIM-016` | Draw: | §5. Match and operation outcomes |
+| `SPEC-SIM-020` | Readable consequence | §4. Player experience pillars and gameplay loops |
+| `SPEC-SIM-021` | Recoverable command | §4. Player experience pillars and gameplay loops |
+| `SPEC-SIM-022` | Seconds | §4.1 Time-scale loops |
+| `SPEC-SIM-023` | Match | §4.1 Time-scale loops |
+| `SPEC-SIM-024` | Stalemate tolerance: | §5. Match and operation outcomes |
 | `SPEC-SKM-001` | Player faction | 17. Skirmish configuration and maps |
 | `SPEC-SKM-002` | Opponent faction | 17. Skirmish configuration and maps |
 | `SPEC-SKM-003` | Map | 17. Skirmish configuration and maps |
@@ -5447,100 +6833,73 @@ All 995 identifiers in this document.
 | `SPEC-SKM-011` | Glass Scar | 17. Skirmish configuration and maps |
 | `SPEC-SKM-012` | Crownfall Basin | 17. Skirmish configuration and maps |
 | `SPEC-SKM-013` | The Confluence Ring | 17. Skirmish configuration and maps |
-| `SPEC-MAP-001` | Spawn fairness. Each map supports two fixed mirrored-distance spawn regions with | 17. Skirmish configuration and maps |
-| `SPEC-MAP-002` | Map truth. Every map ships with a machine-readable contract for grid, starts, te | 17. Skirmish configuration and maps |
-| `SPEC-MAP-003` | Post-match. Results show outcome cause, duration, resource curves, unit producti | 17. Skirmish configuration and maps |
-| `SPEC-CAM-001` | Structure. The campaign contains fifteen operations: five in Necessary Fires, fi | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-002` | Feature introduction. Every operation has a capability manifest marking each uni | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-003` | Persistence. Mission completion, Well records, district allocation, public evide | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-004` | Rewards. Rewards change a later tactical or strategic decision and show exact ef | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-005` | Retry. Autosave occurs before deployment, at authored checkpoints, and after suc | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-006` | Branch clarity. The campaign map shows completed operations, known consequences, | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-001` | M01 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-002` | M02 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-003` | M03 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-004` | M04 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-005` | M05 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-006` | M06 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-007` | M07 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-008` | M08 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-009` | M09 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-010` | M10 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-011` | M11 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-012` | M12 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-013` | M13 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-014` | M14 | 18. Campaign structure, persistence, and pro |
-| `SPEC-PLAN-015` | M15 | 18. Campaign structure, persistence, and pro |
-| `SPEC-END-001` | Restoration | 18. Campaign structure, persistence, and pro |
-| `SPEC-END-002` | Controlled Stabilization | 18. Campaign structure, persistence, and pro |
-| `SPEC-END-003` | Extinguishment | 18. Campaign structure, persistence, and pro |
-| `SPEC-END-004` | Open Evolution | 18. Campaign structure, persistence, and pro |
-| `SPEC-CAM-007` | Ending confirmation. The player sees the earned subset, eligibility reasons, kno | 18. Campaign structure, persistence, and pro |
-| `SPEC-MSN-001` | Operation: What the Ledger Keeps | 19. Mission objective and failure contracts |
-| `SPEC-MSN-002` | Operation: Seven Accounts of Rain | 19. Mission objective and failure contracts |
-| `SPEC-MSN-003` | Operation: A City on Reserve | 19. Mission objective and failure contracts |
-| `SPEC-MSN-004` | Operation: The Unburied Road | 19. Mission objective and failure contracts |
-| `SPEC-MSN-005` | Operation: Terms of Continuance | 19. Mission objective and failure contracts |
-| `SPEC-MSN-006` | Operation: Names Without Births | 19. Mission objective and failure contracts |
-| `SPEC-MSN-007` | Operation: The Shape of Silence | 19. Mission objective and failure contracts |
-| `SPEC-MSN-008` | Operation: The Shape Beside Us | 19. Mission objective and failure contracts |
-| `SPEC-MSN-009` | Operation: Reserve Authority | 19. Mission objective and failure contracts |
-| `SPEC-MSN-010` | Operation: The Choir at Lume Reach | 19. Mission objective and failure contracts |
-| `SPEC-MSN-011` | Operation: No Neutral Ledger | 19. Mission objective and failure contracts |
-| `SPEC-MSN-012` | Operation: The Future That Won | 19. Mission objective and failure contracts |
-| `SPEC-MSN-013` | Operation: Assembly of the Missing | 19. Mission objective and failure contracts |
-| `SPEC-MSN-014` | Operation: Several Voices, One Command | 19. Mission objective and failure contracts |
-| `SPEC-MSN-015` | Operation: The Broken Sun | 19. Mission objective and failure contracts |
-| `SPEC-UI-001` | Selection answer. Every selection answers: what is it, what is it doing, what ca | 20. Interface, selection, controls, and play |
-| `SPEC-UI-002` | Selection fields. Show faction, name, role, owner, health, order, stance, target | 20. Interface, selection, controls, and play |
-| `SPEC-UI-003` | Mixed selection. Show composition and deterministic subgroups. The command deck  | 20. Interface, selection, controls, and play |
-| `SPEC-UI-004` | Action feedback. Accepted actions use distinct non-color ground markers and audi | 20. Interface, selection, controls, and play |
-| `SPEC-UI-005` | HUD fiction. The field HUD is Mara's command deck: a Compact operations instrume | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-001` | Top resource bar | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-002` | Objective panel | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-003` | Selection panel | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-004` | Command deck | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-005` | Production/research | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-006` | Minimap | 20. Interface, selection, controls, and play |
-| `SPEC-HUD-007` | Alert history | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-001` | Left click / drag | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-002` | Shift + selection | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-003` | Double click | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-004` | Right click | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-005` | A / S / H / P / G | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-006` | B / R | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-007` | Q / W / E | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-008` | F | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-009` | C | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-010` | Ctrl + 1–0 | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-011` | Tab / Shift+Tab | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-012` | WASD / edge pan / middle drag / wheel | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-013` | Space | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-014` | F1 / F2 / F3 | 20. Interface, selection, controls, and play |
-| `SPEC-CTL-015` | Escape / Pause | 20. Interface, selection, controls, and play |
-| `SPEC-UI-006` | Remapping. Every gameplay command is remappable; collisions are rejected before  | 20. Interface, selection, controls, and play |
-| `SPEC-LSN-001` | Survey | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-002` | Roster | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-003` | Section muster | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-004` | Route check | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-005` | Reserve | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-006` | Link restoration | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-007` | Foundry | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-008` | Perimeter probe | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-009` | The board | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-010` | The Well | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-LSN-011` | Readiness gate | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-TUT-001` | Fiction. Mara conducts an operational readiness check inside the prologue. There | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-TUT-002` | Hint ladder. After no relevant state change, first highlight the relevant UI, th | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-TUT-003` | Mastery. A lesson completes only from authoritative player action, not elapsed t | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-TUT-004` | Reference. A searchable in-game archive defines units, buildings, resources, ter | 21. Onboarding, tutorial, manual, and learni |
-| `SPEC-ACC-001` | Non-color communication. Ownership, state, command, alert, danger, route, and pr | 22. Accessibility and localization |
-| `SPEC-ACC-002` | Visual settings. HUD scale 80–150%; text scale; high contrast; color-vision pres | 22. Accessibility and localization |
-| `SPEC-ACC-003` | Audio settings. Separate master, music, effects, dialogue, interface, and ambien | 22. Accessibility and localization |
-| `SPEC-ACC-004` | Input. Full keyboard-only menu and field path, complete remapping, edge-pan togg | 22. Accessibility and localization |
-| `SPEC-ACC-005` | Cognition. Pause, tutorial replay, glossary, persistent objective history, clear | 22. Accessibility and localization |
-| `SPEC-LOC-001` | Externalized text. No player-facing string is hard-coded. Every string has an id | 22. Accessibility and localization |
-| `SPEC-LOC-002` | English launch. English is the release language. Fonts, layout, input, saves, an | 22. Accessibility and localization |
+| `SPEC-SKM-014` | Format selection. | Approved additional match formats |
+| `SPEC-SKM-015` | Participant configuration. | Approved additional match formats |
+| `SPEC-SKM-016` | Team authority. | Approved additional match formats |
+| `SPEC-SKM-017` | Session separation. | Approved additional match formats |
+| `SPEC-SKM-018` | Map-format binding. | Approved additional match formats |
+| `SPEC-STANCE-001` | Aggressive | §11.1 Combat stances |
+| `SPEC-STANCE-002` | Defensive (Default) | §11.1 Combat stances |
+| `SPEC-STANCE-003` | Hold Position | §11.1 Combat stances |
+| `SPEC-STANCE-004` | Return Fire | §11.1 Combat stances |
+| `SPEC-STANCE-005` | Hold Fire | §11.1 Combat stances |
+| `SPEC-STR-001` | Anchor | Stable structure data and interaction records |
+| `SPEC-STR-002` | Power Link | Stable structure data and interaction records |
+| `SPEC-STR-003` | Array Foundry | Stable structure data and interaction records |
+| `SPEC-STR-004` | Aegis Post | Stable structure data and interaction records |
+| `SPEC-STR-005` | Memory Hearth | Stable structure data and interaction records |
+| `SPEC-STR-006` | Waystone | Stable structure data and interaction records |
+| `SPEC-STR-007` | Growth Basin | Stable structure data and interaction records |
+| `SPEC-STR-008` | Listening Spine | Stable structure data and interaction records |
+| `SPEC-STR-009` | Concordance | Stable structure data and interaction records |
+| `SPEC-STR-010` | Interval Loom | Stable structure data and interaction records |
+| `SPEC-STR-011` | Chorus Loom | Stable structure data and interaction records |
+| `SPEC-STR-012` | Phase Anchor | Stable structure data and interaction records |
+| `SPEC-TEC-001` | Research interface visibility verification: | §14. Technology and strategic progression |
+| `SPEC-TEC-002` | Strategic sufficiency paradigm: | §14. Technology and strategic progression |
+| `SPEC-TEC-003` | Meridian Compact | §14. Technology and strategic progression |
+| `SPEC-TEC-004` | Meridian Compact | §14. Technology and strategic progression |
+| `SPEC-TEC-005` | Kharuun Assemblies | §14. Technology and strategic progression |
+| `SPEC-TEC-006` | Kharuun Assemblies | §14. Technology and strategic progression |
+| `SPEC-TEC-007` | Hollow Choir | §14. Technology and strategic progression |
+| `SPEC-TEC-008` | Hollow Choir | §14. Technology and strategic progression |
+| `SPEC-TECH-001` | Meridian Compact | Stable technology records |
+| `SPEC-TECH-002` | Meridian Compact | Stable technology records |
+| `SPEC-TECH-003` | Kharuun Assemblies | Stable technology records |
+| `SPEC-TECH-004` | Kharuun Assemblies | Stable technology records |
+| `SPEC-TECH-005` | Hollow Choir | Stable technology records |
+| `SPEC-TECH-006` | Hollow Choir | Stable technology records |
+| `SPEC-TER-001` | Open Landscape | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TER-002` | Scarred Ground | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TER-003` | Blocked / Cliffs | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TER-004` | Water / Void Rift | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TER-005` | Mineral Cover | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TER-006` | Subsurface Conduit | §7.4 Terrain Surface Truth Matrix |
+| `SPEC-TUT-001` | Fiction. Mara conducts an operational readiness check inside the prologue. There is no narrator. The tutorial never breaks world tone or uses unexplai | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-002` | Hint ladder. After no relevant state change, first highlight the relevant UI, then restate the goal, then demonstrate the input without completing it. | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-003` | Mastery. A lesson completes only from authoritative player action, not elapsed time or opening a tooltip. It can be replayed individually from Help. | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-004` | Reference. A searchable in-game archive defines units, buildings, resources, terrain, technologies, Wells, controls, objectives, status effects, count | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-UI-001` | Selection answer. Every selection answers: what is it, what is it doing, what can I order, what will that cost or require, why would I choose it, when | 20. Interface, selection, controls, and player feedback |
+| `SPEC-UI-002` | Selection fields. Show faction, name, role, owner, health, order, stance, target/route, cargo, control group, status, ability cost/cooldown, and every | 20. Interface, selection, controls, and player feedback |
+| `SPEC-UI-003` | Mixed selection. Show composition and deterministic subgroups. The command deck displays only commands legal for at least one selected unit and report | 20. Interface, selection, controls, and player feedback |
+| `SPEC-UI-004` | Action feedback. Accepted actions use distinct non-color ground markers and audio. Rejections identify the reason and recovery. Target hit regions mat | 20. Interface, selection, controls, and player feedback |
+| `SPEC-UI-005` | HUD fiction. The field HUD is Mara's command deck: a Compact operations instrument using ledger entries, duty windows, reserve margins, status bands,  | 20. Interface, selection, controls, and player feedback |
+| `SPEC-UI-006` | Remapping. Every gameplay command is remappable; collisions are rejected before save. Prompts, tutorial, help, and tooltips resolve the active binding | 20.1 Default controls |
+| `SPEC-UNIT-001` | Surveyor | §12.1 Meridian Compact unit rosters |
+| `SPEC-UNIT-002` | Lancer | §12.1 Meridian Compact unit rosters |
+| `SPEC-UNIT-003` | Bulwark Team | §12.1 Meridian Compact unit rosters |
+| `SPEC-UNIT-004` | Relay Skiff | §12.1 Meridian Compact unit rosters |
+| `SPEC-UNIT-005` | Tender | §12.2 Kharuun Assemblies unit rosters |
+| `SPEC-UNIT-006` | Riftstalker | §12.2 Kharuun Assemblies unit rosters |
+| `SPEC-UNIT-007` | Cairnback | §12.2 Kharuun Assemblies unit rosters |
+| `SPEC-UNIT-008` | Resonant | §12.2 Kharuun Assemblies unit rosters |
+| `SPEC-UNIT-009` | Threadkeeper | §12.3 Hollow Choir unit rosters |
+| `SPEC-UNIT-010` | Intervalist | §12.3 Hollow Choir unit rosters |
+| `SPEC-UNIT-011` | Lacuna Warden | §12.3 Hollow Choir unit rosters |
+| `SPEC-UNIT-012` | Afterimage | §12.3 Hollow Choir unit rosters |
+| `SPEC-VAL-001` | Comprehension floor. At least four of five uncoached representative players correctly explain each release roster element's purpose, best use, limitat | 30. Verification and validation strategy |
+| `SPEC-VAL-002` | Balance floor. Across the approved automated-plus-human test set, no non-mirror Standard faction matchup lies outside 40–60% without an accepted desig | 30. Verification and validation strategy |
+| `SPEC-VAL-003` | No purposeless content. Every accessible element passes AUTH-005. A fiction-only verb, dead control, unexplained state, decorative false affordance, o | 30. Verification and validation strategy |
 | `SPEC-VISD-001` | Style | 23. Visual direction, animation, and effects |
 | `SPEC-VISD-002` | Palette | 23. Visual direction, animation, and effects |
 | `SPEC-VISD-003` | Meridian form | 23. Visual direction, animation, and effects |
@@ -5548,753 +6907,11 @@ All 995 identifiers in this document.
 | `SPEC-VISD-005` | Choir form | 23. Visual direction, animation, and effects |
 | `SPEC-VISD-006` | World | 23. Visual direction, animation, and effects |
 | `SPEC-VISD-007` | Effects | 23. Visual direction, animation, and effects |
-| `SPEC-ART-001` | Unit readability. At normal gameplay camera, faction, role, ownership, selection | 23. Visual direction, animation, and effects |
-| `SPEC-ART-002` | Animation set. Each unit has idle, locomotion, turn, acquire, wind-up, attack, r | 23. Visual direction, animation, and effects |
-| `SPEC-ART-003` | Camera framing. Cinematics may use closer detail, but all gameplay assets must b | 23. Visual direction, animation, and effects |
-| `SPEC-AUDF-001` | Meridian music | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUDF-002` | Kharuun music | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUDF-003` | Choir music | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUDF-004` | Effects | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUDF-005` | Interface | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUDF-006` | Voice | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUD-001` | Mix. Target integrated loudness is −16 LUFS ±1 with true peak no higher than −1  | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUD-002` | Cue completeness. Every command, rejection, production, research, construction,  | 24. Audio, music, voice, and cinematics |
-| `SPEC-AUD-003` | Accessibility. Critical audio always has simultaneous visual/text information. S | 24. Audio, music, voice, and cinematics |
-| `SPEC-CIN-001` | Cinematic set. The game includes a title sequence, campaign opening, act transit | 24. Audio, music, voice, and cinematics |
-| `SPEC-CIN-002` | Control handoff. A cinematic states when control is removed, returns camera and  | 24. Audio, music, voice, and cinematics |
-| `SPEC-SAV-001` | Transactional save. Manual save, autosave, checkpoint, settings, campaign ledger | 25. Saves, campaign records, and replays |
-| `SPEC-SAV-002` | Slots. Campaign provides three named journeys plus autosave and one prior valida | 25. Saves, campaign records, and replays |
-| `SPEC-SAV-003` | Compatibility. A save records schema, content identifiers, map, mission, seed, d | 25. Saves, campaign records, and replays |
-| `SPEC-SAV-004` | Replay. Every match and completed operation may produce a deterministic command  | 25. Saves, campaign records, and replays |
-| `SPEC-SAV-005` | Replay browser. Filter by mode, operation/map, faction, result, date, and durati | 25. Saves, campaign records, and replays |
-| `SPEC-MOD-001` | Simulation core | 26. Technical architecture and content contr |
-| `SPEC-MOD-002` | Game adapter | 26. Technical architecture and content contr |
-| `SPEC-MOD-003` | Content compiler | 26. Technical architecture and content contr |
-| `SPEC-MOD-004` | AI | 26. Technical architecture and content contr |
-| `SPEC-MOD-005` | Mission director | 26. Technical architecture and content contr |
-| `SPEC-MOD-006` | Save/replay | 26. Technical architecture and content contr |
-| `SPEC-MOD-007` | Presentation | 26. Technical architecture and content contr |
-| `SPEC-ARC-001` | Data ownership. Faction, unit, building, technology, Well, map, mission, dialogu | 26. Technical architecture and content contr |
-| `SPEC-ARC-002` | Trust boundaries. Save files, replay files, settings, and content packs are untr | 26. Technical architecture and content contr |
-| `SPEC-ARC-003` | Failure behavior. Missing or invalid optional presentation assets use a register | 26. Technical architecture and content contr |
-| `SPEC-BUD-001` | Frame target | 27. Performance, stability, and platform |
-| `SPEC-BUD-002` | Frame time | 27. Performance, stability, and platform |
-| `SPEC-BUD-003` | Fog | 27. Performance, stability, and platform |
-| `SPEC-BUD-004` | Path burst | 27. Performance, stability, and platform |
-| `SPEC-BUD-005` | Memory | 27. Performance, stability, and platform |
-| `SPEC-BUD-006` | Scale | 27. Performance, stability, and platform |
-| `SPEC-BUD-007` | Save | 27. Performance, stability, and platform |
-| `SPEC-BUD-008` | Stability | 27. Performance, stability, and platform |
-| `SPEC-PLAT-001` | Display matrix. 1280×720, 1440×900, 1600×900, 1920×1080, 2560×1440, native Retin | 27. Performance, stability, and platform |
-| `SPEC-PLAT-002` | Graphics scaling. Low, Medium, High, and Auto alter texture, shadow, effects, fo | 27. Performance, stability, and platform |
-| `SPEC-PLAT-003` | Distribution. Ship a Release configuration app signed with Developer ID, notariz | 27. Performance, stability, and platform |
-| `SPEC-PLAT-004` | Privacy. The game operates offline, creates no account, sends no telemetry by de | 27. Performance, stability, and platform |
-| `SPEC-EVID-001` | Static/schema | 30. Verification and validation strategy |
-| `SPEC-EVID-002` | Deterministic unit/system | 30. Verification and validation strategy |
-| `SPEC-EVID-003` | Adversarial | 30. Verification and validation strategy |
-| `SPEC-EVID-004` | Packaged physical play | 30. Verification and validation strategy |
-| `SPEC-EVID-005` | Rendered/audio inspection | 30. Verification and validation strategy |
-| `SPEC-EVID-006` | Uncoached player testing | 30. Verification and validation strategy |
-| `SPEC-EVID-007` | Balance | 30. Verification and validation strategy |
-| `SPEC-EVID-008` | Owner acceptance | 30. Verification and validation strategy |
-| `SPEC-VAL-001` | Comprehension floor. At least four of five uncoached representative players corr | 30. Verification and validation strategy |
-| `SPEC-VAL-002` | Balance floor. Across the approved automated-plus-human test set, no non-mirror  | 30. Verification and validation strategy |
-| `SPEC-VAL-003` | No purposeless content. Every accessible element passes AUTH-005. A fiction-only | 30. Verification and validation strategy |
-| `DEMO-ACC-001` | see Part II | Demo readiness |
-| `DEMO-ACC-002` | see Part II | Demo readiness |
-| `DEMO-ACC-003` | see Part II | Demo readiness |
-| `DEMO-ACC-004` | see Part II | Demo readiness |
-| `DEMO-ACC-005` | see Part II | Demo readiness |
-| `DEMO-ACC-006` | see Part II | Demo readiness |
-| `DEMO-AI-001` | see Part II | Demo readiness |
-| `DEMO-AI-002` | see Part II | Demo readiness |
-| `DEMO-AI-003` | see Part II | Demo readiness |
-| `DEMO-AI-004` | see Part II | Demo readiness |
-| `DEMO-AI-005` | see Part II | Demo readiness |
-| `DEMO-AI-006` | see Part II | Demo readiness |
-| `DEMO-AI-007` | see Part II | Demo readiness |
-| `DEMO-AI-008` | see Part II | Demo readiness |
-| `DEMO-AI-009` | see Part II | Demo readiness |
-| `DEMO-AI-010` | see Part II | Demo readiness |
-| `DEMO-AUD-001` | see Part II | Demo readiness |
-| `DEMO-AUD-002` | see Part II | Demo readiness |
-| `DEMO-AUD-003` | see Part II | Demo readiness |
-| `DEMO-AUD-004` | see Part II | Demo readiness |
-| `DEMO-AUD-005` | see Part II | Demo readiness |
-| `DEMO-AUD-006` | see Part II | Demo readiness |
-| `DEMO-AUD-007` | see Part II | Demo readiness |
-| `DEMO-AUD-008` | see Part II | Demo readiness |
-| `DEMO-AUD-009` | see Part II | Demo readiness |
-| `DEMO-AUD-010` | see Part II | Demo readiness |
-| `DEMO-AUD-011` | see Part II | Demo readiness |
-| `DEMO-AUD-012` | see Part II | Demo readiness |
-| `DEMO-AUD-013` | see Part II | Demo readiness |
-| `SPEC-BAL-001` | Headless Batch Simulation Harness | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-002` | Statistical Balance Reporting with Uncertainty | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-003` | Faction Asymmetry Balance Band | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-004` | Map and Spawn Symmetry Fairness | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-005` | Strategy Primacy Over Randomness | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-006` | Batch Replayability and Verification | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-007` | Balance Evidence Expiry and Re-Validation | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-BAL-008` | AI Instrument Competence Baseline | 16.4 Mass AI Balance Validation Architecture |
-| `SPEC-CTL-016` | Command Responsiveness Invariant | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-CTL-017` | Fluid Command Interruptibility | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-CTL-018` | Micro-Management Usability Preservation | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-CTL-019` | Simulation Tick Cost Ceiling for Steering | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-006` | Any-Angle Movement | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-007` | Direction-Independent Speed | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-008` | Soft Separation and Non-Imprisonment | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-009` | Chokepoint Negotiation Without Deadlock | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-010` | Travel Facing and Presentation Decoupling | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-011` | Group Cohesion and Centroid Navigation | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-012` | Damped Clean Arrival | 7.3 Advanced Movement, Control Responsiven... |
-| `SPEC-MOV-013` | Movement Determinism & Sanitizer Invariance | 7.3 Advanced Movement, Control Responsiven... |
-| `DEMO-GOV-001` | see Part II | Demo readiness |
-| `DEMO-GOV-002` | see Part II | Demo readiness |
-| `DEMO-GOV-003` | see Part II | Demo readiness |
-| `DEMO-GOV-004` | see Part II | Demo readiness |
-| `DEMO-GOV-005` | see Part II | Demo readiness |
-| `DEMO-GOV-006` | see Part II | Demo readiness |
-| `DEMO-GOV-007` | see Part II | Demo readiness |
-| `DEMO-GOV-008` | see Part II | Demo readiness |
-| `DEMO-GOV-009` | see Part II | Demo readiness |
-| `DEMO-GOV-010` | see Part II | Demo readiness |
-| `DEMO-INP-001` | see Part II | Demo readiness |
-| `DEMO-INP-002` | see Part II | Demo readiness |
-| `DEMO-INP-003` | see Part II | Demo readiness |
-| `DEMO-INP-004` | see Part II | Demo readiness |
-| `DEMO-INP-005` | see Part II | Demo readiness |
-| `DEMO-INP-006` | see Part II | Demo readiness |
-| `DEMO-INP-007` | see Part II | Demo readiness |
-| `DEMO-INP-008` | see Part II | Demo readiness |
-| `DEMO-INP-009` | see Part II | Demo readiness |
-| `DEMO-INP-010` | see Part II | Demo readiness |
-| `DEMO-INP-011` | see Part II | Demo readiness |
-| `DEMO-INP-012` | see Part II | Demo readiness |
-| `DEMO-INP-013` | see Part II | Demo readiness |
-| `DEMO-INP-014` | see Part II | Demo readiness |
-| `DEMO-INP-015` | see Part II | Demo readiness |
-| `DEMO-JRN-001` | see Part II | Demo readiness |
-| `DEMO-JRN-002` | see Part II | Demo readiness |
-| `DEMO-JRN-003` | see Part II | Demo readiness |
-| `DEMO-JRN-004` | see Part II | Demo readiness |
-| `DEMO-JRN-005` | see Part II | Demo readiness |
-| `DEMO-JRN-006` | see Part II | Demo readiness |
-| `DEMO-JRN-007` | see Part II | Demo readiness |
-| `DEMO-NAR-001` | see Part II | Demo readiness |
-| `DEMO-NAR-002` | see Part II | Demo readiness |
-| `DEMO-NAR-003` | see Part II | Demo readiness |
-| `DEMO-NAR-004` | see Part II | Demo readiness |
-| `DEMO-NAR-005` | see Part II | Demo readiness |
-| `DEMO-NAR-006` | see Part II | Demo readiness |
-| `DEMO-NAR-007` | see Part II | Demo readiness |
-| `DEMO-NAR-008` | see Part II | Demo readiness |
-| `DEMO-NAR-009` | see Part II | Demo readiness |
-| `DEMO-NAR-010` | see Part II | Demo readiness |
-| `DEMO-NAR-011` | see Part II | Demo readiness |
-| `DEMO-PERF-001` | see Part II | Demo readiness |
-| `DEMO-PERF-002` | see Part II | Demo readiness |
-| `DEMO-PERF-003` | see Part II | Demo readiness |
-| `DEMO-PERF-004` | see Part II | Demo readiness |
-| `DEMO-PERF-005` | see Part II | Demo readiness |
-| `DEMO-PERF-006` | see Part II | Demo readiness |
-| `DEMO-PERF-007` | see Part II | Demo readiness |
-| `DEMO-PERF-008` | see Part II | Demo readiness |
-| `DEMO-PERF-009` | see Part II | Demo readiness |
-| `DEMO-PERF-010` | see Part II | Demo readiness |
-| `DEMO-PERF-011` | see Part II | Demo readiness |
-| `DEMO-PERF-012` | see Part II | Demo readiness |
-| `DEMO-PERF-013` | see Part II | Demo readiness |
-| `DEMO-PERF-014` | see Part II | Demo readiness |
-| `DEMO-PERF-015` | see Part II | Demo readiness |
-| `DEMO-TUT-001` | see Part II | Demo readiness |
-| `DEMO-TUT-002` | see Part II | Demo readiness |
-| `DEMO-TUT-003` | see Part II | Demo readiness |
-| `DEMO-TUT-004` | see Part II | Demo readiness |
-| `DEMO-TUT-005` | see Part II | Demo readiness |
-| `DEMO-TUT-006` | see Part II | Demo readiness |
-| `DEMO-TUT-007` | see Part II | Demo readiness |
-| `DEMO-TUT-008` | see Part II | Demo readiness |
-| `DEMO-TUT-009` | see Part II | Demo readiness |
-| `DEMO-TUT-010` | see Part II | Demo readiness |
-| `DEMO-TUT-011` | see Part II | Demo readiness |
-| `DEMO-TUT-012` | see Part II | Demo readiness |
-| `DEMO-TUT-013` | see Part II | Demo readiness |
-| `DEMO-TUT-014` | see Part II | Demo readiness |
-| `DEMO-TUT-015` | see Part II | Demo readiness |
-| `DEMO-TUT-016` | see Part II | Demo readiness |
-| `DEMO-TUT-017` | see Part II | Demo readiness |
-| `DEMO-TUT-018` | see Part II | Demo readiness |
-| `DEMO-TUT-019` | see Part II | Demo readiness |
-| `DEMO-TUT-020` | see Part II | Demo readiness |
-| `DEMO-TUT-021` | see Part II | Demo readiness |
-| `DEMO-TUT-022` | see Part II | Demo readiness |
-| `DEMO-UI-001` | see Part II | Demo readiness |
-| `DEMO-UI-002` | see Part II | Demo readiness |
-| `DEMO-UI-003` | see Part II | Demo readiness |
-| `DEMO-UI-004` | see Part II | Demo readiness |
-| `DEMO-UI-005` | see Part II | Demo readiness |
-| `DEMO-UI-006` | see Part II | Demo readiness |
-| `DEMO-UI-007` | see Part II | Demo readiness |
-| `DEMO-UI-008` | see Part II | Demo readiness |
-| `DEMO-UI-009` | see Part II | Demo readiness |
-| `DEMO-UI-010` | see Part II | Demo readiness |
-| `DEMO-UI-011` | see Part II | Demo readiness |
-| `DEMO-UI-012` | see Part II | Demo readiness |
-| `DEMO-UI-013` | see Part II | Demo readiness |
-| `DEMO-VAL-001` | see Part II | Demo readiness |
-| `DEMO-VAL-002` | see Part II | Demo readiness |
-| `DEMO-VAL-003` | see Part II | Demo readiness |
-| `DEMO-VAL-004` | see Part II | Demo readiness |
-| `DEMO-VAL-005` | see Part II | Demo readiness |
-| `DEMO-VAL-006` | see Part II | Demo readiness |
-| `DEMO-VAL-007` | see Part II | Demo readiness |
-| `DEMO-VAL-008` | see Part II | Demo readiness |
-| `DEMO-VAL-009` | see Part II | Demo readiness |
-| `DEMO-VAL-010` | see Part II | Demo readiness |
-| `DEMO-VAL-011` | see Part II | Demo readiness |
-| `DEMO-VAL-012` | see Part II | Demo readiness |
-| `DEMO-VAL-013` | see Part II | Demo readiness |
-| `DEMO-VAL-014` | see Part II | Demo readiness |
-| `DEMO-VAL-015` | see Part II | Demo readiness |
-| `DEMO-VAL-016` | see Part II | Demo readiness |
-| `DEMO-VAL-017` | see Part II | Demo readiness |
-| `DEMO-VIS-001` | see Part II | Demo readiness |
-| `DEMO-VIS-002` | see Part II | Demo readiness |
-| `DEMO-VIS-003` | see Part II | Demo readiness |
-| `DEMO-VIS-004` | see Part II | Demo readiness |
-| `DEMO-VIS-005` | see Part II | Demo readiness |
-| `DEMO-VIS-006` | see Part II | Demo readiness |
-| `DEMO-VIS-007` | see Part II | Demo readiness |
-| `DEMO-VIS-008` | see Part II | Demo readiness |
-| `DEMO-VIS-009` | see Part II | Demo readiness |
-| `DEMO-VIS-010` | see Part II | Demo readiness |
-| `DEMO-VIS-011` | see Part II | Demo readiness |
-| `DEMO-VIS-012` | see Part II | Demo readiness |
-| `DEMO-VIS-013` | see Part II | Demo readiness |
-| `REL-ACC-001` | Color-Vision Deficiency Simulation Presets | §21 Accessibility and Localization Readiness |
-| `REL-ACC-002` | Dual-Channel Non-Color Information Encoding | §21 Accessibility and Localization Readiness |
-| `REL-ACC-003` | High-Contrast Silhouette Enhancement | §21 Accessibility and Localization Readiness |
-| `REL-ACC-004` | Reduced Motion Preset Invariant | §21 Accessibility and Localization Readiness |
-| `REL-ACC-005` | Reduced Flashing & Photosensitive Safety | §21 Accessibility and Localization Readiness |
-| `REL-ACC-006` | Full UI Scale Dynamic Range Compliance | §21 Accessibility and Localization Readiness |
-| `REL-ACC-007` | High-Contrast Subtitle Styling & Scalability | §21 Accessibility and Localization Readiness |
-| `REL-ACC-008` | Mandatory Subtitle Speaker Identity Tags | §21 Accessibility and Localization Readiness |
-| `REL-ACC-009` | Directional Spatial Off-Screen Visual Indicators | §21 Accessibility and Localization Readiness |
-| `REL-ACC-010` | Screen Reader TTS Menu Accessibility | §21 Accessibility and Localization Readiness |
-| `REL-ACC-011` | Comprehensive Input Key Re-mapping | §21 Accessibility and Localization Readiness |
-| `REL-ACC-012` | One-Handed Mouse-Only Playability | §21 Accessibility and Localization Readiness |
-| `REL-ACC-013` | Configurable Edge-Pan Speed & Dead-Zone Calibration | §21 Accessibility and Localization Readiness |
-| `REL-ACC-014` | High-Visibility Mouse Cursor & Click Ring | §21 Accessibility and Localization Readiness |
-| `REL-ACC-015` | Single-Player Simulation Game Speed Pacing | §21 Accessibility and Localization Readiness |
-| `REL-ACC-016` | Accessibility Profile Persistence Across Sessions | §21 Accessibility and Localization Readiness |
-| `REL-ACC-017` | Dedicated Top-Level Accessibility Menu Hub | §21 Accessibility and Localization Readiness |
-| `REL-AI-001` | Scoped PlayerView AI Authority Invariant | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-002` | Autonomous AI Economic Expansion | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-003` | Fair Reconnaissance & Scouting Cadence | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-004` | Dynamic Army Composition & Archetype Replacement | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-005` | Defensive Reaction & Base Protection | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-006` | Strike Force Assembly & Coordinated Assault | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-007` | Combat Retreat & Force Preservation | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-008` | Future Well Protocol Doctrinal Alignment | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-009` | AI Doctrine | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-010` | AI Doctrine | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-011` | AI Doctrine | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-012` | AI Doctrine | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-013` | AI Doctrine | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-014` | AI Difficulty Tier | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-015` | AI Difficulty Tier | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-016` | Standard Matchup Competitive Balance Band | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-017` | AI Difficulty Tier | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-018` | AI Difficulty Tier | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-019` | AI Concession & Elimination Protocol | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-020` | Skirmish Mirror Matchup Support | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-021` | Elimination of Undocumented AI Doctrines | §15 Skirmish, AI, Difficulty, and Balance |
-| `REL-AI-022` | Meridian strategy | Initial release |
-| `REL-AI-023` | Kharuun strategy | Initial release |
-| `REL-AI-024` | Choir strategy | Initial release |
-| `REL-AI-025` | Advantage conversion | Initial release |
-| `REL-AI-026` | Skirmish contract | Initial release |
-| `REL-AI-027` | Layered AI architecture | Initial release |
-| `REL-AI-028` | Mission director separation | Initial release |
-| `REL-AI-029` | Fair information model | Initial release |
-| `REL-AI-030` | Dynamic threat assessment | Initial release |
-| `REL-AI-031` | Perceived intelligence behaviors | Initial release |
-| `REL-AI-032` | Doctrine differentiation | Initial release |
-| `REL-AI-033` | Scalable difficulty | Initial release |
-| `REL-AI-034` | AI reconnaissance parity | Initial release |
-| `REL-AI-035` | AI recovery and surrender | Initial release |
-| `REL-AI-036` | AI acceptance | Initial release |
-| `REL-ART-001` | Five-Color Aesthetic Palette Enforcement | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-002` | One-Second Tactical Readability Invariant | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-003` | Matte Terrain Surface Anti-Glint Specification | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-004` | Emissive Accent Surface Area Ceiling | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-005` | 24 Production Mesh Silhouettes & LODs | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-006` | Meridian Compact Engineered Form Language | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-007` | Kharuun Assemblies Grown Mineral Architecture | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-008` | Hollow Choir Possibility Superposition Aesthetics | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-009` | Code-Driven Kinematic Motion Invariant | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-010` | Bulwark Team Deploy Transformation Rig | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-011` | Kharuun Waystone Rooting & Uproot Animation | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-012` | Distinct Weapon Projectile & Muzzle VFX | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-013` | Structural Collapse & Shatter Destruction VFX | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-014` | Future Well Landmark 4-State Visual Manifest | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-015` | Site Dressing & Environmental Coherence | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-016` | Dressing Collision Truth & Passability Parity | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-017` | True 3D Volumetric Fog of War Occlusion | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-018` | Explored Shroud Object Memory Persistence | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-019` | Rigorous Exposure & Lighting Calibration | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-020` | Particle VFX Performance & Collision Discipline | §18 World Art, Units, Structures, Animatio... |
-| `REL-ART-021` | Gameplay-truthful terrain | Initial release |
-| `REL-ART-022` | Cover truth | Initial release |
-| `REL-ART-023` | Ecological signal boundary | Initial release |
-| `REL-AUD-001` | Five-Category Submix Hierarchy | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-002` | Integrated Loudness & True Peak Mastering Target | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-003` | Dynamic Side-Chain Vocal Ducking | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-004` | Local Neural Text-to-Speech Voice Generation Pipeline | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-005` | Voice Profile | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-006` | Voice Profile | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-007` | Voice Profile | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-008` | Voice Profile | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-009` | Voice Profile | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-010` | Full Procedural Music Suite & Act Themes | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-011` | Dynamic Combat State Cross-Fading | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-012` | Positional Environmental Ambience Beds | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-013` | Textural Non-Spoken Unit Acknowledgements | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-014` | High-Priority Alert Audio Rate Limiting | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-015` | Whole-Graph Reduced Dynamic Range Mode | §19 Audio, Voice, Music, and Cinematics |
-| `REL-AUD-016` | Situational Unit Tactical Chatter & Annoyance Lines | §19 Audio, voice, music, cinematics |
-| `REL-BLD-001` | Footprint Validation & Passability Enforcement | §10 Construction, Production, and Research |
-| `REL-BLD-002` | Dynamic Placement Visual Blueprint Preview | §10 Construction, Production, and Research |
-| `REL-BLD-003` | Calibrated Construction Duration Scaling | §10 Construction, Production, and Research |
-| `REL-BLD-004` | Multi-Builder Assist Diminishing Returns | §10 Construction, Production, and Research |
-| `REL-BLD-005` | Incomplete Structure Vulnerability | §10 Construction, Production, and Research |
-| `REL-BLD-006` | Construction Cancellation & Refund Policy | §10 Construction, Production, and Research |
-| `REL-BLD-007` | Command Core Singularity Invariant | §10 Construction, Production, and Research |
-| `REL-BLD-008` | Production Queue Depth & Management | §10 Construction, Production, and Research |
-| `REL-BLD-009` | Unit Emergence, Rallying & Unblocking | §10 Construction, Production, and Research |
-| `REL-BLD-010` | Production Queue Cancellation Invariant | §10 Construction, Production, and Research |
-| `REL-BLD-011` | Research Slot Contention & Mutual Exclusivity | §10 Construction, Production, and Research |
-| `REL-BLD-012` | Technology Irreversibility & Zero Refund | §10 Construction, Production, and Research |
-| `REL-BLD-013` | Structural Repair Resolution | §10 Construction, Production, and Research |
-| `REL-BLD-014` | Structural Destruction Debris & Footprint Clearance | §10 Construction, Production, and Research |
-| `REL-BLD-015` | Meridian Compact Structure Manifests | Initial release |
-| `REL-BLD-016` | Kharuun Assemblies Structure Manifests | Initial release |
-| `REL-BLD-017` | Hollow Choir Structure Manifests | Initial release |
-| `REL-BLD-018` | Faction-specific construction language | Initial release |
-| `REL-BLD-019` | Producer inspection | Initial release |
-| `REL-BLD-020` | Cancellation policy | Initial release |
-| `REL-CAM-001` | Fifteen-Operation Continuous Campaign Lifecycle | §14 Campaign and Narrative |
-| `REL-CAM-002` | Act I | §14 Campaign and Narrative |
-| `REL-CAM-003` | Act II | §14 Campaign and Narrative |
-| `REL-CAM-004` | Act III | §14 Campaign and Narrative |
-| `REL-CAM-005` | Four Earned Campaign Endings | §14 Campaign and Narrative |
-| `REL-CAM-006` | Mission 01 | §14 Campaign and Narrative |
-| `REL-CAM-007` | Mission 02 | §14 Campaign and Narrative |
-| `REL-CAM-008` | Mission 03 | §14 Campaign and Narrative |
-| `REL-CAM-009` | Mission 04 | §14 Campaign and Narrative |
-| `REL-CAM-010` | Mission 05 | §14 Campaign and Narrative |
-| `REL-CAM-011` | Mission 06 | §14 Campaign and Narrative |
-| `REL-CAM-012` | Mission 07 | §14 Campaign and Narrative |
-| `REL-CAM-013` | Mission 08 | §14 Campaign and Narrative |
-| `REL-CAM-014` | Mission 09 | §14 Campaign and Narrative |
-| `REL-CAM-015` | Mission 10 | §14 Campaign and Narrative |
-| `REL-CAM-016` | Mission 11 | §14 Campaign and Narrative |
-| `REL-CAM-017` | Mission 12 | §14 Campaign and Narrative |
-| `REL-CAM-018` | Mission 13 | §14 Campaign and Narrative |
-| `REL-CAM-019` | Mission 14 | §14 Campaign and Narrative |
-| `REL-CAM-020` | Mission 15 | §14 Campaign and Narrative |
-| `REL-CAM-021` | Campaign Objective Decoupling from Corefall | §14 Campaign and Narrative |
-| `REL-CAM-022` | Objective-based operation victory | Initial release |
-| `REL-CAM-023` | Objective-based operation defeat | Initial release |
-| `REL-CAM-024` | Result causality | Initial release |
-| `REL-CAM-025` | Progressive capability introduction | Initial release |
-| `REL-CAM-026` | Objective portfolio | Initial release |
-| `REL-CAM-027` | Mission pacing | Initial release |
-| `REL-CAM-028` | Environmental storytelling | Initial release |
-| `REL-CAM-029` | Persistent progression contract | Initial release |
-| `REL-CAM-030` | Meaningful campaign rewards | Initial release |
-| `REL-CAM-031` | Feature teaching gate | Initial release |
-| `REL-CAM-032` | Scripted-event fairness | Initial release |
-| `REL-CIN-001` | Sequencer In-Engine Cutscene Pipeline | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-002` | In-Engine Title Cinematic Sequence | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-003` | Act I Transition Sequence ("Necessary Fires") | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-004` | Act II Transition Sequence ("The Cost of One Future") | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-005` | Act III Transition Sequence ("Crownfall") | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-006` | Four Authoritative Ending Cinematics | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-007` | Universal Cinematic Skippability & Subtitle Guarantee | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CIN-008` | Production Visual Bar Parity in Cinematics | §19 Audio, Voice, Music, and Cinematics |
-| `REL-CMB-001` | Authoritative Range & Line-of-Sight Firing Arcs | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-002` | Weapon Cooldown & Attack Cadence Sync | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-003` | Ballistic Projectile Travel Simulation | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-004` | Terrain Line-of-Sight Projectile Occlusion | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-005` | Destructible Mineral Cover Ballistic Shielding | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-006` | Deterministic Damage Calculation Hygiene | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-007` | Overkill Avoidance Targeting Protocol | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-008` | Threat-Based Target Priority Hierarchy | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-009` | Combat Stance Architecture | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-010` | Hold Ground Positional Rigidity | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-011` | Attack-Move Engagement Mechanics | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-012` | Cyclic Patrol Waypoint Navigation | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-013` | Guard Escort Dynamics | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-014` | Direct Focus Fire Command Override | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-015` | Entity Destruction & Collision Purge | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-016` | Multi-Channel Combat Damage Feedback | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-017` | Fog of War Engagement Constraints | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-018` | Worker Disarmament Invariant | §11 Selection, Movement, Commands, and Combat |
-| `REL-CMB-019` | Common mobile commands | Initial release |
-| `REL-CMB-020` | Formation meaning | Initial release |
-| `REL-CMB-021` | Control groups | Initial release |
-| `REL-CMB-022` | Worker authority | Initial release |
-| `REL-CMB-023` | Repair resolution | Initial release |
-| `REL-CMB-024` | Rally resolution | Initial release |
-| `REL-CMB-025` | Player-issued reconnaissance | Initial release |
-| `REL-CMB-026` | Reconnaissance lifecycle | Initial release |
-| `REL-CMB-027` | Automation authority boundary | Initial release |
-| `REL-DIST-001` | Standalone macOS Application Bundle | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-002` | Apple Silicon ARM64 Native Architecture | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-003` | Apple Developer ID Code Signing | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-004` | Apple Notarization Service Qualification | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-005` | Cryptographic Ticket Stapling | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-006` | Read-Only Compressed DMG Distribution Installer | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-007` | Application Branding & Metadata Completeness | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-008` | Seamless Clean-Machine Gatekeeper Launch | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-009` | Complete Dynamic Library Self-Containment | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-010` | Strict File System Permission Sandboxing | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-011` | Distribution Package Compression Budget | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-012` | Clean Uninstallation & Zero System Debris | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-013` | Automated Package Seal & SHA-256 Digest | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-014` | Headless Automated Packaging Build Pipeline | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-015` | Multi-Version macOS OS Compatibility | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-016` | 100% Offline DRM-Free Execution | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-DIST-017` | Patching & Delta Update Architecture Readiness | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-ECO-001` | Three Resource Pillars | §9 Economy and Logistics |
-| `REL-ECO-002` | Starting Matter Resource Presets | §9 Economy and Logistics |
-| `REL-ECO-003` | Calibrated Matter Harvesting Cadence | §9 Economy and Logistics |
-| `REL-ECO-004` | Deposit Saturation & Diminishing Returns | §9 Economy and Logistics |
-| `REL-ECO-005` | Deposit Depletion Lifecycle | §9 Economy and Logistics |
-| `REL-ECO-006` | Continuous Automated Worker Harvesting Loop | §9 Economy and Logistics |
-| `REL-ECO-007` | Drop-Off Target Selection & Routing | §9 Economy and Logistics |
-| `REL-ECO-008` | Cargo Loss and Drop-Off Severance Handling | §9 Economy and Logistics |
-| `REL-ECO-009` | Dawn Inflow and Reserve Invariant | §9 Economy and Logistics |
-| `REL-ECO-010` | Fail-Closed Dawn Reservation Invariant | §9 Economy and Logistics |
-| `REL-ECO-011` | Logistics Capacity Allocation Mechanics | §9 Economy and Logistics |
-| `REL-ECO-012` | Logistics Cap Enforcement & Supply Deficit | §9 Economy and Logistics |
-| `REL-ECO-013` | Temporary Logistics Burst Dynamics | §9 Economy and Logistics |
-| `REL-ECO-014` | Asymmetric Faction Economy Rules | §9 Economy and Logistics |
-| `REL-ECO-015` | Continuous worker economy | Initial release |
-| `REL-ECO-016` | Dawn sources and obligations | Initial release |
-| `REL-ECO-017` | Resource monitor | Initial release |
-| `REL-FAC-001` | Tripartite Asymmetric Strategic Identity | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-002` | Meridian Compact Power Grid Topology | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-003` | Meridian Power Link Distribution & Throughput | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-004` | Meridian Aegis Post Automated Defensive Battery | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-005` | Meridian Bulwark Team Directional Shield Deployment | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-006` | Meridian Relay Skiff Logistics Relay | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-007` | Kharuun Waystone Rooting & Relocation | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-008` | Kharuun Listening Spine Seismic Detection | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-009` | Kharuun Warform Adaptation Molting | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-010` | Kharuun Cairnback Mineral Cover Erection | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-011` | Hollow Choir Structural Coherence Upkeep Cycle | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-012` | Hollow Choir Reconciliation Identity Transition | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-013` | Hollow Choir Phase Anchor Coherence Field | §12 Factions, Rosters, and Strategic Depth |
-| `REL-FAC-014` | Strategic loop | Initial release |
-| `REL-FAC-015` | Economic allocation | Initial release |
-| `REL-FAC-016` | Route economy | Initial release |
-| `REL-FAC-017` | Logistics strategy | Initial release |
-| `REL-FAC-018` | Information strategy | Initial release |
-| `REL-FAC-019` | Soft-counter strategy | Initial release |
-| `REL-FAC-020` | Engagement choice | Initial release |
-| `REL-FAC-021` | Production tempo | Initial release |
-| `REL-FAC-022` | Territory and conversion | Initial release |
-| `REL-FAC-023` | Attention strategy | Initial release |
-| `REL-FAC-024` | Strategic knowledge boundary | Initial release |
-| `REL-FAC-025` | Meridian Compact Unit Manifests | Initial release |
-| `REL-FAC-026` | Kharuun Assemblies Unit Manifests | Initial release |
-| `REL-FAC-027` | Hollow Choir Unit Manifests | Initial release |
-| `REL-FAC-028` | Faction Technology Manifests | Initial release |
-| `REL-FAC-029` | Technology purpose | Initial release |
-| `REL-FTU-001` | Clean-Machine Cold Launch Reliability | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-002` | Atmospheric World-Coherent Title Treatment | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-003` | Primary Navigation Hub Ergonomics | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-004` | In-Engine Opening Story Sequence | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-005` | First-Run Progressive Onboarding Gate | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-006` | Tutorial Lesson 1 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-007` | Tutorial Lesson 2 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-008` | Tutorial Lesson 3 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-009` | Tutorial Lesson 4 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-010` | Tutorial Lesson 5 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-011` | Tutorial Lesson 6 | §7 First-Run, Front Door, and Onboarding |
-| `REL-FTU-012` | Demonstration of Fundamental Mastery | §7 First-Run, Front Door, and Onboarding |
-| `REL-GOV-001` | Sole Normative Requirements Authority | §6 Release Governance and Integrity |
-| `REL-GOV-002` | Bidirectional Gate and Milestone Mapping | §6 Release Governance and Integrity |
-| `REL-GOV-003` | Prohibition of Silent Invention | §6 Release Governance and Integrity |
-| `REL-GOV-004` | Traceable Inline Change Cascades | §6 Release Governance and Integrity |
-| `REL-GOV-005` | Evidence-Bounded State Vocabulary | §6 Release Governance and Integrity |
-| `REL-GOV-006` | Permanent Immutable Identifier Preservation | §6 Release Governance and Integrity |
-| `REL-GOV-007` | Verification Class Exclusivity | §6 Release Governance and Integrity |
-| `REL-GOV-008` | Human Acceptance Authority Reservation | §6 Release Governance and Integrity |
-| `REL-GOV-009` | Fail-Closed Architectural Boundary | §6 Release Governance and Integrity |
-| `REL-GOV-010` | Procedural-First Asset Provenance Registration | §6 Release Governance and Integrity |
-| `REL-GOV-011` | Independent Verification Lane Separation | §6 Release Governance and Integrity |
-| `REL-GOV-012` | Continuous Automated Regression Locks | §6 Release Governance and Integrity |
-| `REL-GOV-013` | Defect Severity Ladder and Release Prohibitions | §6 Release Governance and Integrity |
-| `REL-GOV-014` | Single-Candidate Frozen Evidence Binding | §6 Release Governance and Integrity |
-| `REL-GOV-015` | Final Definition of Done Sign-Off Checklist | §6 Release Governance and Integrity |
-| `REL-LOC-001` | Complete String Externalization Standard | §21 Accessibility and Localization Readiness |
-| `REL-LOC-002` | UTF-8 Unicode Encoding Invariant | §21 Accessibility and Localization Readiness |
-| `REL-LOC-003` | UI Text Container Expansion Margins | §21 Accessibility and Localization Readiness |
-| `REL-LOC-004` | Automated Localization Translation Extraction Pipeline | §21 Accessibility and Localization Readiness |
-| `REL-LOC-005` | International Font Fallback & Glyphs | §21 Accessibility and Localization Readiness |
-| `REL-LOC-006` | Culturalization & Regional Sensitivity Hygiene | §21 Accessibility and Localization Readiness |
-| `REL-MP-001` | Conditional Multiplayer Module Dormancy | §26 Conditional Multiplayer Module |
-| `REL-MP-002` | Deterministic Lockstep Protocol Architecture | §26 Conditional Multiplayer Module |
-| `REL-MP-003` | Fixed-Width Command Packet Schema | §26 Conditional Multiplayer Module |
-| `REL-MP-004` | Peer State Checksum Desynchronization Detection | §26 Conditional Multiplayer Module |
-| `REL-MP-005` | Dynamic Ping-Compensated Turn Buffer | §26 Conditional Multiplayer Module |
-| `REL-MP-006` | Graceful Disconnect & Reconnect Recovery | §26 Conditional Multiplayer Module |
-| `REL-MP-007` | Lobby Discovery & Room Creation Interface | §26 Conditional Multiplayer Module |
-| `REL-MP-008` | Player Slot & Asymmetric Faction Configuration | §26 Conditional Multiplayer Module |
-| `REL-MP-009` | Strict Network Bandwidth Budget (64 kbps) | §26 Conditional Multiplayer Module |
-| `REL-MP-010` | Client-Side Local Audio/Visual Command Prediction | §26 Conditional Multiplayer Module |
-| `REL-MP-011` | Automated Desync Dump Serialization | §26 Conditional Multiplayer Module |
-| `REL-MP-012` | Cryptographic Packet Authentication & Anti-Spoofing | §26 Conditional Multiplayer Module |
-| `REL-MP-013` | NAT Traversal & Direct Peer Fallback | §26 Conditional Multiplayer Module |
-| `REL-MP-014` | Host Migration & Listen-Server Resilience | §26 Conditional Multiplayer Module |
-| `REL-MP-015` | Matchmaking Rating (MMR) Calculation Model | §26 Conditional Multiplayer Module |
-| `REL-MP-016` | Absolute Single-Player Network Isolation | §26 Conditional Multiplayer Module |
-| `REL-MP-017` | Development network boundary | Initial release |
-| `REL-PERF-001` | 60 FPS Target on Baseline Apple Silicon | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-002` | Frame Time Distribution & Spike Ceiling | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-003` | Game Thread Execution Budget | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-004` | Render Thread & GPU Execution Budget | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-005` | Volumetric Fog GPU Computation Budget | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-006` | Pathfinding Burst Re-plan Budget | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-007` | Master Performance Budget Compliance Invariant | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-008` | Resident Memory Ceiling (10 GB RSS) | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-009` | VRAM Texture Streaming & Unified Memory Management | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-010` | 400-Unit Four-Team Stress Protocol | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-011` | 600-Second Preflight & 60-Minute Rendered Soak | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-012` | Headless Multi-Hour AI Soak Validation | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-013` | Dynamic Graphics Scalability Presets | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-014` | Metal API Shader Precompilation Pipeline | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-015` | Passive Thermal Throttling Resilience | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-016` | Headless Simulation Execution Throughput | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-017` | Asynchronous Worker Thread Work Scheduler | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-018` | Zero Mid-Frame Heap Allocation Invariant | §22 Graphics Scalability, Performance, and... |
-| `REL-PERF-019` | Quality tiers are data, not code | Initial release |
-| `REL-PERF-020` | Settings forward and backward compatibility | Initial release |
-| `REL-PERF-021` | Presentation cannot reach authority | Initial release |
-| `REL-PERF-022` | Budgets bind to a measured device class | Initial release |
-| `REL-PERF-023` | Capability detection and fallback | Initial release |
-| `REL-PERF-024` | Readability floor across every tier | Initial release |
-| `REL-PERF-025` | Graphics expansion is dormant | Initial release |
-| `REL-PORT-001` | Portability constraint authority | Initial release |
-| `REL-PORT-002` | Toolchain and architecture determinism | Initial release |
-| `REL-PORT-003` | Asset and content path portability | Initial release |
-| `REL-PORT-004` | Container encoding portability | Initial release |
-| `REL-PORT-005` | Input and binding portability | Initial release |
-| `REL-PORT-006` | Dependency portability register | Initial release |
-| `REL-PORT-007` | Generator and compiler platform behavior | Initial release |
-| `REL-PORT-008` | Portability guard runs continuously | Initial release |
-| `REL-PORT-009` | No unsupported platform claim | Initial release |
-| `REL-PORT-010` | Roadmap modules are dormant | Initial release |
-| `REL-PUB-001` | Absolute Truth in Public Gameplay Claims | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-002` | Comprehensive Standalone Game Manual (PDF) | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-003` | Authoritative Manual Content Architecture | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-004` | Official Public Product Website | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-005` | Truthful Hardware System Requirements | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-006` | Direct Support Contact & Issue Reporting | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-007` | Third-Party Open Source Software Disclosures | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-008` | Copyright & Trademark Notices | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-009` | Public Accessibility Feature Documentation | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-010` | Version Release Notes & Changelog | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-011` | In-Engine Truthful Media Assets | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-012` | Community Code of Conduct & Fair Play Rules | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-013` | Transparent Zero-Collection Privacy Policy | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-014` | Public Bug Report Template & Submission Guide | §24 Public Website, Manual, Claims, and Su... |
-| `REL-PUB-015` | Digital Signature Verification Guide | §24 Public Website, Manual, Claims, and Su... |
-| `REL-QA-001` | Rigorous Defect Severity Ladder | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-002` | Zero S0/S1 Release Prohibitions | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-003` | Zero Un-Waived S2 Critical Path Defects | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-004` | Authoritative Defect Register Ledger | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-005` | 85% Simulation Unit Test Coverage Ceiling | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-006` | Automated Campaign Integration Test Suite | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-007` | Automated Skirmish Matchup Matrix Suite | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-008` | ASan + UBSan Memory Sanitizer Qualification | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-009` | ThreadSanitizer Concurrency Validation | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-010` | 60-Minute Rendered Soak Qualification Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-011` | 1,000-Match Headless AI Soak Validation | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-012` | Save/Load Round-Trip Determinism Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-013` | Replay Playback Checksum Consistency Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-014` | Resolution Matrix Visual Quality Audit | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-015` | Continuous UI Scaling Sweep Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-016` | BS.1770-4 Automated Loudness Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-017` | Complete Dialogue Voice & Subtitle Sync Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-018` | Accessibility Preset Functional Verification | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-019` | Clean-Machine DMG Installation & Verification | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-020` | Gatekeeper Notarization & Offline Staple Verification | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-021` | Mouse-Only Full Mission Playability Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-022` | Rapid 300-APM Command Burst Stress Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-023` | Chokepoint Deadlock Stress Test | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-024` | 400-Unit Combat Frame-Rate Benchmark | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-025` | Ten-Match Skirmish Restart Memory Leak Check | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-026` | Independent QA Lane Review Isolation | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-027` | Blind Naive Human Playtesting Sessions | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-028` | Angelis Pseftis Formal Human Acceptance Sign-Off | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-029` | Release Candidate Tagging & Branch Lockdown | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-030` | Master Evidence Archive Binding | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-031` | Continuous CI Regression Guard Locks | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-032` | Post-Release Hotfix Qualification Protocol | §25 QA, Human Validation, and Release Bloc... |
-| `REL-QA-033` | No purposeless element | Initial release |
-| `REL-QA-034` | No fiction-only verbs | Initial release |
-| `REL-QA-035` | Purpose comprehension | Initial release |
-| `REL-QA-036` | Evidence separation | Initial release |
-| `REL-QOL-001` | Control Group Assignment & Selection | §16 Replays and Quality-of-Life |
-| `REL-QOL-002` | Control Group Camera Centering | §16 Replays and Quality-of-Life |
-| `REL-QOL-003` | Multi-Unit Subgroup Navigation | §16 Replays and Quality-of-Life |
-| `REL-QOL-004` | Structure Rally Point Management | §16 Replays and Quality-of-Life |
-| `REL-QOL-005` | Queue Cancellation & Reordering | §16 Replays and Quality-of-Life |
-| `REL-QOL-006` | Idle Worker Cycling Hotkey (`F1`) | §16 Replays and Quality-of-Life |
-| `REL-QOL-007` | Production Facility Cycling Hotkey (`F2`) | §16 Replays and Quality-of-Life |
-| `REL-QOL-008` | Combat Army Selection Hotkey (`F3`) | §16 Replays and Quality-of-Life |
-| `REL-QOL-009` | Spatial Alert Feed & Jump Hotkey (`Space`) | §16 Replays and Quality-of-Life |
-| `REL-QOL-010` | Replay Recording & Metadata Browser | §16 Replays and Quality-of-Life |
-| `REL-QOL-011` | Replay Playback Transport Controls | §16 Replays and Quality-of-Life |
-| `REL-QOL-012` | Anti-Rewrite Campaign Replay Protection | §16 Replays and Quality-of-Life |
-| `REL-SAV-001` | Transactional Atomic Save Writing | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-002` | Header Schema & CRC32/FNV-1a Checksum Validation | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-003` | Isolated Player Profile Persistence | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-004` | Three Independent Campaign Journey Slots | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-005` | Tactical Mission Checkpoint State Serialization | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-006` | Autonomous Milestone Autosave Cadence | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-007` | Asynchronous Non-Blocking Save Frame Budget | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-008` | Cross-Platform Endian-Safe Binary Format | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-009` | Graceful Corrupt Save Containment & Backup Recovery | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-010` | Schema Versioning & Forward Migration Discipline | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-011` | Campaign Consequence Ledger Tamper Resistance | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-012` | In-Match Save Lockout Safety Zones | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-013` | macOS Sandboxed Directory Compliance | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SAV-014` | Save Data Privacy & Zero Personal Telemetry | §20 Saves, Profiles, Progression, and Reco... |
-| `REL-SEC-001` | Memory Safety & Buffer Bounds Discipline | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SEC-002` | Path Traversal Attack Refusal | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SEC-003` | Zero Telemetry & Player Privacy Protection | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SEC-004` | macOS Hardened Runtime Compliance | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SEC-005` | Immutable Read-Only App Bundle Integrity | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SEC-006` | Sanitized Crash Dumps & Zero Memory Leakage | §23 Security, Privacy, Packaging, and Dist... |
-| `REL-SIM-001` | Deterministic Fixed-Accumulator Simulation Loop | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-002` | Integer and Fixed-Point Arithmetic Authority | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-003` | Seeded Pseudo-Random Number Generation | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-004` | Strict View Layer Isolation from Simulation Authority | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-005` | Filtered PlayerView Information Masking | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-006` | Fog of War Spatial Authority | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-007` | Dual Time Representation Contract | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-008` | Authoritative Command Validation Pipeline | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-009` | Entity Unique Identifier Lifecycle & Ghost Prevention | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-010` | Map Spatial Boundary Invariant | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-011` | Transactional State Checksum Verification | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-012` | Core Tick Processing Time Ceiling | §8 Core Simulation, Time, and Player Autho... |
-| `REL-SIM-013` | Corefall standard-match victory | Initial release |
-| `REL-SIM-014` | Corefall defeat and concession | Initial release |
-| `REL-SIM-015` | Team elimination | Initial release |
-| `REL-SIM-016` | Draw | Initial release |
-| `REL-SIM-017` | Outcome comprehension | Initial release |
-| `REL-SIM-018` | Initial-release outcome scope | Initial release |
-| `REL-SIM-019` | Visibility-scoped world presentation | Initial release |
-| `REL-STAB-001` | Sixty-Minute Sustained Gameplay Stability | §22 Graphics Scalability, Performance, and... |
-| `REL-STAB-002` | Match Restart Memory Leak Invariance | §22 Graphics Scalability, Performance, and... |
-| `REL-STAB-003` | Graceful Crash Minidump Capture | §22 Graphics Scalability, Performance, and... |
-| `REL-STAB-004` | Clean Process Termination Invariant | §22 Graphics Scalability, Performance, and... |
-| `REL-STAB-005` | Display & Cursor State Restoration on Exit | §22 Graphics Scalability, Performance, and... |
-| `REL-UI-001` | Production UMG/Slate Widget Framework | §17 UI and Interaction |
-| `REL-UI-002` | Command Card 3x3 Grid Ergonomics | §17 UI and Interaction |
-| `REL-UI-003` | Comprehensive Selection Inspector Panel | §17 UI and Interaction |
-| `REL-UI-004` | Upper Resource Telemetry Deck | §17 UI and Interaction |
-| `REL-UI-005` | Tactical Minimap Presentation & Frustum | §17 UI and Interaction |
-| `REL-UI-006` | Spatial Alert Feed & Banner Notifications | §17 UI and Interaction |
-| `REL-UI-007` | Interactive Technology Archive Tree | §17 UI and Interaction |
-| `REL-UI-008` | Operational Escape Pause Menu | §17 UI and Interaction |
-| `REL-UI-009` | Post-Match Results & Statistics Dossier | §17 UI and Interaction |
-| `REL-UI-010` | Campaign Mission Briefing & Directive Terminal | §17 UI and Interaction |
-| `REL-UI-011` | Context-Sensitive Mouse Cursor State Machine | §17 UI and Interaction |
-| `REL-UI-012` | Ground Selection Ring Visual Hierarchy | §17 UI and Interaction |
-| `REL-UI-013` | Comprehensive Screen Resolution Matrix | §17 UI and Interaction |
-| `REL-UI-014` | Calibrated UI Scale Dynamic Range | §17 UI and Interaction |
-| `REL-UI-015` | Input Keybind Deconfliction Invariant | §17 UI and Interaction |
-| `REL-UI-016` | Layout Safety Margins for Localization | §17 UI and Interaction |
-| `REL-UI-017` | Selection identity | Initial release |
-| `REL-UI-018` | Selection state | Initial release |
-| `REL-UI-019` | Purpose and counterplay | Initial release |
-| `REL-UI-020` | Action availability | Initial release |
-| `REL-UI-021` | Action feedback | Initial release |
-| `REL-UI-022` | Input parity | Initial release |
-| `REL-UI-023` | Binding exclusivity | Initial release |
-| `REL-UI-024` | Tactical overview truth | Initial release |
-| `REL-WEL-001` | Future Well Landmark Entity Authority | §13 Future Wells |
-| `REL-WEL-002` | Future Well Dormant State & Telemetry | §13 Future Wells |
-| `REL-WEL-003` | Contested Well Capture Resolution | §13 Future Wells |
-| `REL-WEL-004` | Well Contestation & Meter Decay | §13 Future Wells |
-| `REL-WEL-005` | Harvest Protocol Public Telegraph | §13 Future Wells |
-| `REL-WEL-006` | Harvest Collapse & Irreversible Scarring | §13 Future Wells |
-| `REL-WEL-007` | Preserve Protocol Compounding Inflow | §13 Future Wells |
-| `REL-WEL-008` | Preserve Radar Reconnaissance Aura | §13 Future Wells |
-| `REL-WEL-009` | Preserve Contested Recapture Mechanics | §13 Future Wells |
-| `REL-WEL-010` | Reshape Protocol Invocation | §13 Future Wells |
-| `REL-WEL-011` | Reshape Terrain Transformation Passability | §13 Future Wells |
-| `REL-WEL-012` | Reshape Expiration & Safe Boundary Displacement | §13 Future Wells |
-| `REL-WEL-013` | Well selection | Initial release |
-| `REL-WEL-014` | Well capture | Initial release |
-| `REL-WEL-015` | Harvest | Initial release |
-| `REL-WEL-016` | Preserve | Initial release |
-| `REL-WEL-017` | Reshape | Initial release |
-| `REL-WEL-018` | Strategic neutrality | Initial release |
-| `REL-ACC-018` | Active Tactical Pause (Single Player) | §21 Accessibility and localization readiness |
-| `REL-ACC-019` | Continuous Simulation Speed Scaling | §21 Accessibility and localization readiness |
-| `REL-ACC-020` | Smart Macro Assist & Auto-Queue Toggle | §21 Accessibility and localization readiness |
-| `REL-ACC-021` | Threat Warning Voice Assistant | §21 Accessibility and localization readiness |
-| `REL-ACC-022` | Content Filter & Family Comfort Presets | §21 Accessibility and localization readiness |
-| `REL-AI-037` | Minimap Tactical Ping Communication | §15 Skirmish, AI, difficulty, balance |
-| `REL-AI-038` | Friendly AI Ally Comprehension & Force Dispatch | §15 Skirmish, AI, difficulty, balance |
-| `REL-AI-039` | Cooperative Resource Tribute & Request System | §15 Skirmish, AI, difficulty, balance |
-| `REL-AI-040` | Cooperative Comp-Stomp Skirmish Presets | §15 Skirmish, AI, difficulty, balance |
-| `REL-ART-024` | Deterministic-Decoupled Kinetic Combat Ragdolls | §18 World art, units, structures, animatio... |
-| `REL-ART-025` | Persistent Battlefield Scorch Decals & Vitrification | §18 World art, units, structures, animatio... |
-| `REL-ART-026` | Dynamic Directional Shield Impact Ripples | §18 World art, units, structures, animatio... |
-| `REL-ART-027` | Structural Critical Degradation States | §18 World art, units, structures, animatio... |
-| `REL-AUD-017` | Bespoke Faction Tactical Announcers | §19 Audio, voice, music, cinematics |
-| `REL-AUD-018` | Acoustic Environmental Spatial Occlusion & Reverb | §19 Audio, voice, music, cinematics |
-| `REL-CAM-033` | "Shattered Sun Conquest" Planetary Meta-Map | §14 Campaign and narrative |
-| `REL-CAM-034` | Procedural Sector Modifiers & Environmental Anomalies | §14 Campaign and narrative |
-| `REL-CAM-035` | Persistent Faction Blueprint Research | §14 Campaign and narrative |
-| `REL-CAM-036` | Conquest Roguelite Permadeath & Seed Sharing | §14 Campaign and narrative |
-| `REL-CAM-037` | Dynamic AI Invasions & Territory Defense | §14 Campaign and narrative |
-| `REL-CAM-038` | Conquest Milestone Dossiers & Commemorative Unlocks | §14 Campaign and narrative |
-| `REL-CMB-028` | Shift-Queued Order Pipelining Execution | §11 Selection, movement, commands, combat |
-| `REL-CMB-029` | Real-Time Waypoint Path Preview | §11 Selection, movement, commands, combat |
-| `REL-CMB-030` | Smart-Cast Energy & Cooldown Conservation | §11 Selection, movement, commands, combat |
-| `REL-CMB-031` | Priority Threat Resolution in Combat Formations | §11 Selection, movement, commands, combat |
-| `REL-CMB-032` | Chase Leash Boundary Enforcement | §11 Selection, movement, commands, combat |
-| `REL-EDT-001` | Native Scenario Editor Architecture | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-002` | Terrain Heightfield & Passability Sculpting | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-003` | Resource Deposit & Landmark Snapping | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-004` | Node-Based Tactical Event & Trigger Graph | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-005` | Custom Campaign Packaging & Manifest Compiler | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-006` | In-Game Community Map Browser & Loader | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-007` | Automated Map Validation Preflight Compiler | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-008` | Sandboxed Custom Asset Ingestion Policy | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-009` | Headless Map Compiler & Navigation Precomputation | §27 In-Engine Scenario and Map Editor |
-| `REL-EDT-010` | Map Schema Forward Migration Discipline | §27 In-Engine Scenario and Map Editor |
-| `REL-PUB-016` | The Soryn Archive In-Game Lore Codex | §24 Public website, manual, claims, support |
-| `REL-PUB-017` | Interactive 3D Model Viewer & Tactical Dossier | §24 Public website, manual, claims, support |
-| `REL-PUB-018` | Tactical Combat Sandbox / Testing Lab Mode | §24 Public website, manual, claims, support |
-| `REL-PUB-019` | Historical Trophy Vault & Feat Tracking Gallery | §24 Public website, manual, claims, support |
-| `REL-PUB-020` | Transparent In-Game Combat Mechanics Glossary | §24 Public website, manual, claims, support |
-| `REL-QOL-013` | "Take Command" Savestate Replay Branching | §16 Replays and Quality-of-Life |
-| `REL-QOL-014` | Replay Bookmark & Event Timeline Navigation | §16 Replays and Quality-of-Life |
-| `REL-QOL-015` | Advanced Esports / Spectator Observer Deck | §16 Replays and Quality-of-Life |
-| `REL-QOL-016` | Cinematic Smooth Camera & Freecam Spectating | §16 Replays and Quality-of-Life |
-| `SPEC-CMD-011` | Shift-Queued Order Chaining | 6. Commands, orders, and player intent |
-| `SPEC-CMD-012` | Waypoint Vector Breadcrumb Visualization | 6. Commands, orders, and player intent |
-| `SPEC-CMD-013` | Smart-Cast Single-Unit Dispatch | 6. Commands, orders, and player intent |
-| `SPEC-CMD-014` | Attack-Move Intelligent Threat Filtering | 6. Commands, orders, and player intent |
-| `SPEC-CMD-015` | Focus-Fire Target Preservation on Range Loss | 6. Commands, orders, and player intent |
+| `SPEC-VISD-008` | Contextual design brief before production. | 23.1 Contextual craftsmanship and functional identity |
+| `SPEC-WEL-001` | Protocol commitment confirmation: | §15. Future Wells |
+| `SPEC-WEL-002` | Strategic selection neutrality: | §15. Future Wells |
+| `SPEC-WEL-003` | Information and determinism invariance: | §15. Future Wells |
+| `SPEC-WEL-004` | Contested landmark entity rule: | §15. Future Wells |
+| `SPEC-WELLP-001` | Harvest Well Protocol | §15. Future Wells |
+| `SPEC-WELLP-002` | Preserve Well Protocol | §15. Future Wells |
+| `SPEC-WELLP-003` | Reshape Well Protocol | §15. Future Wells |

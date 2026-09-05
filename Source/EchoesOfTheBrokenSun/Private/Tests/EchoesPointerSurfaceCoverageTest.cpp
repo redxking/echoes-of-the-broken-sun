@@ -23,11 +23,16 @@ struct FPointerSurfaceCase final
 };
 
 const FPointerSurfaceCase PointerSurfaceCases[] = {
+    {TEXT("1280x720 @0.80"), FVector2D(1280.0f, 720.0f), 0.80f},
     {TEXT("1280x720 @0.85"), FVector2D(1280.0f, 720.0f), 0.85f},
     {TEXT("1280x720 @1.00"), FVector2D(1280.0f, 720.0f), 1.00f},
+    {TEXT("1280x720 @1.50"), FVector2D(1280.0f, 720.0f), 1.50f},
     {TEXT("1366x768 @1.15"), FVector2D(1366.0f, 768.0f), 1.15f},
     {TEXT("1440x900 @1.00"), FVector2D(1440.0f, 900.0f), 1.00f},
+    {TEXT("1920x1080 @0.80"), FVector2D(1920.0f, 1080.0f), 0.80f},
+    {TEXT("1920x1080 @1.00"), FVector2D(1920.0f, 1080.0f), 1.00f},
     {TEXT("1920x1080 @1.35"), FVector2D(1920.0f, 1080.0f), 1.35f},
+    {TEXT("1920x1080 @1.50"), FVector2D(1920.0f, 1080.0f), 1.50f},
     {TEXT("2560x1440 @1.00"), FVector2D(2560.0f, 1440.0f), 1.00f}};
 
 [[nodiscard]] bool BoxContains(const FBox2D& Outer, const FBox2D& Inner)
@@ -149,6 +154,39 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
         // rather than unusable ones.
         const FEchoesHudLayout HudLayout = FEchoesHudLayout::Build(
             Case.ViewportSize, Case.HudScale, true);
+        TestTrue(*FString::Printf(TEXT("%s: ledger remains visible"), Case.Label),
+                 HudLayout.bResourceVisible);
+        TestFalse(*FString::Printf(TEXT("%s: ledger does not overlap command strip"), Case.Label),
+                  BoxesOverlap(HudLayout.MainPanel, HudLayout.ResourcePanel));
+        TestTrue(*FString::Printf(TEXT("%s: ledger blocks battlefield input"), Case.Label),
+                 HudLayout.IsPointerOnChrome(HudLayout.ResourcePanel.GetCenter()));
+        TestTrue(*FString::Printf(TEXT("%s: ledger stays inside viewport"), Case.Label),
+                 BoxContains(FBox2D(FVector2D::ZeroVector, Case.ViewportSize),
+                             HudLayout.ResourcePanel));
+        TestTrue(*FString::Printf(TEXT("%s: all field regions remain available"), Case.Label),
+                 HudLayout.bObjectiveVisible && HudLayout.bBottomBarVisible &&
+                 HudLayout.bMinimapVisible && HudLayout.bSelectionVisible &&
+                 HudLayout.bCommandDeckVisible && HudLayout.bStatusVisible);
+        const FBox2D Viewport(FVector2D::ZeroVector, Case.ViewportSize);
+        const FBox2D* Panels[] = {&HudLayout.MainPanel, &HudLayout.ObjectivePanel,
+            &HudLayout.ResourcePanel, &HudLayout.BottomBar, &HudLayout.MinimapPanel,
+            &HudLayout.SelectionPanel, &HudLayout.CommandDeckPanel, &HudLayout.StatusPanel};
+        for (const FBox2D* Panel : Panels)
+        {
+            TestTrue(*FString::Printf(TEXT("%s: field panel stays in viewport"), Case.Label),
+                     BoxContains(Viewport, *Panel));
+            TestTrue(*FString::Printf(TEXT("%s: field panel shields battlefield input"), Case.Label),
+                     HudLayout.IsPointerOnChrome(Panel->GetCenter()));
+        }
+        TestFalse(TEXT("Objectives clear command strip"), BoxesOverlap(HudLayout.MainPanel, HudLayout.ObjectivePanel));
+        TestFalse(TEXT("Objectives clear status"), BoxesOverlap(HudLayout.ObjectivePanel, HudLayout.StatusPanel));
+        TestFalse(TEXT("Status clears bottom bar"), BoxesOverlap(HudLayout.StatusPanel, HudLayout.BottomBar));
+        TestFalse(TEXT("Selection clears minimap"), BoxesOverlap(HudLayout.MinimapPanel, HudLayout.SelectionPanel));
+        TestFalse(TEXT("Selection clears command card"), BoxesOverlap(HudLayout.SelectionPanel, HudLayout.CommandDeckPanel));
+        TestTrue(TEXT("Command strip reserves actual text scale"),
+                 HudLayout.MainPanel.GetSize().Y + KINDA_SMALL_NUMBER >= 96.0f * Case.HudScale);
+        TestTrue(TEXT("Ledger reserves actual text scale"),
+                 HudLayout.ResourcePanel.GetSize().Y + KINDA_SMALL_NUMBER >= 62.0f * Case.HudScale);
         for (const FEchoesCommandDeckProfile& Profile : DeckProfiles)
         {
             const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
@@ -161,18 +199,21 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
             const FEchoesCommandDeckLayout Deck =
                 FEchoesCommandDeckLayout::Build(
                     HudLayout.CommandDeckPanel, Case.HudScale, Entries.Num());
-            if (Deck.Buttons.IsEmpty())
-            {
-                continue;
-            }
             TestEqual(
                 *FString::Printf(
                     TEXT("%s: deck exposes one button per action"),
                     Case.Label),
                 Deck.Buttons.Num(),
                 Entries.Num());
+            if (Deck.Buttons.IsEmpty()) continue;
+            TestTrue(TEXT("Command buttons clear drawn title at actual scale"),
+                     Deck.Buttons[0].Min.Y + KINDA_SMALL_NUMBER >=
+                         HudLayout.CommandDeckPanel.Min.Y + 56.0f * Case.HudScale);
             for (int32 Index = 0; Index < Deck.Buttons.Num(); ++Index)
             {
+                TestTrue(TEXT("Command buttons clear drawn context at actual scale"),
+                         Deck.Buttons[Index].Max.Y <= HudLayout.CommandDeckPanel.Max.Y -
+                             30.0f * Case.HudScale + KINDA_SMALL_NUMBER);
                 TestTrue(
                     *FString::Printf(
                         TEXT("%s: deck button %d stays inside its panel"),

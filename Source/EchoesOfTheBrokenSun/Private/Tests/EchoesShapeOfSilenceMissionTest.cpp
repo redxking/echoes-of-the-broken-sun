@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -351,11 +352,15 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     constexpr int32 TopologyRevisionOffset = 11;
     constexpr int32 ChecksumSize = 4;
     TArray<uint8> CurrentTopologyBytes;
+    TArray<uint8> CurrentMapEnvelope;
+    FEchoesCampaignMapCheckpointIdentity MapIdentity;
+    EEchoesCampaignMapCheckpointFailure MapFailure{};
     if (!TestTrue(
             TEXT("The current Mission 07 checkpoint carries topology revision two"),
             FFileHelper::LoadFileToArray(
-                CurrentTopologyBytes,
+                CurrentMapEnvelope,
                 *QuickSavePath) &&
+                FEchoesCampaignMapCheckpoint::Inspect(CurrentMapEnvelope, MapIdentity, CurrentTopologyBytes, MapFailure) &&
                 CurrentTopologyBytes.Num() > 16 &&
                 CurrentTopologyBytes[TopologyRevisionOffset] == 2))
     {
@@ -404,9 +409,7 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     }
     if (!TestTrue(
             TEXT("The revision-one Mission 07 fixture retains a valid checksum"),
-            FFileHelper::SaveArrayToFile(
-                LegacyTopologyBytes,
-                *QuickSavePath)))
+            [&]() { TArray<uint8> Envelope; return FEchoesCampaignMapCheckpoint::Wrap(MapIdentity, LegacyTopologyBytes, Envelope, MapFailure) && FFileHelper::SaveArrayToFile(Envelope, *QuickSavePath); }()))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -432,9 +435,7 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     }
     if (!TestTrue(
             TEXT("The revision-zero Mission 07 fixture retains a valid checksum"),
-            FFileHelper::SaveArrayToFile(
-                LegacyTopologyBytes,
-                *QuickSavePath)))
+            [&]() { TArray<uint8> Envelope; return FEchoesCampaignMapCheckpoint::Wrap(MapIdentity, LegacyTopologyBytes, Envelope, MapFailure) && FFileHelper::SaveArrayToFile(Envelope, *QuickSavePath); }()))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);
@@ -448,9 +449,7 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
         Feedback.Contains(TEXT("LOAD_SHAPE_OF_SILENCE_TOPOLOGY_MISMATCH")));
     if (!TestTrue(
             TEXT("The current Mission 07 checkpoint is restored after the legacy probe"),
-            FFileHelper::SaveArrayToFile(
-                CurrentTopologyBytes,
-                *QuickSavePath)))
+            FFileHelper::SaveArrayToFile(CurrentMapEnvelope, *QuickSavePath)))
     {
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(this);

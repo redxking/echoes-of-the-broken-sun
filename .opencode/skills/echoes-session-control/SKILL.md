@@ -1,20 +1,23 @@
 ---
 name: echoes-session-control
-description: "Govern a single Echoes work session: establish live authority, lane ownership, evidence boundaries, and a safe stop before any implementation."
+description: "Govern a single Echoes work session: establish live authority, path ownership, evidence boundaries, and a safe stop before any implementation."
 metadata:
   author: Angelis Pseftis
 ---
 
 # Echoes session control
 
-Use before any consequential Echoes work. It does not authorize edits, builds, releases, or human acceptance.
+## Project authority
 
-1. Read live `CLAUDE.md`, `Docs/GameCompletionDirective.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, and `../WorkstreamControl/ACTIVE_LANES.md`; obey the latter if it limits Codex to review-only.
-2. Identify one gate/slice, its authoritative files, its current evidence state, the exact check, and the owner-only decision boundary. Never infer current status from a prior session.
-3. Before mutation, inspect the exact worktree, branch, commit, dirty paths, and current lease. Do not edit a leased/shared/owner-held path without a matching current lease; never self-authorize from old lane records.
-4. Use source paths (`Content/Data/Source`, `Content/Narrative/Source`, `Content/World/Source`) and the registered compiler/generator; generated artifacts are outputs, never hand-edited authority.
-5. Define a stop condition: missing owner decision, contradictory authority, unavailable mounted volume, failed baseline, or evidence that cannot establish the gate. Report it rather than broadening scope.
+Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
 
-## Completion record
+Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
 
-State the exact commit/worktree, paths touched, commands or human exercise performed, retained evidence location, outcome, and only an allowed state: `OPEN`, `IN PROGRESS`, `IMPLEMENTED — NOT YET VERIFIED`, `AGENT VERIFIED`, `EVIDENCE READY`, `AWAITING HUMAN ACCEPTANCE`, or `BLOCKED`. Only Angelis may mark `HUMAN ACCEPTED` or `HUMAN REJECTED — CHANGES REQUIRED`; `COMPLETE`/`PASS` are reserved. Route evidence to `echoes-evidence-gate-review` and owner review to `echoes-human-acceptance-session`.
+Use before consequential work. It establishes a bounded task; it does not itself authorize edits, builds, releases, or owner acceptance.
+
+1. Identify the outcome, controlling requirement IDs, authority sources, affected paths, evidence state, verification method, and any owner-only decision. Historical assignments do not establish current ownership.
+2. Inspect the checkout, base commit, dirty paths, and active work. Preserve unrelated changes. Establish live ownership with the active task or coordinator before writing an overlapping path; safe read-only work may continue if an old record is absent.
+3. Use registered source locations and their generators. Generated catalogs and assets are outputs, never manual-edit authorities.
+4. State the stop condition and evidence boundary. Record only observed status using the [state vocabulary](../../../Docs/RequirementsState.md#state-vocabulary); only Angelis assigns owner acceptance or requirement completion.
+
+Return the exact scope, paths, base identity, checks performed, retained evidence location, outcome, and unresolved limitation.

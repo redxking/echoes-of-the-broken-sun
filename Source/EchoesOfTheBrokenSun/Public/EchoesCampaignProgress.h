@@ -297,7 +297,11 @@ public:
     /** True when the name is 1-32 chars of letters, digits, space, - or _. */
     [[nodiscard]] static bool IsValidSlotName(const FString& SlotName);
 
-    /** The slot's primary file path inside the save directory. */
+    /**
+     * The slot's primary file path inside the save directory. Spaces and
+     * underscores use distinct escaped filename sequences. Legacy filenames
+     * that conflated the two are preserved and fail closed on access.
+     */
     [[nodiscard]] static FString GetSlotPath(const FString& SlotName);
 
     /** Saves the progress under the named slot, overwriting transactionally. */
