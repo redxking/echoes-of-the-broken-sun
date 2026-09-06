@@ -100,9 +100,10 @@
 <text x="40" y="745" font-family="sans-serif" font-size="17" fill="#26333c">REDUCED MOTION</text>
 <text x="40" y="769" font-family="sans-serif" font-size="18" fill="#26333c">Discrete offset, damaged, registered and extinguished poses.</text>
 <text x="40" y="804" font-family="sans-serif" font-size="17" fill="#26333c">CANCEL / RESTORE</text>
-<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Reconstruct health/destruction state. Do not replay collapse or advance Corefall from animation.</text>
+<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Restore current health/destruction state; never replay collapse. Presentation cannot delay Core destruction or the conditional match outcome.</text>
 <text x="40" y="863" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
-<text x="40" y="887" font-family="sans-serif" font-size="18" fill="#26333c">12 persistent identities; immediate Corefall; no presentation delay. Debris visible through tick 200; footprint recovers at 201.</text>
-<text x="40" y="922" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-BLD-017.HC.CONCORDANCE, REL-SIM-013, REL-ART-008, REL-ART-013, REL-BLD-014</text>
+<text x="40" y="887" font-family="sans-serif" font-size="18" fill="#26333c">12 persistent pane identities. Core destruction is authoritative immediately; same-tick match outcome only for the final required team Core. Debris</text>
+<text x="40" y="910" font-family="sans-serif" font-size="18" fill="#26333c">through tick 200; footprint recovery at 201.</text>
+<text x="40" y="945" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-BLD-017.HC.CONCORDANCE, REL-SIM-013, REL-ART-008, REL-ART-013, REL-BLD-014</text>
 <text x="40" y="1115" font-family="sans-serif" font-size="16" fill="#26333c">Author: Angelis Pseftis • State board only; labels specify intent, not executed simulation evidence.</text>
 </svg>

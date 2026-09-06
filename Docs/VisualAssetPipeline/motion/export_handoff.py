@@ -43,13 +43,22 @@ def export(repo,evidence,output,source_root=None):
   manifest.append(dict(original_path=str(f),member=member,sha256=sha,bytes=len(data),kind=kind))
  output.parent.mkdir(parents=True,exist_ok=True)
  # Exclusive mode protects an archive created since the preflight check.
- with zipfile.ZipFile(output,'x',compression=zipfile.ZIP_STORED) as z:
-  for (f,member,_,_),m in zip(files,manifest):
-   data=f.read_bytes()
-   if digest(data)!=m['sha256']:raise ValueError('Input changed during packaging')
-   z.writestr(member,data)
-  z.writestr('handoff-manifest.json',json.dumps(dict(author='Angelis Pseftis',creator='Angelis Pseftis',created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),source_head=git_info(repo,['rev-parse','HEAD']),visual_source_root=str(source_root),visual_source_head=git_info(source_root,['rev-parse','HEAD']),source_dirty_paths=git_info(repo,['status','--short']),boundary='Local preservation export; no rights clearance, off-device backup or asset acceptance. Historical absolute paths map to archive members here. Original documents remain authoritative.',files=manifest),indent=2)+'\n')
- result=verify(output);result.update(author='Angelis Pseftis',creator='Angelis Pseftis',archive=str(output),sha256=digest(output.read_bytes()),inventory_paths=len(inventory))
+ owned_identity=None
+ try:
+  with output.open('xb') as handle:
+   owned_identity=(output.stat().st_dev,output.stat().st_ino)
+   with zipfile.ZipFile(handle,'w',compression=zipfile.ZIP_STORED) as z:
+    for (f,member,_,_),m in zip(files,manifest):
+     data=f.read_bytes()
+     if digest(data)!=m['sha256']:raise ValueError('Input changed during packaging')
+     z.writestr(member,data)
+    z.writestr('handoff-manifest.json',json.dumps(dict(author='Angelis Pseftis',creator='Angelis Pseftis',created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),source_head=git_info(repo,['rev-parse','HEAD']),visual_source_root=str(source_root),visual_source_head=git_info(source_root,['rev-parse','HEAD']),visual_source_dirty_paths=git_info(source_root,['status','--short']),source_dirty_paths=git_info(repo,['status','--short']),boundary='Local preservation export; no rights clearance, off-device backup or asset acceptance. Historical absolute paths map to archive members here. Original documents remain authoritative.',files=manifest),indent=2)+'\n')
+  result=verify(output)
+ except BaseException:
+  if owned_identity is not None and output.exists() and (output.stat().st_dev,output.stat().st_ino)==owned_identity:
+   output.unlink()  # Only this attempt's partial archive, never an existing output or source.
+  raise
+ result.update(author='Angelis Pseftis',creator='Angelis Pseftis',archive=str(output),sha256=digest(output.read_bytes()),inventory_paths=len(inventory))
  return result
 if __name__=='__main__':
  ap=argparse.ArgumentParser();ap.add_argument('--repo',type=pathlib.Path);ap.add_argument('--evidence',type=pathlib.Path);ap.add_argument('--output',type=pathlib.Path);ap.add_argument('--verify',type=pathlib.Path);ap.add_argument('--source-root',type=pathlib.Path,help='Optional read-only root holding hash-matched full image payloads');a=ap.parse_args()

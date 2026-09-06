@@ -52,7 +52,7 @@
       "reduced_motion": "Static fin group and sensor marker; no whole-body flash.",
       "audio": "One rate-limited rising resonance on inactive-to-active; no count, range or identity encoded.",
       "acceptance_evidence_required": "2200 cm detection; 200 cm resolution; moving-only anonymous signatures; no health/targetability/identity disclosure.",
-      "interruption_and_restore": "Stationary/expired signatures clear cue. Restore from current signature state; never replay wave/sound.",
+      "interruption_and_restore": "Clear only when authoritative signature state removes or expires the contact; do not inspect hidden-unit velocity. Restore current signature state without replaying wave/sound.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
     },
@@ -87,13 +87,13 @@
         },
         {
           "label": "Reload",
-          "caption": "Restore current progress"
+          "caption": "Reload example: active molt snapshot"
         }
       ],
       "reduced_motion": "Static bright pool plus progress marker and vulnerable posture.",
       "audio": "Quiet liquid-mineral loop; completion crack only on authorized success. Stop on cancel/death.",
       "acceptance_evidence_required": "80 ticks; 25 Dawn; 150% incoming damage; cancel without refund; old adaptation persists until success. No rigid crust.",
-      "interruption_and_restore": "Stop progress emphasis on cancellation. Do not change anatomy/statistics ahead of authoritative completion.",
+      "interruption_and_restore": "Stop progress emphasis on cancellation. Do not change anatomy/statistics ahead of authoritative completion. Reload may restore idle or active; the illustrated reload example is active.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
     },
@@ -175,8 +175,8 @@
       ],
       "reduced_motion": "Discrete offset, damaged, registered and extinguished poses.",
       "audio": "Operational held tone; damage cue TBD. Stop tone on destruction; collapse cue requires Choir approval.",
-      "acceptance_evidence_required": "12 persistent identities; immediate Corefall; no presentation delay. Debris visible through tick 200; footprint recovers at 201.",
-      "interruption_and_restore": "Reconstruct health/destruction state. Do not replay collapse or advance Corefall from animation.",
+      "acceptance_evidence_required": "12 persistent pane identities. Core destruction is authoritative immediately; same-tick match outcome only for the final required team Core. Debris through tick 200; footprint recovery at 201.",
+      "interruption_and_restore": "Restore current health/destruction state; never replay collapse. Presentation cannot delay Core destruction or the conditional match outcome.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
     },
@@ -302,6 +302,20 @@
       "interruption_and_restore": "Animation never counts overlaps. Restore current resolved state. Recovery stops loss cue; no duplicate neighbor response.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    }
+  ],
+  "source_evidence": [
+    {
+      "source_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Requirements.md",
+      "evidence_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/Requirements.source-evidence.txt",
+      "sha256": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+      "status": "EVIDENCE_COPY_NOT_AUTHORITY"
+    },
+    {
+      "source_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Archive/DevelopmentBible.md",
+      "evidence_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/DevelopmentBible.source-evidence.txt",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+      "status": "EVIDENCE_COPY_NOT_AUTHORITY"
     }
   ]
 }

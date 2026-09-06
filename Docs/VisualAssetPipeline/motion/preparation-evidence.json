@@ -1,8 +1,8 @@
 {
   "author": "Angelis Pseftis",
   "creator": "Angelis Pseftis",
-  "created_utc": "2026-09-06T21:06:54.397662+00:00",
-  "baseline_commit": "b42821b",
+  "created_utc": "2026-09-06T21:18:59.404306+00:00",
+  "baseline_commit": "8cd38ac",
   "boundary": "Vector construction and state references only; internal visual QA, not owner or runtime acceptance",
   "generators": [
     {
@@ -12,14 +12,14 @@
     },
     {
       "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/build_storyboards.py",
-      "sha256": "ed60150d1d26a09efa02ecadc615b206671237f0bbd53f84dc9dcf709a581696",
+      "sha256": "91bd3de98b50353fbea102db2244e25da45c5bc3d1885aa38af5e85f91620cf0",
       "scope": "Storyboard generator"
     }
   ],
   "artifacts": [
     {
       "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-CONCORDANCE-GAP-03.png",
-      "sha256": "d74d44c1516036054e199fdda1503f81fdcd6fbf28b29eb4002d1a2c46e2f94a",
+      "sha256": "2c53a3efe5fd11152a10a801be3ad2705bd3f926a47ba6e01a3409a334febbb9",
       "scope": "Static vector export; visually inspected"
     },
     {
@@ -39,7 +39,7 @@
     },
     {
       "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-GROWTH-BASIN-GAP-02.png",
-      "sha256": "1e5842fd8cdef9b797a76cda84d4008f973bc32d736b0d64d0edb805e903d7f6",
+      "sha256": "283c4d804fe5b1f3bef0db40ffc3fa5701c3a925a32192281f688606e5238b0b",
       "scope": "Static vector export; visually inspected"
     },
     {
@@ -49,7 +49,7 @@
     },
     {
       "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-RESONANT-GAP-02.png",
-      "sha256": "fdd6cc0c153a2bb6aeca6dcc2d2ca6ed0fcc648fe7a6afc0fe9af055c2866b0e",
+      "sha256": "b1419df08d97c5372f5a51423bce08281778804612cf47c7b6d903dfd5dd1d68",
       "scope": "Static vector export; visually inspected"
     },
     {
@@ -82,5 +82,12 @@
     "Lancer: weapon orientation differs between labeled projections",
     "Surveyor: front canister count drift; anatomical side labels reverse tools"
   ],
-  "source_status": "Dirty isolated documentation work only; primary runtime untouched"
+  "source_status": "Dirty isolated documentation work only; primary runtime untouched",
+  "review_corrections": [
+    "Basin reload active snapshot",
+    "Conditional team Core outcome",
+    "Resonant authoritative expiry only",
+    "Phase Anchor no loss ring",
+    "Preserved exact dirty authority payloads"
+  ]
 }

@@ -1,5 +1,6 @@
 """Author: Angelis Pseftis. Preservation integrity and refusal tests."""
 import json,pathlib,tempfile,unittest,zipfile
+from unittest.mock import patch
 from export_handoff import export,verify,digest
 class HandoffTests(unittest.TestCase):
  def setUp(self):
@@ -30,4 +31,8 @@ class HandoffTests(unittest.TestCase):
  def test_full_payload_from_read_only_root(self):
   source=self.p/'full';source.mkdir();(source/'art.png').write_bytes(b'original');self.img.write_bytes(b'LFS pointer')
   self.assertTrue(export(self.repo,self.e,self.out,source)['valid']);self.assertEqual(self.img.read_bytes(),b'LFS pointer');self.assertEqual((source/'art.png').read_bytes(),b'original')
+ def test_failed_write_removes_only_new_archive(self):
+  with patch.object(zipfile.ZipFile,'writestr',side_effect=OSError('simulated write failure')):
+   with self.assertRaises(OSError):export(self.repo,self.e,self.out)
+  self.assertFalse(self.out.exists());self.assertEqual(self.img.read_bytes(),b'original')
 if __name__=='__main__':unittest.main()

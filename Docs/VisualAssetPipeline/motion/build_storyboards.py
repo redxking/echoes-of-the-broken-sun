@@ -39,7 +39,7 @@ def render(item):
    box(cx+115,cy,30,35,'#ad4688' if n==4 else '#545961')
    text(x+18,y+216,'Ring size illustrative; membership external',16)
   elif 'matrix' in title:
-   out.append(f'<ellipse cx="{cx}" cy="{cy}" rx="115" ry="55" fill="{("#796338" if n in [1,2,3] else "#454641")}" stroke="#56554e" stroke-width="4"/>')
+   out.append(f'<ellipse cx="{cx}" cy="{cy}" rx="115" ry="55" fill="{("#796338" if n in [1,2,3,5] else "#454641")}" stroke="#56554e" stroke-width="4"/>')
    for i in range(3):
     yy=cy-20+i*20;out.append(f'<path d="M{cx-85},{yy} Q{cx},{yy-18+(n%3)*8} {cx+85},{yy}" fill="none" stroke="#c1a564" stroke-width="2"/>')
    text(x+18,y+216,'Unbroken fluid surface; no rigid crust',16)

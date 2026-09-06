@@ -64,9 +64,10 @@
 <text x="40" y="745" font-family="sans-serif" font-size="17" fill="#26333c">REDUCED MOTION</text>
 <text x="40" y="769" font-family="sans-serif" font-size="18" fill="#26333c">Static fin group and sensor marker; no whole-body flash.</text>
 <text x="40" y="804" font-family="sans-serif" font-size="17" fill="#26333c">CANCEL / RESTORE</text>
-<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Stationary/expired signatures clear cue. Restore from current signature state; never replay wave/sound.</text>
-<text x="40" y="863" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
-<text x="40" y="887" font-family="sans-serif" font-size="18" fill="#26333c">2200 cm detection; 200 cm resolution; moving-only anonymous signatures; no health/targetability/identity disclosure.</text>
-<text x="40" y="922" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-UNIT-008, REL-FAC-026.KA.RESONANT, SPEC-ART-002</text>
+<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Clear only when authoritative signature state removes or expires the contact; do not inspect hidden-unit velocity. Restore current signature state</text>
+<text x="40" y="851" font-family="sans-serif" font-size="18" fill="#26333c">without replaying wave/sound.</text>
+<text x="40" y="886" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
+<text x="40" y="910" font-family="sans-serif" font-size="18" fill="#26333c">2200 cm detection; 200 cm resolution; moving-only anonymous signatures; no health/targetability/identity disclosure.</text>
+<text x="40" y="945" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-UNIT-008, REL-FAC-026.KA.RESONANT, SPEC-ART-002</text>
 <text x="40" y="1115" font-family="sans-serif" font-size="16" fill="#26333c">Author: Angelis Pseftis • State board only; labels specify intent, not executed simulation evidence.</text>
 </svg>

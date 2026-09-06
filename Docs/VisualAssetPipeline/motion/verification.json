@@ -11,7 +11,7 @@
     "candidate_records": 21,
     "control_checks": 4,
     "construction_topology_tests": 7,
-    "handoff_integrity_tests": 7
+    "handoff_integrity_tests": 8
   },
   "browser_visual_review": "BLOCKED: browser security policy verification unavailable; no workaround attempted",
   "primary_checkout_head": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
@@ -104,7 +104,14 @@
     "construction_sheets": 5,
     "state_boards": 7,
     "result": "Rendered locally and visually inspected; corrected text overlap and Phase Anchor loss-ring visibility before final bindings",
-    "evidence_manifest": "preparation-evidence.json"
+    "evidence_manifest": "preparation-evidence.json",
+    "final_review_corrections": [
+      "Basin reload active snapshot",
+      "Conditional team Core outcome",
+      "Resonant authoritative expiry only",
+      "Phase Anchor no loss ring",
+      "Preserved exact dirty authority payloads"
+    ]
   },
   "preparation_counts": {
     "BRIEF_READY": 27,
@@ -119,5 +126,7 @@
     "full_payloads_matching_in_primary": 244,
     "isolated_worktree_pointer_paths": 79,
     "resolution": "Read primary payloads with --source-root; no hydration or writes"
-  }
+  },
+  "authority_evidence_manifest": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/manifest.json",
+  "historical_evidence_gap": "Original dirty RequirementsState payload efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961 was not retained; current observation has different hash and is not substituted. Requirements and Bible source payloads match exact motion bindings."
 }

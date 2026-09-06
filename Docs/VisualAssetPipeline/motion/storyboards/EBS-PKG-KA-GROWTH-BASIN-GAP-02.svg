@@ -43,18 +43,19 @@
 <text x="578" y="660" font-family="sans-serif" font-size="17" fill="#26333c">Settle; no success beat</text>
 <rect x="1080" y="420" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
 <text x="1098" y="452" font-family="sans-serif" font-size="24" fill="#26333c">Reload</text>
-<ellipse cx="1330" cy="555" rx="115" ry="55" fill="#454641" stroke="#56554e" stroke-width="4"/>
+<ellipse cx="1330" cy="555" rx="115" ry="55" fill="#796338" stroke="#56554e" stroke-width="4"/>
 <path d="M1245,535 Q1330,533 1415,535" fill="none" stroke="#c1a564" stroke-width="2"/>
 <path d="M1245,555 Q1330,553 1415,555" fill="none" stroke="#c1a564" stroke-width="2"/>
 <path d="M1245,575 Q1330,573 1415,575" fill="none" stroke="#c1a564" stroke-width="2"/>
 <text x="1098" y="636" font-family="sans-serif" font-size="16" fill="#26333c">Unbroken fluid surface; no rigid crust</text>
-<text x="1098" y="660" font-family="sans-serif" font-size="17" fill="#26333c">Restore current progress</text>
+<text x="1098" y="660" font-family="sans-serif" font-size="17" fill="#26333c">Reload example: active molt snapshot</text>
 <text x="40" y="745" font-family="sans-serif" font-size="17" fill="#26333c">REDUCED MOTION</text>
 <text x="40" y="769" font-family="sans-serif" font-size="18" fill="#26333c">Static bright pool plus progress marker and vulnerable posture.</text>
 <text x="40" y="804" font-family="sans-serif" font-size="17" fill="#26333c">CANCEL / RESTORE</text>
-<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Stop progress emphasis on cancellation. Do not change anatomy/statistics ahead of authoritative completion.</text>
-<text x="40" y="863" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
-<text x="40" y="887" font-family="sans-serif" font-size="18" fill="#26333c">80 ticks; 25 Dawn; 150% incoming damage; cancel without refund; old adaptation persists until success. No rigid crust.</text>
-<text x="40" y="922" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-BLD-016.KA.BASIN, REL-FAC-009, REL-FAC-026.KA.ADAPT</text>
+<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Stop progress emphasis on cancellation. Do not change anatomy/statistics ahead of authoritative completion. Reload may restore idle or active; the</text>
+<text x="40" y="851" font-family="sans-serif" font-size="18" fill="#26333c">illustrated reload example is active.</text>
+<text x="40" y="886" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
+<text x="40" y="910" font-family="sans-serif" font-size="18" fill="#26333c">80 ticks; 25 Dawn; 150% incoming damage; cancel without refund; old adaptation persists until success. No rigid crust.</text>
+<text x="40" y="945" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-BLD-016.KA.BASIN, REL-FAC-009, REL-FAC-026.KA.ADAPT</text>
 <text x="40" y="1115" font-family="sans-serif" font-size="16" fill="#26333c">Author: Angelis Pseftis • State board only; labels specify intent, not executed simulation evidence.</text>
 </svg>
