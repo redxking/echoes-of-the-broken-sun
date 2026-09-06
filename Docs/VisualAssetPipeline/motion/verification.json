@@ -1,0 +1,28 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "created_utc": "2026-09-06T20:29:28.045038+00:00",
+  "packages": 21,
+  "open_gap_records": 63,
+  "tests": {
+    "audit_tests": 5,
+    "motion_studies": 8,
+    "sample_executions": 96,
+    "candidate_records": 21,
+    "control_checks": 4
+  },
+  "browser_visual_review": "BLOCKED: browser security policy verification unavailable; no workaround attempted",
+  "primary_checkout_head": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+  "worktree_baseline": "f85123f",
+  "source_bindings": {
+    "Docs/Requirements.md": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+    "Docs/RequirementsState.md": "efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961",
+    "Docs/Archive/DevelopmentBible.md": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+  },
+  "boundary": "Schematic source checks only; no animation clips or runtime acceptance",
+  "image_corrections": {
+    "growth_basin": "Image-level state contrast improved; RTS recognition open",
+    "chorus_loom": "Image-level state contrast improved; RTS recognition open",
+    "aegis_post": "Partial mount supplement; complete matched-view geometry open"
+  }
+}

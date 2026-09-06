@@ -1,0 +1,1259 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "schema_version": 1,
+  "source_packages_sha256": "696a5ee297f044e26d6f7a2d0a715425b9b78160c93452b1f09061a365694e2f",
+  "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906",
+  "boundary": "Candidate and schematic reference only; no Unreal rig, integration, rights clearance or owner acceptance",
+  "packages": [
+    {
+      "package_id": "EBS-PKG-MC-LANCER",
+      "subject": "Lancer",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-UNT-002"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png",
+      "candidate_sha256": "b5c85d32390c8f4c7777b91c80cec71149f9d20bf96d0d2de550a2bcc92a40b2",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/generation-record.json",
+      "receipt_sha256": "fa2b36d34d54d34437e910ae972d5a0cfb75f99700cd03876c8250fe975af37d",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 510,
+          "text": "| **Lancer** (`SPEC-UNIT-002`) | A two-legged line-fire frame, slightly taller than the Surveyor and narrow, with a long forward rail-lance carried at hip height, a recoil strut braced to the rear leg, and a low armored cowl. Ceramic plate over charcoal, cyan band along the lance. | The lance axis and the braced stance say *sustained ranged fire, forward-facing*. Flanks are visibly thin. | Halts, plants the strut, aims, fires with recoil returning through the mount, recovers. Never fires while moving. Muzzle is a clean cyan-white line; impact is a small engineered flash. Sound: a sharp, dry crack with a short metallic ring. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_lancer",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-LANCER-GAP-01",
+          "status": "OPEN",
+          "finding": "Mechanical consistency and source fidelity require review; receipt has no normalized limitations field.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-RELAY-SKIFF",
+      "subject": "Relay Skiff",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-UNT-004"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/relay-skiff-review/relay-skiff-candidate.png",
+      "candidate_sha256": "6ba89f6907b01deacea9c80cc32acea92072526f9f915836619b53285868dca1",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/relay-skiff-review/generation-record.json",
+      "receipt_sha256": "687d3e8947e504f6504edb79b815f170dbf2b7615bf6f472cbc82ff12d94103c",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 512,
+          "text": "| **Relay Skiff** (`SPEC-UNIT-004`) | A light, fast, low-slung skimmer with a tall relay mast, a dish, and a small forward weapon that is clearly secondary. In Mission 01 it carries an **archive cradle**: a sealed pale-ceramic cassette rack lashed to its deck with dark straps. | Mast and dish say *sees and connects*; the archive rack says *carrying something that matters*. Never reads as a hero body. | Glides with a slight nose-down lean; the mast lights cyan when relaying temporary logistics. The archive rack never changes unless an authoritative event binds it. Sound: a light turbine whine and a soft relay chirp. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_relay_skiff",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-RELAY-SKIFF-GAP-01",
+          "status": "OPEN",
+          "finding": "Concept illustration only; secondary-emitter leader points near a lift pod and requires clarified attachment placement before production. Tactical inset is a top-view rendering, not a tested gameplay silhouette. Dimensions and multiview geometry remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-EBS-FAM-FWL-001",
+      "subject": "Future Well",
+      "domain": "FWL",
+      "concept_ids": [
+        "EBS-CON-FWL-SYS-001",
+        "EBS-CON-FWL-SYS-002",
+        "EBS-CON-FWL-SYS-003",
+        "EBS-CON-FWL-SYS-004",
+        "EBS-CON-FWL-SYS-005",
+        "EBS-CON-FWL-SYS-007"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png",
+      "candidate_sha256": "b16e84cb4465c3c3cee46a71fb4b661256c0bdcbb9a030994fd7d7262ed60ba7",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/generation-record.json",
+      "receipt_sha256": "4bb02dd61b5f90ba707ac6aaac5914b3bb7c5873d14d3a8b4465f5ec93df0ba5",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 619,
+          "text": "| **Dormant** | Unlit charcoal | Bowl and spire dark; micro-fracture barely visible; two shadows. | A low hum keyed to place. | A held breath. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 621,
+          "text": "| **Harvest** | Broken-sun amber | 180-tick public telegraph: amber climbs the spire in bands; at commit the spire collapses into the bowl, the bowl goes dark and cracked, the ground's branch-specific feature is removed or damaged. Permanent. | Rising harmonic to a hard, final drop. | Windfall and permanent loss. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 622,
+          "text": "| **Preserve** | Cyan-held | The spire steadies into a single outline; a slow cyan custody ring turns at the bowl's rim while controlled; 1,400 cm intelligence radius shown as a faint band. | Steady tone; a soft cadence chime every 300 ticks. | Slow custody; valuable only if held. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 623,
+          "text": "| **Reshape** | Magenta-fracture | 180-tick telegraph: magenta traces run from the spire along the ground to the authored feature, which then *manifests* (a bridge restored, a route opened, cover raised) for 1,800 ticks; the feature's edges carry an afterimage; a pre-expiry warning brightens then dims; on expiry the feature fades and units displace along authored fallback points. | Phase-shifting tone; a distinct warning cue before expiry. | Temporary impossible terrain both sides can anticipate. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": null,
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-EBS-FAM-FWL-001-GAP-01",
+          "status": "OPEN",
+          "finding": "Single concept sheet, not animation, scale, collision or packaged RTS evidence. Harvest direction of collapse and Dormant doubled shadow require clearer motion/detail references; the spent inset communicates permanence. Crossing is an illustrative possible feature, not approved map geometry.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-SURVEYOR",
+      "subject": "Surveyor",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-UNT-001"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/surveyor-reference.png",
+      "candidate_sha256": "98c3a0ef2300178942d30e0f2ff8d725ef94a51d38877639638c3cd90b6fd913",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/generation-record.json",
+      "receipt_sha256": "0a3aabe6ee81d4144bdb11238963e546a1ad605ca4c7b0657fa202c0c8f51089",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 509,
+          "text": "| **Surveyor** (`SPEC-UNIT-001`) | A compact bipedal maintenance exoframe about as tall as a person and half again as wide at the shoulder: pale ceramic torso shell over a charcoal frame, two articulated tool arms (rotary drill on one, gripper/welder on the other), a small optical mast, and a rear cargo cradle holding cyan-white Matter canisters. Cyan status band across the chest. | Tools and cargo say *worker*; nothing on it says weapon. Its whole body language is service reach. | Walks with planted support and a short settle on stop. Drill spins only during actual gathering and stops on travel or cancel. Build pose extends both arms to the footprint. Repair (when authorized) shows the welder arm only. Sounds: ceramic-on-stone footfalls, a dry rotary drill, a soft cargo latch on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_surveyor",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-SURVEYOR-GAP-01",
+          "status": "OPEN",
+          "finding": "Illustrative derived views, not verified orthographics or animation. Three canisters are a visual proposal, not cargo-capacity units; exact cradle geometry, weld tip, movement and scale need production review.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-BULWARK-TEAM",
+      "subject": "Bulwark Team",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-UNT-003"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/bulwark-review/bulwark-centered-wings-reference.png",
+      "candidate_sha256": "6a8c5cef6697f84f501c1ae0c1f124105c197f0e7df79fa5fa362789b33ec44b",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/bulwark-review/generation-record.json",
+      "receipt_sha256": "451461102f6fc340bfab0337586f80c916b7935e16fbb95a6ddea99b426b6eec",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 511,
+          "text": "| **Bulwark Team** (`SPEC-UNIT-003`) | A wide, low, two-operator chassis with a central emitter and six framed barrier cells on hinged wings. Packed, the wings tuck along the chassis and it reads as a heavy crawler; deployed, the wings unfold into a single directional shield face taller than the operators. | Shield facing and deployed footprint are unmistakable; the exposed rear says *flank me*. | Setup unfolds the wings at the hinges (anticipation, contact, settle); deployed movement is a slow drag; packing reverses. Impacts show on the face as brief cyan ripples. Sound: hydraulic hinge engagement, a low field hum while deployed, a clank on pack. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_bulwark_team",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-BULWARK-TEAM-GAP-01",
+          "status": "OPEN",
+          "finding": "Mechanical consistency and source fidelity require review; receipt has no normalized limitations field.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-TENDER",
+      "subject": "Tender",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-UNT-001"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/tender-review/tender-candidate.png",
+      "candidate_sha256": "d8eb886a72a552636d9661bc501df2dd77180c86867341fa8ad31b216299223e",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/tender-review/generation-record.json",
+      "receipt_sha256": "b37d5fed5b89df5aa4d39135dc622e280a3e1e1779258c0adb72ab842d40318e",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 551,
+          "text": "| **Tender** (`SPEC-UNIT-005`) | A stocky Kharuun cultivator carrying a resonance staff and a woven mineral-fiber sling of carried matter across the back; forearms thickened with working strata; amber nodules at the wrists glow while growing. | Carried matter and the staff say *cultivator*, not soldier. | Gathering is a kneeling press of the staff into strata; growing a structure is a slow circling walk that leaves the organism's first ring. Sounds: stone resonance, a soft crumble on gather, a low sustained tone while growing. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_tender",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-TENDER-GAP-01",
+          "status": "OPEN",
+          "finding": "Face, clothing and tool shape are candidate interpretations. Pose/clothing consistency, scale, rig and RTS readability remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-ANCHOR",
+      "subject": "Anchor",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-BLD-001",
+        "EBS-CON-MER-BLD-005"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/anchor-review/anchor-candidate.png",
+      "candidate_sha256": "4564283f7f1ca3f9330b9b56cf4f887f8d106806d8bbf639e13ea8674b352fd3",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/anchor-review/generation-record.json",
+      "receipt_sha256": "71476daf1c04aac6c91efc4c23b3a2f8625cd937fbdfd7030ca0563e90c16101",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 513,
+          "text": "| **Anchor** (`SPEC-BLD-015.MC.ANCHOR`) | The Compact headquarters: a squat, wide ceramic drum on a charcoal plinth with a tall central mast, three visible worker bays at ground level, a Matter intake chute, and thick conduit roots running out to the network. Cyan bands ring the drum. | Root of the network, worker source, Matter drop-off. The bays and chute make production and delivery legible. | Working: bands lit, mast steady. Damaged: a band dark, panel plates visibly cracked. Destroyed: engineered collapse, drum sags on the plinth. Sound: a deep steady transformer tone, a chute clatter on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_anchor",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-ANCHOR-GAP-01",
+          "status": "OPEN",
+          "finding": "Top-view inset remains oblique rather than orthographic. Mast proportions and damage transitions require consistent views in later development. Doorway size, conduit routes and aprons are illustrative, not approved gameplay footprint or navigation changes.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-POWER-LINK",
+      "subject": "Power Link",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-BLD-002",
+        "EBS-CON-MER-BLD-006"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/power-link-review/power-link-candidate.png",
+      "candidate_sha256": "bb8ffbe50e6683a265a73467b0ceb2bdd1e4d20d7354563f6bd60726f3f91a04",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/power-link-review/generation-record.json",
+      "receipt_sha256": "30e78d7faddde1bbd8c38b2cbe2243162a43574c9ebdf4bc8c82eaa78a716d79",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 514,
+          "text": "| **Power Link** (`SPEC-BLD-015.MC.LINK`) | A slim ceramic pylon with a charcoal base, a ring of cyan conductor collars, and paired conduits that visibly leave the base and run toward its neighbors. | A pylon with cables, not a turret. Connection hardware is the whole message. | Connected: collars lit, conduits faintly pulsing along their length. Disconnected: collars dark, no pulse. Damaged: a collar dark, a conduit hanging. Sound: a thin electrical sustain only while connected. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_power_link",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-POWER-LINK-GAP-01",
+          "status": "OPEN",
+          "finding": "Illustrative candidate, not verified orthographic geometry.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-POWER-LINK-GAP-02",
+          "status": "OPEN",
+          "finding": "Maintenance inset opening spans panels 02 and 03 but only one removed panel is pictured.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-POWER-LINK-GAP-03",
+          "status": "OPEN",
+          "finding": "Coupling layout and dimensions require engineering reference review; RTS readability and performance untested.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-ARRAY-FOUNDRY",
+      "subject": "Array Foundry",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-BLD-003",
+        "EBS-CON-MER-BLD-007"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/array-foundry-review/array-foundry-aligned-output-candidate.png",
+      "candidate_sha256": "4e258375377dc766312ac932f55e3eb3738dbd726047ae506ee455e751f5f169",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/array-foundry-review/generation-record.json",
+      "receipt_sha256": "cd9d903b08b25dda6a270bdd01d1b6bc431ade49ac13669a146396c9225f8b41",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 515,
+          "text": "| **Array Foundry** (`SPEC-BLD-015.MC.FOUNDRY`) | A long rectangular hall with an intake ramp at one end, an open fabrication bay in the middle where frames are visibly assembled on a rail, an output door at the far end, and a research gantry with instruments on the roof. | Intake, work, output, and research each have their own place, so the player reads what it is doing from where the activity is. | Producing: the rail carries a half-built frame toward the door. Researching: the roof gantry lights and the rail stops. Interrupted: gantry dims, no refund animation. Sound: rhythmic fabrication clank; a rising tone during research. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_array_foundry",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-01",
+          "status": "OPEN",
+          "finding": "Interrupted view retains some cyan accents; complete state lighting differentiation requires review.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-02",
+          "status": "OPEN",
+          "finding": "Unit frame is illustrative, not a new approved unit.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-03",
+          "status": "OPEN",
+          "finding": "Long visual hall must be reconciled with observed 4x4 gameplay footprint; dimensions and orthographic consistency are not verified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-04",
+          "status": "OPEN",
+          "finding": "No RTS, art, gameplay or technical acceptance gate completed.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-05",
+          "status": "OPEN",
+          "finding": "Far exterior portals are occluded from this angle; orthographic clearance verification remains required.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-MC-AEGIS-POST",
+      "subject": "Aegis Post",
+      "domain": "MER",
+      "concept_ids": [
+        "EBS-CON-MER-BLD-004",
+        "EBS-CON-MER-BLD-008"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/aegis-post-review/aegis-post-candidate.png",
+      "candidate_sha256": "34bfee19406fb560e317f9c6d237a22e25c1c58ed290a25a14564d6cd31b0129",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/aegis-post-review/generation-record.json",
+      "receipt_sha256": "64a0ae53c2d2ca646ca1e9e915472df0f92a42017ec315271c4d0c4a14c746f5",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 516,
+          "text": "| **Aegis Post** (`SPEC-BLD-015.MC.AEGIS`) | A three-legged ceramic mount with a rotating twin-emitter head, a heavy power coupling on the base, and a cyan band that circles the head only while supplied. | Weapon direction and the power coupling say *defense that needs the network*. | Powered: head tracks, band lit. Offline: head droops, band dark, no smoke or sound implying life. Fires clean cyan-white bolts. Sound: a charged snap; silence when unpowered. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "mc_aegis_post",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-MC-AEGIS-POST-GAP-01",
+          "status": "OPEN",
+          "finding": "Third leg is obscured or absent in rear inset; that inset cannot establish complete tripod geometry.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-AEGIS-POST-GAP-02",
+          "status": "OPEN",
+          "finding": "Main rear-leg attachment and cross-view mechanical consistency require correction in orthographic reference development.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-AEGIS-POST-GAP-03",
+          "status": "OPEN",
+          "finding": "Offline muzzle rims retain blue tint; ensure zero emissive output in future materials.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-MC-AEGIS-POST-GAP-04",
+          "status": "OPEN",
+          "finding": "Scale, footprint, rotation clearances, RTS readability and technical gates unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-MEMORY-HEARTH",
+      "subject": "Memory Hearth",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-BLD-001",
+        "EBS-CON-KHA-BLD-005"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/memory-hearth-review/memory-hearth-candidate.png",
+      "candidate_sha256": "dea8c81b1e6d64307316a80bbbec73aa98a51b69ee0675e437f838a0591a274d",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/memory-hearth-review/generation-record.json",
+      "receipt_sha256": "5d8163125e300edfa77257ec185828e169a1ee01f6143e99212cd03003c0d2bf",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 555,
+          "text": "| **Memory Hearth** (`SPEC-BLD-016`) | The Kharuun headquarters: a wide grown dome of banded strata with a warm amber glow from within, several arched worker hollows at the base, a matter-intake cleft, and a crown of rooted adaptation spires. | Hollows and cleft make growth and delivery legible; the crown says *adaptation root*. | Working: interior glow breathes slowly. Damaged: a spire dark, strata cracked. Destroyed: ceramic collapse inward. Sounds: a deep communal hum far below music tempo; cleft settle on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_memory_hearth",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-01",
+          "status": "OPEN",
+          "finding": "Interior furnishings and exact spire/hollow arrangement are candidate interpretations, not book-established facts.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-02",
+          "status": "OPEN",
+          "finding": "Damage view is cropped at right edge and has geometric differences; not verified state-matched modeling reference.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-03",
+          "status": "OPEN",
+          "finding": "A dark spire is not unambiguously differentiated; damaged-state lighting needs refinement.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-04",
+          "status": "OPEN",
+          "finding": "Scale, 5x5 footprint fit, orthographic consistency, construction/destruction and RTS acceptance remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-WAYSTONE",
+      "subject": "Waystone",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-BLD-002",
+        "EBS-CON-KHA-BLD-006"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/waystone-review/waystone-candidate.png",
+      "candidate_sha256": "e28275d59972eb3713e3a7c1fd69fdc784dc274db062fcc53d729715907907f2",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/waystone-review/generation-record.json",
+      "receipt_sha256": "6e0c4bffff6629c15d8c2c003e1cdb4567766f5dc3e61022b91999383eff303a",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 556,
+          "text": "| **Waystone** (`SPEC-BLD-016`) | A tall faceted monolith of dark strata with amber seams that, rooted, sinks a visible ring of root-strata into the ground; uprooted, it lifts on a grown carriage and moves slowly. | Rooted or moving is visible from the roots alone. | Rooting: preparation, contact, settling, release. Sounds: a grinding root-set, a low tone while rooted. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_waystone",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-WAYSTONE-GAP-01",
+          "status": "OPEN",
+          "finding": "Carriage pad mechanism and folded root arrangement are proposed visual interpretations; gait, weight transfer and root conservation not verified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-WAYSTONE-GAP-02",
+          "status": "OPEN",
+          "finding": "Root-detail folded tip appears close to ground; not a clearance-certified mechanical view.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-WAYSTONE-GAP-03",
+          "status": "OPEN",
+          "finding": "Scale, 2x2 gameplay footprint fit, docking access, rigging and RTS readability remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-WAYSTONE-GAP-04",
+          "status": "OPEN",
+          "finding": "No acceptance or production maturity advancement.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-RIFTSTALKER",
+      "subject": "Riftstalker",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-UNT-002"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png",
+      "candidate_sha256": "26b9095a837ed3a100b784f3846cddebd222a95a2d6c9e6c93e13277f1ac0a6b",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/generation-record.json",
+      "receipt_sha256": "2bade4426ee3876cbd3bce40ec60706d96eea62b9ecc659e488c2141ddae7910",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 552,
+          "text": "| **Riftstalker** (`SPEC-UNIT-006`) | A lean, long-limbed warform with a low forward posture, a faceted carapace in charcoal with amber seams, and a shoulder-mounted shard-caster that fires while it moves. | The forward lean and light frame say *skirmisher that keeps moving*; it visibly lacks the mass for a frontal fight. | Fires on the move with a short sidestep after each shot. Molt at a Growth Basin shows a visible carapace or striker change. Sounds: a ceramic hiss on fire, sharp shard impacts. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_riftstalker",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-RIFTSTALKER-GAP-01",
+          "status": "OPEN",
+          "finding": "Four-limb anatomy is a candidate design decision, not established by prose.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RIFTSTALKER-GAP-02",
+          "status": "OPEN",
+          "finding": "Exact anatomical side of caster and attachment consistency require orthographic verification.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RIFTSTALKER-GAP-03",
+          "status": "OPEN",
+          "finding": "Carapace and weapon overlap may impair RTS weapon identification; silhouette recognition untested.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RIFTSTALKER-GAP-04",
+          "status": "OPEN",
+          "finding": "Damage separation is not unambiguously depicted; molting, sidestep sequence, rig, scale and acceptance gates remain open.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-CAIRNBACK",
+      "subject": "Cairnback",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-UNT-003"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/cairnback-review/cairnback-candidate.png",
+      "candidate_sha256": "eb2c76d5bda301dfea82a9636dea95036f6aaa81dbc6075f15049db361bc46cf",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/cairnback-review/generation-record.json",
+      "receipt_sha256": "16a9f5ef684eba5dd09e0234775cff0a2958e57a0a338a1b6070b853192b657b",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 553,
+          "text": "| **Cairnback** (`SPEC-UNIT-007`) | A broad, low assault warform whose back is a slab of layered heat-holding strata like a vaultback's; thick forelimbs; head low and protected. | The strata back says *absorbs fire, becomes cover*. | Creating mineral cover is a heave that leaves a grown barrier behind it. Damage chips strata; destruction is a ceramic slump. Sounds: heavy stone footfalls, a grinding heave, a low ceramic resonance on loss. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_cairnback",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-CAIRNBACK-GAP-01",
+          "status": "OPEN",
+          "finding": "Quadrupedal tortoise-like anatomy is candidate interpretation; far limbs partly occluded.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-CAIRNBACK-GAP-02",
+          "status": "OPEN",
+          "finding": "Cover study shows resulting barrier, not a verified heave animation or ground-gap clearance.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-CAIRNBACK-GAP-03",
+          "status": "OPEN",
+          "finding": "Barrier proportions and placement need reconciliation with gameplay source; no dimension or runtime changes.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-CAIRNBACK-GAP-04",
+          "status": "OPEN",
+          "finding": "Scale, gait, attack interface, destruction, RTS readability and acceptance gates unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-RESONANT",
+      "subject": "Resonant",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-UNT-004"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/resonant-review/resonant-candidate.png",
+      "candidate_sha256": "60417e30ca9aa911fd959d3b9b9cc34483fa6a7f8f42776e4bc6ca2d3dc2d939",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/resonant-review/generation-record.json",
+      "receipt_sha256": "baf61a7148497f3ec65ce9bd9d551537efd7691b154445fe88fa509f5e32ba57",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 554,
+          "text": "| **Resonant** (`SPEC-UNIT-008`) | A tall, thin scout with sensor-fins of translucent amber along the spine and head, and a delicate frame. | Fins and delicacy say *listens, does not fight*. | Detecting shows the fins brightening in sequence. Sounds: a faint rising resonance; almost silent movement. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_resonant",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "locomotion / turn / stop",
+        "action anticipation / execution / recovery",
+        "cancel / interruption / recovery"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-RESONANT-GAP-01",
+          "status": "OPEN",
+          "finding": "Quadrupedal anatomy and fin arrangement are candidate interpretations; cross-pose anatomy, gait and rig unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RESONANT-GAP-02",
+          "status": "OPEN",
+          "finding": "Static image cannot validate sequential fin brightening or detection timing.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RESONANT-GAP-03",
+          "status": "OPEN",
+          "finding": "Visual brief says listens, does not fight, but observed gameplay source includes attack damage 8/range 380; attack presentation unresolved, no gameplay change inferred.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-RESONANT-GAP-04",
+          "status": "OPEN",
+          "finding": "Scale, RTS readability, materials budget and acceptance gates remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-GROWTH-BASIN",
+      "subject": "Growth Basin",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-BLD-003",
+        "EBS-CON-KHA-BLD-007"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/growth-basin-review/growth-basin-state-contrast.png",
+      "candidate_sha256": "fcb480d64e119226b5b8ff3237322c3698d649cfce91ca45632b05748bef75de",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/growth-basin-review/generation-record.json",
+      "receipt_sha256": "6cb5621b12f7c7a7efa7def396f52a7efb70df5ecab39eadfbe6115450d38f4f",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 557,
+          "text": "| **Growth Basin** (`SPEC-BLD-016`) | A shallow bowl of grown strata with an amber-lit matrix pool at its center, ringed by visible molt niches. | The pool says *grows warforms*; niches say *adaptation choices*. | Growing shows the pool brightening; a molting warform stands in a niche and visibly changes. Sounds: liquid mineral resonance; a crack-and-settle on molt completion. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_growth_basin",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-01",
+          "status": "OPEN",
+          "finding": "Resting pool now darker than growing pool; image-level state contrast improved. Gameplay-camera recognition remains unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-02",
+          "status": "OPEN",
+          "finding": "Pool pattern may read as solid mineral; liquid-mineral motion remains undefined.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-03",
+          "status": "OPEN",
+          "finding": "Four depicted niches do not establish gameplay capacity or new mechanic.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-04",
+          "status": "OPEN",
+          "finding": "Molt inset anatomy and material transformation require reference consistency review.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-05",
+          "status": "OPEN",
+          "finding": "Scale, 4x4 footprint fit, circulation clearance, emergence and molt animation, damage and technical acceptance unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-KA-LISTENING-SPINE",
+      "subject": "Listening Spine",
+      "domain": "KHA",
+      "concept_ids": [
+        "EBS-CON-KHA-BLD-004",
+        "EBS-CON-KHA-BLD-008"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/listening-spine-review/listening-spine-candidate.png",
+      "candidate_sha256": "b61e2856ab445811ffacbf12da6710cb3f671a1ba61c987eb5d11e6061123e56",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/listening-spine-review/generation-record.json",
+      "receipt_sha256": "e58a3e765d916393a918b56e9bb11f0e78dc7b297047d2681ce127bf63bd6b1a",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 558,
+          "text": "| **Listening Spine** (`SPEC-BLD-016`) | A single tall rib of strata with amber sensor nodules climbing it, set into a rooted socket. | A spine, not a weapon. | Detecting shows nodules lighting in sequence toward the source direction. Sounds: a slow pulse that quickens with movement signatures. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "ka_listening_spine",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-KA-LISTENING-SPINE-GAP-01",
+          "status": "OPEN",
+          "finding": "Static study does not establish sequential lighting timing or directional source communication.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-LISTENING-SPINE-GAP-02",
+          "status": "OPEN",
+          "finding": "Exact nodule count, relative positions and cross-view geometry require orthographic verification.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-KA-LISTENING-SPINE-GAP-03",
+          "status": "OPEN",
+          "finding": "Scale, 2x2 footprint fit, construction/damage states, RTS readability and technical acceptance unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-HC-CONCORDANCE",
+      "subject": "Concordance",
+      "domain": "HOL",
+      "concept_ids": [
+        "EBS-CON-HOL-BLD-001"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/concordance-review/concordance-candidate.png",
+      "candidate_sha256": "e6f15555cfaf1397678293e58b14ff291898af93bb5984093f4a1b17e28439da",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/concordance-review/generation-record.json",
+      "receipt_sha256": "0b5b7fbaf071e359769adf644671cb1bc1eb87aa7e74eb51974f38c85f8ed5d6",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 601,
+          "text": "| **Concordance** (`SPEC-BLD-017.HC.CONCORDANCE`) | The Choir headquarters: a ring of tall glass panes standing in offset pairs around a central held tone, with worker emergence between panes and a Matter intake at the ring's one true gap. | The ring and the gap make emergence and delivery legible; the offset panes say *Choir*. | Working: panes hold a steady edge glow; the coherence ledger is readable from it. Damaged: a pane goes dark and its partner loses its offset. Destroyed: the ring collapses into register and goes out. Sounds: the deepest held tone on the field, with interference beating as activity. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "hc_concordance",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-HC-CONCORDANCE-GAP-01",
+          "status": "OPEN",
+          "finding": "Pair count and layout vary between main and elevated inset; exact geometry and worker passage clearances unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CONCORDANCE-GAP-02",
+          "status": "OPEN",
+          "finding": "Held tone visualization is a proposed representation, not book-established geometry.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CONCORDANCE-GAP-03",
+          "status": "OPEN",
+          "finding": "Dark aligned-pair detail does not verify transition animation or destruction sequence.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CONCORDANCE-GAP-04",
+          "status": "OPEN",
+          "finding": "Coherence ledger readability, scale, 5x5 footprint fit and art/gameplay/technical acceptance remain unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-HC-INTERVAL-LOOM",
+      "subject": "Interval Loom",
+      "domain": "HOL",
+      "concept_ids": [
+        "EBS-CON-HOL-BLD-002"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/interval-loom-review/interval-loom-candidate.png",
+      "candidate_sha256": "fd9ee7136a400ee60e127b8488dac8d68988a5c1d23fb611516295bf67c9a581",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/interval-loom-review/generation-record.json",
+      "receipt_sha256": "03a8d9cdba27d096eb14910bef1f78e01b67a4c951903090bc23868be726da26",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 602,
+          "text": "| **Interval Loom** (`SPEC-BLD-017.HC.INTERVAL`) | A small frame of two crossed luminous spans with a Matter drop-pane beneath; the spans cast two shadows. | Small, connective, a drop-off with a rent ticker. | Upkeep tick shows as a brief brightening then dimming. Insolvency shows the spans losing luminance before the structure fails. Sounds: a soft interval chime on each charge. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "hc_interval_loom",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-01",
+          "status": "OPEN",
+          "finding": "Conflicting-shadow behavior is not distinguished from ordinary shadows of two physical arches; requires dedicated study.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-02",
+          "status": "OPEN",
+          "finding": "Exact curve, span crossing clearance, scale and 2x2 footprint fit unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-03",
+          "status": "OPEN",
+          "finding": "Static brightness states do not verify upkeep timing, coherence ledger or failure animation.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-04",
+          "status": "OPEN",
+          "finding": "Art/gameplay/technical acceptance remains open.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-HC-CHORUS-LOOM",
+      "subject": "Chorus Loom",
+      "domain": "HOL",
+      "concept_ids": [
+        "EBS-CON-HOL-BLD-003"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/chorus-loom-review/chorus-loom-state-contrast.png",
+      "candidate_sha256": "14a07fa7f264ae356df87eb5fa43cc8858e1d7f676c3403c26be9db2697625f7",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/chorus-loom-review/generation-record.json",
+      "receipt_sha256": "fd787f67f912d3871676da0a8a133ad8d1a44cd7d8a1d302c4c3b0c33722991c",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 603,
+          "text": "| **Chorus Loom** (`SPEC-BLD-017.HC.CHORUS`) | A wider loom of many parallel luminous threads between two glass pylons, with a visible weaving space where units form and a research pane above. | Threads and the weaving space say *production*; the pane says *research*. | Producing: threads draw a silhouette that fills in. Researching: the pane brightens and the threads still. Sounds: layered tones that resolve in more than one direction before committing. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "hc_chorus_loom",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-01",
+          "status": "OPEN",
+          "finding": "Abstract forming volume is not an approved unit silhouette; replace with selected unit reference in future production study.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-02",
+          "status": "OPEN",
+          "finding": "Research pane now visibly bright with subdued threads; image-level state contrast improved. Gameplay-camera recognition remains unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-03",
+          "status": "OPEN",
+          "finding": "Main platform edge cropped; full orthographic footprint reference remains required.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-04",
+          "status": "OPEN",
+          "finding": "Thread dynamics, overhead pane suspension, 4x4 footprint, scale and art/gameplay/technical acceptance unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    },
+    {
+      "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
+      "subject": "Phase Anchor",
+      "domain": "HOL",
+      "concept_ids": [
+        "EBS-CON-HOL-BLD-004"
+      ],
+      "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/phase-anchor-candidate.png",
+      "candidate_sha256": "857c3febcfea507d8d471128c0d46c9c646808aef817fc1391a4eda797c30938",
+      "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/generation-record.json",
+      "receipt_sha256": "eb80d9de1aaed6013e565f5ce224b7abcb0b5ae081d607ff199e55661340fbe1",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "review_status": "OPEN",
+      "source_motion_contract": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 604,
+          "text": "| **Phase Anchor** (`SPEC-BLD-017.HC.ANCHOR`) | A single tall glass spire whose afterimage is exactly in register \u2014 the only Choir structure with no offset \u2014 projecting a faint magenta field ring at its 700 cm coverage. | Perfect register says *stability*; the ring says *aura*. | Field active: ring steady, structures inside show reduced upkeep. Field lost: the ring collapses and neighbors flicker once. Sounds: a pure sustained tone with the interference beating removed. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_entity": "hc_phase_anchor",
+      "required_track_families": [
+        "idle / operational",
+        "damage response",
+        "destruction / death",
+        "selection and ownership readability",
+        "construction",
+        "offline / recovery",
+        "role-specific operation / interruption"
+      ],
+      "event_binding": "TBD: bind existing authoritative adapter event/state; no animation-owned timers or gameplay mutations",
+      "interruption": "Cancel cosmetic action on authoritative state exit; stop loops and clear effects; reconstruct pose from current state after reload or visibility return",
+      "accessibility": "Provide shape/posture/icon redundancy; reduced motion uses discrete state poses, no rapid flashes",
+      "audio": "Cues described by cited creative brief; loops stop on state exit. Audio files and mixer acceptance not produced.",
+      "geometry_gate": "Fixed component inventory and source-matched front/side/rear/top views before rigging",
+      "gaps": [
+        {
+          "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-01",
+          "status": "OPEN",
+          "finding": "Concept ring is not to scale; documented 700 cm coverage is not validated by image.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-02",
+          "status": "OPEN",
+          "finding": "Ring appears pale violet rather than distinctly magenta; final color requires material review.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-03",
+          "status": "OPEN",
+          "finding": "Neighbor upkeep reduction and one-time flicker on field loss not depicted or validated.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        },
+        {
+          "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-04",
+          "status": "OPEN",
+          "finding": "Scale, 2x2 footprint, geometry consistency, destruction, RTS readability and technical gates unverified.",
+          "closure": "Matched-view correction or authoritative rendered evidence; no automatic closure"
+        }
+      ]
+    }
+  ]
+}

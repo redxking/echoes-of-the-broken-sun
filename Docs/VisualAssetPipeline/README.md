@@ -343,3 +343,7 @@ retained excerpts. Missing or changed book bytes fail validation. This evidence 
 revision. It is outside Git: moving the workstream requires handing off this evidence file as well as the
 commits. The manifest contains relative source bindings, so identical repository and evidence bytes can
 validate from another workspace location.
+
+## Candidate correction and motion references
+
+The [motion handoff](motion/README.md) consolidates the 21 generated candidate receipts, open gaps and animation interfaces. The [interactive review](motion/motion-review.html) contains eight schematic motion studies; these are reference proposals, not Unreal animations or acceptance evidence.
